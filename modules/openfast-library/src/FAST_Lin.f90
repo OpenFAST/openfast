@@ -3262,6 +3262,8 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
       ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
       ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
       call SetBlockMatrix( dUdy, MeshMapData%SD_TP_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+      
+      !Mooring gets set in the Linear_SD_InputSolve_ routines
    end if
 END SUBROUTINE Linear_ED_InputSolve_dy
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3588,8 +3590,8 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
    TYPE(HydroDyn_InputType),    INTENT(INOUT)   :: u_HD        !< The inputs to HydroDyn
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
-   TYPE(SD_OutputType),         INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
+   TYPE(ED_OutputType),TARGET,  INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
+   TYPE(SD_OutputType),TARGET,  INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
    REAL(R8Ki),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^{HD}/du^{HD} block
    
@@ -3603,12 +3605,22 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_HD_InputSolve_du'
+   TYPE(MeshType), POINTER                      :: PlatformMotion
+   TYPE(MeshType), POINTER                      :: SubstructureMotion2HD
 
    
    ErrStat = ErrID_None
    ErrMsg  = ""
                
    
+
+      PlatformMotion => y_ED%PlatformPtMesh
+
+   IF (p_FAST%CompSub == Module_SD) THEN
+      SubstructureMotion2HD => y_SD%Y2Mesh
+   ELSE
+      SubstructureMotion2HD => PlatformMotion
+   END IF   
    ! look at how the translational displacement gets transfered to the translational velocity and translational acceleration:
    !-------------------------------------------------------------------------------------------------
    ! Set the inputs from ElastoDyn:
@@ -3627,7 +3639,7 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       
       ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
       if ( u_HD%PRPMesh%Committed ) then
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+         call Linearize_Point_to_Point( PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
          ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
@@ -3647,108 +3659,53 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
          end if
       end if
       
-      if ( p_FAST%CompSub == Module_None ) then 
          
-         !===================================================   
-         !  y_ED%PlatformPtMesh and u_HD%Morison%Mesh
-         !===================================================    
-      
-            ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
-         if ( u_HD%Morison%Mesh%Committed ) then
-            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      !===================================================
+      !  y_ED%PlatformPtMesh or SD%y2Mesh and u_HD%Morison%Mesh
+      !===================================================
+         ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
+      if ( u_HD%Morison%Mesh%Committed ) then
+         call Linearize_Point_to_Point( SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
-            ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+         ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
             
-            HD_Start_td = Indx_u_HD_Morison_Start(u_HD, y_FAST)
-            HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
+         HD_Start_td = Indx_u_HD_Morison_Start(u_HD, y_FAST)
+         HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
          
-               ! translational velocity:
-            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
-            end if
-         
-               ! translational acceleration:
-            HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%ta_uD )) then            
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
-            end if
+            ! translational velocity:
+         if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%tv_uD )) then             
+            call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
          end if
+         
+            ! translational acceleration:
+         HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%ta_uD )) then            
+            call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
+         end if
+      end if
       
       !===================================================   
-      !  y_ED%PlatformPtMesh and u_HD%WAMITMesh
+      !  y_ED%PlatformPtMesh or SD%y2Mesh and u_HD%WAMITMesh
       !=================================================== 
-         if ( u_HD%WAMITMesh%Committed ) then
+      if ( u_HD%WAMITMesh%Committed ) then
 
-            call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            HD_Start_td = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)   
-            HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
-               ! translational velocity:
-            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
-            end if
-
-               ! translational acceleration:
-            HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-
-            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%ta_uD )) then
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
-            end if
-         end if 
-         
-         
-      else if ( p_FAST%CompSub == Module_SD ) then
-         
-         
-         !===================================================   
-         !  y_SD%Y2Mesh and u_HD%Morison%Mesh
-         !===================================================    
-         if ( u_HD%Morison%Mesh%Committed ) then
-            ! Transfer ED motions to HD motion input (HD inputs depend on previously calculated HD inputs from ED):
-         
-            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-            ! HD is destination in the mapping, so we want M_{tv_uD} and M_{ta_uD}
+         call Linearize_Point_to_Point( SubstructureMotion2HD, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               
+         HD_Start_td = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)   
+         HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field
             
-            HD_Start_td = Indx_u_HD_Morison_Start(u_HD, y_FAST)  
-            HD_Start_tr = HD_Start_td + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field      
-         
-               ! translational velocity:
-            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
-            end if
-         
-               ! translational acceleration:
-            HD_Start_tr = HD_Start_tr + u_HD%Morison%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-            if (allocated(MeshMapData%SubStructure_2_HD_M_P%dM%ta_uD )) then            
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_M_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
-            end if
+            ! translational velocity:
+         if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%tv_uD )) then             
+            call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
          end if
-      
-      !===================================================   
-      !  y_SD%Y2Mesh and u_HD%WAMITMesh
-      !===================================================    
-         if ( u_HD%WAMITMesh%Committed ) then
-            call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-            HD_Start_td = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  
-            HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
-               ! translational velocity:
-            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%tv_uD )) then             
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
-            end if
-
-               ! translational acceleration:
-            HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
-
-            if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%ta_uD )) then
-               call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
-            end if 
+            ! translational acceleration:
+         HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         if (allocated(MeshMapData%SubStructure_2_HD_W_P%dM%ta_uD )) then
+            call SetBlockMatrix( dUdu, MeshMapData%SubStructure_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
          end if
-      
       end if
       
    end if
@@ -3764,8 +3721,8 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
    TYPE(HydroDyn_InputType),    INTENT(INOUT)   :: u_HD        !< The inputs to HydroDyn
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
-   TYPE(SD_OutputType),         INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
+   TYPE(ED_OutputType), TARGET, INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
+   TYPE(SD_OutputType), TARGET, INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
    REAL(R8Ki),                  INTENT(INOUT)   :: dUdy(:,:)   !< Jacobian matrix of which we are computing the dU^{HD}/dy^{ED} block
    
@@ -3775,80 +3732,65 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
       ! Local variables:
 
    INTEGER(IntKi)                               :: HD_Start    ! starting index of dUdy (column) where particular HD fields are located
-   INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
-   INTEGER(IntKi)                               :: SD_Out_Start! starting index of dUdy (row) where particular SD fields are located
+   INTEGER(IntKi)                               :: Platform_Out_Start! starting index of dUdy (row) where particular ED fields are located
+   INTEGER(IntKi)                               :: SubStructure_Out_Start! starting index of dUdy (row) where particular SD/ED fields are located
+   TYPE(MeshType), POINTER                      :: PlatformMotion
+   TYPE(MeshType), POINTER                      :: SubstructureMotion2HD
+
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_HD_InputSolve_dy'
 
    
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
            
-   ! Add ED Platform mesh to HD PRP Mesh
+      PlatformMotion => y_ED%PlatformPtMesh
+      Platform_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+      
+   IF (p_FAST%CompSub == Module_SD) THEN
+      SubstructureMotion2HD => y_SD%y2Mesh
+      SubStructure_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST)   ! start of y_SD%Y2Mesh%TranslationDisp field
+   ELSE
+      SubstructureMotion2HD => PlatformMotion
+      SubStructure_Out_Start = Platform_Out_Start
+   END IF
+   
+   
+   !...................................
+   ! HD PRP Mesh
+   !...................................
    !  use Indx_u_HD_PRP_Start
    HD_Start     = Indx_u_HD_PRP_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field     
-   ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-   call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, HD_Start, ED_Out_Start, dUdy, .false.)
+   call Assemble_dUdy_Motions(PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, HD_Start, Platform_Out_Start, dUdy, .false.)
    
    
-   if ( p_FAST%CompSub == Module_None ) then 
-      ! dU^{HD}/dy^{ED}
-         !...................................
-         ! Morison Mesh
-         !...................................
-      IF (u_HD%Morison%Mesh%Committed) THEN
+   ! dU^{HD}/dy^{ED} or ! dU^{HD}/dy^{SD}
+      !...................................
+      ! Morison Mesh
+      !...................................
+   IF (u_HD%Morison%Mesh%Committed) THEN
             
-         !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
-         !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Line2( y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
+      !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
+      !!! ! while forming dUdy, too.
+      !!!call Linearize_Point_to_Line2( SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
       
-         HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, ED_Out_Start, dUdy, .false.)
-      END IF
+      HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field
+      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, SubStructure_Out_Start, dUdy, .false.)
+   END IF
 
-         !...................................
-         ! Lumped Platform Reference Pt Mesh
-         !...................................
-      IF (u_HD%WAMITMesh%Committed) THEN
+      !...................................
+      ! Lumped Platform Reference Pt Mesh
+      !...................................
+   IF (u_HD%WAMITMesh%Committed) THEN
             
-         !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
-         !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
+      !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
+      !!! ! while forming dUdy, too.
+      !!!call Linearize_Point_to_Point( SubstructureMotion2HD, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
       
-         HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
-      END IF
-      
-   else if ( p_FAST%CompSub == Module_SD ) then
-      ! dU^{HD}/dy^{SD}
-      SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST)   ! start of y_SD%Y2Mesh%TranslationDisp field
-         !...................................
-         ! Morison Mesh
-         !...................................
-      IF (u_HD%Morison%Mesh%Committed) THEN
-            
-         !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
-         !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Line2( y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2 )
-      
-         HD_Start     = Indx_u_HD_Morison_Start(u_HD, y_FAST)  ! start of u_HD%Morison%Mesh%TranslationDisp field              
-         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%Morison%Mesh, MeshMapData%SubStructure_2_HD_M_P, HD_Start, SD_Out_Start, dUdy, .false.)
-      END IF
+      HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
+      call Assemble_dUdy_Motions(SubstructureMotion2HD, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SubStructure_Out_Start, dUdy, .false.)
+   END IF
 
-         !...................................
-         ! Lumped Platform Reference Pt Mesh
-         !...................................
-      IF (u_HD%WAMITMesh%Committed) THEN
-            
-         !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
-         !!! ! while forming dUdy, too.
-         !!!call Linearize_Point_to_Point( y_SD%Y2Mesh, u_HD%Mesh, MeshMapData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2 )
-      
-         HD_Start     = Indx_u_HD_WAMIT_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
-         call Assemble_dUdy_Motions(y_SD%Y2Mesh, u_HD%WAMITMesh, MeshMapData%SubStructure_2_HD_W_P, HD_Start, SD_Out_Start, dUdy, .false.)
-      END IF
-   
-   end if
-   
    
 END SUBROUTINE Linear_HD_InputSolve_dy
 
@@ -3861,8 +3803,8 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
    TYPE(MAP_InputType),         INTENT(INOUT)   :: u_MAP       !< The inputs to MAP
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
-   TYPE(SD_OutputType),         INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
+   TYPE(ED_OutputType), TARGET, INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
+   TYPE(SD_OutputType), TARGET, INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
    REAL(R8Ki),                  INTENT(INOUT)   :: dUdy(:,:)   !< Jacobian matrix of which we are computing the dU^{MAP}/dy^{ED} block
    
@@ -3872,8 +3814,10 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
       ! Local variables:
 
    INTEGER(IntKi)                               :: MAP_Start   ! starting index of dUdy (column) where particular MAP fields are located
-   INTEGER(IntKi)                               :: ED_Out_Start! starting index of dUdy (row) where particular ED fields are located
-   INTEGER(IntKi)                               :: SD_Out_Start! starting index of dUdy (row) where particular SD fields are located
+
+   INTEGER(IntKi)                               :: SubStructure_Out_Start! starting index of dUdy (row) where particular SD/ED fields are located
+   TYPE(MeshType), POINTER                      :: SubstructureMotion
+   
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Linear_MAP_InputSolve_dy'
@@ -3881,6 +3825,15 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
    
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   IF (p_FAST%CompSub == Module_SD) THEN
+      SubstructureMotion => y_SD%y3Mesh
+      SubStructure_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
+   ELSE
+      SubstructureMotion => y_ED%PlatformPtMesh
+      SubStructure_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+   END IF
+   
    IF (u_MAP%PtFairDisplacement%Committed) THEN 
          !...................................
          ! FairLead Mesh
@@ -3888,20 +3841,10 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, y_SD, MeshMapD
 
       MAP_Start    = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
       
-      if ( p_FAST%CompSub == Module_SD ) THEN
-         ! dU^{MAP}/dy^{SD}
-         SD_Out_Start = Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y3Mesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_SD%Y3Mesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_SD%Y3Mesh    , u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, SD_Out_Start, dUdy, OnlyTranslationDisp=.true.)
+      ! dU^{MAP}/dy^{SD} or ! dU^{MAP}/dy^{ED}
+      call Linearize_Point_to_Point( SubstructureMotion, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, SubStructure_Out_Start, dUdy, OnlyTranslationDisp=.true.)
 
-      else if ( p_FAST%CompSub == Module_None ) THEN
-         ! dU^{MAP}/dy^{ED}
-         ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-         call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, MAP_Start, ED_Out_Start, dUdy, OnlyTranslationDisp=.true.)
-
-       end if  
-      
    END IF
 END SUBROUTINE Linear_MAP_InputSolve_dy
 
@@ -4800,6 +4743,37 @@ FUNCTION Indx_u_SD_TPMesh_Start(u_SD, y_FAST) RESULT(SD_Start)
 
 END FUNCTION Indx_u_SD_TPMesh_Start
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the y_SD%Y1Mesh mesh in the FAST linearization outputs.
+FUNCTION Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
+
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+
+   SD_Out_Start = y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
+END FUNCTION Indx_y_SD_Y1Mesh_Start
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine returns the starting index for the y_SD%Y2Mesh mesh in the FAST linearization outputs.
+FUNCTION Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
+
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+
+   SD_Out_Start = Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) + y_SD%Y1Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
+END FUNCTION Indx_y_SD_Y2Mesh_Start
+!> This routine returns the starting index for the y_SD%Y3Mesh mesh in the FAST linearization outputs.
+FUNCTION Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
+   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
+   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
+
+   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
+
+   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
+END FUNCTION Indx_y_SD_Y3Mesh_Start
+!----------------------------------------------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for the u_SD%TPMesh mesh in the FAST linearization inputs.
 FUNCTION Indx_u_SD_LMesh_Start(u_SD, y_FAST) RESULT(SD_Start)
    TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
@@ -4871,34 +4845,6 @@ FUNCTION Indx_y_HD_WAMIT_Start(y_HD, y_FAST) RESULT(HD_Start)
 
    END FUNCTION Indx_y_HD_WAMIT_Start
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the y_SD%Y1Mesh mesh in the FAST linearization outputs.
-FUNCTION Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
-   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
-   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
-
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
-
-   SD_Out_Start = y_FAST%Lin%Modules(MODULE_SD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
-END FUNCTION Indx_y_SD_Y1Mesh_Start
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine returns the starting index for the y_SD%Y2Mesh mesh in the FAST linearization outputs.
-FUNCTION Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
-   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
-   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
-
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
-
-   SD_Out_Start = Indx_y_SD_Y1Mesh_Start(y_SD, y_FAST) + y_SD%Y1Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
-END FUNCTION Indx_y_SD_Y2Mesh_Start
-!> This routine returns the starting index for the y_SD%Y3Mesh mesh in the FAST linearization outputs.
-FUNCTION Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
-   TYPE(FAST_OutputFileType),      INTENT(IN )  :: y_FAST           !< FAST output file data (for linearization)
-   TYPE(SD_OutputType),            INTENT(IN )  :: y_SD             !< SD outputs at t
-
-   INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in ElastoDyn outputs
-
-   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y1Mesh data and get to the beginning of 
-END FUNCTION Indx_y_SD_Y3Mesh_Start
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine allocates the arrays that store the operating point at each linearization time for later producing VTK
