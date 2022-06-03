@@ -56,7 +56,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: TowerHt      !< Height of tower above ground level [onshore] or MSL [offshore] [m]
     REAL(ReKi)  :: RotIner      !< Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) [kg m^2]
     REAL(ReKi)  :: GenIner      !< Generator inertia about HSS [kg m^2]
-    REAL(ReKi)  :: GBoxEff      !< Gearbox efficiency [percent]
     REAL(ReKi)  :: GBoxRatio      !< Gearbox ratio [-]
     LOGICAL  :: SumPrint      !< Print summary data to <RootName>.sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of outputs [-]
@@ -157,7 +156,6 @@ IMPLICIT NONE
     REAL(R8Ki)  :: InitAzimuth      !< Initial azimuth angle for blade 1 [deg]
     REAL(ReKi)  :: RotIner      !< Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) [kg m^2]
     REAL(ReKi)  :: GenIner      !< Generator inertia about HSS [kg m^2]
-    REAL(ReKi)  :: GBoxEff      !< Gearbox efficiency [percent]
     REAL(ReKi)  :: GBoxRatio      !< Gearbox ratio [-]
     INTEGER(IntKi)  :: NumBl      !< Number of blades on the turbine [-]
     REAL(ReKi)  :: TipRad      !< Preconed blade-tip radius (distance from the rotor apex to the blade tip) [m]
@@ -218,7 +216,6 @@ CONTAINS
     DstInputFileData%TowerHt = SrcInputFileData%TowerHt
     DstInputFileData%RotIner = SrcInputFileData%RotIner
     DstInputFileData%GenIner = SrcInputFileData%GenIner
-    DstInputFileData%GBoxEff = SrcInputFileData%GBoxEff
     DstInputFileData%GBoxRatio = SrcInputFileData%GBoxRatio
     DstInputFileData%SumPrint = SrcInputFileData%SumPrint
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
@@ -305,7 +302,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TowerHt
       Re_BufSz   = Re_BufSz   + 1  ! RotIner
       Re_BufSz   = Re_BufSz   + 1  ! GenIner
-      Re_BufSz   = Re_BufSz   + 1  ! GBoxEff
       Re_BufSz   = Re_BufSz   + 1  ! GBoxRatio
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
@@ -380,8 +376,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%RotIner
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GenIner
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%GBoxEff
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GBoxRatio
     Re_Xferred = Re_Xferred + 1
@@ -474,8 +468,6 @@ ENDIF
     OutData%RotIner = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GenIner = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%GBoxEff = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GBoxRatio = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3009,7 +3001,6 @@ ENDDO
     DstParamData%InitAzimuth = SrcParamData%InitAzimuth
     DstParamData%RotIner = SrcParamData%RotIner
     DstParamData%GenIner = SrcParamData%GenIner
-    DstParamData%GBoxEff = SrcParamData%GBoxEff
     DstParamData%GBoxRatio = SrcParamData%GBoxRatio
     DstParamData%NumBl = SrcParamData%NumBl
     DstParamData%TipRad = SrcParamData%TipRad
@@ -3104,7 +3095,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! InitAzimuth
       Re_BufSz   = Re_BufSz   + 1  ! RotIner
       Re_BufSz   = Re_BufSz   + 1  ! GenIner
-      Re_BufSz   = Re_BufSz   + 1  ! GBoxEff
       Re_BufSz   = Re_BufSz   + 1  ! GBoxRatio
       Int_BufSz  = Int_BufSz  + 1  ! NumBl
       Re_BufSz   = Re_BufSz   + 1  ! TipRad
@@ -3193,8 +3183,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%RotIner
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GenIner
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%GBoxEff
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%GBoxRatio
     Re_Xferred = Re_Xferred + 1
@@ -3315,8 +3303,6 @@ ENDIF
     OutData%RotIner = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GenIner = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%GBoxEff = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%GBoxRatio = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

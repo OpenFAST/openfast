@@ -181,7 +181,6 @@ contains
       ! inertia / drivetrain
       p%RotIner      = InputFileData%RotIner
       p%GenIner      = InputFileData%GenIner
-      p%GBoxEff      = InputFileData%GBoxEff
       p%GBoxRatio    = InputFileData%GBoxRatio
 
       ! system inertia

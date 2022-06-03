@@ -193,11 +193,6 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! GBoxEff     - Gearbox efficiency (%)
-   call ParseVar( FileInfo_In, CurLine, "GBoxEff", InputFileData%GBoxEff, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
-   InputFileData%GBoxEff = InputFileData%GBoxEff * 0.01_ReKi   ! convert from percent
-
       ! GBoxRatio     - Gearbox ratio (-)
    call ParseVar( FileInfo_In, CurLine, "GBoxRatio", InputFileData%GBoxRatio, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -281,9 +276,6 @@ subroutine SEDInput_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
    if (InputFileData%RotIner < 0.0_ReKi)     call SetErrStat(ErrID_Fatal,'RotIner must not be negative.',ErrStat,ErrMsg,RoutineName)
    if (InputFileData%GenIner < 0.0_ReKi)     call SetErrStat(ErrID_Fatal,'GenIner must not be negative.',ErrStat,ErrMsg,RoutineName)
 
-   ! gearbox
-   if ((InputFileData%GBoxEff <= 0.0_ReKi) .OR. (InputFileData%GBoxEff > 1.0_ReKi))    &
-         call SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
    !GBRatio  -- no sanity checks on this
 end subroutine SEDInput_ValidateInput
 

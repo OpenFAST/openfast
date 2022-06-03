@@ -36,7 +36,6 @@ typedef  ^        SED_InputFile     ReKi                 Twr2Shft          -  - 
 typedef  ^        SED_InputFile     ReKi                 TowerHt           -  - -   "Height of tower above ground level [onshore] or MSL [offshore]" m
 typedef  ^        SED_InputFile     ReKi                 RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        SED_InputFile     ReKi                 GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
-typedef  ^        SED_InputFile     ReKi                 GBoxEff           -  - -   "Gearbox efficiency" "percent"
 typedef  ^        SED_InputFile     ReKi                 GBoxRatio         -  - -   "Gearbox ratio" -
 typedef  ^        SED_InputFile     LOGICAL              SumPrint          -  - -   "Print summary data to <RootName>.sum" -
 typedef  ^        SED_InputFile     IntKi                NumOuts           -  - -   "Number of outputs"   -
@@ -135,7 +134,6 @@ typedef  ^        ParameterType        ReKi              InitYaw           -  - 
 typedef  ^        ParameterType        R8Ki              InitAzimuth       -  - -   "Initial azimuth angle for blade 1" deg
 typedef  ^        ParameterType        ReKi              RotIner           -  - -   "Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)" "kg m^2"
 typedef  ^        ParameterType        ReKi              GenIner           -  - -   "Generator inertia about HSS" "kg m^2"
-typedef  ^        ParameterType        ReKi              GBoxEff           -  - -   "Gearbox efficiency" "percent"
 typedef  ^        ParameterType        ReKi              GBoxRatio         -  - -   "Gearbox ratio" -
 typedef  ^        ParameterType        IntKi             NumBl             -  - -   "Number of blades on the turbine" -
 typedef  ^        ParameterType        ReKi              TipRad            -  - -   "Preconed blade-tip radius (distance from the rotor apex to the blade tip)" m
