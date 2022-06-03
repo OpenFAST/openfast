@@ -72,9 +72,7 @@ PROGRAM SED_Driver
 
 
       ! Data transfer
-   real(R8Ki)                                         :: Force(6)
-   real(R8Ki)                                         :: Displacement(6)
-   real(R8Ki)                                         :: Theta(3)
+   real(ReKi)                                         :: AeroTrq              !< AeroTrq read from table -- must be put onto mesh for passing
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    integer(IntKi)                                     :: i                    !< generic loop counter
@@ -283,12 +281,13 @@ PROGRAM SED_Driver
 
    ! Get values from table
    do i = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here
-      u(i)%AeroTrq      = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      AeroTrq           = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(i)%HubPtLoad%Moment(1:3,1) = y%HubPtMotion%Orientation(1,1:3,1) * AeroTrq
       u(i)%HSSBrTrqC    = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
       u(i)%GenTrq       = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
       u(i)%BlPitchCom   = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
-      u(i)%Yaw          = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
-      u(i)%YawRate      = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
+      u(i)%YawPosCom    = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(i)%YawRateCom   = InterpStp( real(T,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
       uTimes(i) = TStart - real((i-1),R8Ki) * TimeInterval
    enddo
 
@@ -317,12 +316,13 @@ PROGRAM SED_Driver
       uTimes(1) = n*TimeInterval+TStart
 
       ! InterpStpReal( T, Tary, Vary, TmpIdx, size)
-      u(1)%AeroTrq      = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      AeroTrq           = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(1,:), TmpIdx, size(CaseTime) )
+      u(1)%HubPtLoad%Moment(1:3,1) = y%HubPtMotion%Orientation(1,1:3,1) * AeroTrq
       u(1)%HSSBrTrqC    = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(2,:), TmpIdx, size(CaseTime) )
       u(1)%GenTrq       = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(3,:), TmpIdx, size(CaseTime) )
       u(1)%BlPitchCom   = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(4,:), TmpIdx, size(CaseTime) )
-      u(1)%Yaw          = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
-      u(1)%YawRate      = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
+      u(1)%YawPosCom    = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(5,:), TmpIdx, size(CaseTime) )
+      u(1)%YawRateCom   = InterpStp( real(T+TimeInterval,ReKi), real(CaseTime(:),ReKi), CaseData(6,:), TmpIdx, size(CaseTime) )
 
          ! There are no states to update in SED, but for completeness we add this.
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1

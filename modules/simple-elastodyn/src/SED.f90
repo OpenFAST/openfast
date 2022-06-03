@@ -126,6 +126,9 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Set States
    call Init_States(ErrStat2,ErrMsg2);    if (Failed())  return
 
+   ! Set inputs
+   call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
+
    ! Set Meshes
    call Init_Mesh(ErrStat2,ErrMsg2);      if (Failed())  return
 
@@ -134,9 +137,6 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Set outputs
    call Init_Y(ErrStat2,ErrMsg2);         if (Failed())  return
-
-   ! Set inputs
-   call Init_U(ErrStat2,ErrMsg2);         if (Failed())  return
 
    ! Set InitOutputs
    call Init_InitY(ErrStat2,ErrMsg2);     if (Failed())  return
@@ -407,6 +407,16 @@ contains
          call MeshCommit(y%BladeRootMotion(i), errStat3, errMsg3 );                                   if (errStat3 >= AbortErrLev) return
       enddo
 
+      ! set hub load input mesh
+      call MeshCopy ( SrcMesh  = y%HubPtMotion   &
+                    , DestMesh = u%HubPtLoad    &
+                    , CtrlCode = MESH_SIBLING    &
+                    , IOS      = COMPONENT_INPUT &
+                    , Force    = .TRUE.          &
+                    , Moment   = .TRUE.          &
+                    , ErrStat  = ErrStat3        &
+                    , ErrMess  = ErrMsg3         )
+      if (ErrStat3 >= AbortErrLev) return
    end subroutine Init_Mesh
 
    !> Initialize the inputs in u
@@ -420,17 +430,6 @@ contains
       u%YawPosCom = InputFileData%NacYaw
       u%YawRateCom= 0.0_ReKi
 
-      ! set hub load input mesh
-      call MeshCopy ( SrcMesh  = y%HubPtMotion   &
-                    , DestMesh = u%HubPtLoad    &
-                    , CtrlCode = MESH_SIBLING    &
-                    , IOS      = COMPONENT_INPUT &
-                    ,Force     = .TRUE.          &
-                    ,Moment    = .TRUE.          &
-                    , ErrStat  = ErrStat3        &
-                    , ErrMess  = ErrMsg3         )
-      if (ErrStat3 >= AbortErrLev) return
- 
       return
    end subroutine Init_U
 
