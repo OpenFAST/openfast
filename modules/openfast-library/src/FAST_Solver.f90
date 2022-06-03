@@ -4525,10 +4525,11 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, SED, BD, AD14, AD, ADsk, HD, SD, ExtPt
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   NumBl   = SIZE(ED%y%BladeRootMotion,1)
    if (p_FAST%CompElast == Module_SED) then
+      NumBl   = SIZE(SED%y%BladeRootMotion,1)
       PlatformMotion => SED%y%PlatformPtMesh
    else
+      NumBl   = SIZE(ED%y%BladeRootMotion,1)
       PlatformMotion => ED%y%PlatformPtMesh
       PlatformLoads  => ED%Input(1)%PlatformPtMesh
    endif

@@ -654,7 +654,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
 
       ! lidar
       Init%InData_IfW%lidar%Tmax                   = p_FAST%TMax
-      Init%InData_IfW%lidar%HubPosition            = ED%y%HubPtMotion%Position(:,1)
+      if (p_FAST%CompElast == Module_SED) then
+         Init%InData_IfW%lidar%HubPosition            = SED%y%HubPtMotion%Position(:,1)
+      else
+         Init%InData_IfW%lidar%HubPosition            = ED%y%HubPtMotion%Position(:,1)
+      endif
 
       IF ( PRESENT(ExternInitData) ) THEN
          Init%InData_IfW%Use4Dext = ExternInitData%FarmIntegration
