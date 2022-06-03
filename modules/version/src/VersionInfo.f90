@@ -302,9 +302,9 @@ END FUNCTION GetVersion
 
       SUBROUTINE GET_COMMAND_LINE_ARG(ArgIndex, ArgGiven)
 
-         INTEGER,       INTENT(IN) :: ArgIndex     !< Index location of the argument to get.
-         CHARACTER(*), INTENT(OUT) :: ArgGiven     !< The gotten command-line argument.
-         INTEGER                   :: Error        !< Indicates if there was an error getting an argument.
+         INTEGER, INTENT(IN) :: ArgIndex           !< Index location of the argument to get.
+         CHARACTER(1024), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
+         INTEGER :: Error                          !< Indicates if there was an error getting an argument.
 
          CALL GET_COMMAND_ARGUMENT( ArgIndex, ArgGiven, STATUS=Error )
          ArgGiven = TRIM(ArgGiven)
