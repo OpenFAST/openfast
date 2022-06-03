@@ -57,8 +57,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_Interp_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_Interp_ParameterType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
     REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(ReKi)  :: Z_Depth      !< grid depth [m]
   END TYPE SeaSt_Interp_ParameterType

@@ -1269,12 +1269,15 @@ SUBROUTINE Transfer_SrvD_to_SD_MD( p_FAST, y_SrvD, u_SD, u_MD )
 END SUBROUTINE Transfer_SrvD_to_SD_MD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine transfers the ED outputs into inputs required for HD, SD, ExtPtfm, BD, MAP, and/or FEAM
-SUBROUTINE Transfer_Structure_to_Opt1Inputs( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm, u_MAP, u_FEAM, u_MD, u_Orca, u_BD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
+!> Note that this also calls SD_CalcOutput if SubDyn and HydroDyn are both used.
+SUBROUTINE Transfer_Structure_to_Opt1Inputs( this_time, this_state, p_FAST, y_ED, u_HD, SD, u_ExtPtfm, u_MAP, u_FEAM, u_MD, u_Orca, u_BD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
+   REAL(DbKi)                 , intent(in   ) :: this_time                    !< The current simulation time (actual or time of prediction)
+   INTEGER(IntKi)             , intent(in   ) :: this_state                   !< Index into the state array (current or predicted states)
    TYPE(FAST_ParameterType),    INTENT(IN)    :: p_FAST                       !< Glue-code simulation parameters
    TYPE(ED_OutputType),TARGET,  INTENT(IN   ) :: y_ED                         !< The outputs of the structural dynamics module
    TYPE(HydroDyn_InputType),    INTENT(INOUT) :: u_HD                         !< HydroDyn input
-   TYPE(SD_InputType),          INTENT(INOUT) :: u_SD                         !< SubDyn input
+   TYPE(SubDyn_Data), TARGET,   INTENT(INOUT) :: SD                           !< SubDyn data (all data transferred so we can call SD_CalcOutput if necessary)
    TYPE(ExtPtfm_InputType),     INTENT(INOUT) :: u_ExtPtfm                    !< ExtPtfm_MCKF input
    TYPE(MAP_InputType),         INTENT(INOUT) :: u_MAP                        !< MAP input
    TYPE(FEAM_InputType),        INTENT(INOUT) :: u_FEAM                       !< FEAM input
@@ -1293,23 +1296,32 @@ SUBROUTINE Transfer_Structure_to_Opt1Inputs( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm
    CHARACTER(*), PARAMETER                    :: RoutineName = 'Transfer_Structure_to_Opt1Inputs'   
    TYPE(MeshType), POINTER                    :: PlatformMotion
    TYPE(MeshType), POINTER                    :: SubstructureMotion
+   TYPE(MeshType), POINTER                    :: SubstructureMotion2HD
       
    ErrStat = ErrID_None
    ErrMsg = ""
      
       PlatformMotion => y_ED%PlatformPtMesh
    
+   IF (p_FAST%CompSub == Module_SD) THEN
+      SubstructureMotion => SD%y%y3Mesh
+      SubstructureMotion2HD => SD%y%y2Mesh
+   ELSE
+      SubstructureMotion => PlatformMotion
+      SubstructureMotion2HD => PlatformMotion
+   ENDIF
+   
       ! transfer ED outputs to other modules used in option 1:
             
    IF ( p_FAST%CompSub == Module_SD  ) THEN
       
          ! Map ED (motion) outputs to SD inputs:                     
-      CALL Transfer_Point_to_Point( PlatformMotion, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
+      CALL Transfer_Point_to_Point( PlatformMotion, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_SD%TPMesh' )
 
-      IF ( p_FAST%CompHydro == Module_HD ) THEN
-         CALL Transfer_Point_to_Point( PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%PRPMesh)' )
+      IF ( p_FAST%CompHydro == Module_HD ) THEN ! This call to SD_CalcOutput was added because of some instabilities in the TCF merge (per conversation with ADP in May/June 2021)
+         CALL SD_CalcOutput( this_time, SD%Input(1), SD%p, SD%x(this_state), SD%xd(this_state), SD%z(this_state), SD%OtherSt(this_state), SD%y, SD%m, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       END IF
       
    ELSEIF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
@@ -1318,34 +1330,23 @@ SUBROUTINE Transfer_Structure_to_Opt1Inputs( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm
       CALL Transfer_Point_to_Point( PlatformMotion, u_ExtPtfm%PtfmMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ExtPtfm%PtfmMesh' )
             
-      if ( p_FAST%CompHydro == Module_HD ) then
-             ! Map ED outputs to HD inputs:
-         CALL Transfer_PlatformMotion_to_HD( PlatformMotion, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
-            
-      end if
-     
-
-   ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
-   
-         ! Map ED outputs to HD inputs:
-      CALL Transfer_PlatformMotion_to_HD( PlatformMotion, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
-            
    END IF
-
-
    
-   IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
-      ! map ED root and hub motion outputs to BeamDyn:
-      CALL Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+   IF ( p_FAST%CompHydro == Module_HD ) THEN
+   
+      CALL Transfer_Point_to_Point( PlatformMotion, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName//' (u_HD%PRPMesh)' )
          
+         ! if we don't have a call to SD_CalcOutput, we need to check that p_FAST%CompSub /= Module_SD before this:
+      ! IF (p_FAST%CompSub /= Module_SD) THEN
+         CALL Transfer_SubStructureMotion_to_HD( SubstructureMotion2HD, u_HD%WAMITMesh, u_HD%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      !END IF ! don't transfer for SubDyn unless we have called SD_CalcOutput
+            
    END IF
-      
-   if (  p_FAST%CompSub /= Module_SD ) then
-         SubstructureMotion => PlatformMotion
-   
+
+   ! if we don't have a call to SD_CalcOutput, we need to check that p_FAST%CompSub /= Module_SD before this:
+ ! IF (p_FAST%CompSub /= Module_SD) THEN
       IF ( p_FAST%CompMooring == Module_MAP  ) THEN
             ! motions:
          CALL Transfer_Point_to_Point( SubstructureMotion, u_MAP%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
@@ -1363,16 +1364,25 @@ SUBROUTINE Transfer_Structure_to_Opt1Inputs( p_FAST, y_ED, u_HD, u_SD, u_ExtPtfm
                         
       ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
             ! motions:
-         CALL Transfer_Point_to_Point( SubstructureMotion, u_Orca%PtfmMesh, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( PlatformMotion, u_Orca%PtfmMesh, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_Orca%PtfmMesh' )
       END IF
-   end if
+      
+      ! Map motions for ServodDyn Structural control (TMD) if used.
+      ! don't transfer for SubDyn unless we have called SD_CalcOutput
+      IF ( p_FAST%CompServo == Module_SrvD ) THEN
+         call Transfer_Substructure_to_SStC( u_SrvD, SubstructureMotion, MeshMapData, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStCMotionMesh')
+      END IF
+      
+  !END IF ! don't transfer for SubDyn unless we have called SD_CalcOutput
    
 
-      ! Map motions for ServodDyn Structural control (TMD) if used.
-   IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
-      call Transfer_Substructure_to_SStC( u_SrvD, PlatformMotion, MeshMapData, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//'u_SrvD%SStCMotionMesh')
+   IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
+      ! map ED root and hub motion outputs to BeamDyn:
+      CALL Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+         
    END IF
 
 
@@ -4802,31 +4812,13 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       !> transfer SrvD outputs to other modules used in option 1:
    call Transfer_SrvD_to_SD_MD( p_FAST, SrvD%y, SD%Input(1), MD%Input(1) )
 
-      !> transfer ED outputs to other modules used in option 1:
-   CALL Transfer_Structure_to_Opt1Inputs( p_FAST, ED%y, HD%Input(1), SD%Input(1), ExtPtfm%Input(1), &
+      !> transfer ED outputs to other modules used in option 1 (because we've already computed ED_CalcOutput in SolveOption2):
+      !> Note that this also calls SD_CalcOutput if SubDyn and HydroDyn are both used.
+   CALL Transfer_Structure_to_Opt1Inputs( this_time, this_state, p_FAST, ED%y, HD%Input(1), SD, ExtPtfm%Input(1), &
                                          MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
                                          Orca%Input(1), BD%Input(1,:), SrvD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                                     
       
-   IF ( p_FAST%CompSub == Module_SD .and. p_FAST%CompHydro == Module_HD ) THEN            
-      CALL SD_CalcOutput( this_time, SD%Input(1), SD%p, SD%x(this_state), SD%xd(this_state), SD%z(this_state), SD%OtherSt(this_state), SD%y, SD%m, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-         
-         ! transfer SD outputs to other modules that use it for inputs in option 1:
-      call Transfer_SubStructureMotion_to_HD( SD%y%y2Mesh, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-      IF ( p_FAST%CompMooring == Module_MAP ) THEN         
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)                  
-      END IF
-   END IF
    
       !> Solve option 1 (rigorous solve on loads/accelerations)
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)

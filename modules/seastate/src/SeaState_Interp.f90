@@ -139,14 +139,14 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
       if (FirstWarn) then
          call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
          FirstWarn = .false.
-   end if
+      end if
    end if
    
    Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, zero-based
    
    if ( Indx_Lo >= Indx_Hi ) then
       ! Need to clamp to grid boundary
-      if (FirstWarn .and. Indx_Lo == Indx_Hi) then ! don't warn if we are exactly at the boundary
+      if (FirstWarn .and. Indx_Lo /= Indx_Hi) then ! don't warn if we are exactly at the boundary
          call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
          FirstWarn = .false.
       end if
@@ -197,23 +197,22 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
       Indx_Lo = 1
       isopc = -1.0
       if (FirstWarn) then
-         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if time is outside the lower bounds
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if z is outside the lower bounds
          FirstWarn = .false.
-   end if
+      end if
    end if
    
    Indx_Hi = min( Indx_Lo + 1, nMax )     ! make sure it's a valid index, one-based
    
    if ( Indx_Lo >= Indx_Hi ) then
       ! Need to clamp to grid boundary
-      Indx_Lo = Indx_Hi - 1
-      isopc = 1.0
-      if (FirstWarn) then
-         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if time is outside the lower bounds
+      if (FirstWarn .and. Indx_Lo /= Indx_Hi) then ! don't warn if we are exactly at the boundary
+         call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianZIndex') !error out if z is outside the upper bounds
          FirstWarn = .false.
+      end if
+      Indx_Lo = max(Indx_Hi - 1, 1)
+      isopc = 1.0
    end if
-   end if
-   
    
    
    !-------------------------------------------------------------------------------------------------
