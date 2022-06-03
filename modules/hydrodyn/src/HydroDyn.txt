@@ -129,8 +129,6 @@ typedef     ^                 ^                 SiKi                 MCFD       
 # Define outputs from the initialization routine here:
 #
 typedef   ^                            InitOutputType                WAMIT_InitOutputType     WAMIT                           {:}        -        -         "Initialization output from the WAMIT module"    -
-typedef   ^                            InitOutputType                WAMIT2_InitOutputType    WAMIT2                          {:}         -        -         "Initialization output from the WAMIT2 module"    -
-#typedef   ^                            InitOutputType                Waves2_InitOutputType    Waves2                           -          -        -         "Initialization output from the Waves2 module"    -
 typedef   ^                            ^                             Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
@@ -156,29 +154,24 @@ typedef   ^                            HD_ModuleMapType              MeshMapType
 # Define continuous (differentiable) states here:
 #
 typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               {:}        -          -         "continuous states from the wamit module"        -
-typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              {:}        -          -         "continuous states from the wamit2 module"        -
 typedef   ^                            ContinuousStateType           Morison_ContinuousStateType          Morison             -          -          -         "continuous states from the Morison module"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               {:}        -          -         "discrete states from the wamit module"        -
-typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              {:}        -          -         "discrete states from the wamit2 module"        -
-#typedef   ^                            DiscreteStateType             FIT_DiscreteStateType                FIT                 -          -          -         "discrete states from the FIT module"        -
 typedef   ^                            DiscreteStateType             Morison_DiscreteStateType            Morison             -          -          -         "discrete states from the Morison module"        -
 #
 #
 # Define constraint states here:
 #
 typedef   ^                            ConstraintStateType           WAMIT_ConstraintStateType           WAMIT  -        -          -                      "constraint states from WAMIT (may be empty)"        -
-typedef   ^                            ConstraintStateType           WAMIT2_ConstraintStateType          WAMIT2 -          -          -                      "constraint states from WAMIT2 (may be empty)"        -
 typedef   ^                            ConstraintStateType           Morison_ConstraintStateType         Morison -         -          -                      "constraint states from the Morison module"        -
 #
 #
 # Define any other states here:
 #
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           {:}        -          -         "OtherState information from the WAMIT module"   -
-typedef   ^                            OtherStateType                WAMIT2_OtherStateType    WAMIT2                          {:}        -          -         "OtherState information from the WAMIT2 module"   -
 #typedef   ^                            OtherStateType                FIT_OtherStateType       FIT                             -          -          -         "OtherState information from the FIT module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
 
@@ -197,7 +190,6 @@ typedef   ^                            ^                             WAMIT_MiscV
 typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          {:}        -          -         "misc var information from the WAMIT2 module"   -
 typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
 typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -
-typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                       {:}         -          -         "WAMIT2 module inputs" -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

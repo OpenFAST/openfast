@@ -1792,7 +1792,7 @@ SUBROUTINE Glue_Jacobians( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD, IfW, OpFM, 
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{ED}} \end{bmatrix} = \f$
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{HD}} \end{bmatrix} = \f$
       ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{SD}} \end{bmatrix} = \f$
-      ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{MAP}} \end{bmatrix} = \f$ (dUdy block row 7=AD)
+      ! \f$ \frac{\partial U_\Lambda^{SD}}{\partial y^{MAP}} \end{bmatrix} = \f$ (dUdy block row 7=SD)
       !............
    if (p_FAST%CompHydro == MODULE_HD) then
       call Linear_HD_InputSolve_dy( p_FAST, y_FAST, HD%Input(1), ED%y, SD%y, MeshMapData, dUdy, ErrStat2, ErrMsg2 )
@@ -2401,9 +2401,9 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
       SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) ! start of y_SD%Y2Mesh%TranslationDisp field
          ! we're just going to assume u_SD%LMesh is committed
       if ( HD%y%Morison%Mesh%Committed  ) then ! meshes for floating
-         !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! This linearization was done in forming dUdu (see Linear_SD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         ! call Linearize_Point_to_Point( HD%y%Morison, u_ED%PlatformPtMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison, y_ED%PlatformPtMesh) !HD%Input(1)%Morison and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+         ! call Linearize_Point_to_Point( HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%Morison%Mesh, y_SD%Y2Mesh)
          HD_Out_Start = Indx_y_HD_Morison_Start(HD%y, y_FAST)
          SD_Start     = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%Force field
          call Assemble_dUdy_Loads(HD%y%Morison%Mesh, u_SD%LMesh, MeshMapData%HD_M_P_2_SubStructure, SD_Start, HD_Out_Start, dUdy)
@@ -2414,9 +2414,9 @@ SUBROUTINE Linear_SD_InputSolve_dy( p_FAST, y_FAST, SrvD, u_SD, y_SD, y_ED, HD, 
 ! maybe this should be SumBlockMatrix with future changes to linearized modules???            
       end if      
       if ( HD%y%WAMITMesh%Committed  ) then ! meshes for floating
-         !!! ! This linearization was done in forming dUdu (see Linear_ED_InputSolve_du()), so we don't need to re-calculate these matrices 
+         !!! ! This linearization was done in forming dUdu (see Linear_SD_InputSolve_du()), so we don't need to re-calculate these matrices 
          !!! ! while forming dUdy, too.
-         ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%WAMITMesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+         ! call Linearize_Point_to_Point( HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_SD%Y2Mesh)
          HD_Out_Start = Indx_y_HD_WAMIT_Start(HD%y, y_FAST)
          SD_Start     = Indx_u_SD_LMesh_Start(u_SD, y_FAST) ! start of u_SD%LMesh%Force field
          call Assemble_dUdy_Loads(HD%y%WAMITMesh, u_SD%LMesh, MeshMapData%HD_W_P_2_SubStructure, SD_Start, HD_Out_Start, dUdy)
@@ -2678,7 +2678,7 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud, AD_Start_tv, AD_Start_td )
       end if
          
-      if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud)) then
+      if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud)) then
          AD_Start_ta = AD_Start_td + u_AD%rotors(1)%BladeMotion(k)%NNodes * 12 ! 4 fields (TranslationDisp, Orientation, TranslationVel, and RotationVel) with 3 components before translational velocity field
          
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%ta_ud, AD_Start_ta, AD_Start_td )
@@ -3194,7 +3194,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
 
    END IF
 
-   if ( p_FAST%CompSub == Module_None ) then
+   if ( p_FAST%CompSub /= Module_None ) then !This also occurs with ExtPtfm (though that's not linearized, yet)
       ! HD
       ! parts of dU^{ED}/dy^{HD} and dU^{ED}/dy^{ED}:
       if ( p_FAST%CompHydro == Module_HD ) then ! HydroDyn-{ElastoDyn or SubDyn}

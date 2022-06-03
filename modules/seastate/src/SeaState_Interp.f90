@@ -146,12 +146,12 @@ subroutine SetCartesianXYIndex(p, pZero, delta, nMax, Indx_Lo, Indx_Hi, isopc, F
    
    if ( Indx_Lo >= Indx_Hi ) then
       ! Need to clamp to grid boundary
-      Indx_Lo = Indx_Hi - 1
-      isopc = 1.0
-      if (FirstWarn) then
+      if (FirstWarn .and. Indx_Lo == Indx_Hi) then ! don't warn if we are exactly at the boundary
          call SetErrStat(ErrID_Warn,'Position has been clamped to the grid boundary. Warning will not be repeated though condition may persist.',ErrStat,ErrMsg,'SetCartesianXYIndex') !error out if time is outside the lower bounds
          FirstWarn = .false.
-   end if
+      end if
+      Indx_Lo = max(Indx_Hi - 1, 1)
+      isopc = 1.0
    end if
    
    

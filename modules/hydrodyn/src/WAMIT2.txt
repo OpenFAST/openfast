@@ -62,26 +62,6 @@ typedef     ^                 ^                 ReKi                 WvLowCOffS 
 typedef     ^                 ^                 ReKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 
 
-# Define outputs from the initialization routine here:
-#
-typedef     ^                 InitOutputType    ReKi                NULLVAL            -        -        -        ""  -
-
-
-# ..... States ....................................................................................................................
-# Define continuous (differentiable) states here:
-typedef     ^              ContinuousStateType  SiKi                 DummyContState    -        -        -        "Remove this variable if you have continuous states"  -
-
-
-# Define discrete (nondifferentiable) states here:
-typedef     ^              DiscreteStateType    SiKi                 DummyDiscState    -        -        -        "Remove this variable if you have discrete states" -
-
-
-# Define constraint states here:
-typedef     ^              ConstraintStateType  SiKi                 DummyConstrState  -        -        -        "Remove this variable if you have constraint states"  -
-
-
-# Define any data that are integer or logical states here:
-typedef   ^                OtherStateType      IntKi                 DummyOtherState    -        -        -        "Remove this variable if you have other states" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -97,7 +77,6 @@ typedef     ^                 ^                 ReKi                 F_Waves2   
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef     ^                 ParameterType    IntKi                NStepWave         -        -        -        "Number of wave time steps"                           -
-typedef     ^                 ^                 DbKi                 DT                -        -        -        ""                                                    -
 typedef     ^                 ^                 INTEGER              NBody             -        -        -        "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef     ^                 ^                 INTEGER              NBodyMod          -        -        -        "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 
@@ -114,22 +93,6 @@ typedef     ^                 ^                 LOGICAL              MnDriftF   
 typedef     ^                 ^                 LOGICAL              NewmanAppF        -        -        -        "Flag indicating Newman approximation should be calculated"    -
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
-
-typedef     ^                 ^                 OutParmType          OutParam          {:}      -        -        ""        -
-typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""        -
-typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
-typedef     ^                 ^                 CHARACTER(20)        OutFmt            -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(20)        OutSFmt           -        -        -        ""        -
-typedef     ^                 ^                 CHARACTER(ChanLen)   Delim             -        -        -        ""        -
-typedef     ^                 ^                 INTEGER              UnOutFile         -        -        -        ""        -
-
-
-
-
-# ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
-#
-typedef     ^                 InputType         MeshType             Mesh              -        -        -        "Displacements at the platform reference point in the inertial frame" -
 
 
 
