@@ -1159,7 +1159,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_SED, y_IfW, y_OpFM, 
       u_SrvD%LSS_Spd   = y_SED%RotSpeed
       u_SrvD%HSS_Spd   = y_SED%HSS_Spd
       u_SrvD%RotSpeed  = y_SED%RotSpeed
-      !u_SrvD%BlPitch   = y_SED%BlPitch      ! SED does not send a signal back on this
+      u_SrvD%BlPitch   = y_SED%BlPitch
 
          ! root moments
       ! u_SrvD%RootMxc = y_ED%RootMxc ! fixed-size arrays: always size 3

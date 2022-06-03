@@ -95,6 +95,7 @@ typedef  ^        OutputType        ReKi                 HSS_Spd           -  - 
 # This is a feed through -- SrvD requires knowledge of current actual yaw
 typedef  ^        OutputType        ReKi                 Yaw               -  - -   "Yaw angle"                      rad
 typedef  ^        OutputType        ReKi                 YawRate           -  - -   "Yaw rate"                       rad/s
+typedef  ^        OutputType        ReKi                 BlPitch          {:} - -   "Actual blade pitch"             radians
 typedef  ^        OutputType        ReKi                 WriteOutput      {:} - -   "Data to be written to an output file: see WriteOutputHdr for names of each variable"   "see WriteOutputUnt"
 
 

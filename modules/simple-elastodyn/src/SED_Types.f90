@@ -112,6 +112,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HSS_Spd      !< High-speed shaft (HSS) speed [rad/s]
     REAL(ReKi)  :: Yaw      !< Yaw angle [rad]
     REAL(ReKi)  :: YawRate      !< Yaw rate [rad/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Actual blade pitch [radians]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE SED_OutputType
 ! =======================
@@ -1515,6 +1516,18 @@ ENDIF
     DstOutputData%HSS_Spd = SrcOutputData%HSS_Spd
     DstOutputData%Yaw = SrcOutputData%Yaw
     DstOutputData%YawRate = SrcOutputData%YawRate
+IF (ALLOCATED(SrcOutputData%BlPitch)) THEN
+  i1_l = LBOUND(SrcOutputData%BlPitch,1)
+  i1_u = UBOUND(SrcOutputData%BlPitch,1)
+  IF (.NOT. ALLOCATED(DstOutputData%BlPitch)) THEN 
+    ALLOCATE(DstOutputData%BlPitch(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%BlPitch.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%BlPitch = SrcOutputData%BlPitch
+ENDIF
 IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   i1_l = LBOUND(SrcOutputData%WriteOutput,1)
   i1_u = UBOUND(SrcOutputData%WriteOutput,1)
@@ -1548,6 +1561,9 @@ ENDIF
   CALL MeshDestroy( OutputData%NacelleMotion, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%TowerLn2Mesh, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%PlatformPtMesh, ErrStat, ErrMsg )
+IF (ALLOCATED(OutputData%BlPitch)) THEN
+  DEALLOCATE(OutputData%BlPitch)
+ENDIF
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
@@ -1687,6 +1703,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HSS_Spd
       Re_BufSz   = Re_BufSz   + 1  ! Yaw
       Re_BufSz   = Re_BufSz   + 1  ! YawRate
+  Int_BufSz   = Int_BufSz   + 1     ! BlPitch allocated yes/no
+  IF ( ALLOCATED(InData%BlPitch) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BlPitch upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BlPitch)  ! BlPitch
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
   IF ( ALLOCATED(InData%WriteOutput) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
@@ -1886,6 +1907,21 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YawRate
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%BlPitch) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlPitch,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlPitch,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BlPitch,1), UBOUND(InData%BlPitch,1)
+        ReKiBuf(Re_Xferred) = InData%BlPitch(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2160,6 +2196,24 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%YawRate = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlPitch not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BlPitch)) DEALLOCATE(OutData%BlPitch)
+    ALLOCATE(OutData%BlPitch(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BlPitch.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BlPitch,1), UBOUND(OutData%BlPitch,1)
+        OutData%BlPitch(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4127,6 +4181,12 @@ END IF ! check if allocated
   y_out%Yaw = y1%Yaw + b * ScaleFactor
   b = -(y1%YawRate - y2%YawRate)
   y_out%YawRate = y1%YawRate + b * ScaleFactor
+IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
+  DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
+    b = -(y1%BlPitch(i1) - y2%BlPitch(i1))
+    y_out%BlPitch(i1) = y1%BlPitch(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
@@ -4223,6 +4283,13 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%YawRate - y2%YawRate) + t(2)**2*(-y1%YawRate + y3%YawRate))* scaleFactor
   c = ( (t(2)-t(3))*y1%YawRate + t(3)*y2%YawRate - t(2)*y3%YawRate ) * scaleFactor
   y_out%YawRate = y1%YawRate + b  + c * t_out
+IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
+  DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
+    b = (t(3)**2*(y1%BlPitch(i1) - y2%BlPitch(i1)) + t(2)**2*(-y1%BlPitch(i1) + y3%BlPitch(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%BlPitch(i1) + t(3)*y2%BlPitch(i1) - t(2)*y3%BlPitch(i1) ) * scaleFactor
+    y_out%BlPitch(i1) = y1%BlPitch(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
