@@ -186,6 +186,14 @@ function(ifw_py_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ifw_py_regression)
 
+# # Python-based OpenFAST Library tests
+# function(py_openfast_library_regression TESTNAME LABEL)
+#   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
+#   set(input_file "${CMAKE_SOURCE_DIR}/reg_tests/r-test/glue-codes/openfast/5MW_OC4Jckt_ExtPtfm/5MW_OC4Jckt_ExtPtfm.fst")
+#   add_test(${TESTNAME} ${PYTHON_EXECUTABLE} ${test_module} ${input_file} )
+# endfunction(py_openfast_library_regression)
+
+
 #===============================================================================
 # Regression tests
 #===============================================================================
@@ -225,6 +233,11 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
 endif()
+
+# # Python-based OpenFAST Library unit tests
+# if(BUILD_SHARED_LIBS)
+#   py_openfast_library_regression("py_openfastlib" "python;openfastlib")
+# endif()
 
 # OpenFAST C++ Driver test
 # This tests the FAST Library and FAST_Library.h

@@ -49,6 +49,7 @@ class FastLibAPI {
         void fast_run();
         int total_time_steps();
         std::string output_channel_names();
+        void get_hub_position(float *absolute_position, float *rotational_velocity, double *orientation_dcm);
 };
 
 #endif
