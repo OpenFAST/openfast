@@ -121,6 +121,7 @@ typedef   ^                         ^            ReKi                    yawAcc 
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
 typedef   ^                         ^            MeshType                ptMesh           -      -     -   "Point mesh for origin motion" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_N    -      -     -   "Mesh mapping from nacelle to AD nacelle motion"
 typedef   ^                         ^            MeshMapType             map2hubPt        -      -     -   "Mesh mapping from Nacelle to hub"
 
 # ... Tower data ............................................................................................................

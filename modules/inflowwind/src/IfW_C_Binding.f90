@@ -75,8 +75,8 @@ end subroutine SetErr
 SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_C_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
 #endif
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
@@ -173,8 +173,8 @@ END SUBROUTINE IfW_C_Init
 SUBROUTINE IfW_C_CalcOutput(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_CalcOutput')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
 #endif
    REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
    REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
@@ -226,8 +226,8 @@ END SUBROUTINE IfW_C_CalcOutput
 SUBROUTINE IfW_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_End')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
 #endif
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)

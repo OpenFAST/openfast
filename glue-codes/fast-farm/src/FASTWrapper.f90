@@ -33,7 +33,7 @@ MODULE FASTWrapper
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: FWrap_Ver = ProgDesc( 'FASTWrapper', 'v1.00.00', '7-Feb-2017' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER  :: FWrap_Ver = ProgDesc( 'FASTWrapper', '', '' ) !< module date/version information
 
    REAL(DbKi),  PARAMETER  :: t_initial = 0.0_DbKi                    ! Initial time
 

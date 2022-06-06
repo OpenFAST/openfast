@@ -28,6 +28,8 @@ endif()
 add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
 add_library(versioninfolib src/VersionInfo.f90)
+target_link_libraries(versioninfolib nwtclibs)
+
 
 install(TARGETS versioninfolib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

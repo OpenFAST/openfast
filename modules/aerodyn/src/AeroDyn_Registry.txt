@@ -29,11 +29,11 @@ param    ^              -  IntKi    AFAeroMod_BL_unsteady   -  2  -  "Beddoes-Le
 param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
 param    ^              -  IntKi    TwrPotent_baseline      -  1  -  "baseline tower potential flow"              -
 param    ^              -  IntKi    TwrPotent_Bak           -  2  -  "tower potential flow with Bak correction"   -
- 
+
 param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower shadow"                            -
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
- 
+
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -42,6 +42,7 @@ typedef	^	RotInitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of
 typedef	^	RotInitInputType	R8Ki	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
 typedef	^	RotInitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
 typedef	^	RotInitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference position of nacelle"	m
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	0	-	"Flag to switch between different projection models"	-
 
@@ -98,7 +99,7 @@ typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and da
 # ..... Input file data ...........................................................................................................
 
 # ..... Primary Input file data ...................................................................................................
-typedef  ^  RotInputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+#typedef  ^  RotInputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 typedef	^	RotInputFile	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
 typedef	^	RotInputFile	IntKi	NumTwrNds	-	-	-	"Number of tower nodes used in the analysis"	-
 typedef	^	RotInputFile	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
@@ -110,8 +111,8 @@ typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
 typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
-typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
-typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
+typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
+typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
@@ -123,7 +124,7 @@ typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
 typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
+typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
 typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag
@@ -247,9 +248,8 @@ typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pa
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
-typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
+typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
+typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
@@ -278,12 +278,16 @@ typedef	^	RotParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (
 typedef  ^  RotParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  RotParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
 
+# parameters for all rotors:
 typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for each rotor" -
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
-typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
+typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 
 
 # ..... Inputs ....................................................................................................................

@@ -22,8 +22,8 @@ MODULE FAST_Data
    INTEGER(IntKi)                        :: NumTurbines 
    INTEGER,        PARAMETER             :: IntfStrLen  = 1025       ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 4000        ! Maximum number of outputs
-   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10       ! Maximum number of initialization values from Simulink
-   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 53       ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 51
    
    
       ! Global (static) data:
@@ -83,22 +83,23 @@ subroutine FAST_DeallocateTurbines(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Deal
    ErrMsg_c = C_NULL_CHAR
 end subroutine
 !==================================================================================================================================
-subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
+subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, tmax_c, ErrStat_c, ErrMsg_c, ChannelNames_c, TMax, InitInpAry) BIND (C, NAME='FAST_Sizes')
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
-   REAL(C_DOUBLE),         INTENT(IN   ) :: InitInpAry(MAXInitINPUTS)      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
+   REAL(C_DOUBLE),         INTENT(  OUT) :: tmax_c
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ChannelNames_c(ChanLen*MAXOUTPUTS+1)
+   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: TMax      
+   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: InitInpAry(MAXInitINPUTS) 
    
    ! local
    CHARACTER(IntfStrLen)               :: InputFileName   
@@ -112,30 +113,45 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    
       ! initialize variables:   
    n_t_global = 0
-   
-   ExternInitData%TMax       = TMax
-   ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
-   ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
-   ExternInitData%NumCtrl2SC = 0
-   ExternInitData%NumSC2Ctrl = 0
-   ExternInitData%SensorType = NINT(InitInpAry(1))   
-   ! -- MATLAB Integration --
-   ! Make sure fast farm integration is false
-   ExternInitData%FarmIntegration = .false.
 
-   IF ( NINT(InitInpAry(2)) == 1 ) THEN
-      ExternInitData%LidRadialVel = .true.
-   ELSE
-      ExternInitData%LidRadialVel = .false.
+   IF (PRESENT(TMax) .AND. .NOT. PRESENT(InitInpAry)) THEN
+      ErrStat_c = ErrID_Fatal
+      ErrMsg  = "FAST_Sizes: TMax optional argument provided but it is invalid without InitInpAry optional argument. Provide InitInpAry to use TMax."
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+      RETURN
    END IF
+
+   IF (PRESENT(InitInpAry)) THEN
+      IF (PRESENT(TMax)) THEN
+         ExternInitData%TMax = TMax
+      END IF
+      ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
+      ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
+      ExternInitData%NumCtrl2SC = 0
+      ExternInitData%NumSC2Ctrl = 0
+      ExternInitData%SensorType = NINT(InitInpAry(1))   
+      ! -- MATLAB Integration --
+      ! Make sure fast farm integration is false
+      ExternInitData%FarmIntegration = .false.
    
-   
-   
-   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+      IF ( NINT(InitInpAry(2)) == 1 ) THEN
+         ExternInitData%LidRadialVel = .true.
+      ELSE
+         ExternInitData%LidRadialVel = .false.
+      END IF
+      
+      CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData)
+
+   ELSE
+
+      CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName)
+
+   END IF
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts ))
    dt_c          = Turbine(iTurb)%p_FAST%dt
+   tmax_c        = Turbine(iTurb)%p_FAST%TMax
 
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
@@ -187,17 +203,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       ! initialize variables:   
    n_t_global = 0
 
-#ifdef SIMULINK_DirectFeedThrough   
-   IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
-      ErrStat_c = ErrID_Fatal
-      ErrMsg  = "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR
-      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-      RETURN
-   END IF
 
-   CALL FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, Turbine(iTurb)%m_FAST)
-
-#endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................  
@@ -235,7 +241,7 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
       
 end subroutine FAST_Start
 !==================================================================================================================================
-subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
+subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, EndSimulationEarly, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: FAST_Update
@@ -246,6 +252,7 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
    REAL(C_DOUBLE),         INTENT(  OUT) :: OutputAry(NumOutputs_c)
+   LOGICAL(C_BOOL),        INTENT(  OUT) :: EndSimulationEarly
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
    
@@ -255,7 +262,8 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
    INTEGER(IntKi)                        :: ErrStat2                                ! Error status
    CHARACTER(IntfStrLen-1)               :: ErrMsg2                                 ! Error message  (this needs to be static so that it will print in Matlab's mex library)
                  
-   
+   EndSimulationEarly = .FALSE.
+
    IF ( n_t_global > Turbine(iTurb)%p_FAST%n_TMax_m1 ) THEN !finish 
       
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
@@ -294,20 +302,16 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
          ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
       end if
       
-      ! NOTE: if there is ever more than one turbine, this logic will need to be revisited
       IF ( Turbine(iTurb)%m_FAST%Lin%FoundSteady) THEN
-         ErrStat = ErrID_Fatal + 1 ! it's not really "fatal", but we do want to end prematurely; FAST_SFunc.c will look to see that it's larger than AbortErrLev
-         ErrMsg  = TRIM(ErrMsg)//NewLine//"Ending because steady-state trim solution was successfully found."
+         EndSimulationEarly = .TRUE.
       END IF
-      
-      ! set the outputs for external code here...
-      ! return y_FAST%ChannelNames
       
       ErrStat_c     = ErrStat
       ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
       ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    END IF
-   
+
+   ! set the outputs for external code here
    CALL FillOutputAry_T(Turbine(iTurb), Outputs)   
    OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global 
    OutputAry(2:NumOutputs_c) = Outputs 
@@ -318,6 +322,9 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Er
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+!> NOTE: If this interface is changed, update the table in the ServoDyn_IO.f90::WrSumInfo4Simulink routine
+!!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
+!!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
 subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
 
    USE, INTRINSIC :: ISO_C_Binding
@@ -334,17 +341,21 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
       IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
-      
-      m_FAST%ExternInput%GenTrq      = InputAry(1)
-      m_FAST%ExternInput%ElecPwr     = InputAry(2)
-      m_FAST%ExternInput%YawPosCom   = InputAry(3)
-      m_FAST%ExternInput%YawRateCom  = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+
+   !NOTE: if anything here changes, update ServoDyn_IO.f90::WrSumInfo4Simulink
+      m_FAST%ExternInput%GenTrq           = InputAry(1)
+      m_FAST%ExternInput%ElecPwr          = InputAry(2)
+      m_FAST%ExternInput%YawPosCom        = InputAry(3)
+      m_FAST%ExternInput%YawRateCom       = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom       = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac        = InputAry(8)
+      m_FAST%ExternInput%BlAirfoilCom     = InputAry(9:11)
+      m_FAST%ExternInput%CableDeltaL      = InputAry(12:31)
+      m_FAST%ExternInput%CableDeltaLdot   = InputAry(32:51)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-             m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+             m_FAST%ExternInput%LidarFocus = InputAry(52:54)
       END IF   
       
 end subroutine FAST_SetExternalInputs
