@@ -103,6 +103,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
@@ -275,6 +276,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             ${GITHUB_WORKSPACE}
       - name: Build FAST.Farm
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
@@ -447,6 +449,7 @@ jobs:
             -DBUILD_SHARED_LIBS:BOOL=ON \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             ${GITHUB_WORKSPACE}
 
       - name: Build OpenFAST C-Interfaces
