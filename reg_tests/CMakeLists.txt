@@ -163,9 +163,8 @@ add_custom_command(
 )
 
 add_custom_target(
-  regression_tests
+  regression_test_controllers
   DEPENDS
-    openfast
     "${of_dest}/DISCON.dll"
     "${of_dest}/DISCON_ITIBarge.dll"
     "${of_dest}/DISCON_OC3Hywind.dll"
@@ -175,4 +174,21 @@ add_custom_target(
     "${ff_dest}/DISCON_WT1.dll"
     "${ff_dest}/DISCON_WT2.dll"
     "${ff_dest}/DISCON_WT3.dll"
+)
+
+add_custom_target(
+  regression_tests
+  DEPENDS
+    openfast
+    regression_test_controllers
+)
+
+add_custom_target(
+  regression_test_module_drivers
+  DEPENDS
+    aerodyn_driver
+    beamdyn_driver
+    hydrodyn_driver
+    inflowwind_driver
+    subdyn_driver
 )
