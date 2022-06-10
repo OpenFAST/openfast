@@ -50,7 +50,7 @@ if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   # full optimizations. However, variable tracking should be enabled when actively debugging
   # for better runtime debugging output.
   # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
-  set_source_files_properties(src/FAST_Farm_Types.f90 src/FASTWrapper_Types.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+  set_source_files_properties(src/FAST_Farm_Types.f90 src/FASTWrapper_Types.f90 src/FASTWrapper.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 endif()
 if (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
   # Compilation hangs on FAST_Farm_Types.f90 with -O3 on linux (on some hardware)
