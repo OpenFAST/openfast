@@ -338,9 +338,9 @@ contains
                      ,Orientation     = .true.    &
                      ,TranslationDisp = .true.    &
                      ,RotationVel     = .true.    &
-                     ,TranslationVel  = .false.   &
-                     ,RotationAcc     = .false.   &
-                     ,TranslationAcc  = .false.   &      ! gets set automatically
+                     ,TranslationVel  = .true.    &
+                     ,RotationAcc     = .true.    &
+                     ,TranslationAcc  = .true.    &      ! gets set automatically
                      )
          if (errStat3 >= AbortErrLev) return
 
@@ -372,8 +372,8 @@ contains
                         ,TranslationDisp = .true.    &
                         ,RotationVel     = .true.    &
                         ,TranslationVel  = .true.    &
-                        ,RotationAcc     = .false.   &
-                        ,TranslationAcc  = .false.   &
+                        ,RotationAcc     = .true.    &
+                        ,TranslationAcc  = .true.    &
                         )
             if (errStat3 >= AbortErrLev) return
 
