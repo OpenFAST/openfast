@@ -610,8 +610,8 @@ SUBROUTINE SED_UpdateStates( t, n, u, uTimes, p, x, xd, z, OtherState, m, ErrSta
    ! Simple case of constant RPM
    if (.not. p%GenDOF) then
 
-      ! Azimuth angle
-      x%QT( DOF_Az)  = p%InitAzimuth + x%QDT(DOF_Az) * real(n,R8Ki) * p%DT
+      ! Azimuth angle -- step from n to n+1
+      x%QT( DOF_Az)  = p%InitAzimuth + x%QDT(DOF_Az) * real(n+1,R8Ki) * p%DT
       ! Rotor speed: constant in this case
       !x%QDT(DOF_Az) = x%QDT(DOF_Az)
 
