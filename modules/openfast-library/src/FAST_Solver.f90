@@ -1162,24 +1162,24 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_SED, y_IfW, y_OpFM, 
       u_SrvD%BlPitch   = y_SED%BlPitch
 
          ! root moments
-      ! u_SrvD%RootMxc = y_ED%RootMxc ! fixed-size arrays: always size 3
-      ! u_SrvD%RootMyc = y_ED%RootMyc ! fixed-size arrays: always size 3
+      u_SrvD%RootMxc = 0.0_ReKi      ! y_ED%RootMxc ! fixed-size arrays: always size 3
+      u_SrvD%RootMyc = 0.0_ReKi      ! y_ED%RootMyc ! fixed-size arrays: always size 3
 
-      ! u_SrvD%YawBrTAxp = y_ED%YawBrTAxp
-      ! u_SrvD%YawBrTAyp = y_ED%YawBrTAyp
+      u_SrvD%YawBrTAxp = 0.0_ReKi      ! y_ED%YawBrTAxp
+      u_SrvD%YawBrTAyp = 0.0_ReKi      ! y_ED%YawBrTAyp
       u_SrvD%LSSTipPxa = y_SED%LSSTipPxa
 
       u_SrvD%LSSTipMxa = y_SED%RotTrq
-      ! u_SrvD%LSSTipMya = y_ED%LSSTipMya
-      ! u_SrvD%LSSTipMza = y_ED%LSSTipMza
-      ! u_SrvD%LSSTipMys = y_ED%LSSTipMys
-      ! u_SrvD%LSSTipMzs = y_ED%LSSTipMzs
+      u_SrvD%LSSTipMya = 0.0_ReKi      !  y_ED%LSSTipMya
+      u_SrvD%LSSTipMza = 0.0_ReKi      !  y_ED%LSSTipMza
+      u_SrvD%LSSTipMys = 0.0_ReKi      !  y_ED%LSSTipMys
+      u_SrvD%LSSTipMzs = 0.0_ReKi      !  y_ED%LSSTipMzs
 
-      ! u_SrvD%YawBrMyn  = y_ED%YawBrMyn
-      ! u_SrvD%YawBrMzn  = y_ED%YawBrMzn
-      ! u_SrvD%NcIMURAxs = y_ED%NcIMURAxs
-      ! u_SrvD%NcIMURAys = y_ED%NcIMURAys
-      ! u_SrvD%NcIMURAzs = y_ED%NcIMURAzs
+      u_SrvD%YawBrMyn  = 0.0_ReKi      !  y_ED%YawBrMyn
+      u_SrvD%YawBrMzn  = 0.0_ReKi      !  y_ED%YawBrMzn
+      u_SrvD%NcIMURAxs = 0.0_ReKi      !  y_ED%NcIMURAxs
+      u_SrvD%NcIMURAys = 0.0_ReKi      !  y_ED%NcIMURAys
+      u_SrvD%NcIMURAzs = 0.0_ReKi      !  y_ED%NcIMURAzs
 
       u_SrvD%RotPwr    = y_SED%RotPwr
 

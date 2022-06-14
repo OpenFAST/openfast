@@ -768,7 +768,6 @@ end subroutine SED_RK4
 !!   the direction of the HSS, which is a physically impossible
 !!   situation.  The problem arises since we are integrating in
 !!   discrete time, not continuous time.
-!FIXME: need to  checkes to make sure we don't go backwards when HSS Brake is active
 subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
    type(SED_InputType),             intent(in   )  :: u                       !< Inputs at t
    type(SED_ParameterType),         intent(in   )  :: p                       !< Parameters of the structural dynamics module
@@ -1253,8 +1252,8 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       ! include blade pitch -- rotate about Blade_Z
       R33(1:3,1:3) = SkewSymMat( y%BladeRootMotion(i)%Orientation(3,1:3,1) )  ! blade z-axis
       call Eye(Orient,ErrStat2,ErrMsg2);     if (Failed())  return;
-      ! Rodrigues formula for rotation about a vector
-      Orient = Orient + sin(real(u%BlPitchCom(i),R8Ki)) * R33 + (1-cos(real(u%BlPitchCom(i),R8Ki))) * matmul(R33,R33)
+      ! Rodrigues formula for rotation about a vector (NOTE: BlPitch does not follow right hand rule)
+      Orient = Orient + sin(real(-u%BlPitchCom(i),R8Ki)) * R33 + (1-cos(real(-u%BlPitchCom(i),R8Ki))) * matmul(R33,R33)
       y%BladeRootMotion(i)%Orientation(1:3,1:3,1)   = matmul(y%BladeRootMotion(i)%Orientation(1:3,1:3,1),transpose(Orient))
 
       ! We don't have a blade pitching rate, so we will not include it here

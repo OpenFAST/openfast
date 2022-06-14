@@ -4169,8 +4169,7 @@ END IF ! check if allocated
   y_out%YawRate = y1%YawRate + b * ScaleFactor
 IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
   DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
-    b = -(y1%BlPitch(i1) - y2%BlPitch(i1))
-    y_out%BlPitch(i1) = y1%BlPitch(i1) + b * ScaleFactor
+    CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
@@ -4271,9 +4270,7 @@ END IF ! check if allocated
   y_out%YawRate = y1%YawRate + b  + c * t_out
 IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
   DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
-    b = (t(3)**2*(y1%BlPitch(i1) - y2%BlPitch(i1)) + t(2)**2*(-y1%BlPitch(i1) + y3%BlPitch(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%BlPitch(i1) + t(3)*y2%BlPitch(i1) - t(2)*y3%BlPitch(i1) ) * scaleFactor
-    y_out%BlPitch(i1) = y1%BlPitch(i1) + b  + c * t_out
+    CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), y3%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
