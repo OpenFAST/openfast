@@ -330,13 +330,13 @@ contains
       endif
       ! make sure all values positive
       if (AeroTable%N_TSR < 0_IntKi)   call SetErrStat(ErrID_Fatal,'Entry for "N_TSR" must be postive valued from column '//     &
-               trim(Num2LStr(Idx%ColPitch))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
+               trim(Num2LStr(Idx%ColTSR  ))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
       if (AeroTable%N_RtSpd < 0_IntKi)   call SetErrStat(ErrID_Fatal,'Entry for "N_RtSpd" must be postive valued from column '//     &
-               trim(Num2LStr(Idx%ColPitch))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
+               trim(Num2LStr(Idx%ColRtSpd))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
       if (AeroTable%N_VRel < 0_IntKi)   call SetErrStat(ErrID_Fatal,'Entry for "N_VRel" must be postive valued from column '//     &
-               trim(Num2LStr(Idx%ColPitch))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
+               trim(Num2LStr(Idx%ColVRel ))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
       if (AeroTable%N_Skew < 0_IntKi)   call SetErrStat(ErrID_Fatal,'Entry for "N_Skew" must be postive valued from column '//     &
-               trim(Num2LStr(Idx%ColPitch))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
+               trim(Num2LStr(Idx%ColSkew ))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
       if (AeroTable%N_Pitch < 0_IntKi)   call SetErrStat(ErrID_Fatal,'Entry for "N_Pitch" must be postive valued from column '//     &
                trim(Num2LStr(Idx%ColPitch))//' on line '//trim(Num2LStr(thisLine))//' in file '//trim(thisFile)//'.',ErrStat3,ErrMsg3,'')
       ! NOTE:  we are storing 0 for the dimensions that don't exist in the table. We will
