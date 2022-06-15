@@ -90,7 +90,7 @@ SUBROUTINE SED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
 
    ! set rootname
-   p%RootName = trim(InitInp%RootName)//".SED"
+   p%RootName = trim(InitInp%RootName)
 
    ! Get primary input file
    if ( InitInp%UseInputFile ) then
@@ -181,7 +181,8 @@ contains
       ! inertia / drivetrain
       p%RotIner      = InputFileData%RotIner
       p%GenIner      = InputFileData%GenIner
-      p%GBoxRatio    = InputFileData%GBoxRatio
+      ! NOTE: since we do not calculate gearbox or tower top reaction loads, we don't care about the sign of the gearbox ratio (this simplifies our math)
+      p%GBoxRatio    = abs(InputFileData%GBoxRatio)
 
       ! system inertia
       p%J_DT   = p%RotIner + p%GBoxRatio**2_IntKi * p%GenIner
@@ -836,8 +837,8 @@ subroutine FixHSSBrTq ( Integrator, u, p, x, OtherState, m, ErrStat, ErrMsg )
 
    ! Find the force required to produce RqdQD2Az from the equations of
    !   motion using the new accelerations:
-   GenTrqLSS =     p%GBoxRatio  * u%GenTrq
-   BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrqC
+   GenTrqLSS = p%GBoxRatio * u%GenTrq
+   BrkTrqLSS = p%GBoxRatio * OtherState%HSSBrTrqC
    AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
    RqdFrcAz = RqdQD2Az * p%J_DT - AeroTrq + GenTrqLSS + BrkTrqLSS
 
@@ -900,8 +901,8 @@ function SignLSSTrq( u, p, m )
    real(ReKi)                             :: BrkTrqLSS         ! HSS brake torque, expressed on LSS
    real(ReKi)                             :: AeroTrq           ! AeroDynamic torque -- passed in on HubPt
 
-   GenTrqLSS =     p%GBoxRatio  * u%GenTrq
-   BrkTrqLSS = abs(p%GBoxRatio) * u%HSSBrTrqC
+   GenTrqLSS = p%GBoxRatio * u%GenTrq
+   BrkTrqLSS = p%GBoxRatio * u%HSSBrTrqC
    AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
    MomLPRot  = AeroTrq - GenTrqLSS - BrkTrqLSS
 
@@ -1259,6 +1260,9 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       ! We don't have a blade pitching rate, so we will not include it here
    enddo
 
+   !--------------------
+   ! Get derivative of continuous states (need for RotTrq)
+   call SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    !--------------------
    ! Other outputs
@@ -1266,7 +1270,10 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    call Zero2TwoPi(y%LSSTipPxa)  ! Modulo
    y%RotSpeed  = x%QDT(DOF_Az)
    y%HSS_Spd   = x%QDT(DOF_Az)    * p%GBoxRatio
-   y%RotTrq    = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
+   ! Rotor torque is the torque applied to the LSS shaft by the rotor.
+   !  NOTE: this is equivalent to the reactionary torque of the generator due to its torque and inertia.
+   y%RotTrq    = p%GBoxRatio * u%GenTrq + dxdt%QDT(DOF_Az) * RPS2RPM * p%GBoxRatio * p%GenIner + p%GBoxRatio * OtherState%HSSBrTrq
+   ! y%RotTrq    = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3)) - dxdt%QDT(DOF_Az) * RPS2RPM * p%RotIner   ! this equation is somehow wrong.
    y%RotPwr    = x%QDT(DOF_Az)    * y%RotTrq 
 
    ! Simply pass the yaw cammend through as the current yaw
@@ -1277,8 +1284,6 @@ SUBROUTINE SED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    !---------------------------------------------------------------------------
    ! Compute outputs:
    if (CalcWriteOutput) then
-      ! Get derivative of continuous states
-      call SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 ); if (Failed()) return;
       ! Set the outputs
       call Calc_WriteOutput( u, p, x, dxdt, y, m, ErrStat2, ErrMsg2, CalcWriteOutput );         if (Failed())  return;
       ! Place the selected output channels into the WriteOutput(:)
@@ -1354,8 +1359,8 @@ SUBROUTINE SED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    !!    -  \f$Q_b = n_g Q_{b,\text{HSS}}\f$ is the HSS brake torque projected to the LSS
    !!
    if (p%GenDOF) then
-      GenTrqLSS =     p%GBoxRatio  * u%GenTrq
-      BrkTrqLSS = abs(p%GBoxRatio) * OtherState%HSSBrTrq
+      GenTrqLSS = p%GBoxRatio * u%GenTrq
+      BrkTrqLSS = p%GBoxRatio * OtherState%HSSBrTrq
       AeroTrq = dot_product(u%HubPtLoad%Moment(:,1), m%HubPt_X(1:3))  ! torque about hub X
       dxdt%QDT(DOF_Az)  = real((AeroTrq - GenTrqLSS - BrkTrqLSS)/p%J_DT, R8Ki)
    else
