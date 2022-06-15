@@ -1081,12 +1081,14 @@ SUBROUTINE ADsk_InputSolve_NoIfW( p_FAST, u_ADsk, y_ED, y_SED, MeshMapData, ErrS
    !-------------------------------------------------------------------------------------------------
    if (p_FAST%CompElast == Module_SED) then
       CALL Transfer_Point_to_Point( y_SED%HubPtMotion, u_ADsk%HubMotion, MeshMapData%SED_P_2_ADsk_P_H, ErrStat, ErrMsg )
+      u_ADsk%RotSpeed   = y_SED%RotSpeed
+      u_ADsk%BlPitch    = y_SED%BlPitch(1)   ! ADsk only uses collective blade pitch
    else
       CALL Transfer_Point_to_Point( y_ED%HubPtMotion, u_ADsk%HubMotion, MeshMapData%ED_P_2_ADsk_P_H, ErrStat, ErrMsg )
+      u_ADsk%RotSpeed   = y_ED%RotSpeed
+      u_ADsk%BlPitch    = y_ED%BlPitch(1)    ! ADsk only uses collective blade pitch
    endif
 
-   u_ADsk%RotSpeed   = y_ED%RotSpeed
-   u_ADsk%BlPitch    = y_ED%BlPitch(1)    ! ADsk only uses collective blade pitch
 END SUBROUTINE ADsk_InputSolve_NoIfW
 
 
