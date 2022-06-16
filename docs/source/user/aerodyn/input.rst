@@ -67,7 +67,7 @@ program).
 Set ``WakeMod`` to 0 if you want to disable rotor wake/induction effects or 1 to
 include these effects using the (quasi-steady) BEM theory model. When
 ``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used (also
-referred to as dynamic inflow or dynamic wake model).  When ``WakeMod`` is set
+referred to as dynamic inflow or dynamic wake model, see :numref:`AD_DBEMT`).  When ``WakeMod`` is set
 to 3, the free vortex wake model is used, also referred to as OLAF (see
 :numref:`OLAF`). ``WakeMod`` cannot be set to 2 or 3 during linearization
 analyses.
@@ -179,13 +179,20 @@ Dynamic Blade-Element/Momentum Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The input parameters in this section are used only when ``WakeMod = 2``.
+The theory is described in :numref:`AD_DBEMT`.
 
-Set ``DBEMT_Mod`` to 1 for the constant-tau1 model, set ``DBEMT_Mod`` to 2
-to use a model where tau1 varies with time, or set ``DBEMT_Mod`` to 3
-to use a continuous-state model with constant tau1.
+There are three options available for ``DBEMT_Mod``:
 
-If ``DBEMT_Mod=1`` (constant-tau1 model) or ``DBEMT_Mod=3`` (continuous-state constant-tau1 model), 
-set ``tau1_const`` to the time constant to use for DBEMT.
+- ``1``: discrete-time Oye's model, with constant :math:`\tau_1`
+- ``2``: discrete-time Oye's model, with varying :math:`\tau_1`, automatically adjusted based on inflow. (recommended for time-domain simulations)
+- ``3``: continuous-time Oye's model, with constant :math:`\tau_1` (recommended for linearization)
+
+For ``DBEMT_Mod=1`` or ``DBEMT_Mod=3`` it is the user responsability to set the value of :math:`\tau_1` (i.e. ``tau1_const``) according to the expression given in :numref:`AD_DBEMT`, using an estimate of what the mean axial induction (:math:`\overline{a}`) and the mean relative wind velocity across the rotor (:math:`\overline{U_0}`) are for a given simulation. 
+
+The option ``DBEMT_Mod=3`` is the only one that can be used for linearization.
+
+
+
 
 OLAF -- cOnvecting LAgrangian Filaments (Free Vortex Wake) Theory Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,13 +214,13 @@ The input parameters in this section are used only when ``AFAeroMod
 
 ``UAMod`` determines the UA model. It has the following options:
 
-- ``1``: the original theoretical developments of B-L (**not currently functional**), 
-- ``2``: the extensions to B-L developed by González 
-- ``3``: the extensions to B-L developed by Minnema/Pierce
-- ``4``: a continuous-state model developed by Hansen, Gaunna, and Madsen (HGM)
-- ``5``: a model similar to HGM with an additional state for vortex generation
-- ``6``: Oye's dynamic stall model
-- ``7``: Boeing-Vertol model
+- ``1``: the discrete-time model of Beddoes-Leishman (B-L) (**not currently functional**), 
+- ``2``: the extensions to B-L developed by González  (changes in Cn, Cc, Cm)
+- ``3``: the extensions to B-L developed by Minnema/Pierce (changes in Cc and Cm)
+- ``4``: 4-states continuous-time B-L model developed by Hansen, Gaunna, and Madsen (HGM). NOTE: might require smaller time steps until a stiff integrator is implemented.
+- ``5``: 5-states continuous-time B-L model similar to HGM with an additional state for vortex generation
+- ``6``: 1-state continuous-time developed by Oye
+- ``7``: discrete-time Boeing-Vertol (BV) model
 
 The models are described in :numref:`AD_UA`.
 

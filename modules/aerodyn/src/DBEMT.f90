@@ -21,7 +21,7 @@
 ! References:
 !   [1] E. Branlard, B. Jonkman, G.R. Pirrung, K. Dixon, J. Jonkman (2022)
 !       Dynamic inflow and unsteady aerodynamics models for modal and stability analyses in OpenFAST, 
-!       Journal of Physics: conference series
+!       Journal of Physics: Conference Series, doi:10.1088/1742-6596/2265/3/032044
 !   [2] R. Damiani, J.Jonkman
 !       DBEMT Theory Rev. 3
 !       Unpublished
