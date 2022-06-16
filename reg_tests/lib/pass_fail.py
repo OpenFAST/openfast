@@ -41,8 +41,12 @@ def passing_channels(test, baseline) -> np.ndarray:
     """
     atol = 1e-4
     rtol = 1e-6
-    whereclose = np.isclose( test, baseline, atol=atol, rtol=rtol )
-    passing_channels = np.all(whereclose, axis=1)
+
+    where_close = np.isclose( test, baseline, atol=atol, rtol=rtol )
+    where_not_nan = ~np.isnan(test)
+    where_not_inf = ~np.isinf(test)
+
+    passing_channels = np.all(where_close * where_not_nan * where_not_inf, axis=1)
 
     return passing_channels
 
