@@ -49,6 +49,11 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(TESTDIR ${extra_args})
   endif()
 
+  set(NO_RUN_FLAG "")
+  if(CTEST_NO_RUN_FLAG)
+    set(NO_RUN_FLAG "-n")
+  endif()
+  
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -59,6 +64,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${TOLERANCE}
        ${PLOT_FLAG}                     # empty or "-p"
        ${RUN_VERBOSE_FLAG}              # empty or "-v"
+       ${NO_RUN_FLAG}                   # empty or "-n"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")

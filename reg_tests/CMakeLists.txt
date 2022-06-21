@@ -37,6 +37,8 @@ option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
 # Do not display outputs when running openfast, store in log file
 option(CTEST_RUN_VERBOSE_FLAG  "Display run outputs or store to log file." OFF)
 
+option(CTEST_NO_RUN_FLAG  "Complete the regression test comparison but do not execute the simulation. Local results must already be generated." OFF)
+
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
