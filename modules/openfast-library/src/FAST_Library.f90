@@ -322,6 +322,42 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, En
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+! Get the hub's absolute position, rotation velocity, and orientation DCM for the current time step
+subroutine FAST_HubPosition(iTurb, AbsPosition_c, RotationalVel_c, Orientation_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_HubPosition')
+   IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_HubPosition
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_HubPosition
+#endif
+   INTEGER(C_INT),         INTENT(IN   ) :: iTurb
+   REAL(C_FLOAT),          INTENT(  OUT) :: AbsPosition_c(3), RotationalVel_c(3)
+   REAL(C_DOUBLE),         INTENT(  OUT) :: Orientation_c(9)
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
+
+   ErrStat_c = ErrID_None
+   ErrMsg = C_NULL_CHAR
+
+   if (iTurb > size(Turbine) ) then
+      ErrStat_c = ErrID_Fatal
+      ErrMsg = "iTurb is greater than the number of turbines in the simulation."//C_NULL_CHAR
+      ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+      return
+   end if
+
+   if (.NOT. Turbine(iTurb)%ED%y%HubPtMotion%Committed) then
+      ErrStat_c = ErrID_Fatal
+      ErrMsg = "HubPtMotion mesh has not been committed."//C_NULL_CHAR
+      ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+      return
+   end if
+
+   AbsPosition_c = REAL(Turbine(iTurb)%ED%y%HubPtMotion%Position(:,1), C_FLOAT) + REAL(Turbine(iTurb)%ED%y%HubPtMotion%TranslationDisp(:,1), C_FLOAT)
+   Orientation_c = reshape( Turbine(iTurb)%ED%y%HubPtMotion%Orientation(1:3,1:3,1), (/9/) )
+   RotationalVel_c = Turbine(iTurb)%ED%y%HubPtMotion%RotationVel(:,1)
+
+end subroutine FAST_HubPosition
+!==================================================================================================================================
 !> NOTE: If this interface is changed, update the table in the ServoDyn_IO.f90::WrSumInfo4Simulink routine
 !!    Ideally we would write this summary info from here, but that isn't currently done.  So as a workaround so the user has some
 !!    vague idea what went wrong with their simulation, we have ServoDyn include the arrangement set here in the SrvD.sum file.
