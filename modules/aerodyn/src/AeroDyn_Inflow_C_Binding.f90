@@ -831,6 +831,16 @@ CONTAINS
          call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%NacelleMotion, trim(VTK_OutFileRoot)//'.AD_Nacelle', ErrStat3, ErrMsg3 )
             if (ErrStat3 >= AbortErrLev) return
       endif
+      ! Hub
+      if (u(1)%AD%rotors(1)%HubMotion%Committed) then
+         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%HubMotion, trim(VTK_OutFileRoot)//'.AD_Hub', ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+      endif
+      ! Tower
+      if (u(1)%AD%rotors(1)%TowerMotion%Committed) then
+         call MeshWrVTKreference((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%TowerMotion, trim(VTK_OutFileRoot)//'.AD_Tower', ErrStat3, ErrMsg3 )
+            if (ErrStat3 >= AbortErrLev) return
+      endif
 
    end subroutine WrVTK_refMeshes
 
@@ -1039,6 +1049,16 @@ CONTAINS
       endif
       if (u(1)%AD%rotors(1)%NacelleMotion%Committed) then
          call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%NacelleMotion, trim(VTK_OutFileRoot)//'.AD_Nacelle', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+            if (ErrStat3 >= AbortErrLev) return
+      endif
+      ! Hub
+      if (u(1)%AD%rotors(1)%HubMotion%Committed) then
+         call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%HubMotion, trim(VTK_OutFileRoot)//'.AD_Hub', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+            if (ErrStat3 >= AbortErrLev) return
+      endif
+      ! Tower
+      if (u(1)%AD%rotors(1)%TowerMotion%Committed) then
+         call MeshWrVTK((/0.0_SiKi,0.0_SiKi,0.0_SiKi/), u(1)%AD%rotors(1)%TowerMotion, trim(VTK_OutFileRoot)//'.AD_Tower', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
             if (ErrStat3 >= AbortErrLev) return
       endif
    end subroutine WrVTK_Meshes

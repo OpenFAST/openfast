@@ -79,7 +79,7 @@ class AeroDynInflowLib(CDLL):
         self.error_status_c = c_int(0)
         self.error_message_c = create_string_buffer(self.error_msg_c_len)
 
-        # This is not sufficient for HD
+        # This is not sufficient for AD
         #FIXME: ChanLen may not always be 20 -- could be as much as 256
         #       Possible fix is to pass this length over to Fortran side.
         #       Also may want to convert this at some point to C_NULL_CHAR
