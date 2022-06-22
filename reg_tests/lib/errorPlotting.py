@@ -51,7 +51,7 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     from bokeh.embed import components
     from bokeh.layouts import gridplot
     from bokeh.plotting import figure
-    from bokeh.models.tools import HoverTool, BoxZoomTool
+    from bokeh.models.tools import HoverTool
 
     p1 = figure(title=title1)
     p1.title.align = 'center'
@@ -74,7 +74,7 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
 
     p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
 
-    grid = gridplot([[p1, p2]], plot_width=650, plot_height=375, sizing_mode="scale_both")
+    grid = gridplot([[p1, p2]], width=650, height=375, sizing_mode="scale_both")
     script, div = components(grid)
     
     return script, div
@@ -86,7 +86,7 @@ def _replace_id_div(html_string, plot):
     return html_string
 
 def _replace_id_script(html_string, plot):
-    id_start = html_string.find('var render_items')    
+    id_start = html_string.find('const render_items')    
     id_start += html_string[id_start:].find('roots')    
     id_start += html_string[id_start:].find('":"') + 3    
     id_end = html_string[id_start:].find('"') + id_start
@@ -98,7 +98,8 @@ def _save_plot(script, div, path, attribute):
 
     file_name = "_script".join((attribute, ".txt"))
     with open(os.path.join(path, file_name), 'w') as f:
-        script = _replace_id_script(script.replace('\n', '\n  '), attribute)
+        script = script.replace('\n', '\n  ')
+        script = _replace_id_script(script, attribute)
         f.write(script)
     
     file_name = "_div".join((attribute, ".txt"))
@@ -137,19 +138,25 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     _save_plot(script, div, plotPath, attribute)
     
 def _htmlHead(title):
+    from bokeh.resources import CDN
+
     head  = '<!DOCTYPE html>' + '\n'
     head += '<html>' + '\n'
     head += '<head>' + '\n'
     head += '  <title>{}</title>'.format(title) + '\n'
-    
+
+    # CSS
     head += '  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">' + '\n'
     head += '  <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.2.0.min.css" rel="stylesheet" type="text/css">' + '\n'
     head += '  <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.2.0.min.css" rel="stylesheet" type="text/css">' + '\n'
-    
+
+    # JS
     head += '  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>' + '\n'
     head += '  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>' + '\n'
-    head += '  <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.2.0.min.js"></script>' + '\n'
-    head += '  <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.2.0.min.js"></script>' + '\n'
+
+    # JS - Bokeh
+    head += f'  <script src="{CDN.js_files[0]}"></script>' + '\n'
+    head += f'  <script src="{CDN.js_files[2]}"></script>' + '\n'
     head += '  <script type="text/javascript"> Bokeh.set_log_level("info"); </script>' + '\n'
     
     head += '  <style media="screen" type="text/css">'
@@ -173,7 +180,7 @@ def _tableHead(columns):
     head += '        <tr>' + '\n'
     head += '          <th>#</th>' + '\n'
     for column in columns:
-        head += '          <th>{}</th>'.format(column) + '\n'
+        head += f'          <th>{column}</th>' + '\n'
     head += '        </tr>' + '\n'
     head += '      </thead>' + '\n'
     return head
@@ -184,6 +191,11 @@ def finalizePlotDirectory(test_solution, plot_list, case):
 
     with open(os.path.join(base_path, '.'.join((case, 'html'))), 'r') as html:
         html = html.read()
+
+        # Since this routine adds to an existing html file,
+        # remove the existing endings and they will be added later.
+        html = html.replace("  </div>\n</body>\n</html>", "")
+
         script_ix = html.rfind('</script>\n') + len('</script>\n')
 
         for i, plot in enumerate(plot_list):
