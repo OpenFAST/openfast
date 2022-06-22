@@ -7431,6 +7431,8 @@ END SUBROUTINE CheckR16Var
    REAL(SiKi), PARAMETER         :: IntMin   = -32768.0              ! Smallest integer represented in 2 bytes
    REAL(SiKi), PARAMETER         :: IntRng   = IntMax - IntMin       ! Max Range of 2 byte integer
 
+   REAL(SiKi), PARAMETER         :: SqrtEps = SQRT(EPSILON(1.0_SiKi)) ! small number for tolerance
+
 
          ! Local variables
 
@@ -7636,8 +7638,8 @@ END SUBROUTINE CheckR16Var
       ! Calculate the scaling parameters for each channel
       !...............................................................................................................................
       DO IC=1,NumOutChans                    ! Loop through the output channels
-         IF ( ColMax(IC) == ColMin(IC) ) THEN
-            ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
+         IF ( abs(ColMax(IC) - ColMin(IC)) < SqrtEps ) THEN
+            ColScl(IC) = IntRng/SqrtEps
          ELSE
             ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
          ENDIF

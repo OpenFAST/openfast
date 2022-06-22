@@ -137,7 +137,7 @@ release = u'v3.1.0'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+# language = None  # Default is English and None is not a valid option
 
 #If true, figures, tables and code-blocks are automatically numbered if they 
 #have a caption. At same time, the numref role is enabled. For now, it works 
