@@ -651,7 +651,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
                         ErrStat           = ErrStatTmp       , &
                         ErrMess           = ErrMsgTmp        , &
                         Force             = .TRUE.           , &
-                        Moment            = .FALSE.)
+                        Moment            = .TRUE.)
 
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
