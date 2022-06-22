@@ -243,40 +243,43 @@ def exportResultsSummary(path, results):
         html.write( _htmlTail() )
     html.close()
     
-def exportCaseSummary(path, case, results, results_max, tolerance):
+def exportCaseSummary(path, case, channel_names, passing_channels, norms):
+    """
+    norms: first dimension is the channel and second dimension contains the norms
+    passing_channels: 1d boolean array for whether a channel passed the comparison
+    """
+    
     with open(os.path.join(path, case+".html"), "w") as html:
         html.write( _htmlHead(case + " Summary") )
         
         html.write('<body>\n')
         html.write('  <h2 class="text-center">{}</h2>\n'.format(case + " Summary"))
-        html.write('  <h4 class="text-center">Maximum values for each norm are <span class="cell-warning">highlighted</span> and failing norms (norm >= {0}) are <span class="cell-highlight">highlighted</span></h2>\n'.format(tolerance))
         html.write('  <div class="container">\n')
         
-        data = [
-            ('<a href="#{0}">{0}</a>'.format(attribute), *norms)
-            for attribute, *norms in results
-        ]
+        channel_tags = [ '<a href="#{0}">{0}</a>'.format(channel) for channel in channel_names ]
+
         cols = [
-            'Channel', 'Relative Max Norm',
-            'Relative L2 Norm', 'Infinity Norm'
+            'Channel',
+            'Relative Max Norm',
+            'Relative L2 Norm',
+            'Infinity Norm'
         ]
         table = _tableHead(cols)
         
         body = '      <tbody>' + '\n'
-        for i, d in enumerate(data):
+
+        for i, channel_tag in enumerate(channel_tags):
             body += '        <tr>' + '\n'
             body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
-            body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
+            body += '          <td>{0:s}</td>'.format(channel_tag) + '\n'
             
             fmt = '{0:0.4e}'
-            for j, val in enumerate(d[1]):
-                if val == results_max[j]:
-                    body += ('          <td class="cell-warning">' + fmt + '</td>\n').format(val)
-                elif val > tolerance:
+            for val in norms[i]:
+                if not passing_channels[i]:
                     body += ('          <td class="cell-highlight">' + fmt + '</td>\n').format(val)
                 else:
                     body += ('          <td>' + fmt + '</td>\n').format(val)
-            
+
             body += '        </tr>' + '\n'
         body += '      </tbody>' + '\n'
         table += body

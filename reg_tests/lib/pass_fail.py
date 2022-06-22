@@ -30,12 +30,21 @@ def readFASTOut(fastoutput):
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def passRegressionTest(norm, tolerance):
-    if np.any(np.isnan(norm)):
-        return False
-    if np.any(np.isinf(norm)):
-        return False
-    return True if max(norm) < tolerance else False
+def passing_channels(test, baseline) -> np.ndarray:
+    """
+    test, baseline: arrays containing the results from OpenFAST in the following format
+        [
+            channels,
+            data
+        ]
+    So that test[0,:] are the data for the 0th channel and test[:,0] are the 0th entry in each channel.
+    """
+    atol = 1e-4
+    rtol = 1e-6
+    whereclose = np.isclose( test, baseline, atol=atol, rtol=rtol )
+    passing_channels = np.all(whereclose, axis=1)
+
+    return passing_channels
 
 def maxnorm(data, axis=0):
     return LA.norm(data, np.inf, axis=axis)

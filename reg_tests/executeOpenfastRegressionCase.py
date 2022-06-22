@@ -27,6 +27,7 @@ import sys
 basepath = os.path.dirname(__file__)
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
+import numpy as np
 import shutil
 import subprocess
 import rtestlib as rtl
@@ -160,27 +161,29 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, _ = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-performance = pass_fail.calculateNorms(testData, baselineData)
-normalizedNorm = performance[:, 1]
+
+passing_channels = pass_fail.passing_channels(testData.T, baselineData.T)
+passing_channels = passing_channels.T
+
+norms = pass_fail.calculateNorms(testData, baselineData)
 
 # export all case summaries
-results = list(zip(testInfo["attribute_names"], [*performance]))
-results_max = performance.max(axis=0)
-exportCaseSummary(testBuildDirectory, caseName, results, results_max, tolerance)
-
-# failing case
-if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
-    if plotError:
-        from errorPlotting import finalizePlotDirectory, plotOpenfastError
-        for channel in testInfo["attribute_names"]:
-            try:
-                plotOpenfastError(localOutFile, baselineOutFile, channel)
-            except:
-                error = sys.exc_info()[1]
-                print("Error generating plots: {}".format(error))
-        finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
-
-    sys.exit(1)
+channel_names = testInfo["attribute_names"]
+exportCaseSummary(testBuildDirectory, caseName, channel_names, passing_channels, norms)
 
 # passing case
-sys.exit(0)
+if np.all(passing_channels):
+    sys.exit(0)
+
+# failing case
+if plotError:
+    from errorPlotting import finalizePlotDirectory, plotOpenfastError
+    for channel in testInfo["attribute_names"]:
+        try:
+            plotOpenfastError(localOutFile, baselineOutFile, channel)
+        except:
+            error = sys.exc_info()[1]
+            print("Error generating plots: {}".format(error))
+    finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
+
+sys.exit(1)
