@@ -401,7 +401,6 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    integer(IntKi)           :: iWT
    integer(IntKi)           :: errStat2      ! local status of error message
    character(ErrMsgLen)     :: errMsg2       ! local error message if errStat /= ErrID_None
-   type(AD_InitInputType)   :: InitInData     ! Input data for initialization
    type(WTData), pointer    :: wt ! Alias to shorten notation
    type(RotFED), pointer    :: y_ED ! Alias to shorten notation
    logical                  :: needInit
@@ -467,8 +466,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          endif
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
-         InitInData%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
-         InitInData%rotors(iWT)%NacelleOrientation = y_ED%NacelleMotion%RefOrientation(:,:,1)
+         InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
+         InitInp%AD%rotors(iWT)%NacelleOrientation = y_ED%NacelleMotion%RefOrientation(:,:,1)
          do k=1,wt%numBlades
             InitInp%AD%rotors(iWT)%BladeRootOrientation(:,:,k) = y_ED%BladeRootMotion(k)%RefOrientation(:,:,1)
             InitInp%AD%rotors(iWT)%BladeRootPosition(:,k)      = y_ED%BladeRootMotion(k)%Position(:,1)
