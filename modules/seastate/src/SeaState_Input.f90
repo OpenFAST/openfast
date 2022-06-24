@@ -251,15 +251,16 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
    endif
 
-!FIXME: there is something a little strange here.  RandSeed(2) is an integer, but what if we get an error on the next read?
    read (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
-   InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
 
    if (ErrStat2 == 0) then ! the user entered a number
+      InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
+      
       InputFileData%Waves%RNG%RNG_type = "NORMAL"
       InputFileData%Waves%RNG%pRNG = pRNG_INTRINSIC
 
    else
+      InputFileData%Waves%RNG%RandSeed(2) = 0
 
       InputFileData%Waves%RNG%RNG_type = adjustl( Line )
       call Conv2UC( InputFileData%Waves%RNG%RNG_type )
