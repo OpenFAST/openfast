@@ -297,7 +297,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 !      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
       INTEGER                                :: I                                   ! Generic counters
+      INTEGER                                :: it                                  ! Generic counters
       REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
+      REAL(ReKi)                             :: TmpElev                             ! temporary wave elevation
 
 
          ! Wave Stretching Data
@@ -440,16 +442,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PCurrVyiPz0   = Current_InitOut%PCurrVyiPz0
          
 
-         ! Copy the WaveElevXY data in from the SeaState InitInp
 
-      IF (ALLOCATED(InitInp%WaveElevXY)) THEN
-         call AllocAry(InitOut%WaveElevSeries,size(InitInp%WaveElevXY,DIM=1),size(InitInp%WaveElevXY,DIM=2),'InitOut%WaveElevSeries',ErrStat2,ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-      ENDIF
 
  
          ! Initialize Waves module
@@ -1148,7 +1141,40 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          end if
          
       end if
+      
+      
+         ! If requested, output wave elevation data for VTK visualization
 
+      IF (ALLOCATED(InitInp%WaveElevXY)) THEN
+      ! maybe instead of getting these requested points, we just output the grid that SeaState is generated on?
+         ALLOCATE(InitOut%WaveElevSeries( 0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)),STAT=ErrStat2)
+         if (ErrStat /= 0) then
+            CALL SetErrStat(ErrID_Fatal,"Error allocating InitOut%WaveElevSeries.",ErrStat,ErrMsg,RoutineName)
+            CALL CleanUp()
+            RETURN
+         end if
+
+         do it = 1,size(p%WaveTime)
+            do i = 1, size(InitOut%WaveElevSeries,DIM=2)
+               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), InitInp%WaveElevXY(:,i), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            end do
+         end do
+         
+         if (associated(p%WaveElev2)) then
+            do it = 1,size(p%WaveTime)
+               do i = 1, size(InitOut%WaveElevSeries,DIM=2)
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), InitInp%WaveElevXY(:,i), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
+               end do
+            end do
+         end if
+
+         
+      ENDIF
+      
+      
          ! Destroy the local initialization data
       CALL CleanUp()
          
