@@ -1156,7 +1156,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          do it = 1,size(p%WaveTime)
             do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), InitInp%WaveElevXY(:,i), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             end do
          end do
@@ -1164,7 +1164,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          if (associated(p%WaveElev2)) then
             do it = 1,size(p%WaveTime)
                do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-                  TmpElev = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), InitInp%WaveElevXY(:,i), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
                end do
