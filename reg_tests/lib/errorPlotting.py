@@ -217,8 +217,8 @@ def exportResultsSummary(path, results):
         html.write('  <div class="container">' + '\n')
         
         # Test Case - Pass/Fail - Max Relative Norm            
-        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1],'<a href="{0}/{0}.log">{0}</a>'.format(r[0])) for i,r in enumerate(results)]
-        table = _tableHead(['Test Case', 'Pass/Fail', 'Log File'])
+        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1],'<a href="{0}/{0}.log">{0}.log</a>'.format(r[0])) for i,r in enumerate(results)]
+        table = _tableHead(['Test Case', 'Pass/Fail', 'Screen Output'])
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
