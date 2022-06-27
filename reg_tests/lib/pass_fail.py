@@ -69,13 +69,18 @@ def calculate_max_norm(testData, baselineData):
     return maxnorm(abs(testData - baselineData))
     
 def calculateNorms(test_data, baseline_data):
-    relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
-    max_norm = calculate_max_norm(test_data, baseline_data)
-    relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
-    results = np.hstack((
-        relative_norm.reshape(-1, 1), relative_l2_norm.reshape(-1, 1),
-        max_norm.reshape(-1, 1)
-    ))
+    if test_data.size != baseline_data.size:
+       # print("Calculate Norms size(testdata)={}".format(test_data.size)) 
+       # print("Calculate Norms size(baseline)={}".format(baseline_data.size)) 
+       results = np.nan * test_data
+    else:
+       relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
+       max_norm = calculate_max_norm(test_data, baseline_data)
+       relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
+       results = np.hstack((
+           relative_norm.reshape(-1, 1), relative_l2_norm.reshape(-1, 1),
+           max_norm.reshape(-1, 1)
+       ))
     return results
     
 if __name__=="__main__":
