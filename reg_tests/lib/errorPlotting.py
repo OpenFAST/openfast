@@ -191,6 +191,7 @@ def finalizePlotDirectory(test_solution, plot_list, case):
         html = ''.join((html, '</body>' + '\n'))
         html = ''.join((html, _htmlTail()))
 
+    script = "" # initialize in case plot_list is empty
     for i, plot in enumerate(plot_list):
         _path = os.path.join(plot_path, f'{plot}_script.txt')
         with open(_path, "r") as f:
