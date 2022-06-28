@@ -218,8 +218,8 @@ def exportResultsSummary(path, results):
         html.write('  <div class="container">' + '\n')
         
         # Test Case - Pass/Fail - Max Relative Norm            
-        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1],'<a href="{0}/{0}.log">{0}.log</a>'.format(r[0])) for i,r in enumerate(results)]
-        table = _tableHead(['Test Case', 'Pass/Fail', 'Screen Output'])
+        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1],r[2],'<a href="{0}/{0}.log">{0}.log</a>'.format(r[0])) for i,r in enumerate(results)]
+        table = _tableHead(['Test Case', 'Pass/Fail', 'Completion Code', 'Screen Output'])
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
@@ -231,8 +231,13 @@ def exportResultsSummary(path, results):
                 body += ('          <td class="cell-warning">' + fmt + '</td>').format(d[1]) + '\n'
             else:
                 body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
+
+            if d[2] != 0:
+                body += ('          <td class="cell-warning">{}</td>').format(d[2]) + '\n'
+            else:
+                body += ('          <td>{}</td>').format(d[2]) + '\n'
                 
-            body += '          <td>{0:s}</td>'.format(d[2]) + '\n'
+            body += '          <td>{0:s}</td>'.format(d[3]) + '\n'
 
             body += '        </tr>' + '\n'
         body += '      </tbody>' + '\n'
