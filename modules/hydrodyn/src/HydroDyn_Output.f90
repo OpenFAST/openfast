@@ -954,11 +954,10 @@ END SUBROUTINE HDOut_OpenSum
 
 
 !====================================================================================================
-SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, PRPmesh, q, qdot, qdotdot, AllOuts, ErrStat, ErrMsg )
+SUBROUTINE HDOut_MapOutputs( p, y, m_WAMIT, m_WAMIT2, F_Add, F_Waves, F_Hydro, PRPmesh, q, qdot, qdotdot, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                            INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
    TYPE(HydroDyn_ParameterType),          INTENT( IN    )  :: p              ! HydroDyn's parameter data
    TYPE(HydroDyn_OutputType),             INTENT( INOUT )  :: y              ! HydroDyn's output data
    type(WAMIT_MiscVarType),  ALLOCATABLE, intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data

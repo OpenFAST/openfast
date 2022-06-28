@@ -735,6 +735,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
       Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
       Init%InData_SeaSt%UseInputFile  = .TRUE.
+      Init%InData_SeaSt%hasIce        = p_FAST%CompIce /= Module_None
       Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
       Init%InData_SeaSt%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SeaSt))
       
@@ -759,7 +760,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
          Init%InData_HD%RhoXg          =  Init%OutData_SeaSt%RhoXg
          Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
-         Init%InData_HD%CurrMod        =  Init%OutData_SeaSt%CurrMod
          Init%InData_HD%WaveStMod      =  Init%OutData_SeaSt%WaveStMod
          Init%InData_HD%WaveDirMod     =  Init%OutData_SeaSt%WaveDirMod
          Init%InData_HD%WvLowCOff      =  Init%OutData_SeaSt%WvLowCOff 
@@ -819,7 +819,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_HD%InputFile     = p_FAST%HydroFile
       Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
       Init%InData_HD%TMax          = p_FAST%TMax
-      Init%InData_HD%hasIce        = p_FAST%CompIce /= Module_None
       Init%InData_HD%Linearize     = p_FAST%Linearize
 
          ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
@@ -1730,7 +1729,7 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    y_FAST%Module_Ver( Module_AD14   )%Name = 'AeroDyn14'
    y_FAST%Module_Ver( Module_AD     )%Name = 'AeroDyn'
    y_FAST%Module_Ver( Module_SrvD   )%Name = 'ServoDyn'
-   y_FAST%Module_Ver( Module_HD     )%Name = 'SeaState'
+   y_FAST%Module_Ver( Module_SeaSt  )%Name = 'SeaState'
    y_FAST%Module_Ver( Module_HD     )%Name = 'HydroDyn'
    y_FAST%Module_Ver( Module_SD     )%Name = 'SubDyn'
    y_FAST%Module_Ver( Module_ExtPtfm)%Name = 'ExtPtfm_MCKF'
@@ -1749,7 +1748,7 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    y_FAST%Module_Abrev( Module_AD14   ) = 'AD'
    y_FAST%Module_Abrev( Module_AD     ) = 'AD'
    y_FAST%Module_Abrev( Module_SrvD   ) = 'SrvD'
-   y_FAST%Module_Abrev( Module_HD     ) = 'SEA'
+   y_FAST%Module_Abrev( Module_SeaSt  ) = 'SEA'
    y_FAST%Module_Abrev( Module_HD     ) = 'HD'
    y_FAST%Module_Abrev( Module_SD     ) = 'SD'
    y_FAST%Module_Abrev( Module_ExtPtfm) = 'ExtPtfm'

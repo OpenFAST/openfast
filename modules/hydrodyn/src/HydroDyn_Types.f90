@@ -90,14 +90,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: defWtrDpth      !< Default water depth from the driver; may be overwritten                         [m]
     REAL(ReKi)  :: defMSL2SWL      !< Default mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
-    LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
     REAL(SiKi)  :: RhoXg      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: WaveMod      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
-    INTEGER(IntKi)  :: CurrMod      !<  [-]
     INTEGER(IntKi)  :: WaveStMod      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     INTEGER(IntKi)  :: WaveDirMod      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WvLowCOff      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
@@ -1779,14 +1777,12 @@ ENDIF
     DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
     DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
     DstInitInputData%TMax = SrcInitInputData%TMax
-    DstInitInputData%HasIce = SrcInitInputData%HasIce
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
     DstInitInputData%NStepWave = SrcInitInputData%NStepWave
     DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
     DstInitInputData%RhoXg = SrcInitInputData%RhoXg
     DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
     DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
     DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
     DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
@@ -2214,14 +2210,12 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! defWtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! defMSL2SWL
       Db_BufSz   = Db_BufSz   + 1  ! TMax
-      Int_BufSz  = Int_BufSz  + 1  ! HasIce
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
       Re_BufSz   = Re_BufSz   + 1  ! RhoXg
       Int_BufSz  = Int_BufSz  + 1  ! WaveMod
-      Int_BufSz  = Int_BufSz  + 1  ! CurrMod
       Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
       Int_BufSz  = Int_BufSz  + 1  ! WaveDirMod
       Re_BufSz   = Re_BufSz   + 1  ! WvLowCOff
@@ -2407,8 +2401,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%TMax
     Db_Xferred = Db_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%HasIce, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationX
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
@@ -2420,8 +2412,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%RhoXg
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveMod
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CurrMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveStMod
     Int_Xferred = Int_Xferred + 1
@@ -2968,8 +2958,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%TMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%HasIce = TRANSFER(IntKiBuf(Int_Xferred), OutData%HasIce)
-    Int_Xferred = Int_Xferred + 1
     OutData%PtfmLocationX = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
@@ -2981,8 +2969,6 @@ ENDIF
     OutData%RhoXg = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
     OutData%WaveMod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%CurrMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveStMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

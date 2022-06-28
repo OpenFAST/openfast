@@ -578,19 +578,18 @@ subroutine SeaStOut_WriteWaveElev0( Rootname, SeaSt_Prog, NStepWave, WaveDT, NGr
 end subroutine SeaStOut_WriteWaveElev0
 
 !====================================================================================================
-subroutine SeaStOut_MapOutputs( CurrentTime, p, NWaveElev, WaveElev, WaveElev1, WaveElev2, NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat, ErrMsg )
+subroutine SeaStOut_MapOutputs(  p, NWaveElev, WaveElev, WaveElev1, WaveElev2, NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by SeaSt_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         intent( in    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(SeaSt_ParameterType),       intent( in    )  :: p              ! SeaState's parameter data
+   TYPE(SeaSt_ParameterType),          intent( in    )  :: p              ! SeaState's parameter data
    INTEGER,                            intent( in    )  :: NWaveElev      ! Number of wave elevation locations to output
    REAL(SiKi),                         intent( in    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(SiKi),                         intent( in    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(SiKi),                         intent( in    )  :: WaveElev2(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   INTEGER,                            intent( in    )  :: NWaveKin      ! Number of wave elevation locations to output
-   REAL(SiKi),                         intent( in    )  :: WaveVel(:,:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(SiKi),                         intent( in    )  :: WaveAcc(:,:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(SiKi),                         intent( in    )  :: WaveElev1(:)   ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(SiKi),                         intent( in    )  :: WaveElev2(:)   ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   INTEGER,                            intent( in    )  :: NWaveKin       ! Number of wave elevation locations to output
+   REAL(SiKi),                         intent( in    )  :: WaveVel(:,:)   ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(SiKi),                         intent( in    )  :: WaveAcc(:,:)   ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(SiKi),                         intent( in    )  :: WaveDynP(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(ReKi),                         intent(   out )  :: AllOuts(MaxSeaStOutputs)
    INTEGER(IntKi),                     intent(   out )  :: ErrStat        ! Error status of the operation

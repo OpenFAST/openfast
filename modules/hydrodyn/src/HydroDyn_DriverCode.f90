@@ -198,7 +198,7 @@ PROGRAM HydroDynDriver
    n_SttsTime = MAX( 1, NINT( SttsTime / drvrInitInp%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
     
  !BJJ: added this for IceFloe/IceDyn
-   InitInData%hasIce = .FALSE.
+   InitInData_SeaSt%hasIce = .FALSE.
   
 
 !-------------------------------------------------------------------------------------
@@ -233,7 +233,6 @@ PROGRAM HydroDynDriver
    InitInData%NStepWave2     =  InitOutData_SeaSt%NStepWave2
    InitInData%RhoXg          =  InitOutData_SeaSt%RhoXg
    InitInData%WaveMod        =  InitOutData_SeaSt%WaveMod
-   InitInData%CurrMod        =  InitOutData_SeaSt%CurrMod
    InitInData%WaveStMod      =  InitOutData_SeaSt%WaveStMod
    InitInData%WaveDirMod     =  InitOutData_SeaSt%WaveDirMod
    InitInData%WvLowCOff      =  InitOutData_SeaSt%WvLowCOff 

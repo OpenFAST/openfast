@@ -86,6 +86,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
+    LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -120,7 +121,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
     INTEGER(IntKi)  :: WaveMod      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
-    INTEGER(IntKi)  :: CurrMod      !<  [-]
     INTEGER(IntKi)  :: WaveStMod      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     INTEGER(IntKi)  :: WaveDirMod      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WvLowCOff      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
@@ -1178,6 +1178,7 @@ ENDIF
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
     DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
+    DstInitInputData%HasIce = SrcInitInputData%HasIce
  END SUBROUTINE SeaSt_CopyInitInput
 
  SUBROUTINE SeaSt_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1277,6 +1278,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
       Int_BufSz  = Int_BufSz  + 1  ! WrWvKinMod
+      Int_BufSz  = Int_BufSz  + 1  ! HasIce
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1377,6 +1379,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WrWvKinMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%HasIce, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_PackInitInput
 
@@ -1496,6 +1500,8 @@ ENDIF
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%WrWvKinMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%HasIce = TRANSFER(IntKiBuf(Int_Xferred), OutData%HasIce)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_UnPackInitInput
 
@@ -1803,7 +1809,6 @@ ENDIF
     DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
     DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
     DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
-    DstInitOutputData%CurrMod = SrcInitOutputData%CurrMod
     DstInitOutputData%WaveStMod = SrcInitOutputData%WaveStMod
     DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
     DstInitOutputData%WvLowCOff = SrcInitOutputData%WvLowCOff
@@ -2091,7 +2096,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
       Int_BufSz  = Int_BufSz  + 1  ! WaveMod
-      Int_BufSz  = Int_BufSz  + 1  ! CurrMod
       Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
       Int_BufSz  = Int_BufSz  + 1  ! WaveDirMod
       Re_BufSz   = Re_BufSz   + 1  ! WvLowCOff
@@ -2627,8 +2631,6 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%NStepWave2
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveMod
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CurrMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveStMod
     Int_Xferred = Int_Xferred + 1
@@ -3271,8 +3273,6 @@ ENDIF
     OutData%NStepWave2 = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveMod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%CurrMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveStMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

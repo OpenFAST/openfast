@@ -162,6 +162,7 @@ program SeaStateDriver
    InitInData%InputFile    = drvrInitInp%SeaStateInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
    InitInData%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
+   InitInData%HasIce       = .false.
   
       ! Get the current time
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation

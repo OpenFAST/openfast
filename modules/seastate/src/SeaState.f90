@@ -1124,7 +1124,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvDiffQTFF   =  InputFileData%Waves2%WvDiffQTFF
        InitOut%WvSumQTFF    =  InputFileData%Waves2%WvSumQTFF 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
-       InitOut%CurrMod      =  InputFileData%Current%CurrMod
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       
@@ -1173,6 +1172,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          
       ENDIF
+      
+      
+      IF ( InitInp%hasIce ) THEN
+         IF ((InputFileData%Waves%WaveMod /= 0) .OR. (InputFileData%Current%CurrMod /= 0) ) THEN
+            CALL SetErrStat(ErrID_Fatal,'Waves and Current must be turned off in SeaState when ice loading is computed. Set WaveMod=0 and CurrMod=0.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      END IF
+
+
       
       
          ! Destroy the local initialization data
@@ -1490,7 +1498,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       END IF
 
          ! Map calculated results into the AllOuts Array
-      CALL SeaStOut_MapOutputs( Time, p, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, p%NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
+      CALL SeaStOut_MapOutputs( p, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, p%NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       
       DO I = 1,p%NumOuts
