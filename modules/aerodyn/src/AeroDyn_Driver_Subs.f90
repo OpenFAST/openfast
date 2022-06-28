@@ -223,12 +223,11 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    ! --- Initial AD inputs
    ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
-      !call Set_ADI_Inputs(j*dvr%dt, ADI, FED, errStat2, errMsg2); if(Failed()) return
-      call Shift_ADI_Inputs(j*dvr%dt, ADI, errStat2, errMsg2); if(Failed()) return
+      call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
    END DO              
    ! --- Inflow on points at t=0
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
+!   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
@@ -269,7 +268,6 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if errStat /= ErrID_None
    real(DbKi) :: time             !< Variable for storing time, in seconds
-   type(AD_InputType)  ::  u_AD(2)
    errStat = ErrID_None
    errMsg  = ''
 
@@ -278,16 +276,15 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
 
    ! Set AD inputs for nt (and keep values at nt-1 as well)
    ! u(1) is at nt, u(2) is at nt-1
-   !call Set_ADI_Inputs(nt*dvr%dt, ADI, FED, errStat2,errMsg2); if(Failed()) return
-   call Shift_ADI_Inputs(nt*dvr%dt, ADI, errStat2, errMsg2); if(Failed()) return
+   call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
    ! TODO TODO TODO REMOVE ME
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
+!   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
 
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1
-   call ADI_CalcOutput(ADI%inputTimes(2), ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
+   call ADI_CalcOutput( time, ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2 ); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, errStat2, errMsg2); if(Failed()) return
@@ -849,8 +846,11 @@ end subroutine Set_Mesh_Motion
 !> Shift current inputs to old inputs (done because time step constant in driver)
 !! NOTE: might not be needed with new ADI module
 !! cycle values in the input array AD%InputTime and AD%u.
-subroutine Shift_ADI_Inputs(time, ADI, errStat, errMsg)
-   real(DbKi)                  , intent(in   ) :: time      !< time 
+!subroutine Shift_ADI_Inputs(time, ADI, errStat, errMsg)
+subroutine Shift_ADI_Inputs(nt, dvr, ADI, errStat, errMsg)
+!   real(DbKi)                  , intent(in   ) :: time      !< time 
+   integer(IntKi)              , intent(in   ) :: nt        ! time step number
+   type(Dvr_SimData),            intent(in   ) :: dvr       ! Driver data 
    type(ADI_Data),               intent(inout) :: ADI       !< AeroDyn/InflowWind Data
    integer(IntKi)              , intent(  out) :: errStat   !< Status of error message
    character(*)                , intent(  out) :: errMsg    !< Error message if errStat /= ErrID_None
@@ -866,7 +866,7 @@ subroutine Shift_ADI_Inputs(time, ADI, errStat, errMsg)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Shift_ADI_Inputs')
       ADI%inputTimes(j+1) = ADI%inputTimes(j)
    end do
-   ADI%inputTimes(1) = time ! time at "nt+1"
+   ADI%inputTimes(1) = dvr%dT * nt ! time at "nt+1"
 end subroutine Shift_ADI_Inputs
 
 !----------------------------------------------------------------------------------------------------------------------------------
