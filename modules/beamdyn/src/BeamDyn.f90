@@ -562,6 +562,8 @@ subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_n
        else
           qfit = nkp ! if points-per-element more that number of keypoints, fit to LSFE with order (nkp-1)
        endif 
+       
+       if (qfit .gt. 7) qfit = 7
 
        call AllocAry(least_sq_gll, qfit, "least-squares GLL nodes",ErrStat2, ErrMsg2)
 
@@ -6545,7 +6547,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'BD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   LOGICAL                                                       :: ReturnLogMap
+   LOGICAL                                                       :: ReturnSmallAngle
    TYPE(BD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
 
    
@@ -6583,9 +6585,9 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
    IF ( PRESENT( y_op ) ) THEN
       if (present(NeedLogMap)) then
-         ReturnLogMap = NeedLogMap
+         ReturnSmallAngle = NeedLogMap
       else
-         ReturnLogMap = .false.
+         ReturnSmallAngle = .false.
       end if
       
       if (.not. allocated(y_op)) then
@@ -6607,7 +6609,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseSmlAngle=ReturnSmallAngle)
    
       index = index - 1
       do i=1,p%NumOuts + p%BldNd_TotNumOuts

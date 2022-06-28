@@ -613,6 +613,9 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
       ! hub 2 hubAD
       call MeshMapCreate(y_ED%HubPtMotion, uAD%rotors(iWT)%hubMotion, y_ED%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
+      ! nac 2 nacAD
+      call MeshMapCreate(y_ED%NacelleMotion, uAD%rotors(iWT)%nacelleMotion, y_ED%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed())return
+
       ! bldroot 2 bldroot AD
       allocate(y_ED%ED_P_2_AD_P_R(y_ED%numBlades))
       do iB = 1, y_ED%numBlades
@@ -733,6 +736,9 @@ subroutine Set_Inputs_For_ADI(u_ADI, FED, errStat, errMsg)
       y_ED => FED%WT(iWT)
       ! Hub 2 Hub AD 
       call Transfer_Point_to_Point(y_ED%HubPtMotion, u_ADI%AD%rotors(iWT)%hubMotion, y_ED%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+
+      ! Nac 2 Nac AD 
+      call Transfer_Point_to_Point(y_ED%NacelleMotion, u_ADI%AD%rotors(iWT)%nacelleMotion, y_ED%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,y_ED%numBlades

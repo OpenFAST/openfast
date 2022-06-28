@@ -93,18 +93,17 @@ subroutine Dvr_Init(dvr, ADI, FED, errStat, errMsg )
    errMsg  = ""
 
    ! --- Driver initialization
-   call NWTC_Init( ProgNameIN=version%Name )
+   CALL NWTC_Init( ProgNameIN=version%Name )
+   
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   call CheckArgs( InputFile, Flag=FlagArg )
-   if ( len( trim(FlagArg) ) > 0 ) call NormStop()
-   ! Display the copyright notice
-   call DispCopyrightLicense( version%Name )
-   ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-   ! Tell our users what they're running
-   call WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
-
-   ! --- Read the AeroDyn driver input file
+   CALL CheckArgs( InputFile, Flag=FlagArg )
+   IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+   
+   ! Display the copyright notice and compile info:
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
+   
+   ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, dvr, errStat2, errMsg2 ); if(Failed()) return
 
    ! --- Propagate to FED
