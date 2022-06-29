@@ -1,13 +1,13 @@
-module test_NWTC_IO_CheckArgs
+module test_VersionInfo_CheckArgs
 
     use pFUnit_mod
-    use NWTC_IO
-    use nwtc_library_test_tools
+    use VersionInfo
+    use versioninfo_test_tools 
     
     implicit none
 
-contains
-
+    contains
+    
     ! PASSING CASES
 
     ! ************************************************************************
