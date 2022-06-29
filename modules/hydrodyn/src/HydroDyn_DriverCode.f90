@@ -214,6 +214,7 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
    InitInData_SeaSt%OutRootName  = trim(drvrInitInp%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
+   InitInData_SeaSt%Linearize    = drvrInitInp%Linearize
    Interval = drvrInitInp%TimeInterval
    
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
@@ -240,9 +241,10 @@ PROGRAM HydroDynDriver
    InitInData%WvLowCOffD     =  InitOutData_SeaSt%WvLowCOffD
    InitInData%WvHiCOffD      =  InitOutData_SeaSt%WvHiCOffD 
    InitInData%WvLowCOffS     =  InitOutData_SeaSt%WvLowCOffS
-   InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS 
-   InitInData%WvDiffQTFF     =  InitOutData_SeaSt%WvDiffQTFF
-   InitInData%WvSumQTFF      =  InitOutData_SeaSt%WvSumQTFF 
+   InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS
+   
+   InitInData%ValidWithSSExctn     =  InitOutData_SeaSt%ValidWithSSExctn
+   
    InitInData%WaveDirMin     =  InitOutData_SeaSt%WaveDirMin  
    InitInData%WaveDirMax     =  InitOutData_SeaSt%WaveDirMax  
    InitInData%WaveDir        =  InitOutData_SeaSt%WaveDir     

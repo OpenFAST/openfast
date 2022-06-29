@@ -1121,11 +1121,14 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvHiCOffD    =  InputFileData%Waves2%WvHiCOffD 
        InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
-       InitOut%WvDiffQTFF   =  InputFileData%Waves2%WvDiffQTFF
-       InitOut%WvSumQTFF    =  InputFileData%Waves2%WvSumQTFF 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
+      ! Tell HydroDyn if state-space wave excitation is not allowed:
+       InitOut%ValidWithSSExctn = InputFileData%Waves%WaveMod == 6 .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+                         InputFileData%Waves%WaveDirMod /= 0       .or. & !call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
+                         InputFileData%Waves2%WvDiffQTFF           .or. & !call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+                         InputFileData%Waves2%WvSumQTFF                   !call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       
          ! Write Wave Kinematics?
       if ( InputFileData%Waves%WaveMod /= 6 ) then
@@ -1180,9 +1183,28 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          END IF
       END IF
 
+      if (InitInp%Linearize) then
+      
+         if ( InputFileData%Waves%WaveMod /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
+         end if
+      
+         if ( InputFileData%Waves%WaveDirMod /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'No directional spreading must be used for linearization. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
+         end if
+         
+         if ( InputFileData%Waves2%WvDiffQTFF ) then
+            call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics for linearization. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+         end if
+      
+         if ( InputFileData%Waves2%WvSumQTFF ) then
+            call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+         end if
 
-      
-      
+         
+      end if
+
+
          ! Destroy the local initialization data
       CALL CleanUp()
          

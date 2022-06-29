@@ -17668,7 +17668,7 @@ END IF ! check if allocated
   b = -(u1%LSShftFys - u2%LSShftFys)
   u_out%LSShftFys = u1%LSShftFys + b * ScaleFactor
   b = -(u1%LSShftFzs - u2%LSShftFzs)
-  u_out%LSShftFzs = u1%LSShftFzs + b * ScaleFactor  
+  u_out%LSShftFzs = u1%LSShftFzs + b * ScaleFactor
 IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
   DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
     b = -(u1%fromSC(i1) - u2%fromSC(i1))
@@ -17900,7 +17900,7 @@ END IF ! check if allocated
   u_out%LSShftFys = u1%LSShftFys + b  + c * t_out
   b = (t(3)**2*(u1%LSShftFzs - u2%LSShftFzs) + t(2)**2*(-u1%LSShftFzs + u3%LSShftFzs))* scaleFactor
   c = ( (t(2)-t(3))*u1%LSShftFzs + t(3)*u2%LSShftFzs - t(2)*u3%LSShftFzs ) * scaleFactor
-  u_out%LSShftFzs = u1%LSShftFzs + b  + c * t_out  
+  u_out%LSShftFzs = u1%LSShftFzs + b  + c * t_out
 IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
   DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
     b = (t(3)**2*(u1%fromSC(i1) - u2%fromSC(i1)) + t(2)**2*(-u1%fromSC(i1) + u3%fromSC(i1)))* scaleFactor

@@ -104,8 +104,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffD      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffS      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    LOGICAL  :: WvDiffQTFF      !< Full difference QTF second order forces flag [(-)]
-    LOGICAL  :: WvSumQTFF      !< Full sum QTF second order forces flag [(-)]
+    LOGICAL  :: ValidWithSSExctn      !< Whether SeaState configuration is valid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
@@ -1791,8 +1790,7 @@ ENDIF
     DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
     DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
     DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
-    DstInitInputData%WvDiffQTFF = SrcInitInputData%WvDiffQTFF
-    DstInitInputData%WvSumQTFF = SrcInitInputData%WvSumQTFF
+    DstInitInputData%ValidWithSSExctn = SrcInitInputData%ValidWithSSExctn
 IF (ASSOCIATED(SrcInitInputData%WaveElev1)) THEN
   i1_l = LBOUND(SrcInitInputData%WaveElev1,1)
   i1_u = UBOUND(SrcInitInputData%WaveElev1,1)
@@ -2224,8 +2222,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffD
       Re_BufSz   = Re_BufSz   + 1  ! WvLowCOffS
       Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffS
-      Int_BufSz  = Int_BufSz  + 1  ! WvDiffQTFF
-      Int_BufSz  = Int_BufSz  + 1  ! WvSumQTFF
+      Int_BufSz  = Int_BufSz  + 1  ! ValidWithSSExctn
   Int_BufSz   = Int_BufSz   + 1     ! WaveElev1 allocated yes/no
   IF ( ASSOCIATED(InData%WaveElev1) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! WaveElev1 upper/lower bounds for each dimension
@@ -2429,9 +2426,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WvHiCOffS
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WvDiffQTFF, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WvSumQTFF, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%ValidWithSSExctn, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ASSOCIATED(InData%WaveElev1) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2986,9 +2981,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WvHiCOffS = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-    OutData%WvDiffQTFF = TRANSFER(IntKiBuf(Int_Xferred), OutData%WvDiffQTFF)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WvSumQTFF = TRANSFER(IntKiBuf(Int_Xferred), OutData%WvSumQTFF)
+    OutData%ValidWithSSExctn = TRANSFER(IntKiBuf(Int_Xferred), OutData%ValidWithSSExctn)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev1 not allocated
     Int_Xferred = Int_Xferred + 1

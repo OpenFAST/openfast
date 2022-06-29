@@ -1141,7 +1141,11 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 
 
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
-                     ! is done only for efficiency.
+                     ! is done only for efficiency. 
+                  
+                  !BJJ: If WaveMod==1, this could result in zeroing out the wrong values... 
+                  !InitInp%WvLowCOff and InitInp%WvHiCOff are not used in SeaState when WaveMod = 0,1, or 6
+                  ! Probably could just remove this IF statement????
                   IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
@@ -1335,7 +1339,8 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
          !> 1. Check the data to see if the wave frequencies are present in the QTF data.  Since Newman's approximation only uses
          !!    frequencies where \f$ \omega_1=\omega_2 \f$, the data read in from the files must contain the full range of frequencies
          !!    present in the waves.
-
+!bjj: InitInp%WvLowCOff and InitInp%WvHiCOff aren't supposed to be used when WaveMod=0, 1, or 6, but they are used here regardless of those conditions.
+!     Can we get rid of these checks????
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff

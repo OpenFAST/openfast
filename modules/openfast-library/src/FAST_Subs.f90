@@ -735,6 +735,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%defWtrDpth    = p_FAST%WtrDpth
       Init%InData_SeaSt%defMSL2SWL    = p_FAST%MSL2SWL
       Init%InData_SeaSt%UseInputFile  = .TRUE.
+      Init%InData_SeaSt%Linearize     = p_FAST%Linearize
       Init%InData_SeaSt%hasIce        = p_FAST%CompIce /= Module_None
       Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
       Init%InData_SeaSt%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SeaSt))
@@ -768,14 +769,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WvHiCOffD      =  Init%OutData_SeaSt%WvHiCOffD 
          Init%InData_HD%WvLowCOffS     =  Init%OutData_SeaSt%WvLowCOffS
          Init%InData_HD%WvHiCOffS      =  Init%OutData_SeaSt%WvHiCOffS 
-         Init%InData_HD%WvDiffQTFF     =  Init%OutData_SeaSt%WvDiffQTFF
-         Init%InData_HD%WvSumQTFF      =  Init%OutData_SeaSt%WvSumQTFF 
+         Init%InData_HD%ValidWithSSExctn     =  Init%OutData_SeaSt%ValidWithSSExctn
+         
          Init%InData_HD%WaveDirMin     =  Init%OutData_SeaSt%WaveDirMin  
          Init%InData_HD%WaveDirMax     =  Init%OutData_SeaSt%WaveDirMax  
          Init%InData_HD%WaveDir        =  Init%OutData_SeaSt%WaveDir     
          Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
          Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
+         
          CALL MOVE_ALLOC(  Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )  
          Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
          Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
@@ -3107,7 +3109,7 @@ END DO
       OutFileFmt = OutFileFmt / 2 ! integer division
 
       if (OutFileFmt /= 0) then
-         call SetErrStat( ErrID_Fatal, "OutFileFmt must be 0, 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
+         call SetErrStat( ErrID_Fatal, "OutFileFmt must be 0, 1, 2, 3, 4, or 5.",ErrStat,ErrMsg,RoutineName)
          call cleanup()
          return
       end if

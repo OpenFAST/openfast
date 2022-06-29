@@ -65,6 +65,8 @@ typedef   ^                  ^                      ReKi                     Ptf
 typedef   ^                  ^                      ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
 typedef   ^                  ^                      IntKi                    WrWvKinMod                      -          0          -         "0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname]" -
 typedef   ^                  ^                      LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
+typedef   ^                  ^                      Logical                  Linearize                       -     .FALSE.         -         "Flag that tells this module if the glue code wants to linearize."	-
+
 #
 #
 # Define outputs from the initialization routine here:
@@ -111,8 +113,7 @@ typedef     ^                 ^                 SiKi                 WvLowCOffD 
 typedef     ^                 ^                 SiKi                 WvHiCOffD         -        -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
 typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
-typedef     ^                 ^                 LOGICAL              WvDiffQTFF        -        -        -        "Full difference QTF second order forces flag" (-)
-typedef     ^                 ^                 LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
+typedef     ^                 ^                 LOGICAL              ValidWithSSExctn  -        -        -        "Whether SeaState configuration is valid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                  ^                  SiKi                 MCFD              -        -        -         "Diameter of MacCamy-Fuchs member" (meters)
 typedef   ^                            ^                             SiKi                     WaveElevSeries                  {:}{:}     -        -         "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
