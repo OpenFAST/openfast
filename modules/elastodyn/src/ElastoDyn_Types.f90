@@ -873,6 +873,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: NcIMURAys      !< Nacelle inertial measurement unit angular (rotational) acceleration (absolute) [rad/s^2]
     REAL(ReKi)  :: NcIMURAzs      !< Nacelle inertial measurement unit angular (rotational) acceleration (absolute) [rad/s^2]
     REAL(ReKi)  :: RotPwr      !< Rotor power (this is equivalent to the low-speed shaft power) [W]
+    REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
+    REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
+    REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
   END TYPE ED_OutputType
 ! =======================
 CONTAINS
@@ -23519,6 +23522,9 @@ ENDIF
     DstOutputData%NcIMURAys = SrcOutputData%NcIMURAys
     DstOutputData%NcIMURAzs = SrcOutputData%NcIMURAzs
     DstOutputData%RotPwr = SrcOutputData%RotPwr
+    DstOutputData%LSShftFxa = SrcOutputData%LSShftFxa
+    DstOutputData%LSShftFys = SrcOutputData%LSShftFys
+    DstOutputData%LSShftFzs = SrcOutputData%LSShftFzs
  END SUBROUTINE ED_CopyOutput
 
  SUBROUTINE ED_DestroyOutput( OutputData, ErrStat, ErrMsg )
@@ -23809,6 +23815,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! NcIMURAys
       Re_BufSz   = Re_BufSz   + 1  ! NcIMURAzs
       Re_BufSz   = Re_BufSz   + 1  ! RotPwr
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -24221,6 +24230,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%NcIMURAzs
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RotPwr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFxa
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFys
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFzs
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackOutput
 
@@ -24773,6 +24788,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%RotPwr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFxa = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFys = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFzs = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackOutput
 
 
@@ -25205,6 +25226,12 @@ END IF ! check if allocated
   y_out%NcIMURAzs = y1%NcIMURAzs + b * ScaleFactor
   b = -(y1%RotPwr - y2%RotPwr)
   y_out%RotPwr = y1%RotPwr + b * ScaleFactor
+  b = -(y1%LSShftFxa - y2%LSShftFxa)
+  y_out%LSShftFxa = y1%LSShftFxa + b * ScaleFactor
+  b = -(y1%LSShftFys - y2%LSShftFys)
+  y_out%LSShftFys = y1%LSShftFys + b * ScaleFactor
+  b = -(y1%LSShftFzs - y2%LSShftFzs)
+  y_out%LSShftFzs = y1%LSShftFzs + b * ScaleFactor
  END SUBROUTINE ED_Output_ExtrapInterp1
 
 
@@ -25369,6 +25396,15 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%RotPwr - y2%RotPwr) + t(2)**2*(-y1%RotPwr + y3%RotPwr))* scaleFactor
   c = ( (t(2)-t(3))*y1%RotPwr + t(3)*y2%RotPwr - t(2)*y3%RotPwr ) * scaleFactor
   y_out%RotPwr = y1%RotPwr + b  + c * t_out
+  b = (t(3)**2*(y1%LSShftFxa - y2%LSShftFxa) + t(2)**2*(-y1%LSShftFxa + y3%LSShftFxa))* scaleFactor
+  c = ( (t(2)-t(3))*y1%LSShftFxa + t(3)*y2%LSShftFxa - t(2)*y3%LSShftFxa ) * scaleFactor
+  y_out%LSShftFxa = y1%LSShftFxa + b  + c * t_out
+  b = (t(3)**2*(y1%LSShftFys - y2%LSShftFys) + t(2)**2*(-y1%LSShftFys + y3%LSShftFys))* scaleFactor
+  c = ( (t(2)-t(3))*y1%LSShftFys + t(3)*y2%LSShftFys - t(2)*y3%LSShftFys ) * scaleFactor
+  y_out%LSShftFys = y1%LSShftFys + b  + c * t_out
+  b = (t(3)**2*(y1%LSShftFzs - y2%LSShftFzs) + t(2)**2*(-y1%LSShftFzs + y3%LSShftFzs))* scaleFactor
+  c = ( (t(2)-t(3))*y1%LSShftFzs + t(3)*y2%LSShftFzs - t(2)*y3%LSShftFzs ) * scaleFactor
+  y_out%LSShftFzs = y1%LSShftFzs + b  + c * t_out
  END SUBROUTINE ED_Output_ExtrapInterp2
 
 END MODULE ElastoDyn_Types
