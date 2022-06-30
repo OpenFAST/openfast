@@ -1022,7 +1022,7 @@ SUBROUTINE SeaStOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    ALLOCATE ( p%OutParam(0:p%NumOuts) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = "Error allocating memory for the SeaState OutParam array."
+      ErrMsg  = "Error allocating memory for the SeaState OutParam array. NumOuts="//trim(num2lstr(p%NumOuts))
       RETURN
    ELSE
       ErrStat = ErrID_None
