@@ -455,6 +455,7 @@ jobs:
           cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
@@ -493,5 +494,6 @@ jobs:
           name: c-interface-reg-tests
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
