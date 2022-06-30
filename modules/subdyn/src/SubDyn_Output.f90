@@ -27,7 +27,7 @@ MODULE SubDyn_Output
    IMPLICIT NONE
 
    ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
+   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21705
 
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
@@ -701,7 +701,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       InvalidOutput(SSqmdd01+k-1) = .true.
    END DO
          
-   DO I=1,9
+   DO I=1,99
           !I know el # and whether it is 1st node or second node
       if (I <= p%NMOutputs) then
          INDX=p%MOutLst(I)%NOutCnt+1
@@ -765,13 +765,13 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
    
    
-      Indx =  IndexCharAry( OutListTmp(1:9), ValidParamAry )
+      Indx =  IndexCharAry( OutListTmp(1:10), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         
          p%OutParam(I)%SignM = -1            ! ex, 'MTipDxc1' causes the sign of TipDxc1 to be switched.
          OutListTmp                   = OutListTmp(2:)
          
-         Indx = IndexCharAry( OutListTmp(1:9), ValidParamAry )         
+         Indx = IndexCharAry( OutListTmp(1:10), ValidParamAry )         
       END IF
       
       IF ( Indx > 0 ) THEN
