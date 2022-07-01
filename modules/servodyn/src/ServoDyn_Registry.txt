@@ -223,6 +223,9 @@ typedef	^	BladedDLLType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to th
 typedef	^	BladedDLLType	ReKi	LSSTipMxa	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
 typedef	^	BladedDLLType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
 typedef	^	BladedDLLType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment caused by in-plane forces) at the blade root"	N-m
+typedef	^	BladedDLLType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	BladedDLLType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	BladedDLLType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 ## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
 typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
 typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
@@ -507,6 +510,9 @@ typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
+typedef	^	InputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	InputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	InputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-

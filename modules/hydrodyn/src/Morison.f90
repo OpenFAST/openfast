@@ -2553,8 +2553,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), kvec(3), v(3),  vf(3), vrel(3), vmag, vmagf
-   INTEGER                                           :: I, J, K, nodeIndx, IntWrapIndx
+   REAL(ReKi)                                        :: F_DP(6), vmag, vmagf
+   INTEGER                                           :: I, J, K
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
 
@@ -2608,7 +2608,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
-   real(ReKi)               :: C_1, C_2, a0b0, z1d, z2d, h, h_c_AM, deltal_AM
+   real(ReKi)               :: C_1, C_2, a0b0, h, h_c_AM, deltal_AM
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
@@ -2670,10 +2670,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             
       ! Compute the free surface elevation at the x/y position of all nodes
       positionXY = (/pos1(1),pos1(2)/)      
-      m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat2, ErrMsg2 )
+      m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (associated(p%WaveElev2)) THEN
-        m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat2, ErrMsg2 )
+        m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
       ELSE
@@ -2726,20 +2726,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   ELSE ! Node is above SWL - need wave stretching
           
                       ! Vertical wave stretching
-                      m%FV(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                      m%FV(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FA(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                      m%FA(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAcc0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FDynP(j) = SeaSt_Interp_3D    ( Time, positionXY, p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+                      m%FDynP(j) = SeaSt_Interp_3D    ( Time, positionXY, p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       
                       ! Extrapoled wave stretching
                       IF (p%WaveStMod == 2) THEN 
-                        m%FV(:,j)  = m%FV(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                        m%FV(:,j)  = m%FV(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        m%FA(:,j)  = m%FA(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                        m%FA(:,j)  = m%FA(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        m%FDynP(j) = m%FDynP(j) + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                        m%FDynP(j) = m%FDynP(j) + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                       END IF
           
@@ -2833,12 +2833,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                            
                            
                            ! Vertical wave stretching
-                           m%FAMCF(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                           m%FAMCF(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                            
                            ! Extrapoled wave stretching
                            IF (p%WaveStMod == 2) THEN 
-                              m%FAMCF(:,j)  = m%FAMCF(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * pos1(3)
+                              m%FAMCF(:,j)  = m%FAMCF(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
                                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                            END IF
           
@@ -3443,20 +3443,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ELSE ! Intersection is above SWL - need wave stretching
               
               ! Vertical wave stretching
-              FVFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+              FVFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FAFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+              FAFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FDynPFSInt = SeaSt_Interp_3D    ( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+              FDynPFSInt = SeaSt_Interp_3D    ( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               
               ! Extrapolated wave stretching
               IF (p%WaveStMod == 2) THEN 
-                FVFSInt    = FVFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                FVFSInt    = FVFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                FAFSInt    = FAFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                FAFSInt    = FAFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                FDynPFSInt = FDynPFSInt + SeaSt_Interp_3D    ( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                FDynPFSInt = FDynPFSInt + SeaSt_Interp_3D    ( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               END IF
               
@@ -3466,11 +3466,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
            ! Can evaluate the wave-field variables in the same way as vertical stretching
-           FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+           FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+           FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+           FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
         END IF
@@ -3490,12 +3490,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               ELSE ! Intersection is above SWL - need wave stretching
               
                  ! Vertical wave stretching
-                 FAMCFFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p,  ErrStat2, ErrMsg2 )
+                 FAMCFFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                  ! Extrapolated wave stretching
                  IF (p%WaveStMod == 2) THEN 
-                    FAMCFFSInt    = FAMCFFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAccMCF0,  p%seast_interp_p, ErrStat2, ErrMsg2 ) * FSInt(3)
+                    FAMCFFSInt    = FAMCFFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAccMCF0,  p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  END IF
               
@@ -3505,7 +3505,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
               ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
               ! Can evaluate the wave-field variables in the same way as vertical stretching
-              FAMCFFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, ErrStat2, ErrMsg2 )
+              FAMCFFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            END IF
         END IF
@@ -4030,9 +4030,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg      ! Error message if errStat /= ErrID_None
       ErrStat   = ErrID_None
       ErrMsg    = ""
-      Zeta = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, ErrStat, ErrMsg )
+      Zeta = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
       IF (associated(p%WaveElev2)) THEN
-         Zeta = Zeta + SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, ErrStat, ErrMsg )
+         Zeta = Zeta + SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
       END IF
    END SUBROUTINE GetTotalWaveElev
 

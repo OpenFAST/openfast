@@ -20,7 +20,6 @@ set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GE
 set(module_name "versioninfo")
 set(module_directory "version")
 set(module_library "versioninfolib")
-#set(nwtc_lib_module_directory "nwtc-library")
 
 file(MAKE_DIRECTORY ${build_testdirectory}/${module_directory})
 file(WRITE ${build_testdirectory}/${module_directory}/testSuites.inc "")
@@ -29,10 +28,10 @@ include_directories(
   ${PROJECT_SOURCE_DIR}
   ${pfunit_directory}/mod
   ${build_testdirectory}/${module_directory}
-#  ${source_modulesdirectory}/${nwtc_lib_module_directory}
 )
 
-set(testlist 
+set(testlist
+    VersionInfo_test_tools
     test_VersionInfo_CheckArgs
 )
 foreach(test ${testlist})
@@ -45,10 +44,7 @@ foreach(test ${testlist})
     set(test_sources ${test_sources} ${build_testdirectory}/${module_directory}/${test}.F90)
     file(APPEND ${build_testdirectory}/${module_directory}/testSuites.inc "ADD_TEST_SUITE(${test}_suite)\n")
 endforeach()
-#set(test_sources ${test_sources} ${source_modulesdirectory}/${nwtc_lib_module_directory}/NWTC_Library_test_tools.F90)
 
-  
-  
 add_executable(
     ${module_name}_utest
     ${pfunit_directory}/include/driver.F90

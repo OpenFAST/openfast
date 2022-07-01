@@ -236,6 +236,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSSTipMxa      !< Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader) [N-m]
     REAL(ReKi) , DIMENSION(1:3)  :: RootMyc      !< Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3) [N-m]
     REAL(ReKi) , DIMENSION(1:3)  :: RootMxc      !< In-plane moment (i.e., the moment caused by in-plane forces) at the blade root [N-m]
+    REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
+    REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
+    REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
     REAL(DbKi)  :: DLL_DT      !< interval for calling DLL (integer multiple number of DT) [s]
     CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -513,6 +516,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: RotPwr      !< Rotor power (this is equivalent to the low-speed shaft power) [W]
     REAL(ReKi)  :: HorWindV      !< Horizontal hub-height wind velocity magnitude [m/s]
     REAL(ReKi)  :: YawAngle      !< Estimate of yaw (nacelle + platform) [radians]
+    REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
+    REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
+    REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass input data to the DLL controller from the Lidar [-]
@@ -3517,6 +3523,9 @@ ENDIF
     DstBladedDLLTypeData%LSSTipMxa = SrcBladedDLLTypeData%LSSTipMxa
     DstBladedDLLTypeData%RootMyc = SrcBladedDLLTypeData%RootMyc
     DstBladedDLLTypeData%RootMxc = SrcBladedDLLTypeData%RootMxc
+    DstBladedDLLTypeData%LSShftFxa = SrcBladedDLLTypeData%LSShftFxa
+    DstBladedDLLTypeData%LSShftFys = SrcBladedDLLTypeData%LSShftFys
+    DstBladedDLLTypeData%LSShftFzs = SrcBladedDLLTypeData%LSShftFzs
     DstBladedDLLTypeData%DLL_DT = SrcBladedDLLTypeData%DLL_DT
     DstBladedDLLTypeData%DLL_InFile = SrcBladedDLLTypeData%DLL_InFile
     DstBladedDLLTypeData%RootName = SrcBladedDLLTypeData%RootName
@@ -3962,6 +3971,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! LSSTipMxa
       Re_BufSz   = Re_BufSz   + SIZE(InData%RootMyc)  ! RootMyc
       Re_BufSz   = Re_BufSz   + SIZE(InData%RootMxc)  ! RootMxc
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
       Db_BufSz   = Db_BufSz   + 1  ! DLL_DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InFile)  ! DLL_InFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -4291,6 +4303,12 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%RootMxc(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    ReKiBuf(Re_Xferred) = InData%LSShftFxa
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFys
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFzs
+    Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DLL_DT
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%DLL_InFile)
@@ -4893,6 +4911,12 @@ ENDIF
       OutData%RootMxc(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%LSShftFxa = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFys = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFzs = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%DLL_DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%DLL_InFile)
@@ -14930,6 +14954,9 @@ ENDIF
     DstInputData%RotPwr = SrcInputData%RotPwr
     DstInputData%HorWindV = SrcInputData%HorWindV
     DstInputData%YawAngle = SrcInputData%YawAngle
+    DstInputData%LSShftFxa = SrcInputData%LSShftFxa
+    DstInputData%LSShftFys = SrcInputData%LSShftFys
+    DstInputData%LSShftFzs = SrcInputData%LSShftFzs
 IF (ALLOCATED(SrcInputData%fromSC)) THEN
   i1_l = LBOUND(SrcInputData%fromSC,1)
   i1_u = UBOUND(SrcInputData%fromSC,1)
@@ -15209,6 +15236,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! RotPwr
       Re_BufSz   = Re_BufSz   + 1  ! HorWindV
       Re_BufSz   = Re_BufSz   + 1  ! YawAngle
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
+      Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
   Int_BufSz   = Int_BufSz   + 1     ! fromSC allocated yes/no
   IF ( ALLOCATED(InData%fromSC) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
@@ -15503,6 +15533,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%HorWindV
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YawAngle
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFxa
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFys
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LSShftFzs
     Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%fromSC) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -15935,6 +15971,12 @@ ENDIF
     OutData%HorWindV = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%YawAngle = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFxa = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFys = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LSShftFzs = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fromSC not allocated
     Int_Xferred = Int_Xferred + 1
@@ -17621,6 +17663,12 @@ END IF ! check if allocated
   b = -(u1%HorWindV - u2%HorWindV)
   u_out%HorWindV = u1%HorWindV + b * ScaleFactor
   CALL Angles_ExtrapInterp( u1%YawAngle, u2%YawAngle, tin, u_out%YawAngle, tin_out )
+  b = -(u1%LSShftFxa - u2%LSShftFxa)
+  u_out%LSShftFxa = u1%LSShftFxa + b * ScaleFactor
+  b = -(u1%LSShftFys - u2%LSShftFys)
+  u_out%LSShftFys = u1%LSShftFys + b * ScaleFactor
+  b = -(u1%LSShftFzs - u2%LSShftFzs)
+  u_out%LSShftFzs = u1%LSShftFzs + b * ScaleFactor
 IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
   DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
     b = -(u1%fromSC(i1) - u2%fromSC(i1))
@@ -17844,6 +17892,15 @@ END IF ! check if allocated
   c = ( (t(2)-t(3))*u1%HorWindV + t(3)*u2%HorWindV - t(2)*u3%HorWindV ) * scaleFactor
   u_out%HorWindV = u1%HorWindV + b  + c * t_out
   CALL Angles_ExtrapInterp( u1%YawAngle, u2%YawAngle, u3%YawAngle, tin, u_out%YawAngle, tin_out )
+  b = (t(3)**2*(u1%LSShftFxa - u2%LSShftFxa) + t(2)**2*(-u1%LSShftFxa + u3%LSShftFxa))* scaleFactor
+  c = ( (t(2)-t(3))*u1%LSShftFxa + t(3)*u2%LSShftFxa - t(2)*u3%LSShftFxa ) * scaleFactor
+  u_out%LSShftFxa = u1%LSShftFxa + b  + c * t_out
+  b = (t(3)**2*(u1%LSShftFys - u2%LSShftFys) + t(2)**2*(-u1%LSShftFys + u3%LSShftFys))* scaleFactor
+  c = ( (t(2)-t(3))*u1%LSShftFys + t(3)*u2%LSShftFys - t(2)*u3%LSShftFys ) * scaleFactor
+  u_out%LSShftFys = u1%LSShftFys + b  + c * t_out
+  b = (t(3)**2*(u1%LSShftFzs - u2%LSShftFzs) + t(2)**2*(-u1%LSShftFzs + u3%LSShftFzs))* scaleFactor
+  c = ( (t(2)-t(3))*u1%LSShftFzs + t(3)*u2%LSShftFzs - t(2)*u3%LSShftFzs ) * scaleFactor
+  u_out%LSShftFzs = u1%LSShftFzs + b  + c * t_out
 IF (ALLOCATED(u_out%fromSC) .AND. ALLOCATED(u1%fromSC)) THEN
   DO i1 = LBOUND(u_out%fromSC,1),UBOUND(u_out%fromSC,1)
     b = (t(3)**2*(u1%fromSC(i1) - u2%fromSC(i1)) + t(2)**2*(-u1%fromSC(i1) + u3%fromSC(i1)))* scaleFactor

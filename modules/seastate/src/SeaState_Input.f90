@@ -251,15 +251,16 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
    endif
 
-!FIXME: there is something a little strange here.  RandSeed(2) is an integer, but what if we get an error on the next read?
    read (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
-   InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
 
    if (ErrStat2 == 0) then ! the user entered a number
+      InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
+      
       InputFileData%Waves%RNG%RNG_type = "NORMAL"
       InputFileData%Waves%RNG%pRNG = pRNG_INTRINSIC
 
    else
+      InputFileData%Waves%RNG%RandSeed(2) = 0
 
       InputFileData%Waves%RNG%RNG_type = adjustl( Line )
       call Conv2UC( InputFileData%Waves%RNG%RNG_type )
@@ -542,6 +543,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    integer                                          :: K                    ! Generic loop counter index
    character(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    real(ReKi)                                       :: xpos, ypos, zpos
+   real(SiKi)                                       :: TmpFreq
    logical, allocatable                             :: foundMask(:)
    integer                                          :: WaveModIn
 
@@ -843,14 +845,18 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    if ( EqualRealNos(InputFileData%Waves%WaveDT, 0.0_DbKi) ) then
       InputFileData%Waves%WvHiCOff = 10000.0;  ! This is not going to be used because WaveDT is zero.
    else
-      InputFileData%Waves%WvHiCOff =  MIN( REAL( Pi/InputFileData%Waves%WaveDT,SiKi), InputFileData%Waves%WvHiCOff )
+      TmpFreq = REAL( Pi/InputFileData%Waves%WaveDT,SiKi)
+      if ( InputFileData%Waves%WvHiCOff > TmpFreq ) then
+         InputFileData%Waves%WvHiCOff =  TmpFreq
+         call SetErrStat( ErrID_Info,'WvLowCOff adjusted to '//trim(num2lstr(TmpFreq))//' rad/s, based on WaveDT.',ErrStat,ErrMsg,RoutineName)
+      end if
    end if
 
-   !TODO Issue warning if we changed WvHiCOff  GJH 7/24/13
-
-   if ( InputFileData%Waves%WvLowCOff >= InputFileData%Waves%WvHiCOff ) then
-      call SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
-      return
+   if (InputFileData%Waves%WaveMod > 2 .and. InputFileData%Waves%WaveMod /= 6) then
+      if ( InputFileData%Waves%WvLowCOff >= InputFileData%Waves%WvHiCOff ) then
+         call SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
+         return
+      end if
    end if
    
       ! WaveDir - Wave heading direction.

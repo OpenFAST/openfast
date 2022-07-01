@@ -198,7 +198,7 @@ PROGRAM HydroDynDriver
    n_SttsTime = MAX( 1, NINT( SttsTime / drvrInitInp%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
     
  !BJJ: added this for IceFloe/IceDyn
-   InitInData%hasIce = .FALSE.
+   InitInData_SeaSt%hasIce = .FALSE.
   
 
 !-------------------------------------------------------------------------------------
@@ -214,6 +214,7 @@ PROGRAM HydroDynDriver
    InitInData_SeaSt%InputFile    = drvrInitInp%SeaStateInputFile
    InitInData_SeaSt%OutRootName  = trim(drvrInitInp%OutRootName)//'.SEA'
    InitInData_SeaSt%TMax         = (drvrInitInp%NSteps-1) * drvrInitInp%TimeInterval  ! Starting time is always t = 0.0
+   InitInData_SeaSt%Linearize    = drvrInitInp%Linearize
    Interval = drvrInitInp%TimeInterval
    
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
@@ -233,7 +234,6 @@ PROGRAM HydroDynDriver
    InitInData%NStepWave2     =  InitOutData_SeaSt%NStepWave2
    InitInData%RhoXg          =  InitOutData_SeaSt%RhoXg
    InitInData%WaveMod        =  InitOutData_SeaSt%WaveMod
-   InitInData%CurrMod        =  InitOutData_SeaSt%CurrMod
    InitInData%WaveStMod      =  InitOutData_SeaSt%WaveStMod
    InitInData%WaveDirMod     =  InitOutData_SeaSt%WaveDirMod
    InitInData%WvLowCOff      =  InitOutData_SeaSt%WvLowCOff 
@@ -241,9 +241,10 @@ PROGRAM HydroDynDriver
    InitInData%WvLowCOffD     =  InitOutData_SeaSt%WvLowCOffD
    InitInData%WvHiCOffD      =  InitOutData_SeaSt%WvHiCOffD 
    InitInData%WvLowCOffS     =  InitOutData_SeaSt%WvLowCOffS
-   InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS 
-   InitInData%WvDiffQTFF     =  InitOutData_SeaSt%WvDiffQTFF
-   InitInData%WvSumQTFF      =  InitOutData_SeaSt%WvSumQTFF 
+   InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS
+   
+   InitInData%ValidWithSSExctn     =  InitOutData_SeaSt%ValidWithSSExctn
+   
    InitInData%WaveDirMin     =  InitOutData_SeaSt%WaveDirMin  
    InitInData%WaveDirMax     =  InitOutData_SeaSt%WaveDirMax  
    InitInData%WaveDir        =  InitOutData_SeaSt%WaveDir     
@@ -624,10 +625,13 @@ subroutine HD_DvrCleanup()
       
       call HydroDyn_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers=.false. )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_DestroyContState( x_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
+      
       call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
@@ -642,9 +646,10 @@ subroutine HD_DvrCleanup()
             ErrMsg = 'at simulation time '//trim(Num2LStr(time))//' of '//trim(Num2LStr(InitInData%TMax))//' seconds'
          end if
                     
-         
-         CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
+         if (ErrStat >= AbortErrLev) then
+            CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'//NewLine//' Simulation error level: '&
                          //trim(GetErrStr(errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+         end if
       end if
       
      ! Print *, time

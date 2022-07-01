@@ -71,27 +71,8 @@ MODULE WAMIT2
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: WAMIT2_Init                           !< Initialization routine
-   PUBLIC :: WAMIT2_End                            !< Ending routine (includes clean up)
 
-   PUBLIC :: WAMIT2_UpdateStates                   !< Loose coupling routine for solving for constraint states, integrating
-                                                   !!   continuous states, and updating discrete states
    PUBLIC :: WAMIT2_CalcOutput                     !< Routine for computing outputs
-
-   PUBLIC :: WAMIT2_CalcConstrStateResidual        !< Tight coupling routine for returning the constraint state residual
-   PUBLIC :: WAMIT2_CalcContStateDeriv             !< Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: WAMIT2_UpdateDiscState                !< Tight coupling routine for updating discrete states
-
-   !PUBLIC :: WAMIT2_JacobianPInput                 !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: WAMIT2_JacobianPContState             !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the continuous
-   !                                                !!   states (x)
-   !PUBLIC :: WAMIT2_JacobianPDiscState             !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the discrete
-   !                                                !!   states (xd)
-   !PUBLIC :: WAMIT2_JacobianPConstrState           !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !!   (Xd), and constraint-state (Z) equations all with respect to the constraint
-                                                    !!   states (z)
 
 
 
@@ -206,20 +187,13 @@ CONTAINS
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
 !!    The initial states and initial guess for the input are defined.
-SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-      TYPE(WAMIT2_InputType),             INTENT(  OUT)  :: u                    !< An initial guess for the input; input mesh must be defined
       TYPE(WAMIT2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(  OUT)  :: x                    !< Initial continuous states
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(  OUT)  :: xd                   !< Initial discrete states
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(  OUT)  :: z                    !< Initial guess of the constraint states
-      TYPE(WAMIT2_OtherStateType),        INTENT(  OUT)  :: OtherState           !< Initial other states
       TYPE(WAMIT2_OutputType),            INTENT(  OUT)  :: y                    !< Initial system outputs (outputs are not calculated; only the output mesh is initialized)
       TYPE(WAMIT2_MiscVarType),           INTENT(  OUT)  :: m                    !< Initial misc/optimization variables
-      REAL(DbKi),                         INTENT(INOUT)  :: Interval             !< Coupling interval in seconds: don't change it from the glue code provided value.
-      TYPE(WAMIT2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -297,7 +271,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !-------------------------------------------------------------------------------------------------------------
          !> 1. Check the data file related values (_MnDrift_, _MnDriftF_ etc). Also copy over important things from _InitInp_ to _p_ and _InitOut_.
 
-      CALL CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
+      CALL CheckInitInput( InitInp, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
@@ -671,17 +645,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !----------------------------------------------------------------------
 
          ! Create the input and output meshes associated with lumped loads
-      CALL MeshCreate(  BlankMesh         = u%Mesh           , &
-                        IOS               = COMPONENT_INPUT  , &
+      CALL MeshCreate(  BlankMesh         = y%Mesh           , &
+                        IOS               = COMPONENT_OUTPUT , &
                         Nnodes            = p%NBody          , &
                         ErrStat           = ErrStatTmp       , &
                         ErrMess           = ErrMsgTmp        , &
-                        TranslationDisp   = .TRUE.           , &
-                        Orientation       = .TRUE.           , &
-                        TranslationVel    = .TRUE.           , &
-                        RotationVel       = .TRUE.           , &
-                        TranslationAcc    = .FALSE.          , &
-                        RotationAcc       = .FALSE.)
+                        Force             = .TRUE.           , &
+                        Moment            = .TRUE.)
 
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -697,15 +667,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          XYZloc      = (/InitInp%PtfmRefxt(IBody), InitInp%PtfmRefyt(IBody), InitInp%PtfmRefzt(IBody)/)
 
             ! Create the node on the mesh
-         CALL MeshPositionNode (u%Mesh, IBody, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
+         CALL MeshPositionNode (y%Mesh, IBody, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
             ! Create the mesh element
-         CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, IBody )
+         CALL MeshConstructElement (  y%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, IBody )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       ENDDO
 
-      CALL MeshCommit ( u%Mesh, ErrStatTmp, ErrMsgTmp )
+      CALL MeshCommit ( y%Mesh, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
@@ -713,16 +683,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       END IF
 
 
-      CALL MeshCopy( SrcMesh=u%Mesh, DestMesh=y%Mesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
-                     ErrStat=ErrStatTmp, ErrMess=ErrMsgTmp, Force=.TRUE., Moment=.TRUE. )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      END IF
-
-
-      u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
 
 
@@ -730,17 +690,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 6. Set zero values for unused outputs.  This is mostly so that the
          !!    compiler does not complain.
          !----------------------------------------------------------------------
-      x%DummyContState           = 0.0_SiKi
-      xd%DummyDiscState          = 0.0_SiKi
-      z%DummyConstrState         = 0.0_SiKi
       CALL AllocAry( m%LastIndWave, p%NBody, 'm%LastIndWave', ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       m%LastIndWave              = 1_IntKi
 
-      OtherState%DummyOtherState = 0
-
          ! Cleanup remaining stuff
-      CALL CleanUp
+      CALL CleanUp()
 
       RETURN
 
@@ -1186,7 +1141,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
-                     ! is done only for efficiency.
+                     ! is done only for efficiency. 
+                  
+                  !BJJ: If WaveMod==1, this could result in zeroing out the wrong values... 
+                  !InitInp%WvLowCOff and InitInp%WvHiCOff are not used in SeaState when WaveMod = 0,1, or 6
+                  ! Probably could just remove this IF statement????
                   IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
@@ -1380,7 +1339,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 1. Check the data to see if the wave frequencies are present in the QTF data.  Since Newman's approximation only uses
          !!    frequencies where \f$ \omega_1=\omega_2 \f$, the data read in from the files must contain the full range of frequencies
          !!    present in the waves.
-
+!bjj: InitInp%WvLowCOff and InitInp%WvHiCOff aren't supposed to be used when WaveMod=0, 1, or 6, but they are used here regardless of those conditions.
+!     Can we get rid of these checks????
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
@@ -3066,14 +3026,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !!
    !! This subroutine also populates the InitOut and creates the filenames for each of the calculation types.
    !!
-   SUBROUTINE CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
+   SUBROUTINE CheckInitInput( InitInp, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
 
       IMPLICIT NONE
 
          ! Passed variables.
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp        !< Input data for initialization routine
-      REAL(DbKi),                         INTENT(IN   )  :: Interval       !< Coupling interval in seconds: don't change it from the glue code provided value.
-      TYPE(WAMIT2_InitOutputType),        INTENT(INOUT)  :: InitOut        !< The output from the init routine
       TYPE(WAMIT2_ParameterType),         INTENT(  OUT)  :: p              !< The parameters
 
          ! QTF storage -- from the data files that are read in
@@ -3404,13 +3362,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       !> 1. Wave information we need to keep
       !--------------------------------------------------------------------------------
       p%NStepWave = InitInp%NStepWave
-
-
-      !--------------------------------------------------------------------------------
-      !> 2. Time related information
-      !--------------------------------------------------------------------------------
-
-      p%DT                    =  Interval                   ! Timestep from calling program
 
 
       !--------------------------------------------------------------------------------
@@ -4220,12 +4171,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         IF ( EqualRealNos( Data3D%WvDir1(J), Data3D%WvDir2(J) ) .AND. &
                              EqualRealNos( Data3D%WvDir1(K), Data3D%WvDir2(K) ) ) THEN
 
-                              ! Check if not filled
-                           IF ( .NOT. Data3D%DataMask( I, J, K, L )  ) THEN
+                           ! Check if filled
+                           IF ( Data3D%DataMask( I, J, K, L )  ) THEN
 
                                  ! See if the diagonal mirror one (WvDir2,WvDir1) value is not filled,
                                  ! and fill it if empty
-                              IF ( Data3D%DataMask( I, K, J, L )  ) THEN
+                              IF ( .NOT. Data3D%DataMask( I, K, J, L )  ) THEN
                                  Data3D%DataSet ( I, K, J, L ) = Data3D%DataSet( I, J, K, L )
                                  Data3D%DataMask( I, K, J, L ) = .TRUE.
                               ENDIF
@@ -5666,119 +5617,14 @@ END SUBROUTINE WAMIT2_Init
 
 
 
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.  The purpose of this routine is to destroy any data that is leftover.  If
-!! we don't do this, we may leave memory tied up after the simulation ends.
-!! To destroy the data, we call several routines that are generated by the FAST registry, so any issues with the destroy routines
-!! should be addressed by the registry.exe which generates the WAMIT2_Types.f90 file.
-!!
-SUBROUTINE WAMIT2_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      TYPE(WAMIT2_InputType),             INTENT(INOUT)  :: u              !< System inputs
-      TYPE(WAMIT2_ParameterType),         INTENT(INOUT)  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Continuous states
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Discrete states
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Constraint states
-      TYPE(WAMIT2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Other states
-      TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< System outputs
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         !> Place any last minute operations or calculations here.  For WAMIT2, most calculations are performed
-         !! during the initialization, so there are no final calculations that need to be performed.
-
-
-         !> Close files here.  The only files that are opened for WAMIT2 take place during the initialization routine.  They should
-         !! have been closed then.
-         !! @todo Check to make sure nothing is left open by this module.
-
-
-         !> Destroy the input data:
-
-      CALL WAMIT2_DestroyInput( u, ErrStat, ErrMsg )
-
-
-         !> Destroy the parameter data:
-
-      CALL WAMIT2_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         !> Destroy the state data:
-
-      CALL WAMIT2_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-
-
-         !> Destroy the output data:
-
-      CALL WAMIT2_DestroyOutput( y, ErrStat, ErrMsg )
-
-
-END SUBROUTINE WAMIT2_End
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-!> Continuous, constraint, and discrete states are updated to values at t + Interval.
-SUBROUTINE WAMIT2_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: t              !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: Inputs(:)      !< Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)  !< Times in seconds associated with Inputs
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Input: Continuous states at t;
-                                                                           !!Output: Continuous states at t + Interval
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at t;
-                                                                           !!Output: Discrete states at t + Interval
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Input: Constraint states at t;
-                                                                           !!Output: Constraint states at t + Interval
-      TYPE(WAMIT2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Input: Other states at t;
-                                                                           !! Output: Other states at t + Interval
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-END SUBROUTINE WAMIT2_UpdateStates
-
-
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
       real(SiKi),                         intent(in   )  :: WaveTime(:)    !< Array of wave kinematic time samples, (sec)
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states
       TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< Outputs computed at Time (Input only so that mesh
                                                                            !!   connectivity information does not have to be recalculated)
       TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
@@ -5834,118 +5680,6 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, 
 
 END SUBROUTINE WAMIT2_CalcOutput
 
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine calculates the derivative of the continuous states.
-!! As this routine is not necessary in the WAMIT2 module, it simply issues a warning and returns.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE WAMIT2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(  OUT)  :: dxdt           !< Continuous state derivatives at Time
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States to take derivative of in WAMIT2 module. *WAMIT2::CalcContStateDeriv was called.  It "// &
-                  "is not necessary in the WAMIT2 module, so it does nothing.*"
-
-
-         ! Compute the first time derivatives of the continuous states here: None to calculate, so no code here.
-
-         ! Dummy output value for dxdt -- this is only here to prevent the compiler from complaining.
-   dxdt%DummyContState = 0.0_SiKi
-
-
-END SUBROUTINE WAMIT2_CalcContStateDeriv
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine is used to update discrete states, by
-!! So, this routine will simply issue a warning and return.
-SUBROUTINE WAMIT2_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at Time;
-                                                                           !!   Output: Discrete states at Time + Interval
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No Discrete States to update in WAMIT2 module. *WAMIT2::UpdateDiscState was called.  It is not "// &
-                  "necessary in the WAMIT2 module, so it does nothing.*"
-
-         ! Code to update the discrete states would live here, but there are no discrete states to update, hence no code.
-
-
-END SUBROUTINE WAMIT2_UpdateDiscState
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this is a tight coupling routine for solving for the residual of the constraint state equations
-!! So, this routine will simply issue a warning and return.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE WAMIT2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time (possibly a guess)
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(  OUT)  :: z_residual     !< Residual of the constraint state equations using
-                                                                           !!  the input values described above
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States in WAMIT2 module. *WAMIT2::CalcConstrStateResidual was called.  It is not needed in "//&
-                  "the WAMIT2 module, so it does nothing useful."
-
-
-
-         ! Solve for the constraint states here: Since there are no constraint states to solve for in WAMIT2, there is no code here.
-
-      z_residual%DummyConstrState = 0.0_SiKi    ! This exists just so that we can make the compiler happy.
-
-END SUBROUTINE WAMIT2_CalcConstrStateResidual
 
 
 

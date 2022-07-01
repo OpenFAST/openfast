@@ -2187,7 +2187,7 @@ SUBROUTINE SD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE SD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedPackedOrient )
    REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
@@ -2205,8 +2205,11 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedPackedOrient !< whether a y_op values should contain 3-value representation instead of full orientation matrices
+
    ! Local
    INTEGER(IntKi)                                                :: idx, i
+   LOGICAL                                                       :: ReturnPackedOrientation
    INTEGER(IntKi)                                                :: nu
    INTEGER(IntKi)                                                :: ny
    INTEGER(IntKi)                                                :: ErrStat2
@@ -2229,14 +2232,24 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask, UseSmlAngle=.true.)
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
+   
    IF ( PRESENT( y_op ) ) THEN
       ny = p%Jac_ny + y%Y2Mesh%NNodes * 6 + y%Y3Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
+      
+      if (present(NeedPackedOrient)) then
+         ReturnPackedOrientation = NeedPackedOrient
+      else
+         ReturnPackedOrientation = .false.
+      end if
+      
+      if (ReturnPackedOrientation) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      
       idx = 1
       call PackLoadMesh(y%Y1Mesh, y_op, idx)
       FieldMask = .false.
@@ -2246,13 +2259,14 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask)
-      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=ReturnPackedOrientation)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=ReturnPackedOrientation)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)
       end do
    END IF
+   
    IF ( PRESENT( x_op ) ) THEN
       if (.not. allocated(x_op)) then
          call AllocAry(x_op, p%Jac_nx*2,'x_op',ErrStat2,ErrMsg2); if (Failed()) return

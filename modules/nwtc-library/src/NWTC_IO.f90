@@ -2252,7 +2252,7 @@ END SUBROUTINE CheckR16Var
    INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
+   CHARACTER(25)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -2266,7 +2266,7 @@ END SUBROUTINE CheckR16Var
          CASE ( ErrID_Fatal )
             GetErrStr = 'FATAL ERROR'
          CASE DEFAULT
-            GetErrStr = 'Unknown ErrID'
+            GetErrStr = 'Unknown ErrID '//TRIM(Num2LStr(ErrID))
       END SELECT
 
 
@@ -6221,6 +6221,7 @@ END SUBROUTINE CheckR16Var
 
          ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
 !         RETURN ! finish reading the file instead of returning first
 
       ELSE
@@ -6228,6 +6229,7 @@ END SUBROUTINE CheckR16Var
          CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
 
       END IF
+
 
    END DO
 
@@ -6318,6 +6320,7 @@ END SUBROUTINE CheckR16Var
 
          ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
 !        RETURN ! finish processing the OutList variable before returning
 
       ELSE
@@ -6792,7 +6795,6 @@ END SUBROUTINE CheckR16Var
 
    CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
 
    READ (Word,*,IOSTAT=IOS)  Var
 
@@ -7429,6 +7431,8 @@ END SUBROUTINE CheckR16Var
    REAL(SiKi), PARAMETER         :: IntMin   = -32768.0              ! Smallest integer represented in 2 bytes
    REAL(SiKi), PARAMETER         :: IntRng   = IntMax - IntMin       ! Max Range of 2 byte integer
 
+   REAL(SiKi), PARAMETER         :: SqrtEps = SQRT(EPSILON(1.0_SiKi)) ! small number for tolerance
+
 
          ! Local variables
 
@@ -7634,8 +7638,8 @@ END SUBROUTINE CheckR16Var
       ! Calculate the scaling parameters for each channel
       !...............................................................................................................................
       DO IC=1,NumOutChans                    ! Loop through the output channels
-         IF ( ColMax(IC) == ColMin(IC) ) THEN
-            ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
+         IF ( abs(ColMax(IC) - ColMin(IC)) < SqrtEps ) THEN
+            ColScl(IC) = IntRng/SqrtEps
          ELSE
             ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
          ENDIF

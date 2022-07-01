@@ -38,7 +38,6 @@ MODULE Waves
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: WavePkShpDefault                     ! Return the default value of the peak shape parameter of the incident wave spectrum
    PUBLIC :: Waves_Init                           ! Initialization routine
-   PUBLIC :: Waves_End                            ! Ending routine (includes clean up)
 
 
    PRIVATE:: WheelerStretching                    ! This FUNCTION applies the principle of Wheeler stretching to (1-Forward) find the elevation where the wave kinematics are to be applied using Wheeler stretching or (2-Backword)
@@ -608,7 +607,11 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       InitOut%WaveDOmega = 0.0
-      InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
+      
+      InitOut%WaveTime(0)   = 0.0_DbKi ! We must have at least two different time steps in the interpolation
+      InitOut%WaveTime(1)   = 1.0_DbKi ! We must have at least two different time steps in the interpolation
+      InitOut%WaveTime(2)   = 2.0_DbKi ! We must have at least two different time steps in the interpolation
+      
       InitOut%WaveElev0 = 0.0
       InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0
@@ -2437,22 +2440,12 @@ END SUBROUTINE VariousWaves_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
-!! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Waves_Init( InitInp, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !NOTE: We are making this INOUT so that we can overwrite the WaveKinzi with zeros for wave stretching calculations
-      TYPE(Waves_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
-      TYPE(Waves_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
-      TYPE(Waves_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
-      TYPE(Waves_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
-      TYPE(Waves_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
-      TYPE(Waves_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states
-      TYPE(Waves_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
-                                                                     !!   only the output mesh is initialized)
-      TYPE(Waves_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables
-      REAL(DbKi),                      INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
+      REAL(DbKi),                      INTENT(IN   )  :: Interval    !< Coupling interval in seconds: the rate that
                                                                      !!   (1) Waves_UpdateStates() is called in loose coupling &
                                                                      !!   (2) Waves_UpdateDiscState() is called in tight coupling.
                                                                      !!   Input is the suggested time from the glue code;
@@ -2613,92 +2606,10 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ENDSELECT
 
    InitOut%WaveMultiDir = InitInp%WaveMultiDir
-   u%DummyInput = 0.0
-   p%DT = Interval
-   p%WaveMultiDir = InitInp%WaveMultiDir     ! Flag to indicate multidirectional waves
-   x%DummyContState = 0.0
-   xd%DummyDiscState = 0.0
-   z%DummyConstrState = 0.0
-   OtherState%DummyOtherState = 0
-   m%DummyMiscVar = 0
-   y%DummyOutput = 0.0
-
-
 
 END SUBROUTINE Waves_Init
 
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
-SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      TYPE(Waves_InputType),           INTENT(INOUT)  :: u           !< System inputs
-      TYPE(Waves_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
-      TYPE(Waves_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
-      TYPE(Waves_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
-      TYPE(Waves_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
-      TYPE(Waves_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(Waves_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-         ! Local error handling variables
-      INTEGER(IntKi)                                  :: ErrStatTmp
-      CHARACTER(ErrMsgLen)                            :: ErrMsgTmp
-      CHARACTER(*), PARAMETER                         :: RoutineName = 'Waves_End'
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         ! Place any last minute operations or calculations here:
-
-
-         ! Close files here:
-
-
-
-         ! Destroy the input data:
-
-      CALL Waves_DestroyInput( u, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-
-
-         ! Destroy the parameter data:
-
-      CALL Waves_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-
-
-         ! Destroy the state data:
-
-      CALL Waves_DestroyContState(   x,           ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL Waves_DestroyDiscState(   xd,          ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL Waves_DestroyConstrState( z,           ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      CALL Waves_DestroyOtherState(  OtherState,  ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-
-      CALL Waves_DestroyMisc(  m,  ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-
-
-         ! Destroy the output data:
-
-      CALL Waves_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-
-
-
-
-END SUBROUTINE Waves_End
-!----------------------------------------------------------------------------------------------------------------------------------
 
 !=======================================================================
 FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, ErrMsg )

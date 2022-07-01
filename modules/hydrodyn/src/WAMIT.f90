@@ -225,7 +225,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Copy Output Init data from Waves Module Init call
          
       p%NStepWave    = InitInp%NStepWave
-      p%NumOuts      = InitInp%NumOuts
       p%ExctnMod     = InitInp%ExctnMod
       p%ExctnDisp    = InitInp%ExctnDisp
       p%NBodyMod     = InitInp%NBodyMod
@@ -1836,7 +1835,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
                iStart = (iBody-1)*6+1
                
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
-               m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%SeaSt_interp_p, ErrStat2, ErrMsg2 )
+               m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%SeaSt_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
                
             end do

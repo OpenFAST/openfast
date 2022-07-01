@@ -1660,21 +1660,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !..................
    if ( (InputFileData%WAMIT%ExctnMod == 2) ) then
 
-      if ( InitInp%WaveMod == 6 ) then
-         call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      if ( .not. InitInp%ValidWithSSExctn ) then
+         call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, set WaveMod to 0, 1, 1P#, 2, 3, 4, or 5; WaveDirMod=0; WvDiffQTF=FALSE; and WvSumQTF=FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
       
-      if ( InitInp%WaveDirMod /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
-      end if
-      
-      if ( InitInp%WvDiffQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-      end if
-      
-      if ( InitInp%WvSumQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-      end if
 
       if ( InputFileData%PotMod /= 1 ) then
          call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with state-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
@@ -1703,22 +1692,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !..................
    if (InitInp%Linearize) then
       
-      if ( InitInp%WaveMod /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
-      end if
-      
-      if ( InitInp%WaveDirMod /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'No directional spreading must be used for linearization. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
-      end if
-      
-      if ( InitInp%WvDiffQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics for linearization. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-      end if
-      
-      if ( InitInp%WvSumQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-      end if
-
       if ( InputFileData%PotMod > 1 ) then
          call SetErrStat( ErrID_Fatal, 'Potential-flow model cannot be set to FIT for linearization. Set PotMod= 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
@@ -2501,12 +2474,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          RETURN
       END IF
       foundMask = .FALSE.
-         ! Extract Waves2 list
-!      InputFileData%Waves2%NumOuts  = GetWaves2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   
-!         ! Extract WAMIT2 list
-!      InputFileData%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!
+      
          ! Extract Morison list
          !foundMask = .FALSE.
       InputFileData%Morison%NumOuts = GetMorisonChannels  ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Morison%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2553,13 +2521,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! Populate data in sub-types from parent or other module types
    !----------------------------------------------------------
 
-     
-      
-
       ! WAMIT
       InputFileData%WAMIT%WtrDens      = InputFileData%Morison%WtrDens
       InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
-      InputFileData%WAMIT%OutAll       = InputFileData%OutAll
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
       InputFileData%WAMIT2%WtrDens     = InputFileData%Morison%WtrDens

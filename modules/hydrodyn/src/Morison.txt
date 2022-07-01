@@ -256,24 +256,24 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4626}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation"        -
-typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation"        -
-typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         ""    -
-typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation (points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation (points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
@@ -323,9 +323,9 @@ typedef   ^                            MiscVarType                   ReKi       
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FAMCF                         {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node at time t, which may not correspond to the WaveTime array of times"   -
-typedef   ^                            ^                             ReKi                     WaveElev                      {:}            -         -         "Total wave elevation"   m
-typedef   ^                            ^                             ReKi                     WaveElev1                      {:}            -         -         "First order wave elevation"        m
-typedef   ^                            ^                             ReKi                     WaveElev2                      {:}            -         -         "Second order wave elevation"        m
+typedef   ^                            ^                             SiKi                     WaveElev                      {:}            -         -         "Total wave elevation"   m
+typedef   ^                            ^                             SiKi                     WaveElev1                      {:}            -         -         "First order wave elevation"        m
+typedef   ^                            ^                             SiKi                     WaveElev2                      {:}            -         -         "Second order wave elevation"        m
 typedef   ^                            ^                             ReKi                     vrel                          {:}{:}         -         -         "velocity of structural node relative to the water" m/s^2
 typedef   ^                            ^                             INTEGER                  nodeInWater                    {:}           -         -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             Morison_MemberLoads      memberLoads                    {:}           -         -          "Array (NMembers long) of member-based side-effects load contributions" -
@@ -365,21 +365,21 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg
 typedef   ^                            ^                             ReKi                     AM_End                         {:}{:}{:}         -         -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation"        m
-typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation"        m
-typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveVel0                      {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAcc0                      {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveDynP0                     {*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed"  s
-typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         ""        -
-typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation (points to SeaState module data)"        m
+typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation (points to SeaState module data)"        m
+typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveVel0                      {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAcc0                      {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveDynP0                     {:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed (points to SeaState module data)"  s
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         "(points to SeaState module data)"        -
 typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -

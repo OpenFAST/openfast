@@ -71,7 +71,7 @@ casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 casenames = [c for c in casenames if len(c.strip()) > 0]
 
 results = []
-prefix, passString, failString = "executing", "PASS", "FAIL"
+prefix, passString, failString, didNotRunString = "executing", "PASS", "FAIL", "FAILED TO COMPLETE"
 longestName = max(casenames, key=len)
 for case in casenames:
     print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
@@ -80,8 +80,14 @@ for case in casenames:
     else:
         command = "\"{}\" executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
-    resultString = passString if returnCode == 0 else failString
-    results.append((case, resultString))
+
+    if returnCode > 1:
+        resultsString = didNotRunString
+        returnCode = returnCode / 10
+    else:
+        resultString = passString if returnCode == 0 else failString
+        returnCode = 0
+    results.append((case, resultString, returnCode))
     print(resultString)
 
 from errorPlotting import exportResultsSummary
@@ -89,7 +95,8 @@ exportResultsSummary(buildDirectory, results)
 
 print("\nRegression test execution completed with these results:")
 for r in results:
-    print(" ".join([strFormat(longestName).format(r[0]), r[1]]))
+    if r[2] > 1:
+       print(" ".join([strFormat(longestName).format(r[0]), r[1]]))
 
 nPasses = len( [r[1] for r in results if r[1] == passString] )
 print("Total PASSING tests - {}".format(nPasses))

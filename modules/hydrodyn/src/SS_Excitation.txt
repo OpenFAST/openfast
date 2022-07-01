@@ -23,8 +23,8 @@ typedef ^                      ^                   ReKi                         
 typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 typedef ^                      ^                   SiKi                         WaveElev0       {:} - -   "Wave elevation time history at origin" m
-typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*} - -   "First order wave elevation"        -
-typedef ^                      ^                   SiKi                         WaveTime        {*} - -   "Times where wave elevation is known" s
+typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*} - -   "First order wave elevation (points to SeaState module data)"        -
+typedef ^                      ^                   SiKi                         WaveTime        {*} - -   "Times where wave elevation is known (points to SeaState module data)" s
 typedef ^                      ^            SeaSt_Interp_ParameterType       SeaSt_Interp_p     -  - -   "parameter information from the SeaState Interpolation module"   -
 																                
 typedef ^                      InitOutputType      CHARACTER(10)                WriteOutputHdr  {:} - -   "Header of the output" -
@@ -46,6 +46,7 @@ typedef ^                      ^                   SS_Exc_ContinuousStateType   
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef ^                      MiscVarType         INTEGER                      LastIndWave      -  1 -   "last used index in the WaveTime array" -
+typedef   ^                      ^                 SeaSt_Interp_MiscVarType     SeaSt_Interp_m   -  - -   "misc var information from the SeaState Interpolation module"   -
 
 
 # ..... Parameters .........................
@@ -63,8 +64,8 @@ typedef ^                      ^                   ReKi                         
 typedef ^                      ^                   INTEGER                      numStates        -     0 -   "Number of states" -
 typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
 typedef ^                      ^                   SiKi                         WaveElev0       {:}    - -   "Wave elevation time history at origin" m
-typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*}    - -   "First order wave elevation"        -
-typedef ^                      ^                   SiKi                         WaveTime        {*}    - -   "Times where wave elevation is known" s
+typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*}    - -   "First order wave elevation (points to SeaState module data)"        -
+typedef ^                      ^                   SiKi                         WaveTime        {*}    - -   "Times where wave elevation is known (points to SeaState module data)" s
 typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 
 # ..... Inputs .............................
