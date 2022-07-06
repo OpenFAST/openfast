@@ -163,3 +163,17 @@ int FastLibAPI::total_time_steps() {
     // We assume here t_initial is always 0
     return ceil( t_max / dt ) + 1;
 }
+
+void FastLibAPI::get_hub_position(float *absolute_position, float *rotational_velocity, double *orientation_dcm) {
+    int _error_status = 0;
+    char _error_message[INTERFACE_STRING_LENGTH];
+
+    FAST_HubPosition(
+        &i_turb,
+        absolute_position,
+        rotational_velocity,
+        orientation_dcm,
+        &_error_status,
+        _error_message
+    );
+}

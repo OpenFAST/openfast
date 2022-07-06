@@ -1793,52 +1793,47 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
+      INTEGER(IntKi)                         :: ErrStat2                            ! local error status
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
+      CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_End'
 
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
-      
-         ! Place any last minute operations or calculations here:
-
-
             
          ! Write the HydroDyn-level output file data if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
-         
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN               
-         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat, ErrMsg )         
+         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
       END IF          
       
          ! Close files here:  
-      CALL HDOut_CloseOutput( p, ErrStat, ErrMsg )           
+      CALL HDOut_CloseOutput( p, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
           
 
-         ! Destroy the input data:
+         ! Destroy the input data: (ignore errors)
+      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2 )
+
+
+         ! Destroy the parameter data: (ignore errors)
+      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2 )
+
+
+         ! Destroy the state data: (ignore errors)
+      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2 )
          
-      CALL HydroDyn_DestroyInput( u, ErrStat, ErrMsg )
+         ! Destroy misc variables: (ignore errors)
+      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2 )
 
-
-         ! Destroy the parameter data:
-      
-      CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         ! Destroy the state data:
-         
-      CALL HydroDyn_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-         
-         ! Destroy misc variables:
-      
-      CALL HydroDyn_DestroyMisc( m, ErrStat, ErrMsg )
-
-         ! Destroy the output data:
-         
-      CALL HydroDyn_DestroyOutput( y, ErrStat, ErrMsg )
+         ! Destroy the output data: (ignore errors)
+      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2 )
       
 
 END SUBROUTINE HydroDyn_End
