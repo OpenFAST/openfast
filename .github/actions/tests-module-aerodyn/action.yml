@@ -18,7 +18,7 @@ runs:
         fi
 
         if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
-          ctest -VV -j7 -R ad_
+          ctest -VV -R ad_  #  -j7  do not run these tests in parallel due to a bug in accessing shared files
         fi
 
       working-directory: ${{runner.workspace}}/openfast/build
