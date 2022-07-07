@@ -43,6 +43,7 @@ PROGRAM HydroDynDriver
       INTEGER                 :: NSteps
       REAL(DbKi)              :: TimeInterval
       INTEGER                 :: PRPInputsMod
+      REAL(ReKi)              :: PtfmRefzt
       CHARACTER(1024)         :: PRPInputsFile
       REAL(ReKi)              :: uPRPInSteady(6)
       REAL(ReKi)              :: uDotPRPInSteady(6)
@@ -118,8 +119,10 @@ PROGRAM HydroDynDriver
    integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
 
    type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all PRP-related driver inputs are set
-   type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
-   type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between Reference pt mesh and Morison mesh
+   type(MeshType)                                 :: EDRefPtMesh                             ! 1-node Point mesh located at (0,0,zRef) in global system where ElastoDyn Reference point is
+   type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between HD Reference pt mesh and WAMIT body(ies) mesh
+   type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between HD Reference pt mesh and Morison mesh
+   type(MeshMapType)                              :: ED_Ref_2_M_P                            ! Mesh mapping between ED Reference pt mesh and Morison mesh
    real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    ! For testing
@@ -388,11 +391,19 @@ PROGRAM HydroDynDriver
       
    END IF
 
+
+   Time = 0.0
+   !...............................................................................................................................
+   ! --- Linearization
+   !...............................................................................................................................
+   if (drvrInitInp%Linearize) then
+      call Linearization(Time)
+   endif
+
    
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
-   Time = 0.0
    CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, time, InitInData%TMax )
 
    ! loop through time steps
@@ -932,6 +943,19 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CLOSE( UnIn )
       RETURN
    END IF   
+
+       ! PtfmRefzt
+   CALL ReadVar ( UnIn, FileName, InitInp%PtfmRefzt, 'PtfmRefzt', &
+                                    'Vertical distance from the ground level to the platform reference point', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read PRPInputsMod parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF   
+   
    
    
       ! PRPInputsFile      
@@ -1170,6 +1194,191 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, E
 END SUBROUTINE WaveElevGrid_Output
 
 !----------------------------------------------------------------------------------------------------------------------------------
+! --- Rigid body Linearization at t=0
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Linearization(t)
+   real(DbKi) :: t
+   real(ReKi), allocatable, dimension(:,:) :: dYdu
+   !print*,'>>>> Linearize', drvrInitInp%PtfmRefzt
+   print'(A,F13.6,A)','   Performing rigid-body linearization at t=',t,' at PRP'
+   call PRP_JacobianPInput( t, u(1), y, dYdu)
+
+   print*,'K:'
+   print*,dYdu(1,1:6)
+   print*,dYdu(2,1:6)
+   print*,dYdu(3,1:6)
+   print*,dYdu(4,1:6)
+   print*,dYdu(5,1:6)
+   print*,dYdu(6,1:6)
+   print*,'C:'
+   print*,dYdu(1,7:12)
+   print*,dYdu(2,7:12)
+   print*,dYdu(3,7:12)
+   print*,dYdu(4,7:12)
+   print*,dYdu(5,7:12)
+   print*,dYdu(6,7:12)
+   print*,'M:'
+   print*,dYdu(1,13:19)
+   print*,dYdu(2,13:19)
+   print*,dYdu(3,13:19)
+   print*,dYdu(4,13:19)
+   print*,dYdu(5,13:19)
+   print*,dYdu(6,13:19)
+
+END SUBROUTINE LINEARIZATION
+
+!> Pertub the "PRP" inputs and trigger the rigid body motion on the other HydroDyn meshes
+SUBROUTINE PRP_Perturb_u( n, perturb_sign, u, du )
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(HydroDyn_InputType)            , INTENT(INOUT) :: u                      !< perturbed HD inputs
+   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   
+
+   ! local variables
+   integer                                             :: fieldType ! 1=TranslationDisp, 2=Orientation, 3=TranslationVel etc. 6
+   integer                                             :: fieldIndx
+   integer                                             :: fieldIndx6
+   integer , parameter                                 :: node =1
+   Real(R8Ki)   perturb_t, perturb
+   REAL(R8Ki) :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
+   Real(R8Ki) :: theta(3)
+
+   ! From "n" to: field type, axis, variable
+   fieldType = int((n-1)/3)+1  ! 1=TranslationDisp, 2=Orientation, 3=TranslationVel etc. 6
+   fieldIndx = mod(n-1,3)+1    ! 1=x, 2=y 3=z (axis)
+   fieldIndx6= mod(n-1,6)+1    ! 1=x, 2=y 3=z 4=theta_x, 5=theta_y 3=theta_z (variable)
+
+   ! Perturbation amplitude
+   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  
+   perturb   = 2*D2R                 ! rotational input scaling
+   if (fieldIndx6<=3) then
+     du = perturb_t    ! TranslationDisp,TranslationVel, TranslationAcc
+   elseif (fieldIndx<=6) then
+     du = perturb      ! Orientation, TranslationVel
+   else
+      print*,'Wrong field index'
+      STOP -1
+   endif
+
+   ! --- Perturbing the PRP mesh
+   SELECT CASE(fieldType)      
+      CASE ( 1) !Module/Mesh/Field: u%PRPMesh%TranslationDisp = 1     
+         u%PRPMesh%TranslationDisp (fieldIndx,node) = u%PRPMesh%TranslationDisp (fieldIndx,node) + du * perturb_sign       
+      CASE ( 2) !Module/Mesh/Field: u%PRPMesh%Orientation = 2
+         CALL PerturbOrientationMatrix( u%PRPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+      CASE ( 3) !Module/Mesh/Field: u%PRPMesh%TranslationVel = 3
+         u%PRPMesh%TranslationVel( fieldIndx,node) = u%PRPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign         
+      CASE ( 4) !Module/Mesh/Field: u%PRPMesh%RotationVel = 4
+         u%PRPMesh%RotationVel (fieldIndx,node) = u%PRPMesh%RotationVel (fieldIndx,node) + du * perturb_sign               
+      CASE ( 5) !Module/Mesh/Field: u%PRPMesh%TranslationAcc = 5
+         u%PRPMesh%TranslationAcc( fieldIndx,node) = u%PRPMesh%TranslationAcc( fieldIndx,node) + du * perturb_sign       
+      CASE ( 6) !Module/Mesh/Field: u%PRPMesh%RotationAcc = 6
+         u%PRPMesh%RotationAcc(fieldIndx,node) = u%PRPMesh%RotationAcc(fieldIndx,node) + du * perturb_sign               
+      CASE ( 7)
+         print*,'Wrong fieldType'
+         STOP -1
+   END SELECT   
+
+   ! --- Trigger, set Morison mesh based on PRP
+   call PRP_SetMotionInputs(u)
+
+END SUBROUTINE PRP_Perturb_u
+
+!> Set Motion on Wamit and Morison mesh once PRP has been updated
+SUBROUTINE PRP_SetMotionInputs(u)
+   TYPE(HydroDyn_InputType),  INTENT(INOUT)           :: u          !< HD Inputs
+
+   if ( u%WAMITMesh%Initialized ) then
+      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
+      CALL MeshMapCreate( u%PRPMesh, u%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   endif
+
+   if ( u%Morison%Mesh%Initialized ) then
+      ! Map PRP kinematics to the Morison mesh
+      CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if
+   end if 
+
+END SUBROUTINE PRP_SetMotionInputs
+
+!> Compute Rigid body loads at the PRP, after a perturbation of the PRP
+SUBROUTINE PRP_CalcOutput(t, u, y, Loads)
+   REAL(DbKi),                           INTENT(IN   ) :: t        !< Time in seconds at operating point
+   TYPE(HydroDyn_InputType),             INTENT(INOUT) :: u        !< Inputs at operating point! NOTE: INOUT due to HD_CalcOutput
+   TYPE(HydroDyn_OutputType),            INTENT(INOUT) :: y        !< Output (change to inout if a mesh copy is required);
+   Real(ReKi)               ,            INTENT(OUT)   :: Loads(6) !< Loads at PRP
+
+   call HydroDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ) 
+   ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
+   Loads = m%F_Hydro ! NOTE this is mapped to PRP using m%AllHdroOrigin 
+   !print*,'Loads',Loads
+
+END SUBROUTINE PRP_CalcOutput
+
+!> Calculate the partial derivative of the output functions (Y) with respect to the inputs (u)
+!SUBROUTINE PRP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu)
+SUBROUTINE PRP_JacobianPInput( t, u, y, dYdu)
+   REAL(DbKi),                           INTENT(IN   )       :: t          !< Time in seconds at operating point
+   TYPE(HydroDyn_InputType),                   INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+!    TYPE(HydroDyn_ParameterType),               INTENT(IN   ) :: p          !< Parameters
+!    TYPE(HydroDyn_ContinuousStateType),         INTENT(IN   ) :: x          !< Continuous states at operating point
+!    TYPE(HydroDyn_DiscreteStateType),           INTENT(IN   ) :: xd         !< Discrete states at operating point
+!    TYPE(HydroDyn_ConstraintStateType),         INTENT(IN   ) :: z          !< Constraint states at operating point
+!    TYPE(HydroDyn_OtherStateType),              INTENT(IN   ) :: OtherState !< Other states at operating point
+   TYPE(HydroDyn_OutputType),                  INTENT(INOUT) :: y          !< Output (change to inout if a mesh copy is required);
+!    TYPE(HydroDyn_MiscVarType),                 INTENT(INOUT) :: m          !< Misc/optimization variables
+!    INTEGER(IntKi),                       INTENT(  OUT)       :: ErrStat    !< Error status of the operation
+!    CHARACTER(*),                         INTENT(  OUT)       :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)       :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
+   ! local variables
+   TYPE(HydroDyn_OutputType)                               :: y_tmp
+   TYPE(HydroDyn_InputType)                                :: u_perturb
+   Real(ReKi) :: Loads_p(6)
+   Real(ReKi) :: Loads_m(6)
+   REAL(R8Ki)                                              :: delta        ! delta change in input or state
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'PRP_JacobianPInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+    ! make a copy of the inputs to perturb
+    call HydroDyn_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+    ! allocate dYdu if necessary
+    if (.not. allocated(dYdu)) then
+       call AllocAry(dYdu, 6, 18, 'dYdu', ErrStat2, ErrMsg2)
+    endif
+    ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+    call HydroDyn_CopyOutput( y, y_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2);
+
+    do i=1,size(dYdu,2)
+       ! get u_op + delta u
+       call HydroDyn_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 );
+       call PRP_Perturb_u(i, 1, u_perturb, delta )
+       ! compute y at u_op + delta u
+       call PRP_CalcOutput( t, u_perturb, y_tmp, Loads_p)
+
+       ! get u_op - delta u
+       call HydroDyn_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+       call PRP_Perturb_u( i, -1, u_perturb, delta )
+       ! compute y at u_op - delta u
+       call PRP_CalcOutput( t, u_perturb, y_tmp, Loads_m)
+
+       ! get central difference:            
+       dYdu(:,i) = (Loads_p-Loads_m) / (2.0_R8Ki*delta)
+    end do
+
+    call HydroDyn_DestroyOutput(      y_tmp, ErrStat2, ErrMsg2 )
+    call HydroDyn_DestroyInput (  u_perturb, ErrStat2, ErrMsg2 )
+   
+END SUBROUTINE PRP_JacobianPInput
 
 END PROGRAM HydroDynDriver
 
