@@ -220,8 +220,7 @@ subroutine ADI_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
 
    ! Compute InflowWind inputs for each time
    do it=1,size(utimes)
-      call ADI_ADIW_Solve(utimes(it), u(it)%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
-      u_AD(it) = u(it)%AD
+      call AD_CopyInput(u(it)%AD,u_AD(it),MESH_NEWCOPY,ErrStat2,ErrMsg2); if(Failed()) return
    enddo
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
@@ -264,8 +263,6 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    errMsg  = ""
 
    ! --- CalcOutputs for IW (Sets u_AD%rotors(:)%InflowOnBlade, etc,  and m%IW%y)
-   ! TODO TODO TODO Uncomment
-   call ADI_ADIW_Solve(t, u%AD, OtherState%AD, m%IW%u, m%IW, p%storeHHVel, errStat2, errMsg2)
    y%IW_WriteOutput(:) = m%IW%y%WriteOutput(:)
 
 
