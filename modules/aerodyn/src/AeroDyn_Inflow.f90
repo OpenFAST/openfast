@@ -381,6 +381,7 @@ subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr,
    errStat = ErrID_None
    errMsg  = ''
    !print*,'>>> Concat',allocated(WriteOutputHdr0), allocated(WriteOutputUnt0), allocated(WriteOutputHdr), allocated(WriteOutputUnt)
+   if (.not.allocated(WriteOutputHdr)) return
    if (.not.allocated(WriteOutputHdr0)) then
       call move_alloc(WriteOutputHdr, WriteOutputHdr0)
       call move_alloc(WriteOutputUnt, WriteOutputUnt0)   
