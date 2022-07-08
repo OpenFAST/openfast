@@ -112,7 +112,8 @@ typedef  ^                       ^                 LOGICAL           WindType2Us
 typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for lidar data"                                             -
-
+typedef  ^                       ^                 IntKi             MHK               -   -   -         "MHK turbine type switch"   -
+typedef  ^                       ^                 ReKi              WtrDpth           -   -   -         "Water depth" m
 
 # Init Output
 typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :   -   -    "Names of output-to-file channels"                       -

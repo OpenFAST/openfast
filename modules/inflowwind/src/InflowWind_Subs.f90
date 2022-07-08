@@ -156,7 +156,7 @@ CONTAINS
 
 !====================================================================================================
 !>  This public subroutine parses the array of strings in InputFileData for the input parameters.
-SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  FixedWindFileRootName, TurbineID, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_ParseInputFileInfo( InitInp, InputFileData, InFileInfo, PriPath, InputFileName, EchoFileName,  FixedWindFileRootName, TurbineID, ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------
 
    IMPLICIT NONE
@@ -165,6 +165,7 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
       ! Passed variables
    LOGICAL,                            INTENT(IN   )  :: FixedWindFileRootName!< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)
    INTEGER(IntKi),                     INTENT(IN   )  :: TurbineID            !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)
+   TYPE(InflowWind_InitInputType),     INTENT(IN   )  :: InitInp              !< Input data for initialization
    TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< Data of the InflowWind Input File
    TYPE(FileInfoType),                 INTENT(IN   )  :: InFileInfo           !< The derived type for holding the file information
    CHARACTER(*),                       INTENT(IN   )  :: PriPath              !< Path to InflowWind input files
@@ -254,6 +255,9 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    if (Failed()) return
 
    CALL ParseAry( InFileInfo, CurLine, 'WindVziList', InputFileData%WindVziList, InputFileData%NWindVel, TmpErrStat, TmpErrMsg, UnEc )
+   if ( InitInp%MHK == 1 ) then
+      InputFileData%WindVziList = InputFileData%WindVziList - InitInp%WtrDpth
+   end if
    if (Failed()) return
 
    !-------------------------------------------------------------------------------------------------
@@ -265,6 +269,9 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    if (Failed()) return
 
    CALL ParseVar( InFileInfo, CurLine, "RefHt", InputFileData%Steady_RefHt, TmpErrStat, TmpErrMsg, UnEc )
+   if ( InitInp%MHK == 1 ) then
+      InputFileData%Steady_RefHt = InputFileData%Steady_RefHt - InitInp%WtrDpth
+   end if
    if (Failed()) return
 
    CALL ParseVar( InFileInfo, CurLine, "PLexp", InputFileData%Steady_PLexp, TmpErrStat, TmpErrMsg, UnEc )
@@ -287,6 +294,9 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    ENDIF
 
    CALL ParseVar( InFileInfo, CurLine, "RefHt_Uni", InputFileData%Uniform_RefHt, TmpErrStat, TmpErrMsg, UnEc )
+   if ( InitInp%MHK == 1 ) then
+      InputFileData%Uniform_RefHt = InputFileData%Uniform_RefHt - InitInp%WtrDpth
+   end if
    if (Failed()) return
 
    CALL ParseVar( InFileInfo, CurLine, "RefLength", InputFileData%Uniform_RefLength, TmpErrStat, TmpErrMsg, UnEc )
@@ -384,6 +394,9 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    if (Failed()) return
 
    CALL ParseVar( InFileInfo, CurLine, "RefHt_HAWC", InputFileData%FF%RefHt, TmpErrStat, TmpErrMsg, UnEc )
+   if ( InitInp%MHK == 1 ) then
+      InputFileData%FF%RefHt = InputFileData%FF%RefHt - InitInp%WtrDpth
+   end if
    if (Failed()) return
 
    !----------------------------------------------------------------------------------------------
