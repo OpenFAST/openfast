@@ -87,9 +87,14 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
     INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
     CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
     
-    real(SiKi)  :: GetWaveElevation(p%NBody)
-    TYPE(SS_Exc_InputType)        :: u_out  ! extra_interp result
-    integer                     :: iBody
+    real(SiKi)                                     :: GetWaveElevation(p%NBody)
+    TYPE(SS_Exc_InputType)                         :: u_out  ! extra_interp result
+    integer                                        :: iBody
+    character(ErrMsgLen)                           :: ErrMsg2
+    integer(IntKi)                                 :: ErrStat2
+    character(*), parameter                        :: RoutineName = 'GetWaveElevation'
+    
+    
        ! Initialize ErrStat   
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -99,11 +104,17 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
    else
       
-      call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat, ErrMsg )
+      call SS_Exc_CopyInput(u_in(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
       do iBody = 1, p%NBody  
-         GetWaveElevation(:) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat, ErrMsg ) ! note only the last error message would get returned
+         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
-        ! call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+
    end if
    
 end function GetWaveElevation
