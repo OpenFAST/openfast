@@ -54,6 +54,16 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define MAXInitINPUTS 53
 
 #define NumFixedInputs  2 + 2 + MAXIMUM_BLADES + 1 + MAXIMUM_AFCTRL + MAXIMUM_CABLE_DELTAL + MAXIMUM_CABLE_DELTALDOT
-
+/* Fixed inputs list:
+    1       Generator Torque (N-m)
+    2       Electrical Power (W)
+    3       Yaw pos (rad)
+    4       Yaw rate (rad/s)
+    5-7     Blade 1-3 pitch angle (rad)
+    8       High speed shaft brake fraction (-)
+    9-11    Blade 1-3 Airfoil control (-)
+    12-31   Cable control channel 1-20 DeltaL (m)
+    32-51   Cable control channel 1-20 DeltaLDot (m/s)
+*/
 
 #endif
