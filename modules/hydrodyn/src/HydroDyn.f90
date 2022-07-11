@@ -1165,52 +1165,53 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       
       integer(IntKi)                                     :: i
 
+
+      INTEGER(IntKi)                         :: ErrStat2                            ! local error status
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
+      CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_End'
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
 
       
-         ! Place any last minute operations or calculations here:
-
-
             
          ! Write the HydroDyn-level output file data if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
          
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN               
-         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat, ErrMsg )         
+         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
       END IF          
       
          ! Close files here:  
-      CALL HDOut_CloseOutput( p, ErrStat, ErrMsg )           
+      CALL HDOut_CloseOutput( p, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
           
 
-         ! Destroy the input data:
-         
-      CALL HydroDyn_DestroyInput( u, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+         ! Destroy the input data: (ignore errors)
+      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
 
-         ! Destroy the parameter data:
-      
+         ! Destroy the parameter data: (ignore errors)
       ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
       ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
-      CALL HydroDyn_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
-         ! Destroy the state data:
-         
-      CALL HydroDyn_DestroyContState(   x,           ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
-         
-         ! Destroy misc variables:
-      
-      CALL HydroDyn_DestroyMisc( m, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
-         ! Destroy the output data:
+         ! Destroy the state data: (ignore errors)
          
-      CALL HydroDyn_DestroyOutput( y, ErrStat, ErrMsg, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+
+         ! Destroy misc variables: (ignore errors)
+      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+
+         ! Destroy the output data: (ignore errors)
+      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
       
 
 END SUBROUTINE HydroDyn_End

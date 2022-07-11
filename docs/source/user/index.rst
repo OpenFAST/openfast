@@ -53,6 +53,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    InflowWind <inflowwind/index.rst>
    ServoDyn <servodyn/index.rst>
    Structural Control <servodyn-stc/StC_index.rst>
+   TurbSim <turbsim/index.rst>
    C++ API <cppapi/index.rst>
    FAST.Farm <fast.farm/index.rst>
 

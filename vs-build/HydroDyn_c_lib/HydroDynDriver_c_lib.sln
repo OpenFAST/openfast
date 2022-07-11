@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30503.244
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{A2215CCC-531E-454C-A1F0-E502FB697697}") = "HydroDynDriver_c_lib.dll", "HydroDynDriver_c_lib.vfproj", "{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16} = {DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FAST_Registry", "..\Registry\FAST_Registry.vcxproj", "{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_Double|Win32 = Debug_Double|Win32
+		Debug_Double|x64 = Debug_Double|x64
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release_Double|Win32 = Release_Double|Win32
+		Release_Double|x64 = Release_Double|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug_Double|Win32.ActiveCfg = Debug_Double|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug_Double|Win32.Build.0 = Debug_Double|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug_Double|x64.ActiveCfg = Debug_Double|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug_Double|x64.Build.0 = Debug_Double|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug|Win32.Build.0 = Debug|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug|x64.ActiveCfg = Debug|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Debug|x64.Build.0 = Debug|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release_Double|Win32.ActiveCfg = Release_Double|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release_Double|Win32.Build.0 = Release_Double|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release_Double|x64.ActiveCfg = Release_Double|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release_Double|x64.Build.0 = Release_Double|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release|Win32.ActiveCfg = Release|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release|Win32.Build.0 = Release|Win32
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release|x64.ActiveCfg = Release|x64
+		{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}.Release|x64.Build.0 = Release|x64
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug_Double|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug_Double|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug_Double|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug_Double|x64.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Debug|x64.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
