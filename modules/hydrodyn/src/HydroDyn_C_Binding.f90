@@ -245,7 +245,7 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLen
    ! Set other inputs for calling HydroDyn_Init
    InitInp%InputFile             = "passed_hd_file"         ! dummy
    InitInp%UseInputFile          = .FALSE.                  ! this probably should be passed in
-   InitInp%HasIce                = .FALSE.                  ! Always keep at false unless interfacing to ice modules
+!  InitInp%HasIce                = .FALSE.                  ! Always keep at false unless interfacing to ice modules
    ! Linearization
    !     for now, set linearization to false. Pass this in later when interface supports it
    !     Note: we may want to linearize at T=0 for added mass effects, but that might be
