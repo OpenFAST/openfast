@@ -23,6 +23,7 @@ PROGRAM MoorDyn_Driver
    USE MoorDyn_Types
    USE MoorDyn
    USE NWTC_Library 
+   USE VersionInfo
 
    IMPLICIT NONE 
 

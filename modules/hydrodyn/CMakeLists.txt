@@ -59,6 +59,13 @@ set(HYDRODYN_SOURCES
 add_library(hydrodynlib ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib nwtclibs)
 
+# c-bindings interface library
+add_library(hydrodyn_c_binding SHARED src/HydroDyn_C_Binding.f90)
+target_link_libraries(hydrodyn_c_binding hydrodynlib)
+if(APPLE OR UNIX)
+   target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+endif()
+
 add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
 target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 
@@ -66,7 +73,7 @@ target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
-install(TARGETS hydrodynlib hydrodyn_driver
+install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
