@@ -26,7 +26,11 @@ EXTERNAL_ROUTINE void FAST_OpFM_Step(int * iTurb, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_HubPosition(int * iTurb, float * absolute_position, float * rotation_veocity, double * orientation_dcm, int *ErrStat, char *ErrMsg);
 
 EXTERNAL_ROUTINE void FAST_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, int * NumOuts, double * dt, int * n_t_global, int *ErrStat, char *ErrMsg);
+#ifdef __cplusplus
+EXTERNAL_ROUTINE void FAST_Sizes(int * iTurb, const char *InputFileName, int *AbortErrLev, int * NumOuts, double * dt, double * tmax, int *ErrStat, char *ErrMsg, char *ChannelNames, double *TMax = NULL, double *InitInputAry = NULL); 
+#else
 EXTERNAL_ROUTINE void FAST_Sizes(int * iTurb, const char *InputFileName, int *AbortErrLev, int * NumOuts, double * dt, double * tmax, int *ErrStat, char *ErrMsg, char *ChannelNames, double *TMax, double *InitInputAry);
+#endif
 EXTERNAL_ROUTINE void FAST_Start(int * iTurb, int *NumInputs_c, int *NumOutputs_c, double *InputAry, double *OutputAry, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_Update(int * iTurb, int *NumInputs_c, int *NumOutputs_c, double *InputAry, double *OutputAry, bool *EndSimulationEarly, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_End(int * iTurb, bool * stopThisProgram);
