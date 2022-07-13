@@ -19,8 +19,17 @@ None
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
 ----------------------------------
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Removed in OpenFAST dev
+Added in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       13   WrHAWCFF         False      WrHAWCFF          - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.2.0 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -58,7 +67,6 @@ OpenFAST                                      28   Patm            103500     Pa
 OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
 OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
 OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
-TurbSim                                       13   WrHAWCFF        False      WrHAWCFF          - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
 AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
 AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 AeroDyn driver                                34   Twr2Shft        3.09343    Twr2Shft          - Vertical distance from the tower-top to the rotor shaft (m)
