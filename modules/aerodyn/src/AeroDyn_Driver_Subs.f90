@@ -86,16 +86,15 @@ subroutine Dvr_Init(dvr, AD, IW, errStat,errMsg )
 
    ! --- Driver initialization
    CALL NWTC_Init( ProgNameIN=version%Name )
+   
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
-   ! Display the copyright notice
-   call DispCopyrightLicense( version%Name )
-   ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-   ! Tell our users what they're running
-   call WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
-         
+   
+   ! Display the copyright notice and compile info:
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
+   
    ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, dvr, errStat2, errMsg2 ); if(Failed()) return
 
@@ -731,6 +730,9 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
       ! hub 2 hubAD
       call MeshMapCreate(wt%hub%ptMesh, uAD%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed())return
 
+      ! nac 2 nacAD
+      call MeshMapCreate(wt%nac%ptMesh, uAD%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed())return
+
       ! bldroot 2 bldroot AD
       do iB = 1, wt%numBlades
          call MeshMapCreate(wt%bld(iB)%ptMesh, uAD%rotors(iWT)%BladeRootMotion(iB), wt%bld(iB)%ED_P_2_AD_P_R, errStat2, errMsg2); if(Failed())return
@@ -1064,6 +1066,9 @@ subroutine Set_AD_Inputs(nt,dvr,AD,IW,errStat,errMsg)
       wt => dvr%WT(iWT)
       ! Hub 2 Hub AD 
       call Transfer_Point_to_Point(wt%hub%ptMesh, AD%u(1)%rotors(iWT)%hubMotion, wt%hub%ED_P_2_AD_P_H, errStat2, errMsg2); if(Failed()) return
+
+      ! Nac 2 Nac AD 
+      call Transfer_Point_to_Point(wt%nac%ptMesh, AD%u(1)%rotors(iWT)%nacelleMotion, wt%nac%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed()) return
 
       ! Blade root to blade root AD
       do iB = 1,wt%numBlades
@@ -1895,9 +1900,9 @@ subroutine Dvr_CalcOutputDriver(dvr, y_Ifw, errStat, errMsg)
 
          ! 6 base DOF
          rotations  = EulerExtract(dvr%WT(iWT)%ptMesh%Orientation(:,:,1)); 
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(1,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(2,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
-         arr(k) = dvr%WT(iWT)%ptMesh%Position(3,1)+dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(1,1); k=k+1 ! surge
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(2,1); k=k+1 ! sway
+         arr(k) = dvr%WT(iWT)%ptMesh%TranslationDisp(3,1); k=k+1 ! heave
          arr(k) = rotations(1) * R2D                                                      ; k=k+1 ! roll
          arr(k) = rotations(2) * R2D                                                      ; k=k+1 ! pitch
          arr(k) = rotations(3) * R2D                                                      ; k=k+1 ! yaw

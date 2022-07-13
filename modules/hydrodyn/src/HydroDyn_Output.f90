@@ -1231,6 +1231,8 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
       ! Local variables
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
    
    
   IF (p%UnOutFile < 0 ) RETURN
@@ -1268,7 +1270,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumTotalOuts )   
       END IF
           
-      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
+      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat2)          ! write the line return -- ignore error status
    
    ELSE      
       Decimate = Decimate + 1

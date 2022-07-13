@@ -45,7 +45,7 @@ set(DWM_SOURCES
 )
 
 add_executable(dwm_driver_wind_farm ${DWM_SOURCES})
-target_link_libraries(dwm_driver_wind_farm aerodyn14lib)
+target_link_libraries(dwm_driver_wind_farm aerodyn14lib versioninfolib)
 
 install(TARGETS dwm_driver_wind_farm
   RUNTIME DESTINATION bin

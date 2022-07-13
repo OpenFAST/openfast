@@ -25,7 +25,7 @@ General
 Workshop material, legacy documentation, and other resources are listed below.
 
 - `Workshop Presentations <https://drive.google.com/drive/folders/1BDDfcnIyvmZCwf7eFo0ISI7aF_FMAOvt?usp=sharing>`_
-- :download:`Old FAST v6 User’s Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
+- :download:`Old FAST v6 User's Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
 - :download:`FAST v8 README <../../OtherSupporting/FAST8_README.pdf>`
 - `Implementation of Substructure Flexibility and Member-Level Load Capabilities for Floating Offshore Wind Turbines in OpenFAST <https://www.nrel.gov/docs/fy20osti/76822.pdf>`_
 - `FAST modularization framework for wind turbine simulation: full-system linearization <https://www.nrel.gov/docs/fy17osti/67015.pdf>`_
@@ -53,9 +53,46 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    InflowWind <inflowwind/index.rst>
    ServoDyn <servodyn/index.rst>
    Structural Control <servodyn-stc/StC_index.rst>
+   TurbSim <turbsim/index.rst>
    C++ API <cppapi/index.rst>
    FAST.Farm <fast.farm/index.rst>
-   
+
+The following modules do not currently have formal documentation
+or are contributed to OpenFAST from organizations
+external to NREL and the core OpenFAST team. As documentation is added,
+these resources will be moved to their appropriate location. If newer versions
+of the external resources are available, please open a `GitHub Issue <https://github.com/openfast/openfast/issues>`_
+with the information for the new documentation.
+
+- MAP++
+
+  - `Official MAP++ documentation <https://map-plus-plus.readthedocs.io/en/latest/index.html>`_
+  - :download:`Implementation of a Multi-Segmented, Quasi-Static Cable Model <../../OtherSupporting/MAP/cable_model_development.pdf>`
+
+- FEAMooring
+
+  - :download:`Theory Manual <../../OtherSupporting/FEAMooring/FEAM_Theory_Manual.pdf>`
+  - :download:`User's Guide <../../OtherSupporting/FEAMooring/FEAM_Users_Guide.pdf>`
+
+- MoorDyn
+
+  - `Official User's Guide <http://www.matt-hall.ca/files/MoorDyn%20Users%20Guide%202017-08-16.pdf>`_
+
+- OrcaFlex Interface:
+
+  - :download:`User's Guide <../../OtherSupporting/OrcaFlex/User_Guide_OrcaFlexInterface.pdf>`
+
+- IceFloe
+
+  - :download:`Ice Load Project Final Technical Report <../../OtherSupporting/IceFloe/Ice_Load_Final_Report.pdf>`
+
+- IceDyn
+
+  - :download:`Draft: FAST Ice Module Manual <../../OtherSupporting/IceDyn/IceDyn_Manual.pdf>`
+
+- TurbSim
+
+  - :download:`User's Guide <../../OtherSupporting/TurbSim/TurbSim_v2.00.pdf>`
 
 Modularization Framework
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -79,3 +116,9 @@ Glue Code and Mesh Mapping
 - `FAST Modular Framework for Wind Turbine Simulation: New Algorithms and Numerical Examples <https://dx.doi.org/10.2514/6.2015-1461>`_
 - :download:`OpenFAST Algorithms <../../OtherSupporting/OpenFAST_Algorithms/OpenFAST_Algorithms.pdf>` - A summary of the solve method used in the glue code.
 - :download:`Predictor-Corrector Approach <../../OtherSupporting/ProposedPCApproach_Rev4.docx>`
+
+
+NWTC Subroutine Library
+~~~~~~~~~~~~~~~~~~~~~~~
+
+- :download:`NWTC Library - short overview of subroutines and functions <../../OtherSupporting/NWTC_Library_Description.pdf>`

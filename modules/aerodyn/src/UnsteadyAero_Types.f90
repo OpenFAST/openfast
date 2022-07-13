@@ -83,6 +83,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: X4      !<  [-]
     REAL(ReKi)  :: Kprime_alpha      !<  [-]
     REAL(ReKi)  :: Kprime_q      !<  [-]
+    REAL(ReKi)  :: K3prime_q      !<  [-]
+    REAL(ReKi)  :: Kprimeprime_q      !<  [-]
     REAL(ReKi)  :: Dp      !<  [-]
     REAL(ReKi)  :: Cn_pot      !<  [-]
     REAL(ReKi)  :: Cc_pot      !<  [-]
@@ -950,6 +952,8 @@ ENDIF
     DstKelvinChainTypeData%X4 = SrcKelvinChainTypeData%X4
     DstKelvinChainTypeData%Kprime_alpha = SrcKelvinChainTypeData%Kprime_alpha
     DstKelvinChainTypeData%Kprime_q = SrcKelvinChainTypeData%Kprime_q
+    DstKelvinChainTypeData%K3prime_q = SrcKelvinChainTypeData%K3prime_q
+    DstKelvinChainTypeData%Kprimeprime_q = SrcKelvinChainTypeData%Kprimeprime_q
     DstKelvinChainTypeData%Dp = SrcKelvinChainTypeData%Dp
     DstKelvinChainTypeData%Cn_pot = SrcKelvinChainTypeData%Cn_pot
     DstKelvinChainTypeData%Cc_pot = SrcKelvinChainTypeData%Cc_pot
@@ -1047,6 +1051,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! X4
       Re_BufSz   = Re_BufSz   + 1  ! Kprime_alpha
       Re_BufSz   = Re_BufSz   + 1  ! Kprime_q
+      Re_BufSz   = Re_BufSz   + 1  ! K3prime_q
+      Re_BufSz   = Re_BufSz   + 1  ! Kprimeprime_q
       Re_BufSz   = Re_BufSz   + 1  ! Dp
       Re_BufSz   = Re_BufSz   + 1  ! Cn_pot
       Re_BufSz   = Re_BufSz   + 1  ! Cc_pot
@@ -1139,6 +1145,10 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%Kprime_alpha
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Kprime_q
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%K3prime_q
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Kprimeprime_q
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Dp
     Re_Xferred = Re_Xferred + 1
@@ -1265,6 +1275,10 @@ ENDIF
     OutData%Kprime_alpha = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Kprime_q = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%K3prime_q = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Kprimeprime_q = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Dp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
