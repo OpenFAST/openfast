@@ -269,7 +269,7 @@ jobs:
 
   ### TEST JOBS
 
-  regression-tests-module-drivers:
+  rtest-module-drivers:
     runs-on: ubuntu-20.04
     needs: build-drivers-release
     steps:
@@ -309,437 +309,12 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: regression-tests-aerodyn-module
+          name: rtest-module-drivers
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/modules
 
 
-  regression-tests-interfaces:
-    runs-on: ubuntu-20.04
-    needs: build-interfaces-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-interfaces-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Run Interface / API tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L "cpp|python" -j ${{env.NUM_PROCS}}
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: c-interface-reg-tests
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
-
-
-  regression-tests-openfast-5MW:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -j8 -L openfast -LE "cpp|linear|python" -R 5MW_ -E "5MW_Land_BD_DLL_WTurb|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Semi_WSt_WavesWN|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-5MW_OC4Semi_WSt_WavesWN:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW_OC4Semi_WSt_WavesWN
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-5MW_OC3Trpd_DLL_WSt_WavesReg:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW_OC3Trpd_DLL_WSt_WavesReg
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-5MW_Land_BD_DLL_WTurb:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run 5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-5MW_Land_BD_DLL_WTurb
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-not-5MW:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run non-5MW tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -j8 -E 5MW_ -L openfast -LE "cpp|linear|python"
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-not-5MW
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-openfast-linearization:
-    runs-on: ubuntu-20.04
-    needs: build-openfast-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-openfast-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run OpenFAST linearization tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          ctest -VV -j8 -L linear
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-not-5MW
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-
-  regression-tests-fastfarm:
-    runs-on: ubuntu-20.04
-    needs: build-fastfarm-release
-    steps:
-      - name: Cache the workspace
-        uses: actions/cache@v3.0.4
-        with:
-          path: ${{runner.workspace}}
-          key: build-fastfarm-release-${{ github.sha }}
-      - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: '3.9'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh
-          sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Configure Tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
-      - name: Run FAST.Farm tests
-        working-directory: ${{runner.workspace}}/openfast/build
-        shell: bash
-        run: |
-          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: fastfarm-tests-release
-          path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
-
-
-  module-tests-debug:
+  rtest-modules-debug:
     runs-on: ubuntu-20.04
     needs: build-all-debug
     steps:
@@ -788,7 +363,393 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: debug-tests-release
+          name: rtest-modules-debug
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/modules
             ${{runner.workspace}}/openfast/build/unit_tests
+
+
+  rtest-interfaces:
+    runs-on: ubuntu-20.04
+    needs: build-interfaces-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-interfaces-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Run Interface / API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L "cpp|python" -j ${{env.NUM_PROCS}}
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-interfaces
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+
+
+  rtest-OF:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -j8 \
+          -L openfast \
+          -LE "cpp|linear|python" \
+          -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC4Semi_WSt_WavesWN:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC4Semi_WSt_WavesWN
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_Land_BD_DLL_WTurb:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-5MW_Land_BD_DLL_WTurb
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-linearization:
+    runs-on: ubuntu-20.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run OpenFAST linearization tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -j8 -L linear
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-OF-linearization
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-FF:
+    runs-on: ubuntu-20.04
+    needs: build-fastfarm-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-fastfarm-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+      - name: Run FAST.Farm tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        shell: bash
+        run: |
+          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: rtest-FF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
