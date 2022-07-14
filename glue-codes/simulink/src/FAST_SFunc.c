@@ -204,6 +204,7 @@ static void mdlInitializeSizes(SimStruct *S)
        if (checkError(S)) return;
 
        FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &TMax, &dt, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
+       FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &dt, &TMax, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
        n_t_global = -1;
        if (checkError(S)) return;
 
