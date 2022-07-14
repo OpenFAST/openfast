@@ -21,7 +21,7 @@ MODULE SubDyn_Output
    USE NWTC_Library
    USE SubDyn_Types
    USE SD_FEM
-   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS
+   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS, OutStrLenM1
    USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01
 
    IMPLICIT NONE
@@ -757,16 +757,21 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          p%OutParam(I)%SignM = -1     ! ex, '-TipDxc1' causes the sign of TipDxc1 to be switched.
          OutListTmp                   = OutListTmp(2:)
       ELSE IF ( INDEX( 'mM', OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
-         CheckOutListAgain            = .TRUE.
+         CheckOutListAgain  = .TRUE.
          p%OutParam(I)%SignM = 1
       ELSE
          p%OutParam(I)%SignM = 1
       END IF
       
+      if ( INDEX( 'mM', OutListTmp(1:1) ) > 0 .and. INDEX( '0123456789', OutListTmp(2:2) ) > 0 .and. INDEX( 'nN', OutListTmp(3:3) ) > 0 ) then ! an old-style output without the leading zero on the member number
+         OutListTmp = OutListTmp(1:1)//'0'//OutListTmp(2:)
+         CheckOutListAgain  = .FALSE.
+      end if
+      
       CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
    
    
-      Indx =  IndexCharAry( OutListTmp(1:10), ValidParamAry )
+      Indx =  IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         
          p%OutParam(I)%SignM = -1            ! ex, 'MTipDxc1' causes the sign of TipDxc1 to be switched.
