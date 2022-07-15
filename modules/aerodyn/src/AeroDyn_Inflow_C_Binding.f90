@@ -272,12 +272,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    OutputChannelUnits_C(:) = ''
 
 
-   ! For debugging the interface:
-   if (debugverbose > 0) then
-      call ShowPassedData()
-   endif
-
-
    !--------------------------
    ! Input files
    !--------------------------
@@ -285,6 +279,13 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    OutRootName = TRANSFER( OutRootName_C, OutRootName )
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
+
+
+   ! For debugging the interface:
+   if (debugverbose > 0) then
+      call ShowPassedData()
+   endif
+
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input files as a string
    call C_F_pointer(ADinputFileString_C,  ADinputFileString)
@@ -566,7 +567,11 @@ CONTAINS
       call WrScr("       ADinputFilePassed_C            "//TmpFlag )
       call WrScr("       ADinputFileString_C (ptr addr) "//trim(Num2LStr(LOC(ADinputFileString_C))) )
       call WrScr("       ADinputFileStringLength_C      "//trim(Num2LStr( ADinputFileStringLength_C )) )
-      call WrScr("       OutRootName_C (not truncated)  "//trim(TRANSFER( OutRootName_C, OutRootName )) )
+      TmpFlag="F";   if (IfWinputFilePassed) TmpFlag="T"
+      call WrScr("       IfWinputFilePassed_C           "//TmpFlag )
+      call WrScr("       IfWinputFileString_C (ptr addr)"//trim(Num2LStr(LOC(IfWinputFileString_C))) )
+      call WrScr("       IfWinputFileStringLength_C     "//trim(Num2LStr( IfWinputFileStringLength_C )) )
+      call WrScr("       OutRootName                    "//trim(OutRootName) )
       call WrScr("   Environment variables")
       call WrScr("       gravity_C                      "//trim(Num2LStr( gravity_C     )) )
       call WrScr("       defFldDens_C                   "//trim(Num2LStr( defFldDens_C  )) )
@@ -674,7 +679,7 @@ CONTAINS
 
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_BldPtMotionMesh )
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_BldPtMotionMesh, MeshName='AD_BldPtMotionMesh' )
 
 
       !-------------------------------------------------------------
@@ -708,7 +713,7 @@ CONTAINS
 
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacMotionMesh )
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacMotionMesh, MeshName='AD_NacMotionMesh' )
 
 
       !-------------------------------------------------------------
@@ -739,7 +744,7 @@ CONTAINS
 
       ! For checking the mesh
       !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_BldPtLoadMesh )
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_BldPtLoadMesh, MeshName='AD_BldPtLoadMesh' )
 
 
       !-------------------------------------------------------------
@@ -758,7 +763,7 @@ CONTAINS
 
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacLoadMesh )
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, AD_NacLoadMesh, MeshName='AD_NacLoadMesh' )
 
 
       !-------------------------------------------------------------
@@ -1460,7 +1465,7 @@ subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
    AD_BldPtLoadMesh%Moment    = 0.0_ReKi
    do i=1,NumBlades
       if ( y_local%AD%rotors(1)%BladeLoad(i)%Committed ) then
-         if (debugverbose > 4) call MeshPrintInfo( CU, y_local%AD%rotors(1)%BladeLoad(i) )
+         if (debugverbose > 4)  call MeshPrintInfo( CU, y_local%AD%rotors(1)%BladeLoad(i), MeshName='AD%rotors('//trim(Num2LStr(1))//')%BladeLoad('//trim(Num2LStr(i))//')' )
          call Transfer_Line2_to_Point( y%AD%rotors(1)%BladeLoad(i), AD_BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), &
                   ErrStat3, ErrMsg3, u_local%AD%rotors(1)%BladeMotion(i), AD_BldPtMotionMesh )
          if (ErrStat3 >= AbortErrLev)  return
@@ -1468,7 +1473,7 @@ subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
          AD_BldPtLoadMesh%Moment = AD_BldPtLoadMesh%Moment + AD_BldPtLoadMesh_tmp%Moment
       endif
    enddo
-   if (debugverbose > 4) call MeshPrintInfo( CU, AD_BldPtLoadMesh)
+   if (debugverbose > 4)  call MeshPrintInfo( CU, AD_BldPtLoadMesh, MeshName='AD_BldPtLoadMesh' )
 end subroutine AD_TransferLoads
 
 !> Transfer the loads from the load mesh to the temporary array for output
