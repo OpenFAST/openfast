@@ -2286,7 +2286,11 @@ END SUBROUTINE CheckR16Var
 
       ! Store all the version info into a single string:
       if (len_trim(ProgInfo%Ver) > 0) then
-         GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+         if (len_trim(ProgInfo%Date) > 0) then
+            GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+         else
+            GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//')'
+         end if
       else
          GetNVD = TRIM( ProgInfo%Name )
       end if

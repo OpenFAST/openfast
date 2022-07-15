@@ -4620,7 +4620,7 @@ end function Rad2M180to180Deg
             angles(AngleDim) = angles(AngleDim) + Perturbation
          END IF
 !         Orientation = DCM_exp( angles )
-         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), OrientationTmp, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), Orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
       else !Only works if AngleDim is specified
          IF (PRESENT(Perturbations)) THEN
             angles = Perturbations
