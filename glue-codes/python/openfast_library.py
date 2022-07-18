@@ -5,11 +5,12 @@ from ctypes import (
     byref,
     c_int,
     c_double,
+    c_float,
     c_char,
     c_bool
 )
 import os
-from typing import List
+from typing import List, Tuple
 import numpy as np
 import math
 
@@ -110,6 +111,16 @@ class FastLibAPI(CDLL):
             POINTER(c_bool),        # StopTheProgram IN
         ]
         self.FAST_End.restype = c_int
+
+        self.FAST_HubPosition.argtypes = [
+            POINTER(c_int),         # iTurb IN
+            POINTER(c_float),       # AbsPosition_c(3) OUT
+            POINTER(c_float),       # RotationalVel_c(3) OUT
+            POINTER(c_double),      # Orientation_c(9) OUT
+            POINTER(c_int),         # ErrStat_c OUT
+            POINTER(c_char)         # ErrMsg_c OUT
+        ]
+        self.FAST_HubPosition.restype = c_int
 
 
     def fatal_error(self, error_status) -> bool:
@@ -240,3 +251,27 @@ class FastLibAPI(CDLL):
         output_channel_names = self.channel_names.value.split()
         output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
         return output_channel_names
+
+
+    def get_hub_position(self) -> Tuple:
+        _error_status = c_int(0)
+        _error_message = create_string_buffer(IntfStrLen)
+
+        # Data buffers
+        absolute_position = (c_float * 3)(0.0, )
+        rotational_velocity = (c_float * 3)(0.0, )
+        orientation_dcm = (c_double * 9)(0.0, )
+
+        # Get hub position from the fast library
+        self.FAST_HubPosition(
+            byref(self.i_turb),
+            absolute_position,
+            rotational_velocity,
+            orientation_dcm,
+            byref(_error_status),
+            _error_message            
+        )
+        if self.fatal_error(_error_status):
+            raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
+        return absolute_position, rotational_velocity, orientation_dcm

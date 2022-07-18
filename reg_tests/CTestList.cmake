@@ -159,6 +159,15 @@ function(hd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(hd_regression)
 
+# hydrodyn-Py
+function(hd_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynPyRegressionCase.py")
+  set(HYDRODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(hd_py_regression)
+
 # subdyn
 function(sd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSubdynRegressionCase.py")
@@ -185,6 +194,14 @@ function(ifw_py_regression TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ifw_py_regression)
+
+# # Python-based OpenFAST Library tests
+# function(py_openfast_library_regression TESTNAME LABEL)
+#   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
+#   set(input_file "${CMAKE_SOURCE_DIR}/reg_tests/r-test/glue-codes/openfast/5MW_OC4Jckt_ExtPtfm/5MW_OC4Jckt_ExtPtfm.fst")
+#   add_test(${TESTNAME} ${PYTHON_EXECUTABLE} ${test_module} ${input_file} )
+# endfunction(py_openfast_library_regression)
+
 
 #===============================================================================
 # Regression tests
@@ -225,6 +242,11 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
 endif()
+
+# # Python-based OpenFAST Library unit tests
+# if(BUILD_SHARED_LIBS)
+#   py_openfast_library_regression("py_openfastlib" "python;openfastlib")
+# endif()
 
 # OpenFAST C++ Driver test
 # This tests the FAST Library and FAST_Library.h
@@ -288,6 +310,9 @@ hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
+
+# HydroDyn-Py regression tests
+hd_py_regression("hd_py_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
 
 # SubDyn regression tests
 sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")

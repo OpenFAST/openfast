@@ -83,7 +83,6 @@ REAL(ReKi)                       ::  WSig                   ! Standard deviation
 INTEGER(IntKi)                   :: ErrStat                 ! allocation status
 CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
 CHARACTER(200)                   :: InFile                  ! Name of the TurbSim input file.
-CHARACTER(200)                   :: git_commit              ! String containing the current git commit hash
 CHARACTER(20)                    :: FlagArg                 ! flag argument from command line
 
 
@@ -106,10 +105,10 @@ IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
    ! Display the copyright notice
    CALL DispCopyrightLicense( TurbSim_Ver%Name )
       ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
+   TurbSim_Ver%Ver = 'from OpenFAST-'//TRIM(QueryGitVersion())
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( TurbSim_Ver%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
-
+   CALL WrScr( ' Running '//TRIM( GetNVD(TurbSim_Ver) )//NewLine )
+   
 CALL GetRoot( InFile, p%RootName )
 
    ! Open input file and summary file.
@@ -311,7 +310,7 @@ ENDIF !WrACT
 !..................................................................................................................................
 
    ! Are we generating binary FF files?
-IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
+IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_HAWC) ) THEN
    CALL WrSum_InterpolatedHubStats(p, V)
       
    IF ( p%WrFile(FileExt_BTS) ) THEN
@@ -323,6 +322,12 @@ IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
       CALL WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       CALL CheckError(ErrStat, ErrMsg)
    END IF
+   
+   IF ( p%WrFile(FileExt_HAWC) ) THEN
+      CALL WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg )
+      CALL CheckError(ErrStat, ErrMsg)
+   END IF
+   
 END IF
 
 
