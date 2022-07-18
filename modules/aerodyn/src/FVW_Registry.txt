@@ -165,6 +165,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             BN_Cl_Static  :    -  -  "Coefficient lift,   excluding unsteady aero effects" - 
 typedef     ^                   ^               ReKi                             BN_Cd_Static  :    -  -  "Coefficient drag.   excluding unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cm_Static  :    -  -  "Coefficient moment, excluding unsteady aero effects" -
+typedef     ^                   ^               ReKi                             BN_Cpmin      :    -  -  "Coefficient minimum pressure, excluding unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cl         :    -  -  "Coefficient lift,   including unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cd         :    -  -  "Coefficient drag,   including unsteady aero effects" -
 typedef     ^                   ^               ReKi                             BN_Cm         :    -  -  "Coefficient moment, including unsteady aero effects" -
