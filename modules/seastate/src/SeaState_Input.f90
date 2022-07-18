@@ -29,31 +29,6 @@ module SeaState_Input
    contains
 
 !====================================================================================================
-SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
-!     The routine prints out warning messages if the user has requested invalid output channel names
-!     The errstat is set to ErrID_Warning if any element in foundMask is .FALSE.
-!----------------------------------------------------------------------------------------------------
-   INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
-   CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
-   LOGICAL,                       INTENT( IN    ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   INTEGER                                        :: I
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-   DO I = 1, NUserOutputs
-      IF (.NOT. foundMask(I)) THEN
-         ErrMsg  = ' A requested output channel is invalid'
-         CALL ProgWarn( 'The requested output channel is invalid: ' // UserOutputs(I) )
-         ErrStat = ErrID_Warn
-      END IF
-   END DO
-
-END SUBROUTINE PrintBadChannelWarning
-
-   !====================================================================================================
 subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth, defMSL2SWL, FileInfo_In, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for SeaState from the file whose name is an
 !     input parameter.
@@ -498,11 +473,11 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    CurLine = CurLine + 1
 
       ! OutList - list of requested parameters to output to a file
-   call AllocAry( InputFileData%UserOutputs, MaxSeaStOutputs, 'InputFileData%UserOutputs', ErrStat2, ErrMsg2 )  ! MaxUserOutputs is set in registry
+   call AllocAry( InputFileData%OutList, MaxOutPts, 'InputFileData%OutList', ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
-   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%UserOutputs, &
-            InputFileData%NUserOutputs, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
+            InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
 
 contains
@@ -524,7 +499,7 @@ contains
 end subroutine SeaSt_ParseInput
 
 !====================================================================================================
-subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, ErrStat, ErrMsg )
+subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, ErrMsg )
 !     This private subroutine verifies the input required for HydroDyn is correctly specified.
 !----------------------------------------------------------------------------------------------------
 
@@ -533,7 +508,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    type(SeaSt_InitInputType),     intent( in    )   :: InitInp              ! the SeaState data
    type(SeaSt_ParameterType),     intent( inout )   :: p                    ! the SeaState parameter data
-   real(DbKi),                    intent( in    )   :: Interval             ! The DT supplied by the glue code/driver
    type(SeaSt_InputFile),         intent( inout )   :: InputFileData        ! the SeaState input file data
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -544,7 +518,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
    character(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    real(ReKi)                                       :: xpos, ypos, zpos
    real(SiKi)                                       :: TmpFreq
-   logical, allocatable                             :: foundMask(:)
    integer                                          :: WaveModIn
 
    integer(IntKi)                                   :: ErrStat2, IOS
@@ -1185,40 +1158,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, E
 
    ! Shift from MSL to SWL coordinate system
    InputFileData%WaveKinzi(:) = InputFileData%WaveKinzi(:) - InputFileData%MSL2SWL
-
-         ! OutList - list of requested parameters to output to a file
-
-
-   !----------------------------------------------------------
-   !  Output List
-   !----------------------------------------------------------
-
-      ! First we need to extract module-specific output lists from the user-input list.
-      ! Any unidentified channels will be attached to the HydroDyn module's output list.
-   if (  InputFileData%NUserOutputs > 0 ) then
-      ALLOCATE ( foundMask(InputFileData%NUserOutputs) , STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for temporary array: foundMask in the HydroDynInput_GetInput subroutine.',ErrStat,ErrMsg,RoutineName)
-
-         return
-      end if
-      foundMask = .FALSE.
-
-         ! Attach remaining items to the SeaState list
-         !foundMask = .FALSE.
-      call AllocAry(InputFileData%OutList, InputFileData%NUserOutputs, "InputFileData%OutList", ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      InputFileData%NumOuts       = SeaStOut_GetChannels ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%OutList        , foundMask, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call PrintBadChannelWarning(InputFileData%NUserOutputs, InputFileData%UserOutputs , foundMask, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      if (ErrStat >= AbortErrLev ) return
-
-      DEALLOCATE(foundMask)
-
-   end if
-      ! Now that we have the sub-lists organized, lets do some additional validation.
-
-
-
 
 
    !----------------------------------------------------------

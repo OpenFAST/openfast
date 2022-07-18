@@ -387,7 +387,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          !   because the HydroDynInput module is also responsible for parsing all this 
          !   initialization data from a file
 
-      CALL SeaStateInput_ProcessInitData( InitInp, p, Interval, InputFileData, ErrStat2, ErrMsg2 )
+      CALL SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -1135,9 +1135,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          if ( InitInp%WrWvKinMod == 2 ) then
             call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
                p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-               InitOut%WaveTime, InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
+               InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
          else if ( InitInp%WrWvKinMod == 1 ) then
-            call SeaStOut_WriteWaveElev0(InitInp%OutRootname, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, &
+            call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%NStepWave, &
                p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
                InitOut%WaveTime, ErrStat, ErrMsg ) 
          end if
@@ -1370,8 +1370,9 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(SiKi)                           :: WaveElev2(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       REAL(SiKi)                           :: WaveVel(3,p%NWaveKin)
       REAL(SiKi)                           :: WaveAcc(3,p%NWaveKin)
+      REAL(SiKi)                           :: WaveAccMCF(3,p%NWaveKin)
       REAL(SiKi)                           :: WaveDynP(p%NWaveKin)
-      REAL(ReKi)                           :: AllOuts(MaxSeaStOutputs)  
+      REAL(ReKi)                           :: AllOuts(MaxOutPts)
       real(ReKi)                           :: positionXYZ(3), positionXY(2)
   
       REAL(ReKi)                           :: zeta
@@ -1381,6 +1382,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(ReKi)                           :: positionXYZp(3)
       REAL(ReKi)                           :: positionXY0(3)
       
+      
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -1388,6 +1390,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       WaveElev  = 0.0_ReKi
       WaveElev1 = 0.0_ReKi
       WaveElev2 = 0.0_ReKi    ! In case we don't use 2nd order waves
+      WaveAccMCF = 0.0_ReKi   ! In case we don't use MCF approximation
       ErrStat2 = ErrID_None
       ErrMsg = ""
  
@@ -1426,6 +1429,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     IF (associated(p%WaveAccMCF)) THEN
+                        WaveAccMCF(:,i) = SeaSt_Interp_4D_Vec( p%WaveAccMCF,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     END IF
                      WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   ELSE ! Probe is above SWL
@@ -1437,6 +1444,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     IF (associated(p%WaveAccMCF)) THEN
+                        WaveAccMCF(:,i) = SeaSt_Interp_4D_Vec( p%WaveAccMCF,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     END IF
                      WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      IF (p%WaveStMod == 2) THEN ! extrapolation stretching
@@ -1445,6 +1456,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         WaveAcc(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                        IF (associated(p%WaveAccMCF)) THEN
+                           WaveAccMCF(:,i) = WaveAcc(:,i) + SeaSt_Interp_3D_Vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
+                              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                        END IF
                         WaveDynP(i)  = WaveDynP(i)  + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * p%WaveKinzi(i)
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                      END IF            
@@ -1459,6 +1474,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  IF (associated(p%WaveAccMCF)) THEN
+                     WaveAccMCF(:,i) = SeaSt_Interp_4D_Vec( p%WaveAccMCF,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  END IF
                   WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
@@ -1480,6 +1499,10 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                WaveAcc(:,i) = SeaSt_Interp_4D_Vec( p%WaveAcc,  m%seast_interp_m, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               IF (associated(p%WaveAccMCF)) THEN
+                  WaveAccMCF(:,i) = SeaSt_Interp_4D_Vec( p%WaveAccMCF,  m%seast_interp_m, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               END IF
                WaveDynP(i)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             ELSE ! Probe above SWL
@@ -1520,7 +1543,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       END IF
 
          ! Map calculated results into the AllOuts Array
-      CALL SeaStOut_MapOutputs( p, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, p%NWaveKin, WaveVel, WaveAcc, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
+      CALL SeaStOut_MapOutputs( p, WaveElev, WaveElev1, WaveElev2, WaveVel, WaveAcc, WaveAccMCF, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       
       DO I = 1,p%NumOuts

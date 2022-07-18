@@ -37,7 +37,6 @@ USE Waves2_Types
 USE SeaState_Interp_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxSeaStOutputs = 90      ! The maximum number of output channels supported by this module [-]
 ! =========  SeaSt_InputFile  =======
   TYPE, PUBLIC :: SeaSt_InputFile
     LOGICAL  :: EchoFlag      !< Echo the input file [-]
@@ -59,8 +58,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinxi      !< xi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinyi      !< yi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
-    INTEGER(IntKi)  :: NUserOutputs      !< Number of SeaState-level requested output channels [-]
-    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: UserOutputs      !< This should really be dimensioned with MaxOutPts [-]
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files] [-]
     LOGICAL  :: OutAll      !< Output all user-specified member and joint loads (only at each member end, not interior locations) [T/F] [-]
     INTEGER(IntKi)  :: NumOuts      !< The number of outputs for this module as requested in the input file [-]
@@ -200,7 +197,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveStMod      !< Wave stretching model [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of SeaState module-level outputs (not the total number including sub-modules [-]
-    INTEGER(IntKi)  :: NumTotalOuts      !< Number of all requested outputs including sub-modules [-]
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
@@ -320,19 +316,6 @@ IF (ALLOCATED(SrcInputFileData%WaveKinzi)) THEN
   END IF
     DstInputFileData%WaveKinzi = SrcInputFileData%WaveKinzi
 ENDIF
-    DstInputFileData%NUserOutputs = SrcInputFileData%NUserOutputs
-IF (ALLOCATED(SrcInputFileData%UserOutputs)) THEN
-  i1_l = LBOUND(SrcInputFileData%UserOutputs,1)
-  i1_u = UBOUND(SrcInputFileData%UserOutputs,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%UserOutputs)) THEN 
-    ALLOCATE(DstInputFileData%UserOutputs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%UserOutputs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%UserOutputs = SrcInputFileData%UserOutputs
-ENDIF
     DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
     DstInputFileData%OutAll = SrcInputFileData%OutAll
     DstInputFileData%NumOuts = SrcInputFileData%NumOuts
@@ -395,9 +378,6 @@ IF (ALLOCATED(InputFileData%WaveKinyi)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%WaveKinzi)) THEN
   DEALLOCATE(InputFileData%WaveKinzi)
-ENDIF
-IF (ALLOCATED(InputFileData%UserOutputs)) THEN
-  DEALLOCATE(InputFileData%UserOutputs)
 ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
@@ -526,12 +506,6 @@ ENDIF
   IF ( ALLOCATED(InData%WaveKinzi) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WaveKinzi upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveKinzi)  ! WaveKinzi
-  END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NUserOutputs
-  Int_BufSz   = Int_BufSz   + 1     ! UserOutputs allocated yes/no
-  IF ( ALLOCATED(InData%UserOutputs) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! UserOutputs upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%UserOutputs)*LEN(InData%UserOutputs)  ! UserOutputs
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! OutSwtch
       Int_BufSz  = Int_BufSz  + 1  ! OutAll
@@ -751,25 +725,6 @@ ENDIF
       DO i1 = LBOUND(InData%WaveKinzi,1), UBOUND(InData%WaveKinzi,1)
         ReKiBuf(Re_Xferred) = InData%WaveKinzi(i1)
         Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    IntKiBuf(Int_Xferred) = InData%NUserOutputs
-    Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%UserOutputs) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UserOutputs,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UserOutputs,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%UserOutputs,1), UBOUND(InData%UserOutputs,1)
-        DO I = 1, LEN(InData%UserOutputs)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%UserOutputs(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%OutSwtch
@@ -1070,28 +1025,6 @@ ENDIF
       DO i1 = LBOUND(OutData%WaveKinzi,1), UBOUND(OutData%WaveKinzi,1)
         OutData%WaveKinzi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    OutData%NUserOutputs = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UserOutputs not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%UserOutputs)) DEALLOCATE(OutData%UserOutputs)
-    ALLOCATE(OutData%UserOutputs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UserOutputs.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%UserOutputs,1), UBOUND(OutData%UserOutputs,1)
-        DO I = 1, LEN(OutData%UserOutputs)
-          OutData%UserOutputs(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
       END DO
   END IF
     OutData%OutSwtch = IntKiBuf(Int_Xferred)
@@ -4479,7 +4412,6 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%NumTotalOuts = SrcParamData%NumTotalOuts
     DstParamData%OutSwtch = SrcParamData%OutSwtch
     DstParamData%OutFmt = SrcParamData%OutFmt
     DstParamData%OutSFmt = SrcParamData%OutSFmt
@@ -4785,7 +4717,6 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1  ! NumTotalOuts
       Int_BufSz  = Int_BufSz  + 1  ! OutSwtch
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt)  ! OutFmt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
@@ -5361,8 +5292,6 @@ ENDIF
     END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumTotalOuts
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%OutSwtch
     Int_Xferred = Int_Xferred + 1
@@ -6053,8 +5982,6 @@ ENDIF
     END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NumTotalOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%OutSwtch = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
