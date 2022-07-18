@@ -745,8 +745,10 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    p%Flookup    = InitInp%Flookup
    p%ShedEffect = InitInp%ShedEffect
    
-   if (p%UAMod==UA_HGM) then
+   if (p%UAMod==UA_HGM .or. p%UAMod==UA_HGMV) then
       p%lin_nx = p%numBlades*p%nNodesPerBlade*4 ! 4 continuous states per node per blade (5th state isn't currently linearizable)
+   else if (p%UAMod==UA_OYE) then
+      p%lin_nx = p%numBlades*p%nNodesPerBlade*1 ! continuous state per node per blade, but stored at position 4
    else
       p%lin_nx = 0
    end if
