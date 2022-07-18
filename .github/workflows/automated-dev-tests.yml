@@ -442,7 +442,7 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
             -DBUILD_SHARED_LIBS:BOOL=ON \
             -DBUILD_TESTING:BOOL=ON \
@@ -491,9 +491,10 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: c-interface-reg-tests
+          name: interface-reg-tests
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
             ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
