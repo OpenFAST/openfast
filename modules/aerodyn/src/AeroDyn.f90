@@ -325,6 +325,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          
       
       ! set the rest of the parameters
+   p%SkewMod = InputFileData%SkewMod
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
@@ -1675,7 +1676,7 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    ErrMsg  = ""
    
    ! Disturbed inflow on blade (if tower shadow present)
-   call SetDisturbedInflow(p, u, m, errStat, errMsg)
+   call SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
 
    if (p_AD%WakeMod /= WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
@@ -1686,13 +1687,16 @@ end subroutine SetInputs
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Disturbed inflow on the blade if tower shadow or tower influence are enabled
-subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
+subroutine SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
+   type(AD_ParameterType),       intent(in   )  :: p_AD                   !< AD parameters
    type(RotInputType),           intent(in   )  :: u                      !< AD Inputs at Time
    type(RotMiscVarType),         intent(inout)  :: m                      !< Misc/optimization variables
    integer(IntKi),               intent(  out)  :: errStat                !< Error status of the operation
    character(*),                 intent(  out)  :: errMsg                 !< Error message if ErrStat /= ErrID_None
    ! local variables             
+   real(R8Ki)                                   :: x_hat_disk(3)
+   integer(intKi)                               :: j,k
    integer(intKi)                               :: errStat2
    character(ErrMsgLen)                         :: errMsg2
    character(*), parameter                      :: RoutineName = 'SetDisturbedInflow'
@@ -1704,6 +1708,16 @@ subroutine SetDisturbedInflow(p, u, m, errStat, errMsg)
    else
       m%DisturbedInflow = u%InflowOnBlade
    end if
+
+   if (p_AD%SkewMod == SkewMod_Orthogonal) then
+      x_hat_disk = u%HubMotion%Orientation(1,:,1)
+  
+      do k=1,p%NumBlades
+         do j=1,p%NumBlNds         
+            m%DisturbedInflow(:,j,k) = dot_product( m%DisturbedInflow(:,j,k), x_hat_disk ) * x_hat_disk
+         enddo
+      enddo
+   endif
 
 end subroutine SetDisturbedInflow
 
@@ -2035,7 +2049,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
       endif
       do iR =1, size(p%rotors)
          ! Disturbed inflow for UA on Lifting line Mesh Points
-         call SetDisturbedInflow(p%rotors(iR), u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
+         call SetDisturbedInflow(p%rotors(iR), p, u(tIndx)%rotors(iR), m%rotors(iR), errStat, errMsg)
          do k=1,p%rotors(iR)%NumBlades
             iW=p%FVW%Bld2Wings(iR,k)
             m%FVW_u(tIndx)%W(iW)%Vwnd_LL(1:3,:) = m%rotors(iR)%DisturbedInflow(1:3,:,k)
@@ -2357,7 +2371,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
-      if ( InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
+      if ( InputFileData%SkewMod /= SkewMod_Orthogonal .and. InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
            call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
       
    end if !BEMT/DBEMT checks
@@ -5485,7 +5499,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%TowerMotion%TranslationDisp = 1;
       u%TowerMotion%TranslationDisp( fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%TowerMotion%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%TowerMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
    CASE ( 3) !Module/Mesh/Field: u%TowerMotion%TranslationVel = 3;
       u%TowerMotion%TranslationVel( fieldIndx,node ) = u%TowerMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
       

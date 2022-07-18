@@ -22,7 +22,7 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
+   use BEMTUncoupled, only : SkewMod_Orthogonal, SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
    use FVW_Subs,      only : FVW_AeroOuts
 
    USE AeroDyn_AllBldNdOuts_IO
@@ -2700,6 +2700,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
       ! SkewMod 
       select case (InputFileData%SkewMod)
+         case (SkewMod_Orthogonal)
+            Msg = 'orthogonal'
          case (SkewMod_Uncoupled)
             Msg = 'uncoupled'
          case (SkewMod_PittPeters)
