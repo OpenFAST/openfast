@@ -10,9 +10,8 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-
-OpenFAST v3.1.0 to OpenFAST `dev`
----------------------------------
+OpenFAST v3.2.0 to OpenFAST `dev`
+----------------------------------
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST `dev`
@@ -36,6 +35,27 @@ AeroDyn blade                                      BlCenBt         0.1        [a
 
 
 
+OpenFAST v3.1.0 to OpenFAST v3.2.0
+----------------------------------
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       13   WrHAWCFF         False      WrHAWCFF          - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       14   Clockwise        True           Clockwise       - Clockwise rotation looking downwind? (used only for full-field binary files - not necessary for AeroDyn)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
 OpenFAST v3.0.0 to OpenFAST v3.1.0
 ----------------------------------
 
@@ -45,10 +65,10 @@ Added in OpenFAST v3.1.0
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 ServoDyn                                      60   AeroControlSec  ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
-ServoDyn                                      61   AfCmode         0          AfCmode           - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
-ServoDyn                                      62   AfC_Mean        0          AfC_Mean          - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
-ServoDyn                                      63   AfC_Amp         0          AfC_Amp           - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
-ServoDyn                                      64   AfC_Phase       0          AfC_Phase         - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      61   AfCmode         0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      62   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      63   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      64   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
 ServoDyn                                      74   CablesSection   ---------------------- CABLE CONTROL -------------------------------------------
 ServoDyn                                      75   CCmode          0          CCmode            - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
@@ -137,19 +157,32 @@ SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
 
--  ServoDyn
+**ServoDyn Changes**
 
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
+-  The input file parser is updated to a keyword/value pair based input.
+   Each entry must have a corresponding keyword with the same spelling as
+   expected.
+-  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+   module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- TUNED MASS DAMPER ---------------------------------------
+ServoDyn                                      61   CompNTMD        False         CompNTMD     - Compute nacelle tuned mass damper {true/false} (flag)
+ServoDyn                                      62   NTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    NTMDfile     - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]
+ServoDyn                                      63   CompTTMD        False         CompTTMD     - Compute tower tuned mass damper {true/false} (flag)
+ServoDyn                                      64   TTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    TTMDfile     - Name of the file for tower tuned mass damper (quoted string) [unused when CompTTMD is false]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v3.0.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------
 ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
 ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
