@@ -197,9 +197,8 @@ Two variants are implemented in the Unsteady Aerodynamic module. These two (comp
 Beddoes-Leishman 4-states model (UAMod=4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The 4-states (incompressible) dynamic stall model as implemented in OpenFAST is described in :cite:`ad-Branlard:2022`. 
-The original formulation from Hansen-Gaunaa-Madsen (HGM) is described in :cite:`ad-Hansen:2004`.
-This model is enabled using ``UAMod=4``.  The model uses :math:`C_l` as main physical quantity. 
+The 4-states (incompressible) dynamic stall model as implemented in OpenFAST is described in :cite:`ad-Branlard:2022` (the model differs slithgly from the original formulation from Hansen-Gaunaa-Madsen (HGM) :cite:`ad-Hansen:2004`).
+The model is enabled using ``UAMod=4``.  The model uses :math:`C_l` as main physical quantity. 
 Linearization of the model is available.
 
 NOTE: this model might require smaller time steps until a stiff integrator is implemented in AeroDyn-UA.

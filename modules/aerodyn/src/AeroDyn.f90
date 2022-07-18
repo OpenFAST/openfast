@@ -2479,8 +2479,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    !..................
    if (InitInp%Linearize) then
       if (InputFileData%AFAeroMod /= AFAeroMod_Steady) then
-         if (InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_OYE) then
-            call SetErrStat( ErrID_Fatal, 'When AFAeroMod=2, UAMod must be 4 for linearization. Set AFAeroMod=1 or UAMod=4.', ErrStat, ErrMsg, RoutineName )
+         if (InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
+            call SetErrStat( ErrID_Fatal, 'When AFAeroMod=2, UAMod must be 4, 5, or 6 for linearization. Set AFAeroMod=1, or, set UAMod=4, 5, or 6.', ErrStat, ErrMsg, RoutineName )
          end if
       end if
       

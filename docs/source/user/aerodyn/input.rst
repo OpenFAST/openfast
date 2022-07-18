@@ -222,7 +222,7 @@ The input parameters in this section are used only when ``AFAeroMod
 - ``6``: 1-state continuous-time developed by Oye
 - ``7``: discrete-time Boeing-Vertol (BV) model
 
-The models are described in :numref:`AD_UA`.
+Linearization is supported with ``UAMod=4,5,6`` (which use continuous-time states) but not with the other models. The different models are described in :numref:`AD_UA`.
 
 
 **While all of the UA models are documented in this
