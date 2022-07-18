@@ -4,7 +4,7 @@ Code Style
 ~~~~~~~~~~
 OpenFAST and its underlying modules are mostly written in Fortran adhering to
 the 2003 standard, but modules can be written in C or C++. The
-`NWTC Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`__
+:download:`NWTC Programmer's Handbook <../../OtherSupporting/NWTC_Programmers_Handbook.pdf>`
 is the definitive reference for all questions related to working with the
 FAST Framework and adding code to OpenFAST.
 
