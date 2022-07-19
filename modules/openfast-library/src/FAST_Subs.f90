@@ -2102,6 +2102,11 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_SrvD )))
    END IF
 
+   IF ( p_FAST%CompSeaSt == Module_SeaSt ) THEN
+      y_FAST%Module_Ver( Module_SeaSt )   = Init%OutData_SeaSt%Ver
+      y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_SeaSt )))
+   END IF
+   
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       y_FAST%Module_Ver( Module_HD )   = Init%OutData_HD%Ver
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_HD )))
@@ -3940,75 +3945,19 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    WRITE (y_FAST%UnSum,'(/A)') 'FAST Summary File'
    WRITE (y_FAST%UnSum,'(/A)')  TRIM( y_FAST%FileDescLines(1) )
 
-   WRITE (y_FAST%UnSum,'(2X,A)'   )  'compiled with'
+   WRITE (y_FAST%UnSum,'(2X,A)'   )  'run with'
    Fmt = '(4x,A)'
    WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD(        NWTC_Ver ) )
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD( y_FAST%Module_Ver( Module_ED )   ) )
 
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_BD ) )
-   IF ( p_FAST%CompElast /= Module_BD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
+   DO I = 2,NumModules
+      IF (p_FAST%ModuleInitialized(I)) THEN
+         WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD( y_FAST%Module_Ver( I ) ) )
+      !ELSE
+      !   DescStr = GetNVD( y_FAST%Module_Ver( I ) )
+      !   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )//NotUsedTxt
+      END IF
+   END DO
 
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_IfW ) )
-   IF ( p_FAST%CompInflow /= Module_IfW ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   ! I'm not going to write the openfoam module info to the summary file
-   !DescStr = GetNVD( y_FAST%Module_Ver( Module_OpFM ) )
-   !IF ( p_FAST%CompInflow /= Module_OpFM ) DescStr = TRIM(DescStr)//NotUsedTxt
-   !WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_AD14 ) )
-   IF ( p_FAST%CompAero /= Module_AD14 ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_AD ) )
-   IF ( p_FAST%CompAero /= Module_AD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_SrvD ) )
-   IF ( p_FAST%CompServo /= Module_SrvD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_SeaSt ) )
-   IF ( p_FAST%CompSeaSt /= Module_SeaSt  ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_HD ) )
-   IF ( p_FAST%CompHydro /= Module_HD  ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_SD ) )
-   IF ( p_FAST%CompSub /= Module_SD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_ExtPtfm ) )
-   IF ( p_FAST%CompSub /= Module_ExtPtfm ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_MAP ) )
-   IF ( p_FAST%CompMooring /= Module_MAP ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_FEAM ) )
-   IF ( p_FAST%CompMooring /= Module_FEAM ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_MD ) )
-   IF ( p_FAST%CompMooring /= Module_MD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_Orca ) )
-   IF ( p_FAST%CompMooring /= Module_Orca ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_IceF ) )
-   IF ( p_FAST%CompIce /= Module_IceF ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_IceD ) )
-   IF ( p_FAST%CompIce /= Module_IceD ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
 
 
    !.......................... Information from FAST input File ......................................
