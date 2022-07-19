@@ -1777,7 +1777,7 @@ MAP_ERROR_CODE allocate_types_for_nodes(MAP_InputType_t* u_type, MAP_ConstraintS
     while (i_parsed<parsed->qty-1) { /* iterating through all strings */              
       if (parsed->entry[i_parsed]->slen) { /* if the string length is not 0 */
         if (next==1) {
-          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX")) {
+          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX") || biseqcstrcaseless(parsed->entry[i_parsed],"FIXED")) {
             fix_num++;
             break; /* break the while-loop because the agenda is reached */
           } else if (biseqcstrcaseless(parsed->entry[i_parsed],"CONNECT")) {
@@ -1898,7 +1898,7 @@ MAP_ERROR_CODE set_node_list(const MAP_ParameterType_t* p_type,  MAP_InputType_t
         if (next==0) {            
           next++;
         } else if (next==1) {
-          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX")) {
+          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX") || biseqcstrcaseless(parsed->entry[i_parsed],"FIXED")) {
             node_iter->type = FIX;
             fix_num++;                   /* VarTypePtr              FAST derived  array index */
             success = associate_vartype_ptr(&node_iter->position_ptr.x, other_type->x, fix_num);
