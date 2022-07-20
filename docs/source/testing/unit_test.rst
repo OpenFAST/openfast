@@ -1,7 +1,7 @@
 .. _unit_test:
 
-Unit test
-=========
+Unit tests
+==========
 In a software package as dynamic and collaborative as OpenFAST, confidence in
 multiple layers of code is best accomplished with a strong system of unit
 tests. Through robust testing practices, the entire OpenFAST community can
