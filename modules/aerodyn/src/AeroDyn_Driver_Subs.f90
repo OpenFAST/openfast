@@ -1709,6 +1709,12 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    !if ( FmtWidth < MinChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column less than '//trim(num2lstr(MinChanLen))//' characters wide ('// &
    !   TRIM(Num2LStr(FmtWidth))//'), which may be too small.', ErrStat, ErrMsg, RoutineName )
 
+   if (Check((dvr%out%WrVTK<0      .or. dvr%out%WrVTK>2     ), 'WrVTK must be 0 (none), 1 (initialization only), 2 (animation), or 3 (mode shapes).')) then
+      return
+   else
+      if (Check((dvr%out%WrVTK_Type<1 .or. dvr%out%WrVTK_Type>3), 'VTK_type must be 1 (surfaces), 2 (lines/points), or 3 (both).')) return
+   endif
+
 contains
 
    logical function Check(Condition, ErrMsg_in)
@@ -2114,7 +2120,6 @@ SUBROUTINE SetVTKParameters(p_FAST, dvr, InitOutData_AD, AD, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-!FIXME: include any info needed for line mesh vtk writing
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
    call GetPath ( p_FAST%root, p_FAST%VTK_OutFileRoot, vtkroot ) ! the returned p_FAST%VTK_OutFileRoot includes a file separator character at the end
