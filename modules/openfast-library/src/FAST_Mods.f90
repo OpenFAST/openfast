@@ -61,6 +61,9 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: LIN_OUTPUT_COL          = 2          !< index for outputs
    INTEGER(IntKi), PARAMETER :: LIN_ContSTATE_COL       = 3          !< index for continuous states
    
+   INTEGER(IntKi), PARAMETER :: Solve_FullOpt1          = 1
+   INTEGER(IntKi), PARAMETER :: Solve_FullOpt2          = 2
+   INTEGER(IntKi), PARAMETER :: Solve_SimplifiedOpt1    = 3
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
 

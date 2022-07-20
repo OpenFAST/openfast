@@ -4134,6 +4134,34 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       SubstructureMotion    => ED%y%PlatformPtMesh
       SubstructureLoads     => ED%Input(1)%PlatformPtMesh
    END IF
+
+
+   !............................................................................................................................
+   ! Determine solver options:
+   !............................................................................................................................
+   IF (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
+   
+      p_FAST%SolveOption = Solve_FullOpt1
+      
+   ELSEIF (p_FAST%CompMooring == Module_Orca .or. &
+           p_FAST%CompSub     /= Module_None ) THEN
+           
+      p_FAST%SolveOption = Solve_FullOpt1
+      
+   ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
+   
+      IF (p_FAST%CompElast == Module_ED) THEN
+         p_FAST%SolveOption = Solve_SimplifiedOpt1
+      ELSE
+         p_FAST%SolveOption = Solve_FullOpt1
+      END IF
+      
+   ELSE
+
+      p_FAST%SolveOption = Solve_FullOpt2
+
+   END IF
+
    
    !............................................................................................................................
    ! Create the data structures and mappings in MeshMapType 
@@ -4598,14 +4626,13 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    !............................................................................................................................
    ! Initialize the Jacobian structures:
    !............................................................................................................................
-   !IF ( p_FAST%TurbineType == Type_Offshore_Fixed ) THEN 
-   IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .or. p_FAST%CompMooring == Module_Orca) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
+   IF ( p_FAST%SolveOption == Solve_FullOpt1 ) THEN
       CALL Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
                                     HD%Input(1)%Morison%Mesh, HD%Input(1)%WAMITMesh, &
                                     ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ExtPtfm%Input(1)%PtfmMesh, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
-   ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
-         CALL AllocAry( MeshMapData%Jacobian_Opt1, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for Ptfm-HD coupling', ErrStat2, ErrMsg2 )
+   ELSEIF ( p_FAST%SolveOption == Solve_SimplifiedOpt1 ) THEN
+      CALL AllocAry( MeshMapData%Jacobian_Opt1, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for Ptfm-HD coupling', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    END IF
    
@@ -4625,8 +4652,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    ! initialize the temporary input meshes (for input-output solves in Solve Option 1):
    ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
    !............................................................................................................................
-   IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) &
-         .or. p_FAST%CompMooring == Module_Orca) THEN
+   IF ( p_FAST%SolveOption /= Solve_FullOpt2 ) THEN
                   
          ! Temporary meshes for transfering inputs to ED, HD, BD, Orca, and SD
       CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
@@ -4699,7 +4725,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       END IF
       
       
-   ELSEIF ( p_FAST%CompSub /= Module_SD ) THEN     ! Platform loads from SrvD Structural control (TMDs) to ED in Full Option2 solve
+   ELSEIF ( p_FAST%CompSub /= Module_SD ) THEN     ! Platform loads from SrvD Structural control (TMDs) to ED in Full Option2 solve; bjj note: solves with SD are always option 1, so this condition is always true (could replace ELSEIF with ELSE)
    
       IF ( ALLOCATED(SrvD%Input(1)%SStCMotionMesh) ) THEN ! Platform TMD loads
          CALL MeshCopy ( SubstructureLoads, MeshMapData%SubstructureLoads_Tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
@@ -4986,7 +5012,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
  
    IF (ErrStat >= AbortErrLev) RETURN      
    
-   IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
+   IF (p_FAST%SolveOption == Solve_FullOpt1) THEN
                                  
       CALL FullOpt1_InputOutputSolve(  this_time, p_FAST, calcJacobian &
           ,      ED%Input(1),     ED%p,     ED%x(  this_state),     ED%xd(  this_state),     ED%z(  this_state),     ED%OtherSt(  this_state),     ED%y, ED%m &
@@ -5005,7 +5031,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         
                
-   ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN  ! No substructure model
+   ELSEIF ( p_FAST%SolveOption == Solve_SimplifiedOpt1 ) THEN  ! No substructure model
                                                     
       CALL ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt(this_state), ED%y,  ED%m &

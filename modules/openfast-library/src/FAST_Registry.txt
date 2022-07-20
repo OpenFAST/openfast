@@ -107,7 +107,7 @@ typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An arra
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
 typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
-#typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
+typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-

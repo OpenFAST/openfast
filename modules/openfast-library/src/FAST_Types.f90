@@ -126,6 +126,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT_Ujac      !< Time between when we need to re-calculate these Jacobians [s]
     REAL(ReKi)  :: UJacSclFact      !< Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
+    INTEGER(IntKi)  :: SolveOption      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
     INTEGER(IntKi)  :: CompElast      !< Compute blade loads (switch) {Module_ED; Module_BD} [-]
     INTEGER(IntKi)  :: CompInflow      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM} [-]
     INTEGER(IntKi)  :: CompAero      !< Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD} [-]
@@ -2156,6 +2157,7 @@ ENDIF
     DstParamData%DT_Ujac = SrcParamData%DT_Ujac
     DstParamData%UJacSclFact = SrcParamData%UJacSclFact
     DstParamData%SizeJac_Opt1 = SrcParamData%SizeJac_Opt1
+    DstParamData%SolveOption = SrcParamData%SolveOption
     DstParamData%CompElast = SrcParamData%CompElast
     DstParamData%CompInflow = SrcParamData%CompInflow
     DstParamData%CompAero = SrcParamData%CompAero
@@ -2315,6 +2317,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DT_Ujac
       Re_BufSz   = Re_BufSz   + 1  ! UJacSclFact
       Int_BufSz  = Int_BufSz  + SIZE(InData%SizeJac_Opt1)  ! SizeJac_Opt1
+      Int_BufSz  = Int_BufSz  + 1  ! SolveOption
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Int_BufSz  = Int_BufSz  + 1  ! CompAero
@@ -2489,6 +2492,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = InData%SizeJac_Opt1(i1)
       Int_Xferred = Int_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%SolveOption
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompElast
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
@@ -2808,6 +2813,8 @@ ENDIF
       OutData%SizeJac_Opt1(i1) = IntKiBuf(Int_Xferred)
       Int_Xferred = Int_Xferred + 1
     END DO
+    OutData%SolveOption = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%CompElast = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)
