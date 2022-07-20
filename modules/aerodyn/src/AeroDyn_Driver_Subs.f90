@@ -24,7 +24,7 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow, only: concatOutputHeaders
    use AeroDyn_Inflow, only: ADI_ADIW_Solve ! TODO remove me
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
-   use AeroDyn_IO,     only: AD_WrVTK_Surfaces
+   use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
    
    use AeroDyn_Driver_Types   
    use AeroDyn
@@ -293,12 +293,17 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
 
 
    ! VTK outputs
-   if (dvr%out%WrVTK==1 .and. nt==1) then
+   if ((dvr%out%WrVTK>=1 .and. nt==1) .or. (dvr%out%WrVTK==2)) then
       ! Init only
-      call WrVTK_Surfaces(time, ADI, FED, dvr%out, nt-1)
-   else if (dvr%out%WrVTK==2) then
-      ! Animation
-      call WrVTK_Surfaces(time, ADI, FED, dvr%out, nt-1)
+      select case (dvr%out%WrVTK_Type)
+         case (1)    ! surfaces
+            call WrVTK_Surfaces(time, ADI, FED, dvr%out, nt-1)
+         case (2)    ! lines             
+            call WrVTK_Lines(   time, ADI, FED, dvr%out, nt-1)
+         case (3)    ! both              
+            call WrVTK_Surfaces(time, ADI, FED, dvr%out, nt-1)
+            call WrVTK_Lines(   time, ADI, FED, dvr%out, nt-1)
+      end select
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
@@ -421,6 +426,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       ! ADI
       InitInp%storeHHVel = .true.
       InitInp%WrVTK      = dvr%out%WrVTK
+      InitInp%WrVTK_Type = dvr%out%WrVTK_Type
       ! Inflow Wind
       InitInp%IW_InitInp%InputFile  = dvr%IW_InitInp%InputFile
       InitInp%IW_InitInp%CompInflow = dvr%IW_InitInp%CompInflow
@@ -1215,6 +1221,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    call ParseVar(FileInfo_In, CurLine, 'outFmt'     , dvr%out%outFmt      , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'outFileFmt' , dvr%out%fileFmt     , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'WrVTK'      , dvr%out%WrVTK       , errStat2, errMsg2, unEc); if(Failed()) return
+   call ParseVar(FileInfo_In, CurLine, 'WrVTK_Type' , dvr%out%WrVTK_Type  , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseVar(FileInfo_In, CurLine, 'VTKHubRad'  , hubRad_ReKi         , errStat2, errMsg2, unEc); if(Failed()) return
    call ParseAry(FileInfo_In, CurLine, 'VTKNacDim'  , dvr%out%VTKNacDim, 6, errStat2, errMsg2, unEc); if(Failed()) return
    dvr%out%VTKHubRad =  real(hubRad_ReKi,SiKi)
@@ -1329,6 +1336,12 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    !if ( FmtWidth < MinChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column less than '//trim(num2lstr(MinChanLen))//' characters wide ('// &
    !   TRIM(Num2LStr(FmtWidth))//'), which may be too small.', errStat, errMsg, RoutineName )
+
+   if (Check((dvr%out%WrVTK<0      .or. dvr%out%WrVTK>2     ), 'WrVTK must be 0 (none), 1 (initialization only), 2 (animation), or 3 (mode shapes).')) then
+      return
+   else
+      if (Check((dvr%out%WrVTK_Type<1 .or. dvr%out%WrVTK_Type>3), 'VTK_type must be 1 (surfaces), 2 (lines/points), or 3 (both).')) return
+   endif
 
 contains
 
@@ -1887,7 +1900,7 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
       endif
       
       if (p_FAST%WrVTK>1) then
-         ! --- Debug outputs
+         ! --- animations
          ! Tower base
          call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseSurface', &
                                       VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , &
@@ -1908,7 +1921,66 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
       end if   
    end if   
 end subroutine WrVTK_Surfaces
+!> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
+!! returning an error code.
+subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
+   use FVW_IO, only: WrVTK_FVW
+   REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
+   type(ADI_Data),           intent(in   ) :: ADI                 !< Input data for initialization (intent out for getting AD WriteOutput names/units)
+   type(FED_Data), target,   intent(in   ) :: FED                 !< Elastic wind turbine data (Fake ElastoDyn)
+   TYPE(Dvr_Outputs),        INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   INTEGER(IntKi)          , INTENT(IN   ) :: VTK_count
+   logical, parameter    :: OutputFields = .TRUE.
+   INTEGER(IntKi)        :: k
+   INTEGER(IntKi)        :: ErrStat2
+   CHARACTER(ErrMsgLen)  :: ErrMSg2
+   integer(IntKi)        :: iWT
+   integer(IntKi)        :: nWT
+   character(10)         :: sWT
+   type(RotFED), pointer :: y_ED ! Alias to shorten notation
 
+   ! AeroDyn surfaces (Blades, Tower)
+   call AD_WrVTK_LinesPoints(ADI%u(2)%AD, ADI%y%AD, p_FAST%VTKRefPoint, VTK_count, p_FAST%VTK_OutFileRoot, p_FAST%VTK_tWidth)
+
+   ! Elastic info
+   nWT = size(FED%WT)
+   do iWT = 1, nWT
+      if (nWT==1) then
+         sWT = ''
+      else
+         sWT = '.T'//trim(num2lstr(iWT))
+      endif
+      y_ED => FED%WT(iWT)
+
+      ! Base 
+      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+                                   VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+      if (y_ED%numBlades>0) then
+         ! Nacelle 
+         call MeshWrVTK( p_FAST%VTKRefPoint, y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', &
+                         VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+      endif
+
+      if (p_FAST%WrVTK>1) then
+         ! --- animations  
+         ! Tower base
+         call MeshWrVTK(p_FAST%VTKRefPoint, y_ED%TwrPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBase', &
+                        VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+
+         if (ADI%u(2)%AD%rotors(iWT)%TowerMotion%nNodes>0) then
+            call MeshWrVTK(p_FAST%VTKRefPoint, y_ED%TwrPtMeshAD, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.TwrBaseAD', &
+                           VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth )
+         endif
+      endif
+   enddo
+
+   ! Free wake (only write this here if doing line meshes only -- FVW is written with surface outputs)
+   if (allocated(ADI%m%AD%FVW_u) .and. p_FAST%WrVTK_Type==2) then
+      if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
+         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x%AD%FVW, ADI%z%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+      end if   
+   end if
+end subroutine WrVTK_Lines
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the ground or seabed reference surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf

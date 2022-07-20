@@ -70,7 +70,8 @@ IMPLICIT NONE
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
     Character(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: WrVTK = 0      !< Flag for VTK outputs [-]
+    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -112,7 +113,8 @@ IMPLICIT NONE
     TYPE(AD_ParameterType)  :: AD      !< Parameters [-]
     REAL(DbKi)  :: dt      !< time increment [s]
     LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: WrVTK = 0      !< Flag for VTK outputs [-]
+    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Total number of WriteOutput outputs [-]
   END TYPE ADI_ParameterType
 ! =======================
@@ -1306,7 +1308,8 @@ CONTAINS
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%storeHHVel = SrcInitInputData%storeHHVel
-    DstInitInputData%WrVTK = SrcInitInputData%WrVTK
+    DstInitInputData%wrVTK = SrcInitInputData%wrVTK
+    DstInitInputData%WrVTK_Type = SrcInitInputData%WrVTK_Type
  END SUBROUTINE ADI_CopyInitInput
 
  SUBROUTINE ADI_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1394,7 +1397,8 @@ CONTAINS
       END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
-      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! wrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1484,7 +1488,9 @@ CONTAINS
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%WrVTK
+    IntKiBuf(Int_Xferred) = InData%wrVTK
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_PackInitInput
 
@@ -1600,7 +1606,9 @@ CONTAINS
     END DO ! I
     OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
-    OutData%WrVTK = IntKiBuf(Int_Xferred)
+    OutData%wrVTK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ADI_UnPackInitInput
 
@@ -3226,7 +3234,8 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%dt = SrcParamData%dt
     DstParamData%storeHHVel = SrcParamData%storeHHVel
-    DstParamData%WrVTK = SrcParamData%WrVTK
+    DstParamData%wrVTK = SrcParamData%wrVTK
+    DstParamData%WrVTK_Type = SrcParamData%WrVTK_Type
     DstParamData%NumOuts = SrcParamData%NumOuts
  END SUBROUTINE ADI_CopyParam
 
@@ -3297,7 +3306,8 @@ ENDIF
       END IF
       Db_BufSz   = Db_BufSz   + 1  ! dt
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
-      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! wrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3358,7 +3368,9 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%WrVTK
+    IntKiBuf(Int_Xferred) = InData%wrVTK
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
@@ -3434,7 +3446,9 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
-    OutData%WrVTK = IntKiBuf(Int_Xferred)
+    OutData%wrVTK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

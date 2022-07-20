@@ -46,7 +46,8 @@ typedef    ^    InitInputType          AD_InitInputType                 AD      
 typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
 typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
 typedef    ^        ^                  Logical                          storeHHVel       -  .false.   -   "If True, hub height velocity will be computed by infow wind"	-
-typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "Flag for VTK outputs"	-
+typedef    ^        ^                  IntKi                            wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef    ^        ^                  IntKi                            WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
@@ -73,7 +74,8 @@ typedef    ^        ^                  AD_VTK_RotSurfaceType            VTK_surf
 typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
 typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
 typedef    ^        ^                  Logical                          storeHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
-typedef    ^        ^                  IntKi                            WrVTK            -      0     -   "Flag for VTK outputs"	-
+typedef    ^        ^                  IntKi                            wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef    ^        ^                  IntKi                            WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 typedef    ^        ^                  IntKi                            NumOuts          -      0     -   "Total number of WriteOutput outputs"	-
 
 # ..... Inputs ....................................................................................................................

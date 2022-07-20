@@ -3748,6 +3748,54 @@ subroutine AD_WrVTK_Surfaces(u_AD, y_AD, RefPoint, VTK_Surface, VTK_count, OutFi
 
 end subroutine AD_WrVTK_Surfaces
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Writes AeroDyn VTK Lines and points (tower, hub, blades)
+subroutine AD_WrVTK_LinesPoints(u_AD, y_AD, RefPoint, VTK_count, OutFileRoot, tWidth)
+   type(AD_InputType),       intent(in   ) :: u_AD
+   type(AD_OutputType),      intent(in   ) :: y_AD
+   real(SiKi),               intent(in   ) :: RefPoint(3)
+   integer(IntKi),           intent(in   ) :: VTK_count
+   character(len=*),         intent(in   ) :: OutFileRoot
+   integer,                  intent(in   ) :: tWidth
+   logical, parameter       :: OutputFields = .TRUE.
+   integer(IntKi)           :: k
+   integer(IntKi)           :: errStat2
+   character(ErrMsgLen)     :: errMSg2
+   integer(IntKi)           :: iWT
+   integer(IntKi)           :: nBlades
+   integer(IntKi)           :: nWT
+   character(10)            :: sWT
+
+   nWT = size(u_AD%rotors)
+   do iWT = 1, nWT
+      if (nWT==1) then
+         sWT = ''
+      else
+         sWT = '.T'//trim(num2lstr(iWT))
+      endif
+
+      ! Tower motions
+      if (u_AD%rotors(iWT)%TowerMotion%nNodes>0) then
+         call MeshWrVTK(RefPoint, u_AD%rotors(iWT)%TowerMotion, trim(OutFileRoot)//trim(sWT)//'.Tower', &
+                        VTK_count, OutputFields, errStat2, errMsg2, tWidth )
+      endif
+
+      nBlades = size(u_AD%rotors(iWT)%BladeMotion)
+    
+      if (nBlades>0) then
+         ! Hub
+         call MeshWrVTK(RefPoint, u_AD%rotors(iWT)%HubMotion, trim(OutFileRoot)//trim(sWT)//'.Hub', &
+                        VTK_count, OutputFields, errStat2, errMsg2, tWidth )
+      endif
+
+      ! Blades
+      do K=1,nBlades
+         call MeshWrVTK(RefPoint, u_AD%rotors(iWT)%BladeMotion(K), trim(OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k)), &
+                        VTK_count, OutputFields, errStat2, errMsg2, tWidth, Sib=y_AD%rotors(iWT)%BladeLoad(k) )
+      end do                  
+   enddo
+
+end subroutine AD_WrVTK_LinesPoints
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
 SUBROUTINE AD_SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, errStat, errMsg, BlChord)
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
