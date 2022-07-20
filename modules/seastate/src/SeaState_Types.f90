@@ -127,7 +127,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffD      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffS      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    LOGICAL  :: ValidWithSSExctn      !< Whether SeaState configuration is valid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
+    LOGICAL  :: InvalidWithSSExctn      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     REAL(SiKi)  :: MCFD      !< Diameter of MacCamy-Fuchs member [(meters)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevSeries      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY. [(m)]
@@ -1756,7 +1756,7 @@ ENDIF
     DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
     DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
     DstInitOutputData%WvHiCOffS = SrcInitOutputData%WvHiCOffS
-    DstInitOutputData%ValidWithSSExctn = SrcInitOutputData%ValidWithSSExctn
+    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
       CALL SeaSt_Interp_CopyParam( SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -2042,7 +2042,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffD
       Re_BufSz   = Re_BufSz   + 1  ! WvLowCOffS
       Re_BufSz   = Re_BufSz   + 1  ! WvHiCOffS
-      Int_BufSz  = Int_BufSz  + 1  ! ValidWithSSExctn
+      Int_BufSz  = Int_BufSz  + 1  ! InvalidWithSSExctn
       Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2585,7 +2585,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WvHiCOffS
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%ValidWithSSExctn, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%InvalidWithSSExctn, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3225,7 +3225,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WvHiCOffS = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-    OutData%ValidWithSSExctn = TRANSFER(IntKiBuf(Int_Xferred), OutData%ValidWithSSExctn)
+    OutData%InvalidWithSSExctn = TRANSFER(IntKiBuf(Int_Xferred), OutData%InvalidWithSSExctn)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
