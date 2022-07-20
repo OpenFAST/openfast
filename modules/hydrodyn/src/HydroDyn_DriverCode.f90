@@ -243,7 +243,7 @@ PROGRAM HydroDynDriver
    InitInData%WvLowCOffS     =  InitOutData_SeaSt%WvLowCOffS
    InitInData%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS
    
-   InitInData%ValidWithSSExctn     =  InitOutData_SeaSt%ValidWithSSExctn
+   InitInData%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
    
    InitInData%WaveDirMin     =  InitOutData_SeaSt%WaveDirMin  
    InitInData%WaveDirMax     =  InitOutData_SeaSt%WaveDirMax  
