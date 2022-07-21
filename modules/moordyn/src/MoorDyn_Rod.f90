@@ -49,18 +49,21 @@ CONTAINS
 
 
    !-----------------------------------------------------------------------
-   SUBROUTINE Rod_Setup(Rod, RodProp, endCoords, rhoW, ErrStat, ErrMsg)
+   SUBROUTINE Rod_Setup(Rod, RodProp, endCoords, p, ErrStat, ErrMsg)
 
       TYPE(MD_Rod),       INTENT(INOUT)  :: Rod          ! the single rod object of interest
       TYPE(MD_RodProp),   INTENT(INOUT)  :: RodProp      ! the single rod property set for the line of interest
       REAL(DbKi),    INTENT(IN)          :: endCoords(6)
-      REAL(DbKi),    INTENT(IN)          :: rhoW
+      TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
       INTEGER(4)                         :: i             ! Generic index
       INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
+      
+      Real(DbKi)                         :: phi, beta, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta   ! various orientation things
+      Real(DbKi)                         :: k_hat(3)     ! unit vector (redundant, not used) <<<<
       
       INTEGER                            :: ErrStat2
 
@@ -138,8 +141,31 @@ CONTAINS
       ! set gravity and bottom contact forces to zero initially (because the horizontal components should remain at zero)
       Rod%W = 0.0_DbKi
       Rod%B = 0.0_DbKi
+      
+      ! calculate some orientation items to be used for mesh setup      
+      call GetOrientationAngles(Rod%q, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat) ! calculate some orientation information for the Rod as a whole
+      Rod%OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
+      
             
       IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
+
+
+      if (p%writeLog > 1) then
+         write(p%UnLog, '(A)') "  - Rod "//trim(num2lstr(Rod%IdNum))
+         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Rod%IdNum))
+         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Rod%UnstrLen))
+         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Rod%N   ))
+         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Rod%d   ))
+         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Rod%rho ))
+         write(p%UnLog, '(A)') "    Can  : "//trim(num2lstr(Rod%Can ))
+         write(p%UnLog, '(A)') "    Cat  : "//trim(num2lstr(Rod%Cat ))         
+         write(p%UnLog, '(A)') "    CaEnd: "//trim(num2lstr(Rod%CaEnd ))
+         write(p%UnLog, '(A)') "    Cdn  : "//trim(num2lstr(Rod%Cdn ))
+         write(p%UnLog, '(A)') "    Cdt  : "//trim(num2lstr(Rod%Cdt ))
+         write(p%UnLog, '(A)') "    CdEnd: "//trim(num2lstr(Rod%CdEnd ))
+         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
+      end if
+
 
       ! need to add cleanup sub <<<
 
@@ -339,6 +365,7 @@ CONTAINS
       INTEGER(IntKi)                        :: N              ! number of segments
    
       REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
+      REAL(DbKi)                            :: q_EI_dl(3)        ! <<<< add description
       REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
       REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
       REAL(DbKi)                            :: qMomentSum(3)  ! summation of qEnd*EI/dl_stretched (with correct sign) for each attached line
@@ -377,22 +404,24 @@ CONTAINS
       
          DO l=1,Rod%nAttachedA
          
-            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedA(l)), qEnd, EIend, dlEnd, Rod%TopA(l))
+            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedA(l)), q_EI_dl, Rod%TopA(l), 0)
             
-            qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
+            qMomentSum = qMomentSum + q_EI_dl  ! add each component to the summation vector
             
          END DO
 
          DO l=1,Rod%nAttachedB
          
-            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedB(l)), qEnd, EIend, dlEnd, Rod%TopB(l))
+            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedB(l)), q_EI_dl, Rod%TopB(l), 1)
             
-            qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
+            qMomentSum = qMomentSum + q_EI_dl  ! add each component to the summation vector
             
          END DO
          
          ! solve for line unit vector that balances all moments (unit vector of summation of qEnd*EI/dl_stretched over each line)
          CALL ScaleVector(qMomentSum, 1.0_DbKi, Rod%q)
+         
+         Rod%r6(4:6) = Rod%q  ! set orientation angles
       END IF
 
       ! pass Rod orientation to any attached lines (this is just like what a Connection does, except for both ends)
@@ -558,7 +587,7 @@ CONTAINS
 
       ! used in lumped 6DOF calculations:
       Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
-      Real(DbKi)                 :: OrMat(3,3)             ! rotation matrix to rotate global z to rod's axis
+      !Real(DbKi)                 :: OrMat(3,3)             ! rotation matrix to rotate global z to rod's axis
       Real(DbKi)                 :: F6_i(6)                ! a node's contribution to the total force vector
       Real(DbKi)                 :: M6_i(6,6)              ! a node's contribution to the total mass matrix
       Real(DbKi)                 :: I_l                    ! axial inertia of rod
@@ -936,9 +965,10 @@ CONTAINS
          Imat_l(3,3) = I_l
       end if
       
-      OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
+      ! >>> some of the kinematics parts of this could potentially be moved to a different routine <<<
+      Rod%OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
       
-      Imat = RotateM3(Imat_l, OrMat)  ! rotate to give inertia matrix about CG in global frame
+      Imat = RotateM3(Imat_l, Rod%OrMat)  ! rotate to give inertia matrix about CG in global frame
       
       ! these supplementary inertias can then be added the matrix (these are the terms ASIDE from the parallel axis terms)
       Rod%M6net(4:6,4:6) = Rod%M6net(4:6,4:6) + Imat
