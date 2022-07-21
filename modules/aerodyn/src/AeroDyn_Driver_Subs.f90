@@ -1547,9 +1547,9 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
 
          ! 6 base DOF
          rotations  = EulerExtract(y_ED%PlatformPtMesh%Orientation(:,:,1)); 
-         arr(k) = y_ED%PlatformPtMesh%Position(1,1)+y_ED%PlatformPtMesh%TranslationDisp(1,1); k=k+1 ! surge
-         arr(k) = y_ED%PlatformPtMesh%Position(2,1)+y_ED%PlatformPtMesh%TranslationDisp(2,1); k=k+1 ! sway
-         arr(k) = y_ED%PlatformPtMesh%Position(3,1)+y_ED%PlatformPtMesh%TranslationDisp(3,1); k=k+1 ! heave
+         arr(k) = y_ED%PlatformPtMesh%TranslationDisp(1,1); k=k+1 ! surge
+         arr(k) = y_ED%PlatformPtMesh%TranslationDisp(2,1); k=k+1 ! sway
+         arr(k) = y_ED%PlatformPtMesh%TranslationDisp(3,1); k=k+1 ! heave
          arr(k) = rotations(1) * R2D  ; k=k+1 ! roll
          arr(k) = rotations(2) * R2D  ; k=k+1 ! pitch
          arr(k) = rotations(3) * R2D  ; k=k+1 ! yaw
