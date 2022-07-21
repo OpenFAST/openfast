@@ -25,7 +25,6 @@
 import os
 import sys
 import shutil
-
 import numpy as np
 
 import rtestlib as rtl
@@ -67,10 +66,18 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     p2.xaxis.axis_label = 'Time (s)'
     p2.line(xseries, abs(y2series - y1series), color='blue')
 
-    atol = 1e-4
-    rtol = 1e-6
+    ATOL_MAGNITUDE = 2
+    RTOL_MAGNITUDE = 2
+    NUMEPS = 1e-6
+
+    baseline_offset = y2series - np.min(y2series) + NUMEPS
+    rtol = 10**(-1 * RTOL_MAGNITUDE)
+    b_order_of_magnitude = np.floor( np.log10( baseline_offset ) )
+    atol = 10**( b_order_of_magnitude - ATOL_MAGNITUDE )
+
     passfail_line = atol + rtol * abs(y2series)
     p2.line(xseries, passfail_line, color='red')
+    # p2.cross(xseries, passfail_line)
 
     p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
 

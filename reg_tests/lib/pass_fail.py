@@ -39,15 +39,27 @@ def passing_channels(test, baseline) -> np.ndarray:
         ]
     So that test[0,:] are the data for the 0th channel and test[:,0] are the 0th entry in each channel.
     """
-    atol = 1e-4
-    rtol = 1e-6
+    ATOL_MAGNITUDE = 3
+    RTOL_MAGNITUDE = 2
+    NUMEPS = 1e-6
 
-    where_close = np.isclose( test, baseline, atol=atol, rtol=rtol )
+    # TODO: Add a minimum atol at 1e-10 or 1e-12
+
+    n_channels = np.shape(test)[0]
+    where_close = np.zeros_like(test, dtype=bool)
+    baseline_offset = baseline - np.min(baseline) + NUMEPS
+    b_order_of_magnitude = np.floor( np.log10( baseline_offset ) )
+
+    for i in range(n_channels):
+        rtol = 10**(-1 * RTOL_MAGNITUDE)
+        atol = 10**( b_order_of_magnitude[i] - ATOL_MAGNITUDE )  # This is an array the same size as the current channel
+        where_close[i] = np.isclose( test[i], baseline[i], atol=atol, rtol=rtol )
+
+    # where_close = np.isclose( test, baseline, atol=atol, rtol=rtol )
     where_not_nan = ~np.isnan(test)
     where_not_inf = ~np.isinf(test)
 
     passing_channels = np.all(where_close * where_not_nan * where_not_inf, axis=1)
-
     return passing_channels
 
 def maxnorm(data, axis=0):
