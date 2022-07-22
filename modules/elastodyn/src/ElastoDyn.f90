@@ -127,7 +127,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    p%Gravity = InitInp%Gravity
    
-   CALL ED_ReadInput( InitInp, InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
+   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -157,7 +157,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL ED_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL ED_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2009,9 +2009,10 @@ END SUBROUTINE ED_CalcConstrStateResidual
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData
-SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE ED_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
+   TYPE(ED_InitInputType),   INTENT(IN   )    :: InitInp        !< Input data for initialization routine
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
    TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
@@ -2030,7 +2031,7 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
 
       ! Set parameters from primary input file
-   CALL SetPrimaryParameters( p, InputFileData, ErrStat2, ErrMsg2  )
+   CALL SetPrimaryParameters( InitInp, p, InputFileData, ErrStat2, ErrMsg2  )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -3459,11 +3460,12 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the primary input file data and sets the corresponding parameters.
-SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
+SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
 !..................................................................................................................................
 
       ! Passed variables
 
+   TYPE(ED_InitInputType),   INTENT(IN   )  :: InitInp                      !< Input data for initialization routine
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
@@ -3495,9 +3497,15 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%DT        = InputFileData%DT
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
-   p%TowerHt   = InputFileData%TowerHt
-   p%TowerBsHt = InputFileData%TowerBsHt
-   p%PtfmRefzt = InputFileData%PtfmRefzt
+   IF ( InitInp%MHK == 1 ) THEN
+      p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
+      p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
+      p%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
+   ELSE
+      p%TowerHt   = InputFileData%TowerHt
+      p%TowerBsHt = InputFileData%TowerBsHt
+      p%PtfmRefzt = InputFileData%PtfmRefzt
+   END IF
    
    p%HubMass   = InputFileData%HubMass
    p%GenIner   = InputFileData%GenIner
@@ -3578,7 +3586,11 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
-   p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   IF ( InitInp%MHK == 1 ) THEN
+      p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
+   ELSE
+      p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   END IF
 
    !...............................................................................................................................
    ! set cosine and sine of Precone and Delta3 angles:

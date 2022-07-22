@@ -1281,7 +1281,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads the input file and stores all the data in the ED_InputFile structure.
 !! It does not perform data validation.
-SUBROUTINE ED_ReadInput( InitInp, InputFileName, MeshFile, InputFileData, ReadAdmVals, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
+SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
@@ -1291,7 +1291,6 @@ SUBROUTINE ED_ReadInput( InitInp, InputFileName, MeshFile, InputFileData, ReadAd
    CHARACTER(*), INTENT(IN)               :: MeshFile       !< File that contains the blade mesh information (AeroDyn input file for now) -- later this info will be defined in one of the ED input files.
    CHARACTER(*), INTENT(IN)               :: OutFileRoot    !< The rootname of all the output files written by this routine.
 
-   TYPE(ED_InitInputType), INTENT(IN)     :: InitInp        !< Input data for initialization routine
    TYPE(ED_InputFile),   INTENT(OUT)      :: InputFileData  !< Data stored in the module's input file
 
    INTEGER(IntKi),       INTENT(OUT)      :: ErrStat        !< The error status code
@@ -1320,7 +1319,7 @@ SUBROUTINE ED_ReadInput( InitInp, InputFileName, MeshFile, InputFileData, ReadAd
       ! get the primary/platform input-file data
       ! sets UnEcho, BldFile, FurlFile, TwrFile
    
-   CALL ReadPrimaryFile( InitInp, InputFileName, InputFileData, BldFile, FurlFile, TwrFile, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
+   CALL ReadPrimaryFile( InputFileName, InputFileData, BldFile, FurlFile, TwrFile, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call Cleanup()
@@ -3231,7 +3230,7 @@ END SUBROUTINE ReadTowerFile
 !> This routine reads in the primary ElastoDyn input file and places the values it reads in the InputFileData structure.
 !!  It opens an echo file if requested and returns the (still-open) echo file to the calling routine.
 !!  It also returns the names of the BldFile, FurlFile, and TrwFile for further reading of inputs.
-SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile, TwrFile, OutFileRoot, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile, OutFileRoot, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
@@ -3245,7 +3244,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile
    CHARACTER(*),       INTENT(OUT)    :: BldFile(MaxBl)                      !< name of the files containing blade inputs
    CHARACTER(*),       INTENT(IN)     :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
 
-   TYPE(ED_InitInputType), INTENT(IN) :: InitInp                             !< Input data for initialization routine
    TYPE(ED_InputFile), INTENT(INOUT)  :: InputFileData                       !< All the data in the ElastoDyn input file
 
       ! Local variables:
@@ -3855,9 +3853,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile
 
       ! TowerHt - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
    CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
-      IF ( InitInp%MHK == 1 ) THEN
-         InputFileData%TowerHt = InputFileData%TowerHt - InitInp%WtrDpth
-      END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -3866,9 +3861,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile
 
       ! TowerBsHt - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
    CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
-      IF ( InitInp%MHK == 1 ) THEN
-         InputFileData%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
-      END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -3893,9 +3885,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile
       
       ! PtfmCMzt - Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
    CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
-      IF ( InitInp%MHK == 1 ) THEN
-         InputFileData%PtfmCMzt = InputFileData%PtfmCMzt - InitInp%WtrDpth
-      END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -3904,9 +3893,6 @@ SUBROUTINE ReadPrimaryFile( InitInp, InputFile, InputFileData, BldFile, FurlFile
 
       ! PtfmRefzt - Vertical distance from the ground ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters):
    CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
-      IF ( InitInp%MHK == 1 ) THEN
-         InputFileData%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
-      END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()

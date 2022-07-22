@@ -755,6 +755,9 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
             endif
 
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
+            if ( dvr%MHK==1 ) then
+               twrHeightAD = twrHeightAD + dvr%WtrDpth
+            end if
 
             twrHeight=TwoNorm(wt%nac%ptMesh%Position(:,1) - wt%twr%ptMesh%Position(:,1)  )
             ! KEEP ME, in summary file
@@ -770,7 +773,11 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
             Ptop = wt%nac%ptMesh%Position(:,1)
             DeltaP = Ptop-Pbase
             do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
-               zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               if ( dvr%MHK==1 ) then
+                  zBar = (uAD%rotors(iWT)%TowerMotion%Position(3,i) + dvr%WtrDpth) /twrHeight
+               else
+                  zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               endif
                uAD%rotors(iWT)%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
                uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= wt%twr%ptMesh%RefOrientation(:,:,1)
             enddo
@@ -1172,6 +1179,11 @@ subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
 !          end do
       enddo !j, wake points
    end if
+
+   if ( dvr%MHK == 1 ) then
+      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + dvr%WtrDpth
+   end if
+
 end subroutine Set_IW_Inputs
 
 !> This routine sets the AeroDyn wind inflow inputs.
@@ -1318,9 +1330,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
    if (dvr%compInflow==0) then
       call ParseVar(FileInfo_In, CurLine, "HWindSpeed", dvr%HWindSpeed  , errStat2, errMsg2, unEc); if (Failed()) return
       call ParseVar(FileInfo_In, CurLine, "RefHt"     , dvr%RefHt       , errStat2, errMsg2, unEc); if (Failed()) return
-      if ( dvr%MHK == 1 ) then
-         dvr%RefHt = dvr%RefHt - dvr%WtrDpth
-      end if
       call ParseVar(FileInfo_In, CurLine, "PLExp"     , dvr%PLExp       , errStat2, errMsg2, unEc); if (Failed()) return
    else
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if (Failed()) return

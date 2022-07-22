@@ -114,6 +114,7 @@ typedef  ^                       ^          Lidar_InitInputType      lidar      
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^                 IntKi             MHK               -   -   -         "MHK turbine type switch"   -
 typedef  ^                       ^                 ReKi              WtrDpth           -   -   -         "Water depth" m
+typedef  ^                       ^                 ReKi              MSL2SWL           -   -   -         "Mean sea level to still water level" m
 
 # Init Output
 typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :   -   -    "Names of output-to-file channels"                       -

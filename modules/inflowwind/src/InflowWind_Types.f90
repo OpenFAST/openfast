@@ -130,6 +130,7 @@ IMPLICIT NONE
     TYPE(IfW_4Dext_InitInputType)  :: FDext      !< InitInput for lidar data [-]
     INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Mean sea level to still water level [m]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -1174,6 +1175,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%MHK = SrcInitInputData%MHK
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
  END SUBROUTINE InflowWind_CopyInitInput
 
  SUBROUTINE InflowWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -1306,6 +1308,7 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1470,6 +1473,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE InflowWind_PackInitInput
 
@@ -1684,6 +1689,8 @@ ENDIF
     OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE InflowWind_UnPackInitInput
 

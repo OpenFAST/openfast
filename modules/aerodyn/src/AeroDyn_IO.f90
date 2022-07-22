@@ -2685,11 +2685,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       do I=1,InputFileData%rotors(iR)%NumTwrNds
          call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe5, 5, ErrStat2, ErrMsg2, UnEc )
             if (Failed()) return;
-         if ( InitInp%MHK == 0 .or. InitInp%MHK == 2 ) then
-            InputFileData%rotors(iR)%TwrElev(I) = TmpRe5( 1)
-         elseif ( InitInp%MHK == 1 ) then
-            InputFileData%rotors(iR)%TwrElev(I) = TmpRe5( 1) - InitInp%WtrDpth
-         endif
+         InputFileData%rotors(iR)%TwrElev(I) = TmpRe5( 1)
          InputFileData%rotors(iR)%TwrDiam(I) = TmpRe5( 2)
          InputFileData%rotors(iR)%TwrCd(I)   = TmpRe5( 3)
          InputFileData%rotors(iR)%TwrTI(I)   = TmpRe5( 4)
