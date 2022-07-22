@@ -1,0 +1,81 @@
+###################################################################################################################################
+# Registry for OpenFOAM - CFD interface types in the FAST Modularization Framework
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+
+
+
+# ..... OpenFOAM_InitInputType data .......................................................................................................
+typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
+typedef	^	^	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-
+typedef	^	^	ReKi	StructBldRNodes	{:}	-	-	"Radius to structural model analysis nodes relative to hub"
+typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of variable-spaced structural model tower nodes (relative to the tower rigid base height)"
+typedef	^       ^	ReKi	BladeLength	-	-	-	"Blade length"	meters
+typedef	^	^	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
+typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
+
+
+
+
+
+# ..... OpenFOAM_InitOutputType data .......................................................................................................
+# Define outputs from the initialization routine here:
+typedef	OpenFOAM/OpFM	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+
+# ..... MiscVars ................................................................................................................
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceLoads	{:}	-	-	"line2 mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
+typedef	^	^	MeshType	ActForceMotions	{:}	-	-	"line2 mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
+typedef	^	^	MeshType	ActForceMotionsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
+typedef	^	^	MeshType	ActForceLoadsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
+typedef	^	^	MeshMapType	Line2_to_Line2_Loads	{:}	-	-	"mapping data structure to convert line2 loads to line2 loads"	-
+typedef	^	^	MeshMapType	Line2_to_Line2_Motions	{:}	-	-	"mapping data structure to convert line2 loads to line2 motions"	-
+typedef	^	^	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
+typedef	^	^	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point motions"	-
+
+
+# ..... Parameters ................................................................................................................
+typedef	OpenFOAM/OpFM	ParameterType	ReKi	AirDens	-	-	-	"Air density for normalization of loads sent to OpenFOAM"	kg/m^3
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NumBl	-	-	-	"Number of blades"	-
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NMappings	-	-	-	"Number of mappings"	-
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesVel	-	-	-	"number of velocity nodes on FAST v8-OpenFOAM interface"	-
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForce	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceBlade	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceTower	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
+typedef ^       ^       ReKi            forceBldRnodes             {:}     "Radial location of force nodes"  -
+typedef ^       ^       ReKi            forceTwrHnodes             {:}     "Radial location of force nodes"  -
+typedef ^	^	ReKi	BladeLength	-	-	-	"Blade length (same for all blades)"	"m"
+typedef ^	^	ReKi	TowerHeight	-	-	-	"Tower height"	"m"
+typedef ^	^	ReKi	TowerBaseHeight	-	-	-	"Tower base height"	"m"
+
+
+# ..... OpenFOAM_InputType data .......................................................................................................
+typedef	^	InputType	ReKi	pxVel	{:}	-	-	"x position of velocity interface (Aerodyn) nodes"	"m"
+typedef	^	InputType	ReKi	pyVel	{:}	-	-	"y position of velocity interface (Aerodyn) nodes"	"m"
+typedef	^	InputType	ReKi	pzVel	{:}	-	-	"z position of velocity interface (Aerodyn) nodes"	"m"
+typedef	^	InputType	ReKi	pxForce	{:}	-	-	"x position of actuator force nodes"	"m"
+typedef	^	InputType	ReKi	pyForce	{:}	-	-	"y position of actuator force nodes"	"m"
+typedef	^	InputType	ReKi	pzForce	{:}	-	-	"z position of actuator force nodes"	"m"
+typedef	^	InputType	ReKi	xdotForce	{:}	-	-	"x velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	ydotForce	{:}	-	-	"y velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	zdotForce	{:}	-	-	"z velocity of actuator force nodes"	"m/s"
+typedef	^	InputType	ReKi	pOrientation	{:}	-	-	"Direction cosine matrix to transform vectors from global frame of reference to actuator force node frame of reference" -
+typedef	^	InputType	ReKi	fx	{:}	-	-	"normalized x force at actuator force nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	fy	{:}	-	-	"normalized y force at actuator force nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	fz	{:}	-	-	"normalized z force at actuator force nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	momentx	{:}	-	-	"normalized x moment at actuator force nodes"	"Nm/kg/m^3"
+typedef	^	InputType	ReKi	momenty	{:}	-	-	"normalized y moment at actuator force nodes"	"Nm/kg/m^3"
+typedef	^	InputType	ReKi	momentz	{:}	-	-	"normalized z moment at actuator force nodes"	"Nm/kg/m^3"
+typedef ^       InputType       ReKi    forceNodesChord   {:}     -       -       "chord distribution at the actuator force nodes"   "m"
+
+# ..... OpenFOAM_OutputType data .......................................................................................................
+typedef	OpenFOAM/OpFM	OutputType	ReKi	u	{:}	-	-	"U-component wind speed (in the X-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	v	{:}	-	-	"V-component wind speed (in the Y-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	w	{:}	-	-	"W-component wind speed (in the Z-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

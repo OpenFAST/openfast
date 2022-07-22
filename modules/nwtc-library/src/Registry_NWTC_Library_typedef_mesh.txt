@@ -1,0 +1,40 @@
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+#.............................................................
+
+
+
+#BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
+typedef   NWTC_Library  MapType             IntKi                    OtherMesh_Element  -        - - "Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src"
+typedef     ^             ^                 R8Ki                     distance           -        - - "Magnitude of couple_arm" m
+typedef     ^             ^                 R8Ki                     couple_arm        {3}       - - "Vector between a point and node 1 of an element (p_ODR - p_OSR)" m
+typedef     ^             ^                 R8Ki                     shape_fn          {2}       - - "shape functions: 1-D element-level location [0,1] based on closest-line projection of point" -
+
+typedef   NWTC_Library  MeshMapLinearizationType R8Ki                mi        {:}{:}  - -  "block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh)"
+typedef     ^             ^                 R8Ki                     fx_p      {:}{:}  - -  "block matrix of motions that reflects skew-symmetric (cross-product) matrix"
+typedef     ^             ^                 R8Ki                     tv_uD     {:}{:}  - -  "block matrix of translational velocity that is multiplied by destination translational displacement"
+typedef     ^             ^                 R8Ki                     tv_uS     {:}{:}  - -  "block matrix of translational velocity that is multiplied by source translational displacement"
+typedef     ^             ^                 R8Ki                     ta_uD     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by destination translational displacement"
+typedef     ^             ^                 R8Ki                     ta_uS     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by source translational displacement"
+typedef     ^             ^                 R8Ki                     ta_rv     {:}{:}  - -  "block matrix of translational acceleration that is multiplied by omega (RotationVel)"
+typedef     ^             ^                 R8Ki                     li        {:}{:}  - -  "block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh)"
+typedef     ^             ^                 R8Ki                     M_uS      {:}{:}  - -  "block matrix of moment that is multiplied by Source u (translationDisp)"
+typedef     ^             ^                 R8Ki                     M_uD      {:}{:}  - -  "block matrix of moment that is multiplied by Destination u (translationDisp)"
+typedef     ^             ^                 R8Ki                     M_f       {:}{:}  - -  "block matrix of moment that is multiplied by force"
+
+typedef   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}       - - "mapping data structure for load fields on the mesh"
+typedef     ^               ^               MapType                  MapMotions        {:}       - - "mapping data structure for motion and/or scalar fields on the mesh"
+typedef     ^               ^               MapType                  MapSrcToAugmt     {:}       - - "for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination"
+typedef     ^               ^               MeshType                 Augmented_Ln2_Src  -        - - "temporary mesh for storing augmented line2 source values"
+typedef     ^               ^               MeshType                 Lumped_Points_Src  -        - - "temporary mesh for lumping lines to points, stored here for efficiency"
+typedef     ^               ^               INTEGER                  LoadLn2_A_Mat_Piv {:}       - - "The pivot values for the factorization of LoadLn2_A_Mat"
+typedef     ^               ^               R8Ki                     DisplacedPosition {:}{:}{:} - - "couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)" m
+typedef     ^               ^               R8Ki                     LoadLn2_A_Mat     {:}{:}    - - "The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)"
+typedef     ^               ^               R8Ki                     LoadLn2_F         {:}{:}    - - "The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping"
+typedef     ^               ^               R8Ki                     LoadLn2_M         {:}{:}    - - "The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)"
+typedef     ^             ^                 MeshMapLinearizationType dM
+#typedef     ^               ^               MeshType                 Lumped_Points_Dest -        - - "temporary mesh for debugging the lumped values in the line2-to-line2"
+

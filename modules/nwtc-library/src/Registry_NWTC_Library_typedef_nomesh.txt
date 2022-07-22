@@ -1,0 +1,40 @@
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+#.............................................................
+
+
+typedef   NWTC_Library  ProgDesc            CHARACTER(99)            Name - - - "Name of the program or module"
+typedef     ^             ^                 CHARACTER(99)            Ver  - - - "Version number of the program or module"
+typedef     ^             ^                 CHARACTER(24)            Date - - - "String containing date module was last updated"
+
+typedef   NWTC_Library  FASTdataType        CHARACTER(1024)          File     - - - "Name of the FAST-style binary file"
+typedef     ^             ^                 CHARACTER(1024)          Descr    - - - "String describing file"
+typedef     ^             ^                 IntKi                    NumChans - - - "Number of output channels in this binary file (not including the time channel)"
+typedef     ^             ^                 IntKi                    NumRecs  - - - "Number of records (rows) of data in the file"
+typedef     ^             ^                 DbKi                     TimeStep - - - "Time step for evenly-spaced data in the output file (when NumRecs is not allo"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanNames {:} - - "Strings describing the names of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:} - - "Strings describing the units of the channels from the binary file (including the time channel)"
+typedef     ^             ^                 ReKi                     Data      {:}{:} - - "numeric data (rows and columns) from the binary file, including the time channel"
+
+typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
+typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - - "Name of the output channel"
+typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
+typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
+
+typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
+typedef     ^             ^                 IntKi                    NumFiles
+typedef     ^             ^                 IntKi                    FileLine  {:}
+typedef     ^             ^                 IntKi                    FileIndx  {:}
+typedef     ^             ^                 CHARACTER(1024)          FileList  {:}
+typedef     ^             ^                 CHARACTER(1024)          Lines     {:}
+
+typedef   NWTC_Library  Quaternion          ReKi                     q0
+typedef     ^             ^                 ReKi                     v  {3}
+
+typedef   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+typedef     ^             ^                     IntKi                RandSeed          {3}
+typedef     ^             ^                     IntKi                RandSeedAry       {:}
+typedef     ^             ^              CHARACTER(6)                RNG_type

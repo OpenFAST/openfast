@@ -1,3 +1,0 @@
--BEMT_CoupledSolve:  using AFI_Copyafinfotype() is forcing the AFInfo parameter to be set to INOUT, but this is causing a framework problem in BEMT_UpdateStates because AFInfo is part of p and now p needs to be set to INOUT and it should be IN only.
-        - one fix would be to alter the subroutines in this copy to not require the src data to be of INOUT type
-        

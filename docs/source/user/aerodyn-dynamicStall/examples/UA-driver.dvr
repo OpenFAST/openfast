@@ -1,0 +1,25 @@
+UnsteadyAero Driver file for Unit NACA. k = 0.077  
+-------------------------------------------------------------------------------
+FALSE         Echo                - Echo the input file data (flag)
+---------------------- ENVIRONMENTAL CONDITIONS -------------------------------
+     340.29   SpdSound            - Speed of sound (m/s)
+---------------------- UNSTEADYAERO -------------------------------------------
+"05014051_NACA" OutRootName       - The name which prefixes all UnsteadyAero generated files (quoted string)
+      40.36   InflowVel           - Inflow velocity (m/s)
+       1.48   Re                  - Reynolds number in millions (-)
+          3   UAMod               - Unsteady Aero Model Switch: 2 - Gonzalez’s variant (changes in Cn,Cc,Cm); 3 - Minnema/Pierce variant (changes in Cc and Cm)
+TRUE          Flookup             – Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files
+------------------- AIRFOIL PROPERTIES ----------------------------------------
+"05000051_AD15.dat"    AirFoil    - Airfoil table
+       0.55   Chord               - Chord length (m)
+TRUE          UseCm               - Use Cm data in airfoil table
+------------------- SIMULATION CONTROL ----------------------------------------
+       1      SimMod              - Simulation model [ 1 - use reduced frequency model, 2 - use time series data stored in the TimeInputs file and ignore the remaining parameters ]
+       3      NCycles             - Number of angle-of-attack oscillations (cosine function) over the length of the simulation (-)
+     720      StepsPerCycle       - Number of timesteps per cycle (-)
+       1.8    Frequency           - Frequency for the airfoil oscillations (Hz)
+       9.685  Amplitude           - Amplitude of the oscillations (deg)
+      15.195  Mean                - Cycle mean (deg)
+    -180      Phase               - Initial phase (num steps)
+"UA-driver-timeseries.dat"     InputsFile          - Time series data in an ASCII input file (whitespace-separated data).  8 header lines, followed by column data. First column is time (sec), second column is angle-of-attack (deg), third column is InflowVel (m/s)
+"END" of driver input file

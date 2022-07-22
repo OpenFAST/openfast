@@ -1,0 +1,63 @@
+##################  Registry for SS Radiation ###############
+# column  1: <keyword>
+# column  2: ModuleName/ModName or ^ to use the value from the previous line (ModName is nickname for ModuleName)
+# column  3: Derived data type (without "ModName_" prefix)
+# column  4: Derived data types's Field type
+# column  5: Variable name
+# column  6: Dimension of variable {:} for allocatable
+# column  7: Variable's initial value (if set in the data type)
+# column  8: I think this is a switch for mixed-language programming; it's mostly unused
+# column  9: Description
+# column 10: Units
+###################################################################################################################################
+
+typedef SS_Radiation/SS_Rad   InitInputType       CHARACTER(1024) InputFile        -     - -  "Name of the input file" -
+typedef ^                     ^                   ReKi            enabledDOFs     {:}    - -  "Vector with enable platf. DOFs" (m/s or rad/s)
+typedef ^                     ^                   IntKi           NBody            -     - -  "Number of WAMIT bodies for this State Space model" -
+typedef ^                     ^                   R8Ki            PtfmRefztRot    {:}    - -  "The rotation about zt of the body reference frame(s) from xt/yt" radians 
+
+typedef ^                     InitOutputType      CHARACTER(ChanLen)   WriteOutputHdr  {:}    - -  "Header of the output" -
+typedef ^                     InitOutputType      CHARACTER(ChanLen)   WriteOutputUnt  {:}    - -  "Units of the output" -
+
+typedef   ^              ContinuousStateType R8Ki     x             {:} - -  "Continuous States" -
+
+typedef ^                     DiscreteStateType   SiKi            DummyDiscState   -     - -  "" -
+
+# Define constraint states here:
+typedef ^                     ConstraintStateType SiKi            DummyConstrState -     - - "" -
+
+# Define any data that are other states, including integer or logical states here:
+typedef ^                     OtherStateType      IntKi                        n     -  - - "Current Time step" -
+typedef ^                     ^                   SS_Rad_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType          SiKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
+
+
+# ..... Parameters .........................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+
+typedef ^                     ParameterType       DbKi            DT              -     - - "Time step" (s)
+typedef ^                     ^                   ReKi            A              {:}{:} - - "A matrix" -
+typedef ^                     ^                   ReKi            B              {:}{:} - - "B matrix" -
+typedef ^                     ^                   ReKi            C              {:}{:} - - "C matrix" -
+typedef ^                     ^                   INTEGER         numStates       -     0 - "Number of states" -
+typedef ^                     ^                   INTEGER         spdof          {:}    - - "States per dof" -
+typedef ^                     ^                   IntKi           NBody           -     - - "Number of WAMIT bodies for this State Space model" -
+
+# ..... Inputs .............................
+# Define inputs that are contained on the mesh here:
+typedef ^                     InputType           ReKi            dq             {:}    - - "Body velocities" -
+
+
+# ..... Outputs ............................
+typedef ^                     OutputType          ReKi            y              {:}    - - "Force" -
+typedef ^                     ^                   ReKi            WriteOutput    {:}    - - "output Data" (kN)
+
+
+
+

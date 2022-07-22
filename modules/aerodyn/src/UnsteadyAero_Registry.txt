@@ -1,0 +1,224 @@
+###################################################################################################################################
+# Registry for UnsteadyAero in the FAST Modularization Framework
+# This Registry file is used to create MODULE UnsteadyAero  which contains all of the user-defined types needed in UnsteadyAero.
+# It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>         <ModuleName/ModName>          <TypeName>          <FieldType>         <FieldName>         <Dims>    <IO>      <DNAME>   <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include   Registry_NWTC_Library.txt
+usefrom   AirfoilInfo_Registry.txt
+#
+#
+
+param     UnsteadyAero/UA       -                INTEGER           UA_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Gonzalez      -        2   -   "UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_MinnemaPierce -        3   -   "[Minnema/Pierce variant (changes in Cc and Cm)]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGM           -        4   -   "[continuous variant of HGM (Hansen) model]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_HGMV          -        5   -   "[continuous variant of HGM (Hansen) model with vortex modifications]" -
+param     UnsteadyAero/UA       -                INTEGER           UA_Oye           -        6   -   "Stieg Oye dynamic stall model" -
+param     UnsteadyAero/UA       -                INTEGER           UA_BV            -        7   -   "Boeing-Vertol dynamic stall model (e.g. used in CACTUS)" -
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g.,  the name of the input file,  the file root name,etc.
+#
+typedef   UnsteadyAero/UA              InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
+typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
+typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
+typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
+typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
+typedef   ^                            ^                             Logical                  ShedEffect                      -             .True.    -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
+typedef   ^                            ^                             LOGICAL                  WrSum                           -             .false.   -        "Write UA AFI parameters to summary file?"    -
+typedef   ^                            ^                             INTEGER                  UAOff_innerNode                 {:}           -         -        "Last node on each blade where UA should be turned off based on span location from blade root (0 if always on)"    -
+typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}           -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
+
+#
+# Define outputs from the initialization routine here:                                                                                    
+#                                                                                                                                         
+typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
+typedef   ^                            InitOutputType                CHARACTER(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
+
+
+# Variables local to the Kelvin Chain:                                                                                                                                                                                                                            
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime                         -             -         -        "" -
+#typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime_diff                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_nalpha_circ                    -             -         -        "slope of the circulatory normal force coefficient vs alpha curve" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kalpha_f                         -             -         -        "filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1)" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq_f                             -             -         -        "filtered  backwards finite difference of q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_filt_cur                   -             -         -        "filtered angle of attack" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_e                          -             -         -        "effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4" -
+typedef   ^                            UA_KelvinChainType            ReKi                     dalpha0                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_f                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_cur                            -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_f_cur                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X1                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X2                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X3                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X4                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_alpha                     -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_q                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     K3prime_q                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprimeprime_q                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dp                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_pot                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cc_pot                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_circ                  -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_nc                    -             -         -        "non-circulatory component of normal force coefficient response to step change in alpha and q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_circ                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_nc                      -             -         -        "non-circulatory component of the normal force coefficient response to step change in alpha" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_circ                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_nc                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_nc                          -             -         -        "non-circulatory component of the moment coefficient response to step change in q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime                      -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_c                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_m                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dalphaf                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_c                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_c                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_m                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_m                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_v                             -             -         -        "normal force coefficient due to the presence of LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_V                              -             -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_FS                            -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_f                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fc                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fm                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_V                              -             -         -        "backwards finite difference of the non-dimensionalized distance parameter" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_alpha                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_q                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_alpha                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_q                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     ds                               -             -         -        "non-dimensionalized distance parameter" -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef   ^                            UA_ElementContinuousStateType R8Ki                     x                                5            -         -        "continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function)"        "{rad, rad, - -}"
+typedef   ^                            ContinuousStateType           UA_ElementContinuousStateType  element                   {:}{:}        -         -        "continuous states when UA_Mod=4 for each blade/node"        "-"
+
+# Define discrete (non-differentiable) states here:
+#
+typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     q_f_minus1                      {:}{:}        -         -        "filtered non-dimensional pitching rate, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     X1_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q_circ, previous time step" rad       
+typedef   ^                            DiscreteStateType             ReKi                     X2_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q_circ, previous time step" rad
+typedef   ^                            DiscreteStateType             ReKi                     X3_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_q_circ, previous time step" rad       
+typedef   ^                            DiscreteStateType             ReKi                     X4_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_q_circ, previous time step" rad
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_alpha_minus1             {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_nc, previous time step"    rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_q_minus1                 {:}{:}        -         -        "deficiency function used in the development of Cn_q_nc, previous time step"  rad/s^2   
+typedef   ^                            DiscreteStateType             ReKi                     Kprimeprime_q_minus1            {:}{:}        -         -        "deficiency function used in the development of Cm_q_nc, previous time step"       rad/s^2
+typedef   ^                            DiscreteStateType             ReKi                     K3prime_q_minus1                {:}{:}        -         -        "deficiency function used in the development of Cm_q_circ, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Dp_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cm_q_circ, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Cn_pot_minus1                   {:}{:}        -         -        "deficiency function used in the development of Cn_prime"        -                                  
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_minus1              {:}{:}        -         -        "lagged version of fprime, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_c_minus1            {:}{:}        -         -        "lagged version of fprime_c, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_m_minus1            {:}{:}        -         -        "lagged version of fprime_m, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Df_minus1                       {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Df_c_minus1                     {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Df_m_minus1                     {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Dalphaf_minus1                  {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alphaf_minus1                   {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        "separation point Cn distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprime_c_minus1                 {:}{:}        -         -        "separation point Ct distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprime_m_minus1                 {:}{:}        -         -        "Distance application of Cn with respect to Cm, previous time step"        -             
+typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     tau_V_minus1                    {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        "normal force coefficient due to the presence of LE vortex, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     C_V_minus1                      {:}{:}        -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Cn_prime_minus1                 {:}{:}        -         -        "difference between Cn_prime and Cn_prime_minus1, previous time step"       rad
+#
+#
+# Define constraint states here:
+#
+typedef   ^                            ConstraintStateType           ReKi                     DummyConstraintState            -             -         -        "" -
+#
+#
+# Define any other states, including integer or logical states here:
+typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_fn"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1c                         {:}{:}        -         -        "multiplier for T_fc"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1m                         {:}{:}        -         -        "multiplier for T_fm"   -
+typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
+typedef   ^                            OtherStateType                IntKi                    n                               {:}{:}        -         -        "counter for continuous state integration"   -
+typedef   ^                            OtherStateType                UA_ContinuousStateType   xdot                            4             -         -        "history states for continuous state integration"   -
+typedef   ^                            OtherStateType                ReKi                     t_vortexBegin                   {:}{:}        -         -        "HGMV model: simulation time when vortex lift term became active"   s
+typedef   ^                            OtherStateType                ReKi                     SignOfOmega                     {:}{:}        -         -        "HGMV model: sign of omega when vortex lift term became active "   s
+typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
+typedef   ^                            OtherStateType                LOGICAL                  vortexOn                        {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift term is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  BelowThreshold                  {:}{:}        -         -        "HGMV model: logical flag indicating if cn fell below threshold to form another vortex"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeL                         {:}{:}        -         -        "BV model: logical flag indicating if the lift stall is active"   -
+typedef   ^                            OtherStateType                LOGICAL                  activeD                         {:}{:}        -         -        "BV model: logical flag indicating if the drag stall is active"   -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_UA                    -             -         -        "flag so UA state warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_UA_off                -             -         -        "flag so UA state warning doesn't get repeated forever" -
+# these COULD be OtherStates or just scalar local variables (they are calcaulted/used in UpdateDiscState and written to WriteOutput in CalcOutput)
+typedef   ^                            MiscVarType                   LOGICAL                  TESF                            {:}{:}        -         -        "logical flag indicating if trailing edge separation is possible"   -
+typedef   ^                            MiscVarType                   LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
+typedef   ^                            MiscVarType                   LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
+typedef   ^                            MiscVarType                   ReKi                     T_Sh                            {:}{:}        -         -        "shedding frequency"   -
+typedef   ^                            MiscVarType                   LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow (for compison with AD14)"   -
+typedef   ^                            MiscVarType                   ReKi                     weight                          {:}{:}        -         -        "value between 0 and 1 indicating if UA is on (1) or off (0) or somewhere in between"   -
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
+typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
+typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
+typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
+typedef   ^                            ^                             INTEGER                  NumOuts                         -             0         -        "Number of outputs"        -
+typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files]"    -
+typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
+typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
+typedef   ^                            ^                             CHARACTER(1)             Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
+typedef   ^                            ^                             INTEGER                  UnOutFile                       -             0         -        "File unit for the UnsteadyAero outputs"        -
+typedef   ^                            ^                             Logical                  ShedEffect                      -             -         -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
+typedef   ^                            ParameterType                 IntKi                    lin_nx                          -             0         -        "Number of continuous states for linearization"            -
+typedef   ^                            ^                             LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#
+typedef   ^                            InputType                     ReKi                     U                               -         -         -            "air velocity magnitude relative to the airfoil" m/s
+typedef   ^                            ^                             ReKi                     alpha                           -         -         2pi            "angle of attack" rad
+typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynold's number" -
+typedef   ^                            ^                             ReKi                     UserProp                        -         0.0       -            "UserProp value for interpolating airfoil tables" -
+typedef   ^                            ^                             ReKi                     v_ac                            2         -         -            "Relative fluid velocity at the aerodynamic center (UAMod=4)" m/s
+typedef   ^                            ^                             ReKi                     omega                           -         -         -            "pitching/twisting rate of the airfoil section (UAMod=4)" rad/s
+
+# ..... Outputs ...................................................................................................................                           
+# Define outputs that are contained on the mesh here:                                                                                                         
+typedef   ^                            OutputType                    ReKi                     Cn                              -         -         -            "2D, normal to chord, force coefficient" -
+typedef   ^                            OutputType                    ReKi                     Cc                              -         -         -            "2D, tangent to chord, force coefficient" 
+typedef   ^                            OutputType                    ReKi                     Cm                              -         -         -            "2D pitching moment coefficient about the 1/4 chord, positive when nose is up"
+typedef   ^                            OutputType                    ReKi                     Cl                              -         -         -            "2D lift coefficient" -
+typedef   ^                            OutputType                    ReKi                     Cd                              -         -         -            "2D drag coefficient" -
+typedef   ^                            ^                             ReKi                     WriteOutput                     {:}       -         -            "outputs to be written to a file"  -
+

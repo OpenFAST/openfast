@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnInterfaces="true" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnInterfaces="true" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -15,7 +15,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -25,7 +25,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin"  TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnInterfaces="true" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnInterfaces="true" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -35,7 +35,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin"  TargetName="$(ProjectName)_$(PlatformName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="NO_MESHMAPPING;&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -50,31 +50,31 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="dependencies">
 		<Filter Name="NetLib">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\fftpack\fftpack4.1.f"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
 		<Filter Name="NWTC_Library">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh_Types.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Base.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_IO.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library_Types.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Num.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
 		<Filter Name="RanLux">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ranlux\RANLUX.f90"/></Filter></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter></Filter>
 		<Filter Name="TurbSim">
-		<File RelativePath="..\..\modules-local\turbsim\src\BlankModVKM.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\CohStructures.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\Profiles.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\RandNum.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\Root_Searching.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\TS_FileIO.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\TSsubs.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\TurbSim.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\TurbSim_Types.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\VelocitySpectra.f90"/></Filter>
-		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
+		<File RelativePath="..\..\modules\turbsim\src\BlankModVKM.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\CohStructures.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\Profiles.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\RandNum.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\Root_Searching.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\TS_FileIO.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\TSsubs.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\TurbSim.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\TurbSim_Types.f90"/>
+		<File RelativePath="..\..\modules\turbsim\src\VelocitySpectra.f90"/></Filter>
+		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

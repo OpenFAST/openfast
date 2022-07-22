@@ -18,7 +18,7 @@ underlines only denote the dimension of the corresponding matrix.
 Coordinate Systems
 ------------------
 
-:numref:`blade-geometry` (in :numref:`input-files`) and
+:numref:`blade-geometry` (in :numref:`bd-input-files`) and
 :numref:`bd-frame` show the coordinate system used in BeamDyn.
 
 .. _bd-frame:

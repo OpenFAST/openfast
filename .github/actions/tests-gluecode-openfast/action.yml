@@ -1,0 +1,21 @@
+name: 'OpenFAST glue code tests'
+description: 'Run tests focused on the OpenFAST glue code'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: 'composite'
+  steps: 
+    - run: |
+        ctest -VV -L linear -E Ideal
+        ctest -VV -j8 -I 1,1,1,2,3,4,5,6,7,8,10,11,12,13,14,15,17,18,21,22,23,24,25,26,27,28,29
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash
+
+# OpenFAST linearization tests
+# Dont run these in parallel, copying the case files can fail in a race condition
+# Exclude the Ideal_Beam test cases
+# - They fail consistently in the Docker container when run on GitHub,
+#   but pass everywhere else including running the same Docker image locally
+
+# Subset of OpenFAST regression tests; do not run
+# - 9, 16 because they're very sensitive
+# - 19, 20 because they're too long

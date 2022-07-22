@@ -1,0 +1,89 @@
+###################################################################################################################################
+# Registry for Conv_Radiation in the FAST Modularization Framework
+# This Registry file is used to create MODULE Conv_Radiation  which contains all of the user-defined types needed in Conv_Radiation.
+# It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>         <ModuleName/ModName>          <TypeName>          <FieldType>         <FieldName>         <Dims>    <IO>      <DNAME>   <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include   Registry_NWTC_Library.txt
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g.,  the name of the input file,  the file root name,etc.
+#
+typedef   Conv_Radiation/Conv_Rdtn     InitInputType                 DbKi             RdtnDT                   -          -        -         ""    -
+typedef   ^                            ^                             CHARACTER(80)    RdtnDTChr
+typedef   ^                            ^                             INTEGER          NBody                    -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             ReKi             HighFreq                 -          -        -         ""    -
+typedef   ^                            ^                             CHARACTER(1024)  WAMITFile                -          -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroAddMs                {:}{:}{:}   -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroFreq                 {:}        -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroDmpng                {:}{:}{:}  -        -         ""    -
+typedef   ^                            ^                             INTEGER          NInpFreq                 -          -        -         ""    -
+typedef   ^                            ^                             DbKi             RdtnTMax                 -          -        -         ""    -
+typedef   ^                            ^                             INTEGER          UnSum                    -          -        -         ""    -
+#
+#
+# Define outputs from the initialization routine here:
+#
+typedef   ^                            InitOutputType                INTEGER          DummyInitOut             -          -        -         ""  -
+#
+#
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+#
+typedef   ^                            ContinuousStateType           SiKi             DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
+#
+#
+# Define discrete (nondifferentiable) states here:
+#
+typedef   ^                            DiscreteStateType             ReKi             XDHistory                {:}{:}      -         -         ""        -
+typedef   ^                            ^                             DbKi             LastTime                 -           -         -         ""        -
+#
+#
+# Define constraint states here:
+#
+typedef   ^                            ConstraintStateType           SiKi             DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
+#
+#
+# Define any data that are integer or logical states here:
+typedef   ^                            OtherStateType               INTEGER          IndRdtn                  -           -         -         ""        -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   INTEGER          LastIndRdtn              -           -         -         ""        -
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+#
+typedef   ^                            ParameterType                 DbKi             DT                       -          -         -         "Time step for continuous state integration & discrete state update"  seconds
+typedef   ^                            ^                             DbKi             RdtnDT                   -          -         -         ""        -
+typedef   ^                            ^                             INTEGER          NBody                    -          -         -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+typedef   ^                            ^                             SiKi             RdtnKrnl                {:}{:}{:}   -         -         ""        -
+typedef   ^                            ^                             INTEGER          NStepRdtn                -          -         -         ""        -
+typedef   ^                            ^                             INTEGER          NStepRdtn1               -          -         -         ""        -
+#
+#
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#
+#typedef^            InputType           MeshType  MeshedInput         -         -         -         "Meshed input data" -
+# Define inputs that are not on this mesh here:
+typedef   ^                            InputType                     ReKi             Velocity                {:}         -         -         ""     -
+#
+#
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+#typedef^           OutputType                    MeshType  MeshedOutput        -         -         -         "Meshed output data"          -
+# Define outputs that are not on this mesh here:
+typedef   ^                            OutputType                    ReKi             F_Rdtn                  {:}        -         -         ""    -

@@ -13,8 +13,7 @@ In this appendix we describe the BeamDyn input-file structure and provide exampl
 OpenFAST+BeamDyn and stand-alone BeamDyn (static and dynamic) simulations all require two files:
 
 1) BeamDyn primary input file 
-:download:`(NREL 5MW dynamic example) <examples/bd_primary_nrel_5mw_dynamic.inp>`, 
-:download:`(NREL 5MW static example) <examples/bd_primary_nrel_5mw_static.inp>`: This file includes information on the analysis type (static vs. dynamic), numerical-solution parameters (e.g., numerical damping, quadrature rules), and the geometric definition of the beam reference line via "members" and "key points".  This file also specifies the "blade input file."
+:download:`(NREL 5MW static example) <examples/bd_primary_nrel_5mw.inp>`: This file includes information on the numerical-solution parameters (e.g., numerical damping, quadrature rules), and the geometric definition of the beam reference line via "members" and "key points".  This file also specifies the "blade input file."
 
 2) BeamDyn blade input file :download:`(NREL 5MW example) <examples/nrel_5mw_blade.inp>`: 
 
@@ -22,7 +21,7 @@ Stand-alone BeamDyn simulation also require a driver input file; we list here ex
 
 3a) BeamDyn driver for dynamic simulations :download:`(NREL 5MW example) <examples/bd_driver_dynamic_nrel_5mw.inp>`: This file specifies the inputs for a single blade (e.g., forces, orientations, root velocity) and specifies the BeamDyn primary input file.
 
-3b) BeamDyn driver for static simulations :download:`(NREL 5MW example) <examples/bd_driver_static_nrel_5mw.inp>`: Same as above but calls the appropriate inputs and primary input file (i.e., here one for static analysis).
+3b) BeamDyn driver for static simulations :download:`(NREL 5MW example) <examples/bd_driver_static_nrel_5mw.inp>`: Same as above but for static analysis.
 
 
 .. _app-output-channel:

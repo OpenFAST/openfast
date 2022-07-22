@@ -1,0 +1,412 @@
+###################################################################################################################################
+# Registry for AeroDyn14 in the FAST Modularization Framework
+# This Registry file is used to create MODULE AeroDyn_Types  which contains all of the user-defined types needed in AeroDyn14.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+###################################################################################################################################
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+include	Registry_NWTC_Library.txt
+usefrom	Registry-DWM.txt
+
+# AeroDyn Subtypes
+typedef	AeroDyn14/AD14	Marker	Reki	Position	3	0.0	-		-
+typedef	^	Marker	^	Orientation	{3}{3}	0.0	-		-
+typedef	^	Marker	^	TranslationVel	3	0.0	-		-
+typedef	^	Marker	^	RotationVel	3	0.0	-		-
+
+#ADOptions
+#typedef	AeroDyn14/AD14	ADOptions	CHARACTER(1024)	ADFile
+#typedef	^	ADOptions	CHARACTER(1024)	RootName
+#typedef	^	ADOptions	CHARACTER(1024)	SumFile
+#typedef	^	ADOptions	LOGICAL	WrSumFile
+
+#AeroConfig
+typedef	AeroDyn14/AD14	AeroConfig	Marker	Blade	{:}	-	-		-
+typedef	^	AeroConfig	^	Hub	-	-	-		-
+typedef	^	AeroConfig	^	RotorFurl	-	-	-		-
+typedef	^	AeroConfig	^	Nacelle	-	-	-		-
+typedef	^	AeroConfig	^	TailFin	-	-	-		-
+typedef	^	AeroConfig	^	Tower	-	-	-		-
+typedef	^	AeroConfig	^	SubStructure	-	-	-		-
+typedef	^	AeroConfig	^	Foundation	-	-	-		-
+typedef	^	AeroConfig	ReKi	BladeLength	-	-	-		-
+
+
+#Airfoil
+typedef	AeroDyn14/AD14	AirFoil	ReKi	AL	{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CD	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CL	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	CM	{:}{:}{:}	-	-		-
+typedef	^	AirFoil	ReKi	PMC	-	-	-		-
+typedef	^	AirFoil	ReKi	MulTabLoc	-
+typedef	^	AirFoilParms	IntKi	MaxTable	-	20	-
+typedef	^	AirFoilParms	IntKi	NTables	{:}	-	-		-
+typedef	^	AirFoilParms	IntKi	NLift	{:}	-	-		-
+typedef	^	AirFoilParms	IntKi	NumCL	-	-	-		-
+typedef	^	AirFoilParms	IntKi	NumFoil	-	-	-
+typedef	^	AirFoilParms	IntKi	NFoil	{:}	-	-		-
+typedef	^	AirFoilParms	ReKi	MulTabMet	{:}{:}	-	-		-
+typedef	^	AirFoilParms	CHARACTER(1024)	FoilNm	{:}			"Number of airfoil data sets"
+
+#Beddoes
+typedef	^	Beddoes	ReKi	ADOT	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	ADOT1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	AFE	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	AFE1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	AN	-	-	-		-
+typedef	^	Beddoes	ReKi	ANE	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	ANE1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	AOD	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	AOL	{:}{:}	-	-		-
+typedef	^	Beddoes	LOGICAL	BEDSEP	{:}{:}	-	-		-
+typedef	^	Beddoes	LOGICAL	OLDSEP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CC	-	-	-		-
+typedef	^	Beddoes	ReKi	CDO	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CMI	-	-	-		-
+typedef	^	Beddoes	ReKi	CMQ	-	-	-		-
+typedef	^	Beddoes	ReKi	CN	-	-	-		-
+typedef	^	Beddoes	ReKi	CNA	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNCP	-	-	-		-
+typedef	^	Beddoes	ReKi	CNIQ	-	-	-		-
+typedef	^	Beddoes	ReKi	CNP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNP1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNPD	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNPD1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNPOT	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNPOT1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNS	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNSL	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CNV	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CVN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	CVN1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DF	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DFAFE	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DFAFE1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DFC	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DPP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DQ	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DQP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DQP1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	DS	-	-	-		-
+typedef	^	Beddoes	ReKi	FK	-	-	-		-
+typedef	^	Beddoes	ReKi	FP	-	-	-		-
+typedef	^	Beddoes	ReKi	FPC	-	-	-		-
+typedef	^	Beddoes	ReKi	FSP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	FSP1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	FSPC	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	FSPC1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	FTB	{:}{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	FTBC	{:}{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDCNV	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDDF	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDDFC	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDDN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDDPP	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDDQ	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDTAU	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDXN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	OLDYN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	QX	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	QX1	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	TAU	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	XN	{:}{:}	-	-		-
+typedef	^	Beddoes	ReKi	YN	{:}{:}	-	-		-
+typedef	^	BeddoesParms	ReKi	AS	-	-	-	"Speed of sound for mach num calc"	-
+typedef	^	BeddoesParms	ReKi	TF	-	-	-	"Time constant applied to loc of separation pt"	-
+typedef	^	BeddoesParms	ReKi	TP	-	-	-	"Time constant for pressure lag"	-
+typedef	^	BeddoesParms	ReKi	TV	-	-	-	"Time constant for strength and shed of vortex"	-
+typedef	^	BeddoesParms	ReKi	TVL	-	-	-	"Nondim time of transit of vort moving across airfoil surf"	-
+typedef	^	Beddoes	LOGICAL	SHIFT	-	-	-		-
+typedef	^	Beddoes	LOGICAL	VOR	-	-	-		-
+
+#Blade
+typedef	^	BladeParms	ReKi	C	{:}	-	-	"Chord of each blade element from input file"
+typedef	^	BladeParms	ReKi	DR	{:}	-	-	"Span-wise width of elem (len of elem ctred at RELM(i)"
+typedef	^	BladeParms	ReKi	R	-	-	-	"Rotor radius"
+typedef	^	BladeParms	ReKi	BladeLength	-	-	-	"Blade Length"
+#typedef	^	BladeParms	INTEGER	NB	-	-	-	"Number odem blades"
+
+#DynInflow
+dimspec	maxinfl	constant=6
+dimspec	maxinfl0	constant=2
+dimspec	maxinfl1	constant=3:6
+typedef	AeroDyn14/AD14	DynInflow	ReKi	dAlph_dt	{maxinfl}{4}	-	-
+typedef	^	DynInflow	ReKi	dBeta_dt	{maxinfl1}{4}	-	-
+typedef	^	DynInflow	ReKi	DTO	-	-	-
+typedef	^	DynInflow	ReKi	old_Alph	{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	old_Beta	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	old_LmdM	-	-	-
+typedef	^	DynInflow	ReKi	oldKai	-	-	-
+typedef	^	DynInflow	ReKi	PhiLqC	{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	PhiLqS	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	Pzero	-	-	-
+typedef	^	DynInflow	ReKi	RMC_SAVE	{:}{:}{:}	-	-		-
+typedef	^	DynInflow	ReKi	RMS_SAVE	{:}{:}{:}	-	-		-
+typedef	^	DynInflow	ReKi	TipSpeed	-	-	-
+typedef	^	DynInflow	ReKi	totalInf	-	-	-
+typedef	^	DynInflow	ReKi	Vparam	-	-	-
+typedef	^	DynInflow	ReKi	Vtotal	-	-	-
+typedef	^	DynInflow	ReKi	xAlpha	{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	xBeta	{maxinfl1}	-	-
+typedef	^	DynInflow	ReKi	xKai	-	-	-
+typedef	^	DynInflow	ReKi	XLAMBDA_M	-	-	-
+typedef	^	DynInflow	ReKi	xLcos	{maxinfl}{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	xLsin	{maxinfl1}{maxinfl1}	-	-
+typedef	^	DynInflow	IntKi	MminR	{maxinfl}{maxinfl}	-	-
+typedef	^	DynInflow	IntKi	MminusR	{maxinfl}{maxinfl}	-	-
+typedef	^	DynInflow	IntKi	MplusR	{maxinfl}{maxinfl}	-	-
+typedef	^	DynInflow	ReKi	GAMMA	{maxinfl}{maxinfl}	-	-
+#typedef	^	DynInflowParms	IntKi	MAXINFL	-	6	-	#should be possible to spec with maxinfl
+typedef	^	DynInflowParms	IntKi	MAXINFLO	-	2	-	#should be possible to spec with maxinfl0
+#typedef	^	DynInflowParms	IntKi	MRvector	{maxinfl}	-	-
+#typedef	^	DynInflowParms	IntKi	NJvector	{maxinfl}	-	-
+typedef	^	DynInflowParms	ReKi	xMinv	{maxinfl}	-	-
+
+#Element
+typedef	^	Element	ReKi	A	{:}{:}	-	-		-     "Axial induction factor" -
+typedef	^	Element	ReKi	AP	{:}{:}	-	-		-     "Tangential induction factor" -
+typedef	^	Element	ReKi	ALPHA	{:}{:}	-	-		- "Angle of attack" rad
+typedef	^	Element	ReKi	W2	{:}{:}	-	-		-     "Relative velocity norm " m/s
+typedef	^	Element	ReKi	OLD_A_NS	{:}{:}	-	-		-	#allocated in VIND
+typedef	^	Element	ReKi	OLD_AP_NS	{:}{:}	-	-		-	#allocated in VIND
+typedef	^	Element	ReKi	PITNOW	:: -	-		-         "Current pitch angle - Based on blade orientation (to verify)" rad 
+typedef	^	ElementParms	IntKi	NELM	-	-	-		- "Number of elements (constant)" -
+typedef	^	ElementParms	ReKi	TWIST	{:}	-	-		- "Airfoil twist angle (constant)" - rad
+typedef	^	ElementParms	ReKi	RELM	{:}	-	-		- "Radius of element (constant)" m
+typedef	^	ElementParms	ReKi	HLCNST	{:}	-	-		- "Hub loss constant B/2*(r-rh)/rh (constant)" -
+typedef	^	ElementParms	ReKi	TLCNST	{:}	-	-		- "Tip loss constant B/2*(R-r)/R (constant) " -
+
+#ElOutParams
+typedef	^	ElOutParms	ReKi	AAA	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	AAP	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	ALF	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	CDD	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	CLL	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	CMM	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	CNN	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	CTT	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	DFNSAV	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	DFTSAV	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	DynPres	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	PMM	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	PITSAV	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	ReyNum	{:}	-	-		-
+typedef	^	ElOutParms	ReKi	Gamma	{:}	-	-		- "Circulation along the span, 1/2 c Vrel Cl" m^2/s
+typedef	^	ElOutParms	ReKi	SaveVX	{:}{:}	-	-		-
+typedef	^	ElOutParms	ReKi	SaveVY	{:}{:}	-	-		-
+typedef	^	ElOutParms	ReKi	SaveVZ	{:}{:}	-	-		-
+typedef	^	ElOutParms	ReKi	VXSAV	-	-	-		-
+typedef	^	ElOutParms	ReKi	VYSAV	-	-	-		-
+typedef	^	ElOutParms	ReKi	VZSAV	-	-	-		-
+typedef	^	ElOutParms	IntKi	NumWndElOut	-	-	-	"Number of Blade Elements"
+typedef	^	ElOutParms	IntKi	WndElPrList	{:}	-	-		-
+typedef	^	ElOutParms	IntKi	WndElPrNum	{:}	-	-		-
+typedef	^	ElOutParms	IntKi	ElPrList	{:}	-	-		-
+typedef	^	ElOutParms	IntKi	ElPrNum	{:}	-	-		-
+typedef	^	ElOutParms	IntKi	NumElOut	-	-	-	"Number of Blade Elements"
+
+#InducedVel
+typedef	^	InducedVel	ReKi	SumInFl	-	0	-
+typedef	^	InducedVelParms	ReKi	AToler	-	-	-	"Convergence tolerance for induction factor"	-
+typedef	^	InducedVelParms	ReKi	EqAIDmult	-	-	-	"Multiplier for drag term in axial-induction equation."
+typedef	^	InducedVelParms	LOGICAL	EquilDA	-	-	-	"False unless DB or DA appended to EQUIL"
+typedef	^	InducedVelParms	LOGICAL	EquilDT	-	-	-	"False unless DB or DT appended to EQUIL"
+typedef	^	InducedVelParms	LOGICAL	TLoss	-	-	-	"Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE]"
+typedef	^	InducedVelParms	LOGICAL	GTech	-	-	-	"Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE]"
+typedef	^	InducedVelParms	LOGICAL	HLoss	-	-	-	"Hub-loss model (EQUIL only) [PRANDtl or NONE]"
+
+
+#Rotor
+typedef	^	Rotor	ReKi	AVGINFL	-	-	-	"average induced velocity at the previous time"
+typedef	^	Rotor	ReKi	CTILT	-	-	-
+typedef	^	Rotor	ReKi	CYaw	-	-	-
+typedef	^	Rotor	ReKi	REVS	-	-	-
+typedef	^	Rotor	ReKi	STILT	-	-	-
+typedef	^	Rotor	ReKi	SYaw	-	-	-
+typedef	^	Rotor	ReKi	TILT	-	-	-
+typedef	^	Rotor	ReKi	YawAng	-	-	-
+typedef	^	Rotor	ReKi	YawVEL	-	-	-
+typedef	^	RotorParms	ReKi	HH	-	-	-
+
+#TwrProps
+typedef	^	TwrPropsParms	ReKi	TwrHtFr	{:}	-	-
+typedef	^	TwrPropsParms	ReKi	TwrWid	{:}	-	-
+typedef	^	TwrPropsParms	ReKi	TwrCD	{:}{:}	-	-
+typedef	^	TwrPropsParms	ReKi	TwrRe	{:}	-	-
+typedef	^	TwrPropsParms	ReKi	VTwr	3	-	-
+typedef	^	TwrPropsParms	ReKi	Tower_Wake_Constant	-	-	-
+typedef	^	TwrPropsParms	IntKi	NTwrCDCol	{:}	-	-	"The tower CD column that represents a particular twr ht"
+typedef	^	TwrPropsParms	IntKi	NTwrHT	-	-	-	"The number of tower height rows in the table"
+typedef	^	TwrPropsParms	IntKi	NTwrRe	-	-	-	"The number of tower Re entry rows in the table"
+typedef	^	TwrPropsParms	IntKi	NTwrCD	-	-	-	"The number of tower CD columns in the table"
+typedef	^	TwrPropsParms	LOGICAL	TwrPotent	-	-	-	"Tower influence model"
+typedef	^	TwrPropsParms	LOGICAL	TwrShadow	-	-	-	"Tower shadow model"
+typedef	^	TwrPropsParms	ReKi	ShadHWid	-	-	-	"Tower-shadow half width"	m
+typedef	^	TwrPropsParms	ReKi	TShadC1	-	-	-	"Tower-shadow constant"
+typedef	^	TwrPropsParms	ReKi	TShadC2	-	-	-	"Tower-shadow constant"
+typedef	^	TwrPropsParms	ReKi	TwrShad	-	-	-	"Tower-shadow velocity deficit"
+typedef	^	TwrPropsParms	LOGICAL	PJM_Version	-	-	-	"Only true if new tower influence model, by PJM"
+typedef	^	TwrPropsParms	CHARACTER(1024)	TwrFile	-	-	-	"Tower data file name"
+typedef	^	TwrPropsParms	ReKi	T_Shad_Refpt	-	-	-	"Tower-shadow reference point"	m
+typedef	^	TwrPropsParms	LOGICAL	CalcTwrAero	-	-	-	"Flag to tell AeroDyn to calculate drag on the tower"	m
+typedef	^	TwrPropsParms	INTEGER	NumTwrNodes	-	-	-	"Number of ElastoDyn tower nodes.  Tower drag will be computed at those points."
+typedef	^	TwrPropsParms	ReKi	TwrNodeWidth	{:}	-	-	"The width (diameter) of the tower at the ElastoDyn node locations."	-
+
+#Wind
+typedef	^	Wind	ReKi	ANGFLW	-	-	-
+typedef	^	Wind	ReKi	CDEL	-	-	-
+typedef	^	Wind	ReKi	VROTORX	-	-	-
+typedef	^	Wind	ReKi	VROTORY	-	-	-
+typedef	^	Wind	ReKi	VROTORZ	-	-	-
+typedef	^	Wind	ReKi	SDEL	-	-	-
+typedef	^	WindParms	ReKi	Rho	-	-	-	"Air density"	kg/m^3
+typedef	^	WindParms	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	(m^2/sec)
+
+##################	Registry	for	AeroDyn	###############
+
+typedef	AeroDyn14/AD14	PositionType	ReKi	Pos	3	-	-	"X,Y,Z coordinate of a point"
+typedef	AeroDyn14/AD14	OrientationType	ReKi	Orient	{3}{3}	-	-	"Direction Cosine Matrix"
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#typedef	AeroDyn14/AD14	InitInputType	ADOptions	ADOptions	-	-	-
+typedef	AeroDyn14/AD14	InitInputType	CHARACTER(1024)	Title	-	-	-	"Title"
+typedef	^	InitInputType	CHARACTER(1024)	OutRootName	-	-	-
+typedef	^	InitInputType	CHARACTER(1024)	ADFileName	-	-	-	"AeroDyn file name"
+typedef	^	InitInputType	LOGICAL	WrSumFile	-	-	-	"T/F: Write an AeroDyn summary"
+typedef	^	InitInputType	INTEGER	NumBl	-	-	-	"Number of Blades"
+#typedef	^	InitInputType	INTEGER	NBlInpSt	-	-	-	"Number of Blade Input Stations"
+typedef	^	InitInputType	ReKi	BladeLength	-	-	-	"Blade Length"
+#typedef	^	InitInputType	PositionType	InitBladePos	{:}{:}	-	-	"Positions of the blades elements, initially, from FAST"
+#typedef	^	InitInputType	PositionType	HubPos	-	-	-	"Positions of the blades, initially, from FAST"
+#typedef	^	InitInputType	OrientationType	InitBladeOrient	{:}{:}	-	-	"Positions of the blades, initially, from FAST"
+typedef	^	InitInputType	LOGICAL	LinearizeFlag
+typedef	^	InitInputType	LOGICAL	UseDWM	-	.FALSE.	-	"flag to determine if DWM module should be used"	-
+typedef	^	InitInputType	AeroConfig	TurbineComponents	-	-	-		-
+typedef	^	InitInputType	INTEGER	NumTwrNodes	-	-	-	"Number of ElastoDyn tower nodes.  Tower drag will be computed at those points."
+typedef	^	InitInputType	ReKi	TwrNodeLocs	{:}{:}	-	-	"Location of ElastoDyn tower nodes with respect to the inertial origin."	-
+typedef	^	InitInputType	ReKi	HubHt	-	-	-	"hub height wrt inertial origin"	m
+typedef	^	InitInputType	DWM_InitInputType	DWM	-	-	-		-
+
+# Define outputs from the initialization routine here:
+typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information"
+typedef	^	InitOutputType	DWM_InitOutputType	DWM	-	-	-		-
+typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef	^	ContinuousStateType	DWM_ContinuousStateType	DWM	-	-	-		-
+
+# Define discrete (nondifferentiable) states here:
+typedef	^	DiscreteStateType	DWM_DiscreteStateType	DWM	-	-	-		-
+
+# Define constraint states here:
+typedef	^	ConstraintStateType	DWM_ConstraintStateType	DWM	-	-	-		-
+
+
+# Define any other states, including integer or logical states here:
+typedef	^	OtherStateType	DWM_OtherStateType	DWM	-	-	-		"variables for DWM module"
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef	^	MiscVarType	DWM_MiscVarType	DWM	-	-	-		"variables for DWM module"
+typedef	^	MiscVarType	DWM_InputType	DWM_Inputs	-	-	-		-
+typedef	^	MiscVarType	DWM_OutputType	DWM_Outputs	-	-	-		-
+
+#
+# JM: At this point, I don't know which of these are actually discrete, continuous, or constraint, so they're all misc variables for now
+#
+typedef	^	MiscVarType	DbKi	DT	-	-	-	"actual Time step"	seconds
+typedef	^	MiscVarType	IntKi	ElPrNum	{:}	-	-		-
+typedef	^	MiscVarType	DbKi	OldTime	-	-	-
+typedef	^	MiscVarType	ReKi	HubLoss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	Loss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	TipLoss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	TLpt7	-	-	-	# was saved in GetTipLoss
+typedef	^	MiscVarType	LOGICAL	FirstPassGTL	-	.TRUE.	-	# was saved latch in GetTipLoss
+typedef	^	MiscVarType	LOGICAL	SuperSonic	-	.FALSE.	-	# was saved latch in Attach()
+typedef	^	MiscVarType	LOGICAL	AFLAGVinderr	-	.FALSE.	-	# was saved latch in GetTwrInfluence
+typedef	^	MiscVarType	LOGICAL	AFLAGTwrInflu	-	.FALSE.	-	# was saved latch in GetTwrInfluence
+typedef	^	MiscVarType	LOGICAL	OnePassDynDbg	-	.TRUE.	-	#
+typedef	^	MiscVarType	LOGICAL	NoLoadsCalculated	-	.TRUE.	-		-
+typedef	^	MiscVarType	IntKi	NERRORS	-	0	-	# was saved variable in vinderr
+typedef	^	MiscVarType	AirFoil	AirFoil
+typedef	^	MiscVarType	Beddoes	Beddoes
+typedef	^	MiscVarType	DynInflow	DynInflow
+typedef	^	MiscVarType	Element	Element
+typedef	^	MiscVarType	Rotor	Rotor
+typedef	^	MiscVarType	Wind	Wind
+typedef	^	MiscVarType	InducedVel	InducedVel
+typedef	^	MiscVarType	ElOutParms	ElOut
+typedef	^	MiscVarType	LOGICAL	Skew	-	-	-
+typedef	^	MiscVarType	LOGICAL	DynInit	-	-	-	"FALSE=EQUIL, TRUE=DYNIN"
+typedef	^	MiscVarType	LOGICAL	FirstWarn	-	-	-	"If it's the first warning about AeroDyn not recalculating loads"
+#### Stores previously calculated loads:
+typedef	^	MiscVarType	Reki	StoredForces	{:}{:}{:}			#indices: force, ielm, iblade
+typedef	^	MiscVarType	Reki	StoredMoments	{:}{:}{:}			#indices: force, ielm, iblade
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+#typedef	^	ParameterType	ADOptions	ADOptions
+typedef	^	ParameterType	CHARACTER(1024)	Title	-	-	-	"Title"
+typedef	^	ParameterType	LOGICAL	SIUnit	-
+typedef	^	ParameterType	LOGICAL	Echo	-	.FALSE.	-
+typedef	^	ParameterType	LOGICAL	MultiTab	-
+typedef	^	ParameterType	LOGICAL	LinearizeFlag
+typedef	^	ParameterType	LOGICAL	OutputPlottingInfo	-	.FALSE.
+typedef	^	ParameterType	LOGICAL	UseDWM	-	.FALSE.	-	"flag to determine if DWM module should be used"	-
+typedef	^	ParameterType	ReKi	TwoPiNB	-	-	-	"2*pi/num of blades"	-
+typedef	^	ParameterType	INTEGER	NumBl	-	-	-	"Number of Blades"
+typedef	^	ParameterType	INTEGER	NBlInpSt	-	-	-	"Number of Blade Input Stations"
+typedef	^	ParameterType	LOGICAL	ElemPrn	-	-	-
+typedef	^	ParameterType	LOGICAL	DStall	-	-	-	"FALSE=Steady, TRUE=BEDDOES"
+typedef	^	ParameterType	LOGICAL	PMoment	-	-	-	"FALSE=NO_CM, TRUE=USE_CM"
+typedef	^	ParameterType	LOGICAL	Reynolds	-
+typedef	^	ParameterType	LOGICAL	DynInfl	-	-	-	"FALSE=EQUIL, TRUE=DYNIN"
+typedef	^	ParameterType	LOGICAL	Wake	-	-	-	"False unless WAKE or SWIRL"
+typedef	^	ParameterType	LOGICAL	Swirl	-	-	-	"False unless WAKE or SWIRL"
+typedef	^	ParameterType	DbKi	DtAero	-	-	-	"Time interval for aerodynamic calculations"
+typedef	^	ParameterType	ReKi	HubRad	-	-	-	"Hub radius"	m
+#typedef	^	ParameterType	ReKi	RotorRad	-	-	-	"Rotor radius"	m
+typedef	^	ParameterType	INTEGER	UnEc	-	-1		#patch this in for now; lost in NWTC_Library
+typedef	^	ParameterType	INTEGER	UnElem	-	-1
+typedef	^	ParameterType	INTEGER	UnWndOut	-	-1		# note, these are not minus signs
+typedef	^	ParameterType	INTEGER	MAXICOUNT	-	1000	-	# used in VIND
+typedef	^	ParameterType	LOGICAL	WrOptFile	-	.TRUE.	-	"T/F: Write an AeroDyn summary"
+typedef	^	ParameterType	IntKi	DEFAULT_Wind	-	-1	-
+typedef	^	ParameterType	AirFoilParms	AirFoil
+typedef	^	ParameterType	BladeParms	Blade
+typedef	^	ParameterType	BeddoesParms	Beddoes
+typedef	^	ParameterType	DynInflowParms	DynInflow
+typedef	^	ParameterType	ElementParms	Element
+typedef	^	ParameterType	TwrPropsParms	TwrProps
+typedef	^	ParameterType	InducedVelParms	InducedVel
+typedef	^	ParameterType	WindParms	Wind
+typedef	^	ParameterType	RotorParms	Rotor
+typedef	^	ParameterType	DWM_ParameterType	DWM	-	-	-		-
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
+# Define inputs that are not on this mesh here:
+typedef	^	InputType	MeshType	InputMarkers	{:}	-	-	"Input Forces and positions for the blades (mesh) for each blade"	-
+typedef	^	InputType	MeshType	Twr_InputMarkers	-	-	-	"Input Forces and positions for the tower (mesh)"	-
+typedef	^	InputType	AeroConfig	TurbineComponents	-	-	-	"Current locations of components"
+typedef	^	InputType	ReKi	MulTabLoc	{:}{:}
+typedef	^	InputType	ReKi	InflowVelocity	{:}{:}	-	-	"U,V,W wind inflow speeds at all locations on the Inputmarker and Twr_InputMarker meshes"	"m/s"
+typedef	^	InputType	ReKi	AvgInfVel	{3}	-	-	"an average disk velocity (depends on wind type and should be removed)"	"m/s"
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+#typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
+# Define outputs that are not on this mesh here:
+typedef	^	OutputType	MeshType	OutputLoads	{:}	-	-	"Output Loads (mesh) for each blade"	-
+typedef	^	OutputType	MeshType	Twr_OutputLoads	-	-	-	"Tower Output Loads (mesh)"	-

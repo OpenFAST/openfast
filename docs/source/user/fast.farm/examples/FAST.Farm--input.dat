@@ -1,0 +1,102 @@
+FAST.Farm v1.00.* INPUT FILE
+Sample FAST.Farm input file
+--- SIMULATION CONTROL ---
+False      Echo          Echo input data to <RootName>.ech? (flag)
+FATAL      AbortLevel    Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
+2000.0     TMax          Total run time (s) [>=0.0]
+False      UseSC         Use a super controller? (flag)
+1          Mod_AmbWind   Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: one InflowWind module, 3: multiple instances of InflowWind module}
+--- SUPER CONTROLLER --- [used only for UseSC=True]
+"SC_DLL.dll" SC_FileName Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoted string)
+--- AMBIENT WIND: PRECURSOR IN VTK FORMAT --- [used only for Mod_AmbWind=1]
+2.0        DT_Low-VTK    Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]
+0.5        DT_High-VTK   Time step for high-resolution wind data input files (s) [>0.0] "/AmbWind/steady" WindFilePath Path name to wind data files from precursor (string)
+False      ChkWndFiles   Check all the ambient wind files for data consistency (flag)
+--- AMBIENT WIND: INFLOWWIND MODULE --- [used only for Mod_AmbWind=2 or 3]
+2.0        DT_Low        Time step for low-resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
+0.5        DT_High       Time step for high-resolution wind data interpolation (s) [>0.0]
+300        NX_Low        Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]
+300        NY_Low        Number of low-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]
+35         NZ_Low        Number of low-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]
+5.0        X0_Low        Origin of low-resolution spatial nodes in X direction for wind data interpolation (m)
+5.0        Y0_Low        Origin of low-resolution spatial nodes in Y direction for wind data interpolation (m)
+5.0        Z0_Low        Origin of low-resolution spatial nodes in Z direction for wind data interpolation (m)
+10.0       dX_Low        Spacing of low-resolution spatial nodes in X direction for wind data interpolation (m) [>0.0]
+10.0       dY_Low        Spacing of low-resolution spatial nodes in Y direction for wind data interpolation (m) [>0.0]
+10.0       dZ_Low        Spacing of low-resolution spatial nodes in Z direction for wind data interpolation (m) [>0.0]
+16         NX_High       Number of high-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]
+16         NY_High       Number of high-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]
+17         NZ_High       Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]
+"InflowWind.dat" InflowFile Name of file containing InflowWind module input parameters (quoted string)
+--- WIND TURBINES ---
+1          NumTurbines   Number of wind turbines (-) [>=1] [last 6 columns below used only for Mod_AmbWind=2 or 3]
+WT_X    WT_Y     WT_Z   WT_FASTInFile       X0_High Y0_High  Z0_High dX_High dY_High dZ_High
+(m)     (m)      (m)      (string)            (m)     (m)      (m)     (m)     (m)     (m)
+605.0   1500.0   0.0    "/FAST/Test18.fst"   525.0   1425.0    5.0    10.0    10.0    10.0
+--- WAKE DYNAMICS ---
+5.0        dr            Radial increment of radial finite-difference grid (m) [>0.0]
+40         NumRadii      Number of radii in the radial finite-difference grid (-) [>=2]
+140        NumPlanes     Number of wake planes (-) [>=2]
+DEFAULT    f_c           Cutoff (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [=0.0007]
+DEFAULT    C_HWkDfl_O    Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [=0.0]
+DEFAULT    C_HWkDfl_OY   Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [=0.3]
+DEFAULT    C_HWkDfl_x    Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [=0.0]
+DEFAULT    C_HWkDfl_xY   Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [=-0.004]
+DEFAULT    C_NearWake    Calibrated parameter for the near-wake correction (-) [>1. and <2.5] or DEFAULT [=1.8]
+DEFAULT    k_vAmb        Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [=0.05]
+DEFAULT    k_vShr        Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [=0.016]
+DEFAULT    C_vAmb_DMin   Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [=0.0]
+DEFAULT    C_vAmb_DMax   Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin] or DEFAULT [=1.0]
+DEFAULT    C_vAmb_FMin   Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [=1.0]
+DEFAULT    C_vAmb_Exp    Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [=0.01]
+DEFAULT    C_vShr_DMin   Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [=3.0]
+DEFAULT    C_vShr_DMax   Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [=25.0]
+DEFAULT    C_vShr_FMin   Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [=0.2]
+DEFAULT    C_vShr_Exp    Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [=0.1]
+DEFAULT    Mod_WakeDiam  Wake diameter calculation model (-) (switch) {1: rotor diameter, 2: velocity based, 3: mass-flux based, 4: momentum-flux based} or DEFAULT [=1]
+DEFAULT    C_WakeDiam    Calibrated parameter for wake diameter calculation (-) [>0.0 and <0.99] or DEFAULT [=0.95] [unused for Mod_WakeDiam=1]
+DEFAULT    Mod_Meander   Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [=3]
+DEFAULT    C_Meander     Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [=1.9]
+--- VISUALIZATION ---
+False      WrDisWind     Write low- and high-resolution disturbed wind data to <RootName>.Low.Dis.t<n>.vtk etc. (flag)
+1          NOutDisWindXY Number of XY planes for output of disturbed wind data across the low-resolution domain to <RootName>.Low.DisXY<n_out>.t<n>.vtk (-) [0 to 9]
+90.0       OutDisWindZ   Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]
+2          NOutDisWindYZ Number of YZ planes for output of disturbed wind data across the low-resolution domain to <RootName>/Low.DisYZ<n_out>.t<n>.vtk (-) [0 to 9]
+600.0,978.0 OutDisWindX X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]
+1          NOutDisWindXZ Number of XZ planes for output of disturbed wind data across the low-resolution domain to <RootName>/Low.DisXZ<n_out>.t<n>.vtk (-) [0 to 9]
+1500.0     OutDisWindY   Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]
+4.0       WrDisDT       Time step for disturbed wind visualization output (s) [>0.0] or DEFAULT [=DT_Low or DT_Low-VTK] [unused for WrDisWind=False and NOutDisWindXY=NOutDisWindYZ=NOutDisWindXZ=0]
+--- OUTPUT ---
+True       SumPrint      Print summary data to <RootName>.sum? (flag)
+99999.9    ChkptTime     Amount of time between creating checkpoint files for potential restart (s) [>0.0]
+200.0      TStart        Time to begin tabular output (s) [>=0.0]
+1          OutFileFmt    Format for tabular (time-marching) output file (-) (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
+True       TabDelim      Use tab delimiters in text tabular output file? (flag) {uses spaces if False}
+"ES10.3E2" OutFmt        Format used for text tabular output, excluding the time channel. Resulting field should be 10 characters. (quoted string)
+3          NOutRadii     Number of radial nodes for wake output for an individual rotor (-) [0 to 20]
+0, 15, 39  OutRadii      List of radial nodes for wake output for an individual rotor (-)
+2          NOutDist      Number of downstream distances for wake output for an individual rotor (-) [1 to NOutRadii] [unused for NOutRadii=0] rotor (-) [0 to 9]
+0.0, 378.0 OutDist       List of downstream distances for wake output for an individual rotor (m) [1 to NOutDist] [unused for NOutDist =0]
+1          NWindVel      Number of points for wind output (-) [0 to 9]
+600.0      WindVelX      List of coordinates in the X direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]
+1500.0     WindVelY      List of coordinates in the Y direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]
+90.0       WindVelZ      List of coordinates in the Z direction for wind output (m) [1 to NWindVel] [unused for NWindVel=0]
+OutList The next line(s) contains a list of output parameters. (quoted string)
+"RtAxsXT1, RtAxsYT1, RtAxsZT1"
+"RtPosXT1, RtPosYT1, RtPosZT1"
+"YawErrT1"
+"TIAmbT1"
+"CtT1N01, CtT1N02, CtT1N03, CtT1N04, CtT1N05"
+"WkAxsXT1D1, WkAxsXT1D2, WkAxsXT1D3"
+"WkAxsYT1D1, WkAxsYT1D2, WkAxsYT1D3"
+"WkAxsZT1D1, WkAxsZT1D2, WkAxsZT1D3"
+"WkPosXT1D1, WkPosXT1D2, WkPosXT1D3"
+"WkPosYT1D1, WkPosYT1D2, WkPosYT1D3"
+"WkPosZT1D1, WkPosZT1D2, WkPosZT1D3"
+"WkDfVxT1N01D1, WkDfVxT1N02D1, WkDfVxT1N03D1, WkDfVxT1N04D1, WkDfVxT1N05D1"
+"WkDfVxT1N01D2, WkDfVxT1N02D2, WkDfVxT1N03D2, WkDfVxT1N04D2, WkDfVxT1N05D2"
+"WkDfVxT1N01D3, WkDfVxT1N02D3, WkDfVxT1N03D3, WkDfVxT1N04D3, WkDfVxT1N05D3"
+"WkDfVrT1N01D1, WkDfVrT1N02D1, WkDfVrT1N03D1, WkDfVrT1N04D1, WkDfVrT1N05D1"
+"WkDfVrT1N01D2, WkDfVrT1N02D2, WkDfVrT1N03D2, WkDfVrT1N04D2, WkDfVrT1N05D2"
+"WkDfVrT1N01D3, WkDfVrT1N02D3, WkDfVrT1N03D3, WkDfVrT1N04D3, WkDfVrT1N05D3"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)

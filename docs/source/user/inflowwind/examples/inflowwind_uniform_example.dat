@@ -1,0 +1,14 @@
+! OpenFAST Deterministic Wind File
+#
+# Comment lines begin with "!" or "#" or "%", then the data lines must contain the following columns:
+#
+# If there are only 8 columns, upflow is assumed to be 0.
+#
+# Parameters are interpolated linearly between time steps; using nearest neighbor before the first time 
+# listed in this file and after the last time listed in the file. 
+#
+! Time     Wind    Wind    Vertical    Horiz.      Pwr.Law     Lin.Vert.   Gust     Upflow
+!          Speed   Dir     Speed       Shear       Vert.Shr    Shear       Speed    Angle 
+! (sec)    (m/s)   (Deg)   (m/s)                                            (m/s)   (deg)
+ 0.000000   10   0.000000   0          0.000000   0.300000   0.000000   0.000000      8
+10.000000   12   0.000000   0          0.000000   0.300000   0.000000   0.000000      8

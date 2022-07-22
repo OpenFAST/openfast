@@ -1,0 +1,219 @@
+###################################################################################################################################
+# Registry for FEMooring in the FAST Modularization Framework
+# This Registry file is used to create MODULE FEMooring_Types  which contains all of the user-defined types needed in FEMooring.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword> <ModuleName/ModName> <TypeName>  <FieldType> <FieldName> <Dims>   <IO>  <DNAME>  <DESCRIP>   <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+#bjj NOTE: All variables initialized here should be double-checked that they are properly initialized in the new framework (i.e. can run twice)
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include  Registry_NWTC_Library.txt
+
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data ...........................................................................................................
+typedef   FEAMooring/FEAM  FEAM_InputFile  DbKi          DT          -          -  -   "Communication interval for mooring dynamics"   s
+typedef  ^                ^               ReKi          LineCI {:}           -  -   "Mooring line inertia coefficient"  -
+typedef  ^                ^               ReKi          LineCD {:}           -  -   "Mooring line drag coefficient"  -
+typedef  ^                ^               ReKi          LEAStiff  {:}           -  -   "Mooring line axial stiffness"   -
+typedef  ^                ^               ReKi          LMassDen  {:}           -  -   "Mooring line mass per unit length" -
+typedef  ^                ^               ReKi          LDMassDen {:}           -  -   "Mooring line displaced mass per unit length"   -
+typedef  ^                ^               ReKi          BottmStiff   {:}           -  -   "Seabed spring stiffness"  -
+typedef  ^                ^               ReKi          LRadAnch  {:}           -  -   "Anchor Radius"   -
+typedef  ^                ^               ReKi          LAngAnch  {:}           -  -   "Anchor Angle" -
+typedef  ^                ^               ReKi          LDpthAnch {:}           -  -   "Anchor Depth" -
+typedef  ^                ^               ReKi          LRadFair  {:}           -  -   "Fairlead Radius" -
+typedef  ^                ^               ReKi          LAngFair  {:}           -  -   "Fairlead Radius" -
+typedef  ^                ^               ReKi          LDrftFair {:}           -  -   "Fairlead Draft"  -
+typedef  ^                ^               ReKi          LUnstrLen {:}           -  -   "Line unstretched length"  -
+typedef  ^                ^               ReKi          Tension       {:}          -  -   "Line Top Tension"   -
+typedef  ^                ^               ReKi          GSL         {:}{:}{:} -  -   "Linear spring stiffness at fairlead" -
+typedef  ^                ^               ReKi          GSR         {:}{:}     -  -   "Rotational spring stiffness at fairlead"  -
+typedef  ^                ^               ReKi          GE          {:}{:}{:} -  -   "Reference tangent vector at fairlead"   -
+typedef  ^                ^               IntKi         NumLines   -         -  -   "Number of lines"
+typedef  ^                ^               IntKi         NumElems   -         -  -   "Number of elements" -
+typedef  ^                ^               ReKi          Eps        -          -  -   "Tolerance for static iteration"
+typedef  ^                ^               ReKi          Gravity      -          -  -   "Gravity"
+typedef  ^                ^               ReKi          WtrDens      -          -  -   "Water density"
+typedef  ^                ^               IntKi         MaxIter    -          -  -   "Maximum number of iteration step for static analysis"
+typedef  ^                ^               LOGICAL        SumPrint  -         -  -   "Print summary data to <RootName>.fsm?"   -
+typedef  ^                ^               IntKi         OutFile        -           -  -   "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)" -
+typedef  ^                ^               LOGICAL       TabDelim     -          -  -   "Use tab delimiters in text tabular output file?"  -
+typedef  ^                ^               CHARACTER(20)  OutFmt       -         -  -   "Format used for text tabular output (except time)"   -
+typedef  ^                ^               DbKi          Tstart       -          -  -   "Time to start module's tabular output"   s
+typedef  ^                ^               IntKi         NumOuts      -          -  -   "Number of parameters in the output list (number of outputs requested)" -
+typedef  ^                ^          CHARACTER(ChanLen) OutList     {:}         -  -   "List of user-requested output channels"  -
+
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef  FEAMooring/FEAM  InitInputType  CHARACTER(1024)  InputFile  -  -  -  "Name of the input file"   -
+typedef   ^               ^              CHARACTER(1024)  RootName   -  -  -  "RootName for writing output files" -
+typedef  ^                ^              ReKi             PtfmInit   {6}   -  -   "Platform Initial Position"  -
+typedef  ^                ^              INTEGER          NStepWave  -          -        -         ""    -
+typedef  ^                ^              ReKi             WaveAcc0  {:}{:}{:}  -        -         ""    -
+typedef  ^                ^              ReKi             WaveTime  {:}        -        -         ""    -
+typedef  ^                ^              ReKi             WaveVel0  {:}{:}{:}  -        -         ""    -
+typedef  ^                ^              ReKi             Gravity    -          -  -   "Gravity"
+typedef  ^                ^              ReKi             WtrDens    -          -  -   "Water density"
+
+# Define outputs from the initialization routine here:
+typedef  FEAMooring/FEAM  InitOutputType  CHARACTER(ChanLen)  WriteOutputHdr  {:}  -  -  "Names of the output-to-file channels"  -
+typedef  ^                ^               CHARACTER(ChanLen)  WriteOutputUnt   {:}  -   - "Units of the output-to-file channels" -
+typedef  ^                ^               ProgDesc       Ver             -   -  -   "This module's name, version, and date"   -
+typedef  ^                ^               ReKi           LAnchxi         {:}  -  -  "Anchor coordinate"  -
+typedef  ^                ^               ReKi           LAnchyi         {:}  -  -  "Anchor coordinate"  -
+typedef  ^                ^               ReKi           LAnchzi         {:}  -  -  "Anchor coordinate"  -
+typedef  ^                ^               ReKi           LFairxt         {:}  -  -  "Fairlead coordinate"   -
+typedef  ^                ^               ReKi           LFairyt         {:}  -  -  "Fairlead coordinate"   -
+typedef  ^                ^               ReKi           LFairzt         {:}  -  -  "Fairlead coordinate"   -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef  FEAMooring/FEAM  ContinuousStateType   ReKi     GLU           {:}{:}     -   -     "Global matrix U (displacement)"  -
+typedef  ^                ^                     ReKi     GLDU          {:}{:}     -   -     "Global matrix DU (velocity)"  -
+
+
+
+# Define discrete (nondifferentiable) states here:
+typedef  FEAMooring/FEAM  DiscreteStateType  ReKi  DummyDiscState  -  -  -  "Remove this variable if you have discrete states"   -
+
+
+# Define constraint states here:
+typedef  FEAMooring/FEAM  ConstraintStateType   ReKi     TSN           {3}          -   -     "Lagrangian multiplier" -
+typedef  ^                ^                     ReKi     TZER          {3}          -   -     "Lagrangian multiplier"   -
+
+
+# Define any other states, including integer or logical states here:
+typedef  FEAMooring/FEAM  OtherStateType        ReKi     GLU0             {:}{:}     -   -     "Global matrix U0 (previous state)"  -
+typedef  ^                ^                     ReKi     GLDDU            {:}{:}     -   -     "Global matrix DDU (accleration) -- other state" -
+typedef  ^                ^                     LOGICAL  BottomTouch       -            -   -     "Bottom touch flag"
+# saved from previous time step
+typedef  ^                ^                     ReKi     GFORC0           {:}{:}{:}     -   -     "Old element force matrix"  -
+typedef  ^                ^                     ReKi     GMASS0           {:}{:}{:}{:}  -   -     "Old element mass matrix" -
+typedef  ^                ^                     ReKi     FAST_FPA         {:}{:}        -   -     "Fairlead position - inputs from previous time step (we should replace this with a call to extrap-interp)"   -
+typedef  ^                ^                     ReKi     FAST_RP          {:}{:}        -   -     "Fairlead tangent - part of output computation that was calculated in UpdateStates" -
+typedef  ^                ^                     IntKi    INCR              -            -   -     "FEAM step"
+typedef  ^                ^                     ReKi     RSDF             {15}          -   -     "Line residue force - modifies values from previous call to FEAM_Solve"
+#bjj: these might be local variables, but they weren't initialized when INCR==0, so I'm not sure
+typedef  ^                ^                     ReKi     FORC0            {15} -        -   -     "Local old element force matrix"  -
+typedef  ^                ^                     ReKi     EMAS0            {15}{15}      -   -     "Local old element mass matrix"   -
+
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+# these could be local variables:
+typedef  ^                MiscVarType           ReKi     GLF              {:}{:}        -   -     "Global forcing matrix"  -
+typedef  ^                ^                     ReKi     GLK              {:}{:}{:}     -   -     "Global stiffness matrix"   -
+typedef  ^                ^                     ReKi     EMASS            {15}{15}      -   -     "Line element mass"
+typedef  ^                ^                     ReKi     ESTIF            {15}{15}      -   -     "Line element stiffness"
+typedef  ^                ^                     ReKi     FAST_FP          {:}{:}        -   -     "Fairlead position at t+dt"   -
+typedef  ^                ^                     ReKi     FORCE            {15}          -   -     "Line external force"
+typedef  ^                ^                     ReKi     FP               {3}           -   -     "Fairlead position - used in Couple routine"  -
+typedef  ^                ^                     ReKi     U                {3}{4}        -   -     "Local matrix U"   -
+typedef  ^                ^                     ReKi     U0               {3}{4}        -   -     "Local matrix U0"  -
+typedef  ^                ^                     ReKi     DU               {3}{4}        -   -     "Local matrix DU"  -
+typedef  ^                ^                     ReKi     DDU              {3}{4}        -   -     "Local matrix DDU" -
+typedef  ^                ^                     ReKi     R                {3}           -   -     "POSITION VECTOR OF NODE OF ROD ELEMENT"  -
+typedef  ^                ^                     ReKi     RP               {3}           -   -     "DR/DS AT R (TANGENT - NEED NOT BE UNIT VECTOR)"   -
+typedef  ^                ^                     ReKi     RHSR             {6}           -   -     "RIGHT HAND SIDE CONTRIBUTION TO 6 DEGREES OF FREEDOM OF ROD NODE" -
+typedef  ^                ^                     ReKi     SLIN             {3}           -   -     "LINEAR SPRING CONSTANT - portion of p%GSL" "(UNITS OF FORCE/LENGTH)"
+typedef  ^                ^                     ReKi     STIFR            {6}{6}        -   -     "STIFFNESS COEFFICIENTS FOR 6 DEGREES OF FREEDOM OF ROD NODE (X,DX/DS,Y,DY/DS,Z,DZ/DS)" -
+# these values for WriteOutput could be local variables:
+typedef  ^                ^                     ReKi     FAIR_ANG         {:}{:}        -   -     "Fairlead angle"   -
+typedef  ^                ^                     ReKi     FAIR_T           {:}           -   -     "Fairlead tension"   -
+typedef  ^                ^                     ReKi     ANCH_ANG         {:}{:}        -   -     "Anchor angle"  -
+typedef  ^                ^                     ReKi     ANCH_T           {:}           -   -     "Anchor tension"  -
+typedef  ^                ^                     ReKi     Line_Coordinate  {:}{:}{:}     -   -     "Mooring line coordinate"   -
+typedef  ^                ^                     ReKi     Line_Tangent     {:}{:}{:}     -   -     "Mooring line tangent vector"  -
+typedef  ^                ^                     ReKi     F_Lines          {:}{:}        -   -     "Mooring restoring force"
+# optimization variables:
+typedef  ^                ^                     IntKi    LastIndWave       -            -   -     "FEAM step"
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef  FEAMooring/FEAM  ParameterType  DbKi             DT          -           -  -   "Time step for continuous state integration & discrete state update"  seconds
+typedef  ^                ^              ReKi             GRAV       {3}          -  -   "Gravity" -
+# parameters from Mooring
+typedef  ^                ^              ReKi             Eps        -           -  -   "Tolerance for static iteration"
+typedef  ^                ^              ReKi             Gravity   -           -  -   "Gravity"
+typedef  ^                ^              ReKi             WtrDens   -           -  -   "Water density"
+typedef  ^                ^              IntKi            MaxIter   -           -  -   "Maximum number of iteration step for static analysis"
+typedef  ^                ^              IntKi            NHBD        -           -  -   "Bandwidth = (NBAND+1)/2"
+typedef  ^                ^              IntKi            NDIM        -           -  -   "Dimension = 3"
+typedef  ^                ^              IntKi            NEQ        {:}          -  -   "Number of equation"
+typedef  ^                ^              IntKi            NBAND       -           -  -   "Bandwidth"
+typedef  ^                ^              IntKi            NumLines    -           -  -   "Number of lines"
+typedef  ^                ^              IntKi            NumElems    -           -  -   "Number of elements"
+typedef  ^                ^              IntKi            NumNodes    -           -  -   "Number of nodes"
+typedef  ^                ^              ReKi             GSL        {:}{:}{:}    -  -   "Linear spring stiffness at fairlead"   -
+typedef  ^                ^              ReKi             GP         {:}{:}         -   -   "Fairlead position"   -
+typedef  ^                ^              ReKi             Elength    {:}         -   -   "Element length"   -
+typedef  ^                ^              ReKi             BottmElev  {:}         -   -   "Bottom elevation" -
+typedef  ^                ^              ReKi             BottmStiff {:}         -   -   "Bottom stiffness" -
+typedef  ^                ^              ReKi             LMassDen   {:}         -   -   "Line mass per unit length" -
+typedef  ^                ^              ReKi             LDMassDen  {:}         -   -   "Line displaced mass per unit length"   -
+typedef  ^                ^              ReKi             LEAStiff   {:}         -   -   "Line axial stiffness"   -
+typedef  ^                ^              ReKi             LineCI   {:}        -   -   "Line inertia coefficient"  -
+typedef  ^                ^              ReKi             LineCD   {:}        -   -   "Line drag coefficient"  -
+typedef  ^                ^              ReKi             Bvp        {:}{:}       -  -   "Boundary condtion"   -
+typedef  ^                ^              ReKi             WaveAcc0                         {:}{:}{:}  -        -         ""    -
+typedef  ^                ^              ReKi             WaveTime                         {:}        -        -         ""    -
+typedef  ^                ^              ReKi             WaveVel0                         {:}{:}{:}  -        -         ""    -
+typedef  ^                ^              IntKi            NStepWave   -           -  -   "Number of wave steps"
+
+# parameters from Shape Functions
+typedef  ^                ^              ReKi             SHAP       {6}{4}       -  -  "Shape function"
+typedef  ^                ^              ReKi             SHAPS      {6}{4}       -  -  "Shape function"
+typedef  ^                ^              ReKi             GAUSSW     {6}          -  -  "Shape function"
+typedef  ^                ^              IntKi            NGAUSS      -           -  -  "6 POINT GAUSSIAN QUADRATURE INTEGRATION"
+typedef  ^                ^              ReKi             SHAPT      {10}{4}      -  -  "Shape function"
+typedef  ^                ^              ReKi             SHAPTS     {10}{4}      -  -  "Shape function"
+typedef  ^                ^              IntKi            NTRAP       -           -  -  "10 TRANPEZOIDE INTEGRATION point"
+typedef  ^                ^              ReKi             SBEND      {4}{4}       -  -  "Internal"
+typedef  ^                ^              ReKi             STEN       {3}{4}{4}    -  -  "Internal"
+typedef  ^                ^              ReKi             RMASS      {4}{4}       -  -  "Internal"
+typedef  ^                ^              ReKi             RADDM      {4}{4}{4}{4} -  - "Internal"
+typedef  ^                ^              ReKi             PMPN       {3}{3}       -  - "Internal"
+typedef  ^                ^              ReKi             AM         {4}          -  - "Internal"
+typedef  ^                ^              ReKi             PM         {3}          -  - "Internal"
+typedef  ^                ^              IntKi            IDOF       {3}{4}       -  - "Internal"
+typedef  ^                ^              IntKi            JDOF       {3}          -  - "Internal"
+typedef  ^                ^              ReKi             PPA        {3}{3}{4}    -  - "Internal"
+typedef  ^                ^              ReKi             PtfmRefzt   -           -  -  "Platform reference"
+# parameters for output
+typedef  ^                ^              IntKi            NumOuts     -           -  - "Number of parameters in the output list (number of outputs requested)" -
+typedef  ^                ^              CHARACTER(1024)  RootName     -             -  - "RootName for writing output files" -
+typedef  ^                ^              OutParmType    OutParam   {:}          -  -   "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^                ^              CHARACTER(1)   Delim        -            -  - "Column delimiter for output text files"  -
+
+# parameters that used to be other states
+typedef  ^                ^                     ReKi     GLUZR            {:}{:}{:}     -   -     "Line coordinate & direction cosine" -
+typedef  ^                ^                     ReKi     GTZER            {:}{:}        -   -     "Line tension"  -
+
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+typedef  FEAMooring/FEAM  InputType  MeshType  HydroForceLineMesh      -  -  -  "Meshed input data"   -
+typedef  ^                ^          MeshType  PtFairleadDisplacement  -  -  -  "Meshed input data"   -
+
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+# Define outputs that are not on this mesh here:
+typedef  FEAMooring/FEAM  OutputType   ReKi       WriteOutput       {:}   -  -  "Data to be written to an output file: see WriteOutputHdr for names of each variable"   "see WriteOutputUnt"
+typedef  ^                ^             MeshType   PtFairleadLoad    -  -  -  "Meshed output data" -
+typedef  ^                ^             MeshType   LineMeshPosition  -  -  -  "Meshed output data" -

@@ -1,32 +1,12 @@
-% make sure the FASTv8\bin directory is in the MATLAB path
+% make sure the OpenFAST directory where the FAST_SFunc.mex* file is located
+% is in the MATLAB path (also make sure any other OpenFAST library files that
+% are needed are on the MATLAB path)
 %    (relative path names are not recommended in addpath()):
-% addpath('C:\Users\bjonkman\Documents\CAETools\FASTv8\bin');
+% addpath('../../../build/bin'); % install location for Windows Visual Studio builds
+% addpath(genpath('../../../install')); % cmake default install location
 
+% these variables are defined in the OpenLoop model's FAST_SFunc block:
+FAST_InputFileName = '../../../reg_tests/r-test/glue-codes/openfast/AOC_WSt/AOC_WSt.fst';
+TMax               = 60; % seconds
 
-CertTest_Dir = '..\..\CertTest';
-
-CertTest_TMax=[20, 20, 20, 70, 30, ...
-               35, 70, 20, 40, 25, ...
-               20, 20, 40,  0, 20, ...
-               20, 70, 60, 60, 60, ...
-               60, 60, 60, 60, 60, ...
-               20                  ];
-
- for iTest = [1:13 15:26]  
-     
-        %------------------------------------------------------------------       
-        % Set up and run the Simulink OpenLoop model
-        %------------------------------------------------------------------       
-    
-    FileRoot   = sprintf( 'Test%02.0f', iTest );
-    
-    disp('***********************************************');
-    disp( ['FAST_SFunc certification test for ' FileRoot] );
-    disp('***********************************************');
-    
-    FAST_InputFileName = [CertTest_Dir filesep FileRoot '.fst'];
-    TMax               = CertTest_TMax(iTest);
-    
-    sim('OpenLoop.mdl',[0,TMax]);
-       
- end
+sim('OpenLoop.mdl',[0,TMax]);

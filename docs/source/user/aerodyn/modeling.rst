@@ -12,20 +12,6 @@ are compatible with AeroDyn.
 Please refer to the theory of Section 7 for detailed information about
 the implementation approach we have followed in AeroDyn.
 
-Standalone AeroDyn Driver
--------------------------
-
-The standalone AeroDyn driver code is very useful for computing turbine
-aerodynamics independent of aero-elastic coupling. The standalone
-AeroDyn driver code essentially replaces the functionality previously
-available in the separate wind turbine rotor-performance tool WT\_Perf.
-For example, the standalone AeroDyn driver code can be used to compute
-the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient
-(C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of
-tip-speed ratio (TSR) and blade-pitch angle for a given rotor. Moreover,
-the standalone AeroDyn driver code is more powerful than WT\_Perf in
-that the standalone AeroDyn driver can capture time-varying dynamics as
-a result of nacelle-yaw error, shaft tilt, and/or wind shear.
 
 Environmental Conditions
 ------------------------
@@ -61,7 +47,7 @@ the blade tip. Aerodynamic imbalances are possible through the use of
 geometrical differences between each blade.
 
 When the tower potential-flow (``TwrPotent > 0``), tower shadow
-(``TwrShadow = TRUE``), and/or the tower aerodynamic load
+(``TwrShadow > 0``), and/or the tower aerodynamic load
 (``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
@@ -79,8 +65,8 @@ particular issue for full-field wind file formats).
 Model Options Under Operational and Parked/Idling Conditions
 ------------------------------------------------------------
 
-To model an operational rotor, we recommend to include induction
-(``WakeMod = 1``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
+To model an operational rotor, we recommend to include the dynamic BEM model
+(``WakeMod = 2``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
 Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
@@ -117,7 +103,7 @@ speed, in which case we recommend that ``TwrAero = TRUE``. Otherwise,
 We recommend to include the influence of the tower on the fluid local to
 the blade for both operational and parked/idling rotors. We recommend
 that ``TwrPotent > 0`` for upwind rotors and that ``TwrPotent = 2``
-or ``TwrShadow = TRUE`` for downwind rotors.
+or ``TwrShadow > 0`` for downwind rotors.
 
 Linearization
 -------------

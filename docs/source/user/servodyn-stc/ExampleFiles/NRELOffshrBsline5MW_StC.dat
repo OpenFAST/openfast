@@ -1,0 +1,96 @@
+------- STRUCTURAL CONTROL (StC) INPUT FILE ----------------------------
+Input file for tuned mass damper, module by Matt Lackner, Meghan Glade, and Semyung Park (UMass)
+---------------------- SIMULATION CONTROL --------------------------------------
+True          Echo         - Echo input data to <RootName>.ech (flag)
+---------------------- StC DEGREES OF FREEDOM ----------------------------------
+          2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series}
+true          StC_X_DOF    - DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
+true          StC_Y_DOF    - DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
+FALSE         StC_Z_DOF    - DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]
+---------------------- StC LOCATION ------------------------------------------- [relative to the reference origin of component attached to]
+          0   StC_P_X      - At rest X position of StC (m)
+          0   StC_P_Y      - At rest Y position of StC (m)
+         75   StC_P_Z      - At rest Z position of StC (m)
+---------------------- StC INITIAL CONDITIONS --------------------------------- [used only when StC_DOF_MODE=1 or 2]
+          1   StC_X_DSP    - StC X initial displacement (m) [relative to at rest position]
+          1   StC_Y_DSP    - StC Y initial displacement (m) [relative to at rest position]
+          0   StC_Z_DSP    - StC Z initial displacement (m) [relative to at rest position; used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+"none"        StC_Z_PreLd  - StC Z pre-load (N) {"gravity" to offset for gravity load; "none" or 0 to turn off} [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+---------------------- StC CONFIGURATION -------------------------------------- [used only when StC_DOF_MODE=1 or 2]
+         10   StC_X_PSP    - Positive stop position (maximum X mass displacement) (m)
+        -10   StC_X_NSP    - Negative stop position (minimum X mass displacement) (m)
+         10   StC_Y_PSP    - Positive stop position (maximum Y mass displacement) (m)
+        -10   StC_Y_NSP    - Negative stop position (minimum Y mass displacement) (m)
+         10   StC_Z_PSP    - Positive stop position (maximum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+        -10   StC_Z_NSP    - Negative stop position (minimum Z mass displacement) (m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+---------------------- StC MASS, STIFFNESS, & DAMPING ------------------------- [used only when StC_DOF_MODE=1 or 2]
+      20000   StC_X_M      - StC X mass (kg) [must equal StC_Y_M for StC_DOF_MODE = 2]
+      20000   StC_Y_M      - StC Y mass (kg) [must equal StC_X_M for StC_DOF_MODE = 2]
+          0   StC_Z_M      - StC Z mass (kg) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+      20000   StC_XY_M     - StC XY mass (kg) [used only when StC_DOF_MODE=2]
+      28000   StC_X_K      - StC X stiffness (N/m)
+      28000   StC_Y_K      - StC Y stiffness (N/m)
+          0   StC_Z_K      - StC Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+       2800   StC_X_C      - StC X damping (N/(m/s))
+       2800   StC_Y_C      - StC Y damping (N/(m/s))
+          0   StC_Z_C      - StC Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+      15000   StC_X_KS     - Stop spring X stiffness (N/m)
+      15000   StC_Y_KS     - Stop spring Y stiffness (N/m)
+          0   StC_Z_KS     - Stop spring Z stiffness (N/m) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+      10000   StC_X_CS     - Stop spring X damping (N/(m/s))
+      10000   StC_Y_CS     - Stop spring Y damping (N/(m/s))
+          0   StC_Z_CS     - Stop spring Z damping (N/(m/s)) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+---------------------- StC USER-DEFINED SPRING FORCES ------------------------- [used only when StC_DOF_MODE=1 or 2]
+False         Use_F_TBL    - Use spring force from user-defined table (flag)
+         17   NKInpSt      - Number of spring force input stations
+---------------------- StC SPRING FORCES TABLE -------------------------------- [used only when StC_DOF_MODE=1 or 2]
+    X                F_X               Y              F_Y              Z              F_Z
+   (m)               (N)              (m)             (N)             (m)             (N)
+-6.0000000E+00  -4.8000000E+06  -6.0000000E+00  -4.8000000E+06  -6.0000000E+00  -4.8000000E+06
+-5.0000000E+00  -2.4000000E+06  -5.0000000E+00  -2.4000000E+06  -5.0000000E+00  -2.4000000E+06
+-4.5000000E+00  -1.2000000E+06  -4.5000000E+00  -1.2000000E+06  -4.5000000E+00  -1.2000000E+06
+-4.0000000E+00  -6.0000000E+05  -4.0000000E+00  -6.0000000E+05  -4.0000000E+00  -6.0000000E+05
+-3.5000000E+00  -3.0000000E+05  -3.5000000E+00  -3.0000000E+05  -3.5000000E+00  -3.0000000E+05
+-3.0000000E+00  -1.5000000E+05  -3.0000000E+00  -1.5000000E+05  -3.0000000E+00  -1.5000000E+05
+-2.5000000E+00  -1.0000000E+05  -2.5000000E+00  -1.0000000E+05  -2.5000000E+00  -1.0000000E+05
+-2.0000000E+00  -6.5000000E+04  -2.0000000E+00  -6.5000000E+04  -2.0000000E+00  -6.5000000E+04
+ 0.0000000E+00   0.0000000E+00   0.0000000E+00   0.0000000E+00   0.0000000E+00   0.0000000E+00
+ 2.0000000E+00   6.5000000E+04   2.0000000E+00   6.5000000E+04   2.0000000E+00   6.5000000E+04
+ 2.5000000E+00   1.0000000E+05   2.5000000E+00   1.0000000E+05   2.5000000E+00   1.0000000E+05
+ 3.0000000E+00   1.5000000E+05   3.0000000E+00   1.5000000E+05   3.0000000E+00   1.5000000E+05
+ 3.5000000E+00   3.0000000E+05   3.5000000E+00   3.0000000E+05   3.5000000E+00   3.0000000E+05
+ 4.0000000E+00   6.0000000E+05   4.0000000E+00   6.0000000E+05   4.0000000E+00   6.0000000E+05
+ 4.5000000E+00   1.2000000E+06   4.5000000E+00   1.2000000E+06   4.5000000E+00   1.2000000E+06
+ 5.0000000E+00   2.4000000E+06   5.0000000E+00   2.4000000E+06   5.0000000E+00   2.4000000E+06
+ 6.0000000E+00   4.8000000E+06   6.0000000E+00   4.8000000E+06   6.0000000E+00   4.8000000E+06
+---------------------- StructCtrl CONTROL -------------------------------------------- [used only when StC_DOF_MODE=1 or 2]
+          0   StC_CMODE     - Control mode (switch) {0:none; 1: Semi-Active Control Mode; 4: Active Control Mode through Simulink (not available); 5: Active Control Mode through Bladed interface}
+          0   StC_CChan     - Control channel group (1:10) for stiffness and damping (StC_[XYZ]_K, StC_[XYZ]_C, and StC_[XYZ]_Brake) [used only when StC_DOF_MODE=1 or 2, and StC_CMODE=4 or 5]
+          1   StC_SA_MODE   - Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} (-)
+          0   StC_X_C_HIGH  - StC X high damping for ground hook control
+          0   StC_X_C_LOW   - StC X low damping for ground hook control
+          0   StC_Y_C_HIGH  - StC Y high damping for ground hook control
+          0   StC_Y_C_LOW   - StC Y low damping for ground hook control
+          0   StC_Z_C_HIGH  - StC Z high damping for ground hook control [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+          0   StC_Z_C_LOW   - StC Z low damping for ground hook control  [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+          0   StC_X_C_BRAKE - StC X high damping for braking the StC (Don't use it now. should be zero)
+          0   StC_Y_C_BRAKE - StC Y high damping for braking the StC (Don't use it now. should be zero)
+          0   StC_Z_C_BRAKE - StC Z high damping for braking the StC (Don't use it now. should be zero) [used only when StC_DOF_MODE=1 and StC_Z_DOF=TRUE]
+---------------------- TLCD --------------------------------------------------- [used only when StC_DOF_MODE=3]
+     7.9325   L_X             - X TLCD total length (m)
+     6.5929   B_X             - X TLCD horizontal length (m)
+     2.0217   area_X          - X TLCD cross-sectional area of vertical column (m^2)
+      0.913   area_ratio_X    - X TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
+     2.5265   headLossCoeff_X - X TLCD head loss coeff (-)
+       1000   rho_X           - X TLCD liquid density (kg/m^3)
+     3.5767   L_Y             - Y TLCD total length (m)
+     2.1788   B_Y             - Y TLCD horizontal length (m)
+     1.2252   area_Y          - Y TLCD cross-sectional area of vertical column (m^2)
+     2.7232   area_ratio_Y    - Y TLCD cross-sectional area ratio (vertical column area divided by horizontal column area) (-)
+     0.6433   headLossCoeff_Y - Y TLCD head loss coeff (-)
+       1000   rho_Y           - Y TLCD liquid density (kg/m^3)
+---------------------- PRESCRIBED TIME SERIES --------------------------------- [used only when StC_DOF_MODE=4]
+          1   PrescribedForcesCoord- Prescribed forces are in global or local coordinates (switch) {1: global; 2: local}
+"TimeForceSeries.dat"  PrescribedForcesFile   - Time series force and moment (7 columns of time, FX, FY, FZ, MX, MY, MZ)
+-------------------------------------------------------------------------------
+

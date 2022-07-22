@@ -1,0 +1,130 @@
+###################################################################################################################################
+# Registry for ExtPtfm_MCKF in the FAST Modularization Framework
+# This Registry file is used to create MODULE ExtPtfm_MCKF_Types, which contains all of the user-defined types needed in ExtPtfm_MCKF.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <ModuleName/ModName> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g., the name of the input file, the file root name, etc.
+typedef ExtPtfm_MCKF/ExtPtfm InitInputType CHARACTER(1024) InputFile  - - -        "Name of the input file; remove if there is no file" -
+typedef   ^                ^             LOGICAL           Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^                ^             ReKi              PtfmRefzt  - - -        "Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point" meters
+typedef   ^                ^             CHARACTER(1024)   RootName   - - -        "RootName for writing output files"
+
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data ...........................................................................................................
+typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
+typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
+typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
+typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
+typedef        ^                     ^            LOGICAL            EquilStart -  - -  "Flag to determine the equilibrium positions of the CB modes at initialization (first call)"   -
+typedef        ^                     ^            IntKi              ActiveCBDOF {:} - -  "List of active CB DOF"   -
+typedef        ^                     ^            ReKi               InitPosList {:}   - -  "Initial positions of the CB DOFs"   -
+typedef        ^                     ^            ReKi               InitVelList {:}   - -  "Initial velocities of the CB DOFs"   -
+typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
+typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
+typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
+typedef        ^                     ^            CHARACTER(20)      OutFmt     -  - -  "Format used for module's text tabular output (except time); resulting field should be 10 characters"   -
+typedef        ^                     ^            DbKi               Tstart     -  - -  "Time to start module's tabular output"   seconds
+typedef        ^                     ^            IntKi              NumOuts    -  - -  "Number of parameters in the output list (number of outputs requested)"   -
+typedef        ^                     ^            CHARACTER(ChanLen) OutList   {:} - -  "List of user-requested output channels"   -
+
+
+# Define outputs from the initialization routine here:
+typedef   ^               InitOutputType ProgDesc              Ver              -  - - "This module's name, version, and date" -
+typedef   ^                   ^          CHARACTER(ChanLen)    WriteOutputHdr  {:} - - "Names of the output-to-file channels" -
+typedef   ^                   ^          CHARACTER(ChanLen)    WriteOutputUnt  {:} - - "Units of the output-to-file channels" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_y      {:} - - "Names of the outputs used in linearization" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_x      {:} - - "Names of the continuous states used in linearization" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_u      {:} - - "Names of the inputs used in linearization" -
+typedef   ^                   ^          LOGICAL               RotFrame_y      {:} - - "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               RotFrame_x      {:} - - "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               RotFrame_u      {:} - - "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               IsLoad_u        {:} - - "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^                   ^          IntKi                 DerivOrder_x    {:} - -  "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef    ^              ContinuousStateType ReKi     qm         {:} - -  "Internal CraigBampton positions" -
+typedef    ^              ContinuousStateType ReKi     qmdot      {:} - -  "Internal CraigBampton velocities" -
+
+# Define discrete (nondifferentiable) states here:
+typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Remove this variable if you have discrete states" -
+
+# Define constraint states here:
+typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
+
+# Define any other states, including integer or logical states here:
+typedef   ^               OtherStateType    ExtPtfm_ContinuousStateType  xdot  {:} -  -  "Previous state derivs for m-step time integrator"
+typedef   ^                     ^               IntKi                    n      -  -  -  "Tracks time step for which OtherState was updated last"
+#typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
+typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
+typedef    ^              MiscVarType          ReKi     F_at_t   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
+typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into times, to speed up interpolation" -
+typedef    ^              MiscVarType          LOGICAL  EquilStart - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
+typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef  ^               ParameterType   ReKi     Mass   {:}{:} - - "Mass matrix" "kg, kg-m, kg-m^2"
+typedef  ^               ParameterType   ReKi     Damp   {:}{:} - - "Damping matrix" -
+typedef  ^               ParameterType   ReKi     Stff   {:}{:} - - "Stiffness matrix" -
+typedef  ^               ParameterType   ReKi     Forces {:}{:} - - "Prescribed reduced loads, the 3 platform forces (in N) and moments (Nm) acting at the platform reference, associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
+typedef  ^                    ^          ReKi     times  {:}    - - "the time associated with each row of Forces" "s"
+typedef  ^                    ^          ReKi     AMat {:}{:}   - - "State matrix A" ""
+typedef  ^                    ^          ReKi     BMat {:}{:}   - - "State matrix B" ""
+typedef  ^                    ^          ReKi     CMat {:}{:}   - - "State matrix C" ""
+typedef  ^                    ^          ReKi     DMat {:}{:}   - - "State matrix D" ""
+typedef  ^                    ^          ReKi     FX {:}        - - "State  constant Fx" ""
+typedef  ^                    ^          ReKi     FY {:}        - - "Output constant Fy" ""
+typedef  ^                    ^          ReKi     M11 {:}{:}    - - "Matrix M11" ""
+typedef  ^                    ^          ReKi     M12 {:}{:}    - - "Matrix M12" ""
+typedef  ^                    ^          ReKi     M22 {:}{:}    - - "Matrix M22" ""
+typedef  ^                    ^          ReKi     M21 {:}{:}    - - "Matrix M21" ""
+typedef  ^                    ^          ReKi     K11 {:}{:}    - - "Matrix K11" ""
+typedef  ^                    ^          ReKi     K22 {:}{:}    - - "Matrix K22" ""
+typedef  ^                    ^          ReKi     C11 {:}{:}    - - "Matrix C11" ""
+typedef  ^                    ^          ReKi     C12 {:}{:}    - - "Matrix C12" ""
+typedef  ^                    ^          ReKi     C22 {:}{:}    - - "Matrix C22" ""
+typedef  ^                    ^          ReKi     C21 {:}{:}    - - "Matrix C21" ""
+typedef  ^                    ^          DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
+typedef  ^                    ^          IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
+typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes active" -
+typedef  ^                    ^          IntKi    nCBFull     - - - "Totla number of CraigBampton modes given as input" -
+typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
+typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
+typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef  ^                    ^          IntKi    ActiveCBDOF {:} - -  "List of active CB DOF"   -
+typedef  ^                    ^          OutParmType   OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for linearization analysis" -
+
+# ..... Inputs ....................................................................................................................
+typedef  ^               InputType             MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -
+
+
+# ..... Outputs ...................................................................................................................
+typedef   ^               OutputType          MeshType PtfmMesh     -  - -   "Loads at the platform reference point" -
+typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
+

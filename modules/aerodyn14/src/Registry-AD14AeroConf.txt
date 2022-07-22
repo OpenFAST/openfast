@@ -1,0 +1,56 @@
+###################################################################################################################################
+# Registry for AD14AeroConf in the FAST Modularization Framework
+# This Registry file is used to create MODULE AD14AeroConf_Types which contains all of the user-defined types needed in AD14AeroConf.
+# This module is used within the FVW_Types and AeroDyn_Types modules.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+###################################################################################################################################
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+include	Registry_NWTC_Library.txt
+
+
+## This bit is redundant with AD14 registry.  Could not figure out how to have both this and the AD14 registry use a third common chunk
+# AeroDyn Subtypes
+typedef  AD14AeroConf/AD14AeroConf     Marker            Reki                       Position          3        0.0   -  -
+typedef  ^                             Marker            ^                          Orientation       {3}{3}   0.0   -  -
+typedef  ^                             Marker            ^                          TranslationVel    3        0.0   -  -
+typedef  ^                             Marker            ^                          RotationVel       3        0.0   -  -
+
+
+# Airfoil
+typedef  AD14AeroConf/AD14AeroConf     MiscVarType       ReKi                       AL                ::    -  -  -
+typedef  ^                             MiscVarType       ReKi                       CD                :::   -  -  -
+typedef  ^                             MiscVarType       ReKi                       CL                :::   -  -  -
+typedef  ^                             MiscVarType       ReKi                       CM                :::   -  -  -
+typedef  ^                             MiscVarType       ReKi                       PMC               -     -  -  -
+typedef  ^                             MiscVarType       ReKi                       MulTabLoc         -     -  -  -
+
+# Parameters: this used to be called AirFoilParms
+typedef  ^                             ParameterType     IntKi                      MaxTable          -     20 -  -
+typedef  ^                             ParameterType     IntKi                      NTables           :     -  -  -
+typedef  ^                             ParameterType     IntKi                      NLift             :     -  -  -
+typedef  ^                             ParameterType     IntKi                      NumCL             -     -  -  -
+typedef  ^                             ParameterType     IntKi                      NumFoil           -     -  -  -
+typedef  ^                             ParameterType     IntKi                      NFoil             :     -  -  -
+typedef  ^                             ParameterType     ReKi                       MulTabMet         ::    -  -  -
+typedef  ^                             ParameterType     CHARACTER(1024)            FoilNm            :     "Number of airfoil data sets" - -
+
+
+# Aero input-type  --> this used to be called AeroConfig
+typedef  AD14AeroConf/AD14AeroConf     InputType         Marker                     Blade             :     -  -  -
+typedef  ^                             InputType         ^                          Hub               -     -  -  -
+typedef  ^                             InputType         ^                          RotorFurl         -     -  -  -
+typedef  ^                             InputType         ^                          Nacelle           -     -  -  -
+typedef  ^                             InputType         ^                          TailFin           -     -  -  -
+typedef  ^                             InputType         ^                          Tower             -     -  -  -
+typedef  ^                             InputType         ^                          SubStructure      -     -  -  -
+typedef  ^                             InputType         ^                          Foundation        -     -  -  -
+typedef  ^                             InputType         ReKi                       BladeLength       -     -  -  -
+
+# Dummy outputtype so that the registry is happy
+typedef  AD14AeroConf/AD14AeroConf     OutputType        ReKi                       Dummy             -  -  -  -
+

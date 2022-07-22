@@ -1,28 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug_Double|Win32">
-      <Configuration>Debug_Double</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug_Double|x64">
-      <Configuration>Debug_Double</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_Double|Win32">
-      <Configuration>Release_Double</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_Double|x64">
-      <Configuration>Release_Double</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
@@ -38,57 +22,32 @@
     <ProjectGuid>{BF86702A-CB17-4050-8AE9-078CDC5910D3}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MAP_DLL</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -98,25 +57,13 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -124,82 +71,31 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\build\bin\</OutDir>
-    <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">
-    <TargetName>MAP_$(PlatformName)</TargetName>
-    <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\build\bin\</OutDir>
-    <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">
-    <TargetName>MAP_$(PlatformName)</TargetName>
-    <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -211,21 +107,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
@@ -241,28 +123,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -277,24 +140,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -305,77 +151,64 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\modules-ext\map\src\bstring\bstraux.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\bstring\bstrlib.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\dpmpar.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\enorm.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\enorm_u.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\lmder.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\lmpar.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\qrfac.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\qrsolv.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\freedata.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\jacobian.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\lineroutines.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\lmroutines.cc" />
-    <ClCompile Include="..\..\modules-ext\map\src\mapapi.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\maperror.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\mapinit.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\numeric.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\outputstream.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\residual.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\simclist\simclist.c" />
+    <ClCompile Include="..\..\modules\map\src\bstring\bstraux.c" />
+    <ClCompile Include="..\..\modules\map\src\bstring\bstrlib.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\dpmpar.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\enorm.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\enorm_u.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\lmder.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\lmpar.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\qrfac.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\qrsolv.c" />
+    <ClCompile Include="..\..\modules\map\src\freedata.c" />
+    <ClCompile Include="..\..\modules\map\src\jacobian.c" />
+    <ClCompile Include="..\..\modules\map\src\lineroutines.c" />
+    <ClCompile Include="..\..\modules\map\src\lmroutines.cc" />
+    <ClCompile Include="..\..\modules\map\src\mapapi.c" />
+    <ClCompile Include="..\..\modules\map\src\maperror.c" />
+    <ClCompile Include="..\..\modules\map\src\mapinit.c" />
+    <ClCompile Include="..\..\modules\map\src\numeric.c" />
+    <ClCompile Include="..\..\modules\map\src\outputstream.c" />
+    <ClCompile Include="..\..\modules\map\src\residual.c" />
+    <ClCompile Include="..\..\modules\map\src\simclist\simclist.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\modules-ext\map\src\bstring\bstraux.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\bstring\bstrlib.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\cminpack.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\cminpackP.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\minpack.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\freedata.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\jacobian.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lapack\lapacke.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lapack\lapacke_mangling.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lineroutines.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lmroutines.hpp" />
-    <ClInclude Include="..\..\modules-ext\map\src\map.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapapi.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\maperror.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapinit.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapsys.h" />
-    <ClInclude Include=".\WinSock2.h" />
-    <ClInclude Include="..\..\build\types-files\MAP_Types.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\numeric.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\outputstream.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\residual.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\simclist\simclist.h" />
+    <ClInclude Include="..\..\modules\map\src\bstring\bstraux.h" />
+    <ClInclude Include="..\..\modules\map\src\bstring\bstrlib.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\cminpack.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\cminpackP.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\minpack.h" />
+    <ClInclude Include="..\..\modules\map\src\freedata.h" />
+    <ClInclude Include="..\..\modules\map\src\jacobian.h" />
+    <ClInclude Include="..\..\modules\map\src\lapack\lapacke.h" />
+    <ClInclude Include="..\..\modules\map\src\lapack\lapacke_mangling.h" />
+    <ClInclude Include="..\..\modules\map\src\lineroutines.h" />
+    <ClInclude Include="..\..\modules\map\src\lmroutines.hpp" />
+    <ClInclude Include="..\..\modules\map\src\map.h" />
+    <ClInclude Include="..\..\modules\map\src\mapapi.h" />
+    <ClInclude Include="..\..\modules\map\src\maperror.h" />
+    <ClInclude Include="..\..\modules\map\src\mapinit.h" />
+    <ClInclude Include="..\..\modules\map\src\mapsys.h" />
+    <ClInclude Include="..\..\modules\map\src\MAP_Types.h" />
+    <ClInclude Include="..\..\modules\map\src\numeric.h" />
+    <ClInclude Include="..\..\modules\map\src\outputstream.h" />
+    <ClInclude Include="..\..\modules\map\src\residual.h" />
+    <ClInclude Include="..\..\modules\map\src\simclist\simclist.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\modules-ext\map\src\MAP_Registry.txt">
+    <CustomBuild Include="..\..\modules\map\src\MAP_Registry.txt">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatOutputAsContent>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">false</TreatOutputAsContent>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</TreatOutputAsContent>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</TreatOutputAsContent>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">false</TreatOutputAsContent>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</TreatOutputAsContent>
-      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">false</TreatOutputAsContent>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

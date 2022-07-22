@@ -1,0 +1,97 @@
+###################################################################################################################################
+# Registry for FAST.Farm's FASTWrapper module in the FAST Modularization Framework
+# This Registry file is used to create MODULE FASTWrapper_Types, which contains all of the user-defined types needed in FASTWrapper.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <ModuleName/ModName> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook at https://nwtc.nrel.gov/FAST-Developers for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+usefrom FAST_Registry.txt
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g., the name of the input file, the file root name, etc.
+typedef FASTWrapper/FWrap  InitInputType       IntKi      nr                       -      -      -   "Number of radii in the radial finite-difference grid"      -
+typedef      ^            InitInputType CHARACTER(1024)  FASTInFile                -      -      -   "Filename of primary FAST input file of this turbine"      -
+typedef      ^            InitInputType       ReKi       dr                        -      -      -   "Radial increment of radial finite-difference grid"      m
+typedef      ^            InitInputType       DbKi       tmax                      -      -      -   "Simulation length"      s
+typedef      ^            InitInputType       ReKi       p_ref_Turbine            {3}     -      -   "Undisplaced global coordinates of this turbine"      m
+typedef      ^            InitInputType       IntKi      n_high_low                -      -      -   "Number of high-resolution time steps per low-resolution time step"      -
+typedef      ^            InitInputType       DbKi       dt_high                   -      -      -   "High-resolution time step"     s
+typedef      ^            InitInputType       ReKi       p_ref_high               {3}     -      -   "Position of the origin of the high-resolution spatial domain for this turbine"      m
+typedef      ^            InitInputType       IntKi      nX_high                   -      -      -   "Number of high-resolution spatial nodes in X direction"      -
+typedef      ^            InitInputType       IntKi      nY_high                   -      -      -   "Number of high-resolution spatial nodes in Y direction"      -
+typedef      ^            InitInputType       IntKi      nZ_high                   -      -      -   "Number of high-resolution spatial nodes in Z direction"      -
+typedef      ^            InitInputType       ReKi       dX_high                   -      -      -   "X-component of the spatial increment of the high-resolution spatial domain for this turbine"      m
+typedef      ^            InitInputType       ReKi       dY_high                   -      -      -   "Y-component of the spatial increment of the high-resolution spatial domain for this turbine"      m
+typedef      ^            InitInputType       ReKi       dZ_high                   -      -      -   "Z-component of the spatial increment of the high-resolution spatial domain for this turbine"      m
+typedef      ^            InitInputType       IntKi      TurbNum                   -      -      -   "Turbine ID number (start with 1; end with number of turbines)"      -
+typedef      ^            InitInputType CHARACTER(1024)  RootName                  -      -      -   "The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number]"      -
+typedef      ^            InitInputType       IntKi      NumSC2Ctrl                -      -      -   "Number of turbine-specific controller inputs [from supercontroller]" -
+typedef      ^            InitInputType       IntKi      NumSC2CtrlGlob            -      -      -   "Number of global controller inputs [from supercontroller]" -
+typedef      ^            InitInputType       IntKi      NumCtrl2SC                -      -      -   "Number of turbine-specific controller outputs [to supercontroller]" -
+typedef      ^            InitInputType       Logical    UseSC                     -      -      -   "Use the SuperController? (flag)" -
+typedef      ^            InitInputType       SiKi       fromSCGlob               {:}     -      -   "Global outputs from SuperController" -
+typedef      ^            InitInputType       SiKi       fromSC                   {:}     -      -   "Turbine-specific outputs from SuperController" -
+
+# Define outputs from the initialization routine here:
+#typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
+#typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^               InitOutputType ProgDesc           Ver              -  - -   "This module's name, version, and date"      -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef    ^              ContinuousStateType ReKi     dummy   - - -  "Remove this variable if you have continuous states" -
+
+# Define discrete (nondifferentiable) states here:
+typedef    ^              DiscreteStateType   ReKi     dummy   - - -  "Remove this variable if you have continuous states" -
+
+# Define constraint states here:
+typedef   ^               ConstraintStateType ReKi     dummy   - - - "Remove this variable if you have constraint states" -
+
+# Define any other states, including integer or logical states here:
+typedef   ^               OtherStateType      IntKi    dummy   - - - "Remove this variable if you have other states" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType          FAST_TurbineType     Turbine     -   -  -  "Data for this FAST instance" -
+typedef    ^              MiscVarType          MeshType             TempDisp    {:} -  -  "temp displacement mesh (for AzimAvg_Ct)" -
+typedef    ^              MiscVarType          MeshType             TempLoads   {:} -  -  "temp loads mesh (for AzimAvg_Ct)" -
+typedef    ^              MiscVarType          MeshType             ADRotorDisk {:} -  -  "Mesh that does not deflect with the blade (for AzimAvg_Ct)" -
+typedef    ^              MiscVarType          MeshMapType          AD_L2L      {:} -  -  "Map AD loads from deflected mesh to rotor-disk plane"
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef      ^            ParameterType       IntKi      nr                        -      -      -   "Number of radii in the radial finite-difference grid"      -
+typedef      ^            ParameterType       ReKi       r                        {:}     -      -   "Discretization of radial finite-difference grid"      m
+typedef      ^            ParameterType       IntKi      n_FAST_low                -      -      -   "Number of FAST time steps per low-resolution time step"      -
+typedef      ^            ParameterType       ReKi       p_ref_Turbine            {3}     -      -   "Undisplaced global position of this turbine"      m
+
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+typedef      ^            InputType           SiKi       fromSCglob              {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
+typedef      ^            InputType           SiKi       fromSC                  {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
+typedef      ^            InputType           SiKi       Vdist_High     {:}{:}{:}{:}{:}   -      -      "UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef      ^            OutputType          SiKi       toSC              {:}    -      -      "Turbine-dependent commands to the super controller"      "(various units)"
+typedef      ^            OutputType          ReKi       xHat_Disk                 {3}    -      -      "Orientation of rotor centerline, normal to disk"      "-"
+typedef      ^            OutputType          ReKi       YawErr                     -     -      -      "Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane"      "rad"
+typedef      ^            OutputType          ReKi       p_hub                     {3}    -      -      "Center position of hub"      "m"
+typedef      ^            OutputType          ReKi       D_rotor                    -     -      -      "Rotor diameter"      "m"
+typedef      ^            OutputType          ReKi       DiskAvg_Vx_Rel             -     -      -      "Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      "m/s"
+typedef      ^            OutputType          ReKi       AzimAvg_Ct                {:}    -      -      "Azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      "-"
+

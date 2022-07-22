@@ -1,0 +1,71 @@
+# This file defines types that may be  used from the NWTC_Library
+# include this into a component registry file if you wish to use these types
+# the "usefrom" keyword defines the types for the registry without generating
+# a NWTC_Library_Types.f90 file
+#
+#.............................................................
+
+
+usefrom   NWTC_Library  ProgDesc            CHARACTER(99)            Name
+usefrom     ^             ^                 CHARACTER(99)            Ver
+usefrom     ^             ^                 CHARACTER(24)            Date
+
+usefrom     ^           FASTdataType        CHARACTER(1024)          File
+usefrom     ^             ^                 CHARACTER(1024)          Descr
+usefrom     ^             ^                 IntKi                    NumChans
+usefrom     ^             ^                 IntKi                    NumRecs
+usefrom     ^             ^                 DbKi                     TimeStep
+usefrom     ^             ^                 CHARACTER(ChanLen)       ChanNames {:}
+usefrom     ^             ^                 CHARACTER(ChanLen)       ChanUnits {:}
+usefrom     ^             ^                 ReKi                     Data      {:}{:}
+
+usefrom   NWTC_Library  OutParmType         IntKi                    Indx
+usefrom     ^             ^                 CHARACTER(ChanLen)       Name
+usefrom     ^             ^                 CHARACTER(ChanLen)       Units
+usefrom     ^             ^                 IntKi                    SignM
+
+usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
+usefrom     ^             ^                 IntKi                    NumFiles
+usefrom     ^             ^                 IntKi                    FileLine  {:}
+usefrom     ^             ^                 IntKi                    FileIndx  {:}
+usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
+usefrom     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
+
+usefrom   NWTC_Library  Quaternion          ReKi                     q0
+usefrom     ^             ^                 ReKi                     v  {3}
+
+usefrom   NWTC_Library  NWTC_RandomNumber_ParameterType   IntKi                pRNG
+usefrom     ^             ^                     IntKi                RandSeed          {3}
+usefrom     ^             ^                     IntKi                RandSeedAry       {:}
+usefrom     ^             ^              CHARACTER(6)                RNG_type
+
+#BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
+usefrom   NWTC_Library  MapType             IntKi                    OtherMesh_Element
+usefrom     ^             ^                 R8Ki                     distance           -
+usefrom     ^             ^                 R8Ki                     couple_arm        {3}
+usefrom     ^             ^                 R8Ki                     shape_fn          {2}
+
+usefrom   NWTC_Library  MeshMapLinearizationType R8Ki                mi        {:}{:}
+usefrom     ^             ^                 R8Ki                     fx_p      {:}{:}
+usefrom     ^             ^                 R8Ki                     tv_uD     {:}{:}
+usefrom     ^             ^                 R8Ki                     tv_uS     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_uD     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_uS     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_rv     {:}{:}
+usefrom     ^             ^                 R8Ki                     li        {:}{:}
+usefrom     ^             ^                 R8Ki                     M_u       {:}{:}
+usefrom     ^             ^                 R8Ki                     M_t       {:}{:}
+usefrom     ^             ^                 R8Ki                     M_f       {:}{:}
+
+usefrom   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}
+usefrom     ^             ^                 MapType                  MapMotions        {:}
+usefrom     ^             ^                 MapType                  MapSrcToAugmt     {:}
+usefrom     ^             ^                 MeshType                 Augmented_Ln2_Src  -
+usefrom     ^             ^                 MeshType                 Lumped_Points_Src  -
+usefrom     ^             ^                 INTEGER                  LoadLn2_A_Mat_Piv {:}
+usefrom     ^             ^                 R8Ki                     DisplacedPosition {:}{:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_A_Mat     {:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
+usefrom     ^             ^                 MeshMapLinearizationType dM
+

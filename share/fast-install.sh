@@ -22,8 +22,8 @@ prepInstall() {
 compileLapack() {
 #Registry
     echo -n "Compiling Lapack"
-    [ -d modules-ext/lapack ] || mkdir modules-ext/lapack
-    cd modules-ext/lapack
+    [ -d modules/lapack ] || mkdir modules/lapack
+    cd modules/lapack
     curl -k -o lapack-3.6.0.tgz http://www.netlib.org/lapack/lapack-3.6.0.tgz &> log.wget
     tar -zxf lapack-3.6.0.tgz &> log.untar
     [ -d build ] || mkdir build
@@ -43,8 +43,8 @@ compileYAMLcpp() {
 #yaml-cpp
     echo "Compiling yaml-cpp"
     echo -n "   Setting up build directory"
-    [ -d modules-ext/yaml-cpp ] || mkdir modules-ext/yaml-cpp
-    cd modules-ext/yaml-cpp
+    [ -d modules/yaml-cpp ] || mkdir modules/yaml-cpp
+    cd modules/yaml-cpp
     git clone https://github.com/jbeder/yaml-cpp.git &> /dev/null
     [ -d build ] || mkdir build
     cd build
@@ -67,8 +67,8 @@ compileYAMLcpp() {
 compileHDF5() {
     echo "Compiling hdf5"
     echo -n "   Getting source"
-    [ -d modules-ext/hdf5 ] || mkdir modules-ext/hdf5
-    cd modules-ext/hdf5
+    [ -d modules/hdf5 ] || mkdir modules/hdf5
+    cd modules/hdf5
     wget --no-check-certificate https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.bz2 &> log.wget
     passFail $?
     echo -n "   Setting up build directory"

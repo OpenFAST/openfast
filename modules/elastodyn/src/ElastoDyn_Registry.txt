@@ -1,0 +1,880 @@
+###################################################################################################################################
+# Registry for ElastoDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE ElastoDyn_Types  which contains all of the user-defined types needed in ElastoDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+
+# ElastoDyn Constants
+param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector values (size of state history)"	-
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef	ElastoDyn/ED	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
+typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
+typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info"	-
+typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
+typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
+typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+
+# Define outputs from the initialization routine here:
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef	^	InitOutputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
+typedef	^	InitOutputType	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
+typedef	^	InitOutputType	ReKi	BladeLength	-	-	-	"Blade length (for AeroDyn)"	meters
+typedef	^	InitOutputType	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
+typedef	^	InitOutputType	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
+typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
+typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
+typedef	^	InitOutputType	ReKi	TwrHNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
+typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
+typedef	^	InitOutputType	ReKi	TwrBaseRefPos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseTransDisp	{3}	-	-	"initial displacement of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseRefOrient	{3}{3}	-	-	"reference orientation of the tower base (for SrvD)"
+typedef	^	InitOutputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"initial orientation of the tower base (for SrvD)"
+typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
+typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
+typedef	^	InitOutputType	LOGICAL	isFixed_GenDOF	-	-	-	"whether the generator is fixed or free" -
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+
+# ..... Blade Input file data ...........................................................................................................
+typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
+typedef	^	BladeInputData	ReKi	BlFract	{:}	-	-	"Blade fractional radius for distributed input data"	-
+typedef	^	BladeInputData	ReKi	PitchAx	{:}	-	-	"Pitch axis for distributed input data"	-
+typedef	^	BladeInputData	ReKi	StrcTwst	{:}	-	-	"Structural twist for distributed input data"	radians
+typedef	^	BladeInputData	ReKi	BMassDen	{:}	-	-	"Blade mass density for distributed input data"
+typedef	^	BladeInputData	ReKi	FlpStff	{:}	-	-	"Blade flap stiffness for distributed input data"
+typedef	^	BladeInputData	ReKi	EdgStff	{:}	-	-	"Blade edge stiffness for distributed input data"
+typedef	^	BladeInputData	ReKi	GJStff	{:}	-	-	"Blade torsional stiffness for a given input station"
+typedef	^	BladeInputData	ReKi	EAStff	{:}	-	-	"Blade extensional stiffness for a given input station"
+typedef	^	BladeInputData	ReKi	Alpha	{:}	-	-	"Blade coupling coefficient between flap and twist for a given input station"
+typedef	^	BladeInputData	ReKi	FlpIner	{:}	-	-	"Blade flap (about local structural yb-axis) mass inertia per unit length for a given input station"
+typedef	^	BladeInputData	ReKi	EdgIner	{:}	-	-	"Blade edge (about local structural xb-axis) mass inertia per unit length for a given input station"
+typedef	^	BladeInputData	ReKi	PrecrvRef	{:}	-	-	"Offset for defining the reference axis from the pitch axis for precurved blades at a given input station"
+typedef	^	BladeInputData	ReKi	PreswpRef	{:}	-	-	"Offset for defining the reference axis from the pitch axis for preswept blades at a given input station"
+typedef	^	BladeInputData	ReKi	FlpcgOf	{:}	-	-	"Blade flap (along local aerodynamic xb-axis) mass cg offset for a given input station"
+typedef	^	BladeInputData	ReKi	EdgcgOf	{:}	-	-	"Blade edge (along local aerodynamic yb-axis) mass cg offset for a given input station"
+typedef	^	BladeInputData	ReKi	FlpEAOf	{:}	-	-	"Blade flap (along local aerodynamic xb-axis) elastic axis offset for a given input station"
+typedef	^	BladeInputData	ReKi	EdgEAOf	{:}	-	-	"Blade edge (along local aerodynamic yb-axis) elastic axis offset for a given input station"
+typedef	^	BladeInputData	ReKi	BldFlDmp	2	-	-	"Blade structural damping ratios in flapwise direction"
+typedef	^	BladeInputData	ReKi	BldEdDmp	1	-	-	"Blade structural damping ratios in edgewise direction"
+typedef	^	BladeInputData	ReKi	FlStTunr	2	-	-	"Blade flapwise modal stiffness tuners (input)"
+typedef	^	BladeInputData	ReKi	BldFl1Sh	{:}	-	-	"Blade-flap-mode-1 shape coefficients"
+typedef	^	BladeInputData	ReKi	BldFl2Sh	{:}	-	-	"Blade-flap-mode-2 shape coefficients"
+typedef	^	BladeInputData	ReKi	BldEdgSh	{:}	-	-	"Blade-edge-mode shape coefficients"
+
+
+# ..... Blade Mesh Input file data ...........................................................................................................
+typedef	ElastoDyn/ED	ED_BladeMeshInputData	IntKi	BldNodes	-	-	-	"Number of blade nodes used for analysis"	-
+typedef	^	ED_BladeMeshInputData	ReKi	RNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
+typedef	^	ED_BladeMeshInputData	ReKi	AeroTwst	{:}	-	-	"Aerodynamic twist of the blade at the analysis nodes"	radians
+typedef	^	ED_BladeMeshInputData	ReKi	Chord	{:}	-	-	"Chord of the blade at the analysis nodes"
+
+
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data ...........................................................................................................
+typedef	ElastoDyn/ED	ED_InputFile	DbKi	DT	-	-	-	"Requested integration time for ElastoDyn"	seconds
+typedef	^	ED_InputFile	LOGICAL	FlapDOF1	-	-	-	"First flapwise blade mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	FlapDOF2	-	-	-	"Second flapwise blade mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	EdgeDOF	-	-	-	"Edgewise blade mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TeetDOF	-	-	-	"Rotor-teeter DOF"	-
+typedef	^	ED_InputFile	LOGICAL	DrTrDOF	-	-	-	"Drivetrain rotational-flexibility DOF"	-
+typedef	^	ED_InputFile	LOGICAL	GenDOF	-	-	-	"Generator DOF"	-
+typedef	^	ED_InputFile	LOGICAL	YawDOF	-	-	-	"Nacelle-yaw DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TwFADOF1	-	-	-	"First tower fore-aft bending-mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TwFADOF2	-	-	-	"Second tower fore-aft bending-mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TwSSDOF1	-	-	-	"First tower side-to-side bending-mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TwSSDOF2	-	-	-	"Second tower side-to-side bending-mode DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmSgDOF	-	-	-	"Platform horizontal surge translation DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmSwDOF	-	-	-	"Platform horizontal sway translation DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmHvDOF	-	-	-	"Platform vertical heave translation DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmRDOF	-	-	-	"Platform roll tilt rotation DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmPDOF	-	-	-	"Platform pitch tilt rotation DOF"	-
+typedef	^	ED_InputFile	LOGICAL	PtfmYDOF	-	-	-	"Platform yaw rotation DOF"	-
+typedef	^	ED_InputFile	ReKi	OoPDefl	-	-	-	"Initial out-of-plane blade-tip displacement"	meters
+typedef	^	ED_InputFile	ReKi	IPDefl	-	-	-	"Initial in-plane blade-tip deflection"	meters
+typedef	^	ED_InputFile	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
+typedef	^	ED_InputFile	ReKi	TeetDefl	-	-	-	"Initial teeter angle"	radians
+typedef	^	ED_InputFile	R8Ki	Azimuth	-	-	-	"Initial azimuth angle for blade 1"	radians
+typedef	^	ED_InputFile	ReKi	RotSpeed	-	-	-	"Initial rotor speed"	rad/s
+typedef	^	ED_InputFile	ReKi	NacYaw	-	-	-	"Initial nacelle-yaw angle"	radians
+typedef	^	ED_InputFile	ReKi	TTDspFA	-	-	-	"Initial fore-aft tower-top displacement"	meters
+typedef	^	ED_InputFile	ReKi	TTDspSS	-	-	-	"Initial side-to-side tower-top displacement"	meters
+typedef	^	ED_InputFile	ReKi	PtfmSurge	-	-	-	"Initial horizontal surge translational displacement of platform"	meters
+typedef	^	ED_InputFile	ReKi	PtfmSway	-	-	-	"Initial horizontal sway translational displacement of platform"	meters
+typedef	^	ED_InputFile	ReKi	PtfmHeave	-	-	-	"Initial vertical heave translational displacement of platform"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRoll	-	-	-	"Initial roll tilt rotational displacement of platform"	radians
+typedef	^	ED_InputFile	ReKi	PtfmPitch	-	-	-	"Initial pitch tilt rotational displacement of platform"	radians
+typedef	^	ED_InputFile	ReKi	PtfmYaw	-	-	-	"Initial yaw rotational displacement of platform"	radians
+typedef	^	ED_InputFile	IntKi	NumBl	-	-	-	"Number of blades"	-
+typedef	^	ED_InputFile	ReKi	TipRad	-	-	-	"Preconed blade-tip radius (distance from the rotor apex to the blade tip)"	meters
+typedef	^	ED_InputFile	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	meters
+typedef	^	ED_InputFile	ReKi	PreCone	{:}	-	-	"Rotor precone angles"	radians
+typedef	^	ED_InputFile	ReKi	HubCM	-	-	-	"Distance from rotor apex to hub mass"	meters
+typedef	^	ED_InputFile	ReKi	UndSling	-	-	-	"Undersling length"	meters
+typedef	^	ED_InputFile	ReKi	Delta3	-	-	-	"Delta-3 angle for teetering rotors"	radians
+typedef	^	ED_InputFile	R8Ki	AzimB1Up	-	-	-	"Azimuth value to use for I/O when blade 1 points up"	radians
+typedef	^	ED_InputFile	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"	meters
+typedef	^	ED_InputFile	ReKi	ShftGagL	-	-	-	"Distance from hub or teeter pin to shaft strain gages"	meters
+typedef	^	ED_InputFile	ReKi	ShftTilt	-	-	-	"Rotor shaft tilt angle"	radians
+typedef	^	ED_InputFile	ReKi	NacCMxn	-	-	-	"Downwind distance from tower-top to nacelle CM"	meters
+typedef	^	ED_InputFile	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to nacelle CM"	meters
+typedef	^	ED_InputFile	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"	meters
+typedef	^	ED_InputFile	ReKi	NcIMUxn	-	-	-	"Downwind distance from the tower-top to the nacelle IMU"	meters
+typedef	^	ED_InputFile	ReKi	NcIMUyn	-	-	-	"Lateral distance from the tower-top to the nacelle IMU"	meters
+typedef	^	ED_InputFile	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nacelle IMU"	meters
+typedef	^	ED_InputFile	ReKi	Twr2Shft	-	-	-	"Vertical distance from the tower-top to the rotor shaft"	meters
+typedef	^	ED_InputFile	ReKi	TowerHt	-	-	-	"Height of tower above ground level [onshore] or MSL [offshore]"	meters
+typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore] or MSL [offshore]"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point"	meters
+typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
+typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
+typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	GenIner	-	-	-	"Generator inertia about HSS"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	NacMass	-	-	-	"Nacelle mass"	kg
+typedef	^	ED_InputFile	ReKi	NacYIner	-	-	-	"Nacelle yaw inertia"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	YawBrMass	-	-	-	"Yaw bearing mass"	kg
+typedef	^	ED_InputFile	ReKi	PtfmMass	-	-	-	"Platform mass"	kg
+typedef	^	ED_InputFile	ReKi	PtfmRIner	-	-	-	"Platform inertia for roll tilt rotation about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	PtfmPIner	-	-	-	"Platform inertia for pitch tilt rotation about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	PtfmYIner	-	-	-	"Platform inertia for yaw rotation about the platform CM"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	BldNodes	-	-	-	"Number of blade nodes (per blade) used for analysis"	-
+typedef	^	ED_InputFile	ED_BladeMeshInputData	InpBlMesh	{:}	-	-	"Input data for blade discretizations (could be on each blade)"	"see BladeMeshInputData"
+typedef	^	ED_InputFile	BladeInputData	InpBl	{:}	-	-	"Input data for individual blades"	"see BladeInputData type"
+typedef	^	ED_InputFile	IntKi	TeetMod	-	-	-	"Rotor-teeter spring/damper model switch"	-
+typedef	^	ED_InputFile	ReKi	TeetDmpP	-	-	-	"Rotor-teeter damper position"	radians
+typedef	^	ED_InputFile	ReKi	TeetDmp	-	-	-	"Rotor-teeter damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	ReKi	TeetCDmp	-	-	-	"Rotor-teeter rate-independent Coulomb-damping"	N-m
+typedef	^	ED_InputFile	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"	radians
+typedef	^	ED_InputFile	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"	radians
+typedef	^	ED_InputFile	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	TeetHSSp	-	-	-	"Rotor-teeter hard-stop linear-spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"	%
+typedef	^	ED_InputFile	ReKi	GBRatio	-	-	-	"Gearbox ratio"	-
+typedef	^	ED_InputFile	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"	N-m/rad
+typedef	^	ED_InputFile	ReKi	DTTorDmp	-	-	-	"Drivetrain torsional damper"	N-m/(rad/s)
+typedef	^	ED_InputFile	LOGICAL	Furling	-	-	-	"Use Additional Furling parameters?"	-
+typedef	^	ED_InputFile	IntKi	TwrNodes	-	-	-	"Number of tower nodes used in the analysis"	-
+typedef	^	ED_InputFile	LOGICAL	SumPrint	-	-	-	"Print summary data to <RootName>.sum"	-
+typedef	^	ED_InputFile	IntKi	OutFile	-	-	-	"Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"	-
+#typedef	^	ED_InputFile	IntKi	OutFileFmt	-	-	-	"Format for module tabular (time-marching) output: {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}"	-
+typedef	^	ED_InputFile	LOGICAL	TabDelim	-	-	-	"Flag to cause tab-delimited text output (delimited by space otherwise)"	-
+typedef	^	ED_InputFile	CHARACTER(20)	OutFmt	-	-	-	"Format used for module's text tabular output (except time); resulting field should be 10 characters"	-
+typedef	^	ED_InputFile	DbKi	Tstart	-	-	-	"Time to start module's tabular output"	seconds
+typedef	^	ED_InputFile	IntKi	DecFact	-	-	-	"Decimation factor for module's tabular output (1=output every step)"	-
+typedef	^	ED_InputFile	IntKi	NTwGages	-	-	-	"Number of tower strain gages"	-
+typedef	^	ED_InputFile	IntKi	TwrGagNd	9	-	-	"Nodes closest to the tower strain gages"	-
+typedef	^	ED_InputFile	IntKi	NBlGages	-	-	-	"Number of blade strain gages"	-
+typedef	^	ED_InputFile	IntKi	BldGagNd	9	-	-	"Nodes closest to the blade strain gages"	-
+typedef	^	ED_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
+typedef	^	ED_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
+
+# ..... Tower Input file data ...........................................................................................................
+typedef	^	ED_InputFile	IntKi	NTwInpSt	-	-	-	"Number of tower input stations"	-
+typedef	^	ED_InputFile	ReKi	TwrFADmp	2	-	-	"Tower fore-aft structural damping ratios"	%
+typedef	^	ED_InputFile	ReKi	TwrSSDmp	2	-	-	"Tower side-to-side structural damping ratios"	%
+typedef	^	ED_InputFile	ReKi	FAStTunr	2	-	-	"Tower fore-aft modal stiffness tuners"	-
+typedef	^	ED_InputFile	ReKi	SSStTunr	2	-	-	"Tower side-to-side modal stiffness tuners"	-
+typedef	^	ED_InputFile	ReKi	HtFract	{:}	-	-	"Fractional height of the flexible portion of tower for a given input station"	-
+typedef	^	ED_InputFile	ReKi	TMassDen	{:}	-	-	"Tower mass density for a given input station"	kg/m
+typedef	^	ED_InputFile	ReKi	TwFAStif	{:}	-	-	"Tower fore-aft stiffness for a given input station"	Nm^2
+typedef	^	ED_InputFile	ReKi	TwSSStif	{:}	-	-	"Tower side-to-side stiffness for a given input station"	Nm^2
+typedef	^	ED_InputFile	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coefficients"	-
+typedef	^	ED_InputFile	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"	-
+typedef	^	ED_InputFile	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"	-
+typedef	^	ED_InputFile	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"	-
+# ..... Tower Input file data (ADAMS only) ...........................................................................................................
+typedef	^	ED_InputFile	ReKi	TwGJStif	{:}	-	-	"Tower torsional stiffness for a given input station"	Nm^2
+typedef	^	ED_InputFile	ReKi	TwEAStif	{:}	-	-	"Tower extensional stiffness for a given input station"	N
+typedef	^	ED_InputFile	ReKi	TwFAIner	{:}	-	-	"Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station"	"kg m"
+typedef	^	ED_InputFile	ReKi	TwSSIner	{:}	-	-	"Tower side-to-side (about xt-axis) mass inertia per unit length for a given input station"	"kg m"
+typedef	^	ED_InputFile	ReKi	TwFAcgOf	{:}	-	-	"Tower fore-aft (along the xt-axis) mass cg offset for a given input station"	meters
+typedef	^	ED_InputFile	ReKi	TwSScgOf	{:}	-	-	"Tower fore-aft (along the yt-axis) mass cg offset for a given input station"	meters
+# ..... Furling Input file data ...........................................................................................................
+typedef	^	ED_InputFile	LOGICAL	RFrlDOF	-	-	-	"Rotor-furl DOF"	-
+typedef	^	ED_InputFile	LOGICAL	TFrlDOF	-	-	-	"Tail-furl DOF"	-
+typedef	^	ED_InputFile	ReKi	RotFurl	-	-	-	"Initial or fixed rotor-furl angle"	radians
+typedef	^	ED_InputFile	ReKi	TailFurl	-	-	-	"Initial or fixed tail-furl angle"	radians
+typedef	^	ED_InputFile	ReKi	Yaw2Shft	-	-	-	"Lateral distance from the yaw axis to the rotor shaft"	meters
+typedef	^	ED_InputFile	ReKi	ShftSkew	-	-	-	"Rotor shaft skew angle"	radians
+typedef	^	ED_InputFile	ReKi	RFrlCMxn	-	-	-	"Downwind distance from tower-top to rotor-furl CM"	meters
+typedef	^	ED_InputFile	ReKi	RFrlCMyn	-	-	-	"Lateral distance from tower-top to rotor-furl CM"	meters
+typedef	^	ED_InputFile	ReKi	RFrlCMzn	-	-	-	"Vertical distance from tower-top to rotor-furl CM"	meters
+typedef	^	ED_InputFile	ReKi	BoomCMxn	-	-	-	"Downwind distance from tower-top to tail boom CM"	meters
+typedef	^	ED_InputFile	ReKi	BoomCMyn	-	-	-	"Lateral distance from tower-top to tail boom CM"	meters
+typedef	^	ED_InputFile	ReKi	BoomCMzn	-	-	-	"Vertical distance from tower-top to tail boom CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCMxn	-	-	-	"Downwind distance from tower-top to tail fin CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCMyn	-	-	-	"Lateral distance from tower-top to tail fin CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCMzn	-	-	-	"Vertical distance from tower-top to tail fin CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCPxn	-	-	-	"Downwind distance from tower-top to tail fin CP"	meters
+typedef	^	ED_InputFile	ReKi	TFinCPyn	-	-	-	"Lateral distance from tower-top to tail fin CP"	meters
+typedef	^	ED_InputFile	ReKi	TFinCPzn	-	-	-	"Vertical distance from tower-top to tail fin CP"	meters
+typedef	^	ED_InputFile	ReKi	TFinSkew	-	-	-	"Tail fin chordline skew angle"	radians
+typedef	^	ED_InputFile	ReKi	TFinTilt	-	-	-	"Tail fin chordline tilt angle"	radians
+typedef	^	ED_InputFile	ReKi	TFinBank	-	-	-	"Tail fin planform bank angle"	radians
+typedef	^	ED_InputFile	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	RFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
+typedef	^	ED_InputFile	ReKi	RFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
+typedef	^	ED_InputFile	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	TFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
+typedef	^	ED_InputFile	ReKi	TFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
+typedef	^	ED_InputFile	ReKi	RFrlMass	-	-	-	"Rotor-furl mass"	kg
+typedef	^	ED_InputFile	ReKi	BoomMass	-	-	-	"Tail boom mass"	kg
+typedef	^	ED_InputFile	ReKi	TFinMass	-	-	-	"Tail fin mass"	kg
+typedef	^	ED_InputFile	ReKi	RFrlIner	-	-	-	"Rotor-furl inertia about rotor-furl axis"	"kg m^2"
+typedef	^	ED_InputFile	ReKi	TFrlIner	-	-	-	"Tail boom inertia about tail-furl axis"	"kg m^2"
+typedef	^	ED_InputFile	IntKi	RFrlMod	-	-	-	"Rotor-furl spring/damper model switch"	-
+typedef	^	ED_InputFile	ReKi	RFrlSpr	-	-	-	"Rotor-furl spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"	N-m
+typedef	^	ED_InputFile	ReKi	RFrlUSSP	-	-	-	"Rotor-furl up-stop spring position"	radians
+typedef	^	ED_InputFile	ReKi	RFrlDSSP	-	-	-	"Rotor-furl down-stop spring position"	radians
+typedef	^	ED_InputFile	ReKi	RFrlUSSpr	-	-	-	"Rotor-furl up-stop spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	RFrlDSSpr	-	-	-	"Rotor-furl down-stop spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	RFrlUSDP	-	-	-	"Rotor-furl up-stop damper position"	radians
+typedef	^	ED_InputFile	ReKi	RFrlDSDP	-	-	-	"Rotor-furl down-stop damper position"	radians
+typedef	^	ED_InputFile	ReKi	RFrlUSDmp	-	-	-	"Rotor-furl up-stop damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"	-
+typedef	^	ED_InputFile	ReKi	TFrlSpr	-	-	-	"Tail-furl spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"	N-m
+typedef	^	ED_InputFile	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"	radians
+typedef	^	ED_InputFile	ReKi	TFrlDSSP	-	-	-	"Tail-furl down-stop spring position"	radians
+typedef	^	ED_InputFile	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	TFrlDSSpr	-	-	-	"Tail-furl down-stop spring constant"	N-m/rad
+typedef	^	ED_InputFile	ReKi	TFrlUSDP	-	-	-	"Tail-furl up-stop damper position"	radians
+typedef	^	ED_InputFile	ReKi	TFrlDSDP	-	-	-	"Tail-furl down-stop damper position"	radians
+typedef	^	ED_InputFile	ReKi	TFrlUSDmp	-	-	-	"Tail-furl up-stop damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"	N-m/(rad/s)
+typedef	^	ED_InputFile	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
+
+# ..... ED_AllBldNdOuts compile option ............................................................................................
+typedef  ^  ED_InputFile   IntKi BldNd_NumOuts   -       -       -       "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ED_InputFile   CHARACTER(ChanLen)      BldNd_OutList   {:}     -       -       "List of user-requested output channels (ED_AllBldNdOuts)"      -
+#typedef  ^  ED_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   CHARACTER(1024) BldNd_BlOutNd_Str - - - "String to parse for the blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
+
+# ..... Internal data types .......................................................................................................
+
+# ..... Internal data types: Coordinate Systems ...................................................................................
+#  This type defines coordinate sytems used internally by FAST.  The 3 components of each vector correspond to the z1, z2, and z3 components of the individual vectors.
+#  NOTE: the orientations of most of these coordinate systems will change every time step.
+typedef	^	ED_CoordSys	R8Ki	a1	3	-	-	"Vector / direction a1 (=  xt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	a2	3	-	-	"Vector / direction a2 (=  zt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	a3	3	-	-	"Vector / direction a3 (= -yt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	b1	3	-	-	"Vector / direction b1 (=  xp from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	b2	3	-	-	"Vector / direction b2 (=  zp from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	b3	3	-	-	"Vector / direction b3 (= -yp from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	c1	3	-	-	"Vector / direction c1 (=  xs from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	c2	3	-	-	"Vector / direction c2 (=  zs from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	c3	3	-	-	"Vector / direction c3 (= -ys from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	d1	3	-	-	"Vector / direction d1 (=  xn from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	d2	3	-	-	"Vector / direction d2 (=  zn from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	d3	3	-	-	"Vector / direction d3 (= -yn from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	e1	3	-	-	"Vector / direction e1 (=  xa from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	e2	3	-	-	"Vector / direction e2 (=  ya from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	e3	3	-	-	"Vector / direction e3 (=  za from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	f1	3	-	-	"Vector / direction f1"	-
+typedef	^	ED_CoordSys	R8Ki	f2	3	-	-	"Vector / direction f2"	-
+typedef	^	ED_CoordSys	R8Ki	f3	3	-	-	"Vector / direction f3"	-
+typedef	^	ED_CoordSys	R8Ki	g1	3	-	-	"Vector / direction g1 (=  xh from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	g2	3	-	-	"Vector / direction g2 (=  yh from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	g3	3	-	-	"Vector / direction g3 (=  zh from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	i1	{:}{:}	-	-	"i1(K,:) = vector / direction i1 for blade K (=  xcK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	i2	{:}{:}	-	-	"i2(K,:) = vector / direction i2 for blade K (=  ycK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	i3	{:}{:}	-	-	"i3(K,:) = vector / direction i3 for blade K (=  zcK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	j1	{:}{:}	-	-	"j1(K,:) = vector / direction j1 for blade K (=  xbK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	j2	{:}{:}	-	-	"j2(K,:) = vector / direction j2 for blade K (=  ybK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	j3	{:}{:}	-	-	"j3(K,:) = vector / direction j3 for blade K (=  zbK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	m1	{:}{:}{:}	-	-	"m1(K,J,:) = vector / direction m1 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	m2	{:}{:}{:}	-	-	"m2(K,J,:) = vector / direction m2 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	m3	{:}{:}{:}	-	-	"m3(K,J,:) = vector / direction m3 for node J of blade K (used to calc. and return aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	n1	{:}{:}{:}	-	-	"n1(K,J,:) = vector / direction n1 for node J of blade K (= LxbK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	n2	{:}{:}{:}	-	-	"n2(K,J,:) = vector / direction n2 for node J of blade K (= LybK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	n3	{:}{:}{:}	-	-	"n3(K,J,:) = vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	p1	3	-	-	"Vector / direction p1 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	p2	3	-	-	"Vector / direction p2 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	p3	3	-	-	"Vector / direction p3 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
+typedef	^	ED_CoordSys	R8Ki	rf1	3	-	-	"Vector / direction rf1 (rotor-furl coordinate system = d1 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	rf2	3	-	-	"Vector / direction rf2 (rotor-furl coordinate system = d2 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	rf3	3	-	-	"Vector / direction rf3 (rotor-furl coordinate system = d3 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	rfa	3	-	-	"Vector / direction of the rotor-furl axis"	-
+typedef	^	ED_CoordSys	R8Ki	t1	{:}{:}	-	-	"Vector / direction t1 for tower node J (=  Lxt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	t2	{:}{:}	-	-	"Vector / direction t2 for tower node J (=  Lzt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	t3	{:}{:}	-	-	"Vector / direction t3 for tower node J (= -Lyt from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	te1	{:}{:}{:}	-	-	"te1(K,J,:) = vector / direction te1 for node J of blade K (used to calc. noise)"	-
+typedef	^	ED_CoordSys	R8Ki	te2	{:}{:}{:}	-	-	"te2(K,J,:) = vector / direction te2 for node J of blade K (used to calc. noise)"	-
+typedef	^	ED_CoordSys	R8Ki	te3	{:}{:}{:}	-	-	"te3(K,J,:) = vector / direction te3 for node J of blade K (used to calc. noise)"	-
+typedef	^	ED_CoordSys	R8Ki	tf1	3	-	-	"Vector / direction tf1 (tail-furl coordinate system = d1 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	tf2	3	-	-	"Vector / direction tf2 (tail-furl coordinate system = d2 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	tf3	3	-	-	"Vector / direction tf3 (tail-furl coordinate system = d3 when rotor-furl angle = 0)"	-
+typedef	^	ED_CoordSys	R8Ki	tfa	3	-	-	"Vector / direction of the tail-furl axis"	-
+typedef	^	ED_CoordSys	R8Ki	z1	3	-	-	"Vector / direction z1 (=  xi from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	z2	3	-	-	"Vector / direction z2 (=  zi from the IEC coord. system)"	-
+typedef	^	ED_CoordSys	R8Ki	z3	3	-	-	"Vector / direction z3 (= -yi from the IEC coord. system)"	-
+
+# ..... Internal data types: Enabled DOFs ........................................................................................
+#  This type defines variables associated with the module's degrees of freedom (DOFs)
+#  NOTE: The number of active DOFs may change with time.
+typedef	^	ED_ActiveDOFs	IntKi	NActvDOF	-	-	-	"The number of active (enabled) DOFs in the model"	-
+typedef	^	ED_ActiveDOFs	IntKi	NPCE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the hub center of mass (point C) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPDE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPIE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the tail boom center of mass (point I) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPTE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the tower nodes (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPTTE	-	-	-	"Number of tower DOFs that contribute to the QD2T-related linear accelerations of the tower nodes (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPSBE	{:}	-	-	"Number of blade DOFs that contribute to the QD2T-related linear accelerations of the blade nodes (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPSE	{:}	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the blade nodes (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPUE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the nacelle center of mass (point U) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	NPYE	-	-	-	"Number of DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PCE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the hub center of mass (point C) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PDE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PIE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tail boom center of mass (point I) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PTE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PTTE	{:}	-	-	"Array of tower DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the tower nodes (point T) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PS	{:}	-	-	"Array of DOF indices (pointers) to the active (enabled) DOFs/states"
+typedef	^	ED_ActiveDOFs	IntKi	PSBE	{:}{:}	-	-	"Array of blade DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PSE	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the blade nodes (point S) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PUE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the nacelle center of mass (point U) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	PYE	{:}	-	-	"Array of DOF indices (pointers) that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y) in the inertia frame, based on which DOFs are presently enabled"
+typedef	^	ED_ActiveDOFs	IntKi	SrtPS	{:}	-	-	"Sorted (from smallest to largest DOF index) version of PS()"
+typedef	^	ED_ActiveDOFs	IntKi	SrtPSNAUG	{:}	-	-	"SrtPS() with the additional value of NAUG"
+typedef	^	ED_ActiveDOFs	IntKi	Diag	{:}	-	-	"Array containing the indices of SrtPS() associated with each enabled DOF; that is, SrtPS(Diag(I)) = I"
+
+# ..... Internal data types: Right Hand Side ...................................................................................
+# RtHS Positions:
+typedef	^	ED_RtHndSide	R8Ki	rO	3	-	-	"Position vector from inertial frame origin to tower-top / base plate (point O)"	m
+typedef	^	ED_RtHndSide	R8Ki	rQS	{:}{:}{:}	-	-	"Position vector from the apex of rotation (point Q) to a point on a blade (point S)"	m
+typedef	^	ED_RtHndSide	R8Ki	rS	{:}{:}{:}	-	-	"Position vector from inertial frame origin to a point on a blade (point S)"	m
+typedef	^	ED_RtHndSide	R8Ki	rS0S	{:}{:}{:}	-	-	"Position vector from the blade root (point S(0)) to a point on a blade (point S)"	m
+typedef	^	ED_RtHndSide	R8Ki	rT	{:}{:}	-	-	"Position vector from inertial frame origin to the current node (point T(HNodes(J))"	m
+typedef	^	ED_RtHndSide	R8Ki	rT0O	3	-	-	"Position vector from the tower base (point T(0)) to tower-top / base plate (point O)"	m
+typedef	^	ED_RtHndSide	R8Ki	rT0T	{:}{:}	-	-	"Position vector from a height of TowerBsHt (base of flexible portion of tower) (point T(0)) to a point on the tower (point T)"	m
+typedef	^	ED_RtHndSide	R8Ki	rZ	3	-	-	"Position vector from inertia frame origin to platform reference (point Z)"	m
+typedef	^	ED_RtHndSide	R8Ki	rZO	3	-	-	"Position vector from platform reference (point Z) to tower-top / base plate (point O)"	m
+typedef	^	ED_RtHndSide	R8Ki	rZT	{:}{:}	-	-	"Position vector from platform reference (point Z) to a point on a tower (point T)"	m
+typedef	^	ED_RtHndSide	R8Ki	rPQ	3	-	-	"Position vector from teeter pin (point P) to apex of rotation (point Q)"	m
+typedef	^	ED_RtHndSide	R8Ki	rP	3	-	-	"Position vector from inertial frame origin to teeter pin (point P)"	m
+typedef	^	ED_RtHndSide	R8Ki	rV	3	-	-	"Position vector from inertial frame origin to specified point on rotor-furl axis (point V)"	m
+typedef	^	ED_RtHndSide	R8Ki	rZY	3	-	-	"Position vector from platform reference (point Z) to platform mass center (point Y)"	m
+typedef	^	ED_RtHndSide	R8Ki	rOU	3	-	-	"Position vector from tower-top / base plate (point O) to nacelle center of mass (point U)."	m
+typedef	^	ED_RtHndSide	R8Ki	rOV	3	-	-	"Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V)"	m
+typedef	^	ED_RtHndSide	R8Ki	rVD	3	-	-	"Position vector from specified point on rotor-furl axis (point V) to center of mass of structure that furls with the rotor (not including rotor) (point D)"	m
+typedef	^	ED_RtHndSide	R8Ki	rOW	3	-	-	"Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W)"	m
+typedef	^	ED_RtHndSide	R8Ki	rPC	3	-	-	"Position vector from teeter pin (point P) to hub center of mass (point C)"	m
+typedef	^	ED_RtHndSide	R8Ki	rPS0	{:}{:}	-	-	"Position vector from teeter pin (point P) to blade root (point S(0))"	m
+typedef	^	ED_RtHndSide	R8Ki	rQ	3	-	-	"Position vector from inertial frame origin to apex of rotation (point Q)"	m
+typedef	^	ED_RtHndSide	R8Ki	rQC	3	-	-	"Position vector from apex of rotation (point Q) to hub center of mass (point C)"	m
+typedef	^	ED_RtHndSide	R8Ki	rVIMU	3	-	-	"Position vector from specified point on rotor-furl axis (point V) to nacelle IMU (point IMU)"	m
+typedef	^	ED_RtHndSide	R8Ki	rVP	3	-	-	"Position vector from specified point on rotor-furl axis (point V) to teeter pin (point P)"	m
+typedef	^	ED_RtHndSide	R8Ki	rWI	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I)"	m
+typedef	^	ED_RtHndSide	R8Ki	rWJ	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J)"	m
+typedef	^	ED_RtHndSide	R8Ki	rWK	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail fin  center of pressure (point K)"	m
+typedef	^	ED_RtHndSide	R8Ki	rZT0	3	-	-	"Position vector from platform reference (point Z) to tower base (point T(0))"	m
+# RtHS Angular positions
+typedef	^	ED_RtHndSide	ReKi	AngPosEF	{:}{:}	-	-	"Angular position of the current point on the tower (body F) in the inertial frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngPosXF	{:}{:}	-	-	"Angular position of the current point on the tower (body F) in the platform (body X)"
+typedef	^	ED_RtHndSide	ReKi	AngPosHM	{:}{:}{:}	-	-	"Angular position of eleMent J of blade K (body M) in the hub (body H)"
+typedef	^	ED_RtHndSide	ReKi	AngPosXB	3	-	-	"Angular position of the base plate (body B) in the platform (body X)"
+typedef	^	ED_RtHndSide	ReKi	AngPosEX	3	-	-	"Angular position of the platform                   (body X) in the inertial frame (body E for earth)"
+# RtHS Angular velocities
+typedef	^	ED_RtHndSide	ReKi	PAngVelEA	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the tail (body A) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEF	{:}{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of tower element J (body F) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEG	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the generator (body G) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEH	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the hub (body H) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEL	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the low-speed shaft (body L) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEM	{:}{:}{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of eleMent J of blade K (body M) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEM	{:}{:}{:}	-	-	"Angular velocity of of eleMent J of blade K (body M) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEN	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the nacelle (body N) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEA	3	-	-	"Angular velocity of the tail (body A) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEB	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the base plate (body B) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelER	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PAngVelEX	{:}{:}{:}	-	-	"Partial angular velocity (and its 1st time derivative) of the platform (body B) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEG	3	-	-	"Angular velocity of the generator (body G) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEH	3	-	-	"Angular velocity of the hub (body H) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEL	3	-	-	"Angular velocity of the low-speed shaft (body L) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEN	3	-	-	"Angular velocity of the nacelle (body N) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEB	3	-	-	"Angular velocity of the base plate (body B) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelER	3	-	-	"Angular velocity of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelEX	3	-	-	"Angular velocity of the platform (body X) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	R8Ki	TeetAngVel	-	-	-	"Angular velocity of the teeter motion"
+# RtHS Angular accelerations
+typedef	^	ED_RtHndSide	ReKi	AngAccEBt	3	-	-	"Portion of the angular acceleration of the base plate (body B) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
+typedef	^	ED_RtHndSide	ReKi	AngAccERt	3	-	-	"Portion of the angular acceleration of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEXt	3	-	-	"Portion of the angular acceleration of the platform (body X) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEFt	{:}{:}	-	-	"Portion of the angular acceleration of tower element J (body F) in the inertia frame (body E for earth) associated with everything but the QD2T()s"
+typedef	^	ED_RtHndSide	ReKi	AngVelEF	{:}{:}	-	-	"Angular velocity of the current point on the tower (body F) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	AngVelHM	{:}{:}{:}	-	-	"Angular velocity of the current point on the blade in the inertia frame "
+typedef	^	ED_RtHndSide	ReKi	AngAccEAt	3	-	-	"Portion of the angular acceleration of the tail (body A) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEGt	3	-	-	"Portion of the angular acceleration of the generator (body G) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEHt	3	-	-	"Portion of the angular acceleration of the hub (body H) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	AngAccEKt	{:}{:}{:}	-	-	"Portion of the angular acceleration of the blade in the inertia frame associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	AngAccELt	3	-	-	"Portion of the angular acceleration of the low-speed shaft (body L) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	AngAccENt	3	-	-	"Portion of the angular acceleration of the nacelle (body N) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+# RtHS Linear
+typedef	^	ED_RtHndSide	ReKi	LinAccECt	3	-	-	"Portion of the linear acceleration of the hub center of mass (point C) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEDt	3	-	-	"Portion of the linear acceleration of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEIt	3	-	-	"Portion of the linear acceleration of the tail boom center of mass (point I) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEJt	3	-	-	"Portion of the linear acceleration of the tail fin  center of mass (point J) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinAccEKt	3	-	-	"Portion of the linear acceleration of the tail fin  center of pressure (point K) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinAccEPt	3	-	-	"Portion of the linear acceleration of the teeter pin (point P) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinAccEQt	3	-	-	"Portion of the linear acceleration of the apex of rotation (point Q) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEUt	3	-	-	"Portion of the linear acceleration of the nacelle center of mass (point U) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinAccEVt	3	-	-	"Portion of the linear acceleration of the selected point on the rotor-furl axis (point V) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinAccEWt	3	-	-	"Portion of the linear acceleration of the selected point on the  tail-furl axis (point W) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEYt	3	-	-	"Portion of the linear acceleration of the platform center of mass (point Y) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	LinVelEK	3	-	-	"Linear velocity of tail fin center-of-pressure (point K) in the inertia frame"
+typedef	^	ED_RtHndSide	ReKi	LinVelES	{:}{:}{:}	-	-	"Linear velocity of current point on the current blade (point S) in the inertia frame"
+#typedef	^	ED_RtHndSide	ReKi	LinVelHS	3	-	-	"Relative linear velocity of the current point on the current blade (point S) in the hub frame (body H)"
+#typedef	^	ED_RtHndSide	ReKi	LinVelXO	3	-	-	"Relative linear velocity of the tower-top / base plate (point O) in the platform (body X)"
+#typedef	^	ED_RtHndSide	ReKi	LinVelXT	3	-	-	"Relative linear velocity of the current point on the tower (point T) in the platform (body X)"
+typedef	^	ED_RtHndSide	ReKi	LinVelEQ	3	-	-	"Linear velocity of of the apex of rotation (point Q) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	LinVelET	{:}{:}	-	-	"Linear velocity of current point on the tower (point T) in the inertia frame"
+typedef	^	ED_RtHndSide	ReKi	LinVelESm2	{:}	-	-	"The m2-component (closest to tip) of LinVelES"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEIMU	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the nacelle IMU (point IMU) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEO	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the base plate (point O) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelES	{:}{:}{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of a point on a blade (point S) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelET	{:}{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of a point on the tower (point T) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEZ	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the platform reference point (point Z) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEC	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the hub center of mass (point C) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelED	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEI	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail boom center of mass (point I) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEJ	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail fin center of mass (point J) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEK	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail fin center of pressure(point K) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEP	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the teeter pin (point P) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEQ	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the apex of rotation (point Q) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEU	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the nacelle center of mass (point U) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEV	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the selected point on the rotor-furl axis (point V) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEW	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the selected point on the tail-furl axis (point W) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	PLinVelEY	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the platform mass center (point Y) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	LinAccEIMUt	3	-	-	"Portion of the linear acceleration of the nacelle IMU (point IMU) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEOt	3	-	-	"Portion of the linear acceleration of the base plate (point O) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccESt	{:}{:}{:}	-	-	"Portion of the linear acceleration of a point on a blade (point S) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccETt	{:}{:}	-	-	"Portion of the linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinAccEZt	3	-	-	"Portion of the linear acceleration of the platform reference (point Z) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	LinVelEIMU	3	-	-	"Linear velocity of the nacelle IMU (point IMU) in the inertia frame"
+typedef	^	ED_RtHndSide	ReKi	LinVelEZ	3	-	-	"Linear velocity of platform reference (point Z) in the inertia frame"
+typedef	^	ED_RtHndSide	ReKi	LinVelEO	3	-	-	"Linear velocity of the base plate (point O) in the inertia frame (body E for earth)"
+# RtHS Forces and Moments
+typedef	^	ED_RtHndSide	ReKi	FrcONcRtt	3	-	-	"Portion of the force at yaw bearing (point O) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FrcPRott	3	-	-	"Portion of the force at the teeter pin (point P) due to the rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FrcS0Bt	{:}{:}	-	-	"Portion of the force at the blade root (point S(0)) due to the blade associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FrcT0Trbt	3	-	-	"Portion of the force at tower base (point T(0)) due to the turbine associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FSAero	{:}{:}{:}	-	-	"The aerodynamic force per unit span acting on a blade at point S"
+typedef	^	ED_RtHndSide	ReKi	FSTipDrag	{:}{:}	-	-	"The aerodynamic force at a blade tip resulting from tip drag"
+typedef	^	ED_RtHndSide	ReKi	FTHydrot	{:}{:}	-	-	"Portion of the hydrodynamic force (& all other external forces, including aerodynamic) per unit length acting on the tower at point T associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FZHydrot	3	-	-	"Portion of the platform hydrodynamic force at the platform reference (point Z) associated with everything but the QD2T()'s"
+
+typedef	^	ED_RtHndSide	ReKi	MFHydrot	{:}{:}	-	-	"Portion of the hydrodynamic moment (and all other external moments, including aerodynamic) per unit length acting on a tower element (body F) at point T associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomBNcRtt	3	-	-	"Portion of the moment at the base plate (body B) / yaw bearing (point O) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomH0Bt	{:}{:}	-	-	"Portion of the moment at the hub (body H) / blade root (point S(0)) due to the blade associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomLPRott	3	-	-	"Portion of the moment at the teeter pin (point P) on the low-speed shaft (body L) due to the rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomNGnRtt	3	-	-	"Portion of the moment at the nacelle (body N) / selected point on rotor-furl axis (point V) due the structure that furls with the rotor, generator, and rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomNTailt	3	-	-	"Portion of the moment at the nacelle (body N) / selected point on tail-furl axis (point W) due the tail associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MomX0Trbt	3	-	-	"Portion of the moment at the platform (body X) / tower base (point T(0)) due to the turbine associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	MMAero	{:}{:}{:}	-	-	"The aerodynamic moment per unit span acting on a blade at point S"
+typedef	^	ED_RtHndSide	ReKi	MXHydrot	3	-	-	"Portion of the platform hydrodynamic moment acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	PFrcONcRt	{:}{:}	-	-	"Partial force at the yaw bearing (point O) due to the nacelle, generator, and rotor"
+typedef	^	ED_RtHndSide	ReKi	PFrcPRot	{:}{:}	-	-	"Partial force at the teeter pin (point P) due to the rotor"
+typedef	^	ED_RtHndSide	ReKi	PFrcS0B	{:}{:}{:}	-	-	"Partial force at the blade root (point S(0)) due to the blade"
+typedef	^	ED_RtHndSide	ReKi	PFrcT0Trb	{:}{:}	-	-	"Partial force at the tower base (point T(0)) due to the turbine"
+typedef	^	ED_RtHndSide	ReKi	PFTHydro	{:}{:}{:}	-	-	"Partial hydrodynamic force per unit length acting on the tower at point T"
+typedef	^	ED_RtHndSide	ReKi	PFZHydro	{6}{3}	-	-	"Partial platform hydrodynamic force at the platform reference (point Z)"
+typedef	^	ED_RtHndSide	ReKi	PMFHydro	{:}{:}{:}	-	-	"Partial hydrodynamic moment per unit length acting on a tower element (body F) at point T"
+typedef	^	ED_RtHndSide	ReKi	PMomBNcRt	{:}{:}	-	-	"Partial moment at the base plate (body B) / yaw bearing (point O) due the nacelle, generator, and rotor"
+typedef	^	ED_RtHndSide	ReKi	PMomH0B	{:}{:}{:}	-	-	"Partial moment at the hub (body H) / blade root (point S(0)) due to the blade"
+typedef	^	ED_RtHndSide	ReKi	PMomLPRot	{:}{:}	-	-	"Partial moment at the teeter pin (point P) on the low-speed shaft (body L) due to the rotor"
+typedef	^	ED_RtHndSide	ReKi	PMomNGnRt	{:}{:}	-	-	"Partial moment at the nacelle (body N) / selected point on rotor-furl axis (point V) due the structure that furls with the rotor, generator, and rotor"
+typedef	^	ED_RtHndSide	ReKi	PMomNTail	{:}{:}	-	-	"Partial moment at the nacelle (body N) / selected point on tail-furl axis (point W) due the tail"
+typedef	^	ED_RtHndSide	ReKi	PMomX0Trb	{:}{:}	-	-	"Partial moment at the platform (body X) / tower base (point T(0)) due to the turbine"
+typedef	^	ED_RtHndSide	ReKi	PMXHydro	{6}{3}	-	-	"Partial platform hydrodynamic moment at the platform (body X) / platform reference (point Z)"
+typedef	^	ED_RtHndSide	R8Ki	TeetAng	-	-	-	"Current teeter angle = QT(DOF_Teet) for 2-blader or 0 for 3-blader (this is used in place of QT(DOF_Teet) throughout RtHS()"
+typedef	^	ED_RtHndSide	ReKi	FrcVGnRtt	3	-	-	"Portion of the force at the rotor-furl axis (point V) due to the structure that furls with the rotor, generator, and rotor associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FrcWTailt	3	-	-	"Portion of the force at the tail-furl axis (point W) due to the tail associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	FrcZAllt	3	-	-	"Portion of the force at platform reference (point Z) due to everything associated with everything but the QD2T()'s"
+#typedef	^	ED_RtHndSide	ReKi	FKAero	3	-	-	"The tail fin aerodynamic force acting at point K, the center-of-pressure of the tail fin"
+#typedef	^	ED_RtHndSide	ReKi	MAAero	3	-	-	"The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin"
+typedef	^	ED_RtHndSide	ReKi	MomXAllt	3	-	-	"Portion of the moment at the platform (body X) / platform reference (point Z) due to everything associated with everything but the QD2T()'s"
+typedef	^	ED_RtHndSide	ReKi	PFrcVGnRt	{:}{:}	-	-	"Partial force at the rotor-furl axis (point V) due to the structure that furls with the rotor, generator, and rotor"
+typedef	^	ED_RtHndSide	ReKi	PFrcWTail	{:}{:}	-	-	"Partial force at the tail-furl axis (point W) due to the tail"
+typedef	^	ED_RtHndSide	ReKi	PFrcZAll	{:}{:}	-	-	"Partial force at the platform reference (point Z) due to everything"
+typedef	^	ED_RtHndSide	ReKi	PMomXAll	{:}{:}	-	-	"Partial moment at the platform (body X) / platform reference (point Z) due to the everything"
+typedef	^	ED_RtHndSide	ReKi	TeetMom	-	-	-	"The total moment supplied by the stop, spring, and damper of the teeter mechanism"
+typedef	^	ED_RtHndSide	ReKi	TFrlMom	-	-	-	"The total tail-furl spring and damper moment"
+typedef	^	ED_RtHndSide	ReKi	RFrlMom	-	-	-	"The total rotor-furl spring and damper moment"
+typedef	^	ED_RtHndSide	ReKi	GBoxEffFac	-	-	-	"The factor used to apply the gearbox efficiency effects to the equation associated with the generator DOF"
+typedef	^	ED_RtHndSide	ReKi	rSAerCen	{:}{:}{:}	-	-	"aerodynamic pitching moment arm (i.e., the position vector from point S on the blade to the aerodynamic center of the element)"
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef	^	ContinuousStateType	R8Ki	QT	{:}	-	-	"Current estimate of Q (displacement matrix) for each degree of freedom"	-
+typedef	^	ContinuousStateType	^	QDT	{:}	-	-	"Current estimate of QD (velocity matrix) for each degree of freedom"
+
+# Define discrete (nondifferentiable) states here:
+typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"	-
+
+# Define constraint states here:
+typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
+
+# Define "other" states here:
+typedef	^	OtherStateType	IntKi	n	-	-	-	"tracks time step for which OtherState was updated"
+typedef	^	OtherStateType	ED_ContinuousStateType	xdot	{ED_NMX}	-	-	"previous state deriv for multi-step"
+typedef	^	OtherStateType	IntKi	IC	{:}	-	-	"Array which stores pointers to predictor-corrector results"
+typedef	^	OtherStateType	ReKi	HSSBrTrq	-	-	-	"HSSBrTrq from update states; a hack to get this working with a single integrator"	-
+typedef	^	OtherStateType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque (adjusted for sign)"	N-m
+typedef	^	OtherStateType	IntKi	SgnPrvLSTQ	-	-	-	"The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"	-
+typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
+
+# ..... Misc Vars ................................................................................................................
+typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
+typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
+typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
+typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
+typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
+typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
+typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
+typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
+typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
+typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
+typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
+typedef	^	ParameterType	IntKi	TipNode	-	-	-	"Index of the additional node located at the blade tip = BldNodes + 1"	-
+typedef	^	ParameterType	IntKi	NDOF	-	-	-	"Number of total degrees of freedom (DOFs)"	-
+typedef	^	ParameterType	R8Ki	TwoPiNB	-	-	-	"Two pi divided by the number of blades"	radians
+typedef	^	ParameterType	IntKi	NAug	-	-	-	"Dimension of augmented solution matrix"	-
+typedef	^	ParameterType	IntKi	NPH	-	-	-	"Number of DOFs that contribute to the angular velocity of the hub (body H) in the inertia frame"
+typedef	^	ParameterType	IntKi	PH	{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the hub (body H) in the inertia frame"
+typedef	^	ParameterType	IntKi	NPM	-	-	-	"Number of DOFs that contribute to the angular velocity of the blade elements (body M) in the inertia frame"
+typedef	^	ParameterType	IntKi	PM	{:}{:}	-	-	"Array of DOF indices (pointers) that contribute to the angular velocity of the blade elements (body M) in the inertia frame"
+typedef	^	ParameterType	LOGICAL	DOF_Flag	{:}	-	-	"Array which stores values of the feature flags for each DOF"
+typedef	^	ParameterType	CHARACTER(99)	DOF_Desc	{:}	-	-	"Array which stores descriptions of each DOF"
+typedef	^	ParameterType	ED_ActiveDOFs	DOFs	-	-	-	"Active degrees of freedom in the model"
+typedef	^	ParameterType	IntKi	NumOuts	-	0	-	"Number of parameters in the output list (number of outputs requested)"	-
+typedef	^	ParameterType	CHARACTER(20)	OutFmt	-	-	-	"Output format for tabular data"	-
+typedef	^	ParameterType	IntKi	NBlGages	-	0	-	"Number of blade strain gages"	-
+typedef	^	ParameterType	IntKi	NTwGages	-	0	-	"Number of tower strain gages"	-
+typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
+typedef	^	ParameterType	CHARACTER(1)	Delim	-	-	-	"Column delimiter for output text files"	-
+typedef	^	ParameterType	ReKi	AvgNrmTpRd	-	-	-	"Average tip radius normal to the shaft"	meters
+typedef	^	ParameterType	R8Ki	AzimB1Up	-	-	-	"Azimuth value to use for I/O when blade 1 points up"	radians
+typedef	^	ParameterType	R8Ki	CosDel3	-	1.0	-	"Cosine of the Delta-3 angle for teetering rotors"
+typedef	^	ParameterType	R8Ki	CosPreC	{:}	-	-	"Cosines of the precone angles"
+typedef	^	ParameterType	R8Ki	CRFrlSkew	-	-	-	"Cosine of the rotor-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CRFrlSkw2	-	-	-	"Cosine-squared of the rotor-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CRFrlTilt	-	-	-	"Cosine of the rotor-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	CRFrlTlt2	-	-	-	"Cosine-squared of the rotor-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	CShftSkew	-	-	-	"Cosine of the shaft skew angle"
+typedef	^	ParameterType	R8Ki	CShftTilt	-	-	-	"Cosine of the shaft tilt angle"
+typedef	^	ParameterType	R8Ki	CSRFrlSkw	-	-	-	"Cosine*Sine of the rotor-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CSRFrlTlt	-	-	-	"Cosine*Sine of the rotor-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	CSTFrlSkw	-	-	-	"Cosine*Sine of the tail-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CSTFrlTlt	-	-	-	"Cosine*Sine of the tail-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	CTFinBank	-	-	-	"Cosine of the tail fin planform bank angle"
+typedef	^	ParameterType	R8Ki	CTFinSkew	-	-	-	"Cosine of the tail fin chordline skew angle"
+typedef	^	ParameterType	R8Ki	CTFinTilt	-	-	-	"Cosine of the tail fin chordline tilt angle"
+typedef	^	ParameterType	R8Ki	CTFrlSkew	-	-	-	"Cosine of the tail-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CTFrlSkw2	-	-	-	"Cosine-squared of the tail-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	CTFrlTilt	-	-	-	"Cosine of the tail-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	CTFrlTlt2	-	-	-	"Cosine-squared of the tail-furl axis tilt angle"
+typedef	^	ParameterType	ReKi	HubHt	-	-	-	"Hub-height as computed using FAST inputs [= TowerHt + Twr2Shft + OverHang*SIN( ShftTilt ) ] (was FASTHH)"
+typedef	^	ParameterType	ReKi	HubCM	-	-	-	"Distance from rotor apex to hub mass"
+typedef	^	ParameterType	ReKi	HubRad	-	-	-	"Preconed hub radius"
+typedef	^	ParameterType	ReKi	NacCMxn	-	-	-	"Downwind distance from tower-top to nacelle CM"
+typedef	^	ParameterType	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to nacelle CM"
+typedef	^	ParameterType	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
+typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
+typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
+typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point"
+typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
+typedef	^	ParameterType	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"
+typedef	^	ParameterType	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"
+typedef	^	ParameterType	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"
+typedef	^	ParameterType	ReKi	rVDxn	-	-	-	"xn-component of position vector Rvd"
+typedef	^	ParameterType	ReKi	rVDyn	-	-	-	"yn-component of position vector rVD"
+typedef	^	ParameterType	ReKi	rVDzn	-	-	-	"zn-component of position vector rVD"
+typedef	^	ParameterType	ReKi	rVIMUxn	-	-	-	"xn-component of position vector rVIMU"
+typedef	^	ParameterType	ReKi	rVIMUyn	-	-	-	"yn-component of position vector rVIMU"
+typedef	^	ParameterType	ReKi	rVIMUzn	-	-	-	"zn-component of position vector rVIMU"
+typedef	^	ParameterType	ReKi	rVPxn	-	-	-	"xn-component of position vector rVP"
+typedef	^	ParameterType	ReKi	rVPyn	-	-	-	"yn-component of position vector rVP"
+typedef	^	ParameterType	ReKi	rVPzn	-	-	-	"zn-component of position vector rVP"
+typedef	^	ParameterType	ReKi	rWIxn	-	-	-	"xn-component of position vector rWI"
+typedef	^	ParameterType	ReKi	rWIyn	-	-	-	"yn-component of position vector rWI"
+typedef	^	ParameterType	ReKi	rWIzn	-	-	-	"zn-component of position vector rWI"
+typedef	^	ParameterType	ReKi	rWJxn	-	-	-	"xn-component of position vector rWJ"
+typedef	^	ParameterType	ReKi	rWJyn	-	-	-	"yn-component of position vector rWJ"
+typedef	^	ParameterType	ReKi	rWJzn	-	-	-	"zn-component of position vector rWJ"
+typedef	^	ParameterType	ReKi	rWKxn	-	-	-	"xn-component of position vector rWK"
+typedef	^	ParameterType	ReKi	rWKyn	-	-	-	"yn-component of position vector rWK"
+typedef	^	ParameterType	ReKi	rWKzn	-	-	-	"zn-component of position vector rWK"
+typedef	^	ParameterType	ReKi	rZT0zt	-	-	-	"zt-component of position vector rZT0"
+typedef	^	ParameterType	ReKi	rZYzt	-	-	-	"zt-component of position vector rZY"
+typedef	^	ParameterType	R8Ki	SinDel3	-	-	-	"Sine of the Delta-3 angle for teetering rotors"
+typedef	^	ParameterType	R8Ki	SinPreC	{:}	-	-	"Sines of the precone angles"
+typedef	^	ParameterType	R8Ki	SRFrlSkew	-	-	-	"Sine of the rotor-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	SRFrlSkw2	-	-	-	"Sine-squared of the rotor-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	SRFrlTilt	-	-	-	"Sine of the rotor-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	SRFrlTlt2	-	-	-	"Sine-squared of the rotor-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	SShftSkew	-	-	-	"Sine of the shaft skew angle"
+typedef	^	ParameterType	R8Ki	SShftTilt	-	-	-	"Sine of the shaft tilt angle"
+typedef	^	ParameterType	R8Ki	STFinBank	-	-	-	"Sine of the tail fin planform bank angle"
+typedef	^	ParameterType	R8Ki	STFinSkew	-	-	-	"Sine of the tail fin chordline skew angle"
+typedef	^	ParameterType	R8Ki	STFinTilt	-	-	-	"Sine of the tail fin chordline tilt angle"
+typedef	^	ParameterType	R8Ki	STFrlSkew	-	-	-	"Sine of the tail-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	STFrlSkw2	-	-	-	"Sine-squared of the tail-furl axis skew angle"
+typedef	^	ParameterType	R8Ki	STFrlTilt	-	-	-	"Sine of the tail-furl axis tilt angle"
+typedef	^	ParameterType	R8Ki	STFrlTlt2	-	-	-	"Sine-squared of the tail-furl axis tilt angle"
+typedef	^	ParameterType	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"
+typedef	^	ParameterType	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"
+typedef	^	ParameterType	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"
+typedef	^	ParameterType	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
+typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
+typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore] or MSL [offshore]"	meters
+typedef	^	ParameterType	ReKi	UndSling	-	-	-	"Undersling length"
+typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of turbine blades"	-
+typedef	^	ParameterType	ReKi	AxRedTFA	{:}{:}{:}	-	-	"The axial-reduction terms for the fore-aft tower mode shapes"
+typedef	^	ParameterType	ReKi	AxRedTSS	{:}{:}{:}	-	-	"The axial-reduction terms for the side-to-side tower mode shapes"
+typedef	^	ParameterType	ReKi	CTFA	{2}{2}	-	-	"Generalized damping of tower in fore-aft direction"
+typedef	^	ParameterType	ReKi	CTSS	{2}{2}	-	-	"Generalized damping of tower in side-to-side direction"
+typedef	^	ParameterType	ReKi	DHNodes	{:}	-	-	"Length of variable-length tower elements"
+typedef	^	ParameterType	ReKi	HNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
+typedef	^	ParameterType	ReKi	HNodesNorm	{:}	-	-	"Normalized location of variable-spaced tower nodes (relative to the tower rigid base height) (0 < HNodesNorm(:) < 1)"
+typedef	^	ParameterType	ReKi	KTFA	{2}{2}	-	-	"Generalized stiffness of tower in fore-aft direction"
+typedef	^	ParameterType	ReKi	KTSS	{2}{2}	-	-	"Generalized stiffness of tower in side-to-side direction"
+typedef	^	ParameterType	ReKi	MassT	{:}	-	-	"Interpolated lineal mass density of tower"
+typedef	^	ParameterType	ReKi	StiffTSS	{:}	-	-	"Interpolated side-side tower stiffness"
+typedef	^	ParameterType	ReKi	TwrFASF	{:}{:}{:}	-	-	"Tower fore-aft shape functions"
+typedef	^	ParameterType	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible portion of the tower"
+typedef	^	ParameterType	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
+typedef	^	ParameterType	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
+typedef	^	ParameterType	IntKi	TwrNodes	-	-	-	"Number of tower nodes used in the analysis"
+typedef	^	ParameterType	ReKi	InerTFA	{:}	-	-	"Interpolated tower fore-aft (about yt-axis) mass inertia per unit length"
+typedef	^	ParameterType	ReKi	InerTSS	{:}	-	-	"Interpolated tower side-to-side (about xt-axis) mass inertia per unit length"
+typedef	^	ParameterType	ReKi	StiffTGJ	{:}	-	-	"Interpolated tower torsional stiffness"
+typedef	^	ParameterType	ReKi	StiffTEA	{:}	-	-	"Interpolated tower extensional stiffness"
+typedef	^	ParameterType	ReKi	StiffTFA	{:}	-	-	"Interpolated fore-aft tower stiffness"
+typedef	^	ParameterType	ReKi	cgOffTFA	{:}	-	-	"Interpolated tower fore-aft mass cg offset"
+typedef	^	ParameterType	ReKi	cgOffTSS	{:}	-	-	"Interpolated tower side-to-side mass cg offset"
+typedef	^	ParameterType	ReKi	AtfaIner	-	-	-	"Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass"
+typedef	^	ParameterType	ReKi	BldCG	{:}	-	-	"Blade center of mass wrt the blade root"
+typedef	^	ParameterType	ReKi	BldMass	{:}	-	-	"Blade masses"
+typedef	^	ParameterType	ReKi	BoomMass	-	-	-	"Tail boom mass"
+typedef	^	ParameterType	ReKi	FirstMom	{:}	-	-	"First mass moment of inertia of blades wrt the root"
+typedef	^	ParameterType	ReKi	GenIner	-	-	-	"Generator inertia about HSS"
+typedef	^	ParameterType	ReKi	Hubg1Iner	-	-	-	"Inertia of hub about g1-axis (rotor centerline)"
+typedef	^	ParameterType	ReKi	Hubg2Iner	-	-	-	"Inertia of hub about g2-axis (transverse to the cyclinder and passing through its c.g.)"
+typedef	^	ParameterType	ReKi	HubMass	-	-	-	"Hub mass"
+typedef	^	ParameterType	ReKi	Nacd2Iner	-	-	-	"Inertia of nacelle about the d2-axis whose origin is the nacelle center of mass"
+typedef	^	ParameterType	ReKi	NacMass	-	-	-	"Nacelle mass"
+typedef	^	ParameterType	ReKi	PtfmMass	-	-	-	"Platform mass"
+typedef	^	ParameterType	ReKi	PtfmPIner	-	-	-	"Platform inertia for pitch tilt rotation about the platform CM."
+typedef	^	ParameterType	ReKi	PtfmRIner	-	-	-	"Platform inertia for roll tilt rotation about the platform CM."
+typedef	^	ParameterType	ReKi	PtfmYIner	-	-	-	"Platform inertia for yaw rotation about the platform CM."
+typedef	^	ParameterType	ReKi	RFrlMass	-	-	-	"Rotor-furl mass"
+typedef	^	ParameterType	ReKi	RotIner	-	-	-	"Inertia of rotor about its centerline"
+typedef	^	ParameterType	ReKi	RotMass	-	-	-	"Rotor mass (blades, tips, and hub)"
+typedef	^	ParameterType	ReKi	RrfaIner	-	-	-	"Inertia of structure that furls with the rotor (not including rotor) about the rotor-furl axis whose origin is the center of mass of the structure that furls with the rotor (not including rotor)"
+typedef	^	ParameterType	ReKi	SecondMom	{:}	-	-	"Second mass moment of inertia of blades wrt the root"
+typedef	^	ParameterType	ReKi	TFinMass	-	-	-	"Tail fin mass"
+typedef	^	ParameterType	ReKi	TFrlIner	-	-	-	"Tail boom inertia about tail-furl axis"
+typedef	^	ParameterType	ReKi	TipMass	{:}	-	-	"Tip-brake masses"
+typedef	^	ParameterType	ReKi	TurbMass	-	-	-	"Mass of turbine (tower + rotor + nacelle)"
+typedef	^	ParameterType	ReKi	TwrMass	-	-	-	"Mass of tower"
+typedef	^	ParameterType	ReKi	TwrTpMass	-	-	-	"Tower-top mass (rotor + nacelle)"
+typedef	^	ParameterType	ReKi	YawBrMass	-	-	-	"Yaw bearing mass"
+#typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density = RHO"
+typedef	^	ParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+typedef	^	ParameterType	ReKi	PitchAxis	{:}{:}	-	-	"Pitch axis for analysis nodes"	-
+typedef	^	ParameterType	ReKi	AeroTwst	{:}	-	-	"Aerodynamic twist of the blade at the analysis nodes"
+typedef	^	ParameterType	ReKi	AxRedBld	{:}{:}{:}{:}	-	-	"The axial-reduction terms of the blade shape function"
+typedef	^	ParameterType	ReKi	BAlpha	{:}{:}	-	-	"Interpolated blade coupling coefficient between flap and twist"
+typedef	^	ParameterType	ReKi	BldEDamp	{:}{:}	-	-	"Blade edgewise damping coefficients"
+typedef	^	ParameterType	ReKi	BldFDamp	{:}{:}	-	-	"Blade flapwise damping coefficients"
+typedef	^	ParameterType	ReKi	BldFlexL	-	-	-	"Flexible blade length"
+typedef	^	ParameterType	ReKi	CAeroTwst	{:}	-	-	"Cosine of the aerodynamic twist of the blade at the analysis nodes"
+typedef	^	ParameterType	ReKi	CBE	{:}{:}{:}	-	-	"Generalized edgewise damping of the blades"
+typedef	^	ParameterType	ReKi	CBF	{:}{:}{:}	-	-	"Generalized flapwise damping of the blades"
+typedef	^	ParameterType	ReKi	cgOffBEdg	{:}{:}	-	-	"Interpolated blade edge (along local aerodynamic yb-axis) mass cg offset"
+typedef	^	ParameterType	ReKi	cgOffBFlp	{:}{:}	-	-	"Interpolated blade flap (along local aerodynamic xb-axis) mass cg offset"
+typedef	^	ParameterType	ReKi	Chord	{:}	-	-	"Chord of the blade at the analysis nodes"
+typedef	^	ParameterType	R8Ki	CThetaS	{:}{:}	-	-	"COS( ThetaS )"
+typedef	^	ParameterType	ReKi	DRNodes	{:}	-	-	"Length of variable-spaced blade elements"
+typedef	^	ParameterType	ReKi	EAOffBEdg	{:}{:}	-	-	"Interpolated blade edge (along local aerodynamic yb-axis) elastic axis offset"
+typedef	^	ParameterType	ReKi	EAOffBFlp	{:}{:}	-	-	"Interpolated blade flap (along local aerodynamic xb-axis) elastic axis offset"
+typedef	^	ParameterType	ReKi	FStTunr	{:}{:}	-	-	"Blade flapwise modal stiffness tuners (stored for all blades)"
+typedef	^	ParameterType	ReKi	InerBEdg	{:}{:}	-	-	"Interpolated blade edge (about local structural xb-axis) mass inertia per unit length"
+typedef	^	ParameterType	ReKi	InerBFlp	{:}{:}	-	-	"Interpolated blade flap (about local structural yb-axis) mass inertia per unit length"
+typedef	^	ParameterType	ReKi	KBE	{:}{:}{:}	-	-	"Generalized edgewise stiffness of the blades"
+typedef	^	ParameterType	ReKi	KBF	{:}{:}{:}	-	-	"Generalized flapwise stiffness of the blades"
+typedef	^	ParameterType	ReKi	MassB	{:}{:}	-	-	"Interpolated lineal blade mass density"
+typedef	^	ParameterType	ReKi	RefAxisxb	{:}{:}	-	-	"Interpolated Offset for defining the reference axis from the pitch axis for precurved blades at a given input station (along xb-axis)"
+typedef	^	ParameterType	ReKi	RefAxisyb	{:}{:}	-	-	"Interpolated Offset for defining the reference axis from the pitch axis for preswept blades at a given input station (along yb-axis)"
+typedef	^	ParameterType	ReKi	RNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
+typedef	^	ParameterType	ReKi	RNodesNorm	{:}	-	-	"Normalized radius to analysis nodes relative to hub ( 0 < RNodesNorm(:) < 1 )"
+typedef	^	ParameterType	ReKi	rSAerCenn1	{:}{:}	-	-	"Distance from point S on a blade to the aerodynamic center in the n1 direction (m)"
+typedef	^	ParameterType	ReKi	rSAerCenn2	{:}{:}	-	-	"Distance from point S on a blade to the aerodynamic center in the n2 direction (m)"
+typedef	^	ParameterType	ReKi	SAeroTwst	{:}	-	-	"Sine of the aerodynamic twist of the blade at the analysis nodes"
+typedef	^	ParameterType	ReKi	StiffBE	{:}{:}	-	-	"Interpolated edgewise blade stiffness"
+typedef	^	ParameterType	ReKi	StiffBEA	{:}{:}	-	-	"Interpolated blade extensional stiffness"
+typedef	^	ParameterType	ReKi	StiffBF	{:}{:}	-	-	"Interpolated flapwise blade stiffness"
+typedef	^	ParameterType	ReKi	StiffBGJ	{:}{:}	-	-	"Interpolated blade torsional stiffness"
+typedef	^	ParameterType	R8Ki	SThetaS	{:}{:}	-	-	"SIN( ThetaS )"
+typedef	^	ParameterType	ReKi	ThetaS	{:}{:}	-	-	"Structural twist for analysis nodes"	radians
+typedef	^	ParameterType	ReKi	TwistedSF	{:}{:}{:}{:}{:}	-	-	"Interpolated lineal blade mass density"
+typedef	^	ParameterType	ReKi	BldFl1Sh	{:}{:}	-	-	"Blade-flap-mode-1 shape coefficients"
+typedef	^	ParameterType	ReKi	BldFl2Sh	{:}{:}	-	-	"Blade-flap-mode-2 shape coefficients"
+typedef	^	ParameterType	ReKi	BldEdgSh	{:}{:}	-	-	"Blade-edge-mode shape coefficients"
+# parameters from modes (Blade & Tower frequencies) -- these could probably be replaced by local variables (initialization only)
+typedef	^	ParameterType	ReKi	FreqBE	{:}{:}{:}	-	-	"Blade edgewise natural frequencies (both w/ and w/o centrifugal stiffening)"
+typedef	^	ParameterType	ReKi	FreqBF	{:}{:}{:}	-	-	"Blade flapwise natural frequencies (both w/ and w/o centrifugal stiffening)"
+typedef	^	ParameterType	ReKi	FreqTFA	{2}{2}	-	-	"Computed fore-aft tower natural frequencies"
+typedef	^	ParameterType	ReKi	FreqTSS	{2}{2}	-	-	"Computed side-to-side tower natural frequencies"
+typedef	^	ParameterType	ReKi	TeetCDmp	-	-	-	"Rotor-teeter rate-independent Coulomb-damping"
+typedef	^	ParameterType	ReKi	TeetDmp	-	-	-	"Rotor-teeter damping constant"
+typedef	^	ParameterType	ReKi	TeetDmpP	-	-	-	"Rotor-teeter damper position"
+typedef	^	ParameterType	ReKi	TeetHSSp	-	-	-	"Rotor-teeter hard-stop linear-spring constant"
+typedef	^	ParameterType	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"
+typedef	^	ParameterType	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"
+typedef	^	ParameterType	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"
+typedef	^	ParameterType	IntKi	TeetMod	-	-	-	"Rotor-teeter spring/damper model switch"
+typedef	^	ParameterType	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"
+typedef	^	ParameterType	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"
+typedef	^	ParameterType	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"
+typedef	^	ParameterType	ReKi	TFrlDSDP	-	-	-	"Tail-furl down-stop damper position"
+typedef	^	ParameterType	ReKi	TFrlDSSP	-	-	-	"Tail-furl down-stop spring position"
+typedef	^	ParameterType	ReKi	TFrlDSSpr	-	-	-	"Tail-furl down-stop spring constant"
+typedef	^	ParameterType	ReKi	TFrlSpr	-	-	-	"Tail-furl spring constant"
+typedef	^	ParameterType	ReKi	TFrlUSDmp	-	-	-	"Tail-furl up-stop damping constant"
+typedef	^	ParameterType	ReKi	TFrlUSDP	-	-	-	"Tail-furl up-stop damper position"
+typedef	^	ParameterType	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"
+typedef	^	ParameterType	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"
+typedef	^	ParameterType	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"
+typedef	^	ParameterType	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"
+typedef	^	ParameterType	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"
+typedef	^	ParameterType	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping constant"
+typedef	^	ParameterType	ReKi	RFrlDSDP	-	-	-	"Rotor-furl down-stop damper position"
+typedef	^	ParameterType	ReKi	RFrlDSSP	-	-	-	"Rotor-furl down-stop spring position"
+typedef	^	ParameterType	ReKi	RFrlDSSpr	-	-	-	"Rotor-furl down-stop spring constant"
+typedef	^	ParameterType	ReKi	RFrlSpr	-	-	-	"Rotor-furl spring constant"
+typedef	^	ParameterType	ReKi	RFrlUSDmp	-	-	-	"Rotor-furl up-stop damping constant"
+typedef	^	ParameterType	ReKi	RFrlUSDP	-	-	-	"Rotor-furl up-stop damper position"
+typedef	^	ParameterType	ReKi	RFrlUSSP	-	-	-	"Rotor-furl up-stop spring position"
+typedef	^	ParameterType	ReKi	RFrlUSSpr	-	-	-	"Rotor-furl up-stop spring constant"
+typedef	^	ParameterType	IntKi	RFrlMod	-	-	-	"Rotor-furl spring/damper model switch"
+typedef	^	ParameterType	ReKi	ShftGagL	-	-	-	"Distance from hub or teeter pin to shaft strain gages"
+typedef	^	ParameterType	IntKi	BldGagNd	9	-	-	"Nodes closest to the blade strain gages"
+typedef	^	ParameterType	IntKi	TwrGagNd	9	-	-	"Nodes closest to the tower strain gages"
+typedef	^	ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"
+typedef	^	ParameterType	ReKi	DTTorDmp	-	-	-	"Drivetrain torsional damper"
+typedef	^	ParameterType	ReKi	DTTorSpr	-	-	-	"Drivetrain torsional spring"
+typedef	^	ParameterType	ReKi	GBRatio	-	-	-	"Gearbox ratio"
+typedef	^	ParameterType	ReKi	GBoxEff	-	-	-	"Gearbox efficiency"
+typedef	^	ParameterType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
+typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
+typedef	^	ParameterType	ReKi	BElmntMass	{:}{:}	-	-	"Mass of the blade elements"
+typedef	^	ParameterType	ReKi	TElmntMass	{:}	-	-	"Mass of the tower elements"
+typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
+typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
+typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+# .... ED_AllBlNds option ........................................................................................................
+typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ParameterType  IntKi   BldNd_TotNumOuts     -  -  -  "Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and units (and other characteristics) of all requested output parameters"        -
+#typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
+
+typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
+typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
+typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+typedef	^	InputType	MeshType	BladePtLoads	{:}	-	-	"A mesh on each blade, containing aerodynamic forces and moments (formerly AeroBladeForce and AeroBladeMoment)"
+typedef	^	InputType	MeshType	PlatformPtMesh	-	-	-	"A mesh at the platform reference (point Z), containing force: surge/xi (1), sway/yi (2), and heave/zi (3)-components; and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components acting at the platform (body X) / platform reference (point Z) associated with everything but the QD2T()s"	N
+typedef	^	InputType	MeshType	TowerPtLoads	-	-	-	"Tower line2 mesh with forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower node (point T); and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components of the portion of the tower moment acting at the current tower node"	N/m
+typedef	^	InputType	MeshType	HubPtLoad	-	-	-	"A mesh at the teeter pin, containing forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components; and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components acting at the hub. Passed from BeamDyn"
+typedef	^	InputType	MeshType	NacelleLoads	-	-	-	"From ServoDyn/TMD: loads on the nacelle."
+# Define inputs that are not on a mesh here:
+typedef	^	InputType	ReKi	TwrAddedMass	{:}{:}{:}	-	-	"6-by-6 added mass matrix of the tower elements, per unit length-bjj: place on a mesh" 	"per unit length"
+typedef	^	InputType	ReKi	PtfmAddedMass	{6}{6}	-	-	"Platform added mass matrix"	"kg, kg-m, kg-m^2"
+typedef	^	InputType	ReKi	BlPitchCom	{:}	-	2pi	"Commanded blade pitch angles"	radians
+typedef	^	InputType	ReKi	YawMom	-	-	-	"Torque transmitted through the yaw bearing"	N-m
+typedef	^	InputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
+typedef	^	InputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef	^	OutputType	MeshType	BladeLn2Mesh	{:}	-	-	"A mesh on each blade, containing positions and orientations of the blade elements"
+typedef	^	OutputType	MeshType	PlatformPtMesh	-	-	-	"Platform reference point positions/orientations/velocities/accelerations"	-
+typedef	^	OutputType	MeshType	TowerLn2Mesh	-	-	-	"Tower line2 mesh with positions/orientations/velocities/accelerations"	-
+typedef	^	OutputType	MeshType	HubPtMotion14	-	-	-	"For AeroDyn v14: motions of the hub"
+typedef	^	OutputType	MeshType	HubPtMotion	-	-	-	"For AeroDyn and Lidar(InflowWind): motions of the hub"
+typedef	^	OutputType	MeshType	BladeRootMotion14	-	-	-	"For AeroDyn v14: motions of the blade roots"
+typedef	^	OutputType	MeshType	BladeRootMotion	{:}	-	-	"For AeroDyn/BeamDyn: motions at the blade roots"
+typedef	^	OutputType	MeshType	RotorFurlMotion14	-	-	-	"For AeroDyn14: motions of the rotor furl point."
+typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle."
+typedef	^	OutputType	MeshType	TowerBaseMotion14	-	-	-	"For AeroDyn 14: motions of the tower base"
+
+# Define outputs that are not on this mesh here:
+typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+typedef	^	OutputType	ReKi	BlPitch	{:}	-	2pi	"Current blade pitch angles"	radians
+typedef	^	OutputType	ReKi	Yaw	-	-	2pi	"Current nacelle yaw"	radians
+typedef	^	OutputType	ReKi	YawRate	-	-	-	"Current nacelle yaw rate"	rad/s
+typedef	^	OutputType	ReKi	LSS_Spd	-	-	-	"Low-speed shaft (LSS) speed at entrance to gearbox"	rad/s
+typedef	^	OutputType	ReKi	HSS_Spd	-	-	-	"High-speed shaft (HSS) speed"	rad/s
+typedef	^	OutputType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
+typedef	^	OutputType	ReKi	TwrAccel	-	-	-	"Tower acceleration for tower feedback control (user routine only)"	m/s^2
+typedef	^	OutputType	ReKi	YawAngle	-	-	2pi	"Yaw angle to be used for yaw error calculations"	radians
+typedef	^	OutputType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
+typedef	^	OutputType	ReKi	YawBrTAxp	-	-	-	"Tower-top / yaw bearing fore-aft (translational) acceleration (absolute)"	m/s^2
+typedef	^	OutputType	ReKi	YawBrTAyp	-	-	-	"Tower-top / yaw bearing side-to-side (translational) acceleration (absolute)"	m/s^2
+typedef	^	OutputType	ReKi	LSSTipPxa	-	-	2pi	"Rotor azimuth angle (position)"	radians
+typedef	^	OutputType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment caused by in-plane forces) at the blade root"	N-m
+typedef	^	OutputType	ReKi	LSSTipMxa	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	OutputType	ReKi	LSSTipMya	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	OutputType	ReKi	LSSTipMza	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	OutputType	ReKi	LSSTipMys	-	-	-	"Nonrotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	OutputType	ReKi	LSSTipMzs	-	-	-	"Nonrotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	OutputType	ReKi	YawBrMyn	-	-	-	"Rotating (with nacelle) tower-top / yaw bearing pitch moment"	N-m
+typedef	^	OutputType	ReKi	YawBrMzn	-	-	-	"Tower-top / yaw bearing yaw moment"	N-m
+typedef	^	OutputType	ReKi	NcIMURAxs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	OutputType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	OutputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
+typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N

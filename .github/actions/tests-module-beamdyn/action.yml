@@ -1,0 +1,24 @@
+name: 'BeamDyn module tests'
+description: 'Run tests specific to the BeamDyn module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+
+inputs:
+  test-target:
+    description: 'Which tests to run: unit | regression | all'
+    default: 'all'
+
+runs:
+  using: "composite"
+  steps:  
+    - run: |
+
+        if [[ ${{ inputs.test-target }} == "unit" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -R beamdyn_utest
+        fi
+
+        if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -j7 -R bd_
+        fi
+
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

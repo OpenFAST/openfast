@@ -1,0 +1,26 @@
+# .readthedocs.yml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+formats:
+  - htmlzip
+  - pdf
+  # - epub
+
+python:
+  version: 3.7
+  install:
+    - requirements: docs/requirements.txt
+  system_packages: true
+
+# select the docker image to use: stable | latest
+build:
+  image: stable
+
+sphinx:
+  builder: html
+  configuration: docs/conf.py
+  fail_on_warning: true

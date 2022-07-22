@@ -1,4 +1,4 @@
-.. _future-work: 
+.. _bd-future-work: 
 
 Future Work
 ===========

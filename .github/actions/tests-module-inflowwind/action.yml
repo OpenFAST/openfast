@@ -1,0 +1,25 @@
+name: 'InflowWind module tests'
+description: 'Run tests specific to the InflowWind module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+
+inputs:
+  test-target:
+    description: 'Which tests to run: unit | regression | all'
+    default: 'all'
+
+runs:
+  using: "composite"
+  steps:
+    - run: |
+
+        if [[ ${{ inputs.test-target }} == "unit" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -R inflowwind_utest
+        fi
+
+        if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -j7 -R ifw_ -LE python
+          # Exclude the Python-interface tests since those are run directly in the job
+        fi
+
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

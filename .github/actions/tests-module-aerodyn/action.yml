@@ -1,0 +1,25 @@
+name: 'AeroDyn module tests'
+description: 'Run tests specific to the AeroDyn module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+
+
+inputs:
+  test-target:
+    description: 'Which tests to run: unit | regression | all'
+    default: 'all'
+
+runs:
+  using: "composite"
+  steps: 
+    - run: |
+
+        if [[ ${{ inputs.test-target }} == "unit" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -R fvw_utest
+        fi
+
+        if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -R ad_  #  -j7  do not run these tests in parallel due to a bug in accessing shared files
+        fi
+
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

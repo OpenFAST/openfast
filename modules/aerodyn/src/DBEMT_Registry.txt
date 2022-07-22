@@ -1,0 +1,89 @@
+###################################################################################################################################
+# Registry for DBEMT in the FAST Modularization Framework
+# This Registry file is used to create DBEMT_Types which contains data used in the DBEMT module.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>   <ModuleName/ModName>   <TypeName>   <FieldType>   <FieldName>   <Dims>   <IO>   <DNAME>   <DESCRIP>   <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+
+param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_none           -      0     -   "use BEMT instead (not DBEMT)" -
+param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_tauConst       -      1     -   "use constant tau1" -
+param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_tauVaries      -      2     -   "use time-dependent tau1" -
+param     DBEMT/DBEMT                   -                              INTEGER                 DBEMT_cont_tauConst  -      3     -   "use continuous formulation with constant tau1" -
+ 
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef   DBEMT/DBEMT   InitInputType   IntKi             NumBlades             -   -   -   "Number of blades on the turbine"            -
+typedef   ^             InitInputType   IntKi             NumNodes              -   -   -   "Number of nodes on each blade"              -
+typedef   ^             InitInputType   ReKi              tau1_const            -   -   -   "delay value based on disk-averaged quantities"   -
+typedef   ^             InitInputType   IntKi             DBEMT_Mod             -     -  -   "DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form with constant tau1" -
+typedef   ^             ^               ReKi              rLocal               {:}{:} -  -   "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
+
+# Define outputs from the initialization routine here:
+typedef   ^   InitOutputType   ProgDesc             Ver                -   -   -   "This module's name, version, and date"   -
+
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind                   {2}      -        -        "The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a')"   m/s
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_dot               {2}      -        -        "Time derivative of the filtered induced velocity, x%vind in CCSD"   "m/s^2"
+typedef   ^   DBEMT_ElementContinuousStateType     R8Ki    vind_1                 {2}      -        -        "The filtered intermediate induced velocity"   "m/s"
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef   ^   ContinuousStateType     DBEMT_ElementContinuousStateType    element  {:}{:}  -        -        "The filtered induced velocity [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') at node i on blade j"   m/s
+#
+# Define discrete (nondifferentiable) states here:
+typedef   ^   DiscreteStateType     SiKi                DummyState           -          -        -        "Remove this variable if you have continuous states"        -
+#
+# Define constraint states here:
+typedef   ^   ConstraintStateType     SiKi                DummyState           -          -        -        "Remove this variable if you have constraint states"        -
+#
+# Define "other" states here:
+typedef   ^   OtherStateType   Logical areStatesInitialized                {:}{:}       -        -        "Flag indicating whether the module's states have been initialized properly" -
+typedef   ^   OtherStateType   ReKi    tau1                                -            -        -        "value of tau1 used in updateStates (for output-to-file only)" -
+typedef   ^   OtherStateType   ReKi    tau2                                -            -        -        "value of tau2 used in updateStates (equal to k_tau * tau1, not used between time steps)" -
+typedef   ^   OtherStateType   IntKi   n                                   {:}{:}       -        -        "time step # value used for continuous state integrator" -
+typedef   ^   OtherStateType   DBEMT_ContinuousStateType   xdot            {4}          -        -        "derivative history for continuous state integrators" -
+
+#
+# Define misc/optimization variables (any data that are not considered actual states) here:
+typedef   ^   MiscVarType   Logical   FirstWarn_tau1                      -             -         -        "flag so tau1 limit warning doesn't get repeated forever" -
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef   ^             ParameterType   DbKi              DT                    -   -   -   "Time step for continuous state integration & discrete state update"   seconds
+typedef   ^             ParameterType   IntKi             lin_nx                -   0   -   "Number of continuous states for linearization"            -
+typedef   ^             ParameterType   IntKi             NumBlades             -   -   -   "Number of blades on the turbine"            -
+typedef   ^             ParameterType   IntKi             NumNodes              -   -   -   "Number of nodes on each blade"              -
+typedef   ^             ParameterType   ReKi              k_0ye                 -   -   -   "Filter dynamics constant [default = 0.6 ]"   -
+#typedef   ^             ParameterType   ReKi              c5                    -   -   -   "Filter dynamics constant [default = 1.1 ]"   -
+#typedef   ^             ParameterType   ReKi              c6                    -   -   -   "Filter dynamics constant [default = 1.0 ]"   -
+#typedef   ^             ParameterType   ReKi              c7                    -   -   -   "Filter dynamics constant [default = 1.3 ]"   -
+#typedef   ^             ParameterType   ReKi              c8                    -   -   -   "Filter dynamics constant [default = 0.39]"   -
+#typedef   ^             ParameterType   ReKi              c9                    -   -   -   "Filter dynamics constant [default = 0.26]"   -
+typedef   ^             ParameterType   ReKi              tau1_const            -   -   -   "constant version of the delay value"   -
+typedef   ^             ParameterType   ReKi              spanRatio            {:}{:} -  -   "static span ratio of each blade node"
+typedef   ^             ParameterType   IntKi             DBEMT_Mod             -     -  -   "DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form of constant tau1" -
+
+
+# ..... Inputs ....................................................................................................................
+typedef   ^   DBEMT_ElementInputType     ReKi    vind_s                   {2}      -        -        "The unfiltered induced velocity, [1] is the axial induced velocity (-Vx*a) and [2] is the tangential induced velocity (Vy*a') at node i on blade j. Note that the inputs are used only operated on at a particular node and blade, so we don't store all elements"   "m/s"
+typedef   ^   DBEMT_ElementInputType     ReKi    vind_s_dot               {2}      -        -        "The first time derivative of the unfiltered induced velocity, u%vind_s" "m/s^2"
+typedef   ^   DBEMT_ElementInputType     ReKi    spanRatio                 -       -        -        "Normalized span location of blade node" -
+# Define inputs that are contained on the mesh here:
+#
+# Define inputs that are not on this mesh here:
+typedef   ^   InputType   ReKi                     AxInd_disk      - - -       "Disk-averaged axial induction (for time-varying tau)" -
+typedef   ^   InputType   ReKi                     Un_disk         - - -       "Disk-averaged normal relative inflow velocity (for time-varying tau)" m/s
+typedef   ^   InputType   ReKi                     R_disk          - - -       "Disk-averaged rotor radius (for time-varying tau)" m
+typedef   ^   InputType   DBEMT_ElementInputType   element        {:}{:} - -   "The element-level inputs at each blade node" -
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+#
+# Define outputs that are not on this mesh here:
+typedef   ^   OutputType   ReKi   vind    {:}{:}{:}  - -      "The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tangential induced velocity (Vy*a') at node i on blade j"   m/s

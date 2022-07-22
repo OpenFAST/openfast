@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+basepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import shutil
@@ -57,9 +57,9 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -70,9 +70,9 @@ buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
 systemName = args.systemName[0]
 compilerId = args.compilerId[0]
-plotError = args.plot if args.plot is False else True
-noExec = args.noExec if args.noExec is False else True
-verbose = args.verbose if args.verbose is False else True
+plotError = args.plot
+noExec = args.noExec
+verbose = args.verbose
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -132,7 +132,7 @@ if not os.path.isdir(dst):
 else:
     names = os.listdir(src)
     for name in names:
-        if name is "ServoData":
+        if name == "ServoData":
             continue
         srcname = os.path.join(src, name)
         dstname = os.path.join(dst, name)
@@ -160,26 +160,26 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+performance = pass_fail.calculateNorms(testData, baselineData)
+normalizedNorm = performance[:, 1]
 
 # export all case summaries
-results = list(zip(testInfo["attribute_names"], normalizedNorm, maxNorm))
-exportCaseSummary(testBuildDirectory, caseName, results)
+results = list(zip(testInfo["attribute_names"], [*performance]))
+results_max = performance.max(axis=0)
+exportCaseSummary(testBuildDirectory, caseName, results, results_max, tolerance)
 
 # failing case
 if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
     if plotError:
-        from errorPlotting import initializePlotDirectory, plotOpenfastError
-        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failRelNorm = [normalizedNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
-        for channel in failChannels:
+        from errorPlotting import finalizePlotDirectory, plotOpenfastError
+        for channel in testInfo["attribute_names"]:
             try:
                 plotOpenfastError(localOutFile, baselineOutFile, channel)
             except:
                 error = sys.exc_info()[1]
-                print("Error generating plots: {}".format(error.msg))
+                print("Error generating plots: {}".format(error))
+        finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
+
     sys.exit(1)
 
 # passing case

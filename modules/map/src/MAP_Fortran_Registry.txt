@@ -1,0 +1,22 @@
+##################  Registry    for MAP++   ###############
+#   column  1   <keyword>
+#   column  2   ModuleName/ModName or ^ to use the value from the previous line (SD is nickname for ModuleName)
+#   column  3   Derived data type (without "ModName_" prefix)
+#   column  4   Derived data types's Field type
+#   column  5   Variable name
+#   column  6   Dimension of variable {:} for allocatable
+#   column  7   Variable's initial value (if set in the data type)
+#   column  8   I think this is a switch for mixed-language programming; it's mostly unused
+#   column  9   Description
+#   column  10  Units
+# Keyword   ModuleName/ModName  Derived data type   Field type  Variable name      variable dimension   Initial value   for mix language, not used  Description Units
+
+include Registry_NWTC_Library.txt
+
+typedef       MAP_Fortran/MAP_Fortran  Lin_InitInputType   LOGICAL          linearize          -         .false.             -            "Flag that tells this module if the glue code wants to linearize.  (fortran-only)" -
+typedef         ^          Lin_InitOutputType  CHARACTER(200)   LinNames_y        {:}        ""                  -            "second line of output file contents: units (fortran-only)" -
+typedef         ^          ^                   CHARACTER(200)   LinNames_u        {:}        ""                  -            "Names of the inputs used in linearization (fortran-only)" -
+typedef         ^          ^                   LOGICAL          IsLoad_u          {:}        -                   -            "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) (fortran-only)" -
+typedef         ^          Lin_ParamType       Integer          Jac_u_indx        {:}{:}     -                   -            "matrix to help fill/pack the u vector in computing the jacobian (fortran-only)"  -
+typedef         ^          ^                   R8Ki             du                 -         -                   -            "determines size of the translational displacement perturbation for u (inputs) (fortran-only)" -
+typedef         ^          ^                   Integer          Jac_ny             -         -                   -            "number of outputs in jacobian matrix (fortran-only)" -

@@ -1,0 +1,288 @@
+##################### Registry for SubDyn ##################
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+
+# ============================== Internal data types ============================================================================================================================================
+typedef SubDyn/SD IList     INTEGER  List     {:}    -   - "List of integers"
+# 
+typedef  ^  MeshAuxDataType  INTEGER  MemberID  -             -  -  "Member ID for Output"
+typedef  ^  MeshAuxDataType  INTEGER  NOutCnt   -             -  -  "Number of Nodes for the output member"
+typedef  ^  MeshAuxDataType  INTEGER  NodeCnt   {:}           -  -  "Node ordinal numbers for the output member"
+typedef  ^  MeshAuxDataType  INTEGER  NodeIDs   {:}           -  -  "Node IDs associated with ordinal numbers for the output member"
+typedef  ^  MeshAuxDataType  INTEGER  ElmIDs    {:}{:}        -  -  "Element IDs connected to each NodeIDs; max 10 elements"
+typedef  ^  MeshAuxDataType  INTEGER  ElmNds    {:}{:}        -  -  "Flag to indicate 1st or 2nd node of element for each ElmIDs"
+typedef  ^  MeshAuxDataType  R8Ki     Me        {:}{:}{:}{:}  -  -  "Mass matrix connected to each joint element for outAll output"
+typedef  ^  MeshAuxDataType  R8Ki     Ke        {:}{:}{:}{:}  -  -  "Mass matrix connected to each joint element for outAll output"
+typedef  ^  MeshAuxDataType  R8Ki     Fg        {:}{:}{:}     -  -  "Gravity load vector connected to each joint element for requested member output"
+
+# CB_MatArrays: Matrices and arrays for CB summary
+typedef  ^  CB_MatArrays  R8Ki     MBB     {:}{:}  -  -  "FULL MBB ( no constraints applied)"
+typedef  ^  CB_MatArrays  R8Ki     MBM     {:}{:}  -  -  "FULL MBM ( no constraints applied)"
+typedef  ^  CB_MatArrays  R8Ki     KBB     {:}{:}  -  -  "FULL KBB ( no constraints applied)"
+typedef  ^  CB_MatArrays  R8Ki     PhiL    {:}{:}  -  -  "Retained CB modes, possibly allPhiL(nDOFL,nDOFL), or PhiL(nDOFL,nDOFM)"
+typedef  ^  CB_MatArrays  R8Ki     PhiR    {:}{:}  -  -  "FULL PhiR ( no constraints applied)"
+typedef  ^  CB_MatArrays  R8Ki     OmegaL  {:}     -  -  "Eigenvalues of retained CB modes, possibly all (nDOFL or nDOFM)"
+#
+typedef  ^   ElemPropType  IntKi   eType    -  -  -  "Element Type"
+typedef  ^   ElemPropType  ReKi    Length   -  -  -  "Length of an element"
+typedef  ^   ElemPropType  ReKi    Ixx      -  -  -  "Moment of inertia of an element"
+typedef  ^   ElemPropType  ReKi    Iyy      -  -  -  "Moment of inertia of an element"
+typedef  ^   ElemPropType  ReKi    Jzz      -  -  -  "Moment of inertia of an element"
+typedef  ^   ElemPropType  LOGICAL Shear    -  -  -  "Use timoshenko (true) E-B (false)"
+typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
+typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
+# Properties common to all element types:
+typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, for visualization only" m 
+typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
+typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
+typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N
+typedef  ^   ElemPropType  R8Ki    DirCos  {3}{3}  -  -  "Element direction cosine matrix"
+
+# ============================== Input Initialization (from glue code)  ============================================================================================================================================
+typedef  ^  InitInputType  CHARACTER(1024)  SDInputFile  - - -       "Name of the input file"
+typedef  ^  InitInputType  CHARACTER(1024)  RootName     - - -       "SubDyn rootname"
+typedef  ^  InitInputType  ReKi             g            - - -       "Gravity acceleration"
+typedef  ^  InitInputType  ReKi             WtrDpth      - - -       "Water Depth (positive valued)"
+typedef  ^  InitInputType  ReKi             TP_RefPoint  {3} - -     "global position of transition piece reference point (could also be defined in SubDyn itself)"
+typedef  ^  InitInputType  ReKi             SubRotateZ   - - -       "Rotation angle in degrees about global Z"
+typedef  ^  InitInputType  ReKi             SoilStiffness ::: - -    "Soil stiffness matrices from SoilDyn" '(N/m, N-m/rad)'
+typedef  ^  InitInputType  MeshType         SoilMesh     - - -       "Mesh for soil stiffness locations" -
+typedef  ^  InitInputType  Logical          Linearize    - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
+
+# ============================== Initialization outputs ============================================================================================================================================
+typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputHdr {:}  - -   "Names of the output-to-file channels" -
+typedef  ^  InitOutputType  CHARACTER(ChanLen)     WriteOutputUnt {:}  - -   "Units of the output-to-file channels" -
+typedef  ^  InitOutputType  ProgDesc               Ver             -   - -   "This module's name, version, and date" -
+# Linearization
+typedef  ^  InitOutputType  CHARACTER(LinChanLen)  LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
+typedef  ^  InitOutputType  CHARACTER(LinChanLen)  LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
+typedef  ^  InitOutputType  CHARACTER(LinChanLen)  LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
+typedef  ^  InitOutputType  LOGICAL                RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef  ^  InitOutputType  LOGICAL                RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
+typedef  ^  InitOutputType  LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef  ^  InitOutputType  LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef  ^  InitOutputType  IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for active cable tensioning is requested"   -
+
+# ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
+typedef  ^  SD_InitType   CHARACTER(1024)    RootName - - -           "SubDyn rootname" 
+typedef  ^  SD_InitType   ReKi               TP_RefPoint  {3}  - -    "global position of transition piece reference point (could also be defined in SubDyn itself)" 
+typedef  ^  SD_InitType   ReKi               SubRotateZ - - -         "Rotation angle in degrees about global Z" 
+typedef  ^  SD_InitType   ReKi               g - - -                  "Gravity acceleration" 
+typedef  ^  SD_InitType   DbKi               DT - - -                 "Time step from Glue Code" seconds
+typedef  ^  SD_InitType   INTEGER            NJoints - - -            "Number of joints of the sub structure" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsX - - -         "Number of extended property sets" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsB - - -         "Number of property sets for beams" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsC - - -         "Number of property sets for cables" 
+typedef  ^  SD_InitType   INTEGER            NPropSetsR - - -         "Number of property sets for rigid links" 
+typedef  ^  SD_InitType   INTEGER            NCMass - - -             "Number of joints with concentrated mass" 
+typedef  ^  SD_InitType   INTEGER            NCOSMs - - -             "Number of independent cosine matrices" 
+typedef  ^  SD_InitType   INTEGER            FEMMod - - -             "FEM switch  element model in the FEM" 
+typedef  ^  SD_InitType   INTEGER            NDiv - - -               "Number of divisions for each member" 
+typedef  ^  SD_InitType   LOGICAL            CBMod - - -              "Perform C-B flag" 
+typedef  ^  SD_InitType   ReKi               Joints {:}{:} - -        "Joints number and coordinate values" 
+typedef  ^  SD_InitType   ReKi               PropSetsB {:}{:} - -     "Property sets number and values" 
+typedef  ^  SD_InitType   ReKi               PropSetsC {:}{:} - -     "Property ID and values for cables" 
+typedef  ^  SD_InitType   ReKi               PropSetsR {:}{:} - -     "Property ID and values for rigid link" 
+typedef  ^  SD_InitType   ReKi               PropSetsX {:}{:} - -     "Extended property sets" 
+typedef  ^  SD_InitType   ReKi               COSMs {:}{:} - -         "Independent direction cosine matrices" 
+typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentrated mass information" 
+typedef  ^  SD_InitType   ReKi               JDampings {:} - -        "Damping coefficients for internal modes" 
+typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]" 
+typedef  ^  SD_InitType   ReKi               RayleighDamp  {2} -  -   "Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]" 
+typedef  ^  SD_InitType   ReKi               GuyanDampMat  {6}{6} - - "Guyan Damping Matrix, see also CBB" 
+typedef  ^  SD_InitType   INTEGER            Members {:}{:} - -       "Member joints connection          " 
+typedef  ^  SD_InitType   CHARACTER(ChanLen) SSOutList {:} - -        "List of Output Channels           " 
+typedef  ^  SD_InitType   LOGICAL            OutCOSM - - -            "Output Cos-matrices Flag          " 
+typedef  ^  SD_InitType   LOGICAL            TabDelim - - -           "Generate a tab-delimited output file in OutJckF-Flag                       " 
+typedef  ^  SD_InitType   R8Ki               SSIK {:}{:} - -          "SSI stiffness packed matrix elements (21 of them), for each reaction joint " 
+typedef  ^  SD_InitType   R8Ki               SSIM {:}{:} - -          "SSI mass packed matrix elements (21 of them), for each reaction joint      " 
+typedef  ^  SD_InitType   CHARACTER(1024)    SSIfile {:} - -          "Soil Structure Interaction (SSI) files to associate with each reaction node" 
+typedef  ^  SD_InitType   ReKi               Soil_K {:}{:}{:} - -     "Soil stiffness (at passed at Init, not in input file)  6x6xn               " 
+typedef  ^  SD_InitType   ReKi               Soil_Points {:}{:}  - -  "Node positions where soil stiffness will be added                          " 
+typedef  ^  SD_InitType   Integer            Soil_Nodes {:}   - -     "Node indices where soil stiffness will be added                            " 
+typedef  ^  SD_InitType   INTEGER            NElem - - -              "Total number of elements" 
+typedef  ^  SD_InitType   INTEGER            NPropB  - - -            "Total number of property sets for Beams" 
+typedef  ^  SD_InitType   INTEGER            NPropC  - - -            "Total number of property sets for Cable" 
+typedef  ^  SD_InitType   INTEGER            NPropR  - - -            "Total number of property sets for Rigid" 
+typedef  ^  SD_InitType   ReKi               Nodes {:}{:} - -         "Nodes number and coordinates           " 
+typedef  ^  SD_InitType   ReKi               PropsB     {:}{:} - -    "Property sets and values for Beams     " 
+typedef  ^  SD_InitType   ReKi               PropsC     {:}{:} - -    "Property sets and values for Cable     " 
+typedef  ^  SD_InitType   ReKi               PropsR     {:}{:} - -    "Property sets and values for Rigid link" 
+typedef  ^  SD_InitType   R8Ki               K {:}{:} - -             "System stiffness matrix                " 
+typedef  ^  SD_InitType   R8Ki               M {:}{:} - -             "System mass matrix                     " 
+typedef  ^  SD_InitType   ReKi               ElemProps {:}{:} - -     "Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )" 
+typedef  ^  SD_InitType   INTEGER            MemberNodes {:}{:} - -   "Member number and list of nodes making up a member (>2 if subdivided)" 
+typedef  ^  SD_InitType   INTEGER            NodesConnN {:}{:} - -    "Nodes that connect to a common node   " 
+typedef  ^  SD_InitType   INTEGER            NodesConnE {:}{:} - -    "Elements that connect to a common node" 
+typedef  ^  SD_InitType   LOGICAL            SSSum - - -              "SubDyn Summary File Flag              " 
+
+# ============================== States ============================================================================================================================================
+typedef  ^  ContinuousStateType  R8Ki   qm    {:}   -   -   "Virtual states, Nmod elements"
+typedef  ^  ContinuousStateType  R8Ki   qmdot {:}   -   -   "Derivative of states, Nmod elements"
+
+typedef  ^  DiscreteStateType    ReKi DummyDiscState   - - - "Remove this variable if you have discrete states"
+
+typedef  ^  ConstraintStateType  ReKi DummyConstrState - - - "Remove this variable if you have constraint states"
+
+typedef  ^  OtherStateType SD_ContinuousStateType  xdot       {:} -  -  "previous state derivs for m-step time integrator"
+typedef  ^          ^      IntKi                   n           -  -  -  "tracks time step for which OtherState was updated last"
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^    MiscVarType    ReKi           qmdotdot      {:}  -  -  "2nd Derivative of states, used only for output-file purposes"
+typedef  ^    MiscVarType    ReKi           u_TP           6   -  -  
+typedef  ^    MiscVarType    ReKi           udot_TP        6   -  -  
+typedef  ^    MiscVarType    ReKi           udotdot_TP     6   -  -  
+typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UR_bar        {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UR_bar_dot    {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UR_bar_dotdot {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UL            {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UL_dot        {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UL_dotdot     {:}  -  -  
+typedef  ^    MiscVarType    ReKi           DU_full       {:}  -  -  "Delta U used for extra moment" 
+typedef  ^    MiscVarType    ReKi           U_full        {:}  -  -  
+typedef  ^    MiscVarType    ReKi           U_full_dot    {:}  -  -  
+typedef  ^    MiscVarType    ReKi           U_full_dotdot {:}  -  -  
+typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating)"
+typedef  ^    MiscVarType    ReKi           U_red          {:}  -  -  
+typedef  ^    MiscVarType    ReKi           U_red_dot      {:}  -  -  
+typedef  ^    MiscVarType    ReKi           U_red_dotdot   {:}  -  -  
+typedef  ^    MiscVarType    ReKi           FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"  N
+typedef  ^    MiscVarType    ReKi           SDWrOutput {:} -  -    "Data from previous step to be written to a SubDyn output file"
+typedef  ^    MiscVarType    DbKi           LastOutTime -  -  -    "The time of the most recent stored output data"  "s"
+typedef  ^    MiscVarType    IntKi          Decimat     -  -  -    "Current output decimation counter"  "-"
+typedef  ^    MiscVarType    ReKi           Fext      {:} -  -     "External loads on unconstrained DOFs"  "-"
+typedef  ^    MiscVarType    ReKi           Fext_red  {:} -  -     "External loads on constrained DOFs, Fext_red= T^t Fext"  "-"
+### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
+
+# ============================== Parameters ============================================================================================================================================
+# --- Parameters - Algo
+typedef  ^  ParameterType   DbKi           SDDeltaT      -  -  -  "Time step (for integration of continuous states)"  seconds
+typedef  ^  ParameterType   IntKi          IntMethod     -  -  -  "Integration Method (1/2/3)Length of y2 array"
+# --- Parameters - FEM
+typedef  ^  ParameterType  INTEGER         nDOF          -  -  -  "Total degree of freedom"
+typedef  ^  ParameterType  INTEGER         nDOF_red      -  -  -  "Total degree of freedom after constraint reduction"
+typedef  ^  ParameterType  IntKi           Nmembers      -  -  -  "Number of members of the sub structure"
+typedef  ^  ParameterType  IntKi           Elems  {:}{:}    -  -  "Element nodes connections"
+typedef  ^  ParameterType  ElemPropType    ElemProps   {:}   - -  "List of element properties"
+typedef  ^  ParameterType  R8Ki            FG         {:}    - -  "Gravity force vector (with initial cable force T0), not reduced"  N
+typedef  ^  ParameterType  ReKi            DP0        {:}{:} - -  "Vector from TP to a Node at t=0, used for Floating Rigid Body motion"  m
+typedef  ^  ParameterType  IntKi           NodeID2JointID {:} - - "Store Joint ID for each NodeID since SubDyn re-label nodes (and add more nodes)"  "-"
+# --- Parameters - Constraints reduction
+typedef  ^  ParameterType  Logical reduced           -      -  -  "True if system has been reduced to account for constraints"  "-"
+typedef  ^  ParameterType  R8Ki    T_red             {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"  "-"
+typedef  ^  ParameterType  R8Ki    T_red_T           {:}{:} -  -  "Transpose of T_red"  "-"
+typedef  ^  ParameterType  IList   NodesDOF          {:}    -  -  "DOF indices of each nodes in unconstrained assembled system "  "-"
+typedef  ^  ParameterType  IList   NodesDOFred       {:}    -  -  "DOF indices of each nodes in constrained assembled system "  "-"
+typedef  ^  ParameterType  IntKi   ElemsDOF          {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "  "-"
+typedef  ^  ParameterType  IntKi   DOFred2Nodes      {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"  "-"
+# --- Parameters - Control           
+typedef  ^  ParameterType  IntKi   CtrlElem2Channel  {:}{:} - -   "nCtrlCable x 2, for each CtrlCable, Elem index, and Channel Index"
+# --- Parameters - CB reduction
+typedef  ^  ParameterType  IntKi   nDOFM        -  -  -  "retained degrees of freedom (modes)"
+typedef  ^  ParameterType  IntKi   SttcSolve    -  -  -  "Solve dynamics about static equilibrium point (flag)"
+typedef  ^  ParameterType  Logical GuyanLoadCorrection  -  -  -  "Add Extra lever arm contribution to interface reaction outputs"
+typedef  ^  ParameterType  Logical Floating     -  -  -  "True if floating bottom (the 6 DOF are free at all reaction nodes)"
+typedef  ^  ParameterType  ReKi    KMMDiag  {:}    -  -  "Diagonal coefficients of Kmm (OmegaM squared)"
+typedef  ^  ParameterType  ReKi    CMMDiag  {:}    -  -  "Diagonal coefficients of Cmm (~2 Zeta OmegaM))"
+typedef  ^  ParameterType  ReKi    MMB  {:}{:}     -  -  "Matrix after C-B reduction (transpose of MBM"
+typedef  ^  ParameterType  ReKi    MBmmB  {:}{:}   -  -  "MBm * MmB, used for Y1"
+typedef  ^  ParameterType  ReKi    C1_11  {:}{:}   -  -  "Coefficient of x in Y1"
+typedef  ^  ParameterType  ReKi    C1_12  {:}{:}   -  -  "Coefficient of x in Y1"
+typedef  ^  ParameterType  ReKi    D1_141 {:}{:}  -  -   "MBm PhiM^T"
+typedef  ^  ParameterType  ReKi    D1_142 {:}{:}  -  -   "TI^T PhiR^T"
+typedef  ^  ParameterType  ReKi    PhiM  {:}{:}    -  -  "Coefficient of x in Y2"
+typedef  ^  ParameterType  ReKi    C2_61  {:}{:}   -  -  "Coefficient of x in Y2 (URdotdot ULdotdot)"
+typedef  ^  ParameterType  ReKi    C2_62  {:}{:}   -  -  "Coefficient of x in Y2 (URdotdot ULdotdot)"
+typedef  ^  ParameterType  ReKi    PhiRb_TI  {:}{:} - -  "Coefficient of u in Y2 (Phi_R bar * TI)"
+typedef  ^  ParameterType  ReKi    D2_63  {:}{:}   -  -  "Coefficient of u in Y2 (URdotdot ULdotdot)"
+typedef  ^  ParameterType  ReKi    D2_64  {:}{:}   -  -  "Coefficient of u in Y2 (URdotdot ULdotdot)"
+typedef  ^  ParameterType  ReKi    MBB  {:}{:}     -  -  "Guyan Mass Matrix after C-B reduction"
+typedef  ^  ParameterType  ReKi    KBB  {:}{:}     -  -  "Guyan Stiffness Matrix after C-B reduction"
+typedef  ^  ParameterType  ReKi    CBB  {:}{:}     -  -  "Guyan Damping Matrix after C-B reduction"
+typedef  ^  ParameterType  ReKi    CMM  {:}{:}     -  -  "CB damping matrix"
+typedef  ^  ParameterType  ReKi    MBM  {:}{:}     -  -  "Matrix after C-B reduction"
+typedef  ^  ParameterType  ReKi    PhiL_T  {:}{:}  -  -  "Transpose of Matrix of C-B  modes"
+typedef  ^  ParameterType  ReKi    PhiLInvOmgL2  {:}{:}  -  -  "Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1)"
+typedef  ^  ParameterType  ReKi    KLLm1  {:}{:}   -  -  "KLL^{-1}, inverse of matrix KLL, for static solve only"
+typedef  ^  ParameterType  ReKi    AM2Jac  {:}{:}  -  -  "Jacobian (factored) for Adams-Boulton 2nd order Integration"
+typedef  ^  ParameterType  IntKi   AM2JacPiv  {:}  -  -  "Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration)"
+typedef  ^  ParameterType  ReKi    TI  {:}{:}      -  -  "Matrix to calculate TP reference point reaction at top of structure"
+typedef  ^  ParameterType  ReKi    TIreact  {:}{:} -  -  "Matrix to calculate single point reaction at base of structure"
+# --- Parameters - Partitioning I L C Y, R=[C I]
+typedef  ^  ParameterType  IntKi  nNodes        -  -  -  "Total number of nodes"
+typedef  ^  ParameterType  IntKi  nNodes_I      -  -  -  "Number of Interface nodes"
+typedef  ^  ParameterType  IntKi  nNodes_L      -  -  -  "Number of Internal nodes"
+typedef  ^  ParameterType  IntKi  nNodes_C      -  -  -  "Number of joints with reactions"
+typedef  ^  ParameterType  IntKi  Nodes_I  {:}{:}  -  -  "Interface degree of freedoms"
+typedef  ^  ParameterType  IntKi  Nodes_L  {:}{:}  -  -  "Internal nodes (not interface nor reaction)"
+typedef  ^  ParameterType  IntKi  Nodes_C  {:}{:}  -  -  "React degree of freedoms"
+typedef  ^  ParameterType  IntKi  nDOFI__       -  -  -  "Size of IDI__"
+typedef  ^  ParameterType  IntKi  nDOFI_Rb      -  -  -  "Size of IDI_Rb"
+typedef  ^  ParameterType  IntKi  nDOFI_F       -  -  -  "Size of IDI_F"
+typedef  ^  ParameterType  IntKi  nDOFL_L       -  -  -  "Size of IDL_L"
+typedef  ^  ParameterType  IntKi  nDOFC__       -  -  -  "Size of IDC__"
+typedef  ^  ParameterType  IntKi  nDOFC_Rb      -  -  -  "Size of IDC_Rb"
+typedef  ^  ParameterType  IntKi  nDOFC_L       -  -  -  "Size of IDC_L"
+typedef  ^  ParameterType  IntKi  nDOFC_F       -  -  -  "Size of IDC_F"
+typedef  ^  ParameterType  IntKi  nDOFR__       -  -  -  "Size of IDR__"
+typedef  ^  ParameterType  IntKi  nDOF__Rb      -  -  -  "Size of ID__Rb"
+typedef  ^  ParameterType  IntKi  nDOF__L       -  -  -  "Size of ID__L"
+typedef  ^  ParameterType  IntKi  nDOF__F       -  -  -  "Size of ID__F"
+typedef  ^  ParameterType  IntKi  IDI__  {:}       -  -  "Index of all Interface DOFs"
+typedef  ^  ParameterType  IntKi  IDI_Rb  {:}      -  -  "Index array of the interface (nodes connect to TP) dofs that are retained/master/follower DOFs"
+typedef  ^  ParameterType  IntKi  IDI_F  {:}       -  -  "Index array of the interface (nodes connect to TP) dofs that are fixed DOF"
+typedef  ^  ParameterType  IntKi  IDL_L  {:}       -  -  "Index array of the internal dofs coming from internal nodes"
+typedef  ^  ParameterType  IntKi  IDC__  {:}       -  -  "Index of all bottom DOF"
+typedef  ^  ParameterType  IntKi  IDC_Rb  {:}      -  -  "Index array of the contraint dofs that are retained/master/follower DOF"
+typedef  ^  ParameterType  IntKi  IDC_L  {:}       -  -  "Index array of the contraint dofs that are follower/internal DOF"
+typedef  ^  ParameterType  IntKi  IDC_F  {:}       -  -  "Index array of the contraint dofs that are fixd DOF"
+typedef  ^  ParameterType  IntKi  IDR__  {:}       -  -  "Index array of the interface and restraint dofs"
+typedef  ^  ParameterType  IntKi  ID__Rb  {:}      -  -  "Index array of all the retained/leader/master dofs (from any nodes of the structure)"
+typedef  ^  ParameterType  IntKi  ID__L  {:}       -  -  "Index array of all the follower/internal dofs (from any nodes of the structure)"
+typedef  ^  ParameterType  IntKi  ID__F  {:}       -  -  "Index array of the DOF that are fixed (from any nodes of the structure)"
+# --- Parameters - Outputs
+typedef  ^  ParameterType  IntKi           NMOutputs    -  -   -  "Number of members whose output is written"
+typedef  ^  ParameterType  IntKi           NumOuts       -  -  -  "Number of output channels read from input file"
+typedef  ^  ParameterType  IntKi           OutSwtch      -  -  -  "Output Requested Channels to local or global output file [1/2/3]"
+typedef  ^  ParameterType  IntKi           UnJckF        -  -  -  "Unit of SD ouput file"
+typedef  ^  ParameterType  CHARACTER(1)    Delim         -  -  -  "Column delimiter for output text files"
+typedef  ^  ParameterType  CHARACTER(20)   OutFmt        -  -  -  "Format for Output"
+typedef  ^  ParameterType  CHARACTER(20)   OutSFmt       -  -  -  "Format for Output Headers"
+typedef  ^  ParameterType  MeshAuxDataType MoutLst  {:}     -  -  "List of user requested members and nodes"
+typedef  ^  ParameterType  MeshAuxDataType MoutLst2  {:}    -  -  "List of all member joint nodes and elements for output"
+typedef  ^  ParameterType  MeshAuxDataType MoutLst3  {:}    -  -  "List of all member joint nodes and elements for output"
+typedef  ^  ParameterType  OutParmType     OutParam  {:}    -  -  "An array holding names, units, and indices of all of the selected output channels. # logical"
+typedef  ^  ParameterType  LOGICAL         OutAll        -  -  -  "Flag to output or not all joint forces"
+typedef  ^  ParameterType  IntKi           OutCBModes    -  -  -  "Flag to output CB and Guyan modes to a given format"
+typedef  ^  ParameterType  IntKi           OutFEMModes   -  -  -  "Flag to output FEM modes to a given format"
+typedef  ^  ParameterType  LOGICAL         OutReact      -  -  -  "Flag to check whether reactions are requested"
+typedef  ^  ParameterType  IntKi           OutAllInt     -  -  -  "Integer version of OutAll"
+typedef  ^  ParameterType  IntKi           OutAllDims    -  -  -  "Integer version of OutAll"
+typedef  ^  ParameterType  IntKi           OutDec        -  -  -  "Output Decimation for Requested Channels"
+# --- Parametesr - Linearization
+typedef  ^  ParameterType  Integer Jac_u_indx       {:}{:}   - - "matrix to help fill/pack the u vector in computing the jacobian" -
+typedef  ^  ParameterType  R8Ki    du               {:}      - - "vector that determines size of perturbation for u (inputs)"
+typedef  ^  ParameterType  R8Ki    dx               {2}      - - "vector that determines size of perturbation for x (continuous states)"
+typedef  ^  ParameterType  Integer Jac_ny            -       - - "number of outputs in jacobian matrix" -
+typedef  ^  ParameterType  Integer Jac_nx            -       - - "half the number of continuous states in jacobian matrix" -
+typedef  ^  ParameterType  logical RotStates         -       - - "Orient states in rotating frame during linearization? (flag)" -
+
+# ============================== Inputs ============================================================================================================================================
+typedef  ^  InputType   MeshType    TPMesh         -       -   - "Transition piece inputs on a point mesh"
+typedef  ^  InputType   MeshType    LMesh          -       -   - "Point mesh for interior node inputs"
+typedef  ^  InputType   ReKi        CableDeltaL   {:}      -   - "Cable tension, control input"
+
+# ============================== Outputs ============================================================================================================================================
+typedef  ^  OutputType  MeshType    Y1Mesh         -  - - "Transition piece outputs on a point mesh"
+typedef  ^  OutputType  MeshType    Y2Mesh         -  - - "Interior+Interface nodes rigid body displacements + elastic velocities and accelerations on a point mesh"
+typedef  ^  OutputType  MeshType    Y3Mesh         -  - - "Interior+Interface nodes full elastic displacements/velocities and accelerations on a point mesh"
+typedef  ^  OutputType  ReKi        WriteOutput   {:} - - "Data to be written to an output file"

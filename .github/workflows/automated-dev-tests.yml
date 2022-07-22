@@ -1,0 +1,500 @@
+  
+name: 'Development Pipeline'
+
+on:
+  push:
+    paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
+      - 'docs/**'
+      - 'share/**'
+      - 'vs-build/**'
+
+  pull_request:
+    types: [opened, synchronize, edited, reopened] #labeled, assigned]
+    # Pull request event triggers are unrelated to paths
+    # paths-ignore:
+
+env:
+  FORTRAN_COMPILER: gfortran-10
+  CXX_COMPILER: g++-10
+  C_COMPILER: gcc-10
+  GCOV_EXE: gcov-10
+  NUM_PROCS: 8
+
+
+jobs:
+
+  regression-tests-aerodyn-driver:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build AeroDyn Driver
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
+
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: regression
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: regression-tests-aerodyn-module
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+
+  regression-tests-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build OpenFAST
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
+
+        # SubDyn has only regression tests
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      # - name: Run AeroDyn tests
+      #   uses: ./.github/actions/tests-module-aerodyn
+      #   with:
+      #     test-target: regression
+        # HydroDyn has only regression tests
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: regression
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: regression
+      - name: Run OpenFAST tests
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        uses: ./.github/actions/tests-gluecode-openfast
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: regression-tests-release
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+  regression-tests-debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macOS-11
+            FORTRAN_COMPILER: gfortran-11
+            install_deps: brew install gcovr
+          - os: ubuntu-20.04
+            FORTRAN_COMPILER: gfortran-10
+            install_deps: sudo apt-get update && sudo apt-get install -y gcovr
+
+    name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+          ${{matrix.install_deps}}
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{matrix.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build Drivers
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target beamdyn_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target hydrodyn_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target inflowwind_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target subdyn_driver -- -j ${{env.NUM_PROCS}}
+
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      # - name: Run AeroDyn tests
+      #   uses: ./.github/actions/tests-module-aerodyn
+      #   with:
+      #     test-target: regression
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: regression
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: regression
+
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details -o regressioncov.html # -v
+      #     # cp `find . -name *.gcno` .
+      #     # cp `find . -name *.gcda` .
+      #     # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: regression-tests-debug
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: regression-tests-debug
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+
+  fastfarm-regression-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DOPENMP:BOOL=ON \
+            -DBUILD_FASTFARM:BOOL=ON \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build FAST.Farm
+        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run FAST.Farm tests
+        run: |
+          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
+        working-directory: ${{runner.workspace}}/openfast/build
+        shell: bash
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: test-results
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
+
+  unit-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DBUILD_TESTING:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build unit tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
+
+         # NWTC Library has only unit tests
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+         # VersionInfo has only unit tests
+      - name: Run VersionInfo tests
+        uses: ./.github/actions/tests-module-version
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: unit
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: unit
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: unit
+
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details unitcov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: unit-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/unitcov.html
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: unit-tests
+          path: |
+            ${{runner.workspace}}/openfast/build/unit_tests
+
+  compile-all-single-precision:
+    # Test if single precision compile completes.
+    # Compiles all targets excluding tests.
+    # Run with the OpenFAST registry generating the types files.
+    # Do not run the test suite.
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Setup
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            -DGENERATE_TYPES:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+      - name: Test
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: ./glue-codes/openfast/openfast -v
+
+  interface-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+          sudo apt-get update -y
+          sudo apt-get install -y gcovr
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+
+      - name: Build OpenFAST C-Interfaces
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+
+      - name: Run C++ API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L cpp
+
+      - name: Run Python API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L python
+
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details regressioncov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: c-interface-reg-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: interface-reg-tests
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

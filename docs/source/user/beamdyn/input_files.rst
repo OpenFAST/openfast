@@ -1,4 +1,4 @@
-.. _input-files:
+.. _bd-input-files:
 
 Input Files
 ===========
@@ -371,7 +371,7 @@ The structural twist angle is also following the IEC standard which is
 defined as the twist about the negative :math:`Z_l` axis. The key points
 are entered sequentially (from the root to tip) and there should be a
 total of ``kp_total`` lines for BeamDyn to read in the information,
-after two header lines. Please refer to Figure :numref:`blade-geometry` for
+after two header lines. Please refer to :numref:`blade-geometry` for
 more details on the blade geometry definition.
 
 .. _blade-geometry:
@@ -414,6 +414,8 @@ damping coefficient, respectively. In future releases, specifying
 actuator, whereby the pitch angular orientation, velocity, and
 acceleration are determined by the actuator based on the input
 blade-pitch angle prescribed by the driver code.
+
+.. _BD-Outputs:
 
 Outputs
 ~~~~~~~
@@ -460,6 +462,10 @@ encounters an unknown/invalid channel name, it warns the users but will
 remove the suspect channel from the output file. Please refer to
 Appendix :numref:`app-output-channel` for a complete list of possible output
 parameters and their names.
+
+.. _BD-Nodal-Outputs:
+
+.. include:: BDNodalOutputs.rst
 
 Blade Input File
 ----------------

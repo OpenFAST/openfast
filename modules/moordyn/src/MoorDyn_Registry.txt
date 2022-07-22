@@ -1,0 +1,175 @@
+##################   Registry for MoorDyn   (Matthew Hall 2015)  ###############
+#   column   1   <keyword>
+#   column   2   ModuleName/ModName or ^ to use the value from the previous line (SD is nickname for ModuleName)
+#   column   3   Derived data type (without "ModName_" prefix)
+#   column   4   Derived data types's Field type
+#   column   5   Variable name
+#   column   6   Dimension of variable {:} for allocatable
+#   column   7   Variable's initial value (if set in the data type)
+#   column   8   I think this is a switch for mixed-language programming; it's mostly unused
+#   column   9   Description
+#   column   10   Units
+# Keyword   ModuleName/ModName   Derived data type   Field type   Variable name      variable dimension   Initial value   for mix language, not used   Description   Units
+
+include Registry_NWTC_Library.txt
+
+
+## ============================== Define input types here: ============================================================================================================================================
+typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -999.9 -   "gravity constant"   "[m/s^2]"
+typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
+typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
+typedef   ^           ^                ReKi               PtfmInit      {6}  -      -   "initial position of platform"     -
+typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
+typedef   ^           ^                CHARACTER(1024)    RootName       -   -      -   "RootName for writing output files"              -
+typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
+typedef   ^           ^                ReKi               DTIC           -    -     -   "convergence check time step for IC generation"              "[s]"
+typedef   ^           ^                ReKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
+typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
+typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
+typedef   ^           ^                CHARACTER(ChanLen)      OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+
+
+# ====================================== Internal data types ========================================================================
+# line properties from line dictionary input
+typedef  ^            MD_LineProp      IntKi              IdNum          -       -  -   "integer identifier of this set of line properties"
+typedef  ^            ^                CHARACTER(10)      name           -       -  -   "name/identifier of this set of line properties"
+typedef  ^            ^                DbKi               d              -       -  -   "volume-equivalent diameter"  "[m]"
+typedef  ^            ^                DbKi               w              -       -  -   "per-length weight in air"  "[kg/m]"
+typedef  ^            ^                DbKi               EA             -       -  -   "stiffness"   "[N]"
+typedef  ^            ^                DbKi               BA             -       -  -   "internal damping coefficient times area"  "[N-s]"
+typedef  ^            ^                DbKi               Can            -       -  -   "transverse added mass coefficient"
+typedef  ^            ^                DbKi               Cat            -       -  -   "tangential added mass coefficient"
+typedef  ^            ^                DbKi               Cdn            -       -  -   "transverse drag coefficient"
+typedef  ^            ^                DbKi               Cdt            -       -  -   "tangential drag coefficient"
+
+# this is the Connection type, which holds data for each connection object
+typedef  ^            MD_Connect       IntKi              IdNum          -       -  -   "integer identifier of this Connection"
+typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of Connect: fix, vessel, connect"
+typedef  ^            ^                IntKi              TypeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=connect"
+typedef  ^            ^                IntKi              AttachedFairs  {:}     -  -   "list of IdNums of connected Line tops"
+typedef  ^            ^                IntKi              AttachedAnchs  {:}     -  -   "list of IdNums of connected Line bottoms"
+typedef  ^            ^                DbKi               conX           -       -  -   ""
+typedef  ^            ^                DbKi               conY           -       -  -   ""
+typedef  ^            ^                DbKi               conZ           -       -  -   ""
+typedef  ^            ^                DbKi               conM           -       -  -   ""
+typedef  ^            ^                DbKi               conV           -       -  -   ""
+typedef  ^            ^                DbKi               conFX          -       -  -   ""
+typedef  ^            ^                DbKi               conFY          -       -  -   ""
+typedef  ^            ^                DbKi               conFZ          -       -  -   ""
+typedef  ^            ^                DbKi               conCa          -       -  -   "added mass coefficient of connection point" "-"
+typedef  ^            ^                DbKi               conCdA         -       -  -   "product of drag force and frontal area of connection point" "[m^2]"
+typedef  ^            ^                DbKi               Ftot           {3}     -  -   "total force on node"
+typedef  ^            ^                DbKi               Mtot           {3}{3}  -  -   "node mass matrix, from attached lines"
+typedef  ^            ^                DbKi               S              {3}{3}  -  -   "inverse mass matrix"  "[kg]"
+typedef  ^            ^                DbKi               r              {3}     -  -   "position"
+typedef  ^            ^                DbKi               rd             {3}     -  -   "velocity"
+
+# this is the Line type, which holds data for each line object
+typedef  ^            MD_Line          IntKi              IdNum         -        -  -   "integer identifier of this Line"
+typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of line.  should match one of LineProp names"
+typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
+typedef  ^            ^                IntKi              CtrlChan      -        -  -   "index of control channel that will drive line active tensioning (0 for none)"   -
+typedef  ^            ^                IntKi              FairConnect   -        -  -   "IdNum of Connection at fairlead"
+typedef  ^            ^                IntKi              AnchConnect   -        -  -   "IdNum of Connection at anchor"
+typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
+typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
+typedef  ^            ^                DbKi               UnstrLen      -        -  -   "unstretched length of the line"   -
+typedef  ^            ^                DbKi               BA            -        -  -   "internal damping coefficient times area for this line only"  "[N-s]"
+typedef  ^            ^                DbKi               r            {:}{:}    -  -   "node positions"    -
+typedef  ^            ^                DbKi               rd           {:}{:}    -  -   "node velocities"  -
+typedef  ^            ^                DbKi               q            {:}{:}    -  -   "node tangent vectors"  -
+typedef  ^            ^                DbKi               l            {:}       -  -   "segment unstretched length"  "[m]"
+typedef  ^            ^                DbKi               ld           {:}       -  -   "segment unstretched length rate of change (used in active tensioning)"  "[m]"
+typedef  ^            ^                DbKi               lstr         {:}       -  -   "segment stretched length"  "[m]"
+typedef  ^            ^                DbKi               lstrd        {:}       -  -   "segment change in stretched length"  "[m/s]"
+typedef  ^            ^                DbKi               V            {:}       -  -   "segment volume"  "[m^3]"
+typedef  ^            ^                DbKi               T            {:}{:}    -  -   "segment tension vectors"  "[N]"
+typedef  ^            ^                DbKi               Td           {:}{:}    -  -   "segment internal damping force vectors"  "[N]"
+typedef  ^            ^                DbKi               W            {:}{:}    -  -   "weight/buoyancy vectors"  "[N]"
+typedef  ^            ^                DbKi               Dp           {:}{:}    -  -   "node drag (transverse)"  "[N]"
+typedef  ^            ^                DbKi               Dq           {:}{:}    -  -   "node drag (axial)"  "[N]"
+typedef  ^            ^                DbKi               Ap           {:}{:}    -  -   "node added mass forcing (transverse)"  "[N]"
+typedef  ^            ^                DbKi               Aq           {:}{:}    -  -   "node added mass forcing (axial)"  "[N]"
+typedef  ^            ^                DbKi               B            {:}{:}    -  -   "node bottom contact force"  "[N]"
+typedef  ^            ^                DbKi               F            {:}{:}    -  -   "total force on node"  "[N]"
+typedef  ^            ^                DbKi               S            {:}{:}{:} -  -   "node inverse mass matrix"  "[kg]"
+typedef  ^            ^                DbKi               M            {:}{:}{:} -  -   "node mass matrix"  "[kg]"
+typedef  ^            ^                IntKi              LineUnOut     -        -  -   "unit number of line output file"
+typedef  ^            ^                ReKi               LineWrOutput {:}       -  -   "one row of output data for this line"
+
+
+
+# this is the MDOutParmType - a less literal alternative of the NWTC OutParmType for MoorDyn (to avoid huge lists of possible output channel permutations)
+typedef  ^            MD_OutParmType   CHARACTER(ChanLen) Name          -        -  -   "name of output channel"
+typedef  ^            ^                CHARACTER(ChanLen) Units         -        -  -   "units string"
+typedef  ^            ^                IntKi              QType         -        -  -   "type of quantity - 0=tension, 1=x, 2=y, 3=z..."
+typedef  ^            ^                IntKi              OType         -        -  -   "type of object - 0=line, 1=connect"
+typedef  ^            ^                IntKi              NodeID        -        -  -   "node number if OType=0.  0=anchor, -1=N=Fairlead"
+typedef  ^            ^                IntKi              ObjID         -        -  -   "number of Connect or Line object"
+
+
+## ============================== Define Initialization outputs here: ================================================================================================================================
+typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"
+typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} ""  -   "second line of output file contents: units"
+typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
+typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
+
+
+## ============================== Define Continuous states here: =====================================================================================================================================
+typedef   ^       ContinuousStateType  DbKi                states          {:} ""  -   "full list of node coordinates and velocities"   "[m] or [m/s]"
+
+
+## ============================== Define Discrete states here: =====================================================================================================================================
+typedef   ^       DiscreteStateType    SiKi                dummy             -  -  -   "Remove this variable if you have discrete states" -
+
+
+## ============================== Define constraint states here: =====================================================================================================================================
+typedef   ^       ConstraintStateType  SiKi                dummy            -   -  -   "Remove this variable if you have constraint states"   -
+
+
+## ============================== Define Other states here: =====================================================================================================================================
+typedef   ^       OtherStateType       SiKi                dummy             -  -  -   "Remove this variable if you have other states" -
+
+
+## ============================== Define Misc variables here: =====================================================================================================================================
+typedef   ^       MiscVarType          MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
+typedef   ^       ^                    MD_Connect          ConnectList      {:}  -  -   "array of connection properties"   -
+typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line properties"   -
+typedef   ^       ^                    IntKi               FairIdList       {:}  -  -   "array of size NFairs listing the ID of each fairlead (index of ConnectList)"         ""
+typedef   ^       ^                    IntKi               ConnIdList       {:}  -  -   "array of size NConnss listing the ID of each connect type connection (index of ConnectList)"         ""
+typedef   ^       ^                    IntKi               LineStateIndList {:}  -  -   "starting index of each line's states in state vector"                 ""
+typedef   ^       ^                    ReKi                MDWrOutput       {:}  -  -   "Data from time step to be written to a MoorDyn output file"
+
+
+## ============================== Parameters ============================================================================================================================================
+typedef   ^       ParameterType        IntKi               NTypes         -     -    -   "number of line types"                       ""
+typedef   ^       ^                    IntKi               NConnects      -     -    -   "number of Connection objects"               ""
+typedef   ^       ^                    IntKi               NFairs         -     -    -   "number of Fairlead Connections"             ""
+typedef   ^       ^                    IntKi               NConns         -     -    -   "number of Connect type Connections - not to be confused with NConnects"             ""
+typedef   ^       ^                    IntKi               NAnchs         -     -    -   "number of Anchor type Connections"             ""
+typedef   ^       ^                    IntKi               NLines         -     -    -   "number of Line objects"                     ""
+typedef   ^       ^                    ReKi                g              -  9.81    -   "gravitational constant"          "[kg/m^2]"
+typedef   ^       ^                    ReKi                rhoW           -     -    -   "density of seawater"              "[m]"
+typedef   ^       ^                    ReKi                WtrDpth        -     -    -   "water depth"                      "[m]"
+typedef   ^       ^                    ReKi                kBot           -     -    -   "bottom stiffness"                 "[Pa/m]"
+typedef   ^       ^                    ReKi                cBot           -     -    -   "bottom damping"                  "[Pa-s/m]"
+typedef   ^       ^                    ReKi                dtM0           -     -    -   "desired mooring model time step"          "[s]"
+typedef   ^       ^                    ReKi                dtCoupling     -     -    -   "coupling time step that MoorDyn should expect"              "[s]"
+typedef   ^       ^                    IntKi               NumOuts        -     -    -   "Number of parameters in the output list (number of outputs requested)"    -
+typedef   ^       ^                    CHARACTER(1024)     RootName       -     -    -   "RootName for writing output files"          -
+typedef   ^       ^                    MD_OutParmType      OutParam       {:}   -    -   "Names and units (and other characteristics) of all requested output parameters"          -
+typedef   ^       ^                    CHARACTER(1)        Delim          -     -    -   "Column delimiter for output text files"     -
+typedef   ^       ^                    IntKi               MDUnOut        -     -    -   "Unit number of main output file"
+
+
+# ============================== Inputs ============================================================================================================================================
+typedef   ^       InputType            MeshType     PtFairleadDisplacement  -    -    -   "mesh for position AND VELOCITY of each fairlead in X,Y,Z"  "[m, m/s]"
+# typedef ^       ^                    MeshType     HydroForceLineMesh      -    -    -   "Meshed input data"            -
+typedef   ^       ^                    ReKi         DeltaL                  {:}  -    -   "change in line length command for each channel"       "[m]"
+typedef   ^       ^                    ReKi         DeltaLdot               {:}  -    -   "rate of change of line length command for each channel"       "[m]"
+
+
+## ============================== Outputs ============================================================================================================================================
+typedef   ^       OutputType           MeshType     PtFairleadLoad          -    -    -   "point mesh for fairlead forces in X,Y,Z"         "[N]"
+typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
+# typedef ^       ^                    MeshType     LineMeshPosition        -    -    -   "Meshed output data"   -

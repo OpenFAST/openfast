@@ -4,46 +4,54 @@ Debugging OpenFAST
 ==================
 
 Being a Fortran project, OpenFAST can be challenging to debug and the process
-is unique for each system and environment. However, a common requirement for
-all systems is to compile OpenFAST in debug mode.
+is unique for each system and environment. Keep in mind that some OpenFAST
+cases can be quite large in their memory footprint and may take a long time
+to reach the point of interest in the code. Choosing a test case carefully
+could save a significant amount time.
 
-Keep in mind that some OpenFAST cases can be quite large in their memory
-footprint and may take a long time to reach the point you're targetting in
-the code. Choosing a minimal test case could save significant time.
-
-It may by helpful to write a small fortran program to verify that your
+It may by helpful to write a small fortran program to verify that all
 debugging tools are set up properly before diving in to OpenFAST. Be sure to
 simulate a bug by doing something like accessing an array element that is not
-allocated and verify that you can catch the bug with your tools.
+allocated and verify that you can catch the bug with a given set of tools.
+
+.. note::
+
+    A requirement for all systems is to compile OpenFAST in **debug** mode.
+
+.. _debugging_windows:
 
 Debugging on Windows
 --------------------
-Windows developers using Intel tools can use Visual Studio for debugging. This
-is a straightforward process with lots of support from Intel.
+Windows developers using Intel tools can use Visual Studio solution included in
+the OpenFAST repository for debugging. This is a straightforward process with
+lots of support from Intel.
 
-Otherwise, Windows developers compiling with CygWin or MinGW should proceed to
-the section for debugging with linux.
+Otherwise, Windows developers compiling in Unix-style environments should
+proceed to :ref:`debugging_linux`.
+
+.. _debugging_linux:
 
 Debugging on Linux and macOS
 ----------------------------
-First, compile OpenFAST in debug mode by setting CMAKE_BUILD_TYPE to Debug.
-You can do this on the command line with
+First, compile OpenFAST in debug mode by setting ``CMAKE_BUILD_TYPE`` to
+"Debug". This can be done on the command line with:
 
 .. code-block:: bash
 
     cmake .. -D CMAKE_BUILD_TYPE=Debug
 
-or by using ccmake to open the command line cmake gui to change it.
+or by using ``ccmake`` to open the command line cmake gui to change it.
 
-The GNU debugger, GDB, works well for debugging compiled code. It has a
+The GNU debugger, ``gdb``, works well for debugging compiled code. It has a
 comprehensive command line interface which enables developers to add
 breakpoints and inspect variables.
 
 Driving the debugger through an IDE can make inspecting the code much more
-efficient. One IDE known to work well is Visual Studio Code with the Native
-Debug extension. You can set up a launch configuration in VS Code so that
-you can debug a particular OpenFAST case through the IDE. To do this, open
-the launch configuration and add a block similar to this:
+efficient. One IDE known to work well is `Visual Studio Code <https://code.visualstudio.com>`__
+with the `Native Debug <https://marketplace.visualstudio.com/items?itemName=webfreak.debug>`__
+extension. You can set up a `launch configuration <https://code.visualstudio.com/docs/editor/debugging#_launch-configurations>`__
+so that you can debug a particular OpenFAST case through the IDE. To do this,
+open the launch configuration and add a block similar to this:
 
 .. code-block:: json
 
@@ -58,12 +66,12 @@ the launch configuration and add a block similar to this:
             "target": "${workspaceRoot}/build/glue-codes/openfast/openfast",
             "cwd": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/AOC_WSt/",
             "arguments": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/AOC_WSt/AOC_WSt.fst",
-        },
+        }
 
-macOS configuration
-~~~~~~~~~~~~~~~~~~~
+macOS-specific configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GDB on macOS needs some configuration before the system allows it to take
-over a process. It is recommended that gdb be installed with homebrew
+over a process. It is recommended that ``gdb`` be installed with homebrew
 
 .. code-block:: bash
 
@@ -71,7 +79,7 @@ over a process. It is recommended that gdb be installed with homebrew
     brew install gdb
 
 After that completes, be sure to follow the caveats to finish the installation.
-For gdb 8.2.1, it looks like this:
+For ``gdb 8.2.1``, it looks like this:
 
 .. code-block:: bash
 
@@ -86,8 +94,10 @@ For gdb 8.2.1, it looks like this:
     echo "set startup-with-shell off" >> ~/.gdbinit
 
 For Native Debug on macOS, you have to sort of hack the extension to allow
-breakpoints in fortran files by adding this line to your settings.json:
+breakpoints in fortran files by adding this line to ``.vscode/settings.json``:
 
 .. code-block:: json
 
-    "debug.allowBreakpointsEverywhere": true,
+    {
+        "debug.allowBreakpointsEverywhere": true
+    }

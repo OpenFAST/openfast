@@ -48,7 +48,7 @@ OpenFAST includes the following organizational changes relative to FAST v8.16:
 
 *	An online documentation system has been established to replace existing documentation of FAST v8: http://openfast.readthedocs.io/; during the transition to OpenFAST, most user-related documentation is still provided through the NWTC Information Portal, https://nwtc.nrel.gov
 
-*	Cross platform compiling is accomplished with CMake on Mac, Linux, and Cygwin (Windows) systems
+*	Cross platform compiling is accomplished with CMake on macOS, Linux, and Cygwin (Windows) systems
 
 *	Visual Studio Projects (VS-Build) are provided for compiling OpenFAST on Windows (starting from OpenFAST v1.0.0), but the development team is working to automate the generation of Visual Studio build files via CMake in a future release
 
@@ -73,7 +73,7 @@ Algorithmically, OpenFAST v0.1.0 is the release most closely related to FAST v8.
 
   * The OpenFAST glue codes, modules, module drivers, and compiling tools are contained within a single repository: https://github.com/openfast/openfast
 
-  *	Cross platform compiling is accomplished with CMake on Mac, Linux, and Cygwin (Windows) systems
+  *	Cross platform compiling is accomplished with CMake on macOS, Linux, and Cygwin (Windows) systems
 
   *	An online documentation system has been established to replace existing documentation of FAST v8: http://openfast.readthedocs.io/
 
@@ -123,7 +123,7 @@ v1.0.0 (September 2017)
 
   *	The online documentation (http://openfast.readthedocs.io/en/latest/index.html) has been extensively updated with additions for installation, testing, user (AeroDyn BeamDyn, transition from FAST v8, release notes), and developer guides, etc
 
-  *	The scripts for compiling OpenFAST using CMake on Mac, Linux, and Cygwin (Windows) systems have been updated, including the ability to compile in single precision and building with Spack
+  *	The scripts for compiling OpenFAST using CMake on macOS, Linux, and Cygwin (Windows) systems have been updated, including the ability to compile in single precision and building with Spack
 
   *	Visual Studio Projects (VS-Build) are provided for compiling OpenFAST on Windows
 

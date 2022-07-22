@@ -32,6 +32,7 @@ __pycache__/*
 
 # Build specific files
 build*/
+_build*/
 install/
 vs-build/
 
@@ -40,3 +41,16 @@ vs-build/
 .vscode
 .atom
 .fortls
+# backup files
+*.asv
+~$*.xlsx
+
+# LaTeX compiling files
+*.aux
+*.nlo
+*.log
+
+#Simulink cache files
+varcache
+*.slxc
+

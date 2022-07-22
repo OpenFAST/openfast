@@ -37,19 +37,17 @@
 #     - regfile (filename): Path to the .txt definitions file
 #
 # Outputs:
-#     - outfile (filename): F90 or C file to be generated
+#     - outfile (filename): Path to the F90 or C file to be generated
 #
 function(generate_f90_types regfile outfile)
   get_filename_component(input ${regfile} ABSOLUTE)
-  get_filename_component(outdir ${regfile} DIRECTORY)
-  get_filename_component(output_base ${outfile} NAME)
+  get_filename_component(outdir ${outfile} DIRECTORY)
 
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/${output_base}")
   add_custom_command(
-    OUTPUT ${output}
+    OUTPUT ${outfile}
     DEPENDS openfast_registry ${input}
-    COMMAND ${CMAKE_BINARY_DIR}/modules-local/openfast-registry/openfast_registry
-    ${input} ${OPENFAST_REGISTRY_INCLUDES} ${ARGN})
+    COMMAND ${CMAKE_BINARY_DIR}/modules/openfast-registry/openfast_registry ${input} "-O" "${outdir}" ${OPENFAST_REGISTRY_INCLUDES} ${ARGN}
+  )
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(generate_f90_types)
 

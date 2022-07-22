@@ -1,0 +1,9 @@
+name: 'SubDyn module tests'
+description: 'Run tests specific to the SubDyn module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: "composite"
+  steps: 
+    - run: ctest -VV -j7 -R SD_
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash
