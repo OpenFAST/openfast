@@ -83,13 +83,13 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
-function(of_cpp_regression TESTNAME LABEL)
+function(of_fastlib_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_cpp" "${LABEL}" ${TESTNAME})
-endfunction(of_cpp_regression)
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_fastlib" "${LABEL}" ${TESTNAME})
+endfunction(of_fastlib_regression)
 
 # openfast aeroacoustic 
 function(of_regression_aeroacoustic TESTNAME LABEL)
@@ -247,14 +247,9 @@ if(BUILD_OPENFAST_CPP_API)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
 endif()
 
-# # Python-based OpenFAST Library unit tests
-# if(BUILD_SHARED_LIBS)
-#   py_openfast_library_regression("py_openfastlib" "python;openfastlib")
-# endif()
-
-# OpenFAST C++ Driver test
+# OpenFAST C++ Driver test for OpenFAST Library
 # This tests the FAST Library and FAST_Library.h
-of_cpp_regression("AWT_YFree_WSt"                   "openfast;openfastlib;cpp;elastodyn;aerodyn15;servodyn")
+of_fastlib_regression("AWT_YFree_WSt"                    "openfastlib;elastodyn;aerodyn15;servodyn")
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn")
