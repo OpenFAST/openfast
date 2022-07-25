@@ -142,6 +142,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(MeshType)                         :: AD_BldPtLoadMesh_tmp    ! mesh for loads  for external nodes -- temporary
    type(MeshType)                         :: AD_NacLoadMesh          ! mesh for loads  for nacelle loads
    integer(IntKi)                         :: WrVTK                   !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(IntKi)                         :: WrVTK_Type              !< Write VTK outputs as [1: surface, 2: lines, 3: both]
    integer(IntKi)                         :: VTK_tWidth              !< width of the time field in the VTK
    character(IntfStrLen)                  :: VTK_OutFileRoot         !< Root name to use for echo files, vtk, etc.
    logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
@@ -193,7 +194,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
                InterpOrder_C, T_initial_C, DT_C, TMax_C,                  &
-               storeHHVel, WrVTK_in, TransposeDCM_in,                     &
+               storeHHVel, WrVTK_in, WrVTK_inType, TransposeDCM_in,       &
                HubPos_C, HubOri_C,                                        &
                NacPos_C, NacOri_C,                                        &
                NumBlades_C, BldRootPos_C, BldRootOri_C,                   &
@@ -243,6 +244,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Flags
    logical(c_bool),           intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
    integer(c_int),            intent(in   )  :: WrVTK_in                               !< Write VTK outputs [0: none, 1: init only, 2: animation]
+   integer(c_int),            intent(in   )  :: WrVTK_inType                           !< Write VTK outputs as [1: surface, 2: lines, 3: both]
    logical(c_bool),           intent(in   )  :: TransposeDCM_in                        !< Transpose DCMs as they are passed in
    ! Output
    integer(c_int),            intent(  out)  :: NumChannels_C                          !< Number of output channels requested from the input file
@@ -305,9 +307,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       i = INDEX(TmpFileName,C_NULL_CHAR) - 1                ! if this has a c null character at the end...
       if ( i > 0 ) TmpFileName = TmpFileName(1:I)           ! remove it
       InitInp%AD%InputFile             = TmpFileName
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Interface cannot currently handle a filename passed in for AD primary input file.  Expecting string of file contents"
-      if (Failed())  return
    endif
 
    ! Format IfW input file contents
@@ -324,9 +323,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       i = INDEX(TmpFileName,C_NULL_CHAR) - 1                ! if this has a c null character at the end...
       if ( i > 0 ) TmpFileName = TmpFileName(1:I)           ! remove it
       InitInp%IW_InitInp%InputFile      = TmpFileName
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Interface cannot currently handle a filename passed in for IfW primary input file.  Expecting string of file contents"
-      if (Failed())  return
    endif
 
 
@@ -360,6 +356,14 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       ErrMsg2  =  "WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]"
       if (Failed())  return
    endif
+   WrVTK_Type       = int(WrVTK_inType, IntKi)
+   if ( WrVTK_Type > 0_IntKi ) then
+      if ( WrVTK_Type < 1_IntKi .or. WrVTK_Type > 3_IntKi ) then
+         ErrStat2 =  ErrID_Fatal
+         ErrMsg2  =  "WrVTK_Type option for writing VTK visualization files must be [1: surface, 2: lines, 3: both]"
+         if (Failed())  return
+      endif
+   endif
    ! Flag to transpose DCMs as they are passed in
    TransposeDCM      = TransposeDCM_in
 
@@ -381,6 +385,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    InitInp%AD%MSL2SWL     = REAL(MSL2SWL_C,     ReKi)
    InitInp%storeHHVel     = storeHHVel
    InitInp%WrVTK          = WrVTK
+   InitInp%WrVTK_Type     = WrVTK_Type
    InitInp%IW_InitInp%CompInflow = 1    ! Use InflowWind
 
    ! setup rotors for AD -- interface only supports one rotor at present
@@ -591,6 +596,7 @@ CONTAINS
       TmpFlag="F";   if (storeHHVel) TmpFlag="T"
       call WrScr("       storeHHVel                     "//TmpFlag )
       call WrScr("       WrVTK_in                       "//trim(Num2LStr( WrVTK_in      )) )
+      call WrScr("       WrVTK_inType                   "//trim(Num2LStr( WrVTK_inType  )) )
       TmpFlag="F";   if (TransposeDCM_in) TmpFlag="T"
       call WrScr("       TransposeDCM_in                "//TmpFlag )
       call WrScr("   Init Data")
@@ -1011,8 +1017,8 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
-   ! Write VTK if requested
-   if (WrVTK > 0_IntKi)    call WrVTK_Meshes(ErrStat2,ErrMsg2)
+   ! Write VTK if requested (animation=2)
+   if (WrVTK > 1_IntKi)    call WrVTK_Meshes(ErrStat2,ErrMsg2)
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)

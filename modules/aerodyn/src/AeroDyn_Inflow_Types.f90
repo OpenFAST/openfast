@@ -70,8 +70,8 @@ IMPLICIT NONE
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
     Character(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
-    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
+    INTEGER(IntKi)  :: WrVTK = 0      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type = 1      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -1308,7 +1308,7 @@ CONTAINS
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%storeHHVel = SrcInitInputData%storeHHVel
-    DstInitInputData%wrVTK = SrcInitInputData%wrVTK
+    DstInitInputData%WrVTK = SrcInitInputData%WrVTK
     DstInitInputData%WrVTK_Type = SrcInitInputData%WrVTK_Type
  END SUBROUTINE ADI_CopyInitInput
 
@@ -1397,7 +1397,7 @@ CONTAINS
       END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
-      Int_BufSz  = Int_BufSz  + 1  ! wrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1488,7 +1488,7 @@ CONTAINS
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%storeHHVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%wrVTK
+    IntKiBuf(Int_Xferred) = InData%WrVTK
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
@@ -1606,7 +1606,7 @@ CONTAINS
     END DO ! I
     OutData%storeHHVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%storeHHVel)
     Int_Xferred = Int_Xferred + 1
-    OutData%wrVTK = IntKiBuf(Int_Xferred)
+    OutData%WrVTK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
