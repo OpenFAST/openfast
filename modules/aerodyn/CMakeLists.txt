@@ -74,6 +74,12 @@ set(FVW_LIBS_SOURCES
   src/FVW_VTK.f90
 )
 
+# ADI lib
+set(ADI_LIB_SOURCES
+  src/AeroDyn_Inflow.f90
+  src/AeroDyn_Inflow_Types.f90
+)
+
 # UnsteadyAero lib
 add_library(uaaerolib ${UA_LIBS_SOURCES})
 target_link_libraries(uaaerolib afinfolib nwtclibs)
@@ -93,17 +99,19 @@ target_link_libraries(aeroacoustics afinfolib nwtclibs)
 add_library(aerodynlib ${AD_LIBS_SOURCES})
 target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacoustics)
 
+# ADI lib
+add_library(adilib ${ADI_LIB_SOURCES})
+target_link_libraries(adilib aerodynlib ifwlib nwtclibs)
+
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
-  src/AeroDyn_Inflow.f90
-  src/AeroDyn_Inflow_Types.f90
   src/AeroDyn_Driver.f90
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90
 )
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver adilib ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
 
 
 # UnsteadyAero driver
@@ -118,17 +126,15 @@ target_link_libraries(unsteadyaero_driver aerodynlib fvwlib uaaerolib afinfolib 
 # c-bindings interface library
 set(ADI_C_SOURCES
   src/AeroDyn_Inflow_C_Binding.f90
-  src/AeroDyn_Inflow.f90
-  src/AeroDyn_Inflow_Types.f90
 )
 add_library(aerodyn_inflow_c_binding SHARED ${ADI_C_SOURCES})
-target_link_libraries(aerodyn_inflow_c_binding ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_inflow_c_binding adilib nwtclibs ${CMAKE_DL_LIBS})
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()
 
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib fvwlib uaaerolib afinfolib aeroacoustics aerodyn_inflow_c_binding
+install(TARGETS unsteadyaero_driver aerodyn_driver adilib aerodynlib fvwlib uaaerolib afinfolib aeroacoustics aerodyn_inflow_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
