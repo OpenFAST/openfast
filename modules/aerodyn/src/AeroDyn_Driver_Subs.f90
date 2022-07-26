@@ -1952,9 +1952,11 @@ subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
       endif
       y_ED => FED%WT(iWT)
 
-      ! Base 
-      call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
-                                   VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+      if (p_FAST%WrVTK_Type==2) then   ! only if not doing surfaces
+         ! Base
+         call MeshWrVTK_PointSurface (p_FAST%VTKRefPoint, y_ED%PlatformPtMesh, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.BaseSurface', &
+                                      VTK_count, OutputFields, errStat2, errMsg2, p_FAST%VTK_tWidth , verts = p_FAST%VTK_Surface(iWT)%BaseBox)
+      endif
       if (y_ED%numBlades>0) then
          ! Nacelle 
          call MeshWrVTK( p_FAST%VTKRefPoint, y_ED%NacelleMotion, trim(p_FAST%VTK_OutFileRoot)//trim(sWT)//'.Nacelle', &
