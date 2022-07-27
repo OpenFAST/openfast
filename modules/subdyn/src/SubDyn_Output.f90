@@ -978,7 +978,7 @@ SUBROUTINE SD_Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%TPMesh%TranslationDisp = 1;
       u%TPMesh%TranslationDisp( fieldIndx,node) = u%TPMesh%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%TPMesh%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
    CASE ( 3) !Module/Mesh/Field: u%TPMesh%TranslationVel = 3;
       u%TPMesh%TranslationVel( fieldIndx,node) = u%TPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%TPMesh%RotationVel = 4;
@@ -1007,8 +1007,8 @@ SUBROUTINE SD_Compute_dY(p, y_p, y_m, delta, dY)
    INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
    indx_first = 1
    call PackLoadMesh_dY(  y_p%Y1Mesh, y_m%Y1Mesh, dY, indx_first)
-   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
-   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first, UseSmlAngle=.true.) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first, UseSmlAngle=.true.) ! all 6 motion fields
    do i=1,p%NumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
    end do

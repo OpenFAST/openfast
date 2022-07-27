@@ -133,7 +133,6 @@ if not os.path.isdir(testBuildDirectory):
 if not noExec:
     cwd = os.getcwd()
     os.chdir(testBuildDirectory)
-    print("** CWD: ", os.getcwd())
     caseInputFile = os.path.abspath("cDriver.yaml")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:

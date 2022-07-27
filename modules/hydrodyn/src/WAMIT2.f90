@@ -4221,12 +4221,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         IF ( EqualRealNos( Data3D%WvDir1(J), Data3D%WvDir2(J) ) .AND. &
                              EqualRealNos( Data3D%WvDir1(K), Data3D%WvDir2(K) ) ) THEN
 
-                              ! Check if not filled
-                           IF ( .NOT. Data3D%DataMask( I, J, K, L )  ) THEN
+                           ! Check if filled
+                           IF ( Data3D%DataMask( I, J, K, L )  ) THEN
 
                                  ! See if the diagonal mirror one (WvDir2,WvDir1) value is not filled,
                                  ! and fill it if empty
-                              IF ( Data3D%DataMask( I, K, J, L )  ) THEN
+                              IF ( .NOT. Data3D%DataMask( I, K, J, L )  ) THEN
                                  Data3D%DataSet ( I, K, J, L ) = Data3D%DataSet( I, J, K, L )
                                  Data3D%DataMask( I, K, J, L ) = .TRUE.
                               ENDIF
