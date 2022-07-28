@@ -7265,6 +7265,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
    CHARACTER(1024)                         :: VTK_RootName
    CHARACTER(1024)                         :: VTK_RootDir
    CHARACTER(1024)                         :: vtkroot
+   CHARACTER(1024)                         :: sInfo !< String used for formatted screen output
 
 
    ErrStat = ErrID_None
@@ -7292,15 +7293,18 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
    call MKDIR( trim(VTK_RootDir) )
 
 
-   select case (p_FAST%VTK_modes%VTKLinTim)
-   case (1)
+   do iMode = 1,p_FAST%VTK_modes%VTKLinModes
+      ModeNo = p_FAST%VTK_modes%VTKModes(iMode)
+      call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, nt, dt, p_FAST%VTK_tWidth )
+      write(sInfo, '(A,I4,A,F12.4,A,I4,A,I0)') 'Mode',ModeNo,', Freq=', p_FAST%VTK_modes%DampedFreq_Hz(ModeNo),'Hz, NLinTimes=',NLinTimes,', nt=',nt
+      call WrScr(trim(sInfo))
+      if (nt > 500) then
+         call WrScr('   Skipping mode '//trim(num2lstr(ModeNo))//' due to low frequency.')
+         cycle
+      endif
 
-      do iMode = 1,p_FAST%VTK_modes%VTKLinModes
-         ModeNo = p_FAST%VTK_modes%VTKModes(iMode)
-
-         call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, nt, dt, p_FAST%VTK_tWidth )
-         if (nt > 500) cycle
-
+      select case (p_FAST%VTK_modes%VTKLinTim)
+      case (1)
          p_FAST%VTK_OutFileRoot = trim(VTK_RootName)//'.Mode'//trim(num2lstr(ModeNo))
          y_FAST%VTK_count = 1  ! we are skipping the reference meshes by starting at 1
          do iLinTime = 1,NLinTimes
@@ -7329,15 +7333,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
             call WriteVTK(m_FAST%Lin%LinTimes(iLinTime), p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
 
          end do ! iLinTime
-      end do ! iMode
-
-   case (2)
-
-      do iMode = 1,p_FAST%VTK_modes%VTKLinModes
-         ModeNo = p_FAST%VTK_modes%VTKModes(iMode)
-
-         call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, nt, dt, p_FAST%VTK_tWidth )
-         if (nt > 500) cycle
+      case (2)
 
          do iLinTime = 1,NLinTimes
             p_FAST%VTK_OutFileRoot = trim(VTK_RootName)//'.Mode'//trim(num2lstr(ModeNo))//'.LinTime'//trim(num2lstr(iLinTime))
@@ -7368,13 +7364,15 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
 
                call WriteVTK(m_FAST%Lin%LinTimes(iLinTime)+tprime, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
 
-            end do
-
-
+            end do ! it
          end do ! iLinTime
-      end do   ! iMode
 
-   end select
+      end select ! VTKLinTim=1 or 2
+
+   end do ! iMode
+
+
+
 
 END SUBROUTINE FAST_RestoreForVTKModeShape_T
 !----------------------------------------------------------------------------------------------------------------------------------
