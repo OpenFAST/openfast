@@ -101,9 +101,13 @@ class AeroDynInflowLib(CDLL):
 
         # flags 
         self.storeHHVel  = False
+        self.transposeDCM= False
+
+        # VTK
         self.WrVTK       = 0          # default of no vtk output
         self.WrVTK_Type  = 1          # default of surface meshes
-        self.transposeDCM= False
+        self.VTKNacDim   = np.array([-2.5,-2.5,0,10,5,5], dtype="float32")        # default nacelle dimension for VTK surface rendering [x0,y0,z0,Lx,Ly,Lz] (m)
+        self.VTKHubRad   = 1.5        # default hub radius for VTK surface rendering
 
         # Interpolation order (must be 1: linear, or 2: quadratic)
         self.InterpOrder = 1          # default of linear interpolation
@@ -167,9 +171,11 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax 
             POINTER(c_bool),                    # storeHHVel
+            POINTER(c_bool),                    # transposeDCM
             POINTER(c_int),                     # WrVTK
             POINTER(c_int),                     # WrVTK_Type
-            POINTER(c_bool),                    # transposeDCM
+            POINTER(c_float),                   # VTKNacDim
+            POINTER(c_float),                   # VTKHubRad
             POINTER(c_float),                   # initHubPos
             POINTER(c_double),                  # initHubOrient_flat
             POINTER(c_float),                   # initNacellePos
@@ -284,6 +290,7 @@ class AeroDynInflowLib(CDLL):
 
         #   Flatten arrays to pass
         #       [x2,y1,z1, x2,y2,z2 ...]
+        VTKNacDim_c             = (c_float  * len(self.VTKNacDim        ))(*self.VTKNacDim        )
         initHubPos_c            = (c_float  * len(self.initHubPos       ))(*self.initHubPos       )
         initHubOrient_c         = (c_double * len(self.initHubOrient    ))(*self.initHubOrient    )
         initNacellePos_c        = (c_float  * len(self.initNacellePos   ))(*self.initNacellePos   )
@@ -316,9 +323,11 @@ class AeroDynInflowLib(CDLL):
             byref(c_double(self.dt)),               # IN: time step (dt)
             byref(c_double(self.tmax)),             # IN: tmax
             byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
+            byref(c_bool(self.transposeDCM)),       # IN: transposeDCM
             byref(c_int(self.WrVTK)),               # IN: WrVTK
             byref(c_int(self.WrVTK_Type)),          # IN: WrVTK_Type
-            byref(c_bool(self.transposeDCM)),       # IN: transposeDCM
+            VTKNacDim_c,                            # IN: VTKNacDim
+            byref(c_float(self.VTKHubRad)),         # IN: VTKHubRad
             initHubPos_c,                           # IN: initHubPos -- initial hub position
             initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
             initNacellePos_c,                       # IN: initNacellePos -- initial hub position
