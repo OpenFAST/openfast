@@ -46,6 +46,12 @@ if(APPLE)
   option(CMAKE_MACOSX_RPATH "Use RPATH runtime linking" on)
 endif()
 
+# Warn if atypical configuration for variable tracking and build type
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if(NOT ${VARIABLE_TRACKING} AND (${_build_type} STREQUAL "DEBUG" OR ${_build_type} STREQUAL "RELWITHDEBINFO") )
+  message(WARNING "Variable tracking is disabled and build type includes debug symbols. This may reduce the ability to debug.")
+endif()
+
 # Precompiler/preprocessor flag configuration
 # Do this before configuring modules so that the flags are included
 option(BUILD_TESTING "Build the testing tree." OFF)
