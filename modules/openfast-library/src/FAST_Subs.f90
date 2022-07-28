@@ -7263,6 +7263,8 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_RestoreForVTKModeShape_T'
    CHARACTER(1024)                         :: VTK_RootName
+   CHARACTER(1024)                         :: VTK_RootDir
+   CHARACTER(1024)                         :: vtkroot
 
 
    ErrStat = ErrID_None
@@ -7282,6 +7284,13 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
    NLinTimes = min( p_FAST%VTK_modes%VTKNLinTimes, size(p_FAST%VTK_modes%x_eig_magnitude,2), p_FAST%NLinTimes )
 
    VTK_RootName = p_FAST%VTK_OutFileRoot
+
+   ! Creating VTK folder in case user deleted it.
+   ! We have to extract the vtk root dir again because p_FAST%VTK_OutFileRoot contains the full basename
+   call GetPath ( p_FAST%OutFileRoot, VTK_RootDir, vtkroot )
+   VTK_RootDir = trim(VTK_RootDir) // 'vtk'
+   call MKDIR( trim(VTK_RootDir) )
+
 
    select case (p_FAST%VTK_modes%VTKLinTim)
    case (1)
