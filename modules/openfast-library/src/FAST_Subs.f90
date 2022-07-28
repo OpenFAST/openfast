@@ -3308,6 +3308,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
+   INTEGER(IntKi)                          :: rootNode, cylNode, tipNode
 
 
    ErrStat = ErrID_None
@@ -3417,16 +3418,8 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
             call move_alloc( InitOutData_AD%rotors(1)%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface%BladeShape(k)%AirfoilCoords )
          end do
       ELSE
-#ifndef USE_DEFAULT_BLADE_SURFACE
-         call setErrStat(ErrID_Fatal,'Cannot do surface visualization without airfoil coordinates defined in AeroDyn.',ErrStat,ErrMsg,RoutineName)
-         return
-      END IF
-   ELSE
-      call setErrStat(ErrID_Fatal,'Cannot do surface visualization without using AeroDyn.',ErrStat,ErrMsg,RoutineName)
-      return
-   END IF
-#else
       ! AD used without airfoil coordinates specified
+      call WrScr('Using generic blade surfaces for AeroDyn (S809 airfoil, assumed chord, twist, AC). ')
 
          rootNode = 1
       
@@ -3434,19 +3427,20 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
             tipNode  = AD%Input(1)%rotors(1)%BladeMotion(K)%NNodes
             cylNode  = min(3,AD%Input(1)%rotors(1)%BladeMotion(K)%Nnodes)
          
-            call SetVTKDefaultBladeParams(AD%Input(1)%rotors(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            call SetVTKDefaultBladeParams(AD%Input(1)%rotors(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 1, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF (ErrStat >= AbortErrLev) RETURN
          END DO
       END IF
 
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
+      call WrScr('Using generic blade surfaces for BeamDyn (circular airfoil, constant chord). ') ! TODO make this an option
       rootNode = 1
       DO K=1,NumBl
          tipNode  = BD%y(k)%BldMotion%NNodes
          cylNode  = min(3,BD%y(k)%BldMotion%NNodes)
 
-         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 2, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
@@ -3456,12 +3450,11 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
          tipNode  = ED%y%BladeLn2Mesh(K)%NNodes-1
          cylNode  = min(2,ED%y%BladeLn2Mesh(K)%NNodes)
 
-         call SetVTKDefaultBladeParams(ED%y%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(ED%y%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 1, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
    END IF
-#endif
 
 
    !.......................
@@ -3498,13 +3491,14 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
 END SUBROUTINE SetVTKParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
-SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, ErrStat, ErrMsg)
+SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, iShape, ErrStat, ErrMsg)
 
    TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
    TYPE(FAST_VTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
    INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
    INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
+   INTEGER(IntKi),               INTENT(IN   ) :: iShape           !< 1: S809, 2: circle, 3: square, 4: rectangle
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
@@ -3516,15 +3510,46 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, E
    INTEGER(IntKi)                              :: ErrStat2
    CHARACTER(ErrMsgLen)                        :: ErrMsg2
    CHARACTER(*), PARAMETER                     :: RoutineName = 'SetVTKDefaultBladeParams'
+   integer :: N  ! Number of points for airfoil
+   real, allocatable, dimension(:) :: xc, yc ! Coordinate of airfoil
 
-   !Note: jmj does not like this default option
-
-   integer, parameter :: N = 66
+   if (iShape==1) then
+      N=66
+      call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
+      call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+      xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
+      yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
+   else if (iShape==2) then
+      ! Circle
+      N=21
+      call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
+      call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+      do i=1,N
+         angle = (i-1)*TwoPi/N
+         xc(i) = (cos(angle)+1)/2        ! between 0 and 1, 0.5 substracted later
+         yc(i) = (sin(angle)+1)/2-0.5    ! between -0.5 and 0.5
+      enddo
+   else if (iShape==3) then
+      ! Square
+      N=5
+      call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
+      call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+      xc = (/1.0  , 0.0  , 0.0 , 1.0 , 1.0/)  ! between 0 and 1, 0.5 substracted later
+      yc = (/-0.5 , -0.5 , 0.5 , 0.5 , -0.5/) ! between -0.5 and 0.5
+   else if (iShape==4) then
+      ! Rectangle
+      N=5
+      call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
+      call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+      xc = (/1.0   , 0.0   , 0.0  , 1.0  , 1.0/) ! between 0 and 1, 0.5 substracted later
+      yc = (/-0.25 , -0.25 , 0.25 , 0.25 , 0.0/) ! between 0.25 and 0.25
+   endif
 
    ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:
-   real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
-   real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
-
    call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
@@ -3535,6 +3560,25 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, E
    bladeLengthFract  = 0.22*bladeLength
    bladeLengthFract2 = bladeLength-bladeLengthFract != 0.78*bladeLength
 
+ 
+   ! Circle, square or rectangle, constant chord
+   if (iShape>1) then
+      chord = bladeLength*0.04 ! chord set to 4% of blade length
+      DO i=1,M%Nnodes
+         posLength = TwoNorm( M%Position(:,i) - M%Position(:,rootNode) )
+         DO j=1,N
+            ! normalized x,y coordinates for airfoil
+            x = yc(j)
+            y = xc(j) - 0.5
+               ! x,y coordinates for cylinder
+            BladeShape%AirfoilCoords(1,j,i) = chord*x 
+            BladeShape%AirfoilCoords(2,j,i) = chord*y 
+         END DO
+      enddo
+      return ! We exit this routine
+   endif
+
+   ! Assumed chord/twist/AC distribution for a blade
    DO i=1,M%Nnodes
       posLength = TwoNorm( M%Position(:,i) - M%Position(:,rootNode) )
 
@@ -7649,7 +7693,7 @@ SUBROUTINE ReadModeShapeFile(p_FAST, InputFile, ErrStat, ErrMsg, checkpointOnly)
 ! overwrite these based on inputs:
 
       if (p_FAST%VTK_modes%VTKLinTim == 2) then
-         p_FAST%VTK_modes%VTKLinPhase = 0      ! "Phase when making one animation for all LinTimes together (used only when VTKLinTim=1)" -
+         !p_FAST%VTK_modes%VTKLinPhase = 0      ! "Phase when making one animation for all LinTimes together (used only when VTKLinTim=1)" -
 
          if (VTKLinTimes1) then
             p_FAST%VTK_modes%VTKNLinTimes = 1
