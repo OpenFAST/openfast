@@ -3434,23 +3434,24 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
       END IF
 
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
-      call WrScr('Using generic blade surfaces for BeamDyn (circular airfoil, constant chord). ') ! TODO make this an option
+      call WrScr('Using generic blade surfaces for BeamDyn (rectangular airfoil, constant chord). ') ! TODO make this an option
       rootNode = 1
       DO K=1,NumBl
          tipNode  = BD%y(k)%BldMotion%NNodes
          cylNode  = min(3,BD%y(k)%BldMotion%NNodes)
 
-         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 2, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
    ELSE
+      call WrScr('Using generic blade surfaces for ElastoDyn (rectangular airfoil, constant chord). ') ! TODO make this an option
       DO K=1,NumBl
          rootNode = ED%y%BladeLn2Mesh(K)%NNodes
          tipNode  = ED%y%BladeLn2Mesh(K)%NNodes-1
          cylNode  = min(2,ED%y%BladeLn2Mesh(K)%NNodes)
 
-         call SetVTKDefaultBladeParams(ED%y%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 1, ErrStat2, ErrMsg2)
+         call SetVTKDefaultBladeParams(ED%y%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, 4, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       END DO
@@ -7339,7 +7340,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
 
    do iMode = 1,p_FAST%VTK_modes%VTKLinModes
       ModeNo = p_FAST%VTK_modes%VTKModes(iMode)
-      call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, nt, dt, p_FAST%VTK_tWidth )
+      call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, p_FAST%VTK_modes%VTKLinTim, nt, dt, p_FAST%VTK_tWidth )
       write(sInfo, '(A,I4,A,F12.4,A,I4,A,I0)') 'Mode',ModeNo,', Freq=', p_FAST%VTK_modes%DampedFreq_Hz(ModeNo),'Hz, NLinTimes=',NLinTimes,', nt=',nt
       call WrScr(trim(sInfo))
       if (nt > 500) then
@@ -7420,9 +7421,10 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
 
 END SUBROUTINE FAST_RestoreForVTKModeShape_T
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE GetTimeConstants(DampedFreq_Hz, VTK_fps, nt, dt, VTK_tWidth )
+SUBROUTINE GetTimeConstants(DampedFreq_Hz, VTK_fps, VTKLinTim, nt, dt, VTK_tWidth)
    REAL(R8Ki),     INTENT(IN   ) :: DampedFreq_Hz
    REAL(DbKi),     INTENT(IN   ) :: VTK_fps
+   INTEGER(IntKi), INTENT(IN   ) :: VTKLinTim
    INTEGER(IntKi), INTENT(  OUT) :: nt  !< number of steps
    REAL(DbKi),     INTENT(  OUT) :: dt  !< time step
    INTEGER(IntKi), INTENT(  OUT) :: VTK_tWidth
@@ -7431,21 +7433,27 @@ SUBROUTINE GetTimeConstants(DampedFreq_Hz, VTK_fps, nt, dt, VTK_tWidth )
    INTEGER(IntKi)                          :: NCycles
    INTEGER(IntKi), PARAMETER               :: MinFrames = 5
 
-   if (DampedFreq_Hz <= 0.0_DbKi) then
+   if (DampedFreq_Hz <= 1e-4_DbKi) then
       nt = huge(nt)
       dt = epsilon(dt)
       VTK_tWidth = 1
       return
    end if
 
-   nt = 1
-   NCycles = 0
-   do while (nt<MinFrames)
-      NCycles = NCycles + 1
-      cycle_time = NCycles * 1.0_DbKi / DampedFreq_Hz
+   if (VTKLinTim==1) then
+      nt = 1
+      NCycles = 0
+      do while (nt<MinFrames)
+         NCycles = NCycles + 1
+         cycle_time = NCycles * 1.0_DbKi / DampedFreq_Hz
 
-      nt = NINT( max(1.0_DbKi, VTK_fps) * cycle_time )
-   end do
+         nt = NINT( max(1.0_DbKi, VTK_fps) * cycle_time )
+      end do
+   else
+      ! All simulation will use VTK_fps
+      cycle_time =  1.0_DbKi / DampedFreq_Hz
+      nt = NINT(VTK_fps) 
+   endif
 
    dt = cycle_time / nt
 
