@@ -160,7 +160,7 @@ if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
 
 ### Get a list of all the files in the baseline directory
 baselineOutFiles = os.listdir(targetOutputDirectory)

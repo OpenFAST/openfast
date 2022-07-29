@@ -136,7 +136,7 @@ if not noExec:
     caseInputFile = os.path.abspath("cDriver.yaml")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
     os.chdir(cwd)
     
 ### Build the filesystem navigation variables for running the regression test

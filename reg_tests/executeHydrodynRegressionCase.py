@@ -49,9 +49,9 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot", default=False, const=True, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, const=True, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, const=True, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -97,13 +97,19 @@ if not os.path.isdir(testBuildDirectory):
     for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+
+dirToCopy = os.path.join("glue-codes","openfast","5MW_Baseline","HydroData")
+buildDirectoryGlue = os.path.join(buildDirectory,os.pardir,os.pardir,dirToCopy)
+if not os.path.isdir(buildDirectoryGlue):
+    src = os.path.join(rtest,dirToCopy)
+    shutil.copytree(src, buildDirectoryGlue)
     
 ### Run HydroDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "hd_driver.inp")
     returnCode = openfastDrivers.runHydrodynDriverCase(caseInputFile, executable)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "driver.HD.out")
