@@ -56,7 +56,7 @@ CONTAINS
 !====================================================================================================
 !> This routine acts as a wrapper for the GetWindSpeed routine. It steps through the array of input
 !! positions and calls the GetWindSpeed routine to calculate the velocities at each point.
-SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrStat, ErrMsg)
+SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -66,7 +66,6 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_FFWind_ParameterType),              INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
 
       ! Error handling
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
@@ -816,7 +815,7 @@ SUBROUTINE ConvertFFWind_to_Bladed(FileRootName, p, ErrStat, ErrMsg)
 
 END SUBROUTINE ConvertFFWind_to_Bladed
 !==================================================================================================================================
-   SUBROUTINE WrBinHAWC(FileRootName, FFWind, delta, ErrStat, ErrMsg)
+SUBROUTINE WrBinHAWC(FileRootName, FFWind, delta, ErrStat, ErrMsg)
    CHARACTER(*),      INTENT(IN) :: FileRootName                     !< Name of the file to write the output in
    REAL(SiKi),        INTENT(IN) :: FFWind(:,:,:,:)                  !< 4D wind speeds: index 1=z (height), 2=y (lateral), 3=dimension(u,v,w), 4=time or x
    REAL(SiKi),        INTENT(IN) :: delta(3)                         !< array containing dx, dy, dz in meters
@@ -908,9 +907,9 @@ END SUBROUTINE ConvertFFWind_to_Bladed
 
    END DO
 
-   END SUBROUTINE WrBinHAWC
+END SUBROUTINE WrBinHAWC
 !==================================================================================================================================
-   SUBROUTINE WrBinBladed(FileRootName, FFWind, delta, MeanFFWS, HubHt, GridBase, Periodic, AddMeanAfterInterp, ErrStat, ErrMsg)
+SUBROUTINE WrBinBladed(FileRootName, FFWind, delta, MeanFFWS, HubHt, GridBase, Periodic, AddMeanAfterInterp, ErrStat, ErrMsg)
    CHARACTER(*),      INTENT(IN) :: FileRootName                     !< Name of the file to write the output in
    REAL(SiKi),        INTENT(IN) :: FFWind(:,:,:,:)                  !< 4D wind speeds: index 1=z (height), 2=y (lateral), 3=dimension(u,v,w), 4=time or x
    REAL(SiKi),        INTENT(IN) :: delta(3)                         !< array containing dx, dy, dz in meters
@@ -1099,7 +1098,7 @@ END SUBROUTINE ConvertFFWind_to_Bladed
    CLOSE( UnWind )
    
    
-   END SUBROUTINE WrBinBladed
+END SUBROUTINE WrBinBladed
 !====================================================================================================
 SUBROUTINE ConvertFFWind_toVTK(FileRootName, p, ErrStat, ErrMsg)
    CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files

@@ -1818,7 +1818,7 @@ END SUBROUTINE Read_NativeBladedSummary
 !! day. For now, it merely needs to be functional. It can be fixed up and made all pretty later.
 !!
 !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -1829,7 +1829,6 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, D
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_BladedFFWind_ParameterType),        INTENT(IN   )  :: ParamData         !< Parameters
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_BladedFFWind_MiscVarType),          INTENT(INOUT)  :: MiscVars          !< misc/optimization data (storage for the main data)
 
       ! Error handling
@@ -1838,7 +1837,7 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, D
 
 
 
-   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, ParamData%FF, Velocity, DiskVel, ErrStat, ErrMsg)
+   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, ParamData%FF, Velocity, ErrStat, ErrMsg)
 
 
    RETURN

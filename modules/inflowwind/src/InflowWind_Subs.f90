@@ -1376,7 +1376,6 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
          ! Local variables
       REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
-      REAL(ReKi)                                               :: DiskVel(3)     !< HACK for AD14: disk velocity output at Time
 
       INTEGER(IntKi)                                           :: I                   !< Generic counters
 
@@ -1432,8 +1431,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE (Steady_WindNumber, Uniform_WindNumber)
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, p%UniformWind, y%VelocityUVW, &
-                                          DiskVel, m%UniformWind, TmpErrStat, TmpErrMsg)
+            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, p%UniformWind, y%VelocityUVW, m%UniformWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1441,15 +1439,13 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
                ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
             IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL  IfW_UniformWind_CalcOutput(  Time, p%WindViXYZprime, p%UniformWind, m%WindViUVW, &
-                                             DiskVel, m%UniformWind, TmpErrStat, TmpErrMsg)
+               CALL  IfW_UniformWind_CalcOutput(  Time, p%WindViXYZprime, p%UniformWind, m%WindViUVW, m%UniformWind, TmpErrStat, TmpErrMsg)
             ENDIF
 
          CASE (TSFF_WindNumber)
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_TSFFWind_CalcOutput(  Time, PositionXYZprime, p%TSFFWind, &
-                                          y%VelocityUVW, DiskVel, m%TSFFWind, TmpErrStat, TmpErrMsg)
+            CALL  IfW_TSFFWind_CalcOutput(  Time, PositionXYZprime, p%TSFFWind, y%VelocityUVW, m%TSFFWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1458,8 +1454,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
                ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( p%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL  IfW_TSFFWind_CalcOutput(  Time, p%WindViXYZprime, p%TSFFWind, &
-                                             m%WindViUVW, DiskVel, m%TSFFWind, TmpErrStat, TmpErrMsg)
+               CALL  IfW_TSFFWind_CalcOutput(  Time, p%WindViXYZprime, p%TSFFWind, m%WindViUVW, m%TSFFWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1474,8 +1469,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE (BladedFF_WindNumber) !also includes BladedFF_Shr_WindNumber
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, p%BladedFFWind, &
-                                          y%VelocityUVW, DiskVel, m%BladedFFWind, TmpErrStat, TmpErrMsg)
+            CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, p%BladedFFWind, y%VelocityUVW, m%BladedFFWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1484,8 +1478,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
                ! Call IfW_BladedFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( p%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL  IfW_BladedFFWind_CalcOutput(  Time, p%WindViXYZprime, p%BladedFFWind, &
-                                             m%WindViUVW, DiskVel, m%BladedFFWind, TmpErrStat, TmpErrMsg)
+               CALL  IfW_BladedFFWind_CalcOutput(  Time, p%WindViXYZprime, p%BladedFFWind, m%WindViUVW, m%BladedFFWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1499,8 +1492,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE (User_WindNumber)
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_UserWind_CalcOutput(  Time, PositionXYZprime, p%UserWind, &
-                                          y%VelocityUVW, DiskVel, m%UserWind, TmpErrStat, TmpErrMsg)
+            CALL  IfW_UserWind_CalcOutput(  Time, PositionXYZprime, p%UserWind, y%VelocityUVW, m%UserWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1509,8 +1501,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
                ! Call IfW_UserWind_CalcOutput again in order to get the values needed for the OutList
             IF ( p%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL  IfW_UserWind_CalcOutput(  Time, p%WindViXYZprime, p%UserWind, &
-                                             m%WindViUVW, DiskVel, m%UserWind, TmpErrStat, TmpErrMsg)
+               CALL  IfW_UserWind_CalcOutput(  Time, p%WindViXYZprime, p%UserWind, m%WindViUVW, m%UserWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1523,8 +1514,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE ( HAWC_WindNumber )
             
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_HAWCWind_CalcOutput(  Time, PositionXYZprime, p%HAWCWind, &
-                                          y%VelocityUVW, DiskVel, m%HAWCWind, TmpErrStat, TmpErrMsg)
+            CALL  IfW_HAWCWind_CalcOutput(  Time, PositionXYZprime, p%HAWCWind, y%VelocityUVW, m%HAWCWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1532,8 +1522,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
                ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( p%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
-               CALL  IfW_HAWCWind_CalcOutput(  Time, p%WindViXYZprime, p%HAWCWind, &
-                                             m%WindViUVW, DiskVel, m%HAWCWind, TmpErrStat, TmpErrMsg)
+               CALL  IfW_HAWCWind_CalcOutput(  Time, p%WindViXYZprime, p%HAWCWind, m%WindViUVW, m%HAWCWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1546,10 +1535,8 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE ( FDext_WindNumber )
             
             CALL IfW_4Dext_CalcOutput(Time, PositionXYZprime, p%FDext, y%VelocityUVW,  m%FDext, TmpErrStat, TmpErrMsg) 
-            DiskVel = 0.0_ReKi ! this is only for AD14, which we frankly don't care about in 4Dext wind
-                        
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-            IF ( ErrStat >= AbortErrLev ) RETURN
+               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+               IF ( ErrStat >= AbortErrLev ) RETURN
 
 
                ! Call IfW_4Dext_CalcOutput again in order to get the values needed for the OutList
@@ -1634,8 +1621,8 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
       ENDIF
 
 
-         ! DiskVel values over to the output and apply the coordinate transformation
-      y%DiskVel   =  MATMUL( p%RotFromWind, DiskVel )
+
+
 
       
       ! Done with the prime coordinates for the XYZ position information that was passed in.

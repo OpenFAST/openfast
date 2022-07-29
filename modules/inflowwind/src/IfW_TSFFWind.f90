@@ -577,7 +577,7 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrStat
 
 !====================================================================================================
 !> This routine computes the wind speed at each of the PositionXYZ points.
-SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, p,  Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, p,  Velocity, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                 NONE
 
@@ -590,7 +590,6 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, p,  Velocity, DiskVel, Mis
    REAL(ReKi),                               INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_TSFFWind_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                               INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                               INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_TSFFWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
@@ -599,7 +598,7 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, p,  Velocity, DiskVel, Mis
 
 
 
-   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, Velocity, DiskVel, ErrStat, ErrMsg)
+   CALL IfW_FFWind_CalcOutput(Time, PositionXYZ, p%FF, Velocity, ErrStat, ErrMsg)
 
 
    RETURN

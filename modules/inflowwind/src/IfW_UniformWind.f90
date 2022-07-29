@@ -994,7 +994,6 @@ SUBROUTINE Uniform_to_FF(p, m, p_ff, ErrStat, ErrMsg)
    REAL(DbKi)                           :: Time              !< time from the start of the simulation
    REAL(ReKi)                           :: PositionXYZ(3,1)  !< Array of XYZ coordinates, 3xN
    REAL(ReKi)                           :: Velocity(3,1)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi)                           :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    REAL(ReKi)                           :: n
    
    INTEGER(ReKi) ,            parameter :: dz = 5.0
@@ -1081,7 +1080,7 @@ SUBROUTINE Uniform_to_FF(p, m, p_ff, ErrStat, ErrMsg)
          do iz=1,p_ff%NZGrids
             PositionXYZ(3,1) = (iz-1)*dz + p_ff%GridBase
             
-            call IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, ErrStat2, ErrMsg2)
+            call IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, m, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
             p_ff%FFData(iz,iy,:,it) = Velocity(:,1)

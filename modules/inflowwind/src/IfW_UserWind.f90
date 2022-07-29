@@ -149,7 +149,7 @@ END SUBROUTINE IfW_UserWind_Init
 !!          primary wind flow is along the X-axis.  The rotations to PropagationDir are taken care of
 !!          in the InflowWind_CalcOutput subroutine which calls this routine.
 !-------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -161,7 +161,6 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskV
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_UserWind_ParameterType),            INTENT(IN   )  :: ParamData         !< Parameters
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_UserWind_MiscVarType),              INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
@@ -214,9 +213,6 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskV
       !ENDIF
 
    ENDDO
-
-      ! an average wind speed, required for AD14
-   DiskVel = 0.0_ReKi
 
       ! REMOVE THIS MESSAGE IF YOU WRITE CODE IN THIS MODULE
    CALL SetErrStat(ErrID_Fatal,' This module has not been written yet.',ErrStat,ErrMsg,RoutineName)
