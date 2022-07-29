@@ -192,6 +192,7 @@ jobs:
           cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
