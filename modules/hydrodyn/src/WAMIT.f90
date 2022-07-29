@@ -1362,7 +1362,7 @@ end if
          
       do iBody = 1, p%NBody
 
-         theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(iBody)/)
+         theta = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
          orientation = EulerConstruct(theta)
          
          

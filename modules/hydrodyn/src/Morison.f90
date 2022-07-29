@@ -519,29 +519,29 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                              NOutputs, OutParam, NMOutputs, MOutLst,  NJOutputs, JOutLst, uMesh, yMesh, &
                              p, m, errStat, errMsg ) 
                              
-   INTEGER,                  INTENT ( IN    )  :: UnSum
-   REAL(ReKi),               INTENT ( IN    )  :: g                    ! gravity
-   REAL(ReKi),               INTENT ( IN    )  :: MSL2SWL
-   REAL(ReKi),               INTENT ( IN    )  :: WtrDpth
-   INTEGER,                  INTENT ( IN    )  :: numJoints
-   INTEGER,                  INTENT ( IN    )  :: numNodes
-   TYPE(Morison_NodeType),   INTENT ( IN    )  :: nodes(:)  
-   INTEGER,                  INTENT ( IN    )  :: numMembers
-   TYPE(Morison_MemberType), INTENT ( IN    )  :: members(:)
-   INTEGER,                  INTENT ( IN    )  :: NOutputs
-   TYPE(OutParmType),        INTENT ( IN    )  :: OutParam(:)
-   INTEGER,                  INTENT ( IN    )  :: NMOutputs
-   TYPE(Morison_MOutput),    INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                  INTENT ( IN    )  :: NJOutputs
-   TYPE(Morison_JOutput),    INTENT ( IN    )  :: JOutLst(:)
-   TYPE(MeshType),           INTENT ( INOUT )  :: uMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: yMesh
-   TYPE(Morison_ParameterType), INTENT ( IN    ) :: p
-   TYPE(Morison_MiscVarType), INTENT ( IN    ) :: m 
-   INTEGER,                  INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
-   CHARACTER(*),             INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
+   INTEGER,                               INTENT ( IN    )  :: UnSum
+   REAL(ReKi),                            INTENT ( IN    )  :: g                    ! gravity
+   REAL(ReKi),                            INTENT ( IN    )  :: MSL2SWL
+   REAL(ReKi),                            INTENT ( IN    )  :: WtrDpth
+   INTEGER,                               INTENT ( IN    )  :: numJoints
+   INTEGER,                               INTENT ( IN    )  :: numNodes
+   TYPE(Morison_NodeType),   ALLOCATABLE, INTENT ( IN    )  :: nodes(:)  
+   INTEGER,                               INTENT ( IN    )  :: numMembers
+   TYPE(Morison_MemberType), ALLOCATABLE, INTENT ( IN    )  :: members(:)
+   INTEGER,                               INTENT ( IN    )  :: NOutputs
+   TYPE(OutParmType),        ALLOCATABLE, INTENT ( IN    )  :: OutParam(:)
+   INTEGER,                               INTENT ( IN    )  :: NMOutputs
+   TYPE(Morison_MOutput),    ALLOCATABLE, INTENT ( IN    )  :: MOutLst(:)
+   INTEGER,                               INTENT ( IN    )  :: NJOutputs
+   TYPE(Morison_JOutput),    ALLOCATABLE, INTENT ( IN    )  :: JOutLst(:)
+   TYPE(MeshType),                        INTENT ( INOUT )  :: uMesh
+   TYPE(MeshType),                        INTENT ( INOUT )  :: yMesh
+   TYPE(Morison_ParameterType),           INTENT ( IN    ) :: p
+   TYPE(Morison_MiscVarType),             INTENT ( IN    ) :: m 
+   INTEGER,                               INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                          INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
 
-   INTEGER                                     :: I, J
+   INTEGER                                     :: I, J, II
    REAL(ReKi)                                  :: l                   ! length of an element
    LOGICAL                                     :: filledFlag          ! flag indicating if element is filled/flooded
    CHARACTER(2)                                :: strFmt
@@ -811,7 +811,12 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
             pos = nodes(c)%Position
             pos(3) = pos(3) + MSL2SWL
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(i),  members(j)%R(i)-members(j)%Rin(i),  members(j)%tMG(i),  members(j)%MGdensity(i),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(i)+members(j)%m_fb_l(i),  members(j)%Cd(i),  members(j)%Ca(i),  members(j)%Cp(i),  members(j)%AxCd(i),  members(j)%AxCa(i),  members(j)%AxCp(i), '  -  ',  '  -  ',  '  -  '
+            if (members(j)%flipped) then
+               II=members(j)%NElements+2-I
+            else
+               II=I
+            endif
+            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
          end do
       end do
       
@@ -1119,27 +1124,27 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
 !     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
-   real(ReKi),                intent(in   )  :: MSL2SWL
-   integer(IntKi),            intent(in   )  :: MCoefMod
-   integer(IntKi),            intent(in   )  :: MmbrCoefIDIndx
-   real(ReKi),                intent(in   )  :: SimplCd 
-   real(ReKi),                intent(in   )  :: SimplCdMG
-   real(ReKi),                intent(in   )  :: SimplCa
-   real(ReKi),                intent(in   )  :: SimplCaMG 
-   real(ReKi),                intent(in   )  :: SimplCp
-   real(ReKi),                intent(in   )  :: SimplCpMG 
-   real(ReKi),                intent(in   )  :: SimplAxCd
-   real(ReKi),                intent(in   )  :: SimplAxCdMG 
-   real(ReKi),                intent(in   )  :: SimplAxCa
-   real(ReKi),                intent(in   )  :: SimplAxCaMG 
-   real(ReKi),                intent(in   )  :: SimplAxCp
-   real(ReKi),                intent(in   )  :: SimplAxCpMG 
-   type(Morison_CoefMembers), intent(in   )  :: CoefMembers(:)
-   integer(IntKi),            intent(in   )  :: NCoefDpth
-   type(Morison_CoefDpths),   intent(in   )  :: CoefDpths(:)
-   integer(IntKi),            intent(in   )  :: numNodes
-   type(Morison_NodeType),    intent(in   )  :: nodes(:)
-   type(Morison_MemberType),  intent(inout)  :: member
+   real(ReKi),                             intent(in   )  :: MSL2SWL
+   integer(IntKi),                         intent(in   )  :: MCoefMod
+   integer(IntKi),                         intent(in   )  :: MmbrCoefIDIndx
+   real(ReKi),                             intent(in   )  :: SimplCd 
+   real(ReKi),                             intent(in   )  :: SimplCdMG
+   real(ReKi),                             intent(in   )  :: SimplCa
+   real(ReKi),                             intent(in   )  :: SimplCaMG 
+   real(ReKi),                             intent(in   )  :: SimplCp
+   real(ReKi),                             intent(in   )  :: SimplCpMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCd
+   real(ReKi),                             intent(in   )  :: SimplAxCdMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCa
+   real(ReKi),                             intent(in   )  :: SimplAxCaMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCp
+   real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   integer(IntKi),                         intent(in   )  :: NCoefDpth
+   type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   integer(IntKi),                         intent(in   )  :: numNodes
+   type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
+   type(Morison_MemberType),               intent(inout)  :: member
    
    type(Morison_NodeType)                      :: node, node1, node2
    integer(IntKi)                              :: i, j
@@ -1199,12 +1204,12 @@ end subroutine SetExternalHydroCoefs
 
 SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
    ! sets the margine growth thickness of a single node (previously all nodes)
-   INTEGER,                      INTENT( IN    )  :: numMGDepths
-   TYPE(Morison_MGDepthsType),   INTENT( IN    )  :: MGDepths(:)
-   TYPE(Morison_NodeType),       INTENT( IN    )  :: node
-   real(ReKi),                   intent( in    )  :: MSL2SWL
-   real(ReKi),                   intent( inout )  :: tMG
-   real(ReKi),                   intent( inout )  :: MGdensity
+   INTEGER,                                  INTENT( IN    )  :: numMGDepths
+   TYPE(Morison_MGDepthsType), ALLOCATABLE,  INTENT( IN    )  :: MGDepths(:)
+   TYPE(Morison_NodeType),                   INTENT( IN    )  :: node
+   real(ReKi),                               intent( in    )  :: MSL2SWL
+   real(ReKi),                               intent( inout )  :: tMG
+   real(ReKi),                               intent( inout )  :: MGdensity
    
    INTEGER                 :: I, J
    REAL(ReKi)              :: z
@@ -1267,7 +1272,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    
    errStat = ErrID_None
    errMSg  = ''
-   call AllocAry(member%NodeIndx     , member%NElements,   'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)

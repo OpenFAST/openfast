@@ -58,16 +58,21 @@ target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib f
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
-if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
+if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   # With variable tracking enabled, the compile step frequently aborts on large modules and
-  # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
-  # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.
+  # restarts with this option off. Disabling avoids this problem when compiling with
+  # full optimizations. However, variable tracking should be enabled when actively debugging
+  # for better runtime debugging output.
   # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
   set_source_files_properties(
     src/FAST_Subs.f90 src/FAST_Types.f90 src/FAST_Library.f90
     PROPERTIES
       COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments"
   )
+endif()
+if (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
+  # Compilation hangs on FAST_Farm_Types.f90 with -O3 on linux (on some hardware)
+  set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib

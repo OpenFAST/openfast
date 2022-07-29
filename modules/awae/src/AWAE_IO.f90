@@ -257,6 +257,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    
    if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
       call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
 
    p%X0_low           = origin(1)
    p%Y0_low           = origin(2)
@@ -351,7 +352,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    
       FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"
       Un = -1 ! Set to force closing of file on return
-      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat, errMsg ) 
+      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat2, errMsg2 ) 
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
          if (errStat >= AbortErrLev) return 
    else
       
@@ -371,6 +373,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    
    if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
       call SetErrStat ( ErrID_Fatal, 'The high resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+      if (errStat >= AbortErrLev ) return
 
    p%nX_high          = dims(1)
    p%nY_high          = dims(2)
@@ -392,8 +395,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       
    if ( p%Mod_AmbWind == 1 ) then
          ! Just using this to make sure dims are >=2 points in each direction
-      call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
-         if (errStat >= AbortErrLev ) return
+      call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) return 
    end if
    
    allocate( p%Grid_high(3,NumGrid_high,p%NumTurbines ),stat=errStat2)
@@ -424,7 +428,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       if ( p%Mod_AmbWind == 1 ) then
          FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
          Un = -1 ! Set to force closing of file on return
-         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat2, ErrMsg2 ) 
+            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
             if (ErrStat >= AbortErrLev) return 
       else
          ! Using InflowWind, so data has been passed in via the InitInp data structure
@@ -456,8 +461,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       
       if ( p%Mod_AmbWind == 1 ) then
             ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1
-         call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
-            if (errStat >= AbortErrLev ) return
+         call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
+            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) return 
       end if
       
       nXYZ_high = 0
@@ -494,10 +500,12 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
                nhigh = nh+n*p%n_high_low-1
                FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(nhigh))//".vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)? 
                Un = -1 ! Set to force closing of file on return
-               call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+               call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat2, ErrMsg2 ) 
+                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
                   if (ErrStat >= AbortErrLev) return 
                
-               call HiResWindCheck(nhigh, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
+               call HiResWindCheck(nhigh, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
+                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
                   if (errStat >= AbortErrLev ) return
             
             end do
@@ -533,6 +541,9 @@ SUBROUTINE AWAE_PrintSum(  p, u, y, ErrStat, ErrMsg )
 
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
    CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
+
+   errStat = ErrID_None
+   errMsg  = ""
 
    ! Open the summary file and give it a heading.
       

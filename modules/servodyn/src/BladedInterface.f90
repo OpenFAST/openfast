@@ -19,10 +19,10 @@
 !**********************************************************************************************************************************
 MODULE BladedInterface
 
-   USE NWTC_Library
-
+   USE NWTC_Library  
    USE ServoDyn_Types
-
+   USE BladedInterface_EX
+   
    USE, INTRINSIC :: ISO_C_Binding
 
 
@@ -221,10 +221,11 @@ SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, E
    aviFAIL = 0                ! bjj, this won't necessarially work if aviFAIL is INTENT(OUT) in DLL_Procedure()--could be undefined???
 
       !Convert to C-type characters: the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+      ! Note: the optional size is specified to avoid an array mismatch issue with some intel compilers in debug (gfortran doesn't notice)
 
-   avcOUTNAME = TRANSFER( TRIM(dll_data%RootName)//C_NULL_CHAR,   avcOUTNAME )
-   accINFILE  = TRANSFER( TRIM(dll_data%DLL_InFile)//C_NULL_CHAR, accINFILE  )
-   avcMSG     = TRANSFER( C_NULL_CHAR,                            avcMSG     ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
+   avcOUTNAME  = TRANSFER( TRIM(dll_data%RootName)//C_NULL_CHAR,   avcOUTNAME, p%avcOUTNAME_LEN )
+   accINFILE   = TRANSFER( TRIM(dll_data%DLL_InFile)//C_NULL_CHAR, accINFILE,  LEN_TRIM(dll_data%DLL_InFile)+1 )
+   avcMSG      = TRANSFER( C_NULL_CHAR,                            avcMSG,     LEN(ErrMsg)+1 ) !bjj this is intent(out), so we shouldn't have to do this, but, to be safe...
 
 #ifdef STATIC_DLL_LOAD
 
@@ -276,8 +277,8 @@ SUBROUTINE CallBladedLegacyDLL ( u, filt_fromSCglob, filt_fromSC, p, dll_data, E
 END SUBROUTINE CallBladedLegacyDLL
 !==================================================================================================================================
 !> This routine initializes variables used in the Bladed DLL interface.
-SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, ErrStat, ErrMsg)
-
+SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat, ErrMsg)
+   
    TYPE(SrvD_InputType),           INTENT(INOUT)  :: u               !< An initial guess for the input; input mesh must be defined
    TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc (optimization) variables
@@ -286,6 +287,8 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, ErrStat,
                                                                      !!   only the output mesh is initialized)
    TYPE(SrvD_InputFile),           INTENT(INOUT)  :: InputFileData   !< Data stored in the module's input file
    TYPE(SrvD_InitInputType),       INTENT(IN   )  :: InitInp         !< Input data for initialization routine
+   type(StC_CtrlChanInitInfoType), intent(inout)  :: StC_CtrlChanInitInfo    !< initial values for StC damping, stiffness, etc to pass to controller  (out so we can MOVE_ALLOC)
+   INTEGER(IntKi),                 INTENT(IN   )  :: UnSum           !< summary file number (>0 when set)
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -364,12 +367,23 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, ErrStat,
    END IF
 
    IF ( ErrStat >= AbortErrLev ) RETURN
-
+   
+   ! Set the Extended AVRswap flag
+   p%EXavrSWAP = InputFileData%EXavrSWAP
 
     ! Set status flag and initialize avrSWAP:
    m%dll_data%SimStatus = GH_DISCON_STATUS_INITIALISING
-
-   CALL AllocAry( m%dll_data%avrSwap,   R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels, 'avrSwap', ErrStat2, ErrMsg2 )
+   
+   if ( p%EXavrSWAP ) then
+      CALL AllocAry( m%dll_data%avrSwap,   EXavrSWAP_Size, 'avrSwap', ErrStat2, ErrMsg2 )
+   else
+      CALL AllocAry( m%dll_data%avrSwap,   R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels, 'avrSwap', ErrStat2, ErrMsg2 )
+      if ((R+(2*m%dll_data%DLL_NumTrq)-1 + MaxLoggingChannels >= 1000) .and. p%EXavrSWAP)then
+         CALL CheckError( ErrID_Fatal, 'Too many combined torque lookup values ('//trim(Num2LStr((2*m%dll_data%DLL_NumTrq)))//' entries) '//   &
+            'and logging channels ('//trim(Num2LStr(MaxLoggingChannels))//') -- this overwrites the extended avrSWAP starting at channel 1000.')
+         RETURN
+      endif
+   endif
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
    m%dll_data%avrSWAP = 0.0
@@ -406,7 +420,7 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, ErrStat,
             p%DLL_Trgt%ProcName(2) = p%DLL_Trgt%ProcName(1)   ! we won't call the separate controller_init routine the first time
             p%DLL_Trgt%ProcAddr(2) = p%DLL_Trgt%ProcAddr(1)
          elseif (ErrStat2 == ErrID_Fatal) then
-            CALL CheckError(ErrID_Info,'Error opening BLADED interface DLL. Checking for legacy DLL.')
+            CALL CheckError(ErrID_Info,'Unable to open BLADED interface DLL. Checking for legacy DLL.')
             CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
             p%UseLegacyInterface = .true. ! Bladed checks for the legacy version if it can't find the CONTROLL function in the DLL, so that's what we'll have to do, too
          end if
@@ -446,6 +460,22 @@ SUBROUTINE BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, ErrStat,
 !--------------------------------------
 #endif
 
+   !> get summary file info for legacy interface
+   if (p%UseLegacyInterface) then
+      if (UnSum > 0) then
+         call WrLegacyChannelInfoToSummaryFile(u, p, m%dll_data, UnSum, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+      endif
+   endif
+
+   !> Initialize the extended avrSWAP if used
+   if (p%UseLegacyInterface .and. p%EXavrSWAP) then
+      call EXavrSWAP_Init( InitInp, u, p, y, m%dll_data, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2)
+         CALL CheckError(ErrStat2,ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+   endif
+
 
 CONTAINS
    !...............................................................................................................................
@@ -481,8 +511,184 @@ CONTAINS
    END SUBROUTINE CheckError
 END SUBROUTINE BladedInterface_Init
 !==================================================================================================================================
-SUBROUTINE GetBladedLoggingChannels(u,p, xd, m, ErrStat, ErrMsg)
+subroutine WrLegacyChannelInfoToSummaryFile(u,p,dll_data,UnSum,ErrStat,ErrMsg)
+   type(SrvD_InputType),      intent(in   )  :: u              !< An initial guess for the input; input mesh must be defined
+   type(SrvD_ParameterType),  intent(in   )  :: p              !< Parameters
+   type(BladedDLLType),       intent(in   )  :: dll_data       ! Temporary copy of dll data -- only used for summary file writing
+   integer(IntKi),            intent(in   )  :: UnSum          !< summary file number (>0 when set)
+   integer(IntKi),            intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),              intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   character(1024),           allocatable    :: SumInfo(:)     ! Description strings for each avrSWAP record -- only used for summary file writing
+   character(3),              allocatable    :: DataFlow(:)    ! Direction of data flow -- only used for summary file writing
+   type(BladedDLLType)                       :: dll_data_tmp   ! Temporary copy of dll data -- only used for summary file writing
+   integer(IntKi)                            :: K              !< Generic counter
+   integer(IntKi)                            :: ErrStat2       !< Error status of the operation
+   character(ErrMsgLen)                      :: ErrMsg2        !< Error message if ErrStat /= ErrID_None
 
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ''
+
+   if (UnSum <= 0)   return
+
+   call AllocAry(SumInfo,size(dll_data%avrSwap),'SumInfo array for bladed interface',ErrStat2,ErrMsg2)
+      if (Failed())  return
+   SumInfo  = ''
+   call AllocAry(DataFlow,size(dll_data%avrSwap),'DataFlow array for bladed interface',ErrStat2,ErrMsg2)
+      if (Failed())  return
+   DataFlow  = ''
+
+      ! Channels with info sent to the DLL (from Fill_avrSWAP routine)
+   call WrSumInfoSend(1, 'Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) ')
+   call WrSumInfoSend(2, 'Current time (sec) [t in single precision]')
+   call WrSumInfoSend(3, 'Communication interval (sec)')
+   call WrSumInfoSend(4, 'Blade 1 pitch angle (rad) [SrvD input]')
+   call WrSumInfoSend(5, 'Below-rated pitch angle set-point (rad) [SrvD Ptch_SetPnt parameter]')
+   call WrSumInfoSend(6, 'Minimum pitch angle (rad) [SrvD Ptch_Min parameter]')
+   call WrSumInfoSend(7, 'Maximum pitch angle (rad) [SrvD Ptch_Max parameter]')
+   call WrSumInfoSend(8, 'Minimum pitch rate (most negative value allowed) (rad/s) [SrvD PtchRate_Min parameter]')
+   call WrSumInfoSend(9, 'Maximum pitch rate                               (rad/s) [SrvD PtchRate_Max parameter]')
+   call WrSumInfoSend(10, '0 = pitch position actuator, 1 = pitch rate actuator (-) [must be 0 for ServoDyn]')
+   call WrSumInfoSend(11, 'Current demanded pitch angle (rad) [I am sending the previous value for blade 1 from the DLL, in the absence of any more information provided in Bladed documentation]')
+   call WrSumInfoSend(12, 'Current demanded pitch rate  (rad/s) [always zero for ServoDyn]')
+   call WrSumInfoSend(13, 'Demanded power (W) [SrvD GenPwr_Dem parameter from input file]')
+   call WrSumInfoSend(14, 'Measured shaft power (W) [SrvD input]')
+   call WrSumInfoSend(15, 'Measured electrical power output (W) [SrvD calculation from previous step; should technically be a state]   ')
+   call WrSumInfoSend(16, 'Optimal mode gain (Nm/(rad/s)^2) [if torque-speed table look-up not selected in input file, use SrvD Gain_OM parameter, otherwise use 0 (already overwritten in Init routine)]')
+   call WrSumInfoSend(17, 'Minimum generator speed (rad/s) [SrvD GenSpd_MinOM parameter]')
+   call WrSumInfoSend(18, 'Optimal mode maximum speed (rad/s) [SrvD GenSpd_MaxOMp arameter]')
+   call WrSumInfoSend(19, 'Demanded generator speed above rated (rad/s) [SrvD GenSpd_Dem parameter]')
+   call WrSumInfoSend(20, 'Measured generator speed (rad/s) [SrvD input]')
+   call WrSumInfoSend(21, 'Measured rotor speed (rad/s) [SrvD input]')
+   call WrSumInfoSend(22, 'Demanded generator torque above rated (Nm) [SrvD GenTrq_Dem parameter from input file]')
+   call WrSumInfoSend(23, 'Measured generator torque (Nm) [SrvD calculation from previous step; should technically be a state]')
+   call WrSumInfoSend(24, 'Measured yaw error (rad) [SrvD input]')
+   if (dll_data%DLL_NumTrq==0) then  ! Torque-speed table look-up not selected
+      call WrSumInfoSend(25, 'Start of below-rated torque-speed look-up table (Lookup table not in use)')
+   else                 ! Torque-speed table look-up selected
+      call WrSumInfoSend(25, 'Start of below-rated torque-speed look-up table (Set to record no. '//trim(Num2LStr(R))//')')
+   endif
+   call WrSumInfoSend(26, 'No. of points in torque-speed look-up table (-) [SrvD DLL_NumTrq parameter]: ')
+   call WrSumInfoSend(27, 'Hub wind speed (m/s) [SrvD input]')
+   call WrSumInfoSend(28, 'Pitch control: 0 = collective, 1 = individual (-) [SrvD Ptch_Cntrl parameter]')
+   call WrSumInfoSend(29, 'Yaw control: 0 = yaw rate control, 1 = yaw torque control (-) [must be 0 for ServoDyn] ')
+   call WrSumInfoSend(30, 'Blade 1 root out-of-plane bending moment (Nm) [SrvD input]')
+   call WrSumInfoSend(31, 'Blade 2 root out-of-plane bending moment (Nm) [SrvD input]')
+   call WrSumInfoSend(32, 'Blade 3 root out-of-plane bending moment (Nm) [SrvD input]')
+   if (p%NumBl>1) call WrSumInfoSend(33, 'Blade 2 pitch angle (rad) [SrvD input]')
+   if (p%NumBl>2) call WrSumInfoSend(34, 'Blade 3 pitch angle (rad) [SrvD input]')
+   call WrSumInfoSend(37, 'Nacelle yaw angle from North (rad)')
+   call WrSumInfoSend(49, 'Maximum number of characters in the "MESSAGE" argument (-) [size of ErrMsg argument plus 1 (we add one for the C NULL CHARACTER)]')
+   call WrSumInfoSend(50, 'Number of characters in the "INFILE"  argument (-) [trimmed length of DLL_InFile parameter plus 1 (we add one for the C NULL CHARACTER)]')
+   call WrSumInfoSend(51, 'Number of characters in the "OUTNAME" argument (-) [trimmed length of RootName parameter plus 1 (we add one for the C NULL CHARACTER)]')
+   call WrSumInfoSend(53, 'Tower top fore-aft     acceleration (m/s^2) [SrvD input]')
+   call WrSumInfoSend(54, 'Tower top side-to-side acceleration (m/s^2) [SrvD input]')
+   call WrSumInfoSend(60, 'Rotor azimuth angle (rad) [SrvD input]')
+   call WrSumInfoSend(61, 'Number of blades (-) [SrvD NumBl parameter]')
+   call WrSumInfoSend(62, 'Maximum number of values which can be returned for logging (-) [set to '//trim(Num2LStr(MaxLoggingChannels))//']')
+   call WrSumInfoSend(63, 'Record number for start of logging output (-) [set to '//trim(Num2LStr(R + (2*dll_data%DLL_NumTrq)))//']')
+   call WrSumInfoSend(64, 'Maximum number of characters which can be returned in "OUTNAME" (-) [set to '//trim(Num2LStr(p%avcOUTNAME_LEN))//' (including the C NULL CHARACTER)]')
+   call WrSumInfoSend(66, 'Start of Platform motion -- 1001')
+   call WrSumInfoSend(69, 'Blade 1 root in-plane bending moment (Nm) [SrvD input]')
+   call WrSumInfoSend(70, 'Blade 2 root in-plane bending moment (Nm) [SrvD input]')
+   call WrSumInfoSend(71, 'Blade 3 root in-plane bending moment (Nm) [SrvD input]')
+   call WrSumInfoSend(73, 'Rotating hub My (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(74, 'Rotating hub Mz (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(75, 'Fixed    hub My (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(76, 'Fixed    hub Mz (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(77, 'Yaw bearing  My (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(78, 'Yaw bearing  Mz (GL co-ords) (Nm) [SrvD input]')
+   call WrSumInfoSend(82, 'Nacelle roll    acceleration (rad/s^2) [SrvD input] -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system')
+   call WrSumInfoSend(83, 'Nacelle nodding acceleration (rad/s^2) [SrvD input] ')
+   call WrSumInfoSend(84, 'Nacelle yaw     acceleration (rad/s^2) [SrvD input] -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system')
+   call WrSumInfoSend(95, 'Reserved (SrvD customization: set to SrvD AirDens parameter)')
+   call WrSumInfoSend(96, 'Reserved (SrvD customization: set to SrvD AvgWindSpeed parameter)')
+   call WrSumInfoSend(109, 'Shaft torque (=hub Mx for clockwise rotor) (Nm) [SrvD input]')
+   call WrSumInfoSend(110, 'Thrust - Rotating low-speed shaft force x (GL co-ords) (N) [SrvD input]')
+   call WrSumInfoSend(111, 'Nonrotating low-speed shaft force y (GL co-ords) (N) [SrvD input]')
+   call WrSumInfoSend(112, 'Nonrotating low-speed shaft force z (GL co-ords) (N) [SrvD input]')
+   call WrSumInfoSend(117, 'Controller state [always set to 0]')
+   if (dll_data%DLL_NumTrq>0)  call WrSumInfoSend(R-1,                    'Start of generator speed torque lookup table')
+   if (dll_data%DLL_NumTrq>0)  call WrSumInfoSend(R-1+dll_data%DLL_NumTrq,'End   of generator speed torque lookup table')
+   call WrSumInfoSend(129, 'Maximum extent of the avrSWAP array: '//trim(Num2LStr(size(dll_data%avrSWAP))) )
+
+      ! Channels with info retrieved from the DLL (from Retrieve_avrSWAP routine)
+   call WrSumInfoBiDr(35, 'Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]')
+   call WrSumInfoBiDr(36, 'Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error] ')
+   call WrSumInfoRcvd(41, 'demanded yaw actuator torque [this output is ignored since record 29 is set to 0 by ServoDyn indicating yaw rate control]')
+   IF ( dll_data%Ptch_Cntrl == GH_DISCON_PITCH_CONTROL_INDIVIDUAL )  then
+      do K = 1,p%NumBl
+         call WrSumInfoRcvd(41+K, 'Blade '//trim(Num2LStr(K))//' demanded individual pitch position')
+      enddo
+   else
+      call WrSumInfoRcvd(45, 'Demanded pitch angle (Collective pitch) (rad)')
+   endif
+   call WrSumInfoRcvd(47, 'Demanded generator torque (Nm)')
+   call WrSumInfoRcvd(48, 'Demanded nacelle yaw rate (rad/s)')
+   call WrSumInfoRcvd(55, 'UNUSED: Pitch override [anything other than 0 is an error in ServoDyn]')
+   call WrSumInfoRcvd(56, 'UNUSED: Torque override [anything other than 0 is an error in ServoDyn]')
+   call WrSumInfoRcvd(65, 'Number of variables returned for logging [anything greater than MaxLoggingChannels is an error]')
+   if (dll_data%ShaftBrakeStatusBinaryFlag == 16) call WrSumInfoRcvd(107, 'Brake torque demand (used only when avrSWAP(36) is 16)')
+   call WrSumInfoRcvd(120, 'Airfoil command, blade 1')
+   call WrSumInfoRcvd(121, 'Airfoil command, blade 2')
+   call WrSumInfoRcvd(122, 'Airfoil command, blade 3')
+   call WrSumInfoRcvd(63,'Number logging channels')
+
+
+      ! Write to summary file
+   call WrBladedSumInfoToFile()
+
+      ! Cleanup afterwards
+   call CleanUp()
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WrLegacyChannelInfoToSummaryFile') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+      if (allocated(SumInfo))    deallocate(SumInfo)
+      if (allocated(DataFlow))   deallocate(DataFlow)
+      call SrvD_DestroyBladedDLLType( dll_data_tmp, ErrStat2, ErrMsg2 )
+   end subroutine CleanUp
+   subroutine WrBladedSumInfoToFile()
+      integer(IntKi)    :: I  !< generic counter
+      write(UnSum,'(A)') ''
+      write(UnSum,'(A)') '   Legacy Bladed DLL interface channel usage by SrvD:'
+      write(UnSum,'(A)') ''
+      write(UnSum,'(6x,8x,3x,A3,3x,A)') '-->','indicates from SrvD to DLL'
+      write(UnSum,'(6x,8x,3x,A3,3x,A)') '<--','indicates from DLL to SrvD'
+      write(UnSum,'(6x,8x,3x,A3,3x,A)') '<->','indicates from bidirectional'
+      write(UnSum,'(6x,A8,3x,A3,3x,A11)') 'Record #','   ','Description'
+      write(UnSum,'(6x,A8,3x,A3,3x,A11)') '--------','   ','-----------'
+      do I=1,size(SumInfo)
+         if (len_trim(SumInfo(I)) > 0 )  write(UnSum,'(8x,I4,5x,A4,2x,A)')  I,DataFlow(I),trim(SumInfo(I))
+      enddo
+   end subroutine WrBladedSumInfoToFile
+   subroutine WrSumInfoSend(Record,Desc)
+      integer(IntKi),   intent(in   )  :: Record
+      character(*),     intent(in   )  :: Desc
+      DataFlow(Record)  = '-->'
+      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+   end subroutine WrSumInfoSend
+   subroutine WrSumInfoRcvd(Record,Desc)
+      integer(IntKi),   intent(in   )  :: Record
+      character(*),     intent(in   )  :: Desc
+      DataFlow(Record)  = '<--'
+      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+   end subroutine WrSumInfoRcvd
+   subroutine WrSumInfoBiDr(Record,Desc)
+      integer(IntKi),   intent(in   )  :: Record
+      character(*),     intent(in   )  :: Desc
+      DataFlow(Record)  = '<->'
+      SumInfo(Record)   = trim(Desc(1:min(len_trim(Desc),len(SumInfo(1)))))     ! prevent string length overrun
+   end subroutine WrSumInfoBiDr
+
+end subroutine WrLegacyChannelInfoToSummaryFile
+!==================================================================================================================================
+
+!==================================================================================================================================
+SUBROUTINE GetBladedLoggingChannels(u,p, xd, m, ErrStat, ErrMsg)
+   
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u               !< An initial guess for the input; input mesh must be defined
    TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
    TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd              !< Discrete states
@@ -810,6 +1016,7 @@ END IF
    dll_data%avrSWAP(64) = p%avcOUTNAME_LEN                  !> * Record 64: Maximum number of characters which can be returned in "OUTNAME" (-) [set to bladedinterface::MaxLoggingChannels * (2+nwtc_base::chanlen) + 1 (we add one for the C NULL CHARACTER)]
 ! Record 65 is output [see Retrieve_avrSWAP()]
 ! Records 66-68 are reserved
+   dll_data%avrSWAP(66) = 1001                              !> * Record 66: start index of platform motions
 
    dll_data%avrSWAP(69) = u%RootMxc(1)                      !> * Record 69: Blade 1 root in-plane bending moment (Nm) [SrvD input]
    dll_data%avrSWAP(70) = u%RootMxc(2)                      !> * Record 70: Blade 2 root in-plane bending moment (Nm) [SrvD input]
@@ -843,6 +1050,9 @@ END IF
 ! Records 107-108 are outputs [see Retrieve_avrSWAP()]
 
    dll_data%avrSWAP(109) = u%LSSTipMxa ! or u%LSShftMxs     !> * Record 109: Shaft torque (=hub Mx for clockwise rotor) (Nm) [SrvD input]
+   dll_data%avrSWAP(110) = u%LSShftFxa                      !> * Record 110: Thrust - Rotating low-speed shaft force x (GL co-ords) (N) [SrvD input]
+   dll_data%avrSWAP(111) = u%LSShftFys                      !> * Record 111: Nonrotating low-speed shaft force y (GL co-ords) (N) [SrvD input]
+   dll_data%avrSWAP(112) = u%LSShftFzs                      !> * Record 112: Nonrotating low-speed shaft force z (GL co-ords) (N) [SrvD input]
    dll_data%avrSWAP(117) = 0                                !> * Record 117: Controller state [always set to 0]
 
    !> * Records \f$R\f$ through \f$R + 2*DLL\_NumTrq - 1\f$: torque-speed look-up table elements.
@@ -853,7 +1063,10 @@ END IF
 
 
 !> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn
-! Records 130-142 are outputs [see Retrieve_avrSWAP()]
+   ! Records 120:122 are outputs [see Retrieve_avrSWAP()]
+   dll_data%avrSWAP(129) = size(dll_data%avrSWAP)           !> * Record 129: Maximum extent of the avrSWAP array
+
+! Records 130-142 are outputs [see Retrieve_avrSWAP()]   
 ! Records L1 and onward are outputs [see Retrieve_avrSWAP()]
 
 
@@ -897,6 +1110,11 @@ SUBROUTINE Fill_CONTROL_vars( t, u, p, ErrMsgSz, dll_data )
 
    call Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data ) ! we'll set the avrSWAP variable, for the legacy version of the DLL, too.
 
+   ! set the values for the Extended avrSWAP variable, if using
+   if ( p%EXavrSWAP ) then
+      call Fill_EXavrSWAP( t, u, p, dll_data )
+   endif
+   
    !> The following are values ServoDyn sends to the Bladed DLL.
    !! For variables returned from the DLL, see bladedinterface::retrieve_control_vars.
 
@@ -1052,7 +1270,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    !  (might be used for airfoil flap angles for example)
    dll_data%BlAirfoilCom(1)       = dll_data%avrSWAP(120)
    dll_data%BlAirfoilCom(2)       = dll_data%avrSWAP(121)
-   dll_data%BlAirFoilCom(3)       = dll_data%avrSWAP(122)
+   dll_data%BlAirfoilCom(3)       = dll_data%avrSWAP(122)
 
 !> * Records 130-142: Reserved
 
@@ -1082,6 +1300,12 @@ SUBROUTINE CheckDLLReturnValues( p, dll_data, ErrStat, ErrMsg )
    if (p%UseLegacyInterface) then
       CALL Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
+
+      if (p%EXavrSWAP ) then
+         CALL Retrieve_EXavrSWAP( p, dll_data, ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) return
+      endif
+
    end if
 
 

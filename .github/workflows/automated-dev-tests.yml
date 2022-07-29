@@ -24,7 +24,8 @@ env:
 
 
 jobs:
-  regression-tests-release:
+
+  regression-tests-aerodyn-driver:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -55,17 +56,68 @@ jobs:
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
+      - name: Build AeroDyn Driver
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
+
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: regression
+
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: regression-tests-aerodyn-module
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+
+  regression-tests-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy Bokeh==1.4
+
+      - name: Setup Workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure Build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
+            ${GITHUB_WORKSPACE}
       - name: Build OpenFAST
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
 
+        # SubDyn has only regression tests
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: regression
+      # - name: Run AeroDyn tests
+      #   uses: ./.github/actions/tests-module-aerodyn
+      #   with:
+      #     test-target: regression
+        # HydroDyn has only regression tests
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
       - name: Run InflowWind tests
@@ -106,7 +158,7 @@ jobs:
             install_deps: brew install gcovr
           - os: ubuntu-20.04
             FORTRAN_COMPILER: gfortran-10
-            install_deps: sudo apt-get install -y gcovr
+            install_deps: sudo apt-get update && sudo apt-get install -y gcovr
 
     name: regression-test-debug-${{ matrix.os }}-${{ matrix.FORTRAN_COMPILER }}
     steps:
@@ -137,7 +189,6 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
-            -DCODECOV:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
@@ -152,10 +203,10 @@ jobs:
 
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: regression
+      # - name: Run AeroDyn tests
+      #   uses: ./.github/actions/tests-module-aerodyn
+      #   with:
+      #     test-target: regression
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
       - name: Run InflowWind tests
@@ -167,35 +218,26 @@ jobs:
         with:
           test-target: regression
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml regressioncov.xml  # --html --html-details -o regressioncov.html # -v
-
-          # cp `find . -name *.gcno` .
-          # cp `find . -name *.gcda` .
-          # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./regressioncov.xml # optional
-          flags: regtests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: regression-tests-debug
-          path: |
-            ${{runner.workspace}}/openfast/regressioncov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details -o regressioncov.html # -v
+      #     # cp `find . -name *.gcno` .
+      #     # cp `find . -name *.gcda` .
+      #     # ${{env.GCOV_EXE}} -b -l -p -c *.gcno
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: regression-tests-debug
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
@@ -234,6 +276,7 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             ${GITHUB_WORKSPACE}
       - name: Build FAST.Farm
         # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
@@ -288,15 +331,18 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=Debug \
             -DBUILD_TESTING:BOOL=ON \
-            -DCODECOV:BOOL=ON \
             ${GITHUB_WORKSPACE}
 
       - name: Build unit tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
 
+         # NWTC Library has only unit tests
       - name: Run NWTC Library tests
         uses: ./.github/actions/tests-module-nwtclibrary
+         # VersionInfo has only unit tests
+      - name: Run VersionInfo tests
+        uses: ./.github/actions/tests-module-version
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
@@ -310,31 +356,23 @@ jobs:
         with:
           test-target: unit
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml unitcov.xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./unitcov.xml # optional
-          flags: unittests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: unit-tests
-          path: |
-            ${{runner.workspace}}/openfast/unitcov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details unitcov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: unit-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/unitcov.html
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
@@ -406,19 +444,21 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
             -DBUILD_SHARED_LIBS:BOOL=ON \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
-            -DCODECOV:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             ${GITHUB_WORKSPACE}
 
       - name: Build OpenFAST C-Interfaces
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
 
@@ -432,38 +472,32 @@ jobs:
         run: |
           ctest -VV -L python
 
-      - name: Generate coverage report
-        working-directory: ${{runner.workspace}}/openfast/build
-        run: |
-          find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
-          cd ..
-          gcovr -g -k -r . --xml regressioncov.xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          dry_run: false
-          # token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ./regressioncov.xml # optional
-          flags: regtests # optional
-          # name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
-          verbose: true # optional (default = false)
-          directory: ${{runner.workspace}}/openfast
-
-      - name: Success artifacts
-        uses: actions/upload-artifact@v2
-        if: success()
-        with:
-          name: c-interface-reg-tests
-          path: |
-            ${{runner.workspace}}/openfast/regressioncov.xml
+      # Disabled Codecov since the dashboard and GitHub comments were buggy,
+      # but it may be useful to post the gcov coverage reports to GitHub Actions
+      # artifacts.
+      # Note: if reenabling Codecov, the reports must be in xml format not html.
+      # - name: Generate coverage report
+      #   working-directory: ${{runner.workspace}}/openfast/build
+      #   run: |
+      #     find . -type f -name '*.gcno' -not -path "**tests**" -exec ${{env.GCOV_EXE}} -pb {} +
+      #     cd ..
+      #     gcovr -g -k -r . --html --html-details regressioncov.html
+      # - name: Success artifacts
+      #   uses: actions/upload-artifact@v2
+      #   if: success()
+      #   with:
+      #     name: c-interface-reg-tests
+      #     path: |
+      #       ${{runner.workspace}}/openfast/regressioncov.html
 
       - name: Failing test artifacts
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: c-interface-reg-tests
+          name: interface-reg-tests
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

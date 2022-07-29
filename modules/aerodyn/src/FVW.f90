@@ -240,6 +240,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
       call AllocAry( m%W(iW)%BN_Cl_Static ,    p%W(iW)%nSpan+1 , 'Coefficient lift - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cl_Static = -999999_ReKi;
       call AllocAry( m%W(iW)%BN_Cd_Static ,    p%W(iW)%nSpan+1 , 'Coefficient drag - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cd_Static = -999999_ReKi;
       call AllocAry( m%W(iW)%BN_Cm_Static ,    p%W(iW)%nSpan+1 , 'Coefficient moment - no UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cm_Static = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cpmin     ,    p%W(iW)%nSpan+1 , 'Coefficient minimum pressure - no UA',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cpmin     = -999999_ReKi;
       call AllocAry( m%W(iW)%BN_Cl        ,    p%W(iW)%nSpan+1 , 'Coefficient lift - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cl        = -999999_ReKi;
       call AllocAry( m%W(iW)%BN_Cd        ,    p%W(iW)%nSpan+1 , 'Coefficient drag - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cd        = -999999_ReKi;
       call AllocAry( m%W(iW)%BN_Cm        ,    p%W(iW)%nSpan+1 , 'Coefficient moment - with UA',           ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cm        = -999999_ReKi;
@@ -450,8 +451,8 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    enddo
 
    ! --- Distributing wings to rotors
-   p%nRotors = p%W(1)%iRotor
-   do iW=2,p%nWings
+   p%nRotors = 0
+   do iW=1,p%nWings
       p%nRotors = max(p%nRotors,p%W(iW)%iRotor)
    end do
    ! Count number of blades per rotor
@@ -838,7 +839,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi)       :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
-   integer(IntKi)       :: i,j,k,iW
+   integer(IntKi)       :: i,j,k,iW,nP
    real(ReKi)           :: visc_fact, age  ! Viscosity factor for diffusion of reg param
    real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
 
@@ -874,18 +875,22 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! --- Mean induced velocity over the near wake (NW) TODO, store per wing
       VmeanNW(1:3)=0
       if (m%nNW >1) then
+         nP=0;
          do iW=1,size(m%W); do j=2,m%nNW+1; do k=1,size(m%W(iW)%Vind_NW,2); 
             VmeanNW(1:3) = VmeanNW(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
          enddo; enddo; enddo; 
-         VmeanNW(1:3) = VmeanNW(1:3) / (size(m%W)*m%nNW*size(m%W(1)%Vind_NW,2)) ! TODO TODO
+         VmeanNW(1:3) = VmeanNW(1:3) / nP
       endif
       ! --- Induced velocity over the free far wake (FWEff)
       VmeanFW(1:3)=0
       if (nFWEff >0) then
+         nP=0
          do iW=1,size(m%W); do j=1,nFWEff; do k=1,size(m%W(iW)%Vind_FW,2); 
             VmeanFW(1:3) = VmeanFW(1:3) + m%W(iW)%Vind_FW(1:3, k, j)
+            nP=nP+1;
          enddo; enddo; enddo; 
-         VmeanFW(1:3) = VmeanFW(1:3) / (size(m%W)*nFWEff*size(m%W(1)%Vind_FW,2)) ! TODO TODO
+         VmeanFW(1:3) = VmeanFW(1:3) / nP
       else
          VmeanFW=VmeanNW
          ! Since we convect the first FW point, we need a reasonable velocity there 

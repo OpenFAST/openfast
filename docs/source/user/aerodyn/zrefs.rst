@@ -5,6 +5,5 @@
 
 .. bibliography:: bibliography.bib
    :labelprefix: ad-
-   :keyprefix: ad-
 
 

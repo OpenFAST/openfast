@@ -23,13 +23,13 @@ typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this modu
 typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info"	-
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
+typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
-typedef	^	InitOutputType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^	InitOutputType	ReKi	BlPitch	{:}	-	-	"Initial blade pitch angles"	radians
 typedef	^	InitOutputType	ReKi	BladeLength	-	-	-	"Blade length (for AeroDyn)"	meters
 typedef	^	InitOutputType	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
@@ -38,7 +38,9 @@ typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
 typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
 typedef	^	InitOutputType	ReKi	TwrHNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
 typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
-typedef	^	InitOutputType	ReKi	TwrBasePos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	ReKi	TwrBaseRefPos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseTransDisp	{3}	-	-	"initial displacement of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseRefOrient	{3}{3}	-	-	"reference orientation of the tower base (for SrvD)"
 typedef	^	InitOutputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"initial orientation of the tower base (for SrvD)"
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
@@ -90,7 +92,6 @@ typedef	^	ED_BladeMeshInputData	ReKi	Chord	{:}	-	-	"Chord of the blade at the an
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	ED_InputFile	DbKi	DT	-	-	-	"Requested integration time for ElastoDyn"	seconds
-typedef	^	ED_InputFile	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^	ED_InputFile	LOGICAL	FlapDOF1	-	-	-	"First flapwise blade mode DOF"	-
 typedef	^	ED_InputFile	LOGICAL	FlapDOF2	-	-	-	"Second flapwise blade mode DOF"	-
 typedef	^	ED_InputFile	LOGICAL	EdgeDOF	-	-	-	"Edgewise blade mode DOF"	-
@@ -874,3 +875,6 @@ typedef	^	OutputType	ReKi	NcIMURAxs	-	-	-	"Nacelle inertial measurement unit ang
 typedef	^	OutputType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
+typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N

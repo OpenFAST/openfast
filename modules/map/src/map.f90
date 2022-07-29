@@ -1061,16 +1061,16 @@ IF (ErrStat >= AbortErrLev) RETURN
           
          SELECT CASE( p%InputLineType(iLine) )
          CASE('C')             
-            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str )
+            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str,   SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetCableLibraryData(InitInp%C_obj)
          CASE ('N')            
-            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str )
+            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetNodeData(InitInp%C_obj)                 
          CASE ('E')
-            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str )
+            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetElementData(InitInp%C_obj)                 
          CASE ('S')
-            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str )
+            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str,     SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetSolverOptions(InitInp%C_obj)                  
          END SELECT
              
@@ -1403,6 +1403,9 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
    end if
    call cleanup()
    
+   ! Calling CalcOutput at operating point to ensure that "y" does not have the values of y_m (MAP specific issue)
+   call map_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat2, ErrMsg2 ) 
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
 contains
    subroutine cleanup()
       call map_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )

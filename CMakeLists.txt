@@ -28,6 +28,7 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+option(VARIABLE_TRACKING "Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU." on)
 option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
@@ -45,11 +46,17 @@ if(APPLE)
   option(CMAKE_MACOSX_RPATH "Use RPATH runtime linking" on)
 endif()
 
+# Warn if atypical configuration for variable tracking and build type
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if(NOT ${VARIABLE_TRACKING} AND (${_build_type} STREQUAL "DEBUG" OR ${_build_type} STREQUAL "RELWITHDEBINFO") )
+  message(WARNING "Variable tracking is disabled and build type includes debug symbols. This may reduce the ability to debug.")
+endif()
+
 # Precompiler/preprocessor flag configuration
 # Do this before configuring modules so that the flags are included
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
-  option(CODECOV "Enable infrastructure for measuring code coverage." OFF)
+  option(CODECOVERAGE "Enable infrastructure for measuring code coverage." OFF)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
 endif()
 option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
@@ -61,21 +68,21 @@ endif()
 set_fast_fortran()
 
 # Configure measuring code coverage in tests
-if(CODECOV)
+if(CODECOVERAGE)
   # Only supports GNU
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES GNU)
-    message(WARNING "CODECOV is only support with GNU Compilers. The current Fortran compiler is ${CMAKE_Fortran_COMPILER_ID}.")
+    message(WARNING "CODECOVERAGE is only support with GNU Compilers. The current Fortran compiler is ${CMAKE_Fortran_COMPILER_ID}.")
   endif()
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES GNU)
-    message(WARNING "CODECOV is only support with GNU Compilers. The current C++ compiler is ${CMAKE_CXX_COMPILER_ID}.")
+    message(WARNING "CODECOVERAGE is only support with GNU Compilers. The current C++ compiler is ${CMAKE_CXX_COMPILER_ID}.")
   endif()
   if(NOT CMAKE_C_COMPILER_ID MATCHES GNU)
-    message(WARNING "CODECOV is only support with GNU Compilers. The current C compiler is ${CMAKE_C_COMPILER_ID}.")
+    message(WARNING "CODECOVERAGE is only support with GNU Compilers. The current C compiler is ${CMAKE_C_COMPILER_ID}.")
   endif()
 
   string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
   if (NOT ${_build_type} STREQUAL "DEBUG")
-    message(WARNING "CODECOV reporting may be inaccurate with compiler optimizations on. Please run with CMAKE_BUILD_TYPE=DEBUG.")
+    message(WARNING "CODECOVERAGE reporting may be inaccurate with compiler optimizations on. Please run with CMAKE_BUILD_TYPE=DEBUG.")
   endif()
 
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} --coverage")

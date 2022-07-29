@@ -539,6 +539,11 @@ SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   nz = size(FFData,1)
+   ny = size(FFData,2)
+   nc = size(FFData,3)
+   nx = size(FFData,4)
+   
    if ( InitInp%ScaleMethod == ScaleMethod_None ) then
       
       ! don't scale FFWind:      
@@ -556,11 +561,6 @@ SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
          
       else !if ( InitInp%ScaleMethod == ScaleMethod_StdDev ) then
          ! compute the scale factor to get requested sigma:
-         
-         nz = size(FFData,1)
-         ny = size(FFData,2)
-         nc = size(FFData,3)
-         nx = size(FFData,4)
          
             ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
          iz = (nz + 1) / 2 ! integer division

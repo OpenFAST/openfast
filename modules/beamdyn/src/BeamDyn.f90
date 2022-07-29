@@ -562,6 +562,8 @@ subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_n
        else
           qfit = nkp ! if points-per-element more that number of keypoints, fit to LSFE with order (nkp-1)
        endif 
+       
+       if (qfit .gt. 7) qfit = 7
 
        call AllocAry(least_sq_gll, qfit, "least-squares GLL nodes",ErrStat2, ErrMsg2)
 
@@ -1062,6 +1064,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
 
       p%NdIndx(1) = 1
+      p%NdIndxInverse(1) = 1
       p%OutNd2NdElem(:,1) = 1 ! note this is an array
       indx = 2
       DO i=1,p%elem_total
@@ -1119,6 +1122,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
             if (ErrStat >= AbortErrLev) return
          
          p%NdIndx(1) = 1
+         p%NdIndxInverse(1) = 1
          p%OutNd2NdElem(:,1) = 1 ! note this is an array 
          indx = 2   
          DO i=1,p%elem_total
@@ -6515,7 +6519,7 @@ SUBROUTINE BD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE BD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
+SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedPackedOrient )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(BD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6534,7 +6538,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedPackedOrient !< whether a y_op values should contain 3-value representation instead of full orientation matrices
 
    INTEGER(IntKi)                                                :: index, i, dof
    INTEGER(IntKi)                                                :: nu
@@ -6543,7 +6547,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'BD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   LOGICAL                                                       :: ReturnLogMap
+   LOGICAL                                                       :: ReturnSmallAngle
    TYPE(BD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
 
    
@@ -6580,10 +6584,11 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    
    IF ( PRESENT( y_op ) ) THEN
-      if (present(NeedLogMap)) then
-         ReturnLogMap = NeedLogMap
+      ! Only the y operating points need to potentially return a smaller array than the "normal" call to this return. In the trim solution, we use a smaller array for y.
+      if (present(NeedPackedOrient)) then
+         ReturnSmallAngle = NeedPackedOrient
       else
-         ReturnLogMap = .false.
+         ReturnSmallAngle = .false.
       end if
       
       if (.not. allocated(y_op)) then
@@ -6594,6 +6599,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             if (ErrStat >= AbortErrLev) return
       end if
 
+      if (ReturnSmallAngle) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
       
       index = 1
       call PackLoadMesh(y%ReactionForce, y_op, index)
@@ -6605,7 +6611,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseSmlAngle=ReturnSmallAngle)
    
       index = index - 1
       do i=1,p%NumOuts + p%BldNd_TotNumOuts

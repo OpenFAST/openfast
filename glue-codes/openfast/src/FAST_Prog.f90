@@ -57,7 +57,7 @@ INTEGER(IntKi)                        :: Restart_step                           
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! determine if this is a restart from checkpoint
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   CALL NWTC_Init() ! open console for writing
+   CALL NWTC_Init() ! initialize NWTC library (set some global constants and if necessary, open console for writing)
    ProgName = 'OpenFAST'
    InputFile = ""
    CheckpointRoot = ""

@@ -112,6 +112,7 @@ typedef  ^            ^                IntKi              ObjID         -       
 typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"
 typedef   ^            ^               CHARACTER(ChanLen)  writeOutputUnt  {:} ""  -   "second line of output file contents: units"
 typedef   ^            ^               ProgDesc            Ver              -  ""  -   "this module's name, version, and date"
+typedef   ^            ^               LOGICAL             CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for drive line active tensioning is requested"   -
 
 
 ## ============================== Define Continuous states here: =====================================================================================================================================

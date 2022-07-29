@@ -1127,25 +1127,25 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, NWaveElev, Wa
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(HydroDyn_ParameterType),       INTENT( IN    )  :: p              ! HydroDyn's parameter data
-   TYPE(HydroDyn_OutputType),          INTENT( INOUT )  :: y              ! HydroDyn's output data
-   type(WAMIT_MiscVarType),            intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
-   type(WAMIT2_MiscVarType),           intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
-   INTEGER,                            INTENT( IN    )  :: NWaveElev      ! Number of wave elevation locations to output
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev2(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
-   REAL(ReKi),                         INTENT( IN    )  :: F_Add(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Waves(:)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
-   type(MeshType),                     INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
-   REAL(ReKi),                         INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
-   REAL(ReKi),                         INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
-   REAL(ReKi),                         INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                            INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
+   TYPE(HydroDyn_ParameterType),          INTENT( IN    )  :: p              ! HydroDyn's parameter data
+   TYPE(HydroDyn_OutputType),             INTENT( INOUT )  :: y              ! HydroDyn's output data
+   type(WAMIT_MiscVarType),  ALLOCATABLE, intent( in    )  :: m_WAMIT(:)     ! WAMIT object's MiscVar data
+   type(WAMIT2_MiscVarType), ALLOCATABLE, intent( in    )  :: m_WAMIT2(:)    ! WAMIT2 object's MiscVar data
+   INTEGER,                               INTENT( IN    )  :: NWaveElev      ! Number of wave elevation locations to output
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev(:)    ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev1(:)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),                            INTENT( IN    )  :: WaveElev2(:)    ! Instantaneous second order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Add(:)
+   REAL(ReKi),               ALLOCATABLE, INTENT( IN    )  :: F_Waves(:)
+   REAL(ReKi),                            INTENT( IN    )  :: F_Hydro(:)     ! All hydrodynamic loads integrated at (0,0,0) in the global coordinate system
+   type(MeshType),                        INTENT( IN    )  :: PRPmesh        ! the PRP mesh -- for motions output
+   REAL(ReKi),                            INTENT( IN    )  :: q(:)           ! WAMIT body translations and rotations
+   REAL(ReKi),                            INTENT( IN    )  :: qdot(:)        ! WAMIT body translational and rotational velocities
+   REAL(ReKi),                            INTENT( IN    )  :: qdotdot(:)     ! WAMIT body translational and rotational accelerations
+   REAL(ReKi),                            INTENT(   OUT )  :: AllOuts(MaxHDOutputs)
+   INTEGER(IntKi),                        INTENT(   OUT )  :: ErrStat        ! Error status of the operation
+   CHARACTER(*),                          INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
    INTEGER                                              :: I, iBody, startIndx, endIndx
    integer(IntKi)                                       :: ErrStat2
@@ -1231,6 +1231,8 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
       ! Local variables
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
    
    
   IF (p%UnOutFile < 0 ) RETURN
@@ -1268,7 +1270,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumTotalOuts )   
       END IF
           
-      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
+      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat2)          ! write the line return -- ignore error status
    
    ELSE      
       Decimate = Decimate + 1
@@ -1279,7 +1281,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 END SUBROUTINE HDOut_WriteOutputs
 
 !====================================================================================================
-SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, ErrMsg )
+SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, OutRootName, InputFileData, y,  p, m, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 ! NOTE: This routine must be called only after any sub-modules OUT_Init() subroutines have been called.
@@ -1290,7 +1292,8 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
       ! Passed variables
 
    TYPE(ProgDesc),                INTENT( IN    ) :: HydroDyn_ProgDesc    ! 
-   TYPE(HydroDyn_InitInputType ), INTENT( IN    ) :: InitInp              ! data needed to initialize the output module     
+   CHARACTER(1024),               INTENT( IN    ) :: OutRootName          ! The name of the output file 
+   TYPE(HydroDyn_InputFile ),     INTENT( IN    ) :: InputFileData        ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
    TYPE(HydroDyn_MiscVarType),    INTENT( INOUT ) :: m
@@ -1339,7 +1342,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
    !-------------------------------------------------------------------------------------------------      
       
    
-   CALL HDOUT_ChkOutLst( InitInp%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
+   CALL HDOUT_ChkOutLst( InputFileData%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
    IF ( ErrStat /= 0 ) RETURN
 
          ! Aggregate the sub-module initialization outputs for the glue code
@@ -1414,7 +1417,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
          END IF
 
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-         CALL HDOut_OpenOutput( HydroDyn_ProgDesc, InitInp%OutRootName, p, InitOut, ErrStat, ErrMsg )
+         CALL HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName, p, InitOut, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev ) RETURN
       END IF
       

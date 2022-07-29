@@ -987,9 +987,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             call SetErrStat(ErrID_Fatal, "The requested low-resolution YZ output slice location, X="//TRIM(Num2LStr(p%OutDisWindX(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
          end if
       end do
-      if (errStat2 >= AbortErrLev) then
-         return
-      end if
+      if (errStat >= AbortErrLev) return
 
 
    !interval = InitOut%dt_low
@@ -1008,7 +1006,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vr_wake.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   if (errStat >= AbortErrLev) return
 
 
 
@@ -1031,7 +1029,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vx_rel_disk.', errStat, errMsg, RoutineName )
    allocate ( y%TI_amb   (1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%TI_amb.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   if (errStat >= AbortErrLev) return
 
       ! This next step is not strictly necessary
    y%V_plane       = 0.0_Reki
@@ -1040,24 +1038,24 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
 
    if ( p%NOutDisWindXY > 0 ) then
-      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat )
-      IF ( ErrStat /= 0 )  THEN
+      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXYPlane arrays.'
          RETURN
       ENDIF
    end if
    if ( p%NOutDisWindYZ > 0 ) then
-      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low,1) , STAT=ErrStat )
-      IF ( ErrStat /= 0 )  THEN
+      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low,1) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizYZPlane arrays.'
          RETURN
       ENDIF
    end if
    if ( p%NOutDisWindXZ > 0 ) then
-      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat )
-      IF ( ErrStat /= 0 )  THEN
+      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXZPlane arrays.'
          RETURN
@@ -1112,12 +1110,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_cs.', errStat, errMsg, RoutineName )
    allocate ( m%pvec_ce( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_ce.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   if (errStat >= AbortErrLev) return
 
 
    ! Read-in the ambient wind data for the initial calculate output
 
-   call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat, errMsg )
+   call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
 
 
 
@@ -1241,10 +1240,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 
    if ( p%Mod_AmbWind == 1 ) then
          ! read from file the ambient flow for the n+1 time step
-      call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
-         if ( errStat >= AbortErrLev ) then
-            return
-         end if
+      call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) return 
    !#ifdef _OPENMP
    !   t2 = omp_get_wtime()      
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
@@ -1253,20 +1251,18 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       do nt = 1,p%NumTurbines
          do n_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
-            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
-               if ( errStat >= AbortErrLev ) then
-                  return
-               end if
+            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2)
+               call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+               if (errStat >= AbortErrLev) return 
          end do
       end do
 
    else ! p%Mod_AmbWind == 2 .or. 3
 
       ! Set low-resolution inflow wind velocities
-      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat, errMsg)
-      if ( errStat >= AbortErrLev ) then
-         return
-      end if
+      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) return 
       c = 1
       do k = 0,p%nZ_low-1
          do j = 0,p%nY_low-1
@@ -1281,10 +1277,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
          do nt = 1,p%NumTurbines
             m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
             do n_hl=0, n_high_low
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat, errMsg)
-               if ( errStat >= AbortErrLev ) then
-                  return
-               end if
+               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2)
+                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+                  if (errStat >= AbortErrLev) return 
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
@@ -1309,10 +1304,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                end do
             end do
             do n_hl=0, n_high_low
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat, errMsg)
-               if ( errStat >= AbortErrLev ) then
-                  return
-               end if
+               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
+                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+                  if (errStat >= AbortErrLev) return 
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
@@ -1381,8 +1375,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
             return
       end if
    call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
-
-
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat2 >= AbortErrLev) then
             return

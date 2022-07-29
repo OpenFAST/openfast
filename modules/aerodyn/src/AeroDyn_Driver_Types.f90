@@ -76,7 +76,8 @@ IMPLICIT NONE
     character(1)  :: delim      !< column delimiter [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: fileFmt      !< Output format 1=Text, 2=Binary, 3=Both [-]
-    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=animation [-]
+    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     character(1024)  :: Root      !< Output file rootname [-]
     character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
@@ -162,6 +163,7 @@ IMPLICIT NONE
     character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
     TYPE(MeshType)  :: ptMesh      !< Point mesh for origin motion [-]
+    TYPE(MeshMapType)  :: ED_P_2_AD_P_N      !< Mesh mapping from nacelle to AD nacelle motion [-]
     TYPE(MeshMapType)  :: map2hubPt      !< Mesh mapping from Nacelle to hub [-]
   END TYPE NacData
 ! =======================
@@ -203,7 +205,15 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Dvr_SimData
     character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
     character(1024)  :: IW_InputFile      !< Name of InfloWind input file [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine} [-]
     INTEGER(IntKi)  :: AnalysisType      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: FldDens      !< Density of working fluid [kg/m^3]
+    REAL(ReKi)  :: KinVisc      !< Kinematic viscosity of working fluid [m^2/s]
+    REAL(ReKi)  :: SpdSound      !< Speed of sound in working fluid [m/s]
+    REAL(ReKi)  :: Patm      !< Atmospheric pressure [Pa]
+    REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
     REAL(ReKi)  :: RefHt      !< RefHeight [-]
@@ -1027,6 +1037,7 @@ ENDIF
     DstDvr_OutputsData%outFmt = SrcDvr_OutputsData%outFmt
     DstDvr_OutputsData%fileFmt = SrcDvr_OutputsData%fileFmt
     DstDvr_OutputsData%wrVTK = SrcDvr_OutputsData%wrVTK
+    DstDvr_OutputsData%WrVTK_Type = SrcDvr_OutputsData%WrVTK_Type
     DstDvr_OutputsData%Root = SrcDvr_OutputsData%Root
     DstDvr_OutputsData%VTK_OutFileRoot = SrcDvr_OutputsData%VTK_OutFileRoot
 IF (ALLOCATED(SrcDvr_OutputsData%WriteOutputHdr)) THEN
@@ -1203,6 +1214,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%outFmt)  ! outFmt
       Int_BufSz  = Int_BufSz  + 1  ! fileFmt
       Int_BufSz  = Int_BufSz  + 1  ! wrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Root)  ! Root
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileRoot)  ! VTK_OutFileRoot
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutputHdr allocated yes/no
@@ -1346,6 +1358,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%fileFmt
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%wrVTK
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%Root)
       IntKiBuf(Int_Xferred) = ICHAR(InData%Root(I:I), IntKi)
@@ -1596,6 +1610,8 @@ ENDIF
     OutData%fileFmt = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%wrVTK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%Root)
       OutData%Root(I:I) = CHAR(IntKiBuf(Int_Xferred))
@@ -4640,6 +4656,9 @@ ENDIF
       CALL MeshCopy( SrcNacDataData%ptMesh, DstNacDataData%ptMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+      CALL NWTC_Library_Copymeshmaptype( SrcNacDataData%ED_P_2_AD_P_N, DstNacDataData%ED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
       CALL NWTC_Library_Copymeshmaptype( SrcNacDataData%map2hubPt, DstNacDataData%map2hubPt, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -4658,6 +4677,7 @@ IF (ALLOCATED(NacDataData%motion)) THEN
   DEALLOCATE(NacDataData%motion)
 ENDIF
   CALL MeshDestroy( NacDataData%ptMesh, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( NacDataData%ED_P_2_AD_P_N, ErrStat, ErrMsg )
   CALL NWTC_Library_Destroymeshmaptype( NacDataData%map2hubPt, ErrStat, ErrMsg )
  END SUBROUTINE AD_Dvr_DestroyNacData
 
@@ -4723,6 +4743,23 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! ptMesh
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz   = Int_BufSz + 3  ! ED_P_2_AD_P_N: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2, .TRUE. ) ! ED_P_2_AD_P_N 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! ED_P_2_AD_P_N
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! ED_P_2_AD_P_N
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! ED_P_2_AD_P_N
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -4809,6 +4846,34 @@ ENDIF
       END DO
   END IF
       CALL MeshPack( InData%ptMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! ptMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2, OnlySize ) ! ED_P_2_AD_P_N 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -4971,6 +5036,46 @@ ENDIF
         Int_Xferred = Int_Xferred + Buf_size
       END IF
       CALL MeshUnpack( OutData%ptMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! ptMesh 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 ) ! ED_P_2_AD_P_N 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6533,7 +6638,15 @@ ENDIF
    ErrMsg  = ""
     DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
     DstDvr_SimDataData%IW_InputFile = SrcDvr_SimDataData%IW_InputFile
+    DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
     DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
+    DstDvr_SimDataData%FldDens = SrcDvr_SimDataData%FldDens
+    DstDvr_SimDataData%KinVisc = SrcDvr_SimDataData%KinVisc
+    DstDvr_SimDataData%SpdSound = SrcDvr_SimDataData%SpdSound
+    DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
+    DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
+    DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
+    DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
     DstDvr_SimDataData%CompInflow = SrcDvr_SimDataData%CompInflow
     DstDvr_SimDataData%HWindSpeed = SrcDvr_SimDataData%HWindSpeed
     DstDvr_SimDataData%RefHt = SrcDvr_SimDataData%RefHt
@@ -6661,7 +6774,15 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AD_InputFile)  ! AD_InputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%IW_InputFile)  ! IW_InputFile
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! AnalysisType
+      Re_BufSz   = Re_BufSz   + 1  ! FldDens
+      Re_BufSz   = Re_BufSz   + 1  ! KinVisc
+      Re_BufSz   = Re_BufSz   + 1  ! SpdSound
+      Re_BufSz   = Re_BufSz   + 1  ! Patm
+      Re_BufSz   = Re_BufSz   + 1  ! Pvap
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! RefHt
@@ -6778,8 +6899,24 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%IW_InputFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AnalysisType
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%FldDens
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%KinVisc
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SpdSound
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Patm
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Pvap
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HWindSpeed
@@ -6974,8 +7111,24 @@ ENDIF
       OutData%IW_InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%AnalysisType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%FldDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%KinVisc = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SpdSound = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Patm = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Pvap = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%HWindSpeed = ReKiBuf(Re_Xferred)

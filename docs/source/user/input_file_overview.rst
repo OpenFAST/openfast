@@ -82,6 +82,7 @@ modules use the *value column* format):
 ============== ==========================================================
 AeroDyn         Main AD15 input file 
 AeroDyn         Airfoil files
+HydroDyn        Main HD input file
 InflowWind      Main IfW input file
 InflowWind      Uniform wind input file
 InflowWind      Bladed wind summary file

@@ -7,7 +7,7 @@ Command-line syntax for InflowWind driver:
 
 ::
 
-    InlowWind_Driver <filename> [options]
+    InflowWind_Driver <filename> [options]
 
           where:  <filename>     --   Name of driver input file to use
         options:  /ifw           --   treat <filename> as name of InflowWind input file (no driver input file)
