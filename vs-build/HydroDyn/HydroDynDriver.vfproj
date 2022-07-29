@@ -480,5 +480,6 @@
 		<File RelativePath="..\..\modules\SeaState\src\Waves.f90"/>
 		<File RelativePath="..\..\modules\SeaState\src\Waves2.f90"/></Filter>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_DriverCode.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\HydroDyn_DriverSubs.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

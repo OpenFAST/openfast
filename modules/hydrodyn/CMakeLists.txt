@@ -55,7 +55,12 @@ if(APPLE OR UNIX)
    target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()
 
-add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
+
+set(HD_DRIVER_SOURCES
+  src/HydroDyn_DriverCode.f90
+  src/HydroDyn_DriverSubs.f90)
+  
+add_executable(hydrodyn_driver ${HD_DRIVER_SOURCES})
 target_link_libraries(hydrodyn_driver hydrodynlib seastlib nwtclibs versioninfolib)
 
 #add_executable(ss_radiation
