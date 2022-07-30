@@ -93,13 +93,17 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
       ! If the wind file has zero-mean and unit standard deviation (native Bladed format), scale the data:
       !-------------------------------------------------------------------------------------------------
    ParamData%FF%AddMeanAfterInterp = .false.
-   ParamData%FF%WindProfileType    = FF_InitInp%WindProfileType
    ParamData%FF%Z0                 = FF_InitInp%Z0
    ParamData%FF%PLExp              = FF_InitInp%PLExp
+   ParamData%FF%VLinShr            = FF_InitInp%VLinShr
+   ParamData%FF%HLinShr            = FF_InitInp%HLinShr
+   ParamData%FF%RefLength          = FF_InitInp%RefLength
 
    if (InitInp%NativeBladedFmt) then
       ParamData%FF%InterpTower = .true.
       ParamData%FF%AddMeanAfterInterp = .true.
+      ParamData%FF%WindProfileType = FF_InitInp%WindProfileType
+      
       
          ! Validate scaling data if we've got native-Bladed format
       CALL FFWind_ValidateInput(FF_InitInp, ParamData%FF%NFFComp, TmpErrStat, TmpErrMsg)
@@ -112,9 +116,10 @@ SUBROUTINE IfW_BladedFFWind_Init(InitInp, ParamData, MiscVars, InitOutData, ErrS
          IF (ErrStat >= AbortErrLev) RETURN      
       
          ! Add the mean wind speed to the u component.
-      if (.not. ParamData%FF%AddMeanAfterInterp) call AddMeanVelocity(FF_InitInp, ParamData%FF%GridBase, 1.0_ReKi/ParamData%FF%InvFFZD, ParamData%FF%FFData)
+      if (.not. ParamData%FF%AddMeanAfterInterp) call AddMeanVelocity(FF_InitInp, ParamData%FF%GridBase, 1.0_ReKi/ParamData%FF%InvFFZD, 1.0_ReKi/ParamData%FF%InvFFYD, ParamData%FF%FFData)
    else
       ParamData%FF%InterpTower = .false.
+      ParamData%FF%WindProfileType = WindProfileType_None
    end if
    
 
@@ -244,7 +249,9 @@ SUBROUTINE ReadFiles(InitInp, FF_InitInp, InitOut, ParamData, TI, ErrStat, ErrMs
    
    
    if (InitInp%NativeBladedFmt) then
-      call Read_NativeBladedSummary(InitInp%WindFileName, FF_InitInp%PLExp, NatTI, ParamData%FF%MeanFFWS, ParamData%FF%RefHt, InitOut%PropagationDir, InitOut%VFlowAngle, BinFileName, FF_InitInp%XOffset, TmpErrStat, TmpErrMsg)
+      call Read_NativeBladedSummary(InitInp%WindFileName, FF_InitInp%PLExp, FF_InitInp%VLinShr, FF_InitInp%HLinShr, FF_InitInp%RefLength, &
+                                    NatTI, ParamData%FF%MeanFFWS, ParamData%FF%RefHt, InitOut%PropagationDir, InitOut%VFlowAngle, &
+                                    BinFileName, FF_InitInp%XOffset, TmpErrStat, TmpErrMsg)
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN
       
@@ -283,6 +290,10 @@ SUBROUTINE ReadFiles(InitInp, FF_InitInp, InitOut, ParamData, TI, ErrStat, ErrMs
    else
       InitOut%PropagationDir = 0.0_ReKi
       InitOut%VFlowAngle = 0.0_ReKi
+      FF_InitInp%VLinShr = 0.0_ReKi
+      FF_InitInp%HLinShr = 0.0_ReKi
+      FF_InitInp%RefLength = 1.0_ReKi
+   
       BinFileName = InitInp%WindFileName
    end if
       
@@ -1700,7 +1711,7 @@ END SUBROUTINE ReadFiles
 !====================================================================================================
 !> This subroutine reads the text summary file to get normalizing parameters, the location of the
 !! grid, and the direction the grid was written to the binary file
-SUBROUTINE Read_NativeBladedSummary ( FileName, PLExp, TI, UBar, RefHt, PropagationDir, VFlowAngle, BinFileName, XOffset, ErrStat, ErrMsg )
+SUBROUTINE Read_NativeBladedSummary ( FileName, PLExp, VLinShr, HLinShr, RefLength, TI, UBar, RefHt, PropagationDir, VFlowAngle, BinFileName, XOffset, ErrStat, ErrMsg )
 
    IMPLICIT                                              NONE
 
@@ -1710,6 +1721,9 @@ SUBROUTINE Read_NativeBladedSummary ( FileName, PLExp, TI, UBar, RefHt, Propagat
       ! Passed variables
    CHARACTER(*),                       INTENT(IN   )  :: FileName       !< name of the summary file
    REAL(ReKi),                         INTENT(  OUT)  :: PLExp          !< the power-law exponent for vertical wind shear
+   REAL(ReKi),                         INTENT(  OUT)  :: VLinShr        !< the linear shape for vertical wind shear
+   REAL(ReKi),                         INTENT(  OUT)  :: HLinShr        !< the linear shape for horizontal wind shear
+   REAL(ReKi),                         INTENT(  OUT)  :: RefLength      !< Reference (rotor) diameter
    REAL(ReKi),                         INTENT(  OUT)  :: TI      (3)    !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
    REAL(ReKi),                         INTENT(  OUT)  :: UBar           !< mean (advection) wind speed
    REAL(ReKi),                         INTENT(  OUT)  :: RefHt          !< Reference height
@@ -1786,12 +1800,28 @@ SUBROUTINE Read_NativeBladedSummary ( FileName, PLExp, TI, UBar, RefHt, Propagat
          CALL Cleanup()
          RETURN
       END IF
+      
+   
+   CALL ParseVar ( FileInfo, CurLine, 'VLINSHEAR', VLinShr, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2/=ErrID_None) then
+         VLinShr  = 0.0_ReKi ! this will be the default if VLINSHEAR is not in the file
+      end if
+      
+   CALL ParseVar ( FileInfo, CurLine, 'HLINSHEAR', HLinShr, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2/=ErrID_None) then
+         HLinShr  = 0.0_ReKi ! this will be the default if HLINSHEAR is not in the file
+      end if
+      
+   CALL ParseVar ( FileInfo, CurLine, 'REFLENGTH', RefLength, ErrStat2, ErrMsg2, UnEc )
+      if (ErrStat2/=ErrID_None) then
+         RefLength  = 0.0_ReKi ! this will be the default if RefLength is not in the file; it will cause an error if either of the linear shears are non-zero
+      end if
 
    CALL ParseVar ( FileInfo, CurLine, 'XOffset', XOffset, ErrStat2, ErrMsg2, UnEc )
-   if (ErrStat2/=ErrID_None) then
-      XOffset  = 0.0_ReKi ! this will be the default if offset is not in the file
-   end if
-            
+      if (ErrStat2/=ErrID_None) then
+         XOffset  = 0.0_ReKi ! this will be the default if offset is not in the file
+      end if
+
       
       !-------------------------------------------------------------------------------------------------
       ! Get rid of the FileInfo data structure (including pointers and allocatable array):

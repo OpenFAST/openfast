@@ -1876,6 +1876,7 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
             end do            
          END DO              
          
+         ! HubPosition and HubOrientation from ElastoDyn are missing from this
       END IF     
 END SUBROUTINE Linear_IfW_InputSolve_du_AD
 
@@ -3446,7 +3447,13 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
             AD_Start = AD_Start + 3
          end do      
       end if
-                     
+
+      do i=1,3 !rotor-disk velocity component (DiskVel)
+         dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+      end do
+      node = node + 1
+      AD_Start = AD_Start + 3
+
    !END IF
    
    

@@ -94,7 +94,10 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, ParamData, MiscVars, InitOutData, ErrStat
 
    ParamData%FF%InterpTower = .false.
    ParamData%FF%AddMeanAfterInterp = .false.
-
+   ParamData%FF%WindProfileType = WindProfileType_None
+   ParamData%FF%VLinShr         = 0.0_ReKi
+   ParamData%FF%HLinShr         = 0.0_ReKi
+   ParamData%FF%RefLength       = 1.0_ReKi
 
       ! Get a unit number to use
 

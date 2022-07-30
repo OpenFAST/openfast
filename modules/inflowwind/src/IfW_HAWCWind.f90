@@ -110,11 +110,14 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
    p%FF%WindProfileType = InitInp%FF%WindProfileType
    p%FF%Z0              = InitInp%FF%Z0
    p%FF%PLExp           = InitInp%FF%PLExp
+   p%FF%VLinShr         = 0.0_ReKi
+   p%FF%HLinShr         = 0.0_ReKi
+   p%FF%RefLength       = p%FF%FFYHWid*2.0_ReKi
    p%FF%AddMeanAfterInterp = .true.
 
    
    p%FF%InitXPosition   = InitInp%FF%XOffset
-
+   
    IF ( p%FF%GridBase < 0.0_ReKi ) THEN
       call SetErrStat( ErrID_Severe, 'WARNING: The bottom of the grid is located at a height of '//&
                       TRIM( Num2LStr(p%FF%GridBase) )//' meters, which is below the ground.'//&
@@ -140,7 +143,7 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
    ! Add the mean wind speed to the u component.
    !-------------------------------------------------------------------------------------------------
    if (InitInp%FF%ScaleMethod /= ScaleMethod_None) call SubtractMeanVelocity(p%FF%FFData)
-   if (.not. p%FF%AddMeanAfterInterp) call AddMeanVelocity(InitInp%FF, p%FF%GridBase, 1.0_ReKi/p%FF%InvFFZD, p%FF%FFData)
+   if (.not. p%FF%AddMeanAfterInterp) call AddMeanVelocity(InitInp%FF, p%FF%GridBase, 1.0_ReKi/p%FF%InvFFZD, 1.0_ReKi/p%FF%InvFFYD, p%FF%FFData)
    
    !-------------------------------------------------------------------------------------------------
    ! write info to summary file, if necessary
