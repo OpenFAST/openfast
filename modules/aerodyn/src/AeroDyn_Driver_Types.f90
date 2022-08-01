@@ -76,7 +76,8 @@ IMPLICIT NONE
     character(1)  :: delim      !< column delimiter [-]
     character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: fileFmt      !< Output format 1=Text, 2=Binary, 3=Both [-]
-    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=animation [-]
+    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     character(1024)  :: Root      !< Output file rootname [-]
     character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
@@ -1036,6 +1037,7 @@ ENDIF
     DstDvr_OutputsData%outFmt = SrcDvr_OutputsData%outFmt
     DstDvr_OutputsData%fileFmt = SrcDvr_OutputsData%fileFmt
     DstDvr_OutputsData%wrVTK = SrcDvr_OutputsData%wrVTK
+    DstDvr_OutputsData%WrVTK_Type = SrcDvr_OutputsData%WrVTK_Type
     DstDvr_OutputsData%Root = SrcDvr_OutputsData%Root
     DstDvr_OutputsData%VTK_OutFileRoot = SrcDvr_OutputsData%VTK_OutFileRoot
 IF (ALLOCATED(SrcDvr_OutputsData%WriteOutputHdr)) THEN
@@ -1212,6 +1214,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%outFmt)  ! outFmt
       Int_BufSz  = Int_BufSz  + 1  ! fileFmt
       Int_BufSz  = Int_BufSz  + 1  ! wrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Root)  ! Root
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%VTK_OutFileRoot)  ! VTK_OutFileRoot
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutputHdr allocated yes/no
@@ -1355,6 +1358,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%fileFmt
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%wrVTK
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%Root)
       IntKiBuf(Int_Xferred) = ICHAR(InData%Root(I:I), IntKi)
@@ -1605,6 +1610,8 @@ ENDIF
     OutData%fileFmt = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%wrVTK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%Root)
       OutData%Root(I:I) = CHAR(IntKiBuf(Int_Xferred))
