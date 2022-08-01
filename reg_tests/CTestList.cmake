@@ -57,8 +57,6 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${SOURCE_DIRECTORY}              # openfast source directory
        ${BUILD_DIRECTORY}               # build directory for test
        ${TOLERANCE}
-       ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
-       ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
        ${PLOT_FLAG}                     # empty or "-p"
        ${RUN_VERBOSE_FLAG}              # empty or "-v"
   )
