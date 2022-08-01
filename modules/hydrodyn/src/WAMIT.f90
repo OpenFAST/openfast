@@ -958,7 +958,7 @@ end if
                      return
                   end if   
             end if
-         CASE ( 1, 2, 3, 4, 5, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
+         CASE ( 1, 2, 3, 4, 5, 7, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
 
 
             if ( p%ExctnMod == 1 ) then
