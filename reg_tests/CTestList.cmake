@@ -244,22 +244,22 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
-  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
+  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
 # OpenFAST C++ Driver test for OpenFAST Library
 # This tests the FAST Library and FAST_Library.h
-of_fastlib_regression("AWT_YFree_WSt"                    "openfastlib;elastodyn;aerodyn15;servodyn")
+of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn15;servodyn")
 
 # OpenFAST Python API test
-of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn")
-of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;openfastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
-of_regression_py("5MW_Land_BD_DLL_WTurb_py"                  "openfast;openfastlib;python;beamdyn;aerodyn15;servodyn")
-of_regression_py("HelicalWake_OLAF_py"                       "openfast;openfastlib;python;aerodyn15;olaf")
-of_regression_py("EllipticalWing_OLAF_py"                    "openfast;openfastlib;python;aerodyn15;olaf")
+of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn15;servodyn")
+of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;fastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+of_regression_py("5MW_Land_BD_DLL_WTurb_py"                  "openfast;fastlib;python;beamdyn;aerodyn15;servodyn")
+of_regression_py("HelicalWake_OLAF_py"                       "openfast;fastlib;python;aerodyn15;olaf")
+of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;python;aerodyn15;olaf")
 
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
