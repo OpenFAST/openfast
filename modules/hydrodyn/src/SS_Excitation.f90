@@ -104,7 +104,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
    else
       
-      call SS_Exc_CopyInput(u_in(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
+      call SS_Exc_CopyInput(u_in(1), u_out, MESH_NEWCOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat2, ErrMsg2 )
@@ -115,6 +115,8 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
 
+      call SS_Exc_DestroyInput(u_out, ErrStat2, ErrMsg2 )
+      
    end if
    
 end function GetWaveElevation
