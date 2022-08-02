@@ -118,7 +118,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves1      !< local variable in CalcOutput:Total load contribution from incident waves (i.e., the diffraction problem) [(N, N-m)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Rdtn      !< local variable in CalcOutput:Total load contribution from wave radiation damping (i.e., the diffraction problem) [(N, N-m)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_PtfmAM      !< local variable in CalcOutput: [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BdyPosFiltCr      !< Low-pass filtered WAMIT body position at the current step used when ExctnDisp=2 [-]
     TYPE(SS_Rad_MiscVarType)  :: SS_Rdtn      !<  [-]
     TYPE(SS_Rad_InputType)  :: SS_Rdtn_u      !<  [-]
     TYPE(SS_Rad_OutputType)  :: SS_Rdtn_y      !<  [-]
@@ -3194,7 +3193,6 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyMisc'
@@ -3249,20 +3247,6 @@ IF (ALLOCATED(SrcMiscData%F_PtfmAM)) THEN
     END IF
   END IF
     DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
-ENDIF
-IF (ALLOCATED(SrcMiscData%BdyPosFiltCr)) THEN
-  i1_l = LBOUND(SrcMiscData%BdyPosFiltCr,1)
-  i1_u = UBOUND(SrcMiscData%BdyPosFiltCr,1)
-  i2_l = LBOUND(SrcMiscData%BdyPosFiltCr,2)
-  i2_u = UBOUND(SrcMiscData%BdyPosFiltCr,2)
-  IF (.NOT. ALLOCATED(DstMiscData%BdyPosFiltCr)) THEN 
-    ALLOCATE(DstMiscData%BdyPosFiltCr(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BdyPosFiltCr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BdyPosFiltCr = SrcMiscData%BdyPosFiltCr
 ENDIF
       CALL SS_Rad_CopyMisc( SrcMiscData%SS_Rdtn, DstMiscData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -3328,9 +3312,6 @@ IF (ALLOCATED(MiscData%F_Rdtn)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%F_PtfmAM)) THEN
   DEALLOCATE(MiscData%F_PtfmAM)
-ENDIF
-IF (ALLOCATED(MiscData%BdyPosFiltCr)) THEN
-  DEALLOCATE(MiscData%BdyPosFiltCr)
 ENDIF
   CALL SS_Rad_DestroyMisc( MiscData%SS_Rdtn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3409,11 +3390,6 @@ ENDIF
   IF ( ALLOCATED(InData%F_PtfmAM) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! F_PtfmAM upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_PtfmAM)  ! F_PtfmAM
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! BdyPosFiltCr allocated yes/no
-  IF ( ALLOCATED(InData%BdyPosFiltCr) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! BdyPosFiltCr upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%BdyPosFiltCr)  ! BdyPosFiltCr
   END IF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! SS_Rdtn: size of buffers for each call to pack subtype
@@ -3673,26 +3649,6 @@ ENDIF
       DO i1 = LBOUND(InData%F_PtfmAM,1), UBOUND(InData%F_PtfmAM,1)
         ReKiBuf(Re_Xferred) = InData%F_PtfmAM(i1)
         Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%BdyPosFiltCr) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BdyPosFiltCr,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BdyPosFiltCr,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BdyPosFiltCr,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BdyPosFiltCr,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%BdyPosFiltCr,2), UBOUND(InData%BdyPosFiltCr,2)
-        DO i1 = LBOUND(InData%BdyPosFiltCr,1), UBOUND(InData%BdyPosFiltCr,1)
-          ReKiBuf(Re_Xferred) = InData%BdyPosFiltCr(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
       END DO
   END IF
       CALL SS_Rad_PackMisc( Re_Buf, Db_Buf, Int_Buf, InData%SS_Rdtn, ErrStat2, ErrMsg2, OnlySize ) ! SS_Rdtn 
@@ -3991,7 +3947,6 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_UnPackMisc'
@@ -4077,29 +4032,6 @@ ENDIF
       DO i1 = LBOUND(OutData%F_PtfmAM,1), UBOUND(OutData%F_PtfmAM,1)
         OutData%F_PtfmAM(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BdyPosFiltCr not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BdyPosFiltCr)) DEALLOCATE(OutData%BdyPosFiltCr)
-    ALLOCATE(OutData%BdyPosFiltCr(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BdyPosFiltCr.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%BdyPosFiltCr,2), UBOUND(OutData%BdyPosFiltCr,2)
-        DO i1 = LBOUND(OutData%BdyPosFiltCr,1), UBOUND(OutData%BdyPosFiltCr,1)
-          OutData%BdyPosFiltCr(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
       END DO
   END IF
       Buf_size=IntKiBuf( Int_Xferred )
