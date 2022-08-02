@@ -227,6 +227,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%NStepWave    = InitInp%NStepWave
       p%ExctnMod     = InitInp%ExctnMod
       p%ExctnDisp    = InitInp%ExctnDisp
+      p%ExctnCutOff  = InitInp%ExctnCutOff
       p%NBodyMod     = InitInp%NBodyMod
       p%NBody        = InitInp%NBody            ! In the context of this WAMIT object NBody is 1 if NBodyMod > 1 [there are NBody different WAMIT objects in this case]
       p%seast_interp_p = InitInp%seast_interp_p
@@ -1003,6 +1004,25 @@ end if
                      CALL Cleanup()
                      RETURN            
                   END IF
+                  IF (p%ExctnDisp == 2) THEN
+                     p%ExctnFiltConst = exp(-2.0*Pi*p%ExctnCutOff * InitInp%Conv_Rdtn%RdtnDT)
+                     ALLOCATE ( m%BdyPosFiltCr(1:2, 1:p%NBody) , STAT=ErrStat2 )
+                     IF ( ErrStat2 /= 0 )  THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the BdyPosFiltCr array.', ErrStat, ErrMsg, 'WAMIT_Init')
+                        CALL Cleanup()
+                        RETURN            
+                     END IF
+                     m%BdyPosFiltCr = 0.0_ReKi
+
+                     ALLOCATE ( xd%BdyPosFiltM1(1:2, 1:p%NBody) , STAT=ErrStat2 )
+                     IF ( ErrStat2 /= 0 )  THEN
+                        CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the BdyPosFiltM1 array.', ErrStat, ErrMsg, 'WAMIT_Init')
+                        CALL Cleanup()
+                        RETURN            
+                     END IF
+                     xd%BdyPosFiltM1 = 0.0_ReKi
+
+                  END IF
                else
                   ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
@@ -1721,7 +1741,14 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          
       END IF
       
-      if ( p%ExctnMod == 2 )  then       ! Update the state-space wave excitation sub-module's states      
+      IF ( p%ExctnMod == 1) THEN
+         IF (p%ExctnDisp == 2) THEN
+            DO iBody = 1,p%NBody
+               xd%BdyPosFiltM1(1,iBody) = m%BdyPosFiltCr(1,iBody)
+               xd%BdyPosFiltM1(2,iBody) = m%BdyPosFiltCr(2,iBody)
+            END DO
+         END IF
+      ELSE IF ( p%ExctnMod == 2 )  THEN       ! Update the state-space wave excitation sub-module's states      
           
            ! Allocate array of dummy SS_Excitation inputs for the framework
         
@@ -1755,7 +1782,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          
          deallocate(SS_Exctn_u)
          
-      end if
+      END IF
       
 END SUBROUTINE WAMIT_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1827,19 +1854,30 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
                ErrStat = ErrID_Fatal
                RETURN
             END IF
-               ! We are using the displaced x,y location of the WAMIT bodies to determine the Wave Exication force
-            do iBody  = 1,p%NBody
-               
-               bodyPosition(1) = u%Mesh%TranslationDisp(1,iBody)
-               bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
-               iStart = (iBody-1)*6+1
-               
-               ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
-               m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%SeaSt_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
-               
-            end do
-            
+            ! We are using the displaced x,y location of the WAMIT bodies to determine the Wave Exication force
+            IF ( p%ExctnDisp == 1 ) THEN ! Use unfiltered position
+               DO iBody  = 1,p%NBody
+                  bodyPosition(1) = u%Mesh%TranslationDisp(1,iBody)
+                  bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
+                  iStart = (iBody-1)*6+1
+                  ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
+                  m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, bodyPosition, p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%SeaSt_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+               END DO
+            ELSE IF ( p%ExctnDisp == 2 ) THEN ! Use low-pass filtered position
+               DO iBody  = 1,p%NBody
+                  ! Current unfiltered body position
+                  bodyPosition(1) = u%Mesh%TranslationDisp(1,iBody)
+                  bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
+                  ! Filtered body position
+                  m%BdyPosFiltCr(1,iBody) = p%ExctnFiltConst * xd%BdyPosFiltM1(1,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(1)
+                  m%BdyPosFiltCr(2,iBody) = p%ExctnFiltConst * xd%BdyPosFiltM1(2,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(2)
+                  iStart = (iBody-1)*6+1
+                  ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
+                  m%F_Waves1(iStart:iStart+5) = SeaSt_Interp_3D_Vec6( Time, m%BdyPosFiltCr(:,iBody), p%WaveExctnGrid(:,:,:,iStart:iStart+5), p%SeaSt_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SeaState_CalcOutput' )
+               END DO
+            END IF
          end if
          
       else if ( p%ExctnMod == 2 ) then
