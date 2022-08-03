@@ -359,7 +359,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTK_LastWaveIndx      !< last index into wave array [-]
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen      !< width of the column headers output in the text and/or binary file [-]
-    CHARACTER(30)  :: OutFmt_a      !< Format used for text tabular output (except time); combines OutFmt with delim and appropriate spaces [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
     REAL(ReKi) , DIMENSION(1:5)  :: DriverWriteOutput      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
   END TYPE FAST_OutputFileType
@@ -15526,7 +15525,6 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstOutputFileTypeData%ActualChanLen = SrcOutputFileTypeData%ActualChanLen
-    DstOutputFileTypeData%OutFmt_a = SrcOutputFileTypeData%OutFmt_a
       CALL FAST_Copylinstatesave( SrcOutputFileTypeData%op, DstOutputFileTypeData%op, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -15680,7 +15678,6 @@ ENDDO
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! ActualChanLen
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt_a)  ! OutFmt_a
       Int_BufSz   = Int_BufSz + 3  ! op: size of buffers for each call to pack subtype
       CALL FAST_Packlinstatesave( Re_Buf, Db_Buf, Int_Buf, InData%op, ErrStat2, ErrMsg2, .TRUE. ) ! op 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -15887,10 +15884,6 @@ ENDDO
       ENDIF
     IntKiBuf(Int_Xferred) = InData%ActualChanLen
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutFmt_a)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFmt_a(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       CALL FAST_Packlinstatesave( Re_Buf, Db_Buf, Int_Buf, InData%op, ErrStat2, ErrMsg2, OnlySize ) ! op 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -16158,10 +16151,6 @@ ENDDO
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%ActualChanLen = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutFmt_a)
-      OutData%OutFmt_a(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
