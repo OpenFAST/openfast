@@ -35,7 +35,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  RdtnMod                         -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnDisp                       -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef   ^                            ^                             INTEGER                  ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             ReKi                     ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
@@ -76,6 +76,7 @@ typedef   ^                            ^                             Conv_Rdtn_C
 typedef   ^                            DiscreteStateType             Conv_Rdtn_DiscreteStateType           Conv_Rdtn         -          -         -       "discrete states from the convolution radiation module"        -
 typedef   ^                            DiscreteStateType             SS_Rad_DiscreteStateType              SS_Rdtn           -          -         -       "placeholder"        -
 typedef   ^                            DiscreteStateType             SS_Exc_DiscreteStateType              SS_Exctn          -          -         -       "placeholder"        -
+typedef   ^                            DiscreteStateType             ReKi                                  BdyPosFiltM1      {:}{:}     -         -       "Low-pass filtered WAMIT body position at the previous step used when ExctnDisp=2"
 #
 #
 # Define constraint states here:
@@ -123,7 +124,8 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
 typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef   ^                            ^                             INTEGER                  ExctnCutOff              -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             ReKi                     ExctnCutOff              -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             ReKi                     ExctnFiltConst           -          -        -          "Low-pass time filter constant computed from ExctnCutOff"
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveExctnGrid            {:}{:}{:}{:}     -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -

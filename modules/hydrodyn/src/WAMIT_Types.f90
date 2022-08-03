@@ -55,7 +55,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RdtnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    INTEGER(IntKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
+    REAL(ReKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
     REAL(DbKi)  :: RdtnTMax      !<  [-]
     REAL(ReKi)  :: WaveDir      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
@@ -94,6 +94,7 @@ IMPLICIT NONE
     TYPE(Conv_Rdtn_DiscreteStateType)  :: Conv_Rdtn      !< discrete states from the convolution radiation module [-]
     TYPE(SS_Rad_DiscreteStateType)  :: SS_Rdtn      !< placeholder [-]
     TYPE(SS_Exc_DiscreteStateType)  :: SS_Exctn      !< placeholder [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BdyPosFiltM1      !< Low-pass filtered WAMIT body position at the previous step used when ExctnDisp=2 [-]
   END TYPE WAMIT_DiscreteStateType
 ! =======================
 ! =========  WAMIT_ConstraintStateType  =======
@@ -139,7 +140,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RdtnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    INTEGER(IntKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
+    REAL(ReKi)  :: ExctnCutOff      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
+    REAL(ReKi)  :: ExctnFiltConst      !< Low-pass time filter constant computed from ExctnCutOff [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveExctnGrid      !< WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body [-]
     INTEGER(IntKi)  :: NStepWave      !<  [-]
@@ -527,7 +529,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RdtnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnDisp
-      Int_BufSz  = Int_BufSz  + 1  ! ExctnCutOff
+      Re_BufSz   = Re_BufSz   + 1  ! ExctnCutOff
       Db_BufSz   = Db_BufSz   + 1  ! RdtnTMax
       Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%WAMITFile)  ! WAMITFile
@@ -754,8 +756,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ExctnDisp
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%ExctnCutOff
-    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%ExctnCutOff
+    Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%RdtnTMax
     Db_Xferred = Db_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDir
@@ -1127,8 +1129,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%ExctnDisp = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%ExctnCutOff = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    OutData%ExctnCutOff = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%RdtnTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%WaveDir = ReKiBuf(Re_Xferred)
@@ -1915,6 +1917,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyDiscState'
@@ -1930,6 +1934,20 @@ ENDIF
       CALL SS_Exc_CopyDiscState( SrcDiscStateData%SS_Exctn, DstDiscStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcDiscStateData%BdyPosFiltM1)) THEN
+  i1_l = LBOUND(SrcDiscStateData%BdyPosFiltM1,1)
+  i1_u = UBOUND(SrcDiscStateData%BdyPosFiltM1,1)
+  i2_l = LBOUND(SrcDiscStateData%BdyPosFiltM1,2)
+  i2_u = UBOUND(SrcDiscStateData%BdyPosFiltM1,2)
+  IF (.NOT. ALLOCATED(DstDiscStateData%BdyPosFiltM1)) THEN 
+    ALLOCATE(DstDiscStateData%BdyPosFiltM1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%BdyPosFiltM1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%BdyPosFiltM1 = SrcDiscStateData%BdyPosFiltM1
+ENDIF
  END SUBROUTINE WAMIT_CopyDiscState
 
  SUBROUTINE WAMIT_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1959,6 +1977,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL SS_Exc_DestroyDiscState( DiscStateData%SS_Exctn, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ALLOCATED(DiscStateData%BdyPosFiltM1)) THEN
+  DEALLOCATE(DiscStateData%BdyPosFiltM1)
+ENDIF
  END SUBROUTINE WAMIT_DestroyDiscState
 
  SUBROUTINE WAMIT_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2048,6 +2069,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BdyPosFiltM1 allocated yes/no
+  IF ( ALLOCATED(InData%BdyPosFiltM1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! BdyPosFiltM1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BdyPosFiltM1)  ! BdyPosFiltM1
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2159,6 +2185,26 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%BdyPosFiltM1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BdyPosFiltM1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BdyPosFiltM1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BdyPosFiltM1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BdyPosFiltM1,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%BdyPosFiltM1,2), UBOUND(InData%BdyPosFiltM1,2)
+        DO i1 = LBOUND(InData%BdyPosFiltM1,1), UBOUND(InData%BdyPosFiltM1,1)
+          ReKiBuf(Re_Xferred) = InData%BdyPosFiltM1(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE WAMIT_PackDiscState
 
  SUBROUTINE WAMIT_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2174,6 +2220,8 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_UnPackDiscState'
@@ -2307,6 +2355,29 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BdyPosFiltM1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BdyPosFiltM1)) DEALLOCATE(OutData%BdyPosFiltM1)
+    ALLOCATE(OutData%BdyPosFiltM1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BdyPosFiltM1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%BdyPosFiltM1,2), UBOUND(OutData%BdyPosFiltM1,2)
+        DO i1 = LBOUND(OutData%BdyPosFiltM1,1), UBOUND(OutData%BdyPosFiltM1,1)
+          OutData%BdyPosFiltM1(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE WAMIT_UnPackDiscState
 
  SUBROUTINE WAMIT_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4431,6 +4502,7 @@ ENDIF
     DstParamData%ExctnMod = SrcParamData%ExctnMod
     DstParamData%ExctnDisp = SrcParamData%ExctnDisp
     DstParamData%ExctnCutOff = SrcParamData%ExctnCutOff
+    DstParamData%ExctnFiltConst = SrcParamData%ExctnFiltConst
 IF (ALLOCATED(SrcParamData%WaveExctn)) THEN
   i1_l = LBOUND(SrcParamData%WaveExctn,1)
   i1_u = UBOUND(SrcParamData%WaveExctn,1)
@@ -4580,7 +4652,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RdtnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnMod
       Int_BufSz  = Int_BufSz  + 1  ! ExctnDisp
-      Int_BufSz  = Int_BufSz  + 1  ! ExctnCutOff
+      Re_BufSz   = Re_BufSz   + 1  ! ExctnCutOff
+      Re_BufSz   = Re_BufSz   + 1  ! ExctnFiltConst
   Int_BufSz   = Int_BufSz   + 1     ! WaveExctn allocated yes/no
   IF ( ALLOCATED(InData%WaveExctn) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveExctn upper/lower bounds for each dimension
@@ -4759,8 +4832,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%ExctnDisp
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%ExctnCutOff
-    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%ExctnCutOff
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%ExctnFiltConst
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WaveExctn) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -5038,8 +5113,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%ExctnDisp = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%ExctnCutOff = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    OutData%ExctnCutOff = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%ExctnFiltConst = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveExctn not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
