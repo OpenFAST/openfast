@@ -4135,33 +4135,114 @@ END SUBROUTINE AddEndLoad
 SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat, errMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
-                                                                       !!   Output: Discrete states at Time + Interval
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time          
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
+   REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+   TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+   TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
+   TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input:  Discrete states at Time; 
+                                                                    !< Output: Discrete states at Time + Interval
+   TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+   TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time          
+   TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+   INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
+   INTEGER(IntKi)                                    :: J
+   REAL(ReKi)                                        :: WtrDpth
+   REAL(ReKi)                                        :: pos(3), posPrime(3), positionXY(2)
+   REAL(SiKi)                                        :: WaveElev, WaveElev1, WaveElev2
+   REAL(ReKi)                                        :: vrel(3), FV(3), vmag, vmagf
+   INTEGER(IntKi)                                    :: errStat2
+   CHARACTER(ErrMsgLen)                              :: errMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Morison_UpdateDiscState'
+   
+   ! Initialize errStat  
+   errStat = ErrID_None         
+   errMsg  = ""               
+   
+   ! Water depth measured from the free surface
+   WtrDpth = p%WtrDpth + p%MSL2SWL
 
-      INTEGER(IntKi)           :: J                    
-               
-         ! Initialize errStat
-         
-      errStat = ErrID_None         
-      errMsg  = ""               
-      
-      
-         ! Update discrete states here:
-      
-      ! Update state of the velocity high-pass filter
-         DO J = 1, p%NJoints
-              xd%V_rel_n_FiltStat(J) = m%V_rel_n_HiPass(J)-m%V_rel_n(J)
-         END DO
-
+   ! Update state of the relative normal velocity high-pass filter at each joint
+   DO j = 1, p%NJoints 
+      ! Get joint position
+      IF (p%WaveDisp == 0 ) THEN
+         ! use the initial X,Y location
+         pos(1) = u%Mesh%Position(1,j)
+         pos(2) = u%Mesh%Position(2,j)
+      ELSE
+         ! Use current X,Y location
+         pos(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
+         pos(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
+      END IF
+      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
+        pos(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
+      ELSE ! Wave stretching disabled
+        pos(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
+      END IF      
+      ! Compute the free surface elevation at the x/y position of the joint
+      positionXY = (/pos(1),pos(2)/)      
+      WaveElev1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (associated(p%WaveElev2)) THEN
+        WaveElev2 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        WaveElev  = WaveElev1 + WaveElev2
+      ELSE
+        WaveElev  = WaveElev1 
+      END IF
+      ! Compute fluid and relative velocity at the joint
+      IF (p%WaveStMod == 0) THEN ! No wave stretching
+          IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
+              ! Use location to obtain interpolated values of kinematics         
+              call SeaSt_Interp_Setup( Time, pos, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              FV   = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              vrel = FV - u%Mesh%TranslationVel(:,j)
+          ELSE ! Node is above the SWL
+              vrel = 0.0_ReKi
+          END IF
+      ELSE ! Wave stretching enabled
+          IF ( pos(3) <= WaveElev ) THEN ! Node is submerged
+              IF ( p%WaveStMod < 3 ) THEN ! Vertical or extrapolated wave stretching
+                  IF ( pos(3) <= 0.0_ReKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
+                      ! Use location to obtain interpolated values of kinematics         
+                      call SeaSt_Interp_Setup( Time, pos, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                      FV = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  ELSE ! Node is above SWL - need wave stretching
+                      ! Vertical wave stretching
+                      FV = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                      ! Extrapoled wave stretching
+                      IF (p%WaveStMod == 2) THEN 
+                        FV = FV + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3)
+                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                      END IF
+                  END IF ! Node is submerged
+              ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
+                  ! Map the node z-position linearly from [-WtrDpth,WaveElev] to [-WtrDpth,0] 
+                  posPrime = pos
+                  posPrime(3) = WtrDpth*(WtrDpth+pos(3))/(WtrDpth+WaveElev)-WtrDpth
+                  ! Obtain the wave-field variables by interpolation with the mapped position.
+                  call SeaSt_Interp_Setup( Time, posPrime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  FV = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
+                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              END IF
+              vrel = FV - u%Mesh%TranslationVel(:,j)
+          ELSE ! Node is out of water - zero-out all wave dynamics
+              vrel = 0.0_ReKi
+          END IF ! If node is in or out of water
+      END IF ! If wave stretching is on or off
+      ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
+      vmag  = vrel(1)*p%An_End(1,J) + vrel(2)*p%An_End(2,J) + vrel(3)*p%An_End(3,J)
+      ! High-pass filtering
+      vmagf = p%VRelNFiltConst(J) * (vmag + xd%V_rel_n_FiltStat(J))
+      ! Update relative normal velocity filter state for joint J 
+      xd%V_rel_n_FiltStat(J) = vmagf-vmag
+   END DO ! j = 1, p%NJoints
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE Morison
