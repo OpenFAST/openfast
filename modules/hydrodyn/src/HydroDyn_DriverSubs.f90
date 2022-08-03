@@ -33,121 +33,65 @@ MODULE HydroDynDriverSubs
    
    IMPLICIT NONE
    
+   TYPE HD_Drvr_OutputFile
+      INTEGER                          :: NumOuts
+      INTEGER                          :: NumOutsMods(2)
+      CHARACTER(ChanLen), ALLOCATABLE  :: WriteOutputHdr(:)
+      CHARACTER(ChanLen), ALLOCATABLE  :: WriteOutputUnt(:)
+      REAL(ReKi),         ALLOCATABLE  :: Storage(:,:)
+      CHARACTER(500)                   :: FileDescLines(3)
+      INTEGER                          :: unOutFile = -1
+      CHARACTER(20)                    :: OutFmt
+      CHARACTER(20)                    :: OutFmt_t
+      INTEGER                          :: n_Out = 0
+      REAL(DbKi)                       :: TimeData(2)
+   END TYPE HD_Drvr_OutputFile
+   
    TYPE HD_Drvr_InitInput
-      LOGICAL                 :: Echo
-      REAL(ReKi)              :: Gravity
-      REAL(ReKi)              :: WtrDens
-      REAL(ReKi)              :: WtrDpth
-      REAL(ReKi)              :: MSL2SWL
-      CHARACTER(1024)         :: HDInputFile
-      CHARACTER(1024)         :: SeaStateInputFile
-      CHARACTER(1024)         :: OutRootName
-      LOGICAL                 :: Linearize
-      INTEGER                 :: NSteps
-      REAL(DbKi)              :: TimeInterval
-      INTEGER                 :: PRPInputsMod
-      CHARACTER(1024)         :: PRPInputsFile
-      REAL(ReKi)              :: uPRPInSteady(6)
-      REAL(ReKi)              :: uDotPRPInSteady(6)
-      REAL(ReKi)              :: uDotDotPRPInSteady(6)
-      LOGICAL                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
-      REAL(ReKi)              :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
-      REAL(ReKi)              :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
-      INTEGER(IntKi)          :: WaveElevNX              !< Number of points in the X direction for the wave elevation series (-)
-      INTEGER(IntKi)          :: WaveElevNY              !< Number of points in the X direction for the wave elevation series (-)
+      LOGICAL                          :: Echo
+      REAL(ReKi)                       :: Gravity
+      REAL(ReKi)                       :: WtrDens
+      REAL(ReKi)                       :: WtrDpth
+      REAL(ReKi)                       :: MSL2SWL
+      CHARACTER(1024)                  :: HDInputFile
+      CHARACTER(1024)                  :: SeaStateInputFile
+      CHARACTER(1024)                  :: OutRootName
+      LOGICAL                          :: Linearize
+      LOGICAL                          :: WrTxtOutFile = .true.
+      LOGICAL                          :: WrBinOutFile = .false.
+      INTEGER                          :: NSteps
+      REAL(DbKi)                       :: TimeInterval
+      REAL(DbKi)                       :: TMax
+      INTEGER                          :: PRPInputsMod
+      CHARACTER(1024)                  :: PRPInputsFile
+      REAL(ReKi)                       :: uPRPInSteady(6)
+      REAL(ReKi)                       :: uDotPRPInSteady(6)
+      REAL(ReKi)                       :: uDotDotPRPInSteady(6)
+      LOGICAL                          :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
+      REAL(ReKi)                       :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
+      REAL(ReKi)                       :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
+      INTEGER(IntKi)                   :: WaveElevNX              !< Number of points in the X direction for the wave elevation series (-)
+      INTEGER(IntKi)                   :: WaveElevNY              !< Number of points in the X direction for the wave elevation series (-)
+      TYPE(HD_Drvr_OutputFile)         :: OutData
+      character(500)                   :: FTitle                  ! description from 2nd line of driver file
    END TYPE HD_Drvr_InitInput
    
 ! -----------------------------------------------------------------------------------   
 ! NOTE:  this module and the ModMesh.f90 modules must use the Fortran compiler flag:  
 !        /fpp                  because of they both have preprocessor statements
 ! ----------------------------------------------------------------------------------- 
-
-   !
-   !INTEGER(IntKi), PARAMETER                           :: NumInp = 1           ! Number of inputs sent to HydroDyn_UpdateStates
-   !
-   !   ! Program variables
-   !
-   !REAL(DbKi)                                          :: Time                 ! Variable for storing time, in seconds
-   !
-   !REAL(DbKi)                                          :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
-   !REAL(DbKi)                                          :: Interval             ! HD module requested time interval
-   !
-   !type(SeaSt_InitInputType)                        :: InitInData_SeaSt           ! Input data for initialization
-   !type(SeaSt_InitOutputType)                       :: InitOutData_SeaSt          ! Output data from initialization
-   !
-   !type(SeaSt_ContinuousStateType)                  :: x_SeaSt                    ! Continuous states
-   !type(SeaSt_DiscreteStateType)                    :: xd_SeaSt                   ! Discrete states
-   !type(SeaSt_ConstraintStateType)                  :: z_SeaSt                    ! Constraint states
-   !type(SeaSt_OtherStateType)                       :: OtherState_SeaSt           ! Other states
-   !type(SeaSt_MiscVarType)                          :: m_SeaSt                    ! Misc/optimization variables
-   !
-   !type(SeaSt_ParameterType)                        :: p_SeaSt                    ! Parameters
-   !!type(SeaSt_InputType)                           :: u                    ! System inputs [OLD STYLE]
-   !type(SeaSt_InputType)                            :: u_SeaSt(NumInp)            ! System inputs
-   !type(SeaSt_OutputType)                           :: y_SeaSt                    ! System outputs
-   !
-   !
-   !
-   !TYPE(HydroDyn_InitInputType)                        :: InitInData           ! Input data for initialization
-   !TYPE(HydroDyn_InitOutputType)                       :: InitOutData          ! Output data from initialization
-   !
-   !TYPE(HydroDyn_ContinuousStateType)                  :: x                    ! Continuous states
-   !TYPE(HydroDyn_ContinuousStateType)                  :: x_new                ! Continuous states at updated time
-   !TYPE(HydroDyn_DiscreteStateType)                    :: xd                   ! Discrete states
-   !TYPE(HydroDyn_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
-   !TYPE(HydroDyn_ConstraintStateType)                  :: z                    ! Constraint states
-   !TYPE(HydroDyn_OtherStateType)                       :: OtherState           ! Other states
-   !TYPE(HydroDyn_MiscVarType)                          :: m                    ! Misc/optimization variables
-   !
-   !TYPE(HydroDyn_ParameterType)                        :: p                    ! Parameters
-   !!TYPE(HydroDyn_InputType)                           :: u                    ! System inputs [OLD STYLE]
-   !TYPE(HydroDyn_InputType)                            :: u(NumInp)            ! System inputs
-   !TYPE(HydroDyn_OutputType)                           :: y                    ! System outputs
-   !
-   !
-   !
-   !INTEGER(IntKi)                                     :: UnPRPInp            ! PRP Inputs file identifier
-   !REAL(ReKi), ALLOCATABLE                            :: PRPin(:,:)          ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
-   !
-   !INTEGER(IntKi)                                     :: NBody                 ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
-   !
-   !INTEGER(IntKi)                                     :: I                    ! Generic loop counter
-   !INTEGER(IntKi)                                     :: J                    ! Generic loop counter
-   !INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
-   !INTEGER(IntKi)                                     :: ErrStat,ErrStat2     ! Status of error message
-   !CHARACTER(1024)                                    :: ErrMsg,ErrMsg2       ! Error message if ErrStat /= ErrID_None
-   !REAL(R8Ki)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
-   !CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
-   !TYPE(HD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
-   !
-   !integer                                        :: StrtTime (8)                            ! Start time of simulation (including intialization)
-   !integer                                        :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
-   !real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
-   !real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
-   !real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
-   !real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
-   !real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
-   !integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
-   !
-   !type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
-   !type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between Reference pt mesh and Morison mesh
-   !
-   !! For testing
-   !REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
-   !
-   !CHARACTER(20)                    :: FlagArg       ! Flag argument from command line
-   !
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
+   character(*), parameter          :: Delim = Tab
 
 
 CONTAINS
 
-SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
+SUBROUTINE ReadDriverInputFile( inputFile, drvrData, ErrStat, ErrMsg )
 
-   CHARACTER(*),                  INTENT( IN    )   :: inputFile
-   TYPE(HD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
-   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
-   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   CHARACTER(*),                  INTENT( IN    ) :: inputFile
+   TYPE(HD_Drvr_InitInput),       INTENT( INOUT ) :: drvrData
+   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables  
 
@@ -186,12 +130,12 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    if (Failed()) return
 
 
-   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat2, ErrMsg2 )
+   CALL ReadStr( UnIn, FileName, drvrData%FTitle, 'FTitle', 'HydroDyn Driver input file header line 2', ErrStat2, ErrMsg2 )
    if (Failed()) return
 
 
      ! Echo Input Files.
-   CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
+   CALL ReadVar ( UnIn, FileName, drvrData%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
    if (Failed()) return
    
    
@@ -199,7 +143,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
       ! which we must store, set, and then replace on error or completion.
       
-   IF ( InitInp%Echo ) THEN
+   IF ( drvrData%Echo ) THEN
       
       EchoFile = TRIM(FileName)//'.ech'
       CALL GetNewUnit( UnEchoLocal )   
@@ -216,7 +160,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       if (Failed()) return
 
          ! Echo Input Files. Note this line is prevented from being echoed by the ReadVar routine.
-      CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL ReadVar ( UnIn, FileName, drvrData%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEchoLocal )
       if (Failed()) return
 
       
@@ -230,19 +174,19 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    if (Failed()) return
 
       ! Gravity - Gravity.
-   CALL ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%Gravity, 'Gravity', 'Gravity', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
 
       ! WtrDens - Water density.
-   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%WtrDens, 'WtrDens', 'Water density', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
 
       ! WtrDpth - Water depth.
-   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%WtrDpth, 'WtrDpth', 'Water depth', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
 
       ! MSL2SWL - Offset between still-water level and mean sea level.
-   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
    !-------------------------------------------------------------------------------------------------
@@ -254,30 +198,30 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    if (Failed()) return
    
       ! HDInputFile
-   CALL ReadVar ( UnIn, FileName, InitInp%HDInputFile, 'HDInputFile', 'HydroDyn input filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%HDInputFile, 'HDInputFile', 'HydroDyn input filename', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
-   IF ( PathIsRelative( InitInp%HDInputFile ) ) InitInp%HDInputFile = TRIM(PriPath)//TRIM(InitInp%HDInputFile)
+   IF ( PathIsRelative( drvrData%HDInputFile ) ) drvrData%HDInputFile = TRIM(PriPath)//TRIM(drvrData%HDInputFile)
 
        ! SeaStInputFile
-   CALL ReadVar ( UnIn, FileName, InitInp%SeaStateInputFile, 'SeaStateInputFile', 'SeaState input filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%SeaStateInputFile, 'SeaStateInputFile', 'SeaState input filename', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
-   IF ( PathIsRelative( InitInp%SeaStateInputFile ) ) InitInp%SeaStateInputFile = TRIM(PriPath)//TRIM(InitInp%SeaStateInputFile)
+   IF ( PathIsRelative( drvrData%SeaStateInputFile ) ) drvrData%SeaStateInputFile = TRIM(PriPath)//TRIM(drvrData%SeaStateInputFile)
 
       ! OutRootName
-   CALL ReadVar ( UnIn, FileName, InitInp%OutRootName, 'OutRootName', 'HydroDyn output root filename', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%OutRootName, 'OutRootName', 'HydroDyn output root filename', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
-   IF ( PathIsRelative( InitInp%OutRootName ) ) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
+   IF ( PathIsRelative( drvrData%OutRootName ) ) drvrData%OutRootName = TRIM(PriPath)//TRIM(drvrData%OutRootName)
 
        ! Linearize
-   CALL ReadVar ( UnIn, FileName, InitInp%Linearize, 'Linearize', 'Linearize parameter', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%Linearize, 'Linearize', 'Linearize parameter', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
   
       ! NSteps
-   CALL ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', 'Number of time steps in the HydroDyn simulation', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%NSteps, 'NSteps', 'Number of time steps in the HydroDyn simulation', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
       ! TimeInterval   
-   CALL ReadVar ( UnIn, FileName, InitInp%TimeInterval, 'TimeInterval', 'Time interval for any HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%TimeInterval, 'TimeInterval', 'Time interval for any HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
    
@@ -290,13 +234,13 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    if (Failed()) return
    
       ! PRPInputsMod      
-   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsMod, 'PRPInputsMod', 'Model for the PRP (principal reference point) inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsMod, 'PRPInputsMod', 'Model for the PRP (principal reference point) inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
       ! PRPInputsFile      
-   CALL ReadVar ( UnIn, FileName, InitInp%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
-   IF ( PathIsRelative( InitInp%PRPInputsFile ) ) InitInp%PRPInputsFile = TRIM(PriPath)//TRIM(InitInp%PRPInputsFile)
+   IF ( PathIsRelative( drvrData%PRPInputsFile ) ) drvrData%PRPInputsFile = TRIM(PriPath)//TRIM(drvrData%PRPInputsFile)
    
    
    !-------------------------------------------------------------------------------------------------
@@ -308,24 +252,27 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    if (Failed()) return
 
       ! uPRPInSteady
-   CALL ReadAry ( UnIn, FileName, InitInp%uPRPInSteady, 6, 'uPRPInSteady', 'PRP Steady-state displacements and rotations.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   CALL ReadAry ( UnIn, FileName, drvrData%uPRPInSteady, 6, 'uPRPInSteady', 'PRP Steady-state displacements and rotations.', ErrStat2,  ErrMsg2, UnEchoLocal)
    if (Failed()) return
    
       ! uDotPRPInSteady
-   CALL ReadAry ( UnIn, FileName, InitInp%uDotPRPInSteady, 6, 'uDotPRPInSteady', 'PRP Steady-state translational and rotational velocities.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   CALL ReadAry ( UnIn, FileName, drvrData%uDotPRPInSteady, 6, 'uDotPRPInSteady', 'PRP Steady-state translational and rotational velocities.', ErrStat2,  ErrMsg2, UnEchoLocal)
    if (Failed()) return
       
       ! uDotDotPRPInSteady
-   CALL ReadAry ( UnIn, FileName, InitInp%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', 'PRP Steady-state translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEchoLocal)
+   CALL ReadAry ( UnIn, FileName, drvrData%uDotDotPRPInSteady, 6, 'uDotDotPRPInSteady', 'PRP Steady-state translational and rotational accelerations.', ErrStat2,  ErrMsg2, UnEchoLocal)
    if (Failed()) return
 
       
-   IF ( InitInp%PRPInputsMod /= 1 ) THEN
-      InitInp%uPRPInSteady       = 0.0
-      InitInp%uDotPRPInSteady    = 0.0
-      InitInp%uDotDotPRPInSteady = 0.0
+   IF ( drvrData%PRPInputsMod /= 1 ) THEN
+      drvrData%uPRPInSteady       = 0.0
+      drvrData%uDotPRPInSteady    = 0.0
+      drvrData%uDotDotPRPInSteady = 0.0
    END IF
 
+   drvrData%WrTxtOutFile = .true.
+   drvrData%WrBinOutFile = .false.
+   
 
    CALL cleanup()
    
@@ -344,8 +291,210 @@ CONTAINS
    end subroutine Cleanup
    
 END SUBROUTINE ReadDriverInputFile
-
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE InitOutputFile(InitOutData_HD, InitOutData_SeaSt, drvrData, ErrStat, ErrMsg)
 
+   TYPE(HydroDyn_InitOutputType),   INTENT(IN)      :: InitOutData_HD          ! Output data from initialization
+   TYPE(SeaSt_InitOutputType),      INTENT(IN)      :: InitOutData_SeaSt       ! Output data from initialization
+   TYPE(HD_Drvr_InitInput),         INTENT( INOUT ) :: drvrData
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                   :: FmtWidth, TChanLen
+   integer(IntKi)                                   :: i, Indx
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'InitOutputFile'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   drvrData%OutData%n_Out = 0
+   drvrData%OutData%OutFmt = "ES15.6E2"
+   CALL ChkRealFmtStr( drvrData%OutData%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
+   !IF ( drvrData%WrTxtOutFile .and. FmtWidth < MinChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+   !      TRIM(Num2LStr(FmtWidth))//'), which may be too small.', ErrStat, ErrMsg, RoutineName )
+   
+   if (drvrData%TMax < 1.0_DbKi) then ! log10(0) gives floating point divide-by-zero error
+      TChanLen = MinChanLen
+   else
+      TChanLen = max( MinChanLen, int(log10(drvrData%TMax))+7 )
+   end if
+   drvrData%OutData%OutFmt_t = 'F'//trim(num2lstr( TChanLen ))//'.4' ! 'F10.4'
+   
+   
+
+   drvrData%OutData%NumOutsMods = 0
+   if (Allocated(InitOutData_SeaSt%WriteOutputHdr)) drvrData%OutData%NumOutsMods(1) = size(InitOutData_SeaSt%WriteOutputHdr)
+   if (Allocated(InitOutData_HD%WriteOutputHdr   )) drvrData%OutData%NumOutsMods(2) = size(InitOutData_HD%WriteOutputHdr)
+   drvrData%OutData%NumOuts = sum(drvrData%OutData%NumOutsMods) + 1 ! add 1 for time channel
+   
+   call AllocAry(drvrData%OutData%WriteOutputHdr, drvrData%OutData%NumOuts, ' DriverWriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(drvrData%OutData%WriteOutputUnt, drvrData%OutData%NumOuts, ' DriverWriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(drvrData%OutData%Storage, drvrData%OutData%NumOuts-1, drvrData%NSteps, ' DriverWriteOutputStorage', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+   IF (ErrStat >= AbortErrLev) RETURN
+   
+   ! Fill concatenated WriteOuput header and unit arrays:
+   drvrData%OutData%WriteOutputHdr(1) = 'Time'
+   drvrData%OutData%WriteOutputUnt(1) = '(s)'
+   Indx = 1
+   do i=1,drvrData%OutData%NumOutsMods(1)
+      Indx = Indx + 1
+      drvrData%OutData%WriteOutputHdr(Indx) = InitOutData_SeaSt%WriteOutputHdr(i)
+      drvrData%OutData%WriteOutputUnt(Indx) = InitOutData_SeaSt%WriteOutputUnt(i)
+   end do
+   
+   do i=1,drvrData%OutData%NumOutsMods(2)
+      Indx = Indx + 1
+      drvrData%OutData%WriteOutputHdr(Indx) = InitOutData_HD%WriteOutputHdr(i)
+      drvrData%OutData%WriteOutputUnt(Indx) = InitOutData_HD%WriteOutputUnt(i)
+   end do
+   
+   ! get lines for output file:
+   drvrData%OutData%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(version))
+   drvrData%OutData%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
+   drvrData%OutData%FileDescLines(3)  = 'Description from the driver input file: '//TRIM(drvrData%FTitle)
+   
+   
+   IF (drvrData%WrTxtOutFile) THEN
+
+      call GetNewUnit(drvrData%OutData%unOutFile, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            drvrData%OutData%unOutFile = -1
+            return
+         end if
+            
+      call OpenFOutFile ( drvrData%OutData%unOutFile, trim(drvrData%OutRootName)//'.out', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            drvrData%OutData%unOutFile = -1
+            return
+         end if
+
+         ! Add some file information:
+
+      WRITE (drvrData%OutData%unOutFile,'(/,A)')  TRIM( drvrData%OutData%FileDescLines(1) )
+      WRITE (drvrData%OutData%unOutFile,'(1X,A)') TRIM( drvrData%OutData%FileDescLines(2) )
+      WRITE (drvrData%OutData%unOutFile,'()' )    !print a blank line
+      WRITE (drvrData%OutData%unOutFile,'(A)'   ) TRIM( drvrData%OutData%FileDescLines(3) )
+      WRITE (drvrData%OutData%unOutFile,'()' )    !print a blank line
+
+
+         !......................................................
+         ! Write the names of the output parameters on one line:
+         !......................................................
+      CALL WrFileNR ( drvrData%OutData%unOutFile, trim(drvrData%OutData%WriteOutputHdr(1)) )
+      DO I=2,drvrData%OutData%NumOuts
+         CALL WrFileNR ( drvrData%OutData%unOutFile, Delim//trim(drvrData%OutData%WriteOutputHdr(I)) )
+      ENDDO ! I
+
+      WRITE (drvrData%OutData%unOutFile,'()')
+
+         !......................................................
+         ! Write the units of the output parameters on one line:
+         !......................................................
+      CALL WrFileNR ( drvrData%OutData%unOutFile, trim(drvrData%OutData%WriteOutputUnt(1)) )
+      DO I=2,drvrData%OutData%NumOuts
+         CALL WrFileNR ( drvrData%OutData%unOutFile, Delim//trim(drvrData%OutData%WriteOutputUnt(I)) )
+      ENDDO ! I
+
+      WRITE (drvrData%OutData%unOutFile,'()')
+         
+   END IF
+   
+   IF (drvrData%WrBinOutFile) THEN
+      drvrData%OutData%TimeData(1) = 0.0_DbKi                  ! This is the first output time, which we will set later
+      drvrData%OutData%TimeData(2) = drvrData%TimeInterval      ! This is the (constant) time between subsequent writes to the output file
+   END IF
+
+   
+END SUBROUTINE InitOutputFile
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FillOutputFile(time, y_SeaSt, y_HD, drvrData, ErrStat, ErrMsg)
+   REAL(DbKi),                      INTENT( IN    ) :: time
+   TYPE(SeaSt_OutputType),          INTENT( IN    ) :: y_SeaSt                 ! SeaState outputs
+   TYPE(HydroDyn_OutputType),       INTENT( IN    ) :: y_HD                    ! HydroDyn outputs
+   TYPE(HD_Drvr_InitInput),         INTENT( INOUT ) :: drvrData
+   INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
+   
+   character(60)                                    :: TmpStr
+   integer(IntKi)                                   :: i, Indx
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'FillOutputFile'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   IF ( drvrData%OutData%n_Out < drvrData%NSteps ) THEN
+      drvrData%OutData%n_Out = drvrData%OutData%n_Out + 1
+   ELSE IF (drvrData%WrBinOutFile) THEN
+      ErrStat = ErrID_Warn
+      ErrMsg = 'Not all data could be written to the binary output file.'
+   END IF
+
+   ! Fill data array with concatenated writeOutput data:
+   Indx = 0
+   do i=1,drvrData%OutData%NumOutsMods(1)
+      Indx = Indx + 1
+      drvrData%OutData%Storage(Indx, drvrData%OutData%n_Out) = y_SeaSt%WriteOutput(i)
+   end do
+   do i=1,drvrData%OutData%NumOutsMods(2)
+      Indx = Indx + 1
+      drvrData%OutData%Storage(Indx, drvrData%OutData%n_Out) = y_HD%WriteOutput(i)
+   end do
+
+
+   IF (drvrData%WrTxtOutFile) THEN
+            ! Write one line of tabular output:
+
+            ! time
+      WRITE( TmpStr, '('//trim(drvrData%OutData%OutFmt_t)//')' ) time
+      CALL WrFileNR( drvrData%OutData%unOutFile, trim(TmpStr) )
+
+         ! write the individual module output (convert to SiKi if necessary, so that we don't need to print so many digits in the exponent)
+      CALL WrNumAryFileNR ( drvrData%OutData%unOutFile, REAL(drvrData%OutData%Storage(:,drvrData%OutData%n_Out),SiKi), '"'//Delim//'"'//drvrData%OutData%OutFmt, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+         ! write a new line (advance to the next line)
+      WRITE (drvrData%OutData%unOutFile,'()')
+   END IF
+
+
+   IF (drvrData%WrBinOutFile) THEN
+         ! store time data
+      IF ( drvrData%OutData%n_Out == 1_IntKi ) THEN
+         drvrData%OutData%TimeData(drvrData%OutData%n_Out) = time   ! First time in the output file
+      END IF
+   END IF
+
+
+END SUBROUTINE FillOutputFile
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE WriteOutputFile(drvrData, ErrStat, ErrMsg)
+   TYPE(HD_Drvr_InitInput),         INTENT( IN    ) :: drvrData
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   IF (drvrData%WrTxtOutFile) THEN
+      IF (drvrData%OutData%unOutFile > 0) CLOSE(drvrData%OutData%unOutFile)
+   END IF
+   
+   IF (drvrData%WrBinOutFile .AND. drvrData%OutData%n_Out > 0) THEN
+
+      CALL WrBinFAST(TRIM(drvrData%OutRootName)//'.outb', FileFmtID_ChanLen_In, TRIM(drvrData%OutData%FileDescLines(1))//' '//TRIM(drvrData%OutData%FileDescLines(2))//'; '//TRIM(drvrData%OutData%FileDescLines(3)), &
+            drvrData%OutData%WriteOutputHdr, drvrData%OutData%WriteOutputUnt, drvrData%OutData%TimeData, drvrData%OutData%Storage(:,1:drvrData%OutData%n_Out), ErrStat, ErrMsg)
+
+   END IF
+   
+   
+END SUBROUTINE WriteOutputFile
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs
 
