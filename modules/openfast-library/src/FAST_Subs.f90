@@ -2313,11 +2313,6 @@ end do
          y_FAST%ActualChanLen = max( y_FAST%ActualChanLen, LEN_TRIM(y_FAST%ChannelUnits(I)) )
       ENDDO ! I
 
-      y_FAST%OutFmt_a = '"'//p_FAST%Delim//'"'//p_FAST%OutFmt      ! format for array elements from individual modules
-      if (p_FAST%FmtWidth < y_FAST%ActualChanLen) then
-         y_FAST%OutFmt_a = trim(y_FAST%OutFmt_a)//','//trim(num2lstr(y_FAST%ActualChanLen - p_FAST%FmtWidth))//'x'
-      end if
-
       CALL GetNewUnit( y_FAST%UnOu, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
