@@ -41,11 +41,12 @@ def _runGenericCase(inputFile, executable, verbose=False, log=True):
     rtl.validateFileOrExit(inputFile)
     rtl.validateExeOrExit(executable)
     
-    casebase = os.path.sep.join(inputFile.split(os.path.sep)[-1].split('.')[:-1])
-    caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+#bjj, why wouldn't we check if log is true instead of verbose being false to generate a log file???
     if verbose:
         logFile = None
     else:
+        caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+        casebase = caseparent.split(os.path.sep)[-1]  # assumes that the directory structure name is the name of the .log file. (for consistent driver + glue-code names)
         logFile = caseparent + os.path.sep + casebase + '.log'
     
     returnCode = _runCase(executable, inputFile, logFile, stdout)
@@ -67,7 +68,7 @@ def runBeamdynDriverCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
 def runHydrodynDriverCase(inputFile, executable, verbose=False):
-    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    #caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     #os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
 

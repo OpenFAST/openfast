@@ -89,7 +89,7 @@ for case in casenames:
         command = "\"{}\" execute{}LinearRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     else:
         command = "\"{}\" execute{}RegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
-    print("command = '{}'".format(command), flush=True)
+    # print("command = '{}'".format(command), flush=True)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
 
     if returnCode > 1:
