@@ -94,6 +94,11 @@ foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
 endforeach()
 
+foreach(turbineDirectory 5MW_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
+  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/python/")
+endforeach()
+
 ## fastfarm seed
 foreach(turbineDirectory 5MW_Baseline)
   file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/${turbineDirectory}"
@@ -123,6 +128,23 @@ add_custom_command(
   COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${of_dest}"
 )
 
+set(ofpy_dest "${CTEST_BINARY_DIR}/glue-codes/python/5MW_Baseline/ServoData/")
+add_custom_command(
+  OUTPUT "${ofpy_dest}/DISCON.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ofpy_dest}"
+)
+add_custom_command(
+  OUTPUT "${ofpy_dest}/DISCON_ITIBarge.dll"
+  DEPENDS DISCON_ITIBarge
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${ofpy_dest}"
+)
+add_custom_command(
+  OUTPUT "${ofpy_dest}/DISCON_OC3Hywind.dll"
+  DEPENDS DISCON_OC3Hywind
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${ofpy_dest}"
+)
+
 set(ff_dest "${CTEST_BINARY_DIR}/glue-codes/fast-farm/5MW_Baseline/ServoData/")
 add_custom_command(
   OUTPUT "${ff_dest}/DISCON_WT1.dll"
@@ -141,13 +163,32 @@ add_custom_command(
 )
 
 add_custom_target(
-  regression_tests
+  regression_test_controllers
   DEPENDS
-    openfast
     "${of_dest}/DISCON.dll"
     "${of_dest}/DISCON_ITIBarge.dll"
     "${of_dest}/DISCON_OC3Hywind.dll"
+    "${ofpy_dest}/DISCON.dll"
+    "${ofpy_dest}/DISCON_ITIBarge.dll"
+    "${ofpy_dest}/DISCON_OC3Hywind.dll"
     "${ff_dest}/DISCON_WT1.dll"
     "${ff_dest}/DISCON_WT2.dll"
     "${ff_dest}/DISCON_WT3.dll"
+)
+
+add_custom_target(
+  regression_tests
+  DEPENDS
+    openfast
+    regression_test_controllers
+)
+
+add_custom_target(
+  regression_test_module_drivers
+  DEPENDS
+    aerodyn_driver
+    beamdyn_driver
+    hydrodyn_driver
+    inflowwind_driver
+    subdyn_driver
 )

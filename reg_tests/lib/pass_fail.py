@@ -31,6 +31,10 @@ def readFASTOut(fastoutput):
         rtl.exitWithError("Error: {}".format(e))
 
 def passRegressionTest(norm, tolerance):
+    if np.any(np.isnan(norm)):
+        return False
+    if np.any(np.isinf(norm)):
+        return False
     return True if max(norm) < tolerance else False
 
 def maxnorm(data, axis=0):

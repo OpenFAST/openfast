@@ -2481,7 +2481,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
       u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%RootMotion%Orientation(:,:,node), du * perturb_sign, fieldIndx )   ! NOTE: call not using DCM_logmap
    CASE ( 3) !Module/Mesh/Field: u%RootMotion%TranslationVel = 3;
       u%RootMotion%TranslationVel( fieldIndx,node) = u%RootMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%RootMotion%RotationVel = 4;
@@ -2561,8 +2561,8 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
          call BD_CrvMatrixR( x%q( 4:6, node ), rotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
          orientation = transpose(rotation)
          
-         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )
-
+         CALL PerturbOrientationMatrix( orientation, dx * perturb_sign, dof-3 )   ! NOTE: call not using DCM_logmap
+         
          rotation = transpose(orientation)
          call BD_CrvExtractCrv( rotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
       end if

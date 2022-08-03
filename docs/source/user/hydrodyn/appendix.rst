@@ -301,53 +301,58 @@ range [1,9] and corresponds to row α in the MEMBER OUTPUT LIST table and
 β is a number in the range [1,9] and corresponds to location β in the
 **NodeLocs** list of that table entry. Jα refers to output joint α,
 where α is a number in the range [1,9] and corresponds to row α in the
-JOINT OUTPUT LIST table. All outputs are in the global inertial-frame
-coordinate system.
+JOINT OUTPUT LIST table. Bα refers to body α, where α is a number in
+the range [1,9]. Setting α > NBody yields invalid output; if NBody > 9,
+only the first 9 bodies can be output. Waveα refers to point α where
+wave elevations can be output, where α is a number in the range [1,9].
+Setting α > NWaveElev yields invalid output. All outputs are in the
+global inertial-frame coordinate.
 
-================================================================ ============================================================================================== ========================================================================================
-Channel Name(s)                                                  Units                                                                                          Description
-================================================================ ============================================================================================== ========================================================================================
-*Wave and Current Kinematics*                                                                                                                                  
-Wave1Elev, Wave2Elev, …, Wave9Elev                               (m)                                                                                            Total (first- plus second-order) wave elevations (up to 9 designated locations)
-Wave1Elv1, Wave2Elv1, …, Wave9Elv1                               (m)                                                                                            First-order wave elevations (up to 9 designated locations)
-Wave1Elv2, Wave2Elv2, …, Wave9Elv2                               (m)                                                                                            Second-order wave elevations (up to 9 designated locations)
-MαNβVxi, MαNβVyi, MαNβVzi                                        (m/s), (m/s), (m/s)                                                                            Total (first- plus second-order) fluid particle velocities at MαNβ
-MαNβAxi, MαNβAyi, MαNβAzi                                        (m/s:sup:`2`), (m/s:sup:`2`), (m/s:sup:`2`)                                                    Total (first- plus second-order) fluid particle accelerations at MαNβ
-MαNβDynP                                                         (Pa)                                                                                           Total (first- plus second-order) fluid particle dynamic pressure at MαNβ
-JαVxi, JαVyi, JαVzi                                              (m/s), (m/s), (m/s)                                                                            Total (first- plus second-order) fluid particle velocities at Jα
-JαAxi, JαAyi, JαAzi                                              (m/s:sup:`2`), (m/s:sup:`2`), (m/s:sup:`2`)                                                    Total (first- plus second-order) fluid particle accelerations at Jα
-JαDynP                                                           (Pa)                                                                                           Total (first- plus second-order) fluid particle dynamic pressure at Jα
-*Total and Additional Loads*                                                                                                                                   
-AddFxi, AddFyi, AddFzi, AddMxi, AddMyi, AddMzi                   (N), (N), (N), (N·m), (N·m), (N·m)                                                             Forces and moments due to additional preload, stiffness, and damping at the WRP
-HydroFxi, HydroFyi, HydroFzi, HydroMxi, HydroMyi, HydroMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                             Total integrated hydrodynamic loads from both potential flow and strip theory at the WRP
-*Loads from Potential-Flow Solution*                                                                                                                           
-WavesFxi, WavesFyi, WavesFzi, WavesMxi, WavesMyi, WavesMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                             Total (first- plus second-order) wave-excitation loads from diffraction at the WRP
-WavesF1xi, WavesF1yi, WavesF1zi, WavesM1xi, WavesM1yi, WavesM1zi (N), (N), (N), (N·m), (N·m), (N·m)                                                             First-order wave-excitation loads from diffraction at the WRP
-WavesF2xi, WavesF2yi, WavesF2zi, WavesM2xi, WavesM2yi, WavesM2zi (N), (N), (N), (N·m), (N·m), (N·m)                                                             Second-order wave-excitation loads from diffraction at the WRP
-HdrStcFxi, HdrStcFyi, HdrStcFzi, HdrStcMxi, HdrStcMyi, HdrStcMzi (N), (N), (N), (N·m), (N·m), (N·m)                                                             Hydrostatic loads at the WRP
-RdtnFxi, RdtnFyi, RdtnFzi, RdtnMxi, RdtnMyi, RdtnMzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                             Radiation loads at the WRP
-*Structural Motions*                                                                                                                                           
-WRPSurge, WRPSway, WRPHeave, WRPRoll, WRPPitch WRPYaw            (m), (m), (m), (rad), (rad), (rad)                                                             Displacements and rotations at the WRP
-WRPTVxi, WRPTVyi, WRPTVzi, WRPRVxi, WRPRVyi, WRPVzi              (m/s), (m/s), (m/s), (rad/s), (rad/s), (rad/s)                                                 Translational and rotational velocities at the WRP
-WRPTAxi, WRPTAyi, WRPTAzi, WRPRAxi, WRPRAyi, WRPAzi              (m/s:sup:`2`), (m/s:sup:`2`), (m/s:sup:`2`), (rad/s:sup:`2`), (rad/s:sup:`2`), (rad/s:sup:`2`) Translational and rotational accelerations at the WRP
-MαNβSTVxi, MαNβSTVyi, MαNβSTVzi                                  (m/s), (m/s), (m/s)                                                                            Structural translational velocities at MαNβ
-MαNβSTAxi, MαNβSTAyi, MαNβSTAzi                                  (m/s:sup:`2`), (m/s:sup:`2`), (m/s:sup:`2`)                                                    Structural translational accelerations at MαNβ
-JαSTVxi, JαSTVyi, JαSTVzi                                        (m/s), (m/s), (m/s)                                                                            Structural translational velocities at Jα
-JαSTAxi, JαSTAyi, JαSTAzi                                        (m/s:sup:`2`), (m/s:sup:`2`), (m/s:sup:`2`)                                                    Structural translational accelerations at Jα
-*Distributed Loads (Per Unit Length) on Members*                                                                                                               
-MαNβFDxi, MαNβFDyi, MαNβFDzi                                     (N/m), (N/m), (N/m)                                                                            Viscous-drag force at MαNβ
-MαNβFIxi, MαNβFIyi, MαNβFIzi                                     (N/m), (N/m), (N/m)                                                                            Fluid-inertia force at MαNβ
-MαNβFBxi, MαNβFByi, MαNβFBzi, MαNβMBxi, MαNβMByi, MαNβMBzi       (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                 Buoyancy loads at MαNβ
-MαNβFBFxi, MαNβFBFyi, MαNβFBFzi, MαNβMBFxi, MαNβMBFyi, MαNβMBFzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                 Negative buoyancy loads due to flooding/ballasting at MαNβ
-MαNβFMGxi, MαNβFMGyi, MαNβFMGzi                                  (N/m), (N/m), (N/m)                                                                            Forces due to marine growth weight at MαNβ
-MαNβFAMxi, MαNβFAMyi, MαNβFAMzi                                  (N/m), (N/m), (N/m)                                                                            Hydrodynamic added-mass forces at MαNβ
-MαNβFAGxi, MαNβFAGyi, MαNβFAGzi                                  (N/m), (N/m), (N/m)                                                                            Marine growth mass inertia forces at MαNβ
-MαNβFAFxi, MαNβFAFyi, MαNβFAFzi                                  (N/m), (N/m), (N/m)                                                                            Flooding/ballasting mass inertia forces at MαNβ
-MαNβFAxi, MαNβFAyi, MαNβFAzi                                     (N/m), (N/m), (N/m)                                                                            Total effective added-mass forces at MαNβ
-*Lumped Loads at Joints*                                                                                                                                       
-JαFDxi, JαFDyi, JαFDzi                                           (N), (N), (N)                                                                                  Viscous-drag force at Jα
-JαFIxi, JαFIyi, JαFIzi                                           (N), (N), (N)                                                                                  Fluid-inertia force at Jα
-JαFBxi, JαFByi, JαFBzi, JαMBxi, JαMByi, JαMBzi                   (N), (N), (N), (N·m), (N·m), (N·m)                                                             Buoyancy loads at Jα
-JαFBFxi, JαFBFyi, JαFBFzi, JαMBFxi, JαMBFyi, JαMBFzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                             Negative buoyancy loads due to flooding/ballasting at Jα
-JαFAMxi, JαFAMyi, JαFAMzi                                        (N), (N), (N)                                                                                  Hydrodynamic added-mass forces at Jα
-================================================================ ============================================================================================== ========================================================================================
+================================================================ ========================================================================================================== ========================================================================================
+Channel Name(s)                                                  Units                                                                                                      Description
+================================================================ ========================================================================================================== ========================================================================================
+**Wave and Current Kinematics**                                                                                                                                 
+WaveαElev                                                        (m)                                                                                                        Total (first- plus second-order) wave elevations (up to 9 designated locations)
+WaveαElv1                                                        (m)                                                                                                        First-order wave elevations (up to 9 designated locations)
+WaveαElv2                                                        (m)                                                                                                        Second-order wave elevations (up to 9 designated locations)
+MαNβVxi, MαNβVyi, MαNβVzi                                        (m/s), (m/s), (m/s)                                                                                        Total (first- plus second-order) fluid particle velocities at MαNβ
+MαNβAxi, MαNβAyi, MαNβAzi                                        (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`)                                                                Total (first- plus second-order) fluid particle accelerations at MαNβ
+MαNβDynP                                                         (Pa)                                                                                                       Total (first- plus second-order) fluid particle dynamic pressure at MαNβ
+JαVxi, JαVyi, JαVzi                                              (m/s), (m/s), (m/s)                                                                                        Total (first- plus second-order) fluid particle velocities at Jα
+JαAxi, JαAyi, JαAzi                                              (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`)                                                                Total (first- plus second-order) fluid particle accelerations at Jα
+JαDynP                                                           (Pa)                                                                                                       Total (first- plus second-order) fluid particle dynamic pressure at Jα
+**Total and Additional Loads**                                                                                                                                              
+BαAddFxi, BαAddFyi, BαAddFzi, BαAddMxi, BαAddMyi, BαAddMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Loads due to additional preload, stiffness, and damping at Bα
+HydroFxi, HydroFyi, HydroFzi, HydroMxi, HydroMyi, HydroMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Total integrated hydrodynamic loads from both potential flow and strip theory at (0,0,0)
+**Loads from Potential-Flow Solution**                                                                                                                                      
+BαWvsFxi, BαWvsFyi, BαWvsFzi, BαWvsMxi, BαWvsMyi, BαWvsMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Total (first- plus second-order) wave-excitation loads from diffraction at Bα
+BαWvsF1xi, BαWvsF1yi, BαWvsF1zi, BαWvsM1xi, BαWvsM1yi, BαWvsM1zi (N), (N), (N), (N·m), (N·m), (N·m)                                                                         First-order wave-excitation loads from diffraction at Bα
+BαWvsF2xi, BαWvsF2yi, BαWvsF2zi, BαWvsM2xi, BαWvsM2yi, BαWvsM2zi (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Second-order wave-excitation loads from diffraction at Bα
+BαHdSFxi, BαHdSFyi, BαHdSFzi, BαHdSMxi, BαHdSMyi, BαHdSMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Hydrostatic loads at Bα
+BαRdtFxi, BαRdtFyi, BαRdtFzi, BαRdtMxi, BαRdtMyi, BαRdtMzi       (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Wave-radiation loads at Bα
+**Structural Motions**                                                                                                                                                      
+BαSurge, BαSway, BαHeave, BαRoll, BαPitch BαYaw                  (m), (m), (m), (rad), (rad), (rad)                                                                         Displacements and rotations at Bα
+BαTVxi, BαTVyi, BαTVzi, BαRVxi, BαRVyi, BαRVzi                   (m/s), (m/s), (m/s), (rad/s), (rad/s), (rad/s)                                                             Translational and rotational velocities at Bα
+BαTAxi, BαTAyi, BαTAzi, BαRAxi, BαRAyi, BαRAzi                   (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`), (rad/s\ :sup:`2`), (rad/s\ :sup:`2`), (rad/s\ :sup:`2`) Translational and rotational accelerations at Bα
+MαNβSTVxi, MαNβSTVyi, MαNβSTVzi                                  (m/s), (m/s), (m/s)                                                                                        Structural translational velocities at MαNβ
+MαNβSTAxi, MαNβSTAyi, MαNβSTAzi                                  (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`)                                                                Structural translational accelerations at MαNβ
+JαSTVxi, JαSTVyi, JαSTVzi                                        (m/s), (m/s), (m/s)                                                                                        Structural translational velocities at Jα
+JαSTAxi, JαSTAyi, JαSTAzi                                        (m/s\ :sup:`2`), (m/s\ :sup:`2`), (m/s\ :sup:`2`)                                                                Structural translational accelerations at Jα
+**Distributed Loads (Per Unit Length) on Members**                                                                                                                          
+MαNβFDxi, MαNβFDyi, MαNβFDzi                                     (N/m), (N/m), (N/m)                                                                                        Viscous-drag forces at MαNβ
+MαNβFIxi, MαNβFIyi, MαNβFIzi                                     (N/m), (N/m), (N/m)                                                                                        Fluid-inertia forces at MαNβ
+MαNβFBxi, MαNβFByi, MαNβFBzi, MαNβMBxi, MαNβMByi, MαNβMBzi       (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Buoyancy loads at MαNβ
+MαNβFBFxi, MαNβFBFyi, MαNβFBFzi, MαNβMBFxi, MαNβMBFyi, MαNβMBFzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Negative buoyancy loads due to flooding/ballasting at MαNβ
+MαNβFMGxi, MαNβFMGyi, MαNβFMGzi, MαNβMMGxi, MαNβMMGyi, MαNβMMGzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Loads due to marine growth weight at MαNβ
+MαNβFAMxi, MαNβFAMyi, MαNβFAMzi                                  (N/m), (N/m), (N/m)                                                                                        Hydrodynamic added-mass forces at MαNβ
+MαNβFAGxi, MαNβFAGyi, MαNβFAGzi, MαNβMAGxi, MαNβMAGyi, MαNβMAGzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Marine growth mass inertia loads at MαNβ
+MαNβFAFxi, MαNβFAFyi, MαNβFAFzi, MαNβMAFxi, MαNβMAFyi, MαNβMAFzi (N/m), (N/m), (N/m), (N·m/m), (N·m/m), (N·m/m)                                                             Flooding/ballasting mass inertia loads at MαNβ
+**Lumped Loads at Joints**                                                                                                                                                  
+JαFDxi, JαFDyi, JαFDzi                                           (N), (N), (N)                                                                                              Viscous-drag forces at Jα
+JαFIxi, JαFIyi, JαFIzi                                           (N), (N), (N)                                                                                              Fluid-inertia forces at Jα
+JαFBxi, JαFByi, JαFBzi, JαMBxi, JαMByi, JαMBzi                   (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Buoyancy loads at Jα
+JαFBFxi, JαFBFyi, JαFBFzi, JαMBFxi, JαMBFyi, JαMBFzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Negative buoyancy loads due to flooding/ballasting at Jα
+JαFMGxi, JαFMGyi, JαFMGzi                                        (N), (N), (N)                                                                                              Forces due to marine growth weight at Jα
+JαFAMxi, JαFAMyi, JαFAMzi                                        (N), (N), (N)                                                                                              Hydrodynamic added-mass forces at Jα
+JαFAGxi, JαFAGyi, JαFAGzi, JαMAGxi, JαMAGyi, JαMAGzi             (N), (N), (N), (N·m), (N·m), (N·m)                                                                         Marine growth mass inertia loads at Jα
+================================================================ ========================================================================================================== ========================================================================================

@@ -59,16 +59,20 @@ typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to 
 
 
 # Define outputs from the initialization routine here:
-typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
-typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
-typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
-typedef	^	InitOutputType	IntKi	CouplingScheme	-	-	-	"Switch that indicates if a particular coupling scheme is required"	-
-typedef	^	InitOutputType	Logical	UseHSSBrake	-	-	-	"flag to determine if high-speed shaft brake is potentially used (true=yes)"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
-typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
-typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
-typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
+typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputUnt    {:} - -  "Units of the output-to-file channels"   -
+typedef  ^  InitOutputType    ProgDesc                Ver               -   - -  "This module's name, version, and date"   -
+typedef  ^  InitOutputType    IntKi                   CouplingScheme    -   - -  "Switch that indicates if a particular coupling scheme is required"   -
+typedef  ^  InitOutputType    Logical                 UseHSSBrake       -   - -  "flag to determine if high-speed shaft brake is potentially used (true=yes)"   -
+# Linearization
+typedef  ^  InitOutputType    CHARACTER(LinChanLen)   LinNames_y     {:}   -   -   "Names of the outputs used in linearization"   -
+typedef  ^  InitOutputType    CHARACTER(LinChanLen)   LinNames_x     {:}   -   -   "Names of the states used in linearization"   -
+typedef  ^  InitOutputType    CHARACTER(LinChanLen)   LinNames_u     {:}   -   -   "Names of the inputs used in linearization"   -
+typedef  ^  InitOutputType    LOGICAL                 RotFrame_y     {:}   -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"   -
+typedef  ^  InitOutputType    LOGICAL                 RotFrame_x     {:}   -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"   -
+typedef  ^  InitOutputType    LOGICAL                 RotFrame_u     {:}   -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"   -
+typedef  ^  InitOutputType    LOGICAL                 IsLoad_u       {:}   -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef  ^  InitOutputType    IntKi                   DerivOrder_x   {:}   -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"   -
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -148,7 +152,7 @@ typedef	^	SrvD_InputFile	IntKi	DLL_NumTrq	-	-	-	"Record 26: No. of points in tor
 typedef	^	SrvD_InputFile	ReKi	GenSpd_TLU	{:}	-	-	"Records R:2:R+2*DLL_NumTrq-2: Generator speed values in look-up table [used only with DLL Interface]"	rad/s
 typedef	^	SrvD_InputFile	ReKi	GenTrq_TLU	{:}	-	-	"Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table [used only with DLL Interface]"	Nm
 typedef	^	SrvD_InputFile	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
-
+# StC input files/instances
 typedef	^	SrvD_InputFile	IntKi	NumBStC	-	-	-	"Number of blade structural controllers (integer)"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	BStCfiles	{:}	-	-	"Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]"	-
 typedef	^	SrvD_InputFile	IntKi	NumNStC	-	-	-	"Number of nacelle structural controllers (integer)"	-
@@ -157,14 +161,14 @@ typedef	^	SrvD_InputFile	IntKi	NumTStC	-	-	-	"Number of tower structural control
 typedef	^	SrvD_InputFile	CHARACTER(1024)	TStCfiles	{:}	-	-	"Name of the files for tower structural controllers (quoted strings) [unused when NumTStC==0]"	-
 typedef	^	SrvD_InputFile	IntKi	NumSStC	-	-	-	"Number of substructure structural controllers (integer)"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	SStCfiles	{:}	-	-	"Name of the files for subtructure structural controllers (quoted strings) [unused when NumSStC==0]"	-
-
+# Airfoil control
 typedef	^	SrvD_InputFile	IntKi	AfCmode	-	-	-	"Airfoil control mode {0: none, 1: sine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
 typedef	^	SrvD_InputFile	ReKi	AfC_Mean	-	-	-	"Mean level for cosine cycling or steady value [used only with AfCmode==1]" -
 typedef	^	SrvD_InputFile	ReKi	AfC_Amp	-	-	-	"Amplitude for for cosine cycling of flap signal (-) [used only with AfCmode==1]"	-
 typedef	^	SrvD_InputFile	ReKi	AfC_Phase	-	-	-	"Phase relative to the blade azimuth (0 is vertical) for for cosine cycling of flap signal (deg) [used only with AfCmode==1]"	deg
-
+# cable control
 typedef	^	SrvD_InputFile	IntKi	CCmode	-	-	-	"Cable control control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL}" -
-
+# extended avrSWAP (this is currently hard coded to true in the input parsing -- left this in case we run into issues and need to make it an input file option
 typedef	^	SrvD_InputFile	Logical	EXavrSWAP	-	-	-	"Use extendend AVR swap"	-
 
 # ..... Data for using Bladed DLLs .......................................................................................................
@@ -219,6 +223,9 @@ typedef	^	BladedDLLType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to th
 typedef	^	BladedDLLType	ReKi	LSSTipMxa	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
 typedef	^	BladedDLLType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
 typedef	^	BladedDLLType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment caused by in-plane forces) at the blade root"	N-m
+typedef	^	BladedDLLType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	BladedDLLType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	BladedDLLType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 ## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
 typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
 typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
@@ -442,6 +449,28 @@ typedef	^	ParameterType	IntKi	NumCableControl	-	-	-	"Number of cable control cha
 typedef	^	ParameterType	IntKi	NumStC_Control	-	-	-	"Number of cable StC channels requested"	-
 typedef	^	ParameterType	IntKi	StCMeasNumPerChan	{:}	-	-	"Number of cable StC channel to average on each control channel sent to DLL"	-
 typedef ^       ParameterType   LOGICAL UseSC   -       -       -       "Supercontroller on/off flag" -
+# parameters for linearization
+typedef  ^  ParameterType  Integer  Jac_u_indx  {:}{:} - -  "matrix to help fill/pack the u vector in computing the jacobian"   -
+typedef  ^  ParameterType  Integer  Jac_x_indx  {:}{:} - -  "matrix to help fill/pack the x vector in computing the jacobian"   -
+typedef  ^  ParameterType  R8Ki     du          {:}    - -  "vector that determines size of perturbation for u (inputs)"
+typedef  ^  ParameterType  ReKi     dx          {:}    - -  "vector that determines size of perturbation for x (continuous states)"
+typedef  ^  ParameterType  Integer  Jac_nu      -      - -  "number of inputs in jacobian matrix"   -
+typedef  ^  ParameterType  Integer  Jac_ny      -      - -  "number of outputs in jacobian matrix"   -
+typedef  ^  ParameterType  Integer  Jac_nx      -      - -  "the number of continuous states in jacobian matrix" -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_u {:}{:}{:} - -  "the start and end indices of blade        StC u jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_u {:}{:}    - -  "the start and end indices of nacelle      StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_u {:}{:}    - -  "the start and end indices of tower        StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_u {:}{:}    - -  "the start and end indices of substructure StC u jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_x {:}{:}{:} - -  "the start and end indices of blade        StC x jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_x {:}{:}    - -  "the start and end indices of nacelle      StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_x {:}{:}    - -  "the start and end indices of tower        StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_x {:}{:}    - -  "the start and end indices of substructure StC x jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_BStC_y {:}{:}{:} - -  "the start and end indices of blade        StC y jacobian [ start/end, blade, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {:}{:}    - -  "the start and end indices of nacelle      StC y jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {:}{:}    - -  "the start and end indices of tower        StC y jacobian [ start/end, instance ]"  -
+typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and end indices of substructure StC y jacobian [ start/end, instance ]"  -
+
+
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -481,6 +510,9 @@ typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
 typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
+typedef	^	InputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	InputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	InputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-

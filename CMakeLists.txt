@@ -28,6 +28,7 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+option(VARIABLE_TRACKING "Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU." on)
 option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
@@ -43,6 +44,12 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 if(APPLE)
   option(CMAKE_MACOSX_RPATH "Use RPATH runtime linking" on)
+endif()
+
+# Warn if atypical configuration for variable tracking and build type
+string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
+if(NOT ${VARIABLE_TRACKING} AND (${_build_type} STREQUAL "DEBUG" OR ${_build_type} STREQUAL "RELWITHDEBINFO") )
+  message(WARNING "Variable tracking is disabled and build type includes debug symbols. This may reduce the ability to debug.")
 endif()
 
 # Precompiler/preprocessor flag configuration

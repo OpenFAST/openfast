@@ -1453,8 +1453,16 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    Vwnd_s = matmul(M_sg, Vwnd_g)
    Urel_s = Vwnd_s - Vstr_s          ! relative wind
    Vtot_s = Vwnd_s - Vstr_s + Vind_s
-   AxInd  = -Vind_s(1)/Urel_s(1)
-   TanInd =  Vind_s(2)/Urel_s(2)
+   if (EqualRealNos(Urel_s(1),0.0_ReKi)) then
+      AxInd = 0.0_ReKi
+   else
+      AxInd  = -Vind_s(1)/Urel_s(1)
+   endif
+   if (EqualRealNos(Urel_s(2),0.0_ReKi)) then
+      TanInd = 0.0_ReKi
+   else
+      TanInd =  Vind_s(2)/Urel_s(2)
+   end if
    phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
    if(.false.) print*,PitchAndTwist ! just to avoid unused var for now

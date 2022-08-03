@@ -1046,8 +1046,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                DO IdxBlade=1,p%BldNd_BladesOut
                   iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-!NOT available in FVW yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
+                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cpmin(IdxNode)
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
@@ -1392,7 +1391,6 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
          ! The following are invalid for free vortex wake
       InvalidOutput( BldNd_Chi       ) = .true.
       InvalidOutput( BldNd_Curve     ) = .true.
-      InvalidOutput( BldNd_CpMin     ) = .true.
       InvalidOutput( BldNd_GeomPhi   ) = .true.  ! applies only to BEM
    endif
 
