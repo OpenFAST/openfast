@@ -329,15 +329,27 @@ ENDIF
     DstParamData%Z0_low = SrcParamData%Z0_low
  END SUBROUTINE Farm_CopyParam
 
- SUBROUTINE Farm_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Farm_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%WT_Position)) THEN
   DEALLOCATE(ParamData%WT_Position)
 ENDIF
@@ -361,12 +373,14 @@ IF (ALLOCATED(ParamData%WindVelZ)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
 DO i1 = LBOUND(ParamData%Module_Ver,1), UBOUND(ParamData%Module_Ver,1)
-  CALL NWTC_Library_Destroyprogdesc( ParamData%Module_Ver(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( ParamData%Module_Ver(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
  END SUBROUTINE Farm_DestroyParam
 
@@ -1243,15 +1257,27 @@ ENDIF
     DstMiscData%n_Out = SrcMiscData%n_Out
  END SUBROUTINE Farm_CopyMisc
 
- SUBROUTINE Farm_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Farm_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%AllOuts)) THEN
   DEALLOCATE(MiscData%AllOuts)
 ENDIF
@@ -1527,23 +1553,43 @@ ENDIF
     DstFASTWrapper_DataData%IsInitialized = SrcFASTWrapper_DataData%IsInitialized
  END SUBROUTINE Farm_CopyFASTWrapper_Data
 
- SUBROUTINE Farm_DestroyFASTWrapper_Data( FASTWrapper_DataData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyFASTWrapper_Data( FASTWrapper_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FASTWrapper_Data), INTENT(INOUT) :: FASTWrapper_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyFASTWrapper_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyFASTWrapper_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL FWrap_DestroyContState( FASTWrapper_DataData%x, ErrStat, ErrMsg )
-  CALL FWrap_DestroyDiscState( FASTWrapper_DataData%xd, ErrStat, ErrMsg )
-  CALL FWrap_DestroyConstrState( FASTWrapper_DataData%z, ErrStat, ErrMsg )
-  CALL FWrap_DestroyOtherState( FASTWrapper_DataData%OtherSt, ErrStat, ErrMsg )
-  CALL FWrap_DestroyParam( FASTWrapper_DataData%p, ErrStat, ErrMsg )
-  CALL FWrap_DestroyInput( FASTWrapper_DataData%u, ErrStat, ErrMsg )
-  CALL FWrap_DestroyOutput( FASTWrapper_DataData%y, ErrStat, ErrMsg )
-  CALL FWrap_DestroyMisc( FASTWrapper_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL FWrap_DestroyContState( FASTWrapper_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyDiscState( FASTWrapper_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyConstrState( FASTWrapper_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyOtherState( FASTWrapper_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyParam( FASTWrapper_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyInput( FASTWrapper_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyOutput( FASTWrapper_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FWrap_DestroyMisc( FASTWrapper_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyFASTWrapper_Data
 
  SUBROUTINE Farm_PackFASTWrapper_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2365,23 +2411,43 @@ ENDIF
     DstWakeDynamics_DataData%IsInitialized = SrcWakeDynamics_DataData%IsInitialized
  END SUBROUTINE Farm_CopyWakeDynamics_Data
 
- SUBROUTINE Farm_DestroyWakeDynamics_Data( WakeDynamics_DataData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyWakeDynamics_Data( WakeDynamics_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(WakeDynamics_Data), INTENT(INOUT) :: WakeDynamics_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyWakeDynamics_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyWakeDynamics_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL WD_DestroyContState( WakeDynamics_DataData%x, ErrStat, ErrMsg )
-  CALL WD_DestroyDiscState( WakeDynamics_DataData%xd, ErrStat, ErrMsg )
-  CALL WD_DestroyConstrState( WakeDynamics_DataData%z, ErrStat, ErrMsg )
-  CALL WD_DestroyOtherState( WakeDynamics_DataData%OtherSt, ErrStat, ErrMsg )
-  CALL WD_DestroyParam( WakeDynamics_DataData%p, ErrStat, ErrMsg )
-  CALL WD_DestroyInput( WakeDynamics_DataData%u, ErrStat, ErrMsg )
-  CALL WD_DestroyOutput( WakeDynamics_DataData%y, ErrStat, ErrMsg )
-  CALL WD_DestroyMisc( WakeDynamics_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL WD_DestroyContState( WakeDynamics_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyDiscState( WakeDynamics_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyConstrState( WakeDynamics_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyOtherState( WakeDynamics_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyParam( WakeDynamics_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyInput( WakeDynamics_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyOutput( WakeDynamics_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WD_DestroyMisc( WakeDynamics_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyWakeDynamics_Data
 
  SUBROUTINE Farm_PackWakeDynamics_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3203,23 +3269,43 @@ ENDIF
     DstAWAE_DataData%IsInitialized = SrcAWAE_DataData%IsInitialized
  END SUBROUTINE Farm_CopyAWAE_Data
 
- SUBROUTINE Farm_DestroyAWAE_Data( AWAE_DataData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyAWAE_Data( AWAE_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_Data), INTENT(INOUT) :: AWAE_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAWAE_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAWAE_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AWAE_DestroyContState( AWAE_DataData%x, ErrStat, ErrMsg )
-  CALL AWAE_DestroyDiscState( AWAE_DataData%xd, ErrStat, ErrMsg )
-  CALL AWAE_DestroyConstrState( AWAE_DataData%z, ErrStat, ErrMsg )
-  CALL AWAE_DestroyOtherState( AWAE_DataData%OtherSt, ErrStat, ErrMsg )
-  CALL AWAE_DestroyParam( AWAE_DataData%p, ErrStat, ErrMsg )
-  CALL AWAE_DestroyInput( AWAE_DataData%u, ErrStat, ErrMsg )
-  CALL AWAE_DestroyOutput( AWAE_DataData%y, ErrStat, ErrMsg )
-  CALL AWAE_DestroyMisc( AWAE_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AWAE_DestroyContState( AWAE_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyDiscState( AWAE_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyConstrState( AWAE_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyOtherState( AWAE_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyParam( AWAE_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyInput( AWAE_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyOutput( AWAE_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AWAE_DestroyMisc( AWAE_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyAWAE_Data
 
  SUBROUTINE Farm_PackAWAE_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4043,23 +4129,43 @@ ENDIF
     DstSC_DataData%IsInitialized = SrcSC_DataData%IsInitialized
  END SUBROUTINE Farm_CopySC_Data
 
- SUBROUTINE Farm_DestroySC_Data( SC_DataData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroySC_Data( SC_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(SC_Data), INTENT(INOUT) :: SC_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroySC_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroySC_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL SC_DestroyContState( SC_DataData%x, ErrStat, ErrMsg )
-  CALL SC_DestroyDiscState( SC_DataData%xd, ErrStat, ErrMsg )
-  CALL SC_DestroyConstrState( SC_DataData%z, ErrStat, ErrMsg )
-  CALL SC_DestroyOtherState( SC_DataData%OtherState, ErrStat, ErrMsg )
-  CALL SC_DestroyParam( SC_DataData%p, ErrStat, ErrMsg )
-  CALL SC_DestroyInput( SC_DataData%uInputs, ErrStat, ErrMsg )
-  CALL SC_DestroyOutput( SC_DataData%y, ErrStat, ErrMsg )
-  CALL SC_DestroyMisc( SC_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL SC_DestroyContState( SC_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyDiscState( SC_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyConstrState( SC_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyOtherState( SC_DataData%OtherState, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyParam( SC_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyInput( SC_DataData%uInputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyOutput( SC_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL SC_DestroyMisc( SC_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroySC_Data
 
  SUBROUTINE Farm_PackSC_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4913,31 +5019,49 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE Farm_CopyAll_FastFarm_Data
 
- SUBROUTINE Farm_DestroyAll_FastFarm_Data( All_FastFarm_DataData, ErrStat, ErrMsg )
+ SUBROUTINE Farm_DestroyAll_FastFarm_Data( All_FastFarm_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(All_FastFarm_Data), INTENT(INOUT) :: All_FastFarm_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAll_FastFarm_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAll_FastFarm_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL Farm_DestroyParam( All_FastFarm_DataData%p, ErrStat, ErrMsg )
-  CALL Farm_DestroyMisc( All_FastFarm_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL Farm_DestroyParam( All_FastFarm_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Farm_DestroyMisc( All_FastFarm_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(All_FastFarm_DataData%FWrap)) THEN
 DO i1 = LBOUND(All_FastFarm_DataData%FWrap,1), UBOUND(All_FastFarm_DataData%FWrap,1)
-  CALL Farm_Destroyfastwrapper_data( All_FastFarm_DataData%FWrap(i1), ErrStat, ErrMsg )
+  CALL Farm_Destroyfastwrapper_data( All_FastFarm_DataData%FWrap(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(All_FastFarm_DataData%FWrap)
 ENDIF
 IF (ALLOCATED(All_FastFarm_DataData%WD)) THEN
 DO i1 = LBOUND(All_FastFarm_DataData%WD,1), UBOUND(All_FastFarm_DataData%WD,1)
-  CALL Farm_Destroywakedynamics_data( All_FastFarm_DataData%WD(i1), ErrStat, ErrMsg )
+  CALL Farm_Destroywakedynamics_data( All_FastFarm_DataData%WD(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(All_FastFarm_DataData%WD)
 ENDIF
-  CALL Farm_Destroyawae_data( All_FastFarm_DataData%AWAE, ErrStat, ErrMsg )
-  CALL Farm_Destroysc_data( All_FastFarm_DataData%SC, ErrStat, ErrMsg )
+  CALL Farm_Destroyawae_data( All_FastFarm_DataData%AWAE, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Farm_Destroysc_data( All_FastFarm_DataData%SC, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyAll_FastFarm_Data
 
  SUBROUTINE Farm_PackAll_FastFarm_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
