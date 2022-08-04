@@ -31,8 +31,10 @@ AeroDyn 15                                    81   NacCenBz        0.1        Na
 AeroDyn blade                                      BlCb            0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn         0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt         0.1        [additional column in *Blade Properties* table]
+AeroDyn driver                                54\* WrVTK_Type      1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
+\*Exact line number depends on number of entries in various preceeding tables.
 
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
@@ -321,12 +323,22 @@ Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                       Line    Flag Name / section                              Example Value
 ============================ ====== ================================================ ====================================================================================
-MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table  .. code-block:: none
-
-                                                                                        Line    LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Outputs  CtrlChan
-                                                                                        (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
-                                                                                        1         main     835.35      20        1         4         -        0
+MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table    
 ============================ ====== ================================================ ====================================================================================
+
+============== ====== =============== ============== =============================================================================================================================================================================
+Renamed in OpenFAST v2.5.0
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module          Line   Previous Name   New Name       Example Value
+============== ====== =============== ============== =============================================================================================================================================================================
+InflowWind      17    Filename         FileName_Uni   "Shr11_30.wnd"    FileName_Uni   - Filename of time series data for uniform wind field.      (-)
+InflowWind      18    RefHt            RefHt_Uni      90                RefHt_Uni      - Reference height for horizontal wind speed                (m)
+InflowWind      21    Filename         FileName_BTS   "unused"          FileName_BTS   - Name of the Full field wind file to use (.bts)            (-)
+InflowWind      23    Filename         FileNameRoot   "unused"          FileNameRoot   - WindType=4: Rootname of the full-field wind file to use (.wnd, .sum); WindType=7: name of the intermediate file with wind scaling values
+InflowWind      35    RefHt            RefHt_Hawc     90                RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid  (m)
+InflowWind      47    PLExp            PLExp_Hawc     0.2               PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)
+InflowWind      49    InitPosition(x)  XOffset        0                 XOffset        - Initial offset in +x direction (shift of wind box)
+============== ====== =============== ============== =============================================================================================================================================================================
 
 
 
@@ -361,11 +373,6 @@ Modified in OpenFAST v2.4.0
  Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
 ============== ==== ================== ======================================================================================================================================================= =========================
 AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
-InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
-InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
-InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
-InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
-InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.

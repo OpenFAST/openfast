@@ -404,10 +404,10 @@ quantities are actually output at these nodes.
 
 .. _ad_tower_geom:
 
-.. figure:: figs/ad_tower_geom.png
+.. figure:: figs/aerodyn_tower_geom.png
    :width: 60%
    :align: center
-   :alt: ad_tower_geom.png
+   :alt: aerodyn_tower_geom.png
 
    AeroDyn Tower Geometry
 
@@ -786,10 +786,10 @@ See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :n
 
 .. _ad_blade_geom:
 
-.. figure:: figs/ad_blade_geom.png
+.. figure:: figs/aerodyn_blade_geom.png
    :width: 90%
    :align: center
-   :alt: ad_blade_geom.png
+   :alt: aerodyn_blade_geom.png
 
    AeroDyn Blade Geometry – Left: Side View; Right: Front View (Looking Downwind)
 
