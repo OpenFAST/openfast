@@ -1180,7 +1180,7 @@ subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
       enddo !j, wake points
    end if
 
-   if ( dvr%MHK == 1 ) then
+   if ( dvr%MHK == 1 .or. dvr%MHK == 2 ) then
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + dvr%WtrDpth
    end if
 
@@ -1691,7 +1691,6 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
-   if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',ErrStat, ErrMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%compInflow) ), 'CompInflow needs to be 0 or 1')) return

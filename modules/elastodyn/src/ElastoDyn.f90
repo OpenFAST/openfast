@@ -150,7 +150,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    END IF
 
 
-   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, ErrStat2, ErrMsg2 )
+   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, InitInp%MHK, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 

@@ -548,7 +548,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! make sure that all values for WindVzi are above ground.  Set to 0 otherwise.
 
-   IF ( InitInp%MHK == 1 ) THEN
+   IF ( InitInp%MHK == 1 .or. InitInp%MHK == 2 ) THEN
       DO I = 1, InputFileData%NWindVel
          IF ( InputFileData%WindVziList(I) >= InitInp%WtrDpth + InitInp%MSL2SWL ) THEN
             CALL SetErrStat( ErrID_Warn, ' Requested wind velocity at point ( '//   &
@@ -566,7 +566,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
          CALL SetErrStat( ErrID_Warn, ' Requested wind velocity at point ( '//   &
                TRIM(Num2LStr(InputFileData%WindVxiList(I)))//', '//              &
                TRIM(Num2LStr(InputFileData%WindVyiList(I)))//', '//              &
-               TRIM(Num2LStr(InputFileData%WindVziList(I)))//') is below ground (wind turbine) or below seabed (fixed MHK turbine). Ignoring this point.', &
+               TRIM(Num2LStr(InputFileData%WindVziList(I)))//') is below ground (wind turbine) or below seabed (MHK turbine). Ignoring this point.', &
                ErrStat, ErrMsg, RoutineName)
          InputFileData%WindVziList(I)  =  0.0_ReKi
       ENDIF
