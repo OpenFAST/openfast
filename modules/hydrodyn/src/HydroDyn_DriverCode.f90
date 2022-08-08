@@ -65,21 +65,14 @@ PROGRAM HydroDynDriver
    TYPE(HydroDyn_InputType)                           :: u(NumInp)            ! System inputs
    TYPE(HydroDyn_OutputType)                          :: y                    ! System outputs
 
-
-
-   INTEGER(IntKi)                                     :: UnPRPInp             ! PRP Inputs file identifier
-   REAL(ReKi), ALLOCATABLE                            :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
-   
-   INTEGER(IntKi)                                     :: NBody                ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
-   
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
-   INTEGER(IntKi)                                     :: J                    ! Generic loop counter
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
    INTEGER(IntKi)                                     :: ErrStat              ! Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    REAL(R8Ki)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
-   TYPE(HD_Drvr_InitInput)                            :: drvrData             ! Data for the driver program (from an input file)
+   TYPE(HD_Drvr_Data)                                 :: drvrData             ! Data for the driver program (from an input file)
+   TYPE(HD_Drvr_MappingData)                          :: mappingData          ! data for mesh mappings in the driver
    
    integer                                            :: StrtTime (8)         ! Start time of simulation (including intialization)
    integer                                            :: SimStrtTime (8)      ! Start time of simulation (after initialization)
@@ -87,12 +80,9 @@ PROGRAM HydroDynDriver
    real(ReKi)                                         :: UsrTime1             ! User CPU time for simulation initialization
    real(ReKi)                                         :: UsrTime2             ! User CPU time for simulation (without intialization)
    real(DbKi)                                         :: TiLstPrn             ! The simulation time of the last print
-   real(DbKi)                                         :: SttsTime             ! Amount of time between screen status messages (sec)
    integer                                            :: n_SttsTime           ! Number of time steps between screen status messages (-)
 
-!   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all PRP-related driver inputs are set
-   type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between HD Reference pt mesh and WAMIT body(ies) mesh
-   type(MeshMapType)                              :: HD_Ref_2_M_P                            ! Mesh mapping between HD Reference pt mesh and Morison mesh
+   
    ! For 6x6 linearization
    type(MeshType)                                 :: EDRPtMesh                               ! 1-node Point mesh located at (0,0,zRef) in global system where ElastoDyn Reference point is
    type(MeshType)                                 :: ZZZPtMeshMotion                         ! 1-node Point mesh located at (0,0,0) in global system and never moving
@@ -101,7 +91,6 @@ PROGRAM HydroDynDriver
    type(MeshMapType)                              :: HD_Ref_2_ED_Ref                         ! Mesh mapping between HD Reference pt mesh and ED ref poing mesh
    type(MeshMapType)                              :: HD_RefLoads_2_ED_Ref                    ! Mesh mapping between HDHdroOrigin pt mesh and ED ref point mesh for loads
    type(MeshMapType)                              :: HD_RefLoads_2_ZZZLoads                  ! Mesh mapping between HDHdroOrigin pt mesh and ZZZPtMesh
-!   real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    logical                                            :: SeaState_Initialized, HydroDyn_Initialized
    ! For testing
@@ -111,7 +100,6 @@ PROGRAM HydroDynDriver
 
    ! Variables Init
    Time = -99999 ! initialize to negative number for error messages
-   UnPRPInp = -1
    ErrStat = ErrID_None
    ErrMsg = ""
    SeaState_Initialized = .false.
@@ -144,27 +132,32 @@ PROGRAM HydroDynDriver
    drvrFilename = ''
    CALL CheckArgs( drvrFilename, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
+   
+   
+      ! Get the current time
+   call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
+   call cpu_time ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
 
+   
    ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
+   
    
       ! Parse the driver input file and run the simulation based on that file
    CALL ReadDriverInputFile( drvrFilename, drvrData, ErrStat, ErrMsg )
       CALL CheckError()
       
+      ! Read the PRPInputsFile:
+   CALL ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
+      CALL CheckError()
+      
    drvrData%OutData%NumOuts = 0
    drvrData%OutData%n_Out   = 0
    drvrData%TMax = (drvrData%NSteps-1) * drvrData%TimeInterval  ! Starting time is always t = 0.0
-      
-  
-      ! Get the current time
-   call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
-   call cpu_time ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
-   SttsTime = 1.0 ! seconds
-   
-     ! figure out how many time steps we should go before writing screen output:      
-   n_SttsTime = MAX( 1, NINT( SttsTime / drvrData%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
+
+     ! figure out how many time steps we should go before writing screen output (roughly once per second):      
+   n_SttsTime = MAX( 1, NINT( 1.0_DbKi / drvrData%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
     
 
 !-------------------------------------------------------------------------------------
@@ -195,69 +188,7 @@ PROGRAM HydroDynDriver
       call HD_DvrEnd()
    end if
    
-   
-   IF ( drvrData%PRPInputsMod == 2 ) THEN
-      
-         ! Open the PRP inputs data file
-      CALL GetNewUnit( UnPRPInp ) 
-      CALL OpenFInpFile ( UnPRPInp, drvrData%PRPInputsFile, ErrStat, ErrMsg );         CALL CheckError()
 
-
-      ALLOCATE ( PRPin(drvrData%NSteps, 19), STAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         ErrMsg  = '  Error allocating space for PRPin array.'
-         errStat = ErrID_Fatal
-         call HD_DvrEnd()
-      END IF 
-      
-      DO n = 1,drvrData%NSteps
-         READ (UnPRPInp,*,IOSTAT=ErrStat) (PRPin (n,J), J=1,19)
-            
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = '  Error reading the PRP input time-series file. '
-               errStat = ErrID_Fatal
-               call HD_DvrEnd()
-            END IF 
-      END DO
-      
-         ! Close the inputs file 
-      CLOSE ( UnPRPInp )
-      UnPRPInp = -1
-   ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
-      ! multi-body kinematics driver option (time, PRP DOFs 1-6, body1 DOFs 1-6, body2 DOFs 1-6...)
-      
-      NBODY = -drvrData%PRPInputsMod
-         ! Open the WAMIT inputs data file
-      CALL GetNewUnit( UnPRPInp ) 
-      CALL OpenFInpFile ( UnPRPInp, drvrData%PRPInputsFile, ErrStat, ErrMsg );         CALL CheckError()
-      
-      
-      ALLOCATE ( PRPin(drvrData%NSteps, 7+6*NBODY), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = '  Error allocating space for PRPin array.'
-         ErrStat = ErrID_Fatal
-         call HD_DvrEnd()
-      END IF 
-      
-      call WrScr( 'NBody is '//trim(Num2LStr(NBody))//' and planning to read in  '//trim(Num2LStr(7+6*NBODY))//' columns from the input file' )
-      
-      DO n = 1,drvrData%NSteps
-         READ (UnPRPInp,*,IOSTAT=ErrStat) (PRPin (n,J), J=1,7+6*NBODY)
-            
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = '  Error reading the WAMIT input time-series file (for multiple bodies). '
-               ErrStat = ErrID_Fatal
-               call HD_DvrEnd()
-            END IF 
-      END DO
-      
-         ! Close the inputs file 
-      CLOSE ( UnPRPInp )
-      UnPRPInp = -1
-   ELSE
-      NBody = 0
-   END IF
-   
   
       ! Set HD Init Inputs based on SeaStates Init Outputs
    call SetHD_InitInputs()
@@ -286,45 +217,18 @@ PROGRAM HydroDynDriver
    ! Create Mesh mappings
    if ( u(1)%WAMITMesh%Initialized ) then
       ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
-      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat, ErrMsg  );         CALL CheckError()
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat, ErrMsg  );         CALL CheckError()
    endif
    if ( u(1)%Morison%Mesh%Initialized ) then
       ! Create mesh mappings between (0,0,0) reference point mesh and the Morison mesh
-      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat, ErrMsg  );         CALL CheckError()
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat, ErrMsg  );         CALL CheckError()
    endif
 
    
-      
-   ! Set any steady-state inputs, once before the time-stepping loop   
-         
-   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
-                
-      u(1)%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
 
-         ! Compute direction cosine matrix from the rotation angles
-      CALL SmllRotTrans( 'InputRotation', REAL(drvrData%uPRPInSteady(4), ReKi), REAL(drvrData%uPRPInSteady(5), ReKi), REAL(drvrData%uPRPInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg );          call CheckError()
-      u(1)%PRPMesh%Orientation(:,:,1)     = dcm
-
-      u(1)%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)  
-      u(1)%PRPMesh%RotationVel(:,1)       = drvrData%uDotPRPInSteady(4:6) 
-      u(1)%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)  
-      u(1)%PRPMesh%RotationAcc(:,1)       = drvrData%uDotDotPRPInSteady(4:6)    
+   ! Set any steady-state inputs, once before the time-stepping loop (these don't change, so we don't need to update them in the time-marching simulation)
+   CALL SetHDInputs_Constant(u(1), mappingData, drvrData, ErrStat, ErrMsg);       CALL CheckError()
       
-      IF ( u(1)%WAMITMesh%Initialized ) THEN 
-            
-            ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
-         CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat, ErrMsg );            CALL CheckError()
-
-         
-      END IF ! u(1)%WAMITMesh%Initialized
-      
-      if ( u(1)%Morison%Mesh%Initialized ) then
-         
-            ! Map PRP kinematics to the Morison mesh
-         CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat, ErrMsg );            CALL CheckError()
-      end if ! u(1)%Morison%Mesh%Initialized
-      
-   END IF
 
 
    Time = 0.0
@@ -344,7 +248,7 @@ PROGRAM HydroDynDriver
       CALL MeshMapCreate( m%AllHdroOrigin, EDRPtMesh, HD_RefLoads_2_ED_Ref, ErrStat, ErrMsg );            CALL CheckError()
       CALL MeshMapCreate( m%AllHdroOrigin, ZZZPtMeshLoads, HD_RefLoads_2_ZZZLoads, ErrStat, ErrMsg );            CALL CheckError()
 
-      call Linearization(Time, .true.)
+      call Linearization(Time, .true.)  !The inputs aren't set unless we have constant inputs, so this might be a problem calling this when PRPInputsMod<0 or PRPInputsMod==2
       print*,''
       call Linearization(Time, .false.)
 
@@ -369,29 +273,29 @@ PROGRAM HydroDynDriver
       ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
       IF ( drvrData%PRPInputsMod == 2 ) THEN
                                   
-         u(1)%PRPMesh%TranslationDisp(:,1)   = PRPin(n,2:4) 
+         u(1)%PRPMesh%TranslationDisp(:,1)   = drvrData%PRPin(n,2:4) 
 
             ! Compute direction cosine matrix from the rotation angles
                
-         IF ( abs(PRPin(n,5)) > maxAngle ) maxAngle = abs(PRPin(n,5))
-         IF ( abs(PRPin(n,6)) > maxAngle ) maxAngle = abs(PRPin(n,6))
-         IF ( abs(PRPin(n,7)) > maxAngle ) maxAngle = abs(PRPin(n,7))
+         IF ( abs(drvrData%PRPin(n,5)) > maxAngle ) maxAngle = abs(drvrData%PRPin(n,5))
+         IF ( abs(drvrData%PRPin(n,6)) > maxAngle ) maxAngle = abs(drvrData%PRPin(n,6))
+         IF ( abs(drvrData%PRPin(n,7)) > maxAngle ) maxAngle = abs(drvrData%PRPin(n,7))
             
-         CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,5),ReKi), REAL(PRPin(n,6),ReKi), REAL(PRPin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg );            CALL CheckError()
+         CALL SmllRotTrans( 'InputRotation', REAL(drvrData%PRPin(n,5),ReKi), REAL(drvrData%PRPin(n,6),ReKi), REAL(drvrData%PRPin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg );            CALL CheckError()
          u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
-         u(1)%PRPMesh%TranslationVel(:,1)    = PRPin(n,8:10)  
-         u(1)%PRPMesh%RotationVel(:,1)       = PRPin(n,11:13) 
-         u(1)%PRPMesh%TranslationAcc(:,1)    = PRPin(n,14:16)  
-         u(1)%PRPMesh%RotationAcc(:,1)       = PRPin(n,17:19)
+         u(1)%PRPMesh%TranslationVel(:,1)    = drvrData%PRPin(n,8:10)  
+         u(1)%PRPMesh%RotationVel(:,1)       = drvrData%PRPin(n,11:13) 
+         u(1)%PRPMesh%TranslationAcc(:,1)    = drvrData%PRPin(n,14:16)  
+         u(1)%PRPMesh%RotationAcc(:,1)       = drvrData%PRPin(n,17:19)
             
          IF ( u(1)%WAMITMesh%Initialized ) THEN
                ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat, ErrMsg );               CALL CheckError()
+            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat, ErrMsg );               CALL CheckError()
          END IF
          
           IF ( u(1)%Morison%Mesh%Initialized ) THEN
                ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat, ErrMsg );               CALL CheckError()
+            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat, ErrMsg );               CALL CheckError()
           END IF
           
       end if
@@ -402,67 +306,67 @@ PROGRAM HydroDynDriver
       IF ( drvrData%PRPInputsMod < 0 ) THEN
                
             ! platform reference point (PRP), and body 1-NBody displacements
-            u(1)%PRPMesh%TranslationDisp(:,1)   = PRPin(n,2:4) 
-            DO I=1,NBody
-               u(1)%WAMITMesh%TranslationDisp(:,I)   = PRPin(n, 6*I+2:6*I+4) 
+            u(1)%PRPMesh%TranslationDisp(:,1)   = drvrData%PRPin(n,2:4) 
+            DO I=1,drvrData%NBody
+               u(1)%WAMITMesh%TranslationDisp(:,I)   = drvrData%PRPin(n, 6*I+2:6*I+4) 
             END DO
                
             ! PRP and body 1-NBody orientations (skipping the maxAngle stuff)
-            CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,5),ReKi), REAL(PRPin(n,6),ReKi), REAL(PRPin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg );               CALL CheckError()
+            CALL SmllRotTrans( 'InputRotation', REAL(drvrData%PRPin(n,5),ReKi), REAL(drvrData%PRPin(n,6),ReKi), REAL(drvrData%PRPin(n,7),ReKi), dcm, 'PRP orientation', ErrStat, ErrMsg );               CALL CheckError()
             u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
-            DO I=1, NBody
-               CALL SmllRotTrans( 'InputRotation', REAL(PRPin(n,6*I+5),ReKi), REAL(PRPin(n,6*I+6),ReKi), REAL(PRPin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg );                  CALL CheckError()
+            DO I=1, drvrData%NBody
+               CALL SmllRotTrans( 'InputRotation', REAL(drvrData%PRPin(n,6*I+5),ReKi), REAL(drvrData%PRPin(n,6*I+6),ReKi), REAL(drvrData%PRPin(n,6*I+7),ReKi), dcm, 'body orientation', ErrStat, ErrMsg );                  CALL CheckError()
                u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
             END DO
 
             ! use finite differences for velocities and accelerations
             IF (n == 1) THEN   ! use forward differences for first time step
             
-               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n+1, 2:4) -   PRPin(n  , 2:4))/drvrData%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n+1, 5:7) -   PRPin(n  , 5:7))/drvrData%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n+2, 2:4) - 2*PRPin(n+1, 2:4) + PRPin(n, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n+2, 5:7) - 2*PRPin(n+1, 5:7) + PRPin(n, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (drvrData%PRPin(n+1, 2:4) -   drvrData%PRPin(n  , 2:4))/drvrData%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (drvrData%PRPin(n+1, 5:7) -   drvrData%PRPin(n  , 5:7))/drvrData%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (drvrData%PRPin(n+2, 2:4) - 2*drvrData%PRPin(n+1, 2:4) + drvrData%PRPin(n, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (drvrData%PRPin(n+2, 5:7) - 2*drvrData%PRPin(n+1, 5:7) + drvrData%PRPin(n, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                
-               DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n+1, 6*I+2:6*I+4) -   PRPin(n  , 6*I+2:6*I+4))/drvrData%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) -   PRPin(n  , 6*I+5:6*I+7))/drvrData%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n+2, 6*I+2:6*I+4) - 2*PRPin(n+1, 6*I+2:6*I+4) + PRPin(n, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n+2, 6*I+5:6*I+7) - 2*PRPin(n+1, 6*I+5:6*I+7) + PRPin(n, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               DO I=1,drvrData%NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (drvrData%PRPin(n+1, 6*I+2:6*I+4) -   drvrData%PRPin(n  , 6*I+2:6*I+4))/drvrData%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (drvrData%PRPin(n+1, 6*I+5:6*I+7) -   drvrData%PRPin(n  , 6*I+5:6*I+7))/drvrData%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (drvrData%PRPin(n+2, 6*I+2:6*I+4) - 2*drvrData%PRPin(n+1, 6*I+2:6*I+4) + drvrData%PRPin(n, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(n+2, 6*I+5:6*I+7) - 2*drvrData%PRPin(n+1, 6*I+5:6*I+7) + drvrData%PRPin(n, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                END DO
 
             ELSE IF (n == drvrData%NSteps) THEN  ! use backward differences for last time step
             
-               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n, 2:4) -   PRPin(n-1, 2:4))/drvrData%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n, 5:7) -   PRPin(n-1, 5:7))/drvrData%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n, 2:4) - 2*PRPin(n-1, 2:4) + PRPin(n-2, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n, 5:7) - 2*PRPin(n-1, 5:7) + PRPin(n-2, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (drvrData%PRPin(n, 2:4) -   drvrData%PRPin(n-1, 2:4))/drvrData%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (drvrData%PRPin(n, 5:7) -   drvrData%PRPin(n-1, 5:7))/drvrData%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (drvrData%PRPin(n, 2:4) - 2*drvrData%PRPin(n-1, 2:4) + drvrData%PRPin(n-2, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (drvrData%PRPin(n, 5:7) - 2*drvrData%PRPin(n-1, 5:7) + drvrData%PRPin(n-2, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                
-               DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n, 6*I+2:6*I+4) -   PRPin(n-1, 6*I+2:6*I+4))/drvrData%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n, 6*I+5:6*I+7) -   PRPin(n-1, 6*I+5:6*I+7))/drvrData%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n, 6*I+2:6*I+4) - 2*PRPin(n-1, 6*I+2:6*I+4) + PRPin(n-2, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n, 6*I+5:6*I+7) - 2*PRPin(n-1, 6*I+5:6*I+7) + PRPin(n-2, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               DO I=1,drvrData%NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (drvrData%PRPin(n, 6*I+2:6*I+4) -   drvrData%PRPin(n-1, 6*I+2:6*I+4))/drvrData%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (drvrData%PRPin(n, 6*I+5:6*I+7) -   drvrData%PRPin(n-1, 6*I+5:6*I+7))/drvrData%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (drvrData%PRPin(n, 6*I+2:6*I+4) - 2*drvrData%PRPin(n-1, 6*I+2:6*I+4) + drvrData%PRPin(n-2, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(n, 6*I+5:6*I+7) - 2*drvrData%PRPin(n-1, 6*I+5:6*I+7) + drvrData%PRPin(n-2, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                END DO
             
             ELSE   ! otherwise use central differences for intermediate time steps
                      
-               u(1)%PRPMesh%TranslationVel(:,1) = (PRPin(n+1, 2:4) - PRPin(n-1, 2:4))*0.5/drvrData%TimeInterval
-               u(1)%PRPMesh%RotationVel(   :,1) = (PRPin(n+1, 5:7) - PRPin(n-1, 5:7))*0.5/drvrData%TimeInterval
-               u(1)%PRPMesh%TranslationAcc(:,1) = (PRPin(n+1, 2:4) - 2*PRPin(n, 2:4) + PRPin(n-1, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-               u(1)%PRPMesh%RotationAcc(   :,1) = (PRPin(n+1, 5:7) - 2*PRPin(n, 5:7) + PRPin(n-1, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%TranslationVel(:,1) = (drvrData%PRPin(n+1, 2:4) - drvrData%PRPin(n-1, 2:4))*0.5/drvrData%TimeInterval
+               u(1)%PRPMesh%RotationVel(   :,1) = (drvrData%PRPin(n+1, 5:7) - drvrData%PRPin(n-1, 5:7))*0.5/drvrData%TimeInterval
+               u(1)%PRPMesh%TranslationAcc(:,1) = (drvrData%PRPin(n+1, 2:4) - 2*drvrData%PRPin(n, 2:4) + drvrData%PRPin(n-1, 2:4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               u(1)%PRPMesh%RotationAcc(   :,1) = (drvrData%PRPin(n+1, 5:7) - 2*drvrData%PRPin(n, 5:7) + drvrData%PRPin(n-1, 5:7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                
-               DO I=1,NBody
-                  u(1)%WAMITMesh%TranslationVel(:,I) = (PRPin(n+1, 6*I+2:6*I+4) - PRPin(n-1, 6*I+2:6*I+4))*0.5/drvrData%TimeInterval
-                  u(1)%WAMITMesh%RotationVel(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) - PRPin(n-1, 6*I+5:6*I+7))*0.5/drvrData%TimeInterval
-                  u(1)%WAMITMesh%TranslationAcc(:,I) = (PRPin(n+1, 6*I+2:6*I+4) - 2*PRPin(n, 6*I+2:6*I+4) + PRPin(n-1, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
-                  u(1)%WAMITMesh%RotationAcc(   :,I) = (PRPin(n+1, 6*I+5:6*I+7) - 2*PRPin(n, 6*I+5:6*I+7) + PRPin(n-1, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
+               DO I=1,drvrData%NBody
+                  u(1)%WAMITMesh%TranslationVel(:,I) = (drvrData%PRPin(n+1, 6*I+2:6*I+4) - drvrData%PRPin(n-1, 6*I+2:6*I+4))*0.5/drvrData%TimeInterval
+                  u(1)%WAMITMesh%RotationVel(   :,I) = (drvrData%PRPin(n+1, 6*I+5:6*I+7) - drvrData%PRPin(n-1, 6*I+5:6*I+7))*0.5/drvrData%TimeInterval
+                  u(1)%WAMITMesh%TranslationAcc(:,I) = (drvrData%PRPin(n+1, 6*I+2:6*I+4) - 2*drvrData%PRPin(n, 6*I+2:6*I+4) + drvrData%PRPin(n-1, 6*I+2:6*I+4))/(drvrData%TimeInterval*drvrData%TimeInterval)
+                  u(1)%WAMITMesh%RotationAcc(   :,I) = (drvrData%PRPin(n+1, 6*I+5:6*I+7) - 2*drvrData%PRPin(n, 6*I+5:6*I+7) + drvrData%PRPin(n-1, 6*I+5:6*I+7))/(drvrData%TimeInterval*drvrData%TimeInterval)
                END DO
                
             END IF
             
             IF ( u(1)%Morison%Mesh%Initialized ) THEN
                ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-               CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, HD_Ref_2_M_P, ErrStat, ErrMsg )
+               CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat, ErrMsg )
                   CALL CheckError()
              END IF
              
@@ -580,7 +484,6 @@ subroutine HD_DvrEnd()
       call WriteOutputFile(drvrData, ErrStat2, ErrMsg2)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       
-      if (UnPRPInp > 0) CLOSE( UnPRPInp )
       if (drvrData%OutData%unOutFile > 0) CLOSE(drvrData%OutData%unOutFile)
       
       if (SeaState_Initialized) then
@@ -606,19 +509,24 @@ subroutine HD_DvrEnd()
             ! Destroy copies of HD data
       call HydroDyn_DestroyDiscState( xd_new, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-   
-   
       
       call HydroDyn_DestroyContState( x_new, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          
+         
          ! Destroy other data
-      IF (ALLOCATED(PRPin)) DEALLOCATE(PRPin)
+      IF (ALLOCATED(drvrData%PRPin)) DEALLOCATE(drvrData%PRPin)
       
       IF (ALLOCATED(drvrData%OutData%WriteOutputHdr)) DEALLOCATE(drvrData%OutData%WriteOutputHdr)
       IF (ALLOCATED(drvrData%OutData%WriteOutputUnt)) DEALLOCATE(drvrData%OutData%WriteOutputUnt)
       IF (ALLOCATED(drvrData%OutData%Storage       )) DEALLOCATE(drvrData%OutData%Storage       )
+      
+         ! Destroy mappings
+      CALL MeshMapDestroy( mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ) 
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      CALL MeshMapDestroy( mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 ) 
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         
    
       if ( ErrStat /= ErrID_None ) then
          CALL WrScr(NewLine//NewLine//'Error status and messages after execution:'// &
@@ -805,32 +713,32 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, u, EDRPMesh, du, Motion_HDRP)
 
 END SUBROUTINE PRP_Perturb_u
 
-!> Set Motion on Wamit and Morison mesh once PRP has been updated
-SUBROUTINE PRP_SetMotionInputs(u, ErrStat, ErrMsg)
-   TYPE(HydroDyn_InputType),  INTENT(INOUT)           :: u            !< HD Inputs
-   INTEGER(IntKi)          ,  INTENT(  OUT)           :: ErrStat      !< Status of error message
-   CHARACTER(*)            ,  INTENT(  OUT)           :: ErrMsg       !< Error message if ErrStat /= ErrID_None
-
-   INTEGER(IntKi)                                     :: ErrStat2     ! Status of error message
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
-   CHARACTER(*), PARAMETER                            :: RoutineName = 'PRP_SetMotionInputs'
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   
-   if ( u%WAMITMesh%Initialized ) then
-      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
-      CALL MeshMapCreate( u%PRPMesh, u%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (errStat >= AbortErrLev) return
-   endif
-
-   if ( u%Morison%Mesh%Initialized ) then
-      ! Map PRP kinematics to the Morison mesh
-      CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (errStat >= AbortErrLev) return
-   end if 
-
-END SUBROUTINE PRP_SetMotionInputs
+!!!!> Set Motion on Wamit and Morison mesh once PRP has been updated
+!!!SUBROUTINE PRP_SetMotionInputs(u, ErrStat, ErrMsg)
+!!!   TYPE(HydroDyn_InputType),  INTENT(INOUT)           :: u            !< HD Inputs
+!!!   INTEGER(IntKi)          ,  INTENT(  OUT)           :: ErrStat      !< Status of error message
+!!!   CHARACTER(*)            ,  INTENT(  OUT)           :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+!!!
+!!!   INTEGER(IntKi)                                     :: ErrStat2     ! Status of error message
+!!!   CHARACTER(ErrMsgLen)                               :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+!!!   CHARACTER(*), PARAMETER                            :: RoutineName = 'PRP_SetMotionInputs'
+!!!   
+!!!   ErrStat = ErrID_None
+!!!   ErrMsg = ""
+!!!   
+!!!   if ( u%WAMITMesh%Initialized ) then
+!!!      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ]
+!!!      CALL MeshMapCreate( u%PRPMesh, u%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!!!      if (errStat >= AbortErrLev) return
+!!!   endif
+!!!
+!!!   if ( u%Morison%Mesh%Initialized ) then
+!!!      ! Map PRP kinematics to the Morison mesh
+!!!      CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!!!      if (errStat >= AbortErrLev) return
+!!!   end if 
+!!!
+!!!END SUBROUTINE PRP_SetMotionInputs
 
 !> Compute Rigid body loads at the PRP, after a perturbation of the PRP
 SUBROUTINE PRP_CalcOutput(t, u, EDRPMesh, y, Loads)

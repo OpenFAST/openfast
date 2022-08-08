@@ -33,6 +33,11 @@ MODULE HydroDynDriverSubs
    
    IMPLICIT NONE
    
+   TYPE HD_Drvr_MappingData
+      type(MeshMapType)                :: HD_Ref_2_WB_P                           ! Mesh mapping between HD Reference pt mesh and WAMIT body(ies) mesh
+      type(MeshMapType)                :: HD_Ref_2_M_P                            ! Mesh mapping between HD Reference pt mesh and Morison mesh
+   END TYPE HD_Drvr_MappingData
+   
    TYPE HD_Drvr_OutputFile
       INTEGER                          :: NumOuts
       INTEGER                          :: NumOutsMods(2)
@@ -47,7 +52,7 @@ MODULE HydroDynDriverSubs
       REAL(DbKi)                       :: TimeData(2)
    END TYPE HD_Drvr_OutputFile
    
-   TYPE HD_Drvr_InitInput
+   TYPE HD_Drvr_Data
       LOGICAL                          :: Echo
       REAL(ReKi)                       :: Gravity
       REAL(ReKi)                       :: WtrDens
@@ -67,10 +72,13 @@ MODULE HydroDynDriverSubs
       REAL(ReKi)                       :: uPRPInSteady(6)
       REAL(ReKi)                       :: uDotPRPInSteady(6)
       REAL(ReKi)                       :: uDotDotPRPInSteady(6)
+      REAL(ReKi), ALLOCATABLE          :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
+      INTEGER(IntKi)                   :: NBody                ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
       REAL(ReKi)                       :: PtfmRefzt
       TYPE(HD_Drvr_OutputFile)         :: OutData
       character(500)                   :: FTitle                  ! description from 2nd line of driver file
-   END TYPE HD_Drvr_InitInput
+      
+   END TYPE HD_Drvr_Data
    
 ! -----------------------------------------------------------------------------------   
 ! NOTE:  this module and the ModMesh.f90 modules must use the Fortran compiler flag:  
@@ -82,10 +90,10 @@ MODULE HydroDynDriverSubs
 
 CONTAINS
 
-SUBROUTINE ReadDriverInputFile( inputFile, drvrData, ErrStat, ErrMsg )
+SUBROUTINE ReadDriverInputFile( FileName, drvrData, ErrStat, ErrMsg )
 
-   CHARACTER(*),                  INTENT( IN    ) :: inputFile
-   TYPE(HD_Drvr_InitInput),       INTENT( INOUT ) :: drvrData
+   CHARACTER(*),                  INTENT( IN    ) :: FileName
+   TYPE(HD_Drvr_Data),            INTENT( INOUT ) :: drvrData
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -95,7 +103,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, drvrData, ErrStat, ErrMsg )
    INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
    CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
    CHARACTER(1024)                                  :: PriPath              ! Temporary storage for relative path name
-   CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file  
 
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
@@ -106,16 +113,14 @@ SUBROUTINE ReadDriverInputFile( inputFile, drvrData, ErrStat, ErrMsg )
    UnEchoLocal = -1
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   FileName = TRIM(inputFile)
-   
+      
    CALL GetNewUnit( UnIn ) 
    CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ) 
    if (Failed()) return
 
 
-   CALL WrScr( 'Opening HydroDyn Driver input file:  '//FileName )
-   call GetPath( TRIM(inputFile), PriPath ) ! store path name in case any of the file names are relative to the primary input file
+   CALL WrScr( 'Opening HydroDyn Driver input file:  '//trim(FileName) )
+   call GetPath( TRIM(FileName), PriPath ) ! store path name in case any of the file names are relative to the primary input file
 
    
    !-------------------------------------------------------------------------------------------------
@@ -292,11 +297,90 @@ CONTAINS
    
 END SUBROUTINE ReadDriverInputFile
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
+
+   TYPE(HD_Drvr_Data),            INTENT( INOUT ) :: drvrData
+   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   
+      ! Local variables  
+
+   INTEGER                                          :: UnIn                 ! Unit number for the input file
+   INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
+!   CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
+
+   integer(IntKi)                                   :: n
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
+   
+   
+      ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
+   UnEchoLocal = -1
+   UnIn = -1
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+      
+   drvrData%NBODY= 0
+   
+   IF ( drvrData%PRPInputsMod == 2 ) THEN
+   
+      CALL AllocAry(drvrData%PRPin, drvrData%NSteps, 19, 'PRPin', ErrStat2, ErrMsg2)
+         if (Failed()) return
+      
+   ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
+      ! multi-body kinematics driver option (time, PRP DOFs 1-6, body1 DOFs 1-6, body2 DOFs 1-6...)
+      
+      drvrData%NBODY = -drvrData%PRPInputsMod
+       
+      CALL AllocAry(drvrData%PRPin, drvrData%NSteps, 7+6*drvrData%NBODY, 'PRPin', ErrStat2, ErrMsg2)
+         if (Failed()) return
+      
+      call WrScr( 'NBody is '//trim(Num2LStr(drvrData%NBody))//' and planning to read in  '//trim(Num2LStr(SIZE(drvrData%PRPin,2)))//' columns from the input file' )
+      
+   ELSE
+   
+      RETURN
+      
+   END IF
+   
+      ! Open the (PRP or WAMIT) inputs data file
+   CALL GetNewUnit( UnIn ) 
+   CALL OpenFInpFile ( UnIn, trim(drvrData%PRPInputsFile), ErrStat2, ErrMsg2 )
+      if (Failed()) return
+   
+      !seems like it would be more efficient to switch the indices on drvrData%PRPin
+   DO n = 1,drvrData%NSteps
+      CALL ReadAry ( UnIn, drvrData%PRPInputsFile, drvrData%PRPin(n,:), SIZE(drvrData%PRPin,2), 'Line', 'drvrData%PRPin', ErrStat2, ErrMsg2, UnEchoLocal )
+      if (Failed()) return
+   END DO
+   
+   call Cleanup()
+   
+CONTAINS
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call Cleanup()
+        
+   end function Failed
+
+   subroutine Cleanup()
+      IF ( UnIn > 0 ) CLOSE( UnIn )
+      IF ( UnEchoLocal > 0 ) CLOSE( UnEchoLocal )
+   end subroutine Cleanup
+   
+   
+
+END SUBROUTINE ReadPRPInputsFile
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE InitOutputFile(InitOutData_HD, InitOutData_SeaSt, drvrData, ErrStat, ErrMsg)
 
    TYPE(HydroDyn_InitOutputType),   INTENT(IN)      :: InitOutData_HD          ! Output data from initialization
    TYPE(SeaSt_InitOutputType),      INTENT(IN)      :: InitOutData_SeaSt       ! Output data from initialization
-   TYPE(HD_Drvr_InitInput),         INTENT( INOUT ) :: drvrData
+   TYPE(HD_Drvr_Data),              INTENT( INOUT ) :: drvrData
    INTEGER,                         INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -416,7 +500,7 @@ SUBROUTINE FillOutputFile(time, y_SeaSt, y_HD, drvrData, ErrStat, ErrMsg)
    REAL(DbKi),                      INTENT( IN    ) :: time
    TYPE(SeaSt_OutputType),          INTENT( IN    ) :: y_SeaSt                 ! SeaState outputs
    TYPE(HydroDyn_OutputType),       INTENT( IN    ) :: y_HD                    ! HydroDyn outputs
-   TYPE(HD_Drvr_InitInput),         INTENT( INOUT ) :: drvrData
+   TYPE(HD_Drvr_Data),              INTENT( INOUT ) :: drvrData
    INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
    
@@ -475,7 +559,7 @@ SUBROUTINE FillOutputFile(time, y_SeaSt, y_HD, drvrData, ErrStat, ErrMsg)
 END SUBROUTINE FillOutputFile
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteOutputFile(drvrData, ErrStat, ErrMsg)
-   TYPE(HD_Drvr_InitInput),         INTENT( IN    ) :: drvrData
+   TYPE(HD_Drvr_Data),              INTENT( IN    ) :: drvrData
    INTEGER,                         INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -495,6 +579,51 @@ SUBROUTINE WriteOutputFile(drvrData, ErrStat, ErrMsg)
    
    
 END SUBROUTINE WriteOutputFile
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
+   TYPE(HydroDyn_InputType),        INTENT( INOUT ) :: u_HD                    ! HydroDyn inputs
+   TYPE(HD_Drvr_MappingData),       INTENT( INOUT ) :: mappingData
+   TYPE(HD_Drvr_Data),              INTENT( IN    ) :: drvrData
+   
+   INTEGER,                         INTENT(   OUT ) :: ErrStat                ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg                 ! Error message if ErrStat /= ErrID_None
+   
+   integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
+   character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
+   character(*), parameter                          :: RoutineName = 'SetHDInputs_Constant'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   IF (( drvrData%PRPInputsMod /= 2 ) .AND. ( drvrData%PRPInputsMod >= 0 )) THEN
+                
+      u_HD%PRPMesh%TranslationDisp(:,1)   = drvrData%uPRPInSteady(1:3) 
+
+         ! Compute direction cosine matrix from the rotation angles
+      CALL SmllRotTrans( 'InputRotation', drvrData%uPRPInSteady(4), drvrData%uPRPInSteady(5), drvrData%uPRPInSteady(6), u_HD%PRPMesh%Orientation(:,:,1), 'Junk', ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      u_HD%PRPMesh%TranslationVel(:,1)    = drvrData%uDotPRPInSteady(1:3)
+      u_HD%PRPMesh%RotationVel(:,1)       = drvrData%uDotPRPInSteady(4:6)
+      u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
+      u_HD%PRPMesh%RotationAcc(:,1)       = drvrData%uDotDotPRPInSteady(4:6)
+      
+         ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
+      IF ( u_HD%WAMITMesh%Initialized ) THEN 
+         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      END IF
+      
+         ! Map PRP kinematics to the Morison mesh
+      if ( u_HD%Morison%Mesh%Initialized ) then
+         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+      
+   END IF
+   
+END SUBROUTINE SetHDInputs_Constant
+!----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE HydroDynDriverSubs
 
