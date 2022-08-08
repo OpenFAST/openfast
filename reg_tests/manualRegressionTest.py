@@ -94,11 +94,11 @@ for case in casenames:
 
     if returnCode > 1:
         resultString = didNotRunString
-        returnCode = returnCode / 10
+        completeCode = round(returnCode / 10) # did not complete, so completion code is returnCode/10
     else:
         resultString = passString if returnCode == 0 else failString
-        returnCode = 0
-    results.append((case, resultString, returnCode))
+        completeCode = 0  # this completed, so completion code is 0, but may or may not have matched the results
+    results.append((case, resultString, completeCode))
     print(resultString)
 
 from errorPlotting import exportResultsSummary
