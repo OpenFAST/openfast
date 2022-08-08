@@ -2482,7 +2482,7 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    !! IF Src is forces and/or moments, loop over Src Mesh;
    !!    each load in the source mesh needs to be placed somewhere in the destination mesh.
 
-   if ( HasLoadFields(Src) ) then
+   if ( HasLoadFields(Src) .AND. HasLoadFields(Dest)  ) then
             
       !........................
       ! Create mapping

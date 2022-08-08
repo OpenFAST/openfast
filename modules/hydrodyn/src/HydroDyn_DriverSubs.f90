@@ -67,11 +67,7 @@ MODULE HydroDynDriverSubs
       REAL(ReKi)                       :: uPRPInSteady(6)
       REAL(ReKi)                       :: uDotPRPInSteady(6)
       REAL(ReKi)                       :: uDotDotPRPInSteady(6)
-      LOGICAL                          :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
-      REAL(ReKi)                       :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
-      REAL(ReKi)                       :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
-      INTEGER(IntKi)                   :: WaveElevNX              !< Number of points in the X direction for the wave elevation series (-)
-      INTEGER(IntKi)                   :: WaveElevNY              !< Number of points in the X direction for the wave elevation series (-)
+      REAL(ReKi)                       :: PtfmRefzt
       TYPE(HD_Drvr_OutputFile)         :: OutData
       character(500)                   :: FTitle                  ! description from 2nd line of driver file
    END TYPE HD_Drvr_InitInput
@@ -233,11 +229,15 @@ SUBROUTINE ReadDriverInputFile( inputFile, drvrData, ErrStat, ErrMsg )
    CALL ReadCom( UnIn, FileName, 'PRP INPUTS header', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
-      ! PRPInputsMod      
+      ! PRPInputsMod
    CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsMod, 'PRPInputsMod', 'Model for the PRP (principal reference point) inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    
-      ! PRPInputsFile      
+       ! PtfmRefzt
+   CALL ReadVar ( UnIn, FileName, drvrData%PtfmRefzt, 'PtfmRefzt', 'Vertical distance from the ground level to the platform reference point', ErrStat, ErrMsg, UnEchoLocal )
+   if (Failed()) return
+   
+      ! PRPInputsFile
    CALL ReadVar ( UnIn, FileName, drvrData%PRPInputsFile, 'PRPInputsFile', 'Filename for the PRP HydroDyn inputs', ErrStat2, ErrMsg2, UnEchoLocal )
    if (Failed()) return
    IF ( PathIsRelative( drvrData%PRPInputsFile ) ) drvrData%PRPInputsFile = TRIM(PriPath)//TRIM(drvrData%PRPInputsFile)

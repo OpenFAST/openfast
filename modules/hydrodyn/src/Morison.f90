@@ -2553,7 +2553,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), vmag, vmagf
+!   REAL(ReKi)                                        :: F_DP(6)
+   REAL(ReKi)                                        :: vmag, vmagf
    INTEGER                                           :: I, J, K
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
@@ -2594,7 +2595,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: FbVec(3), MbVec(3)
    REAL(ReKi)               :: pwr   ! exponent for buoyancy node distribution smoothing
    REAL(ReKi)               :: alpha ! final load distribution factor for element
-   REAL(ReKi)               :: Fb    !buoyant force
+!   REAL(ReKi)               :: Fb    !buoyant force
    REAL(ReKi)               :: Fr    !radial component of buoyant force
    REAL(ReKi)               :: Fl    !axial component of buoyant force
    REAL(ReKi)               :: Moment     !moment induced about the center of the cylinder's bottom face
