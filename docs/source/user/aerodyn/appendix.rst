@@ -57,10 +57,10 @@ The local tower coordinate system is shown in :numref:`ad_tower_geom` and the lo
 
 .. _ad_blade_local_cs:
 
-.. figure:: figs/ad_blade_local_cs.png
+.. figure:: figs/aerodyn_blade_local_cs.png
    :width: 80%
    :align: center
-   :alt: ad_blade_local_cs.png
+   :alt: aerodyn_blade_local_cs.png
 
    AeroDyn Local Blade Coordinate System (Looking Toward the Tip, 
    from the Root) – l: Lift, d: Drag, m: Pitching, x: Normal (to Plane), 
@@ -69,9 +69,9 @@ The local tower coordinate system is shown in :numref:`ad_tower_geom` and the lo
 
 .. _ad-output-channel:
 
-.. figure:: figs/ad_output_channel.pdf
+.. figure:: figs/aerodyn_output_channel.pdf
    :width: 500px
    :align: center
-   :alt: ad_output_channel.pdf
+   :alt: aerodyn_output_channel.pdf
 
    AeroDyn Output Channel List

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <math.h>
 #include <cstring>
+#include <stdexcept>
 
 
 FastLibAPI::FastLibAPI(std::string input_file):
