@@ -120,6 +120,7 @@ typedef   ^                         ^            ReKi                    amplitu
 typedef   ^                         ^            ReKi                    frequency        -      -     -   "" -
 typedef   ^                         ^            character(1024)         motionFileName   -      -     -   "" -
 typedef   ^                         ^            ReKi                    WriteOutput      :      -     -   "WriteOutputs of the driver only"
+typedef   ^                         ^            ReKi                    userSwapArray    :      -     -   "Array to store user data for user-defined functions" "-"
 
 
 # ..... Data for driver simulation .......................................................................................................

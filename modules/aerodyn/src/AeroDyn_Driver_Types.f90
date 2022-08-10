@@ -152,6 +152,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: frequency      !<  [-]
     character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< WriteOutputs of the driver only [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: userSwapArray      !< Array to store user data for user-defined functions [-]
   END TYPE WTData
 ! =======================
 ! =========  Dvr_SimData  =======
@@ -2339,6 +2340,18 @@ IF (ALLOCATED(SrcWTDataData%WriteOutput)) THEN
   END IF
     DstWTDataData%WriteOutput = SrcWTDataData%WriteOutput
 ENDIF
+IF (ALLOCATED(SrcWTDataData%userSwapArray)) THEN
+  i1_l = LBOUND(SrcWTDataData%userSwapArray,1)
+  i1_u = UBOUND(SrcWTDataData%userSwapArray,1)
+  IF (.NOT. ALLOCATED(DstWTDataData%userSwapArray)) THEN 
+    ALLOCATE(DstWTDataData%userSwapArray(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%userSwapArray.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWTDataData%userSwapArray = SrcWTDataData%userSwapArray
+ENDIF
  END SUBROUTINE AD_Dvr_CopyWTData
 
  SUBROUTINE AD_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg )
@@ -2373,6 +2386,9 @@ IF (ALLOCATED(WTDataData%motion)) THEN
 ENDIF
 IF (ALLOCATED(WTDataData%WriteOutput)) THEN
   DEALLOCATE(WTDataData%WriteOutput)
+ENDIF
+IF (ALLOCATED(WTDataData%userSwapArray)) THEN
+  DEALLOCATE(WTDataData%userSwapArray)
 ENDIF
  END SUBROUTINE AD_Dvr_DestroyWTData
 
@@ -2581,6 +2597,11 @@ ENDIF
   IF ( ALLOCATED(InData%WriteOutput) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! userSwapArray allocated yes/no
+  IF ( ALLOCATED(InData%userSwapArray) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! userSwapArray upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%userSwapArray)  ! userSwapArray
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2921,6 +2942,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
         ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%userSwapArray) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%userSwapArray,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%userSwapArray,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%userSwapArray,1), UBOUND(InData%userSwapArray,1)
+        ReKiBuf(Re_Xferred) = InData%userSwapArray(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3378,6 +3414,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
         OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! userSwapArray not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%userSwapArray)) DEALLOCATE(OutData%userSwapArray)
+    ALLOCATE(OutData%userSwapArray(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%userSwapArray.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%userSwapArray,1), UBOUND(OutData%userSwapArray,1)
+        OutData%userSwapArray(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

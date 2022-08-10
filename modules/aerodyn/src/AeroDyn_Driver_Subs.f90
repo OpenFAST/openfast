@@ -45,9 +45,10 @@ module AeroDyn_Driver_Subs
    integer(IntKi), parameter, dimension(3) :: idBaseMotionVALID  = (/idBaseMotionFixed, idBaseMotionSine, idBaseMotionGeneral /)
 
    integer(IntKi), parameter :: idHubMotionConstant  = 0
-   integer(IntKi), parameter :: idHubMotionVariable  = 1
-   integer(IntKi), parameter :: idHubMotionStateTS   = 2 !<<< Used internally, with idAnalysisTimeD
-   integer(IntKi), parameter, dimension(2) :: idHubMotionVALID  = (/idHubMotionConstant, idHubMotionVariable/)
+   integer(IntKi), parameter :: idHubMotionVariable  = 1    ! Input file with prescribed motion
+   integer(IntKi), parameter :: idHubMotionUserFunction = 3 ! User-defined function
+   integer(IntKi), parameter :: idHubMotionStateTS   = 200 !<<< Used internally, with idAnalysisTimeD
+   integer(IntKi), parameter, dimension(3) :: idHubMotionVALID  = (/idHubMotionConstant, idHubMotionVariable, idHubMotionUserFunction/)
 
    integer(IntKi), parameter :: idBldMotionConstant = 0
    integer(IntKi), parameter :: idBldMotionVariable = 1
@@ -68,6 +69,53 @@ module AeroDyn_Driver_Subs
    integer(IntKi), parameter :: idAnalysisCombi   = 3
    integer(IntKi), parameter, dimension(3) :: idAnalysisVALID  = (/idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi/)
 
+
+   ! User Swap Array - TODO not clean
+   integer, parameter :: MAX_SWAP_ARRAY_SIZE = 14
+   integer(IntKi),  parameter :: iAzi         = 1 !< index in swap array for azimuth
+   integer(IntKi),  parameter :: iN_          = 4 !< index in swap array for time step
+   integer(IntKi),  parameter :: igenTorque   = 5 !< index in swap array for generator torque
+   integer(IntKi),  parameter :: igenTorqueF  = 6 !< index in swap array for filtered generator torque
+   integer(IntKi),  parameter :: irotTorque   = 7 !< index in swap array for rotor torque
+   integer(IntKi),  parameter :: irotTorqueF  = 8 !< index in swap array for filtered rotor torque
+   integer(IntKi),  parameter :: iDeltaTorque = 9 !< index in swap array for delta torque
+   integer(IntKi),  parameter :: iDeltaTorqueF = 10 !< index in swap array for delta torque 
+   integer(IntKi),  parameter :: irotSpeedI    = 11 !< index in swap array for instantaneous rotor speed
+   integer(IntKi),  parameter :: irotSpeedF    = 12 !< index in swap array for filtered rotor speed
+   integer(IntKi),  parameter :: iAlpha        = 13 !< index in swap array for filter constant alpha
+   integer(IntKi),  parameter :: iRegion       = 14 !< Controller region
+   character(len=ChanLen), dimension(MAX_SWAP_ARRAY_SIZE), parameter :: userSwapHdr=(/ &
+       "SwapAzimuth  ",&! 1 
+       "SwapRotSpeed ",&! 2
+       "SwapRotAcc   ",&! 3 
+       "SwapTimeStep ",&! 4
+       "SwapGenTq    ",&! 5
+       "SwapGenTqF   ",&! 6
+       "SwapRotTq    ",&! 7
+       "SwapRotTqF   ",&! 8
+       "SwapDeltaTq  ",&! 9
+       "SwapDeltaTqF ",&!10
+       "SwapRotSpeedI",&!11
+       "SwapRotSpeedF",&!12
+       "SwapAlpha    ",&!13
+       "SwapRegion   " &!14
+       /)
+   character(len=ChanLen), dimension(MAX_SWAP_ARRAY_SIZE), parameter :: userSwapUnt=(/ &
+       "(deg)    ",&! 1 
+       "(rad/s)  ",&! 2
+       "(rad/s^2)",&! 3 
+       "(-)      ",&! 4
+       "(Nm)     ",&! 5
+       "(Nm)     ",&! 6
+       "(Nm)     ",&! 7
+       "(Nm)     ",&! 8
+       "(Nm)     ",&! 9
+       "(Nm)     ",&!10
+       "(rad/s)  ",&!11
+       "(rad/s)  ",&!12
+       "(-)      ",&!13
+       "(-)      " &!14
+       /)
 
    real(ReKi), parameter :: myNaN = -99.9_ReKi
    integer(IntKi), parameter :: NumInp = 2
@@ -202,7 +250,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
       allocate(dvr%out%unOutFile(dvr%numTurbines))
    endif
    dvr%out%unOutFile = -1
-
 
    ! --- Initialize ADI
    call Init_ADI_ForDriver(iCase, ADI, dvr, FED, dvr%dt, errStat2, errMsg2); if(Failed()) return
@@ -783,6 +830,9 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          wt%hub%rotSpeed  = hubMotion(2)
          wt%hub%rotAcc    = hubMotion(2)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
+      else if (wt%hub%motionType == idHubMotionUserFunction) then
+         ! We call a user-defined function to determined the azimuth, speed (and potentially acceleration...)
+         call userHubMotion(nt, iWT, dvr, ADI, FED, wt%userSwapArray, wt%hub%azimuth, wt%hub%rotSpeed, wt%hub%rotAcc)
 
       else if (wt%hub%motionType == idHubMotionStateTS) then
          ! NOTE: match AeroDyndriver for backward compatibility
@@ -1446,6 +1496,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
    integer(IntKi)         ,  intent(  out) :: errStat              ! Status of error message
    character(*)           ,  intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
    integer :: maxNumBlades, k, j, iWT
+   logical :: hasSwapArray ! small hack, if a swap array is present NOTE: we don't know the size of it...
    errStat = ErrID_None
    errMsg  = ''
 
@@ -1456,6 +1507,17 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
 
    ! --- Allocate driver-level outputs
    dvr%out%nDvrOutputs = 1+ 4 + 6 + 3 + 1*maxNumBlades ! 
+   !
+   do iWT =1,dvr%numTurbines
+      if (dvr%WT(iWT)%hub%motionType == idHubMotionUserFunction) then
+         hasSwapArray=.true.
+      endif
+   enddo
+   if (hasSwapArray) then
+      dvr%out%nDvrOutputs = dvr%out%nDvrOutputs + MAX_SWAP_ARRAY_SIZE ! TODO figure out how many you need
+   endif
+
+
    allocate(dvr%out%WriteOutputHdr(1+dvr%out%nDvrOutputs))
    allocate(dvr%out%WriteOutputUnt(1+dvr%out%nDvrOutputs))
    do iWT =1,dvr%numTurbines
@@ -1505,6 +1567,16 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
       dvr%out%WriteOutputHdr(j) = 'BldPitch'//trim(num2lstr(k))
       dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
    enddo
+   if (hasSwapArray) then
+      do k =1,MAX_SWAP_ARRAY_SIZE
+         dvr%out%WriteOutputHdr(j) = userSwapHdr(k)
+         dvr%out%WriteOutputUnt(j) = userSwapUnt(k)
+         !dvr%out%WriteOutputHdr(j) = 'SwapArr'//trim(num2lstr(k))
+         !dvr%out%WriteOutputUnt(j) = '(NA)'; 
+         j=j+1
+      enddo
+   endif
+
 
 end subroutine Dvr_InitializeDriverOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1522,6 +1594,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
    real(ReKi), pointer  :: arr(:)
    type(WTData), pointer :: wt ! Alias to shorten notation
    type(RotFED), pointer :: y_ED ! Alias to shorten notation
+   logical :: hasSwapArray ! small hack, if a swap array is present NOTE: we don't know the size of it...
 
    errStat = ErrID_None
    errMsg  = ''
@@ -1530,6 +1603,8 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
    do iWT=1,size(dvr%WT)
       maxNumBlades= max(maxNumBlades, dvr%WT(iWT)%numBlades)
    end do
+
+   ! Determine if a swap array is present
    
    do iWT = 1, dvr%numTurbines
       wt => dvr%wt(iWT)
@@ -1565,6 +1640,13 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
             endif
             k=k+1;
          enddo
+         ! Swap array
+         if (wt%hub%motionType == idHubMotionUserFunction) then
+            do j=1,min(MAX_SWAP_ARRAY_SIZE, size(wt%userSwapArray))
+               arr(k) = wt%userSwapArray(j); k=k+1;
+            enddo
+         endif
+
       endif
    enddo
 
@@ -2025,5 +2107,150 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    WRITE(Un,'(A)')         '      </Polys>'      
    call WrVTK_footer( Un )       
 end subroutine WrVTK_Ground
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
+   use AeroDyn_IO, only: RtAeroMxh
+   integer(IntKi)             , intent(in   ) :: nt       !< time step number
+   integer(IntKi)             , intent(in   ) :: iWT      !< Wind turbine index
+   type(Dvr_SimData),           intent(in   ) :: dvr      !< Driver arr 
+   type(ADI_Data),              intent(in   ) :: ADI      !< AeroDyn/InflowWind arr
+   type(FED_Data),              intent(in   ) :: FED      !< Elastic wind turbine arr (Fake ElastoDyn)
+   real(ReKi), dimension(:), allocatable, intent(inout) :: arr !< Swap array that user can use to store arr
+   real(ReKi),                  intent(  out) :: azimuth  !<  [deg]
+   real(ReKi),                  intent(  out) :: rotSpeed !<  [rad/s]
+   real(ReKi),                  intent(  out) :: rotAcc   !<  [rad/s^2]
+   ! Main parameters to be adjusted
+   real(ReKi), parameter      :: cutInSpeed = 0.10     !< Cut in speed [rad/s]
+   real(ReKi), parameter      :: ratedSpeed = 1.00     !< Rated speed [rad/s]
+   real(ReKi), parameter      :: maxSpeed   = 10       !< Maximum rotor speed [rad/s]
+   real(ReKi), parameter      :: minSpeed   = 0.0      !< Minimum rotor speed [rad/s]
+   real(ReKi), parameter      :: genTorque_rated =  10.0e6  !< Generator torque at rated [Nm]
+   real(ReKi), parameter      :: genTorqueRate_max = 8.0e6  !< Maximum torque rate [Nm/s]  
+   real(ReKi), parameter      :: k2 = 1.0e7               !< Proportionality constant for region 2 [Nm/(rad/s)^2]
+   real(ReKi), parameter      :: rotInertia = 5.0e6       !< Rotor inertia [kg m^2]
+   real(ReKi), parameter      :: CornerFreqTq    = 3.5    !< Corner frequency (-3dB point) for the low-pass filter, rad/s.
+   real(ReKi), parameter      :: CornerFreqSpeed = 1.0    !< Corner frequency (-3dB point) for the low-pass filter, rad/s.
+   ! Local
+   real(ReKi) :: azimuth_prev, rotSpeed_prev, rotAcc_prev, rotSpeed_int, rotSpeed_filt, rotSpeed_filt_prev
+   real(ReKi) :: rotTorque, rotTorque_prev, rotTorque_filt, rotTorque_filt_prev
+   real(ReKi) :: genTorque, genTorque_prev, genTorque_filt, genTorque_filt_prev
+   real(ReKi) :: deltaTorque, deltaTorque_filt, deltaTorque_prev, deltaTorque_filt_prev
+   real(ReKi) :: genTorqueRate
+   real(DbKi) :: time, time_prev 
+   integer(IntKi) :: nt_prev
+   integer(IntKi) :: region
+   real(ReKi) :: alphaTq    ! coefficient for the low-pass filter for the generator torque
+   real(ReKi) :: alphaSpeed ! coefficient for the low-pass filter for the rotor speed
+
+   ! First call, allocate memory
+   if (.not.allocated(arr)) then
+      call WrScr('Driver: Using user-defined function for hub motion, turbine'//trim(num2lstr(iWT)))
+      if (nt>0) then
+         print*,'>>> swap array should have been allocated by now',nt
+         STOP
+      endif
+      allocate(arr(MAX_SWAP_ARRAY_SIZE))
+      arr    = 0.0_ReKi
+      arr(iN_) = real(nt, ReKi)
+   endif
+
+   ! Retrieve previous time step values
+   azimuth_prev          = arr(iAzi+0)
+   rotSpeed_prev         = arr(iAzi+1)
+   rotAcc_prev           = arr(iAzi+2)
+   rotSpeed_filt_prev    = arr(irotSpeedF)
+   rotTorque_prev        = arr(irotTorque)
+   genTorque_prev        = arr(igenTorque)
+   rotTorque_filt_prev   = arr(irotTorqueF)
+   genTorque_filt_prev   = arr(igenTorqueF)
+   deltaTorque_prev      = arr(iDeltaTorque)
+   deltaTorque_filt_prev = arr(iDeltaTorqueF)
+   nt_prev        = int(arr(iN_), IntKi)
+   time_prev      = dvr%dt * nt_prev
+   time           = dvr%dt * nt
+   ! Return if time step is the same as previous time step
+   if (nt==nt_prev) then
+      azimuth  = azimuth_prev
+      rotSpeed = rotSpeed_prev
+      rotAcc   = rotAcc_prev
+      return
+   endif
+   ! --- Filter constant. alpha=0: use current value(no filter), alpha=1 use previous value
+   alphaTq    = exp( (time_prev - time)*CornerFreqTq    )
+   alphaSpeed = exp( (time_prev - time)*CornerFreqSpeed )
+   alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
+
+   ! --- Rotor torque
+   rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
+   ! Optional filtering of input torque
+   rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev
+
+   ! --- Generator torque
+   ! TODO insert better generator model here
+   if (rotSpeed_prev >= ratedSpeed) then
+      genTorque = genTorque_rated
+      region = 3
+   elseif (rotSpeed_prev > cutInSpeed) then
+      genTorque = k2 * rotSpeed**2
+      region = 2
+   else
+      genTorque = 0 
+      region = 0
+   endif
+
+   ! Optional - saturate torque rate
+   if (genTorque>0) then
+      genTorqueRate = (genTorque - genTorque_prev)/dvr%dt
+      genTorqueRate = min( max( genTorqueRate, -genTorqueRate_max), genTorqueRate_max) 
+      genTorque  = genTorque_prev + genTorqueRate * dvr%dt
+   endif
+
+   ! Optional filtering
+   genTorque_filt = ( 1.0 - alphaTq )*genTorque + alphaTq*genTorque_filt_prev
+
+
+   ! --- Delta torque
+   !deltaTorque      = rotTorque_filt - genTorque_filt
+   !deltaTorque      = rotTorque - genTorque
+   deltaTorque      = rotTorque - genTorque
+   ! Optional filtering
+   deltaTorque_filt = ( 1.0 - alphaTq )*deltaTorque + alphaTq*deltaTorque_filt_prev
+
+   ! --- Rotor Speed
+   ! Equation written at low speed shaft for now
+   rotSpeed_int  = rotSpeed_prev + dvr%dt/rotInertia * (deltaTorque)
+   !rotSpeed_int = 6.0*2*PI/60 ! Constant speed hack
+
+   ! Optional filtering of the rotor speed
+   rotSpeed_filt = ( 1.0 - alphaSpeed )*rotSpeed_int + alphaSpeed*rotSpeed_filt_prev ! filtered
+
+   ! Chose rotational speed
+   !rotSpeed = rotSpeed_filt ! we return the filtered value
+   rotSpeed = rotSpeed_int ! we return the filtered value
+
+   ! Bounding 
+   rotSpeed = min(max(rotSpeed, minSpeed), maxSpeed) ! Bounding rotor speed
+
+   ! --- Azimuth and acceleration
+   azimuth = azimuth_prev + (dvr%dt * rotSpeed)*180/PI ! [deg]
+   rotAcc = (rotSpeed-rotSpeed_prev) / dvr%dt ! Or set it to zero..
+   !rotAcc = 0.0_ReKi
+
+   ! --- Store new values in swap array
+   arr(iAzi+0)        = azimuth
+   arr(iAzi+1)        = rotSpeed
+   arr(iAzi+2)        = rotAcc
+   arr(iN_)           = nt
+   arr(igenTorque)    = genTorque
+   arr(igenTorqueF)   = genTorque_filt
+   arr(irotTorque)    = rotTorque
+   arr(irotTorqueF)   = rotTorque_filt
+   arr(iDeltaTorque)  = deltaTorque
+   arr(iDeltaTorqueF) = deltaTorque_filt
+   arr(irotSpeedI )   = rotSpeed_int
+   arr(irotSpeedF )   = rotSpeed_filt
+   arr(iAlpha )       = alphaTq
+   arr(iRegion )      = region
+end subroutine userHubMotion
 
 end module AeroDyn_Driver_Subs
