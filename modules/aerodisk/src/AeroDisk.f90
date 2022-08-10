@@ -422,7 +422,7 @@ SUBROUTINE ADsk_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    !!          \vec{V}_\textrm{rel}[1] \hat{x}_\textrm{disk}[1] + \vec{V}_\textrm{rel}[2] \hat{x}_\textrm{disk}[2] \right) \f$
    !! - PsiSkew:    \f$ \Psi_\textrm{skew} = \text{ATAN2}\left( \hat{z} \bullet \hat{y}_\textrm{disk}, -\hat{z}\bullet \hat{z}_\textrm{disk} \right) \f$
    y%YawErr  = atan2( VRel_vec(2)*x_hatDisk(1) - VRel_vec(1)*x_hatDisk(2),   VRel_vec(1)*x_hatDisk(1) + VRel_vec(2)*x_hatDisk(2) )
-   y%PsiSkew = atan2( real( dot_product(m%z_hat,y_hatDisk), ReKi), -1.0_ReKi * real( dot_product(m%z_hat, z_hatDisk), ReKi) )
+   y%PsiSkew = atan2( -1.0_ReKi * real( dot_product(m%z_hat,y_hatDisk), ReKi), real( dot_product(m%z_hat, z_hatDisk), ReKi) )
   
 
    !-------------------------------------------
