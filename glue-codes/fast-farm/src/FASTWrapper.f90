@@ -670,8 +670,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
       if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
          y%AzimAvg_Ct = 0.0_ReKi
       else
-         y%AzimAvg_Ct(1) = 0.0_ReKi
-         y%AzimAvg_Ct(2:p%nr) = m%Turbine%ADsk%y%Ct
+         y%AzimAvg_Ct(1:p%nr) = m%Turbine%ADsk%y%Ct
       endif
 
 !FIXME: Uncomment this for the curled wake!!!!
