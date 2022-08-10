@@ -169,8 +169,8 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !.................
       ! Check that we've set up FAST properly:
       !.................
-      if (m%Turbine%p_FAST%CompAero /= MODULE_AD) then
-         call SetErrStat(ErrID_Fatal,"AeroDyn (v15) must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      if (m%Turbine%p_FAST%CompAero /= MODULE_AD .and. m%Turbine%p_FAST%CompAero /= MODULE_ADsk) then
+         call SetErrStat(ErrID_Fatal,"AeroDyn (v15) or AeroDisk must be used in each instance of FAST for FAST.Farm.",ErrStat,ErrMsg,RoutineName)
          call cleanup()
          return
       end if
@@ -205,69 +205,71 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       if ( InitInp%UseSC ) then
          call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       end if
-      
-      nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
-      Allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 )
-      if (ErrStat2 /= 0) then
-         call SetErrStat(ErrID_Fatal,"Error allocating space for ADRotorDisk meshes.",ErrStat,ErrMsg,RoutineName)
-         call cleanup()
-         return
-      end if
-      
-      do k=1,nb
-         
-         call meshCopy(  SrcMesh         = m%Turbine%AD%y%rotors(1)%BladeLoad(k) &
-                       , DestMesh        = m%TempDisp(k)         & 
-                       , CtrlCode        = MESH_COUSIN           &  ! Like a sibling, except using new memory for position/refOrientation and elements
-                       , Orientation     = .TRUE.                &  ! set automatically to identity
-                       , TranslationDisp = .TRUE.                &  ! set automatically to 0
-                       , ErrStat         = ErrStat2              &
-                       , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-       
-         call meshCopy(  SrcMesh         = m%TempDisp(k)         &
-                       , DestMesh        = m%TempLoads(k)        & 
-                       , CtrlCode        = MESH_SIBLING          &
-                       , Force           = .true.                &
-                       , Moment          = .true.                &
-                       , ErrStat         = ErrStat2              &
-                       , ErrMess         = ErrMsg2               )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                        
-            
-         call MeshCreate ( BlankMesh         = m%ADRotorDisk(k) &
-                          ,IOS               = COMPONENT_OUTPUT &
-                          ,Nnodes            = p%nr             &
-                          ,ErrStat           = ErrStat2         &
-                          ,ErrMess           = ErrMsg2          &
-                          ,Force             = .true.           &
-                          ,Moment            = .true.           &
-                          ,TranslationDisp   = .true.           & ! only for loads transfer
-                          ,Orientation       = .true.           & ! only for loads transfer
-                         )
-               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
-            if (errStat >= AbortErrLev) exit
-            
-            ! set node initial position/orientation
-         ! shortcut for 
-         ! call MeshPositionNode(m%ADRotorDisk(k), j, [0,0,r(j)], errStat2, errMsg2)
-         m%ADRotorDisk(k)%Position(3,:) = p%r ! this will get overwritten later, but we check that we have no zero-length elements in MeshCommit()
-         m%ADRotorDisk(k)%TranslationDisp = 0.0_R8Ki ! this happens by default, anyway....
+      if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
+         nb = size(m%Turbine%AD%y%rotors(1)%BladeLoad)
+         Allocate( m%ADRotorDisk(nb), m%TempDisp(nb), m%TempLoads(nb), m%AD_L2L(nb), STAT=ErrStat2 )
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal,"Error allocating space for ADRotorDisk meshes.",ErrStat,ErrMsg,RoutineName)
+            call cleanup()
+            return
+         end if
          
-            ! create line2 elements
-         do j=1,p%nr-1
-            call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
+         do k=1,nb
+            
+            call meshCopy(  SrcMesh         = m%Turbine%AD%y%rotors(1)%BladeLoad(k) &
+                          , DestMesh        = m%TempDisp(k)         & 
+                          , CtrlCode        = MESH_COUSIN           &  ! Like a sibling, except using new memory for position/refOrientation and elements
+                          , Orientation     = .TRUE.                &  ! set automatically to identity
+                          , TranslationDisp = .TRUE.                &  ! set automatically to 0
+                          , ErrStat         = ErrStat2              &
+                          , ErrMess         = ErrMsg2               )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+          
+            call meshCopy(  SrcMesh         = m%TempDisp(k)         &
+                          , DestMesh        = m%TempLoads(k)        & 
+                          , CtrlCode        = MESH_SIBLING          &
+                          , Force           = .true.                &
+                          , Moment          = .true.                &
+                          , ErrStat         = ErrStat2              &
+                          , ErrMess         = ErrMsg2               )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                           
+               
+            call MeshCreate ( BlankMesh         = m%ADRotorDisk(k) &
+                             ,IOS               = COMPONENT_OUTPUT &
+                             ,Nnodes            = p%nr             &
+                             ,ErrStat           = ErrStat2         &
+                             ,ErrMess           = ErrMsg2          &
+                             ,Force             = .true.           &
+                             ,Moment            = .true.           &
+                             ,TranslationDisp   = .true.           & ! only for loads transfer
+                             ,Orientation       = .true.           & ! only for loads transfer
+                            )
+                  call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+ 
+               if (errStat >= AbortErrLev) exit
+               
+               ! set node initial position/orientation
+            ! shortcut for 
+            ! call MeshPositionNode(m%ADRotorDisk(k), j, [0,0,r(j)], errStat2, errMsg2)
+            m%ADRotorDisk(k)%Position(3,:) = p%r ! this will get overwritten later, but we check that we have no zero-length elements in MeshCommit()
+            m%ADRotorDisk(k)%TranslationDisp = 0.0_R8Ki ! this happens by default, anyway....
+            
+               ! create line2 elements
+            do j=1,p%nr-1
+               call MeshConstructElement( m%ADRotorDisk(k), ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1 )
+                  call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            end do !j
+               
+            call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 )
                call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         end do !j
-            
-         call MeshCommit(m%ADRotorDisk(k), errStat2, errMsg2 )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            if (errStat >= AbortErrLev) exit
-            
-         call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2) ! this is going to transfer the motions as well as the loads, which is overkill
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      end do
+               if (errStat >= AbortErrLev) exit
+               
+            call MeshMapCreate(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2) ! this is going to transfer the motions as well as the loads, which is overkill
+               call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         end do
+      endif
       
       !................
       ! also need to set the WrOutput channels...
@@ -553,90 +555,142 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    end if
    
    
-   ! ....... outputs from AeroDyn v15 ............
-   
-   ! note that anything that uses m%Turbine%AD%Input(1) assumes we have not updated these inputs after calling AD_CalcOutput in FAST.
-   
-   ! Orientation of rotor centerline, normal to disk:
-   y%xHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
-   
-   
-   ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
-   ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
-   
-      ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
-      ! the nacelle-yaw error is undefined
-   if ( EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(1), 0.0_ReKi) .and. EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(2), 0.0_ReKi) ) then
-      call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor-disk-averaged relative wind speed "// &
-                        "is directed vertically", ErrStat,ErrMsg,RoutineName) 
-   elseif ( EqualRealNos(y%xHat_Disk(1), 0.0_ReKi) .and. EqualRealNos(y%xHat_Disk(2), 0.0_ReKi) ) then
-      call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor centerline "// &
-                        "is directed vertically", ErrStat,ErrMsg,RoutineName) 
-   else
-      vy = m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(1) - m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(2) 
-      vx = m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(1) + m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(2) 
+   if (m%Turbine%p_FAST%CompAero == MODULE_AD) then
+      ! ....... outputs from AeroDyn v15 ............
       
-      y%YawErr = atan2(vy, vx)
-   end if
-   
+      ! note that anything that uses m%Turbine%AD%Input(1) assumes we have not updated these inputs after calling AD_CalcOutput in FAST.
       
-   ! Center position of hub, m
-   p0 = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Position(:,1) + m%Turbine%AD%Input(1)%rotors(1)%HubMotion%TranslationDisp(:,1) 
-   y%p_hub = p%p_ref_Turbine + p0     
-   
-   ! Rotor diameter, m
-   y%D_rotor = 2.0_ReKi * maxval(m%Turbine%AD%m%rotors(1)%BEMT_u(indx)%rLocal) ! BEMT_u(indx) is calculated on inputs that were passed INTO AD_CalcOutput; Input(1) is calculated from values passed out of ED_CalcOutput AFTER AD_CalcOutput
-
-   if ( y%D_rotor > p%r(p%nr) ) then
-      call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
-   end if
-   
-   ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
-   y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
-   
-   ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
-   theta = 0.0_ReKi
-   do k=1,size(m%ADRotorDisk)
-            
-      m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
-      m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
-     !m%TempDisp(k)%TranslationDisp = 0.0_R8Ki
-      m%TempLoads(k)%Force         = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Force
-      m%TempLoads(k)%Moment        = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Moment
+      ! Orientation of rotor centerline, normal to disk:
+      y%xHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
       
-      theta(1) = m%Turbine%AD%m%rotors(1)%hub_theta_x_root(k)
-      orientation = EulerConstruct( theta )
-      m%ADRotorDisk(k)%RefOrientation(:,:,1) = matmul(orientation, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(:,:,1) )
-      do j=1,p%nr
-         m%ADRotorDisk(k)%RefOrientation(:,:,j) = m%ADRotorDisk(k)%RefOrientation(:,:,1)
-         m%ADRotorDisk(k)%Position(:,j) = p0 + p%r(j)*m%ADRotorDisk(k)%RefOrientation(3,:,1)
-      end do
-     !m%ADRotorDisk(k)%TranslationDisp = 0.0_ReKi
-      m%ADRotorDisk(k)%RemapFlag = .true.
-   
-      call transfer_line2_to_line2(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2, m%TempDisp(k), m%ADRotorDisk(k))
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
-   end do
+      
+      ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
+      ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
+      
+         ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
+         ! the nacelle-yaw error is undefined
+      if ( EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(1), 0.0_ReKi) .and. EqualRealNos(m%Turbine%AD%m%rotors(1)%V_DiskAvg(2), 0.0_ReKi) ) then
+         call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor-disk-averaged relative wind speed "// &
+                           "is directed vertically", ErrStat,ErrMsg,RoutineName) 
+      elseif ( EqualRealNos(y%xHat_Disk(1), 0.0_ReKi) .and. EqualRealNos(y%xHat_Disk(2), 0.0_ReKi) ) then
+         call SetErrStat(ErrID_Fatal,"Nacelle-yaw error is undefined because the rotor centerline "// &
+                           "is directed vertically", ErrStat,ErrMsg,RoutineName) 
+      else
+         vy = m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(1) - m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(2) 
+         vx = m%Turbine%AD%m%rotors(1)%V_DiskAvg(1) * y%xHat_Disk(1) + m%Turbine%AD%m%rotors(1)%V_DiskAvg(2) * y%xHat_Disk(2) 
          
-   if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
-      y%AzimAvg_Ct = 0.0_ReKi
-   else
-      y%AzimAvg_Ct(1) = 0.0_ReKi
+         y%YawErr = atan2(vy, vx)
+      end if
       
-      do j=2,p%nr
          
-         num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk)
-            num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
+      ! Center position of hub, m
+      p0 = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Position(:,1) + m%Turbine%AD%Input(1)%rotors(1)%HubMotion%TranslationDisp(:,1) 
+      y%p_hub = p%p_ref_Turbine + p0     
+      
+      ! Rotor diameter, m
+      y%D_rotor = 2.0_ReKi * maxval(m%Turbine%AD%m%rotors(1)%BEMT_u(indx)%rLocal) ! BEMT_u(indx) is calculated on inputs that were passed INTO AD_CalcOutput; Input(1) is calculated from values passed out of ED_CalcOutput AFTER AD_CalcOutput
+ 
+      if ( y%D_rotor > p%r(p%nr) ) then
+         call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
+      end if
+      
+      ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+      y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
+      
+      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
+      theta = 0.0_ReKi
+      do k=1,size(m%ADRotorDisk)
+               
+         m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
+         m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
+        !m%TempDisp(k)%TranslationDisp = 0.0_R8Ki
+         m%TempLoads(k)%Force         = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Force
+         m%TempLoads(k)%Moment        = m%Turbine%AD%y%rotors(1)%BladeLoad(k)%Moment
+         
+         theta(1) = m%Turbine%AD%m%rotors(1)%hub_theta_x_root(k)
+         orientation = EulerConstruct( theta )
+         m%ADRotorDisk(k)%RefOrientation(:,:,1) = matmul(orientation, m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(:,:,1) )
+         do j=1,p%nr
+            m%ADRotorDisk(k)%RefOrientation(:,:,j) = m%ADRotorDisk(k)%RefOrientation(:,:,1)
+            m%ADRotorDisk(k)%Position(:,j) = p0 + p%r(j)*m%ADRotorDisk(k)%RefOrientation(3,:,1)
          end do
-         
-         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
-            
-         y%AzimAvg_Ct(j) = num / denom
+        !m%ADRotorDisk(k)%TranslationDisp = 0.0_ReKi
+         m%ADRotorDisk(k)%RemapFlag = .true.
+      
+         call transfer_line2_to_line2(m%TempLoads(k), m%ADRotorDisk(k), m%AD_L2L(k), ErrStat2, ErrMsg2, m%TempDisp(k), m%ADRotorDisk(k))
+            call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
       end do
+            
+      if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+         y%AzimAvg_Ct = 0.0_ReKi
+      else
+         y%AzimAvg_Ct(1) = 0.0_ReKi
          
-   end if  
+         do j=2,p%nr
+            
+            num = 0.0_ReKi
+            do k=1,size(m%ADRotorDisk)
+               num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
+            end do
+            
+            denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
+               
+            y%AzimAvg_Ct(j) = num / denom
+         end do
+            
+      end if  
+
+   elseif (m%Turbine%p_FAST%CompAero == MODULE_ADsk) then
+      ! ....... outputs from AeroDisk ...............
+     ! Orientation of rotor centerline, normal to disk:
+     y%xHat_Disk = m%Turbine%ADsk%Input(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
+
+     ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
+     ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
+     ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
+     ! the nacelle-yaw error is undefined (this is handled inside of AeroDisk)
+     y%YawErr = m%Turbine%ADsk%y%YawErr
+
+     ! Center position of hub, m
+     p0 = m%Turbine%ADsk%Input(1)%HubMotion%Position(:,1) + m%Turbine%ADsk%Input(1)%HubMotion%TranslationDisp(:,1) 
+     y%p_hub = p%p_ref_Turbine + p0     
+
+     ! Rotor diameter, m
+     y%D_rotor = m%Turbine%ADsk%p%RotorRad
+
+     if ( y%D_rotor > p%r(p%nr) ) then
+        call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
+     end if
+
+     ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+     y%DiskAvg_Vx_Rel = m%Turbine%ADsk%y%VRel
+
+      ! Thrust coefficients
+      if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+         y%AzimAvg_Ct = 0.0_ReKi
+      else
+         y%AzimAvg_Ct(1) = 0.0_ReKi
+         y%AzimAvg_Ct(2:p%nr) = m%Turbine%ADsk%y%Ct
+      endif
+
+!FIXME: Uncomment this for the curled wake!!!!
+      !! Torque coefficients
+      !if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
+      !   y%AzimAvg_Cq = 0.0_ReKi
+      !else
+      !   y%AzimAvg_Cq(1) = 0.0_ReKi
+      !   do j=2,p%nr
+      !      y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * p%r(p%nr) / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
+      !   enddo
+      !endif
+
+!FIXME: Uncomment this for the curled wake!!!!
+      !! Skew angles
+      !y%psi_skew = m%Turbine%ADsk%y%PsiSkew
+      !y%chi_skew = m%Turbine%ADsk%y%ChiSkew
+
+   endif
       
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
