@@ -1187,7 +1187,7 @@ subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, si
      
    ! Compute the Ct
    ! Add another cosine term to project the vortices
-   Gamma0 = -R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
+   Gamma0 =  R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
 
    ! Loop through all the points
    do ir = 2, nVortex-1

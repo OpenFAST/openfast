@@ -692,8 +692,8 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    endif
    zHat_Disk = zSkew
 
-   tmp_sz_y =            dot_product(zHat_Disk,yHat_plane)
-   tmp_sz_z = -1.0_ReKi* dot_product(zHat_Disk,zHat_plane)
+   tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
+   tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
    if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
       y%psi_skew = 0.0_ReKi
    else
