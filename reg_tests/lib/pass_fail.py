@@ -71,8 +71,12 @@ def calculate_max_norm(testData, baselineData):
 def calculateNorms(test_data, baseline_data):
     if test_data.size != baseline_data.size:
        # print("Calculate Norms size(testdata)={}".format(test_data.size)) 
-       # print("Calculate Norms size(baseline)={}".format(baseline_data.size)) 
-       results = np.nan * test_data
+       # print("Calculate Norms size(baseline)={}".format(baseline_data.size))
+       relative_norm = calculate_max_norm_over_range(test_data, test_data)
+       results = np.nan * np.hstack((
+           relative_norm.reshape(-1, 1), relative_norm.reshape(-1, 1),
+           relative_norm.reshape(-1, 1)
+       ))
     else:
        relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
        max_norm = calculate_max_norm(test_data, baseline_data)
