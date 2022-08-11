@@ -1241,13 +1241,13 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
          ! Local variables
       INTEGER                                            :: I, iWAMIT       ! Generic loop counters
-!      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-      TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       INTEGER                                            :: nTime           ! number of inputs 
 
       TYPE(WAMIT_InputType), ALLOCATABLE                 :: Inputs_WAMIT(:)  
+      TYPE(Morison_InputType), ALLOCATABLE               :: Inputs_Morison(:)  
+      TYPE(Morison_InputType)                            :: u_Morison
       CHARACTER(*), PARAMETER                            :: RoutineName = 'HydroDyn_UpdateStates'
       
           ! Create dummy variables required by framework but which are not used by the module
@@ -1262,83 +1262,111 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
+      nTime = size(Inputs)
 
-      IF (INPUTS(2)%Morison%Mesh%Committed) THEN
-         ! Update the discrete states of Morison - The state of the high-pass velocity filter
-         CALL Morison_UpdateDiscState( t, INPUTS(2)%Morison, p%Morison, x%Morison, xd%Morison, &
-                                z%Morison, OtherState%Morison, m%Morison, ErrStat2, ErrMsg2 )
+      IF (INPUTS(1)%Morison%Mesh%Committed) THEN
+      
+         ALLOCATE( Inputs_Morison(nTime), STAT = ErrStat2 )
+         IF (ErrStat2 /=0) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_Morison.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
+         
+         DO i=1,nTime
+            CALL Morison_CopyInput(Inputs(i)%Morison, Inputs_Morison(i), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END DO
+         CALL Morison_CopyInput(Inputs(1)%Morison, u_Morison, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+         CALL Morison_Input_ExtrapInterp(Inputs_Morison, InputTimes, u_Morison, t, ErrStat2, ErrMsg2) ! get inputs at time t
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+         IF (ErrStat < AbortErrLev) THEN
+            ! Update the discrete states of Morison - The state of the high-pass velocity filter
+            CALL Morison_UpdateDiscState( t, u_Morison, p%Morison, x%Morison, xd%Morison, &
+                                   z%Morison, OtherState%Morison, m%Morison, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END IF
+            
+         call Morison_DestroyInput(u_Morison, ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+         do i=1,size(Inputs_Morison)
+            call Morison_DestroyInput(Inputs_Morison(i), ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         end do
+         deallocate(Inputs_Morison)
+            
       END IF
          
          ! Return without doing any work if the we are not using a potential flow model
-      IF ( p%PotMod == 0  ) RETURN
-      
-      ! Return without doing any work if the input mesh is not initialized (NOT USING WAMIT)
-      !IF ( .NOT. Inputs(1)%WAMIT%Mesh%Initialized  ) RETURN
-      
-      nTime = size(Inputs)   
-      
-      
-         ! Allocate array of WAMIT inputs
-         
-!FIXME: Error handling appears to be broken here
-
-   IF ( p%PotMod == 1 ) THEN
-       
-      ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat2 )
-      IF (ErrStat2 /=0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_WAMIT.', ErrStat, ErrMsg, RoutineName )
+      IF ( p%PotMod == 0  ) THEN
          RETURN
-      END IF
+      ELSEIF ( p%PotMod == 1 ) THEN
+       
+         ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat2 )
+         IF (ErrStat2 /=0) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_WAMIT.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
 
-      if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-         ! For this NBodyMod or NBody=1, there is only one WAMIT object, so copy the necessary inputs and then call WAMIT_UpdateStates
-         do I=1,nTime
-               ! Copy the inputs from the HD mesh into the WAMIT mesh         
-            call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-         end do
-         
-         if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
-               ! Update the WAMIT module states
-      
-            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-
-         end if
-         
-      else
-         
-         ! We have multiple WAMIT objects
-
-            ! Loop over number of inputs and copy them into an array of WAMIT inputs
-         do iWAMIT = 1, p%nWAMITObj
-            
+         if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+            ! For this NBodyMod or NBody=1, there is only one WAMIT object, so copy the necessary inputs and then call WAMIT_UpdateStates
             do I=1,nTime
-                  ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
-               call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-                  ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
-               Inputs_WAMIT(I)%Mesh%TranslationDisp(:,1)  = Inputs(I)%WAMITMesh%TranslationDisp(:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%Orientation    (:,:,1)= Inputs(I)%WAMITMesh%Orientation    (:,:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%TranslationVel (:,1)  = Inputs(I)%WAMITMesh%TranslationVel (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%RotationVel    (:,1)  = Inputs(I)%WAMITMesh%RotationVel    (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%TranslationAcc (:,1)  = Inputs(I)%WAMITMesh%TranslationAcc (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%RotationAcc    (:,1)  = Inputs(I)%WAMITMesh%RotationAcc    (:,iWAMIT)               
+                  ! Copy the inputs from the HD mesh into the WAMIT mesh         
+               call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
             end do
+         
+            if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
+                  ! Update the WAMIT module states
+      
+               call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+
+            end if
+         
+         else
+         
+            ! We have multiple WAMIT objects
+
+               ! Loop over number of inputs and copy them into an array of WAMIT inputs
+            do iWAMIT = 1, p%nWAMITObj
             
-               ! UpdateStates for the iWAMIT-th body
-            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+               do I=1,nTime
+                     ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
+                  call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               end do
                if (ErrStat > AbortErrLev) exit
                
-         end do
+               do I=1,nTime
+                     ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+                  Inputs_WAMIT(I)%Mesh%TranslationDisp(:,1)  = Inputs(I)%WAMITMesh%TranslationDisp(:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%Orientation    (:,:,1)= Inputs(I)%WAMITMesh%Orientation    (:,:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%TranslationVel (:,1)  = Inputs(I)%WAMITMesh%TranslationVel (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%RotationVel    (:,1)  = Inputs(I)%WAMITMesh%RotationVel    (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%TranslationAcc (:,1)  = Inputs(I)%WAMITMesh%TranslationAcc (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%RotationAcc    (:,1)  = Inputs(I)%WAMITMesh%RotationAcc    (:,iWAMIT)               
+               end do
+            
+                  ! UpdateStates for the iWAMIT-th body
+               call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+                  if (ErrStat > AbortErrLev) exit
+               
+            end do
          
-      end if
+         end if
        
-         ! deallocate temporary inputs
-      do I=1,nTime
-         call WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-      end do
+            ! deallocate temporary inputs
+         do I=1,nTime
+            call WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         end do
       
-      deallocate(Inputs_WAMIT)
+         deallocate(Inputs_WAMIT)
 
 #ifdef USE_FIT      
    ELSE IF ( p%PotMod == 2 ) THEN  ! FIT
@@ -1385,6 +1413,28 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
    END IF
    
+   !CALL Cleanup()
+   
+contains
+   subroutine Cleanup()
+   
+      if (allocated(Inputs_Morison)) then
+         do i=1,size(Inputs_Morison)
+            call Morison_DestroyInput(Inputs_Morison(i), ErrStat2, ErrMsg2)
+         end do
+         deallocate(Inputs_Morison)
+      end if
+      call Morison_DestroyInput(u_Morison, ErrStat2, ErrMsg2)
+      
+   
+      if (allocated(Inputs_WAMIT)) then
+         do i=1,size(Inputs_WAMIT)
+            call Wamit_DestroyInput(Inputs_WAMIT(i), ErrStat2, ErrMsg2)
+         end do
+         deallocate(Inputs_WAMIT)
+      end if
+      
+   end subroutine Cleanup
       
 END SUBROUTINE HydroDyn_UpdateStates
 
