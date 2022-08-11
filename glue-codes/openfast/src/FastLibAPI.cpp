@@ -56,7 +56,7 @@ void FastLibAPI::fast_init() {
         &t_max,
         &_error_status,
         _error_message,
-        channel_names
+        output_channel_names
     );
     if (fatal_error(_error_status)) {
         throw std::runtime_error( "Error " + std::to_string(_error_status) + ": " + _error_message );

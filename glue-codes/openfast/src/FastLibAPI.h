@@ -19,7 +19,7 @@ class FastLibAPI {
         int abort_error_level;
         bool end_early;
         int num_outs;
-        char channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
+        char output_channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
         bool ended;
 
         // The inputs are meant to be from Simulink.
