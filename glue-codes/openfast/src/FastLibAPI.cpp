@@ -1,6 +1,7 @@
 
 #include "FastLibAPI.h"
 #include <string>
+#include <sstream>
 #include <stdlib.h>
 #include <iostream>
 #include <math.h>
@@ -34,6 +35,7 @@ bool FastLibAPI::fatal_error(int error_status) {
 void FastLibAPI::fast_init() {
     int _error_status = 0;
     char _error_message[INTERFACE_STRING_LENGTH];
+    char channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
 
     std::cout << input_file_name;
 
@@ -56,7 +58,7 @@ void FastLibAPI::fast_init() {
         &t_max,
         &_error_status,
         _error_message,
-        output_channel_names
+        channel_names
     );
     if (fatal_error(_error_status)) {
         throw std::runtime_error( "Error " + std::to_string(_error_status) + ": " + _error_message );
@@ -64,6 +66,15 @@ void FastLibAPI::fast_init() {
 
     // Allocate the data for the outputs
     output_values.resize(total_output_steps(), std::vector<double>(num_outs, 0));
+
+    // Get output channel names
+    std::istringstream ss(channel_names);
+    std::string channel_name;
+    output_channel_names.clear();
+    while (ss >> channel_name) 
+    {
+        output_channel_names.push_back(channel_name);
+    }
 }
 
 void FastLibAPI::fast_sim() {

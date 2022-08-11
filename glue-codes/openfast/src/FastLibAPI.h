@@ -19,7 +19,6 @@ class FastLibAPI {
         int abort_error_level;
         bool end_early;
         int num_outs;
-        char output_channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
         bool ended;
 
         // The inputs are meant to be from Simulink.
@@ -48,7 +47,7 @@ class FastLibAPI {
         void fast_run();
         int total_time_steps();
         int total_output_steps();
-        std::string output_channel_names();
+        std::vector<std::string> output_channel_names;
         void get_hub_position(float *absolute_position, float *rotational_velocity, double *orientation_dcm);
 };
 
