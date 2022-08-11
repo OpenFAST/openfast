@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -90,7 +90,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -132,7 +132,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
       - name: Setup workspace
@@ -182,7 +182,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Build OpenFAST C-Interfaces
@@ -218,7 +218,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Build OpenFAST glue-code
@@ -287,7 +287,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Run AeroDyn tests
@@ -332,7 +332,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -387,7 +387,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Run Interface / API tests
@@ -424,7 +424,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -471,7 +471,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -515,7 +515,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -559,7 +559,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -603,7 +603,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -647,7 +647,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh jinja2==3.0
+          pip install numpy Bokeh==1.4 jinja2==3.0
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -691,7 +691,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
@@ -735,7 +735,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh
+          pip install numpy Bokeh==1.4
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
