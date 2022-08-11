@@ -37,7 +37,7 @@ class FastLibAPI(CDLL):
         self.abort_error_level = c_int(4)  # Initialize to 4 (ErrID_Fatal) and reset to user-given value in FAST_Sizes
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
-        self.channel_names = []
+        self.output_channel_names = []
         self.ended = False
 
         # The inputs are meant to be from Simulink.
@@ -161,9 +161,9 @@ class FastLibAPI(CDLL):
 
         # Extract channel name strings from argument
         if len(channel_names.value.split()) == 0:
-            self.channel_names = []
+            self.output_channel_names = []
         else:
-            self.channel_names = [n.decode('UTF-8') for n in channel_names.value.split()] 
+            self.output_channel_names = [n.decode('UTF-8') for n in channel_names.value.split()] 
 
         # Allocate the data for the outputs
         self.output_values = np.zeros( (self.total_output_steps, self.num_outs.value), dtype=c_double, order='C' )
