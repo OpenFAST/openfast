@@ -243,14 +243,16 @@ PROGRAM HydroDynDriver
       ! --- Creating useful EDRPtMesh
 
       call Eye(dcm, ErrStat, ErrMsg );            CALL CheckError()
-      call CreatePointMesh(mappingData%EDRPtMesh,       (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true.,  HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreatePointMesh(mappingData%EDRPt_Loads,     (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
+      call CreatePointMesh(mappingData%EDRPt_Motion,    (/0.0_ReKi, 0.0_ReKi, drvrData%PtfmRefzt/), dcm, HasMotion=.true., HasLoads=.false.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
       call CreatePointMesh(mappingData%ZZZPtMeshMotion, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.true.,  HasLoads=.false., ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
       call CreatePointMesh(mappingData%ZZZPtMeshLoads , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi          /), dcm, HasMotion=.false., HasLoads=.true.,  ErrStat=ErrStat, ErrMsg=ErrMsg );            CALL CheckError()
 
-      CALL MeshMapCreate( u(1)%PRPMesh,          mappingData%EDRPtMesh,      mappingData%HD_Ref_2_ED_Ref,       ErrStat, ErrMsg );    CALL CheckError()
-      CALL MeshMapCreate( mappingData%EDRPtMesh, u(1)%PRPMesh,               mappingData%ED_Ref_2_HD_Ref,       ErrStat, ErrMsg );    CALL CheckError()
-      CALL MeshMapCreate( m%AllHdroOrigin,       mappingData%EDRPtMesh,      mappingData%HD_RefLoads_2_ED_Ref,  ErrStat, ErrMsg );    CALL CheckError()
-      CALL MeshMapCreate( m%AllHdroOrigin,       mappingData%ZZZPtMeshLoads, mappingData%HD_RefLoads_2_ZZZLoads,ErrStat, ErrMsg );    CALL CheckError()
+      CALL MeshMapCreate( u(1)%PRPMesh,             mappingData%EDRPt_Motion,   mappingData%HD_Ref_2_ED_Ref,       ErrStat, ErrMsg );    CALL CheckError()
+      CALL MeshMapCreate( mappingData%EDRPt_Motion, u(1)%PRPMesh,               mappingData%ED_Ref_2_HD_Ref,       ErrStat, ErrMsg );    CALL CheckError()
+      
+      CALL MeshMapCreate( m%AllHdroOrigin,          mappingData%EDRPt_Loads,    mappingData%HD_RefLoads_2_ED_Ref,  ErrStat, ErrMsg );    CALL CheckError()
+      CALL MeshMapCreate( m%AllHdroOrigin,          mappingData%ZZZPtMeshLoads, mappingData%HD_RefLoads_2_ZZZLoads,ErrStat, ErrMsg );    CALL CheckError()
 
    endif
 
@@ -275,8 +277,13 @@ PROGRAM HydroDynDriver
       
      
       if (n==1 .and. drvrData%Linearize) then
+         ! we set u(1)%PRPMesh motions, so we should assume that EDRP changed similarly: 
+         call Transfer_Point_to_Point( u(1)%PRPMesh, mappingData%EDRPt_Motion, mappingData%HD_Ref_2_ED_Ref, ErrStat, ErrMsg);  CALL CheckError()
+         
+         !call MeshPrintInfo ( 21, mappingData%EDRPt_Motion)
+         !call MeshPrintInfo ( 22, u(1)%PRPMesh)
+      
          call Linearization(Time, u(1), p, x, xd, z, OtherState, y, m, .true.,  mappingData, ErrStat, ErrMsg);  CALL CheckError()
-         call WrScr('')
          call Linearization(Time, u(1), p, x, xd, z, OtherState, y, m, .false., mappingData, ErrStat, ErrMsg);  CALL CheckError()
       end if
       
@@ -433,7 +440,9 @@ subroutine HD_DvrEnd()
       CALL MeshMapDestroy( mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          
-      CALL MeshDestroy( mappingData%EDRPtMesh, ErrStat2, ErrMsg2 )
+      CALL MeshDestroy( mappingData%EDRPt_Motion, ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      CALL MeshDestroy( mappingData%EDRPt_Loads, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       CALL MeshDestroy( mappingData%ZZZPtMeshMotion, ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
