@@ -949,7 +949,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    if ( InputFileData%Waves%NWaveElev < 0 ) then
 
-      call SetErrStat( ErrID_Fatal,'NWaveElev must not be negative.',ErrStat,ErrMsg,RoutineName)
+      call SetErrStat( ErrID_Fatal,'NWaveElev ('//trim(num2lstr(InputFileData%Waves%NWaveElev))//') must not be negative.',ErrStat,ErrMsg,RoutineName)
       return
 
    end if

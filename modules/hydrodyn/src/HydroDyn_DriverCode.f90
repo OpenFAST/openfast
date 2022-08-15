@@ -450,9 +450,7 @@ subroutine HD_DvrEnd()
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    
       if ( ErrStat /= ErrID_None ) then
-         CALL WrScr(NewLine//NewLine//'Error status and messages after execution:'// &
-                              NewLine//'           ErrStat: '//TRIM(Num2LStr(ErrStat))// &
-                              NewLine//'   ErrMsg returned: '//TRIM(ErrMsg)//NewLine)
+         CALL WrScr(NewLine//NewLine//'Error status after execution:'//TRIM(Num2LStr(ErrStat))//NewLine//TRIM(ErrMsg)//NewLine)
                               
          if (ErrStat >= AbortErrLev) then
             if ( time < 0.0 ) then
@@ -463,7 +461,7 @@ subroutine HD_DvrEnd()
                ErrMsg = 'at simulation time '//trim(Num2LStr(time))//' of '//trim(Num2LStr(drvrData%TMax))//' seconds'
             end if
                     
-            CALL ProgAbort( 'HydroDyn encountered an error '//trim(errMsg)//'.'// &
+            CALL ProgAbort( 'HydroDyn Driver encountered an error '//trim(errMsg)//'.'// &
                      NewLine//' Simulation error level: '//trim(GetErrStr(errStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
          end if
       end if
