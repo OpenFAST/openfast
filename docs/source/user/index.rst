@@ -24,7 +24,7 @@ General
 
 Workshop material, legacy documentation, and other resources are listed below.
 
-- :download:`Overview of OpenFAST at NAWEA WindTech 2019 <../../OtherSupporting/OpenFAST_Overview_NAWEAWindTech2019.pdf>`
+- `Overview of OpenFAST at NAWEA WindTech 2019 <https://drive.google.com/file/d/1wagMTOV_CLxSKzS2EEPFp2CExUo3JLpQ/view?usp=sharing>`_
 - `Workshop Presentations <https://drive.google.com/drive/folders/1BDDfcnIyvmZCwf7eFo0ISI7aF_FMAOvt?usp=sharing>`_
 - :download:`Old FAST v6 User's Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
 - :download:`FAST v8 README <../../OtherSupporting/FAST8_README.pdf>`

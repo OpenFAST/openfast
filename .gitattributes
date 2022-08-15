@@ -2,4 +2,3 @@
 CreateGitVersion.bat ident export-subst
 # Declare files that will always have CRLF line endings on checkout.
 *.bat text eol=crlf
-docs/OtherSupporting/OpenFAST_Overview_NAWEAWindTech2019.pdf filter=lfs diff=lfs merge=lfs -text
