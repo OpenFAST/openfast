@@ -24,13 +24,15 @@ from numpy import linalg as LA
 from fast_io import load_output
 import rtestlib as rtl
 
+NUMEPS = 1e-6
+
 def readFASTOut(fastoutput):
     try:
         return load_output(fastoutput)
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def passing_channels(test, baseline) -> np.ndarray:
+def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarray:
     """
     test, baseline: arrays containing the results from OpenFAST in the following format
         [
@@ -39,23 +41,19 @@ def passing_channels(test, baseline) -> np.ndarray:
         ]
     So that test[0,:] are the data for the 0th channel and test[:,0] are the 0th entry in each channel.
     """
-    ATOL_MAGNITUDE = 3
-    RTOL_MAGNITUDE = 2
-    NUMEPS = 1e-6
-
-    # TODO: Add a minimum atol at 1e-10 or 1e-12
-
     n_channels = np.shape(test)[0]
     where_close = np.zeros_like(test, dtype=bool)
-    baseline_offset = baseline - np.min(baseline) + NUMEPS
-    b_order_of_magnitude = np.floor( np.log10( baseline_offset ) )
+    baseline_offset = baseline - np.min(baseline)
+    b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
 
+    rtol = 10**(-1 * RTOL_MAGNITUDE)
     for i in range(n_channels):
-        rtol = 10**(-1 * RTOL_MAGNITUDE)
-        atol = 10**( b_order_of_magnitude[i] - ATOL_MAGNITUDE )  # This is an array the same size as the current channel
+        # atol = 10**(-1 * ATOL_MAGNITUDE)
+        # atol = max( atol, 1e-6 )
+        # atol[atol < ATOL_MIN] = ATOL_MIN
+        atol = 10**( ( max(b_order_of_magnitude[i]) - ATOL_MAGNITUDE) )
         where_close[i] = np.isclose( test[i], baseline[i], atol=atol, rtol=rtol )
 
-    # where_close = np.isclose( test, baseline, atol=atol, rtol=rtol )
     where_not_nan = ~np.isnan(test)
     where_not_inf = ~np.isinf(test)
 

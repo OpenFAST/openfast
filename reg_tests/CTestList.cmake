@@ -61,7 +61,8 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${EXECUTABLE}
        ${SOURCE_DIRECTORY}              # openfast source directory
        ${BUILD_DIRECTORY}               # build directory for test
-       ${TOLERANCE}
+       ${CTEST_RTEST_RTOL}
+       ${CTEST_RTEST_ATOL}
        ${PLOT_FLAG}                     # empty or "-p"
        ${RUN_VERBOSE_FLAG}              # empty or "-v"
        ${NO_RUN_FLAG}                   # empty or "-n"

@@ -47,7 +47,8 @@ parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="Th
 parser.add_argument("executable", metavar="SubDyn-Driver", type=str, nargs=1, help="The path to the SubDyn driver executable.")
 parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
 parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
-parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
+parser.add_argument("rtol", metavar="Relative-Tolerance", type=float, nargs=1, help="Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.")
+parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, help="Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.")
 parser.add_argument("-p", "-plot", dest="plot",  action='store_true', default=False, help="bool to include matplotlib plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec",  action='store_true', default=False, help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose",  action='store_true', default=False, help="bool to include verbose system output")
@@ -58,7 +59,8 @@ caseName = args.caseName[0]
 executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
-tolerance = args.tolerance[0]
+rtol = args.rtol[0]
+atol = args.atol[0]
 plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
@@ -110,7 +112,7 @@ rtl.validateFileOrExit(baselineOutFile)
 testData, testInfo, _ = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
-passing_channels = pass_fail.passing_channels(testData.T, baselineData.T)
+passing_channels = pass_fail.passing_channels(testData.T, baselineData.T, rtol, atol)
 passing_channels = passing_channels.T
 
 norms = pass_fail.calculateNorms(testData, baselineData)
@@ -128,7 +130,7 @@ if plotError:
     from errorPlotting import finalizePlotDirectory, plotOpenfastError
     for channel in testInfo["attribute_names"]:
         try:
-            plotOpenfastError(localOutFile, baselineOutFile, channel)
+            plotOpenfastError(localOutFile, baselineOutFile, channel, rtol, atol)
         except:
             error = sys.exc_info()[1]
             print("Error generating plots: {}".format(error))

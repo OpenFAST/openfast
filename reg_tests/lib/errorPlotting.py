@@ -30,6 +30,8 @@ import numpy as np
 import rtestlib as rtl
 from fast_io import load_output
 
+NUMEPS = 1e-6
+
 def _validateAndExpandInputs(argv):
     rtl.validateInputOrExit(argv, 3, "solution1 solution2 attribute")
     testSolution = argv[0]
@@ -46,37 +48,35 @@ def _parseSolution(solution):
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
+def _plotError(time, test, baseline, xlabel, title1, title2, RTOL_MAGNITUDE, ATOL_MAGNITUDE):
     from bokeh.embed import components
     from bokeh.layouts import gridplot
     from bokeh.plotting import figure
     from bokeh.models.tools import HoverTool
 
+    # Plot the baseline and test channels
     p1 = figure(title=title1)
     p1.title.align = 'center'
     p1.grid.grid_line_alpha=0.3
     p1.xaxis.axis_label = 'Time (s)'
-    p1.line(xseries, y2series, color='green', line_width=3, legend_label='Baseline')
-    p1.line(xseries, y1series, color='red', line_width=1, legend_label='Local')
+    p1.line(time, baseline, color='green', line_width=3, legend_label='Baseline')
+    p1.line(time, test, color='red', line_width=1, legend_label='Local')
     p1.add_tools(HoverTool(tooltips=[('Time','@x'), ('Value', '@y')],mode='vline'))
 
+    # Plot the error and threshold
     p2 = figure(title=title2, x_range=p1.x_range)
     p2.title.align = 'center'
     p2.grid.grid_line_alpha = 0
     p2.xaxis.axis_label = 'Time (s)'
-    p2.line(xseries, abs(y2series - y1series), color='blue')
+    p2.line(time, abs(baseline - test), color='blue')
 
-    ATOL_MAGNITUDE = 2
-    RTOL_MAGNITUDE = 2
-    NUMEPS = 1e-6
-
-    baseline_offset = y2series - np.min(y2series) + NUMEPS
+    # Calculate the threshold
+    baseline_offset = baseline - np.min(baseline)
+    b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
     rtol = 10**(-1 * RTOL_MAGNITUDE)
-    b_order_of_magnitude = np.floor( np.log10( baseline_offset ) )
-    atol = 10**( b_order_of_magnitude - ATOL_MAGNITUDE )
-
-    passfail_line = atol + rtol * abs(y2series)
-    p2.line(xseries, passfail_line, color='red')
+    atol = 10**( ( max(b_order_of_magnitude) - ATOL_MAGNITUDE) )
+    passfail_line = atol + rtol * abs(baseline)
+    p2.line(time, passfail_line, color='red')
     # p2.cross(xseries, passfail_line)
 
     p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
@@ -118,7 +118,7 @@ def _save_plot(script, div, path, attribute):
         div = div.replace("<div", " ".join(("<div", style)))
         f.write(div)
 
-def plotOpenfastError(testSolution, baselineSolution, attribute):
+def plotOpenfastError(testSolution, baselineSolution, attribute, RTOL_MAGNITUDE, ATOL_MAGNITUDE):
     testSolution, baselineSolution, attribute = _validateAndExpandInputs([
         testSolution, baselineSolution, attribute
     ])
@@ -137,7 +137,7 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     timevec = dict1[:, 0]
     y1series = np.array(dict1[:, channel], dtype = np.float)
     y2series = np.array(dict2[:, channel], dtype = np.float)
-    script, div = _plotError(timevec, y1series, y2series, xlabel, title1, title2)
+    script, div = _plotError(timevec, y1series, y2series, xlabel, title1, title2, RTOL_MAGNITUDE, ATOL_MAGNITUDE)
 
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")

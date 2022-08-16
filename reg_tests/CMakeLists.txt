@@ -74,12 +74,8 @@ if(NOT EXISTS ${PYTHON_EXECUTABLE})
 endif()
 
 # Set the testing tolerance
-set(CTEST_REGRESSION_TOL "0.00001" CACHE STRING "Set the tolerance for the regression test. Leave empty to automatically set.")
-if(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
-  set(TOLERANCE ${CTEST_REGRESSION_TOL})
-else(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
-  set(TOLERANCE 0.00001)
-endif()
+set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
+set(CTEST_RTEST_ATOL "1.9" CACHE STRING "Set the absolute orders of magnitude to consider as testable values; any deviations smaller than this always pass.")
 
 # include the r-test cmake projects (servodyn controllers)
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
