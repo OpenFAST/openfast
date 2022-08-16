@@ -960,6 +960,19 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
       !call MeshPrintInfo (CU, u%PRPMesh)
    endif
 
+   
+      ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
+   IF ( u%WAMITMesh%Initialized ) THEN 
+      CALL Transfer_Point_to_Point( u%PRPMesh, u%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END IF
+      
+      ! Map PRP kinematics to the Morison mesh
+   if ( u%Morison%Mesh%Initialized ) then
+      CALL Transfer_Point_to_Point( u%PRPMesh, u%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end if
+   
 END SUBROUTINE PRP_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Calculate the partial derivative of the output functions (Y) with respect to the inputs (u)
@@ -1068,7 +1081,7 @@ SUBROUTINE Linearization(t, u, p, x, xd, z, OtherState, y, m, Motion_HDRP, mappi
    integer                                                   :: i,j
    character(40)                                             :: sMotion
    CHARACTER(13)                                             :: sTime
-   character(*), parameter                                   :: Fmt = 'F18.7'
+   character(*), parameter                                   :: Fmt = 'F18.5'
 
    
    ErrStat = ErrID_None

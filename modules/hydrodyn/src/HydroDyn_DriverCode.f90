@@ -259,10 +259,10 @@ PROGRAM HydroDynDriver
    !...............................................................................................................................
    ! Routines called in loose coupling -- the glue code may implement this in various ways
    !...............................................................................................................................
-   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, time, drvrData%TMax )
+   Time = 0.0
+   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, Time, drvrData%TMax )
 
    ! loop through time steps
-   Time = 0.0
    maxAngle = 0.0
    mappingData%Ind = 1 ! initialize
 
