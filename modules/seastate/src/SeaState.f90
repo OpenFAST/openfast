@@ -1267,7 +1267,7 @@ SUBROUTINE SeaSt_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
             
-         ! Write the SeaState-level output file data if the user requested module-level output
+         ! Write the SeaState-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
          
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN  !Note: this will always output a line, even if we're ending early (e.g. if HD doesn't initialize properly, this will write a line of zeros to the output file.)
@@ -1398,8 +1398,20 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       ! These Outputs are only used for generated user-requested output channel results.
       ! If the user did not request any outputs, then we can simply return
-      if ( p%NumOuts > 0 ) then
+   if ( p%NumOuts > 0 ) then
          
+         ! Write the SeaState-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
+         ! and the current time has advanced since the last stored time step. Note that this must be done before filling y%WriteOutput
+         ! so that we don't get recent results. Also note that this may give strange results in the .SeaSt.out files of linearization simulations
+         ! because it assumes that the last call to SeaSt_CalcOutput was for a "normal" time step.
+           
+      IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN
+         CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+      m%LastOutTime   = Time  ! time associated with next WriteOutput calculations
+
+   
          !-------------------------------------------------------------------
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
@@ -1532,43 +1544,16 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          
       end do
       
-  
       
-         ! Write the SeaState-level output file data if the user requested module-level output
-         ! and the current time has advanced since the last stored time step.
-           
-      IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN    
-         CALL SeaStOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
-      END IF
-
          ! Map calculated results into the AllOuts Array
       CALL SeaStOut_MapOutputs( p, WaveElev, WaveElev1, WaveElev2, WaveVel, WaveAcc, WaveAccMCF, WaveDynP, AllOuts, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                  
       
       DO I = 1,p%NumOuts
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO    
+      END DO   
       
-      !   ! Aggregate the sub-module outputs 
-      !   
-      !IF ( p%OutSwtch > 0) THEN
-      !   
-      !   J = p%NumOuts + 1        
-      !   
-      !   IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
-      !      DO I=1, p%Waves2%NumOuts
-      !         y%WriteOutput(J) = y%Waves2%WriteOutput(I)
-      !         J = J + 1
-      !      END DO
-      !   END IF
-      !
-      !
-      !   
-      !END IF
-      
-      m%LastOutTime   = Time
-      end if
+   end if
       
 END SUBROUTINE SeaSt_CalcOutput
 
