@@ -630,18 +630,9 @@ SUBROUTINE SetHDInputs_Constant(u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationAcc(:,1)    = drvrData%uDotDotPRPInSteady(1:3)
       u_HD%PRPMesh%RotationAcc(:,1)       = drvrData%uDotDotPRPInSteady(4:6)
       
-         ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
-      IF ( u_HD%WAMITMesh%Initialized ) THEN 
-         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2 )
+      CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      END IF
-      
-         ! Map PRP kinematics to the Morison mesh
-      if ( u_HD%Morison%Mesh%Initialized ) then
-         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      end if
-      
+
    END IF
    
 END SUBROUTINE SetHDInputs_Constant
@@ -684,18 +675,9 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       u_HD%PRPMesh%TranslationAcc(:,1)    = yInterp(13:15)
       u_HD%PRPMesh%RotationAcc(:,1)       = yInterp(16:18)
             
-      IF ( u_HD%WAMITMesh%Initialized ) THEN
-            ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%WAMITMesh, mappingData%HD_Ref_2_WB_P, ErrStat2, ErrMsg2 )
+      CALL PRP_TransferToMotionInputs(u_HD, mappingData, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      END IF
-         
-      IF ( u_HD%Morison%Mesh%Initialized ) THEN
-            ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-         CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      END IF
-          
+   
    ELSEIF ( drvrData%PRPInputsMod < 0 ) THEN
       
       !@mhall: new kinematics input for moving bodies individually
@@ -775,6 +757,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       END DO
                
             
+       ! half of the PRP_TransferToMotionInputs routine:
       IF ( u_HD%Morison%Mesh%Initialized ) THEN
          ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
          CALL Transfer_Point_to_Point( u_HD%PRPMesh, u_HD%Morison%Mesh, mappingData%HD_Ref_2_M_P, ErrStat2, ErrMsg2 )
@@ -960,6 +943,25 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
       !call MeshPrintInfo (CU, u%PRPMesh)
    endif
 
+   CALL PRP_TransferToMotionInputs(u, mappingData, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+END SUBROUTINE PRP_Perturb_u
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE PRP_TransferToMotionInputs(u, mappingData, ErrStat, ErrMsg)
+   TYPE(HydroDyn_InputType), target    , INTENT(INOUT) :: u                      !< perturbed HD inputs
+   TYPE(HD_Drvr_MappingData),            INTENT(INOUT) :: mappingData
+   integer(IntKi)                      , intent(  out) :: errStat                ! Status of error message
+   character(*)                        , intent(  out) :: errMsg                 ! Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   INTEGER(IntKi)                                      :: ErrStat2     ! Status of error message
+   CHARACTER(ErrMsgLen)                                :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+   character(*), parameter                             :: RoutineName = 'PRP_TransferToMotionInputs'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
    
       ! Map PRP kinematics to the WAMIT mesh with 1 to NBody nodes
    IF ( u%WAMITMesh%Initialized ) THEN 
@@ -973,7 +975,7 @@ SUBROUTINE PRP_Perturb_u( n, perturb_sign, p, u, EDRPMotion, du, Motion_HDRP, ma
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end if
    
-END SUBROUTINE PRP_Perturb_u
+END SUBROUTINE PRP_TransferToMotionInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Calculate the partial derivative of the output functions (Y) with respect to the inputs (u)
 SUBROUTINE PRP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, dYdu, Motion_HDRP, mappingData, ErrStat, ErrMsg)
