@@ -1077,7 +1077,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpComplexArr.',     ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( WaveElevC         (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+      ALLOCATE ( WaveElevC         (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC.',         ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( WaveDynPC0        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
@@ -1168,46 +1168,46 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
 
-         ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
-         ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynP0BPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0Pz0.',      ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-         ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
 
          ALLOCATE ( InitOut%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
@@ -1221,22 +1221,22 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          
          IF (InitInp%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
          
-            ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-            ALLOCATE ( PWaveAccC0HyiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0HyiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
-            ALLOCATE ( PWaveAccC0VMCFPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0VMCFPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VMCFPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
-            ALLOCATE ( PWaveAcc0HxiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0HxiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiMCFPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-            ALLOCATE ( PWaveAcc0HyiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0HyiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiMCFPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
       
-            ALLOCATE ( PWaveAcc0VMCFPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElev), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0VMCFPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VMCFPz0.',     ErrStat,ErrMsg,'VariousWaves_Init')
          
             ALLOCATE ( InitOut%PWaveAccMCF0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
@@ -1925,9 +1925,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          !===================================
          IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
-            DO J = 1,InitInp%NWaveElev ! Loop through all points on the SWL
-               WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveElevxi(J)*CosWaveDir(I) + &
-                                                            InitInp%WaveElevyi(J)*SinWaveDir(I) ))
+            DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL
+               WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveElevGridxi(J)*CosWaveDir(I) + &
+                                                            InitInp%WaveElevGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
                PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
                PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
@@ -1985,11 +1985,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 !NOTE:  For all grid points
-      DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
+      DO k = 1,InitInp%NWaveElevGrid     ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(2) + 1
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevGridxi(k), InitInp%WaveElevGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -2050,7 +2050,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       !===================================
       IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
-         DO J = 1,InitInp%NWaveElev ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
+         DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
             ! FFT's of the partial derivatives
             CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:,J  ),         PWaveDynPC0BPz0(:,J  ), FFT_Data, ErrStatTmp )
             CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveDynP0BPz0.',   ErrStat,ErrMsg,'VariousWaves_Init')
@@ -2081,7 +2081,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
          
          IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
-            DO J = 1,InitInp%NWaveElev 
+            DO J = 1,InitInp%NWaveElevGrid
       
                CALL  ApplyFFT_cx (         PWaveAcc0HxiMCFPz0 (:,J  ),       PWaveAccC0HxiMCFPz0(:,J  ),FFT_Data, ErrStatTmp )
                CALL  SetErrStat(ErrStatTmp,'Error occured while applying the FFT to PWaveAcc0HxiMCFPz0.',  ErrStat,ErrMsg,'VariousWaves_Init')
@@ -2441,16 +2441,10 @@ END SUBROUTINE VariousWaves_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE Waves_Init( InitInp, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !NOTE: We are making this INOUT so that we can overwrite the WaveKinzi with zeros for wave stretching calculations
-      REAL(DbKi),                      INTENT(IN   )  :: Interval    !< Coupling interval in seconds: the rate that
-                                                                     !!   (1) Waves_UpdateStates() is called in loose coupling &
-                                                                     !!   (2) Waves_UpdateDiscState() is called in tight coupling.
-                                                                     !!   Input is the suggested time from the glue code;
-                                                                     !!   Output is the actual coupling interval that will be used
-                                                                     !!   by the glue code.
       TYPE(Waves_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None

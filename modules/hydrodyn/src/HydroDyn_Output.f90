@@ -1054,6 +1054,9 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
    
   IF (p%UnOutFile < 0 ) RETURN
   
@@ -1064,9 +1067,6 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
       ErrStat = ErrID_Warn
       ErrMsg  = ' Cannot write output to file because there are not a valid output list.'
       RETURN
-   ELSE
-      ErrStat = ErrID_None
-      ErrMsg  = ''
    END IF
    
    

@@ -280,14 +280,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       ! Now copy over things to parameters...
       !--------------------------------------------------------------------------------
 
-         ! Wave information we need to keep
-
-      p%NWaveElev    = InitInp%NWaveElev
-      p%NStepWave    = InitInp%NStepWave
-      p%NStepWave2   = InitInp%NStepWave2
-
-
-
          ! Difference QTF
       p%WvDiffQTFF            =  InitInp%WvDiffQTFF           ! Flag for calculation
 
@@ -399,7 +391,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
       ALLOCATE ( InitOut%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
-     ! ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
@@ -549,19 +540,18 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             !--------------------------------------------------------------------------------
             !> ## Calculate the surface elevation corrections ##
             !!
-            !! For each (x,y) coordinate that a wave elevation is requested at (both from the
-            !! (WaveElevxi,WaveElevyi) pairs, and the WaveElevXY pairs), a call is made to the
+            !! For each (x,y) coordinate that a wave elevation is requested at, a call is made to the
             !! subroutine waves2::waveelevtimeseriesatxy_diff to calculate the full time series for
             !! that point.  The results are added to the wave elevation results from the sum
             !! frequency calculations later in the code.
             !--------------------------------------------------------------------------------
 
             ! Step through the requested points
-         DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
+         DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
-            CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveElevGridxi(k), InitInp%WaveElevGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -913,19 +903,18 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          !--------------------------------------------------------------------------------
          !> ## Calculate the surface elevation corrections ##
          !!
-         !! For each (x,y) coordinate that a wave elevation is requested at (both from the
-         !! (WaveElevxi,WaveElevyi) pairs, and the WaveElevXY pairs), a call is made to the
+         !! For each (x,y) coordinate that a wave elevation is requested at, a call is made to the
          !! subroutine waves2::waveelevtimeseriesatxy_sum to calculate the full time series for
          !! that point.  The results are added to the wave elevation results from the diff
          !! frequency calculations earlier in the code.
          !--------------------------------------------------------------------------------
 !NOTE: This is all grid points
              ! Step through the requested points
-         DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
+         DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
-            CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveElevGridxi(k), InitInp%WaveElevGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()

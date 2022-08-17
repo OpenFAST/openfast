@@ -76,148 +76,6 @@ MODULE HydroDyn
    
    CONTAINS
    
-!SUBROUTINE WvStretch_Init(WaveStMod, WtrDpth, NStepWave, NNodes,  &
-!                          NWaveElev, WaveElev, WaveKinzi, WaveTime, &
-!                          WaveVel0, WaveAcc0, WaveDynP0, &
-!                          WavePVel0, WavePAcc0, WavePDynP0, &
-!                          WaveVel , WaveAcc , WaveDynP , &
-!                          nodeInWater, ErrStat, ErrMsg )
-!
-! 
-!   INTEGER,          INTENT(IN   )  :: WaveStMod
-!   REAL(SiKi),       INTENT(IN   )  :: WtrDpth
-!   INTEGER,          INTENT(IN   )  :: NStepWave
-!   INTEGER,          INTENT(IN   )  :: NNodes
-!   INTEGER,          INTENT(IN   )  :: NWaveElev
-!   REAL(SiKi),       INTENT(IN   )  :: WaveElev(0:,:)
-!   REAL(SiKi),       INTENT(IN   )  :: WaveKinzi(:)
-!   REAL(SiKi),       INTENT(IN   )  :: WaveTime(0:)
-!   REAL(SiKi),       INTENT(IN   )  :: WaveVel0(0:,:,:)               !< Wave velocity in Global coordinate system at Z = 0.  Each point in this array has a corresponding entry (same index #) in the WaveVel array
-!   REAL(SiKi),       INTENT(IN   )  :: WaveAcc0(0:,:,:)
-!   REAL(SiKi),       INTENT(IN   )  :: WaveDynP0(0:,:)
-!   REAL(SiKi),       INTENT(IN   )  :: WavePVel0(0:,:,:)               !< Wave velocity in Global coordinate system at Z = 0.  Each point in this array has a corresponding entry (same index #) in the WaveVel array
-!   REAL(SiKi),       INTENT(IN   )  :: WavePAcc0(0:,:,:)
-!   REAL(SiKi),       INTENT(IN   )  :: WavePDynP0(0:,:)
-!   REAL(SiKi),       INTENT(INOUT)  :: WaveVel(0:,:,:)
-!   REAL(SiKi),       INTENT(INOUT)  :: WaveAcc(0:,:,:)
-!   REAL(SiKi),       INTENT(INOUT)  :: WaveDynP(0:,:)
-!   INTEGER(IntKi),   INTENT(INOUT)  :: nodeInWater(0:,:)
-!   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat             !< Error status of the operation
-!   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-!
-!      ! Local variables
-!   INTEGER(IntKi) ::  I, J                            !< Local loop counters
-!   REAL(SiKi) :: wavekinzloc ,WavePVel0loc
-!   
-!       ! Initialize ErrStat      
-!   ErrStat = ErrID_None         
-!   ErrMsg  = ""               
-!      
-!      
-!   DO I = 0,NStepWave-1       ! Loop through all time steps
-!       
-!      DO J = 1,NNodes
-!         
-!         SELECT CASE ( WaveStMod )  ! Which model are we using to extrapolate the incident wave kinematics to the instantaneous free surface?
-!
-!            CASE ( 0 )                 ! None = no stretching.
-!               ! Since we have no stretching, the wave kinematics between the seabed and
-!               !   the mean sea level are left unchanged; below the seabed or above the
-!               !   mean sea level, the wave kinematics are zero:                     
-!               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > 0.0          ) )  THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
-!
-!                  WaveDynP   (I,J  )  = 0.0
-!                  WaveVel    (I,J,:)  = 0.0
-!                  WaveAcc    (I,J,:)  = 0.0
-!                  nodeInWater(I,J  )  = 0
-!               ELSE   
-!                  nodeInWater(I,J  )  = 1
-!               END IF
-!            CASE ( 1 )                 ! Vertical stretching.
-!
-!
-!               ! Vertical stretching says that the wave kinematics above the mean sea level
-!               !   equal the wave kinematics at the mean sea level.  The wave kinematics
-!               !   below the mean sea level are left unchanged:
-!               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > WaveElev(I,J) ) ) THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above the instantaneous wave elevation (exclusive)
-!
-!                  WaveDynP   (I,J  )  = 0.0
-!                  WaveVel    (I,J,:)  = 0.0
-!                  WaveAcc    (I,J,:)  = 0.0
-!                  nodeInWater(I,J  )  = 0
-!               ELSE 
-!                  nodeInWater(I,J  )  = 1
-!                  IF   ( WaveKinzi(J) >= 0.0_ReKi ) THEN
-!                     ! Set the wave kinematics to the kinematics at mean sea level for locations above MSL, but below the wave elevation.
-!                     WaveDynP   (I,J  )  = WaveDynP0  (I,J  )
-!                     WaveVel    (I,J,:)  = WaveVel0   (I,J,:)
-!                     WaveAcc    (I,J,:)  = WaveAcc0   (I,J,:)
-!                  END IF
-!                  ! Otherwise, do nothing because the kinematics have already be set correctly via the various Waves modules
-!               END IF
-!            
-!
-!
-!
-!            CASE ( 2 )                 ! Extrapolation stretching.
-!
-!
-!            ! Extrapolation stretching uses a linear Taylor expansion of the wave
-!            !   kinematics (and their partial derivatives with respect to z) at the mean
-!            !   sea level to find the wave kinematics above the mean sea level.  The
-!            !   wave kinematics below the mean sea level are left unchanged:
-!
-!              
-!               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > WaveElev(I,J) ) ) THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above the instantaneous wave elevation (exclusive)
-!
-!                  WaveDynP   (I,J  )  = 0.0
-!                  WaveVel    (I,J,:)  = 0.0
-!                  WaveAcc    (I,J,:)  = 0.0
-!                  nodeInWater(I,J  )  = 0
-!               ELSE 
-!                  nodeInWater(I,J  )  = 1
-!                  wavekinzloc = WaveKinzi(J)
-!                  WavePVel0loc = WavePVel0   (I,J,1)
-!                  IF   ( WaveKinzi(J) >= 0.0_ReKi ) THEN
-!                     ! Set the wave kinematics to the kinematics at mean sea level for locations above MSL, but below the wave elevation.
-!                     WaveDynP   (I,J  )  = WaveDynP0  (I,J  ) + WaveKinzi(J)*WavePDynP0  (I,J  )
-!                     WaveVel    (I,J,:)  = WaveVel0   (I,J,:) + WaveKinzi(J)*WavePVel0   (I,J,:)
-!                     WaveAcc    (I,J,:)  = WaveAcc0   (I,J,:) + WaveKinzi(J)*WavePAcc0   (I,J,:)
-!                  END IF
-!                  ! Otherwise, do nothing because the kinematics have already be set correctly via the various Waves modules
-!               END IF
-!
-!
-!            CASE ( 3 )                 ! Wheeler stretching.
-!
-!
-!            ! Wheeler stretching says that wave kinematics calculated using Airy theory
-!            !   at the mean sea level should actually be applied at the instantaneous
-!            !   free surface and that Airy wave kinematics computed at locations between
-!            !   the seabed and the mean sea level should be shifted vertically to new
-!            !   locations in proportion to their elevation above the seabed.
-!            !
-!            ! Computing the wave kinematics with Wheeler stretching requires that first
-!            !   say that the wave kinematics we computed at the elevations defined by
-!            !   the WaveKinzi0Prime(:) array are actual applied at the elevations found
-!            !   by stretching the elevations in the WaveKinzi0Prime(:) array using the
-!            !   instantaneous wave elevation--these new elevations are stored in the
-!            !   WaveKinzi0St(:) array.  Next, we interpolate the wave kinematics
-!            !   computed without stretching to the desired elevations (defined in the
-!            !   WaveKinzi(:) array) using the WaveKinzi0St(:) array:
-!
-! 
-!         ENDSELECT
-!      END DO                   ! J - All points where the incident wave kinematics will be computed
-!   END DO                      ! I - All time steps
-!   
-!   ! Set the ending timestep to the same as the first timestep
-!   WaveDynP (NStepWave,:  )  = WaveDynP (0,:  )
-!   WaveVel  (NStepWave,:,:)  = WaveVel  (0,:,:)
-!   WaveAcc  (NStepWave,:,:)  = WaveAcc  (0,:,:)
-!         
-!END SUBROUTINE WvStretch_Init
-   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -275,30 +133,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! WAMIT Mesh
       real(R8Ki)                             :: theta(3), orientation(3,3)        
       
-         ! Wave Stretching Data
-      !REAL(SiKi), ALLOCATABLE  :: tmpWaveKinzi(:    )
-      !INTEGER                  :: tmpNWaveElev
-      !REAL(SiKi), ALLOCATABLE  :: tmpWaveElevxi(:    )
-      !REAL(SiKi), ALLOCATABLE  :: tmpWaveElevyi(:    )
-      !REAL(SiKi), ALLOCATABLE  :: tmpWaveElevXY(:,:  )
-      !REAL(SiKi), ALLOCATABLE  :: WaveElevSt  (:,:  ) 
-      !REAL(SiKi), ALLOCATABLE  :: WaveVel0    (:,:,:) 
-      !REAL(SiKi), ALLOCATABLE  :: WaveAcc0    (:,:,:)                              
-      !REAL(SiKi), ALLOCATABLE  :: WaveDynP0   (:,:  )  
-      !REAL(SiKi), ALLOCATABLE  :: WaveVel2S0  (:,:,:)
-      !REAL(SiKi), ALLOCATABLE  :: WaveAcc2S0  (:,:,:)                                   
-      !REAL(SiKi), ALLOCATABLE  :: WaveDynP2S0 (:,:  )   
-      !REAL(SiKi), ALLOCATABLE  :: WaveVel2D0  (:,:,:)    
-      !REAL(SiKi), ALLOCATABLE  :: WaveAcc2D0  (:,:,:)                              
-      !REAL(SiKi), ALLOCATABLE  :: WaveDynP2D0 (:,:  )                                     
-
-                                       
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
       CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_Init'
    
 
-      
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -396,7 +235,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       IF ( InputFileData%HDSum ) THEN 
          
          SummaryName = TRIM(InitInp%OutRootName)//'.sum'
-         CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
+         CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -797,26 +636,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! will be passing into the Morrison module.
 
         
-!==============================================================================
-         ! TODO: 1/29/2016 GJH
-         ! This is where we need to perform Wave Stretching, now that the wave kinematics have been combined.
-         ! We will call a new subroutine to perform this work. 
-         ! As an input, this code needs the kinematics at the (X,Y,0) location which in a Z-line above/below all the nodes where kinematics are computed.
-         ! This code will alter the kinematics for stretching AND alter the nodeInWater array based on the combined wave elevation information
-         !IF (InputFileData%Waves%WaveStMod > 0 ) THEN
-         !   call WvStretch_Init( InputFileData%Waves%WaveStMod, InputFileData%Waves%WtrDpth, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-         !                     p%NWaveElev, WaveElevSt, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-         !                     WaveVel0, WaveAcc0, WaveDynP0, &
-         !                     Waves_InitOut%PWaveVel0, Waves_InitOut%PWaveAcc0, Waves_InitOut%PWaveDynP0, &
-         !                     InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-         !                     InputFileData%Morison%nodeInWater, ErrStat, ErrMsg )  
-         !   DEALLOCATE(WaveElevSt)
-         !   DEALLOCATE(WaveVel0)
-         !   DEALLOCATE(WaveAcc0)
-         !   DEALLOCATE(WaveDynP0)
-         !END IF
-!==============================================================================
-      
          InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
         
             ! Initialize the Morison Element Calculations 
@@ -825,15 +644,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-         
-         
-            ! Verify that Morison_Init() did not request a different Interval!
-      
-         IF ( p%DT /= Interval ) THEN
-            CALL SetErrStat(ErrID_Fatal,'Morison Module attempted to change timestep interval, but this is not allowed.  Morison Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
             CALL CleanUp()
             RETURN
          END IF
@@ -1163,8 +973,6 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
-      integer(IntKi)                                     :: i
-
 
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message

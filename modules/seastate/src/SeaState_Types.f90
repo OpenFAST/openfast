@@ -51,7 +51,7 @@ IMPLICIT NONE
     TYPE(Waves2_InitInputType)  :: Waves2      !< Initialization data for Waves2 module [-]
     TYPE(Current_InitInputType)  :: Current      !< Initialization data for Current module [-]
     LOGICAL  :: Echo      !< Echo the input files to a file with the same name as the input but with a .echo extension [T/F] [-]
-    INTEGER(IntKi)  :: NWaveElev      !< Number of points where the incident wave elevations can be output [-]
+    INTEGER(IntKi)  :: NWaveElev      !< Number of user-requested points where the incident wave elevations can be output [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevyi      !< yi-coordinates for points where the incident wave elevations can be output [(meters)]
     INTEGER(IntKi)  :: NWaveKin      !< Number of points where the incident wave kinematics will be computed [-]
@@ -63,7 +63,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< The number of outputs for this module as requested in the input file [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: SeaStSum      !< Generate a SeaState summary file [T/F] [-]
-    INTEGER(IntKi)  :: UnSum      !< File unit for the SeaState summary file [-1 = no summary file] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
   END TYPE SeaSt_InputFile
@@ -172,7 +171,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: X_HalfWidth      !< Half-width of the domain in the X direction [m]
     REAL(ReKi)  :: Y_HalfWidth      !< Half-width of the domain in the Y direction [m]
     REAL(ReKi)  :: Z_Depth      !< Depth of the domain the Z direction [m]
-    INTEGER(IntKi)  :: NStepWave      !< Number of data points in the wave kinematics arrays [-]
+    INTEGER(IntKi)  :: NStepWave      !< Number of user-requested data points in the wave kinematics arrays [-]
     INTEGER(IntKi)  :: NWaveElev      !< Number of wave elevation outputs [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevyi      !< yi-coordinates for points where the incident wave elevations can be output [(meters)]
@@ -200,7 +199,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
-    CHARACTER(ChanLen)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
+    CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to space [-]
     INTEGER(IntKi)  :: UnOutFile      !< File unit for the SeaState outputs [-]
     INTEGER(IntKi)  :: OutDec      !< Write every OutDec time steps [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
@@ -332,7 +331,6 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
     DstInputFileData%OutList = SrcInputFileData%OutList
 ENDIF
     DstInputFileData%SeaStSum = SrcInputFileData%SeaStSum
-    DstInputFileData%UnSum = SrcInputFileData%UnSum
     DstInputFileData%OutFmt = SrcInputFileData%OutFmt
     DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
  END SUBROUTINE SeaSt_CopyInputFile
@@ -516,7 +514,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! SeaStSum
-      Int_BufSz  = Int_BufSz  + 1  ! UnSum
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt)  ! OutFmt
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -751,8 +748,6 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%SeaStSum, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%UnSum
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%OutFmt)
       IntKiBuf(Int_Xferred) = ICHAR(InData%OutFmt(I:I), IntKi)
@@ -1054,8 +1049,6 @@ ENDIF
       END DO
   END IF
     OutData%SeaStSum = TRANSFER(IntKiBuf(Int_Xferred), OutData%SeaStSum)
-    Int_Xferred = Int_Xferred + 1
-    OutData%UnSum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%OutFmt)
       OutData%OutFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))

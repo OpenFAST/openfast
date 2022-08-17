@@ -1869,7 +1869,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    TYPE(Morison_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
                                                                      !!   only the output mesh is initialized)
    TYPE(Morison_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
-   REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+   REAL(DbKi),                        INTENT(IN   )  :: Interval    !< Coupling interval in seconds: the rate that 
                                                                      !!   (1) Morison_UpdateStates() is called in loose coupling &
                                                                      !!   (2) Morison_UpdateDiscState() is called in tight coupling.
                                                                      !!   Input is the suggested time from the glue code; 

@@ -18,9 +18,7 @@ include  Registry_NWTC_Library.txt
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
-typedef     Waves2/Waves2     InitInputType     INTEGER              UnSum             -        -        -        "The unit number for the HydroDyn summary file" -
-
-typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
+typedef     Waves2/Waves2     InitInputType     ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 
@@ -36,10 +34,9 @@ typedef     ^                 ^                 SiKi                 WaveElevC0 
 typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
 typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
-typedef     ^                 ^                 INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations can be output"  -
-typedef     ^                 ^                 SiKi                 WaveElevxi        {:}      -        -        "xi-coordinates for points where the incident wave elevations can be output"  (meters)
-typedef     ^                 ^                 SiKi                 WaveElevyi        {:}      -        -        "yi-coordinates for points where the incident wave elevations can be output"  (meters)
-typedef     ^                 ^                 SiKi                 WaveElevXY        {:}{:}   -        -        "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  Index 1 corresponds to X or Y coordinate.  Index 2 corresponds to point number."    -
+typedef     ^                 ^                 INTEGER              NWaveElevGrid     -        -        -        "Number of grid points where the incident wave elevations can be output"  -
+typedef     ^                 ^                 SiKi                 WaveElevGridxi    {:}      -        -        "xi-coordinates for grid points where the incident wave elevations can be output"  (meters)
+typedef     ^                 ^                 SiKi                 WaveElevGridyi    {:}      -        -        "yi-coordinates for grid points where the incident wave elevations can be output"  (meters)
 
 typedef     ^                 ^                 INTEGER              NWaveKin          -        -        -        "Number of points where the incident wave kinematics will be computed"  -
 typedef     ^                 ^                 SiKi                 WaveKinxi         {:}      -        -        "xi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean sea level"  (meters)
@@ -63,14 +60,7 @@ typedef     ^                 ^                 SiKi                 WaveAcc2S  
 typedef     ^                 ^                 SiKi                 WaveDynP2S        {:}{:}{:}{:}   -        -  "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
 typedef     ^                 ^                 SiKi                 WaveVel2D         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
 typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-typedef     ^                 InitOutputType    SiKi                 WaveElev2         {*}{*}{*}   -        -     "Instantaneous elevation time-series of incident waves at each of the NWaveElev points where the incident wave elevations can be output" (meters)
-
-#typedef     ^                 ^                 SiKi                 WaveAcc2D0        {:}{:}{:}{:}{:} -      -  "Instantaneous 2nd-order difference frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-#typedef     ^                 ^                 SiKi                 WaveDynP2D0       {:}{:}{:}{:}   -        - "Instantaneous 2nd-order difference frequency correction for the dynamic pressure of incident waves                                                              , at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-#typedef     ^                 ^                 SiKi                 WaveAcc2S0        {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the acceleration     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (m/s^2)
-#typedef     ^                 ^                 SiKi                 WaveDynP2S0       {:}{:}{:}{:}   -        -  "Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed" (N/m^2)
-#typedef     ^                 ^                 SiKi                 WaveVel2D0        {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
-#typedef     ^                 ^                 SiKi                 WaveVel2S0        {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), for each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
+typedef     ^                 InitOutputType    SiKi                 WaveElev2         {*}{*}{*}   -        -     "Instantaneous elevation time-series of incident waves at each of the NWaveElevGrid points where the incident wave elevations can be output" (meters)
 
 
 
@@ -79,7 +69,4 @@ typedef     ^                 InitOutputType    SiKi                 WaveElev2  
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef     ^                 ParameterType     LOGICAL              WvDiffQTFF        -        -        -        "Full difference QTF second order forces flag" (-)
 typedef     ^                 ParameterType     LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
-typedef     ^                 ParameterType     INTEGER              NWaveElev         -        -        -        "Number of points where the incident wave elevations can be output"  -
-typedef     ^                 ParameterType     INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
-typedef     ^                 ParameterType     INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 
