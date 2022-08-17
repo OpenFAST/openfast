@@ -1925,8 +1925,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          !===================================
          IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
             DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL
-               WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveElevGridxi(J)*CosWaveDir(I) + &
-                                                            InitInp%WaveElevGridyi(J)*SinWaveDir(I) ))
+               WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(J)*CosWaveDir(I) + &
+                                                            InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
                PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
                PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
@@ -1988,7 +1988,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(2) + 1
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevGridxi(k), InitInp%WaveElevGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()

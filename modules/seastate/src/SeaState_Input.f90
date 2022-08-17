@@ -1186,9 +1186,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          return
       end if
       
-      call AllocAry( InputFileData%Waves%WaveElevGridxi, InputFileData%Waves%NWaveElevGrid, 'WaveElevGridxi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      call AllocAry( InputFileData%Waves%WaveElevGridyi, InputFileData%Waves%NWaveElevGrid, 'WaveElevGridyi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
       call AllocAry( InputFileData%Waves%WaveKinGridxi, p%NGridPts, 'WaveKinGridxi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       call AllocAry( InputFileData%Waves%WaveKinGridyi, p%NGridPts, 'WaveKinGridyi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       call AllocAry( InputFileData%Waves%WaveKinGridzi, p%NGridPts, 'WaveKinGridzi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1214,10 +1211,10 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
                InputFileData%Waves%WaveKinGridzi(count)      = zpos   ! zi-coordinates for points where the incident wave kinematics will be computed;
                InputFileData%Current%WaveKinGridzi(count) = InputFileData%Waves%WaveKinGridzi(count)
 
-               if ( k == 0 ) then
-                  InputFileData%Waves%WaveElevGridxi(count)      = xpos   ! xi-coordinates for points where the incident wave kinematics will be computed;
-                  InputFileData%Waves%WaveElevGridyi(count)      = ypos   ! yi-coordinates for points where the incident wave kinematics will be computed;
-               end if
+               !if ( k == 0 ) then
+               !   InputFileData%Waves%WaveElevGridxi(count)      = xpos   ! xi-coordinates for points where the incident wave kinematics will be computed;
+               !   InputFileData%Waves%WaveElevGridyi(count)      = ypos   ! yi-coordinates for points where the incident wave kinematics will be computed;
+               !end if
                count = count + 1
             end do
          end do
@@ -1234,12 +1231,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          InputFileData%Waves2%WaveStMod     = InputFileData%Waves%WaveStMod
          InputFileData%Waves2%NGrid         = p%NGrid
          InputFileData%Waves2%NWaveElevGrid = InputFileData%Waves%NWaveElevGrid
-         call AllocAry( InputFileData%Waves2%WaveElevGridxi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevGridxi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         call AllocAry( InputFileData%Waves2%WaveElevGridyi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevGridyi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if ( ErrStat >= AbortErrLev ) return
-         
-         InputFileData%Waves2%WaveElevGridxi  = InputFileData%Waves%WaveElevGridxi
-         InputFileData%Waves2%WaveElevGridyi  = InputFileData%Waves%WaveElevGridyi
 
          call AllocAry( InputFileData%Waves2%WaveKinGridxi, p%NGridPts, 'WaveKinGridxi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          call AllocAry( InputFileData%Waves2%WaveKinGridyi, p%NGridPts, 'WaveKinGridyi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

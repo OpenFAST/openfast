@@ -48,8 +48,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid      !< Grid dimensions [-]
     INTEGER(IntKi)  :: NWaveElevGrid      !< Number of grid points where the incident wave elevations can be output [-]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevGridxi      !< xi-coordinates for grid points where the incident wave elevations can be output [(meters)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevGridyi      !< yi-coordinates for grid points where the incident wave elevations can be output [(meters)]
     INTEGER(IntKi)  :: NWaveKinGrid      !< Number of grid points where the incident wave kinematics will be computed [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridxi      !< xi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridyi      !< yi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
@@ -147,30 +145,6 @@ IF (ASSOCIATED(SrcInitInputData%WaveTime)) THEN
 ENDIF
     DstInitInputData%nGrid = SrcInitInputData%nGrid
     DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
-IF (ALLOCATED(SrcInitInputData%WaveElevGridxi)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveElevGridxi,1)
-  i1_u = UBOUND(SrcInitInputData%WaveElevGridxi,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElevGridxi)) THEN 
-    ALLOCATE(DstInitInputData%WaveElevGridxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevGridxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveElevGridxi = SrcInitInputData%WaveElevGridxi
-ENDIF
-IF (ALLOCATED(SrcInitInputData%WaveElevGridyi)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveElevGridyi,1)
-  i1_u = UBOUND(SrcInitInputData%WaveElevGridyi,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElevGridyi)) THEN 
-    ALLOCATE(DstInitInputData%WaveElevGridyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevGridyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveElevGridyi = SrcInitInputData%WaveElevGridyi
-ENDIF
     DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
 IF (ALLOCATED(SrcInitInputData%WaveKinGridxi)) THEN
   i1_l = LBOUND(SrcInitInputData%WaveKinGridxi,1)
@@ -252,12 +226,6 @@ IF (ASSOCIATED(InitInputData%WaveTime)) THEN
   DEALLOCATE(InitInputData%WaveTime)
   InitInputData%WaveTime => NULL()
 ENDIF
-IF (ALLOCATED(InitInputData%WaveElevGridxi)) THEN
-  DEALLOCATE(InitInputData%WaveElevGridxi)
-ENDIF
-IF (ALLOCATED(InitInputData%WaveElevGridyi)) THEN
-  DEALLOCATE(InitInputData%WaveElevGridyi)
-ENDIF
 IF (ALLOCATED(InitInputData%WaveKinGridxi)) THEN
   DEALLOCATE(InitInputData%WaveKinGridxi)
 ENDIF
@@ -329,16 +297,6 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + SIZE(InData%nGrid)  ! nGrid
       Int_BufSz  = Int_BufSz  + 1  ! NWaveElevGrid
-  Int_BufSz   = Int_BufSz   + 1     ! WaveElevGridxi allocated yes/no
-  IF ( ALLOCATED(InData%WaveElevGridxi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveElevGridxi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevGridxi)  ! WaveElevGridxi
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WaveElevGridyi allocated yes/no
-  IF ( ALLOCATED(InData%WaveElevGridyi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveElevGridyi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElevGridyi)  ! WaveElevGridyi
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! NWaveKinGrid
   Int_BufSz   = Int_BufSz   + 1     ! WaveKinGridxi allocated yes/no
   IF ( ALLOCATED(InData%WaveKinGridxi) ) THEN
@@ -460,36 +418,6 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%NWaveElevGrid
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveElevGridxi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevGridxi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevGridxi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveElevGridxi,1), UBOUND(InData%WaveElevGridxi,1)
-        ReKiBuf(Re_Xferred) = InData%WaveElevGridxi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%WaveElevGridyi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElevGridyi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElevGridyi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveElevGridyi,1), UBOUND(InData%WaveElevGridyi,1)
-        ReKiBuf(Re_Xferred) = InData%WaveElevGridyi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%NWaveKinGrid
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WaveKinGridxi) ) THEN
@@ -665,42 +593,6 @@ ENDIF
     END DO
     OutData%NWaveElevGrid = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevGridxi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveElevGridxi)) DEALLOCATE(OutData%WaveElevGridxi)
-    ALLOCATE(OutData%WaveElevGridxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevGridxi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveElevGridxi,1), UBOUND(OutData%WaveElevGridxi,1)
-        OutData%WaveElevGridxi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevGridyi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveElevGridyi)) DEALLOCATE(OutData%WaveElevGridyi)
-    ALLOCATE(OutData%WaveElevGridyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevGridyi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveElevGridyi,1), UBOUND(OutData%WaveElevGridyi,1)
-        OutData%WaveElevGridyi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
     OutData%NWaveKinGrid = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveKinGridxi not allocated
