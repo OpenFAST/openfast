@@ -597,7 +597,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( InitOut%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%PWaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
 
       ALLOCATE ( InitOut%WaveDirArr (0:InitOut%NStepWave2                   ) , STAT=ErrStatTmp )
@@ -630,14 +630,13 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       count = 1
 
-      !DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
+      !DO J = 1,InitInp%NWaveKinGrid      ! Loop through all points where the incident wave kinematics will be computed
       do k = 1, InitInp%NGrid(3)
          do j = 1, InitInp%NGrid(2)
             do i = 1, InitInp%NGrid(1)
                InitOut%WaveVel(:,i,j,k,1) =  InitInp%CurrVxi(count)  ! xi-direction
                InitOut%WaveVel(:,i,j,k,2) =  InitInp%CurrVyi(count)  ! yi-direction
-               IF (    InitInp%WaveKinzi(count) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(count) <= 0 )  THEN
-
+               IF (    InitInp%WaveKinGridzi(count) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(count) <= 0 )  THEN
                   InitOut%nodeInWater(:,count) = 1
                ELSE
                   InitOut%nodeInWater(:, count) = 0
@@ -877,9 +876,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          J_Min          = 0
          NWaveKin0Prime = 0
-         DO J = 1,InitInp%NWaveKin   ! Loop through all mesh points  where the incident wave kinematics will be computed
+         DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
                ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-           IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+           IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
            END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -902,11 +901,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          I = 1
 
-         DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
+         DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
                ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
-               WaveKinzi0Prime(I) =  InitInp%WaveKinzi(J)
+               WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
                I = I + 1
 
@@ -977,7 +976,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !                   incident waves
       !
       ! Thus, in order to account for Wheeler stretching when computing the wave
-      !   kinematics at each of the NWaveKin points along a vertical line passing
+      !   kinematics at each of the NWaveKinGrid points along a vertical line passing
       !   through the platform reference point [defined by the zi-coordinates
       !   relative to the mean see level as specified in the WaveKinzi(:) array],
       !   we must first compute the wave kinematics without stretching at
@@ -1248,7 +1247,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 ! END TODO SECTION
 
-      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
       IF ( InitInp%WaveMod /= 7) THEN    ! For WaveMod == 7, these are allocated and populated in UserWaveComponents_Init
@@ -1285,9 +1284,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! We now need to establish the nodeInWater flag values for all the simulation node for all timesteps, this is an extension which is needed to
       ! support user input wave data.  TODO:  THIS ASSUMES NO WAVE STRETCHING!!!!!!!! GJH 18 Mar 2015
-      DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
+      DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
             ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-         IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+         IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
             InitOut%nodeInWater(:, J) = 1
          ELSE
@@ -1900,15 +1899,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
 
-            WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinxi(WaveKinPrimeMap(J))*CosWaveDir(I) + &
-               InitInp%WaveKinyi(WaveKinPrimeMap(J))*SinWaveDir(I) ))
+            WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(WaveKinPrimeMap(J))*CosWaveDir(I) + &
+                                                         InitInp%WaveKinGridyi(WaveKinPrimeMap(J))*SinWaveDir(I) ))
 
             WaveDynPC0 (I,J)     = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
 
             WaveVelC0Hxi (I,J)   = CosWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
             WaveVelC0Hyi (I,J)   = SinWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0V (I,J)     =           ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
             WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
 
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
@@ -2164,7 +2163,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       primeCount = 1
       count = 1
-      !DO J = 1,InitInp%NWaveKin      ! Loop through all points where the incident wave kinematics will be computed
+      !DO J = 1,InitInp%NWaveKinGrid      ! Loop through all points where the incident wave kinematics will be computed
       do k = 1, InitInp%NGrid(3)
          do j = 1, InitInp%NGrid(2)
             do i = 1, InitInp%NGrid(1)
@@ -2173,7 +2172,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
              !  jj = mod( (count-1) /InitInp%NGrid(1), InitInp%NGrid(2) ) + 1
              !  kk = (count-1) / (InitInp%NGrid(1)*InitInp%NGrid(2)) + 1
 
-               IF (   ( InitInp%WaveKinzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(count) > 0.0 ) ) THEN
+               IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
                   ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
 
@@ -2205,7 +2204,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          do k = 1, InitInp%NGrid(3)
             do j = 1, InitInp%NGrid(2)
                do i = 1, InitInp%NGrid(1)
-                  IF (   ( InitInp%WaveKinzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinzi(count) > 0.0 ) ) THEN
+                  IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                      ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
                      ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
                      InitOut%WaveAccMCF(:,i,j,k,:)  = 0.0
@@ -2506,59 +2505,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
 
 
       CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
-
-         ! To correctly perform stretching we need wave kinematics at (xi,yi,0) for all nodes where kinematics are computed.
-         ! This could all be done with the same call to VariousWaves_Init, but then we would have to allocate double the number of temporary data
-         ! structures for this extra set of locations.
-         ! INSTEAD, to save memory (at the expense of time) we are going to call VariousWaves_Init, twice!  Once for the (xi,yi,zi) locations
-         ! and then again for the (xi,yi,0) locations.
-         ! To accomplish this, we need to schuffle some of our data structures or create temporary copies
-
-         !   ! Allocate the temporary storage array for the WvKinxi
-         !ALLOCATE ( tmpWaveKinzi(InitInp%NWaveKin), STAT = ErrStatTmp )
-         !IF ( ErrStatTmp /= ErrID_None ) THEN
-         !   CALL SetErrStat( ErrID_Fatal,'Error allocating space for tmpWaveKinzi array.',ErrStat,ErrMsg,'Waves_Init')
-         !   RETURN
-         !END IF
-         !!DO I = 1,InitInp%NWaveKin
-         !!   tmpWaveKinzi(I) = InitInp%WaveKinzi(I)
-         !!   InitInp%WaveKinzi(I) = 0.0_ReKi         ! Force all zi coordinates to 0.0 for this version of the Waves initialization
-         !! END DO
-         !   tmpWaveKinzi = InitInp%WaveKinzi
-         !   InitInp%WaveKinzi = 0.0_ReKi         ! Force all zi coordinates to 0.0 for this version of the Waves initialization
-         !
-         !CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
-         !   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
-         !   IF ( ErrStat >= AbortErrLev ) RETURN
-         !
-         !ALLOCATE ( InitOut%WaveDynP0 (0:InitOut%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
-         !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,'Waves_Init')
-         !
-         !ALLOCATE ( InitOut%WaveVel0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
-         !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,'Waves_Init')
-         !
-         !ALLOCATE ( InitOut%WaveAcc0  (0:InitOut%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
-         !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'Waves_Init')
-         !
-         !IF ( ErrStat >= AbortErrLev ) RETURN
-         !
-         !   ! Copy the init output arrays into the MSL versions
-         !InitOut%WaveDynP0  =      InitOut%WaveDynP
-         !InitOut%WaveAcc0   =      InitOut%WaveAcc
-         !InitOut%WaveVel0   =      InitOut%WaveVel
-         !
-         !   ! Reset the zi locations
-         !InitInp%WaveKinzi  =      tmpWaveKinzi
-         !
-         !   ! Deallocate data which will be allocated again within the Init routine
-         !DEALLOCATE( InitOut%WaveDynP )
-         !DEALLOCATE( InitOut%WaveAcc )
-         !DEALLOCATE( InitOut%WaveVel )
-         !DEALLOCATE( InitOut%WaveElevC0)
-         !DEALLOCATE( InitOut%WaveDirArr)
-         !DEALLOCATE( InitOut%WaveElev  )
-         !DEALLOCATE( InitOut%WaveTime  )
-         !DEALLOCATE( InitOut%NodeInWater  )
 
             ! Now call the init with all the zi locations for the Morrison member nodes
          CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )

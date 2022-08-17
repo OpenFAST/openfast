@@ -1173,16 +1173,12 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       InputFileData%Waves%NGrid = p%NGrid
       InputFileData%Current%NGridPts = p%NGridPts
 
-      ALLOCATE ( InputFileData%Current%WaveKinzi(p%NGridPts), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
+      call AllocAry( InputFileData%Current%WaveKinGridzi, p%NGridPts, 'WaveKinGridzi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if ( ErrStat >= AbortErrLev ) return
 
 
-!NOTE: This is now set with the grid points? GJH 7/11/21
          ! Establish the number and locations where the wave kinematics will be computed
-      InputFileData%Waves%NWaveKin       = p%NGridPts                          ! Number of points where the incident wave kinematics will be computed (-)
+      InputFileData%Waves%NWaveKinGrid   = p%NGridPts                          ! Number of grid points where the incident wave kinematics will be computed (-)
       InputFileData%Waves%NWaveElevGrid  = p%NGrid(1)*p%NGrid(2)               ! Number of XY grid points where the wave elevations are computed
       
       if ( InputFileData%Waves%NWaveElevGrid < 0 ) then
@@ -1190,33 +1186,14 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          return
       end if
       
-      ALLOCATE ( InputFileData%Waves%WaveKinxi(p%NGridPts), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
-      ALLOCATE ( InputFileData%Waves%WaveKinyi(p%NGridPts), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
-      ALLOCATE ( InputFileData%Waves%WaveKinzi(p%NGridPts), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
+      call AllocAry( InputFileData%Waves%WaveElevGridxi, InputFileData%Waves%NWaveElevGrid, 'WaveElevGridxi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call AllocAry( InputFileData%Waves%WaveElevGridyi, InputFileData%Waves%NWaveElevGrid, 'WaveElevGridyi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ALLOCATE ( InputFileData%Waves%WaveElevGridxi(InputFileData%Waves%NWaveElevGrid), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveElevxi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
-      ALLOCATE ( InputFileData%Waves%WaveElevGridyi(InputFileData%Waves%NWaveElevGrid), STAT = ErrStat2 )
-      if ( ErrStat2 /= ErrID_None ) then
-         call SetErrStat( ErrID_Fatal,'Error allocating space for WaveElevyi array.',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
-
+      call AllocAry( InputFileData%Waves%WaveKinGridxi, p%NGridPts, 'WaveKinGridxi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call AllocAry( InputFileData%Waves%WaveKinGridyi, p%NGridPts, 'WaveKinGridyi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call AllocAry( InputFileData%Waves%WaveKinGridzi, p%NGridPts, 'WaveKinGridzi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if ( ErrStat >= AbortErrLev ) return
+      
       ! Generate grid points
       p%X_HalfWidth  = InputFileData%X_HalfWidth
       p%Y_HalfWidth  = InputFileData%Y_HalfWidth
@@ -1231,11 +1208,11 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
             ypos = -InputFileData%Y_HalfWidth + p%deltaGrid(2)*j
             do i= 0, p%NGrid(1)-1
                xpos = -InputFileData%X_HalfWidth + p%deltaGrid(1)*i
-               InputFileData%Waves%WaveKinxi(count)      = xpos   ! xi-coordinates for points where the incident wave kinematics will be computed;
-               InputFileData%Waves%WaveKinyi(count)      = ypos   ! yi-coordinates for points where the incident wave kinematics will be computed;
+               InputFileData%Waves%WaveKinGridxi(count)      = xpos   ! xi-coordinates for points where the incident wave kinematics will be computed;
+               InputFileData%Waves%WaveKinGridyi(count)      = ypos   ! yi-coordinates for points where the incident wave kinematics will be computed;
 
-               InputFileData%Waves%WaveKinzi(count)      = zpos   ! zi-coordinates for points where the incident wave kinematics will be computed;
-               InputFileData%Current%WaveKinzi(count) = InputFileData%Waves%WaveKinzi(count)
+               InputFileData%Waves%WaveKinGridzi(count)      = zpos   ! zi-coordinates for points where the incident wave kinematics will be computed;
+               InputFileData%Current%WaveKinGridzi(count) = InputFileData%Waves%WaveKinGridzi(count)
 
                if ( k == 0 ) then
                   InputFileData%Waves%WaveElevGridxi(count)      = xpos   ! xi-coordinates for points where the incident wave kinematics will be computed;
@@ -1249,42 +1226,29 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Waves2
 
             ! If we are using the Waves module, the node information must be copied over.
-      InputFileData%Waves2%NWaveKin   = InputFileData%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)
+      InputFileData%Waves2%NWaveKinGrid   = InputFileData%Waves%NWaveKinGrid                          ! Number of points where the incident wave kinematics will be computed (-)
       if ( InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) then
-         InputFileData%Waves2%WtrDens     = InputFileData%Waves%WtrDens
-         InputFileData%Waves2%Gravity     = InitInp%Gravity
-         InputFileData%Waves2%WtrDpth     = InputFileData%Waves%WtrDpth
-         InputFileData%Waves2%WaveStMod   = InputFileData%Waves%WaveStMod
-         InputFileData%Waves2%NGrid       = p%NGrid
-         InputFileData%Waves2%NWaveElevGrid   = InputFileData%Waves%NWaveElevGrid
-         call AllocAry( InputFileData%Waves2%WaveElevGridxi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevxi' , ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-         call AllocAry( InputFileData%Waves2%WaveElevGridyi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevyi' , ErrStat2, ErrMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         InputFileData%Waves2%WtrDens       = InputFileData%Waves%WtrDens
+         InputFileData%Waves2%Gravity       = InitInp%Gravity
+         InputFileData%Waves2%WtrDpth       = InputFileData%Waves%WtrDpth
+         InputFileData%Waves2%WaveStMod     = InputFileData%Waves%WaveStMod
+         InputFileData%Waves2%NGrid         = p%NGrid
+         InputFileData%Waves2%NWaveElevGrid = InputFileData%Waves%NWaveElevGrid
+         call AllocAry( InputFileData%Waves2%WaveElevGridxi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevGridxi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call AllocAry( InputFileData%Waves2%WaveElevGridyi, InputFileData%Waves2%NWaveElevGrid, 'WaveElevGridyi' , ErrStat2, ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if ( ErrStat >= AbortErrLev ) return
+         
          InputFileData%Waves2%WaveElevGridxi  = InputFileData%Waves%WaveElevGridxi
          InputFileData%Waves2%WaveElevGridyi  = InputFileData%Waves%WaveElevGridyi
 
-         ALLOCATE ( InputFileData%Waves2%WaveKinxi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         if ( ErrStat2 /= ErrID_None ) then
-            call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-            return
-         end if
-         ALLOCATE ( InputFileData%Waves2%WaveKinyi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         if ( ErrStat2 /= ErrID_None ) then
-            call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-            return
-         end if
-         ALLOCATE ( InputFileData%Waves2%WaveKinzi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-         if ( ErrStat2 /= ErrID_None ) then
-            call SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
-            return
-         end if
+         call AllocAry( InputFileData%Waves2%WaveKinGridxi, p%NGridPts, 'WaveKinGridxi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call AllocAry( InputFileData%Waves2%WaveKinGridyi, p%NGridPts, 'WaveKinGridyi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call AllocAry( InputFileData%Waves2%WaveKinGridzi, p%NGridPts, 'WaveKinGridzi' , ErrStat2, ErrMsg2);  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if ( ErrStat >= AbortErrLev ) return
 
-         InputFileData%Waves2%WaveKinxi  = InputFileData%Waves%WaveKinxi
-         InputFileData%Waves2%WaveKinyi  = InputFileData%Waves%WaveKinyi
-         InputFileData%Waves2%WaveKinzi  = InputFileData%Waves%WaveKinzi
-
+         InputFileData%Waves2%WaveKinGridxi  = InputFileData%Waves%WaveKinGridxi
+         InputFileData%Waves2%WaveKinGridyi  = InputFileData%Waves%WaveKinGridyi
+         InputFileData%Waves2%WaveKinGridzi  = InputFileData%Waves%WaveKinGridzi
       ENDIF
 
 end subroutine SeaStateInput_ProcessInitData

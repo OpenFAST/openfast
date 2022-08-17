@@ -1094,7 +1094,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       WRITE( UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
       do i= 1, p%NGridPts
          ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
-         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinxi(i),  InputFileData%Waves%WaveKinyi(i),  InputFileData%Waves%WaveKinzi(i) + InputFileData%MSL2SWL,  InputFileData%Waves%WaveKinzi(i)
+         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinGridxi(i),  InputFileData%Waves%WaveKinGridyi(i),  InputFileData%Waves%WaveKinGridzi(i) + InputFileData%MSL2SWL,  InputFileData%Waves%WaveKinGridzi(i)
       end do
  
       !   ! Write User-requested Wave Kinematics locations
