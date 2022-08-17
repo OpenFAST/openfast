@@ -24,8 +24,6 @@ from numpy import linalg as LA
 from fast_io import load_output
 import rtestlib as rtl
 
-NUMEPS = 1e-6
-
 def readFASTOut(fastoutput):
     try:
         return load_output(fastoutput)
@@ -41,17 +39,22 @@ def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarr
         ]
     So that test[0,:] are the data for the 0th channel and test[:,0] are the 0th entry in each channel.
     """
+
+    NUMEPS = 1e-12
+    ATOL_MIN = 1e-6
+
     n_channels = np.shape(test)[0]
     where_close = np.zeros_like(test, dtype=bool)
-    baseline_offset = baseline - np.min(baseline)
-    b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
 
     rtol = 10**(-1 * RTOL_MAGNITUDE)
     for i in range(n_channels):
+        baseline_offset = baseline[i] - np.min(baseline[i])
+        b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
         # atol = 10**(-1 * ATOL_MAGNITUDE)
         # atol = max( atol, 1e-6 )
         # atol[atol < ATOL_MIN] = ATOL_MIN
-        atol = 10**( ( max(b_order_of_magnitude[i]) - ATOL_MAGNITUDE) )
+        atol = 10**(max(b_order_of_magnitude) - ATOL_MAGNITUDE)
+        atol = max(atol, ATOL_MIN)
         where_close[i] = np.isclose( test[i], baseline[i], atol=atol, rtol=rtol )
 
     where_not_nan = ~np.isnan(test)

@@ -30,8 +30,6 @@ import numpy as np
 import rtestlib as rtl
 from fast_io import load_output
 
-NUMEPS = 1e-6
-
 def _validateAndExpandInputs(argv):
     rtl.validateInputOrExit(argv, 3, "solution1 solution2 attribute")
     testSolution = argv[0]
@@ -71,10 +69,13 @@ def _plotError(time, test, baseline, xlabel, title1, title2, RTOL_MAGNITUDE, ATO
     p2.line(time, abs(baseline - test), color='blue')
 
     # Calculate the threshold
+    NUMEPS = 1e-12
+    ATOL_MIN = 1e-6
     baseline_offset = baseline - np.min(baseline)
     b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
     rtol = 10**(-1 * RTOL_MAGNITUDE)
-    atol = 10**( ( max(b_order_of_magnitude) - ATOL_MAGNITUDE) )
+    atol = 10**(max(b_order_of_magnitude) - ATOL_MAGNITUDE)
+    atol = max(atol, ATOL_MIN)
     passfail_line = atol + rtol * abs(baseline)
     p2.line(time, passfail_line, color='red')
     # p2.cross(xseries, passfail_line)
