@@ -66,7 +66,7 @@ def _plotError(time, test, baseline, xlabel, title1, title2, RTOL_MAGNITUDE, ATO
     p2.title.align = 'center'
     p2.grid.grid_line_alpha = 0
     p2.xaxis.axis_label = 'Time (s)'
-    p2.line(time, abs(baseline - test), color='blue')
+    p2.line(time, abs(baseline - test), color='blue', legend_label="Error")
 
     # Calculate the threshold
     NUMEPS = 1e-12
@@ -77,7 +77,7 @@ def _plotError(time, test, baseline, xlabel, title1, title2, RTOL_MAGNITUDE, ATO
     atol = 10**(max(b_order_of_magnitude) - ATOL_MAGNITUDE)
     atol = max(atol, ATOL_MIN)
     passfail_line = atol + rtol * abs(baseline)
-    p2.line(time, passfail_line, color='red')
+    p2.line(time, passfail_line, color='red', legend_label="Threshold")
     # p2.cross(xseries, passfail_line)
 
     p2.add_tools(HoverTool(tooltips=[('Time','@x'), ('Error', '@y')], mode='vline'))
@@ -132,7 +132,7 @@ def plotOpenfastError(testSolution, baselineSolution, attribute, RTOL_MAGNITUDE,
         rtl.exitWithError("Error: Invalid channel name--{}".format(e))
 
     title1 = attribute + " (" + info1["attribute_units"][channel] + ")"
-    title2 = "ABS(Local - Baseline)"
+    title2 = "abs(Local - Baseline)"
     xlabel = 'Time (s)'
 
     timevec = dict1[:, 0]
