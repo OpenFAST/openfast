@@ -1646,7 +1646,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
                WaveS1Sdd = 0.0
             ELSE
-               WaveS1Sdd =  InitInp%WaveHs * InitInp%WaveHs / ( 8.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
+               WaveS1Sdd =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
             END IF
          CASE ( 4 )              ! User-defined spectrum (irregular) wave.
             IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
