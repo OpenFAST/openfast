@@ -24,7 +24,7 @@
 
 import os
 import sys
-basepath = os.path.dirname(__file__)
+basepath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import numpy as np
