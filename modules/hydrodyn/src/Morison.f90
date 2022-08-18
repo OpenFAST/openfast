@@ -1869,7 +1869,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    TYPE(Morison_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
                                                                      !!   only the output mesh is initialized)
    TYPE(Morison_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
-   REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+   REAL(DbKi),                        INTENT(IN   )  :: Interval    !< Coupling interval in seconds: the rate that 
                                                                      !!   (1) Morison_UpdateStates() is called in loose coupling &
                                                                      !!   (2) Morison_UpdateDiscState() is called in tight coupling.
                                                                      !!   Input is the suggested time from the glue code; 
@@ -2553,7 +2553,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-   REAL(ReKi)                                        :: F_DP(6), vmag, vmagf
+!   REAL(ReKi)                                        :: F_DP(6)
+   REAL(ReKi)                                        :: vmag, vmagf
    INTEGER                                           :: I, J, K
    REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
@@ -2594,7 +2595,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: FbVec(3), MbVec(3)
    REAL(ReKi)               :: pwr   ! exponent for buoyancy node distribution smoothing
    REAL(ReKi)               :: alpha ! final load distribution factor for element
-   REAL(ReKi)               :: Fb    !buoyant force
+!   REAL(ReKi)               :: Fb    !buoyant force
    REAL(ReKi)               :: Fr    !radial component of buoyant force
    REAL(ReKi)               :: Fl    !axial component of buoyant force
    REAL(ReKi)               :: Moment     !moment induced about the center of the cylinder's bottom face

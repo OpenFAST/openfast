@@ -126,6 +126,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT_Ujac      !< Time between when we need to re-calculate these Jacobians [s]
     REAL(ReKi)  :: UJacSclFact      !< Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
+    INTEGER(IntKi)  :: SolveOption      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
     INTEGER(IntKi)  :: CompElast      !< Compute blade loads (switch) {Module_ED; Module_BD} [-]
     INTEGER(IntKi)  :: CompInflow      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM} [-]
     INTEGER(IntKi)  :: CompAero      !< Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD} [-]
@@ -358,7 +359,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTK_LastWaveIndx      !< last index into wave array [-]
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen      !< width of the column headers output in the text and/or binary file [-]
-    CHARACTER(30)  :: OutFmt_a      !< Format used for text tabular output (except time); combines OutFmt with delim and appropriate spaces [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
     REAL(ReKi) , DIMENSION(1:5)  :: DriverWriteOutput      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
   END TYPE FAST_OutputFileType
@@ -2156,6 +2156,7 @@ ENDIF
     DstParamData%DT_Ujac = SrcParamData%DT_Ujac
     DstParamData%UJacSclFact = SrcParamData%UJacSclFact
     DstParamData%SizeJac_Opt1 = SrcParamData%SizeJac_Opt1
+    DstParamData%SolveOption = SrcParamData%SolveOption
     DstParamData%CompElast = SrcParamData%CompElast
     DstParamData%CompInflow = SrcParamData%CompInflow
     DstParamData%CompAero = SrcParamData%CompAero
@@ -2315,6 +2316,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DT_Ujac
       Re_BufSz   = Re_BufSz   + 1  ! UJacSclFact
       Int_BufSz  = Int_BufSz  + SIZE(InData%SizeJac_Opt1)  ! SizeJac_Opt1
+      Int_BufSz  = Int_BufSz  + 1  ! SolveOption
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1  ! CompInflow
       Int_BufSz  = Int_BufSz  + 1  ! CompAero
@@ -2489,6 +2491,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = InData%SizeJac_Opt1(i1)
       Int_Xferred = Int_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%SolveOption
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompElast
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CompInflow
@@ -2808,6 +2812,8 @@ ENDIF
       OutData%SizeJac_Opt1(i1) = IntKiBuf(Int_Xferred)
       Int_Xferred = Int_Xferred + 1
     END DO
+    OutData%SolveOption = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%CompElast = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CompInflow = IntKiBuf(Int_Xferred)
@@ -15519,7 +15525,6 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstOutputFileTypeData%ActualChanLen = SrcOutputFileTypeData%ActualChanLen
-    DstOutputFileTypeData%OutFmt_a = SrcOutputFileTypeData%OutFmt_a
       CALL FAST_Copylinstatesave( SrcOutputFileTypeData%op, DstOutputFileTypeData%op, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -15673,7 +15678,6 @@ ENDDO
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! ActualChanLen
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt_a)  ! OutFmt_a
       Int_BufSz   = Int_BufSz + 3  ! op: size of buffers for each call to pack subtype
       CALL FAST_Packlinstatesave( Re_Buf, Db_Buf, Int_Buf, InData%op, ErrStat2, ErrMsg2, .TRUE. ) ! op 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -15880,10 +15884,6 @@ ENDDO
       ENDIF
     IntKiBuf(Int_Xferred) = InData%ActualChanLen
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutFmt_a)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFmt_a(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       CALL FAST_Packlinstatesave( Re_Buf, Db_Buf, Int_Buf, InData%op, ErrStat2, ErrMsg2, OnlySize ) ! op 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -16151,10 +16151,6 @@ ENDDO
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%ActualChanLen = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutFmt_a)
-      OutData%OutFmt_a(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN

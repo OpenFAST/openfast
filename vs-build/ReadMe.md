@@ -13,11 +13,11 @@ The following solution files are available for code development on Windows using
    - Structural: 
      - [BeamDyn driver](BeamDyn/BeamDyn-w-registry.sln)
      - [SubDyn driver](SubDyn/SubDyn.sln)
-  - Wind/Wave conditions:
-     - [TurbSim](TurbSim/TurbSim.sln) Generates wind files
-     - [InflowWind driver](InflowWind/InflowWind_driver.sln) Reads and interpolates existing wind files
-     - [SeaState driver](SeaState/SeaStateDriver.sln) Waves and currents
- 	  
+   - Wind/Wave conditions:
+      - [TurbSim](TurbSim/TurbSim.sln) Generates wind files
+      - [InflowWind driver](InflowWind/InflowWind_driver.sln) Reads and interpolates existing wind files
+      - [InflowWind c binding](InflowWind/InflowWind_c_binding.sln) Creates a library (DLL/so) of the InflowWind routines that can be called from a C interface. **TO DO: Combine this with InflowWind driver for easier maintenance**
+      - [SeaState driver](SeaState/SeaStateDriver.sln) Waves and currents
 - Other:
   - [Discon](Discon/Discon.sln) 
     This solution file contains all 3 controllers used in the OpenFAST r-test (with the NREL 5MW model).

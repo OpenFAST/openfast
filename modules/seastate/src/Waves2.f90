@@ -73,7 +73,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
       INTEGER(IntKi)                                     :: I,ii                 !< Generic counters
       INTEGER(IntKi)                                     :: J, jj,k,kk           !< Generic counters
-      integer(IntKi)                                     :: masterCount          !< Counter from 1 to NWaveKin
+      integer(IntKi)                                     :: masterCount          !< Counter from 1 to NWaveKinGrid
       INTEGER(IntKi)                                     :: n                    !< Generic counter for calculations
       INTEGER(IntKi)                                     :: m                    !< Generic counter for calculations
       INTEGER(IntKi)                                     :: mu_minus             !< Generic counter for difference kinematics calculations
@@ -280,14 +280,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       ! Now copy over things to parameters...
       !--------------------------------------------------------------------------------
 
-         ! Wave information we need to keep
-
-      p%NWaveElev    = InitInp%NWaveElev
-      p%NStepWave    = InitInp%NStepWave
-      p%NStepWave2   = InitInp%NStepWave2
-
-
-
          ! Difference QTF
       p%WvDiffQTFF            =  InitInp%WvDiffQTFF           ! Flag for calculation
 
@@ -333,9 +325,9 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          ! Determine NWaveKin0Prime here:
 
          NWaveKin0Prime = 0
-         DO J = 1,InitInp%NWaveKin   ! Loop through all mesh points  where the incident wave kinematics will be computed
+         DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
                ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
             END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -358,11 +350,11 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
          I = 1
 
-         DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
+         DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
                ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
+            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
-               WaveKinzi0Prime(I) =  InitInp%WaveKinzi(J)
+               WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
                I = I + 1
 
@@ -399,7 +391,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
       ALLOCATE ( InitOut%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
-     ! ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
@@ -549,19 +540,18 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             !--------------------------------------------------------------------------------
             !> ## Calculate the surface elevation corrections ##
             !!
-            !! For each (x,y) coordinate that a wave elevation is requested at (both from the
-            !! (WaveElevxi,WaveElevyi) pairs, and the WaveElevXY pairs), a call is made to the
+            !! For each (x,y) coordinate that a wave elevation is requested at, a call is made to the
             !! subroutine waves2::waveelevtimeseriesatxy_diff to calculate the full time series for
             !! that point.  The results are added to the wave elevation results from the sum
             !! frequency calculations later in the code.
             !--------------------------------------------------------------------------------
 
             ! Step through the requested points
-         DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
+         DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
-            CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -623,8 +613,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(masterCount)  &
-                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(masterCount)  ))
+                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
+                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                         ! Get value for \f$ B^- \f$ for the n,m index pair
@@ -913,19 +903,18 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          !--------------------------------------------------------------------------------
          !> ## Calculate the surface elevation corrections ##
          !!
-         !! For each (x,y) coordinate that a wave elevation is requested at (both from the
-         !! (WaveElevxi,WaveElevyi) pairs, and the WaveElevXY pairs), a call is made to the
+         !! For each (x,y) coordinate that a wave elevation is requested at, a call is made to the
          !! subroutine waves2::waveelevtimeseriesatxy_sum to calculate the full time series for
          !! that point.  The results are added to the wave elevation results from the diff
          !! frequency calculations earlier in the code.
          !--------------------------------------------------------------------------------
 !NOTE: This is all grid points
              ! Step through the requested points
-         DO k = 1,InitInp%NWaveElev      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
+         DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
-            CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveElevxi(k), InitInp%WaveElevyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
+            CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -999,8 +988,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi(masterCount)  &
-                              +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi(masterCount)  ))
+                           *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinGridxi(masterCount)  &
+                              +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                      ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1101,8 +1090,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(masterCount)  &
-                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(masterCount)  ))
+                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
+                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                         ! Get value for \f$ B+ \f$ for the n,m index pair

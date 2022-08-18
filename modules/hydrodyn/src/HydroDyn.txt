@@ -98,7 +98,7 @@ typedef     ^                 ^                 SiKi                 WvLowCOffD 
 typedef     ^                 ^                 SiKi                 WvHiCOffD         -        -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
 typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
-typedef     ^                 ^                 LOGICAL              ValidWithSSExctn  -        -        -        "Whether SeaState configuration is valid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
+typedef     ^                 ^                 LOGICAL              InvalidWithSSExctn -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef     ^                 ^                 SiKi                 WaveElev1         {*}{*}{*}      -          -         "First order wave elevation (points to SeaState module data)"        -
 typedef     ^                 ^                 SiKi                 WaveElev2         {*}{*}{*}      -          -         "Second order wave elevation (points to SeaState module data)"        -
 typedef     ^                 ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)

@@ -213,7 +213,7 @@ SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
       
       DO I = 1, InitInp%NGridPts
          
-         CALL Calc_Current( InitInp, InitInp%WaveKinzi(I), InitInp%WtrDpth, InitInp%DirRoot, CurrVxi, CurrVyi )        
+         CALL Calc_Current( InitInp, InitInp%WaveKinGridzi(I), InitInp%WtrDpth, InitInp%DirRoot, CurrVxi, CurrVyi )        
          
          InitOut%CurrVxi(I) = CurrVxi
          InitOut%CurrVyi(I) = CurrVyi

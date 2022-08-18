@@ -107,7 +107,7 @@ typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An arra
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
 typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
-#typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
+typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
@@ -358,7 +358,6 @@ typedef	^	FAST_OutputFileType	IntKi	VTK_count	-	-	-	"Number of VTK files written
 typedef	^	FAST_OutputFileType	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave array"	-
 typedef	^	FAST_OutputFileType	FAST_LinFileType	Lin	-	-	-	"linearization data for output"
 typedef	^	FAST_OutputFileType	IntKi	ActualChanLen	-	-	-	"width of the column headers output in the text and/or binary file"	-
-typedef	^	FAST_OutputFileType	CHARACTER(30)	OutFmt_a	-	-	-	"Format used for text tabular output (except time); combines OutFmt with delim and appropriate spaces"	-
 typedef   ^   FAST_OutputFileType   FAST_LinStateSave   op   -   -   -   "operating points of states and inputs for VTK output of mode shapes"
 typedef	^	FAST_OutputFileType	ReKi	DriverWriteOutput	{5}	-	-	"pitch and tsr for current aero map case, plus error, number of iterations, wind speed"
 #typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	DriverWriteOutputHdr	{:}	-	-	"headers of data output from the driver"

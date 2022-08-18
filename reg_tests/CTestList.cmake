@@ -159,6 +159,15 @@ function(hd_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(hd_regression)
 
+# hydrodyn-Py
+function(hd_py_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynPyRegressionCase.py")
+  set(HYDRODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(hd_py_regression)
+
 # subdyn
 function(sd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSubdynRegressionCase.py")
@@ -309,6 +318,9 @@ hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
+
+# HydroDyn-Py regression tests
+hd_py_regression("hd_py_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
 
 # SubDyn regression tests
 sd_regression("SD_Cable_5Joints"                              "subdyn;offshore")

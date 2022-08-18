@@ -1660,7 +1660,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !..................
    if ( (InputFileData%WAMIT%ExctnMod == 2) ) then
 
-      if ( .not. InitInp%ValidWithSSExctn ) then
+      if ( InitInp%InvalidWithSSExctn ) then
          call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, set WaveMod to 0, 1, 1P#, 2, 3, 4, or 5; WaveDirMod=0; WvDiffQTF=FALSE; and WvSumQTF=FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
       

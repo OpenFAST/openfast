@@ -578,7 +578,6 @@ MODULE HydroDyn_Output
    INTEGER(IntKi), PARAMETER      :: B9WvsM2zi = 510
 
 
-
      ! The maximum number of output channels which can be output by the code.
    INTEGER(IntKi), PARAMETER      :: MaxOutPts = 510
 
@@ -658,7 +657,7 @@ MODULE HydroDyn_Output
                                                                B1RAzi,B2RAzi,B3RAzi,B4RAzi,B5RAzi,B6RAzi,B7RAzi,B8RAzi,B9RAzi/), &
                                                                (/9,6/)))
 
-    INTEGER, PARAMETER             :: PRPMotions(6) = (/PRPSurge,PRPSway,PRPHeave,PRPRoll,PRPPitch,PRPYaw/)
+   INTEGER, PARAMETER             :: PRPMotions(6) = (/PRPSurge,PRPSway,PRPHeave,PRPRoll,PRPPitch,PRPYaw/)
    INTEGER, PARAMETER             :: PRPVel(6)     = (/PRPTVxi, PRPTVyi,PRPTVzi, PRPRVxi,PRPRVyi, PRPRVzi/)
    INTEGER, PARAMETER             :: PRPAcc(6)     = (/PRPTAxi, PRPTAyi,PRPTAzi, PRPRAxi,PRPRAyi, PRPRAzi/)
  
@@ -794,7 +793,7 @@ MODULE HydroDyn_Output
                                  HydroFzi ,  HydroMxi ,  HydroMyi ,  HydroMzi ,  PRPHeave ,  PRPPitch ,   PRPRAxi ,   PRPRAyi , &
                                   PRPRAzi ,   PRPRoll ,   PRPRVxi ,   PRPRVyi ,   PRPRVzi ,  PRPSurge ,   PRPSway ,   PRPTAxi , &
                                   PRPTAyi ,   PRPTAzi ,   PRPTVxi ,   PRPTVyi ,   PRPTVzi ,    PRPYaw /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(510) =  (/  &  ! This lists the units corresponding to the allowed parameters
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(510) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
                                "(N)      ","(N)      ","(N)      ","(N-m)    ","(N-m)    ","(N-m)    ","(N)      ","(N)      ", &
                                "(N)      ","(N-m)    ","(N-m)    ","(N-m)    ","(m)      ","(rad)    ","(rad/s^2)","(rad/s^2)", &
                                "(rad/s^2)","(N)      ","(N)      ","(N)      ","(N-m)    ","(N-m)    ","(N-m)    ","(rad)    ", &
@@ -1052,6 +1051,11 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
       ! Local variables
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ''
    
    
   IF (p%UnOutFile < 0 ) RETURN
@@ -1063,9 +1067,6 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
       ErrStat = ErrID_Warn
       ErrMsg  = ' Cannot write output to file because there are not a valid output list.'
       RETURN
-   ELSE
-      ErrStat = ErrID_None
-      ErrMsg  = ''
    END IF
    
    
@@ -1089,7 +1090,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumTotalOuts )   
       END IF
           
-      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
+      WRITE (p%UnOutFile,'()', IOSTAT=ErrStat2)          ! write the line return -- ignore error status
    
    ELSE      
       Decimate = Decimate + 1

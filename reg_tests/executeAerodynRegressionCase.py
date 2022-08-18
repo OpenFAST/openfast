@@ -110,7 +110,7 @@ if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "ad_driver.dvr")
     returnCode = openfastDrivers.runAerodynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
     
 ###Build the filesystem navigation variables for running the regression test
 # For multiple turbines, test turbine 2, for combined cases, test case 4 
