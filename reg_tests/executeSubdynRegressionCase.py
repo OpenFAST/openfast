@@ -99,7 +99,7 @@ if not noExec:
     # run driver
     returnCode = openfastDrivers.runSubdynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName+".SD.out")
