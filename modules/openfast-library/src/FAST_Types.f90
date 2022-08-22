@@ -665,8 +665,8 @@ IMPLICIT NONE
     TYPE(MeshMapType)  :: SDy3_P_2_IceF_P      !< Map SubDyn y3Mesh point mesh to IceFloe point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: IceD_P_2_SD_P      !< Map IceDyn point mesh to SubDyn LMesh point mesh [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: SDy3_P_2_IceD_P      !< Map SubDyn y3Mesh point mesh to IceDyn point mesh [-]
-    TYPE(MeshMapType)  :: SlD_P_2_SD_P      !< Map SoilDyn point mesh to SubDyn y2Mesh point mesh [-]
-    TYPE(MeshMapType)  :: SD_P_2_SlD_P      !< Map SubDyn y2Mesh point mesh to SoilDyn point mesh [-]
+    TYPE(MeshMapType)  :: SlD_P_3_SD_P      !< Map SoilDyn point mesh to SubDyn y3Mesh point mesh [-]
+    TYPE(MeshMapType)  :: SD_P_3_SlD_P      !< Map SubDyn y3Mesh point mesh to SoilDyn point mesh [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian_Opt1      !< Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Jacobian_pivot      !< Pivot array used for LU decomposition of Jacobian_Opt1 [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
@@ -37418,10 +37418,10 @@ IF (ALLOCATED(SrcModuleMapTypeData%SDy3_P_2_IceD_P)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SlD_P_2_SD_P, DstModuleMapTypeData%SlD_P_2_SD_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SlD_P_3_SD_P, DstModuleMapTypeData%SlD_P_3_SD_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_2_SlD_P, DstModuleMapTypeData%SD_P_2_SlD_P, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copymeshmaptype( SrcModuleMapTypeData%SD_P_3_SlD_P, DstModuleMapTypeData%SD_P_3_SlD_P, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcModuleMapTypeData%Jacobian_Opt1)) THEN
@@ -37735,8 +37735,8 @@ DO i1 = LBOUND(ModuleMapTypeData%SDy3_P_2_IceD_P,1), UBOUND(ModuleMapTypeData%SD
 ENDDO
   DEALLOCATE(ModuleMapTypeData%SDy3_P_2_IceD_P)
 ENDIF
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SlD_P_2_SD_P, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_2_SlD_P, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SlD_P_3_SD_P, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( ModuleMapTypeData%SD_P_3_SlD_P, ErrStat, ErrMsg )
 IF (ALLOCATED(ModuleMapTypeData%Jacobian_Opt1)) THEN
   DEALLOCATE(ModuleMapTypeData%Jacobian_Opt1)
 ENDIF
@@ -38703,37 +38703,37 @@ ENDIF
       END IF
     END DO
   END IF
-      Int_BufSz   = Int_BufSz + 3  ! SlD_P_2_SD_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, .TRUE. ) ! SlD_P_2_SD_P 
+      Int_BufSz   = Int_BufSz + 3  ! SlD_P_3_SD_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SlD_P_3_SD_P, ErrStat2, ErrMsg2, .TRUE. ) ! SlD_P_3_SD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SlD_P_2_SD_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SlD_P_3_SD_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SlD_P_2_SD_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SlD_P_3_SD_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SlD_P_2_SD_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SlD_P_3_SD_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! SD_P_2_SlD_P: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_SlD_P, ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_2_SlD_P 
+      Int_BufSz   = Int_BufSz + 3  ! SD_P_3_SlD_P: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_3_SlD_P, ErrStat2, ErrMsg2, .TRUE. ) ! SD_P_3_SlD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_2_SlD_P
+      IF(ALLOCATED(Re_Buf)) THEN ! SD_P_3_SlD_P
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_2_SlD_P
+      IF(ALLOCATED(Db_Buf)) THEN ! SD_P_3_SlD_P
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_2_SlD_P
+      IF(ALLOCATED(Int_Buf)) THEN ! SD_P_3_SlD_P
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -40617,7 +40617,7 @@ ENDIF
       ENDIF
     END DO
   END IF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, OnlySize ) ! SlD_P_2_SD_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SlD_P_3_SD_P, ErrStat2, ErrMsg2, OnlySize ) ! SlD_P_3_SD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -40645,7 +40645,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_2_SlD_P, ErrStat2, ErrMsg2, OnlySize ) ! SD_P_2_SlD_P 
+      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%SD_P_3_SlD_P, ErrStat2, ErrMsg2, OnlySize ) ! SD_P_3_SlD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -43435,7 +43435,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SlD_P_2_SD_P, ErrStat2, ErrMsg2 ) ! SlD_P_2_SD_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SlD_P_3_SD_P, ErrStat2, ErrMsg2 ) ! SlD_P_3_SD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -43475,7 +43475,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 ) ! SD_P_2_SlD_P 
+      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%SD_P_3_SlD_P, ErrStat2, ErrMsg2 ) ! SD_P_3_SlD_P 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

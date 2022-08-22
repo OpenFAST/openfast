@@ -649,8 +649,8 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mes
 typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn LMesh point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceD_P	{:}	-	-	"Map SubDyn y3Mesh point mesh to IceDyn point mesh"
 # SlD <-> SD
-typedef	^	FAST_ModuleMapType	MeshMapType	SlD_P_2_SD_P	-	-	-	"Map SoilDyn point mesh to SubDyn y2Mesh point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_SlD_P	-	-	-	"Map SubDyn y2Mesh point mesh to SoilDyn point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SlD_P_3_SD_P	-	-	-	"Map SoilDyn point mesh to SubDyn y3Mesh point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_3_SlD_P	-	-	-	"Map SubDyn y3Mesh point mesh to SoilDyn point mesh"
 # Stored Jacobians:
 typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve"
 typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"

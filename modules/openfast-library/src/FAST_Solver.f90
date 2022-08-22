@@ -1503,7 +1503,7 @@ SUBROUTINE SlD_InputSolve( u_SlD, y_SD, MeshMapData, ErrStat, ErrMsg )
       ! Map SD outputs to SoilDyn inputs
       !----------------------------------------------------------------------------------------------------
       ! motions:
-   CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_2_SlD_P, ErrStat, ErrMsg )
+   CALL Transfer_Point_to_Point( y_SD%y3Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_3_SlD_P, ErrStat, ErrMsg )
 
 END SUBROUTINE SlD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3183,8 +3183,8 @@ CONTAINS
 
          if (p_FAST%CompSoil == Module_SlD) then
             ! SlD loads to SD
-            CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y2Mesh )
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y2Mesh)' )
+            CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_3_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y3Mesh )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y3Mesh)' )
             MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
             MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
          endif !  SoilDyn
@@ -4922,11 +4922,11 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 
    IF ( p_FAST%CompSoil == Module_SlD ) THEN
          ! SoilDyn output SoilMesh point mesh to SubDyn input LMesh point mesh
-      CALL MeshMapCreate( SlD%y%SoilMesh, SD%Input(1)%LMesh,  MeshMapData%SlD_P_2_SD_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SlD_P_2_SD_P' )
+      CALL MeshMapCreate( SlD%y%SoilMesh, SD%Input(1)%LMesh,  MeshMapData%SlD_P_3_SD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SlD_P_3_SD_P' )
          ! SubDyn output y2Mesh point mesh to SoilDyn input SoilMesh point mesh
-      CALL MeshMapCreate( SD%y%y2Mesh, SlD%Input(1)%SoilMesh,  MeshMapData%SD_P_2_SlD_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_SlD_P' )
+      CALL MeshMapCreate( SD%y%y3Mesh, SlD%Input(1)%SoilMesh,  MeshMapData%SD_P_3_SlD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_3_SlD_P' )
    END IF   ! SubDyn-SoilDyn
 
    IF (ErrStat >= AbortErrLev ) RETURN
