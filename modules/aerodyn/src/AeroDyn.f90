@@ -1098,6 +1098,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrMsg   = ""
 
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   p%MHK              = InitInp%MHK
    
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
@@ -4050,8 +4051,13 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, th
 
    do jElem = 1, u%TowerMotion%ElemTable(ELEMENT_LINE2)%nelem   ! number of elements on TowerMesh
          ! grab node numbers associated with the jElem_th element
-      n1 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(1)
-      n2 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(2)
+      if ( p%MHK == 2 ) then
+         n1 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(u%TowerMotion%ElemTable(ELEMENT_LINE2)%nelem - (jElem - 1))%ElemNodes(2)
+         n2 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(u%TowerMotion%ElemTable(ELEMENT_LINE2)%nelem - (jElem - 1))%ElemNodes(1)
+      else
+         n1 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(1)
+         n2 = u%TowerMotion%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(2)
+      end if
 
       p1 = u%TowerMotion%Position(:,n1) + u%TowerMotion%TranslationDisp(:,n1)
       p2 = u%TowerMotion%Position(:,n2) + u%TowerMotion%TranslationDisp(:,n2)

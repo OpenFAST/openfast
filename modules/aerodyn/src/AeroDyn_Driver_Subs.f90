@@ -754,15 +754,24 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
          if (wt%hasTower) then
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes)-uAD%rotors(iWT)%TowerMotion%Position(3,1)
             ! Check tower height
-            if (twrHeightAD<0) then
-               errStat=ErrID_Fatal
-               errMsg='First AeroDyn tower height should be smaller than last AD tower height'
+            if ( dvr%MHK==2 ) then
+               if (twrHeightAD>0) then
+                  errStat=ErrID_Fatal
+                  errMsg='First AeroDyn tower height should be larger than last AD tower height for a floating MHK turbine'
+               endif
+            else
+               if (twrHeightAD<0) then
+                  errStat=ErrID_Fatal
+                  errMsg='First AeroDyn tower height should be smaller than last AD tower height'
+               endif
             endif
 
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
             if ( dvr%MHK==1 ) then
                twrHeightAD = twrHeightAD + dvr%WtrDpth
-            end if
+            elseif ( dvr%MHK==2 ) then
+               twrHeightAD = abs(twrHeightAD)
+            endif
 
             twrHeight=TwoNorm(wt%nac%ptMesh%Position(:,1) - wt%twr%ptMesh%Position(:,1)  )
             ! KEEP ME, in summary file
@@ -776,7 +785,11 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
             ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
             Pbase = wt%twr%ptMesh%Position(:,1)
             Ptop = wt%nac%ptMesh%Position(:,1)
-            DeltaP = Ptop-Pbase
+            if ( dvr%MHK==2 ) then
+               DeltaP = Pbase-Ptop
+            else
+               DeltaP = Ptop-Pbase
+            endif
             do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
                if ( dvr%MHK==1 ) then
                   zBar = (uAD%rotors(iWT)%TowerMotion%Position(3,i) + dvr%WtrDpth) /twrHeight
