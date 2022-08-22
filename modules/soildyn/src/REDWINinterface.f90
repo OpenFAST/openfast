@@ -2,7 +2,7 @@
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
-!    This file is part of FAST's Controls and Electrical Drive Module, "ServoDyn".
+!    This file is part of SoilDyn.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
