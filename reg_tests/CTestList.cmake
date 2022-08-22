@@ -49,6 +49,11 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
     set(TESTDIR ${extra_args})
   endif()
 
+  set(NO_RUN_FLAG "")
+  if(CTEST_NO_RUN_FLAG)
+    set(NO_RUN_FLAG "-n")
+  endif()
+  
   add_test(
     ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -56,11 +61,11 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${EXECUTABLE}
        ${SOURCE_DIRECTORY}              # openfast source directory
        ${BUILD_DIRECTORY}               # build directory for test
-       ${TOLERANCE}
-       ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
-       ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
+       ${CTEST_RTEST_RTOL}
+       ${CTEST_RTEST_ATOL}
        ${PLOT_FLAG}                     # empty or "-p"
        ${RUN_VERBOSE_FLAG}              # empty or "-v"
+       ${NO_RUN_FLAG}                   # empty or "-n"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
@@ -79,13 +84,13 @@ function(of_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
-function(of_cpp_regression TESTNAME LABEL)
+function(of_fastlib_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_cpp" "${LABEL}" ${TESTNAME})
-endfunction(of_cpp_regression)
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_fastlib" "${LABEL}" ${TESTNAME})
+endfunction(of_fastlib_regression)
 
 # openfast aeroacoustic 
 function(of_regression_aeroacoustic TESTNAME LABEL)
@@ -225,19 +230,19 @@ of_regression("AWT_WSt_StartUpShutDown"         "openfast;elastodyn;aerodyn15;se
 of_regression("AOC_WSt"                         "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("AOC_YFree_WTurb"                 "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("AOC_YFix_WSt"                    "openfast;elastodyn;aerodyn15;servodyn")
-of_regression("UAE_Dnwind_YRamp_WSt"            "openfast;elastodyn;aerodyn14;servodyn")
+# of_regression("UAE_Dnwind_YRamp_WSt"            "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("UAE_Upwind_Rigid_WRamp_PwrCurve" "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb_PitchFail"          "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("WP_VSP_ECD"                      "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;servodyn")
-of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
+# of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 of_regression("5MW_OC3Trpd_DLL_WSt_WavesReg"    "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
-of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
-of_regression("5MW_ITIBarge_DLL_WTurb_WavesIrr"        "openfast;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
+# of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+# of_regression("5MW_ITIBarge_DLL_WTurb_WavesIrr"        "openfast;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_OC3Spar_DLL_WTurb_WavesIrr"         "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
@@ -249,27 +254,22 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
-  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;openfastlib;cpp")
+  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
-# # Python-based OpenFAST Library unit tests
-# if(BUILD_SHARED_LIBS)
-#   py_openfast_library_regression("py_openfastlib" "python;openfastlib")
-# endif()
-
-# OpenFAST C++ Driver test
+# OpenFAST C++ Driver test for OpenFAST Library
 # This tests the FAST Library and FAST_Library.h
-of_cpp_regression("AWT_YFree_WSt"                   "openfast;openfastlib;cpp;elastodyn;aerodyn15;servodyn")
+of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn15;servodyn")
 
 # OpenFAST Python API test
-of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn")
-of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;openfastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
-of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;openfastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
-of_regression_py("5MW_Land_BD_DLL_WTurb_py"                  "openfast;openfastlib;python;beamdyn;aerodyn15;servodyn")
-of_regression_py("HelicalWake_OLAF_py"                       "openfast;openfastlib;python;aerodyn15;olaf")
-of_regression_py("EllipticalWing_OLAF_py"                    "openfast;openfastlib;python;aerodyn15;olaf")
+of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn15;servodyn")
+of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;fastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
+of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
+of_regression_py("5MW_Land_BD_DLL_WTurb_py"                  "openfast;fastlib;python;beamdyn;aerodyn15;servodyn")
+of_regression_py("HelicalWake_OLAF_py"                       "openfast;fastlib;python;aerodyn15;olaf")
+of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;python;aerodyn15;olaf")
 
 # AeroAcoustic regression test
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
@@ -315,6 +315,7 @@ bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
 hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr"  "hydrodyn;offshore")
 hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
+hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"      "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
