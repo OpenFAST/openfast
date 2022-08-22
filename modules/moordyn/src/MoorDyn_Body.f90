@@ -51,11 +51,11 @@ MODULE MoorDyn_Body
 CONTAINS
 
 
-   SUBROUTINE Body_Setup( Body, tempArray, rhoW, ErrStat, ErrMsg)
+   SUBROUTINE Body_Setup( Body, tempArray, p, ErrStat, ErrMsg)
 
       TYPE(MD_Body),     INTENT(INOUT)    :: Body          ! the single body object of interest
       REAL(DbKi),        INTENT(IN)       :: tempArray(6)  ! initial pose of body
-      REAL(DbKi),        INTENT(IN)       :: rhoW
+      TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
       INTEGER,           INTENT(INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),      INTENT(INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 

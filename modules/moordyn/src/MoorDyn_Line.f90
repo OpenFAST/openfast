@@ -47,12 +47,12 @@ CONTAINS
 
    !-----------------------------------------------------------------------
    ! >>>>>>>>>>>>>> rename/reorganize this subroutine >>>>>>>>>>>>>
-   SUBROUTINE SetupLine (Line, LineProp, rhoW, ErrStat, ErrMsg)
+   SUBROUTINE SetupLine (Line, LineProp, p, ErrStat, ErrMsg)
       ! allocate arrays in line object
 
       TYPE(MD_Line), INTENT(INOUT)       :: Line          ! the single line object of interest
       TYPE(MD_LineProp), INTENT(INOUT)   :: LineProp      ! the single line property set for the line of interest
-      REAL(DbKi),    INTENT(IN)          :: rhoW
+      TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
@@ -212,6 +212,23 @@ CONTAINS
          RETURN
       END IF
       
+      
+      if (p%writeLog > 1) then
+         write(p%UnLog, '(A)') "  - Line"//trim(num2lstr(Line%IdNum))
+         write(p%UnLog, '(A)') "    ID: "//trim(num2lstr(Line%IdNum))
+         write(p%UnLog, '(A)') "    UnstrLen: "//trim(num2lstr(Line%UnstrLen))
+         write(p%UnLog, '(A)') "    N   : "//trim(num2lstr(Line%N   ))
+         write(p%UnLog, '(A)') "    d   : "//trim(num2lstr(Line%d   ))
+         write(p%UnLog, '(A)') "    rho : "//trim(num2lstr(Line%rho ))
+         write(p%UnLog, '(A)') "    E   : "//trim(num2lstr(Line%EA  ))
+         write(p%UnLog, '(A)') "    EI  : "//trim(num2lstr(Line%EI  ))
+         !write(p%UnLog, '(A)') "    BAin: "//trim(num2lstr(Line%BAin))
+         write(p%UnLog, '(A)') "    Can : "//trim(num2lstr(Line%Can ))
+         write(p%UnLog, '(A)') "    Cat : "//trim(num2lstr(Line%Cat ))
+         write(p%UnLog, '(A)') "    Cdn : "//trim(num2lstr(Line%Cdn ))
+         write(p%UnLog, '(A)') "    Cdt : "//trim(num2lstr(Line%Cdt ))
+         !write(p%UnLog, '(A)') "    ww_l: " << ( (rho - env->rho_w)*(pi/4.*d*d) )*9.81 << endl;	
+      end if
     
       
       ! need to add cleanup sub <<<
@@ -1548,25 +1565,34 @@ CONTAINS
 
    END SUBROUTINE Line_GetEndStuff
    !--------------------------------------------------------------
-
-
-   ! set end kinematics of a line that's attached to a Rod, and this includes rotational information
+  
+   ! Get bending stiffness vector from line end for use in computing orientation of zero-length rods
    !--------------------------------------------------------------
-   SUBROUTINE Line_GetEndSegmentInfo(Line, qEnd, EIout, dlOut, topOfLine)
+   SUBROUTINE Line_GetEndSegmentInfo(Line, q_EI_dl, topOfLine, rodEndB)
 
       TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! label for the current line, for convenience
-      REAL(DbKi),       INTENT(  OUT)  :: qEnd(3)
-      REAL(DbKi),       INTENT(  OUT)  :: EIout
-      REAL(DbKi),       INTENT(  OUT)  :: dlOut
+      REAL(DbKi),       INTENT(  OUT)  :: q_EI_dl(3)     ! EI/dl of the line end segment multiplied by the axis unit vector with the correct sign
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
+      INTEGER(IntKi),   INTENT(IN   )  :: rodEndB        ! rodEndB=0 means the line is attached to Rod end A, =1 means attached to Rod end B (implication for unit vector sign)
       
-      EIout = Line%EI;
-      
+      REAL(DbKi)   :: qEnd(3)
+      REAL(DbKi)   :: dlEnd
+            
       if (topOfLine==1) then
-         CALL UnitVector(Line%r(:,Line%N-1), Line%r(:,Line%N), qEnd, dlOut)  ! unit vector of last line segment
+         CALL UnitVector(Line%r(:,Line%N-1), Line%r(:,Line%N), qEnd, dlEnd)  ! unit vector of last line segment
+         if (rodEndB == 0) then
+            q_EI_dl =  qEnd*Line%EI/dlEnd  ! -----line----->[A==ROD==>B]
+         else
+            q_EI_dl = -qEnd*Line%EI/dlEnd  ! -----line----->[B==ROD==>A]
+         end if
       else
-         CALL UnitVector(Line%r(:,0       ), Line%r(:,1     ), qEnd, dlOut)  ! unit vector of first line segment
-      END IF
+         CALL UnitVector(Line%r(:,0       ), Line%r(:,1     ), qEnd, dlEnd)  ! unit vector of first line segment
+         if (rodEndB == 0) then
+            q_EI_dl = -qEnd*Line%EI/dlEnd  ! <----line-----[A==ROD==>B]
+         else
+            q_EI_dl =  qEnd*Line%EI/dlEnd  ! <----line-----[B==ROD==>A]
+         end if
+      end if
       
    END SUBROUTINE Line_GetEndSegmentInfo
    !--------------------------------------------------------------
