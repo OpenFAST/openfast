@@ -993,8 +993,8 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
-!      ! Internal variables
-   LOGICAL                               :: Err
+         ! Internal variables
+   INTEGER                                        :: ErrStat2
 
 
    !-------------------------------------------------------------------------------------------------
@@ -1005,7 +1005,6 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
    ErrStat = ErrID_None         
    ErrMsg  = ""    
       
-   Err     = .FALSE.
 
          ! Write the summary file header
    IF ( p%UnOutFile > -1 ) THEN   
@@ -1014,17 +1013,12 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Close our output file
    !-------------------------------------------------------------------------------------------------
-      CLOSE( p%UnOutFile, IOSTAT = ErrStat )
-      IF ( ErrStat /= 0 ) Err = .TRUE.
+      CLOSE( p%UnOutFile, IOSTAT = ErrStat2 )
+      IF ( ErrStat2 /= 0 ) then
+         ErrStat = ErrID_Severe
+         ErrMsg  = ' Error closing SeaState output file.'
+      END IF
 
-   END IF
- 
-   !-------------------------------------------------------------------------------------------------
-   ! Make sure ErrStat is non-zero if an error occurred
-   !-------------------------------------------------------------------------------------------------
-   IF ( Err ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error closing SeaState output file.'
    END IF
    
    RETURN
