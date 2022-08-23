@@ -208,9 +208,12 @@ def finalizePlotDirectory(test_solution, plot_list, case):
 
         for i, plot in enumerate(plot_list):
             _path = os.path.join(plot_path, plot + '_div.txt')
-            with open(_path, 'r') as f:
-                div = f.read().strip().join(('      ', '\n'))
-            html = ''.join((html, div))
+            try:
+                with open(_path, 'r') as f:
+                    div = f.read().strip().join(('      ', '\n'))
+                html = ''.join((html, div))
+            except FileNotFoundError:
+                print("The file for ", plot ," does not exist.")
 
         html = ''.join((html, '    </div>' + '\n'))
         html = ''.join((html, '  </div>' + '\n'))
@@ -220,12 +223,15 @@ def finalizePlotDirectory(test_solution, plot_list, case):
     script = "" # initialize in case plot_list is empty
     for i, plot in enumerate(plot_list):
         _path = os.path.join(plot_path, f'{plot}_script.txt')
-        with open(_path, "r") as f:
-            _s = f.read()
-        if i == 0:
-            script = _s
-        else:
-            script = ''.join((script, _s))
+        try:
+            with open(_path, "r") as f:
+                _s = f.read()
+            if i == 0:
+                script = _s
+            else:
+                script = ''.join((script, _s))
+        except FileNotFoundError:
+            msg = "The file does not exist."
         
     shutil.rmtree(plot_path, ignore_errors=True)
 
