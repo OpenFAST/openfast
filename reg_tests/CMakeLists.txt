@@ -80,106 +80,121 @@ set(CTEST_RTEST_ATOL "1.9" CACHE STRING "Set the absolute orders of magnitude to
 # include the r-test cmake projects (servodyn controllers)
 add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
+#-------------------------------------------------------------------------------
 # build and seed the test directories with the data they need to run the tests
+#-------------------------------------------------------------------------------
+
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/subdyn)
+foreach(regTest glue-codes/openfast glue-codes/openfast-cpp glue-codes/python 
+                glue-codes/fast-farm modules/aerodyn modules/beamdyn 
+                modules/hydrodyn modules/subdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
-## openfast seed
-foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
-endforeach()
+set(src ${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast)
+set(dst ${CTEST_BINARY_DIR}/glue-codes)
+add_custom_target(
+  copy_test_data_for_openfast
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/5MW_Baseline"  "${dst}/openfast/5MW_Baseline"
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/AOC"           "${dst}/openfast/AOC"
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/AWT27"         "${dst}/openfast/AWT27"
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/SWRT"          "${dst}/openfast/SWRT"
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/UAE_VI"        "${dst}/openfast/UAE_VI"
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/WP_Baseline"   "${dst}/openfast/WP_Baseline"
+  DEPENDS openfast
+)
 
-foreach(turbineDirectory 5MW_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/python/")
-endforeach()
+add_custom_target(
+  copy_test_data_for_python
+  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/5MW_Baseline"  "${dst}/python/5MW_Baseline"
+  DEPENDS openfastlib
+)
 
-## fastfarm seed
-foreach(turbineDirectory 5MW_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast-farm/${turbineDirectory}"
-  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast-farm/")
-endforeach()
+if(BUILD_OPENFAST_CPP_API)
+  add_custom_target(
+    copy_test_data_for_openfastcpp
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/5MW_Baseline"  "${dst}/openfast-cpp/5MW_Baseline"
+    DEPENDS openfastcpp
+  )
+endif()
+
+if(BUILD_FASTFARM)
+  add_custom_target(
+    copy_test_data_for_fastfarm
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${src}/5MW_Baseline"  "${dst}/fast-farm/5MW_Baseline"
+    DEPENDS FAST.Farm
+  )
+endif()
 
 # add the tests
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
 
+#-------------------------------------------------------------------------------
 # Copy the DISCON controllers to the 5MW turbine directories
-set(src "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/5MW_Baseline/ServoData")
+#-------------------------------------------------------------------------------
 
-set(of_dest "${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${of_dest}"
-)
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON_ITIBarge.dll"
-  DEPENDS DISCON_ITIBarge
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${of_dest}"
-  )
-add_custom_command(
-  OUTPUT "${of_dest}/DISCON_OC3Hywind.dll"
-  DEPENDS DISCON_OC3Hywind
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${of_dest}"
-)
+set(src_servo "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/5MW_Baseline/ServoData")
+set(src_discon "${src_servo}/DISCON/build/DISCON.dll")
+set(src_discon_iti "${src_servo}/DISCON_ITI/build/DISCON_ITIBarge.dll")
+set(src_discon_oc3 "${src_servo}/DISCON_OC3/build/DISCON_OC3Hywind.dll")
 
-set(ofpy_dest "${CTEST_BINARY_DIR}/glue-codes/python/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ofpy_dest}"
-)
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON_ITIBarge.dll"
-  DEPENDS DISCON_ITIBarge
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_ITI/build/DISCON_ITIBarge.dll" "${ofpy_dest}"
-)
-add_custom_command(
-  OUTPUT "${ofpy_dest}/DISCON_OC3Hywind.dll"
-  DEPENDS DISCON_OC3Hywind
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON_OC3/build/DISCON_OC3Hywind.dll" "${ofpy_dest}"
-)
-
-set(ff_dest "${CTEST_BINARY_DIR}/glue-codes/fast-farm/5MW_Baseline/ServoData/")
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT1.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT1.dll"
-)
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT2.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT2.dll"
-)
-add_custom_command(
-  OUTPUT "${ff_dest}/DISCON_WT3.dll"
-  DEPENDS DISCON
-  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT3.dll"
-)
-
+set(dest ${CTEST_BINARY_DIR}/glue-codes/openfast/5MW_Baseline/ServoData)
 add_custom_target(
-  regression_test_controllers
-  DEPENDS
-    "${of_dest}/DISCON.dll"
-    "${of_dest}/DISCON_ITIBarge.dll"
-    "${of_dest}/DISCON_OC3Hywind.dll"
-    "${ofpy_dest}/DISCON.dll"
-    "${ofpy_dest}/DISCON_ITIBarge.dll"
-    "${ofpy_dest}/DISCON_OC3Hywind.dll"
-    "${ff_dest}/DISCON_WT1.dll"
-    "${ff_dest}/DISCON_WT2.dll"
-    "${ff_dest}/DISCON_WT3.dll"
+  regression_test_controllers_openfast
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}      ${dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_iti}  ${dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_oc3}  ${dest}
+  DEPENDS openfast DISCON DISCON_ITIBarge DISCON_OC3Hywind  copy_test_data_for_openfast
 )
+
+set(dest ${CTEST_BINARY_DIR}/glue-codes/python/5MW_Baseline/ServoData)
+add_custom_target(
+  regression_test_controllers_python
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}      ${dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_iti}  ${dest}
+  COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_oc3}  ${dest}
+  DEPENDS openfastlib DISCON DISCON_ITIBarge DISCON_OC3Hywind copy_test_data_for_python
+)
+
+if(BUILD_OPENFAST_CPP_API)
+  set(dest ${CTEST_BINARY_DIR}/glue-codes/openfast-cpp/5MW_Baseline/ServoData)
+  add_custom_target(
+    regression_test_controllers_openfastcpp
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}      ${dest}
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_iti}  ${dest}
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon_oc3}  ${dest}
+    DEPENDS openfastcpp DISCON DISCON_ITIBarge DISCON_OC3Hywind copy_test_data_for_openfastcpp
+  )
+endif()
+
+if(BUILD_FASTFARM)
+  set(dest ${CTEST_BINARY_DIR}/fast-farm/5MW_Baseline/ServoData)
+  add_custom_target(
+    regression_test_controllers_fastfarm
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}  ${dest}/DISCON_WT1.dll
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}  ${dest}/DISCON_WT2.dll
+    COMMAND "${CMAKE_COMMAND}" -E copy ${src_discon}  ${dest}/DISCON_WT3.dll
+    DEPENDS FAST.Farm DISCON copy_test_data_for_fastfarm
+  )
+endif()
+
+#-------------------------------------------------------------------------------
+# Combined Targets
+#-------------------------------------------------------------------------------
 
 add_custom_target(
   regression_tests
   DEPENDS
     openfast
-    regression_test_controllers
+    regression_test_controllers_openfast
+    regression_test_controllers_python
 )
+if(BUILD_OPENFAST_CPP_API)
+  add_dependencies(regression_tests regression_test_controllers_openfastcpp)
+endif()
+if(BUILD_FASTFARM)
+  add_dependencies(regression_tests regression_test_controllers_fastfarm)
+endif()
 
 add_custom_target(
   regression_test_module_drivers
