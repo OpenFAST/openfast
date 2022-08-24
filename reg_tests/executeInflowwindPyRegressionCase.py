@@ -104,8 +104,8 @@ if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "inflowWind_testDriver.py")
     returnCode = openfastDrivers.runInflowwindDriverCase(caseInputFile, executable)
     if returnCode != 0:
-        rtl.exitWithError("")
-
+        sys.exit(returnCode*10)
+    
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "Points.Velocity.dat")
 baselineOutFile = os.path.join(targetOutputDirectory, "Points.Velocity.dat")
