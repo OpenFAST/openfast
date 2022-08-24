@@ -145,7 +145,7 @@ if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
-        rtl.exitWithError("")
+        sys.exit(returnCode*10)
 
 ### Get a all the .lin files in the baseline directory
 baselineOutFiles = [f for f in os.listdir(targetOutputDirectory) if '.lin' in f]
