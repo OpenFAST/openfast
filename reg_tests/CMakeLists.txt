@@ -183,21 +183,27 @@ endif()
 #-------------------------------------------------------------------------------
 
 add_custom_target(
-  regression_tests
+  regression_test_controllers
   DEPENDS
-    openfast
     regression_test_controllers_openfast
     regression_test_controllers_python
 )
 if(BUILD_OPENFAST_CPP_API)
-  add_dependencies(regression_tests regression_test_controllers_openfastcpp)
+  add_dependencies(regression_test_controllers regression_test_controllers_openfastcpp)
 endif()
 if(BUILD_FASTFARM)
-  add_dependencies(regression_tests regression_test_controllers_fastfarm)
+  add_dependencies(regression_test_controllers regression_test_controllers_fastfarm)
 endif()
 
 add_custom_target(
-  regression_test_module_drivers
+  regression_tests 
+  DEPENDS
+    openfast
+    regression_test_controllers
+)
+
+add_custom_target(
+  regression_test_module_drivers 
   DEPENDS
     aerodyn_driver
     beamdyn_driver
