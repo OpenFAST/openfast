@@ -79,7 +79,7 @@ MODULE REDWINinterface
    end interface
 #endif
 
-   type(ProgDesc), parameter    :: REDWINinterface_Ver = ProgDesc( 'SoilDyn Interface for REDWIN soil interaction DLLs', 'using '//TRIM(OS_Desc), '99-Feb-2020' )
+   type(ProgDesc), parameter    :: REDWINinterface_Ver = ProgDesc( 'SoilDyn Interface for REDWIN soil interaction DLLs', 'using '//TRIM(OS_Desc), '28-Aug-2022' )
 
       ! Interface version (in case we end up with multiple different versions supported at some later date)
    INTEGER(IntKi), PARAMETER    :: RW_v00 = 0         ! Version number
@@ -145,8 +145,6 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    character(1024)                                 :: PropsLoc             !< Full path to PropsFile location
    character(1024)                                 :: LDispLoc             !< Full path to LDispFile location
 
-
-
    ErrStat = ErrID_None
    ErrMsg= ''
 
@@ -163,22 +161,17 @@ subroutine REDWINinterface_Init( DLL_FileName, DLL_ProcName, DLL_Trgt, DLL_Model
    call CheckPaths()
    if (ErrStat >= AbortErrLev) return
 
-   ! Load the DLL
-#ifdef STATIC_DLL_LOAD
-      ! because OpenFOAM needs the MPI task to copy the library, we're not going to dynamically load it; it needs to be loaded at runtime.
-   DLL_Trgt%FileName = ''
-   DLL_Trgt%ProcName = ''
-#else
    ! Define and load the DLL:
    DLL_Trgt%FileName = DLL_FileName
    DLL_Trgt%ProcName = "" ! initialize all procedures to empty so we try to load only one
    DLL_Trgt%ProcName(1) = DLL_ProcName
-   CALL LoadDynamicLib ( DLL_Trgt, ErrStat2, ErrMsg2 );   if(Failed()) return;
-#endif
+   CALL LoadDynamicLib ( DLL_Trgt, ErrStat2, ErrMsg2 )
+   if(Failed()) return
 
    ! Initialize DLL
    dll_data%IDtask = IDtask_init
-   CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2);   if(Failed()) return;
+   CALL CallREDWINdll(DLL_Trgt, DLL_Model, dll_data, ErrStat2, ErrMsg2)
+   if(Failed()) return
 
    ! Checks on model version
    ! NOTE:  there is not a good way to tell exactly which DLL model is in use.  The DLL does not return

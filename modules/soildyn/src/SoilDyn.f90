@@ -37,7 +37,7 @@ MODULE SoilDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER :: SlD_Ver = ProgDesc( 'SoilDyn', 'v0.01.00', '99-Feb-2020' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER :: SlD_Ver = ProgDesc( 'SoilDyn', 'v0.01.00', '24-Aug-2022' ) !< module date/version information
 
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: SlD_Init                          !  Initialization routine
