@@ -208,23 +208,30 @@ def finalizePlotDirectory(test_solution, plot_list, case):
 
         for i, plot in enumerate(plot_list):
             _path = os.path.join(plot_path, plot + '_div.txt')
-            with open(_path, 'r') as f:
-                div = f.read().strip().join(('      ', '\n'))
-            html = ''.join((html, div))
+            try:
+                with open(_path, 'r') as f:
+                    div = f.read().strip().join(('      ', '\n'))
+                html = ''.join((html, div))
+            except FileNotFoundError:
+                print("The file for ", plot ," does not exist.")
 
         html = ''.join((html, '    </div>' + '\n'))
         html = ''.join((html, '  </div>' + '\n'))
         html = ''.join((html, '</body>' + '\n'))
         html = ''.join((html, _htmlTail()))
 
+    script = "" # initialize in case plot_list is empty
     for i, plot in enumerate(plot_list):
         _path = os.path.join(plot_path, f'{plot}_script.txt')
-        with open(_path, "r") as f:
-            _s = f.read()
-        if i == 0:
-            script = _s
-        else:
-            script = ''.join((script, _s))
+        try:
+            with open(_path, "r") as f:
+                _s = f.read()
+            if i == 0:
+                script = _s
+            else:
+                script = ''.join((script, _s))
+        except FileNotFoundError:
+            msg = "The file does not exist."
         
     shutil.rmtree(plot_path, ignore_errors=True)
 
@@ -243,8 +250,8 @@ def exportResultsSummary(path, results):
         html.write('  <div class="container">' + '\n')
         
         # Test Case - Pass/Fail - Max Relative Norm            
-        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1]) for i,r in enumerate(results)]
-        table = _tableHead(['Test Case', 'Pass/Fail'])
+        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1],r[2],'<a href="{0}/{0}.log">{0}.log</a>'.format(r[0])) for i,r in enumerate(results)]
+        table = _tableHead(['Test Case', 'Pass/Fail', 'Completion Code', 'Screen Output'])
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
@@ -256,7 +263,14 @@ def exportResultsSummary(path, results):
                 body += ('          <td class="cell-warning">' + fmt + '</td>').format(d[1]) + '\n'
             else:
                 body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
+
+            if d[2] != 0:
+                body += ('          <td class="cell-warning">{}</td>').format(d[2]) + '\n'
+            else:
+                body += ('          <td>{}</td>').format(d[2]) + '\n'
                 
+            body += '          <td>{0:s}</td>'.format(d[3]) + '\n'
+
             body += '        </tr>' + '\n'
         body += '      </tbody>' + '\n'
         table += body

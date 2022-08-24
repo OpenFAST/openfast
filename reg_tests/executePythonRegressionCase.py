@@ -146,6 +146,7 @@ if not noExec:
     output_channel_names = openfastlib.output_channel_names
 
 ### Build the filesystem navigation variables for running the regression test
+localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 rtl.validateFileOrExit(baselineOutFile)
 
