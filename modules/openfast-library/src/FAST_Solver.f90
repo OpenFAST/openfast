@@ -5984,15 +5984,6 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
       END DO !j_ss
    END IF            
             
-
-   ! Transfer platform ED to SD
-   IF ( p_FAST%CompSub == Module_SD  ) THEN
-         ! Map ED (motion) outputs to SD inputs:
-      CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   END IF
-
-
    ! HydroDyn: get predicted states
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6018,6 +6009,13 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          
    ! SubDyn/ExtPtfm: get predicted states
    IF ( p_FAST%CompSub == Module_SD ) THEN
+
+      ! Transfer platform ED to SD if SlD is active (Map ED (motion) outputs to SD inputs)
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
       CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
