@@ -67,8 +67,8 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    REAL(SiKi)                                      :: TmpWaveElevRow(2)    !< row read in from the wave elevation input file
  
    ! Local Variables
-   CHARACTER(1024)                                 :: TextLine          !< One line of text read from the file
-   INTEGER(IntKi)                                  :: LineLen           !< The length of the line read in
+   CHARACTER(MaxFileInfoLineLen)                   :: TextLine             !< One line of text read from the file
+   INTEGER(IntKi)                                  :: LineLen              !< The length of the line read in
    INTEGER(IntKi)                                  :: I                    !< Generic counter integer
    INTEGER(IntKi)                                  :: NumDataColumns       !< Number of columns of data found in the file
    INTEGER(IntKi)                                  :: NumHeaderLines       !< Number of header lines in the file.
@@ -628,7 +628,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
  
 
    ! Local Variables
-   CHARACTER(1024)                                 :: TextLine             !< One line of text read from the file
+   CHARACTER(MaxFileInfoLineLen)                   :: TextLine             !< One line of text read from the file
    INTEGER(IntKi)                                  :: LineLen              !< The length of the line read in
    INTEGER(IntKi)                                  :: I                    !< Generic counter integer
    INTEGER(IntKi)                                  :: NumDataColumns       !< Number of columns of data found in the file
@@ -989,9 +989,9 @@ SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, N
    INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
    LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
    
-   CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+   CHARACTER(MaxFileInfoLineLen*4)                    :: TextLine          !< One line of text read from the file
    INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
-   CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
+   CHARACTER(MaxFileInfoLineLen)                      :: StrRead           !< String containing the first word read in
    REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
    CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
    INTEGER(IntKi)                                     :: i                 !< simple integer counter

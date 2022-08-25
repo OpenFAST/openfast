@@ -182,7 +182,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       LOGICAL                                :: NewPer                               ! When .TRUE., indicates that the period has just changed.
       LOGICAL                                :: ZeroFreq                             ! When .TRUE., indicates that the zero    -frequency limit of added mass is contained within the WAMIT output files.
       
-      CHARACTER(1024)                        :: Line                                 ! String to temporarily hold the value of a line within a WAMIT output file.
+      CHARACTER(MaxFileInfoLineLen)          :: Line                                 ! String to temporarily hold the value of a line within a WAMIT output file.
 
       TYPE(FFT_DataType)                     :: FFT_Data                             ! the instance of the FFT module we're using
       integer(IntKi)                         :: iSub, jSub                           ! indices into the 6x6 sub-matrices used to redimensionalize the WAMIT data (Needed because NBodyMod=1 could have WAMIT matrices which are 6N x 6N)

@@ -6270,7 +6270,7 @@ END SUBROUTINE CheckR16Var
 
    INTEGER                          :: QuoteCh                                     ! Character position.
 
-   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
+   CHARACTER(MaxFileInfoLineLen)    :: OutLine                                     ! Character string read from file, containing output list
    CHARACTER(3)                     :: EndOfFile
 
 

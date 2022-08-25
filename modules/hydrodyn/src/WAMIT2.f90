@@ -3548,7 +3548,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 
 
          ! File reading variables
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
       REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
@@ -4302,7 +4302,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 
 
          ! File reading variables
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
       REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
@@ -5351,7 +5351,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
       INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
       LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
 
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
       REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't

@@ -48,7 +48,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       ! Local variables
    integer                                      :: UnEc                 ! The local unit number for this module's echo file
    character(1024)                              :: EchoFile             ! Name of SeaState echo file
-   character(1024)                              :: Line                 ! String to temporarially hold value of read line
+   character(MaxFileInfoLineLen)                :: Line                 ! String to temporarially hold value of read line
    real(ReKi), allocatable                      :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
    integer, allocatable                         :: tmpArray(:)          ! Temporary array storage of the joint output list
    real(ReKi), allocatable                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
