@@ -2440,21 +2440,21 @@ END SUBROUTINE CheckR16Var
 !! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
 !! as word separators. If there aren't NumWords in the line, the remaining array elements will remain empty.
 !! Use CountWords (nwtc_io::countwords) to count the number of words in a line.
-   SUBROUTINE GetWords ( Line, Words, NumWords )
+   SUBROUTINE GetWords ( Line, Words, NumWords, NumFound )
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: NumWords                                     !< The number of words to look for.
+   INTEGER, INTENT(IN)            :: NumWords                                     !< The maximum number of words to look for (and size of Words)
 
-   CHARACTER(*), INTENT(IN)     :: Line                                         !< The string to search.
-   CHARACTER(*), INTENT(OUT)    :: Words(NumWords)                              !< The array of found words.
-
+   CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
+   CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
+   INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
 
       ! Local declarations.
 
-   INTEGER                      :: Ch                                           ! Character position within the string.
-   INTEGER                      :: IW                                           ! Word index.
-   INTEGER                      :: NextWhite                                    ! The location of the next whitespace in the string.
+   INTEGER                        :: Ch                                           ! Character position within the string.
+   INTEGER                        :: IW                                           ! Word index.
+   INTEGER                        :: NextWhite                                    ! The location of the next whitespace in the string.
 
 
 
@@ -2464,48 +2464,51 @@ END SUBROUTINE CheckR16Var
       Words(IW) = ' '
    END DO ! IW
 
-
-      ! Let's make sure we have text on this line.
-
-   IF ( LEN_TRIM( Line ) == 0 )  RETURN
-
-
-      ! Parse words separated by any combination of spaces, tabs, commas,
-      ! semicolons, single quotes, and double quotes ("whitespace").
-
-   Ch = 0
    IW = 0
 
-   DO
+   
+      ! Let's make sure we have text on this line.
 
-      NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
+   IF ( LEN_TRIM( Line ) > 0 )  THEN
 
-      IF ( NextWhite > 1 )  THEN
+         ! Parse words separated by any combination of spaces, tabs, commas,
+         ! semicolons, single quotes, and double quotes ("whitespace").
 
-         IW        = IW + 1
-         Words(IW) = Line(Ch+1:Ch+NextWhite-1)
-         if (NextWhite > len(words(iw)) ) then 
-            call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
-         end if 
+      Ch = 0
 
-         IF ( IW == NumWords )  EXIT
+      DO
 
-         Ch = Ch + NextWhite
+         NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
 
-      ELSE IF ( NextWhite == 1 )  THEN
+         IF ( NextWhite > 1 )  THEN
 
-         Ch = Ch + 1
+            IW        = IW + 1
+            Words(IW) = Line(Ch+1:Ch+NextWhite-1)
+            if (NextWhite > len(words(iw)) ) then 
+               call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
+            end if 
 
-         CYCLE
+            IF ( IW == NumWords )  EXIT
 
-      ELSE
+            Ch = Ch + NextWhite
 
-         EXIT
+         ELSE IF ( NextWhite == 1 )  THEN
 
-      END IF
+            Ch = Ch + 1
 
-   END DO
+            CYCLE
 
+         ELSE
+
+            EXIT
+
+         END IF
+
+      END DO
+      
+   END IF
+   
+   IF (PRESENT(NumFound)) NumFound = IW
 
    RETURN
    END SUBROUTINE GetWords
@@ -3279,7 +3282,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChVar'
 

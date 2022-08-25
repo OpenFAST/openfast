@@ -693,7 +693,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       ! Go through the SEA headerlines
       DO I = 2,NumHeaderLines   
          CALL ReadLine( WaveCompUnit, '', TextLine, LineLen, ErrStatTmp )
-         CALL GetWords( TextLine, Words, 20 )
+         CALL GetWords( TextLine, Words, SIZE(Words) )
          
          ! Make sure the wave direction convention is not nautial, which is not supported
          IF (TRIM(Words(1)) == 'dconv:' .AND. TRIM(Words(2)) == 'naut') THEN
@@ -1044,16 +1044,10 @@ SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, N
    
       !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
       !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
-      CALL GetWords( TextLine, Words, 20 )
+      CALL GetWords( TextLine, Words, SIZE(Words), NumWords )
    
-      !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
-      !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
-      DO i=1,20
-         IF (TRIM(Words(i)) .ne. '') NumWords=i
-      ENDDO
-      
       !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
-      !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
+      !! everything that is on the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
       !! when the value in Words(i) can be read as a real(SiKi).  'StrRead' will contain the string equivalent.
       DO i=1,NumWords
          CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )

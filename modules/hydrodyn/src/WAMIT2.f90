@@ -5412,13 +5412,7 @@ SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 
             !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
             !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
-         CALL GetWords( TextLine, Words, 20 )
-
-            !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
-            !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
-         DO i=1,20
-            IF (TRIM(Words(i)) .ne. '') NumWords=i
-         ENDDO
+         CALL GetWords( TextLine, Words, size(Words), NumWords )
 
 
             !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
