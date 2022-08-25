@@ -76,7 +76,7 @@ True          SumPrint            - Generate a summary file listing input option
           1,          3,          4,          6    BlOutNd             - Blade nodes whose values will be output  (-)
           0   NTwOuts             - Number of tower node outputs [0 - 9]  (-)
           1   TwOutNd             - Tower nodes whose values will be output  (-)
-                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+              OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
 "B1N1VDisx, B1N1VDisy, B1N1VDisz" ! disturbed wind velocity at Blade 1, Node 1
 "B1N2VDisx, B1N2VDisy, B1N2VDisz" ! disturbed wind velocity at Blade 1, Node 2
 "B1N3VDisx, B1N3VDisy, B1N3VDisz" ! disturbed wind velocity at Blade 1, Node 3
@@ -91,7 +91,7 @@ END of OutList section (the word "END" must appear in the first 3 columns of the
 ====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]
           1   BldNd_BladesOut     - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
 "All"         BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
-                  OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+              OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
 "Fx, Fy"                   
 "Vx, Vy"                   
 "Vrel"                     
@@ -103,3 +103,4 @@ END of OutList section (the word "END" must appear in the first 3 columns of the
 "Vindy"                    
 "Alpha"                    
 END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+====================================================================================================
