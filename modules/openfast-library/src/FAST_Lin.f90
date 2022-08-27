@@ -4995,7 +4995,8 @@ FUNCTION Indx_y_ED_Nacelle_Start(y_ED, y_FAST) RESULT(ED_Out_Start)
 
    INTEGER                                      :: ED_Out_Start     !< starting index of this blade mesh in ElastoDyn outputs
 
-   ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, MaxNBlades+1)
+   ED_Out_Start = Indx_y_ED_BladeRoot_Start(y_ED, y_FAST, size(y_ED%BladeRootMotion))        ! start of last blade root
+   ED_Out_Start = ED_Out_Start + y_ED%BladeRootMotion(size(y_ED%BladeRootMotion))%NNodes*18  ! N blade roots, 6 fields with 3 components per blade.
 END FUNCTION Indx_y_ED_Nacelle_Start
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine returns the starting index for y_ED%Yaw in the FAST linearization outputs.
@@ -5188,7 +5189,7 @@ FUNCTION Indx_y_SD_Y3Mesh_Start(y_SD, y_FAST) RESULT(SD_Out_Start)
 
    INTEGER                                      :: SD_Out_Start     !< starting index of this mesh in SubDyn outputs
 
-   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 18    ! 6 fields (TranslationDisp, MASKID_Orientation, TranslationVel, RotationVel, TranslationAcc, RotationAcc) with 3 components
+   SD_Out_Start = Indx_y_SD_Y2Mesh_Start(y_SD, y_FAST) + y_SD%Y2Mesh%NNodes * 6            ! 3 forces + 3 moments at each node! skip all of the Y2Mesh data and get to the beginning of Y3Mesh
 END FUNCTION Indx_y_SD_Y3Mesh_Start
 
 !----------------------------------------------------------------------------------------------------------------------------------
