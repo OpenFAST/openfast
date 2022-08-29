@@ -611,9 +611,10 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
       end if
       
       if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnNacelle(1) = y_OpFM%u(node)
-         u_AD%rotors(1)%InflowOnNacelle(2) = y_OpFM%v(node)
-         u_AD%rotors(1)%InflowOnNacelle(3) = y_OpFM%w(node)
+!        for cfd we will lump the hub and nacelle together
+         u_AD%rotors(1)%InflowOnNacelle(1) = y_OpFM%u(1)
+         u_AD%rotors(1)%InflowOnNacelle(2) = y_OpFM%v(1)
+         u_AD%rotors(1)%InflowOnNacelle(3) = y_OpFM%w(1)
          node = node + 1
       else
          u_AD%rotors(1)%InflowOnNacelle = 0.0_ReKi
