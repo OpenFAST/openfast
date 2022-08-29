@@ -3181,7 +3181,6 @@ END SUBROUTINE CheckR16Var
          ! Local declarations.
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
-      INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
 
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChAry'
 
@@ -3680,6 +3679,7 @@ END SUBROUTINE CheckR16Var
       ENDIF
       CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2)
          CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>= AbortErrLev) return
          
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
@@ -4146,10 +4146,8 @@ END SUBROUTINE CheckR16Var
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
                         , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg2 )
-      IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         RETURN
-      ENDIF
+         IF (ErrStat >= AbortErrLev) RETURN
 
       READ (Words(3-NameIndx),*,IOSTAT=ErrStatLcl)  Var
 
@@ -4335,7 +4333,9 @@ END SUBROUTINE CheckR16Var
          RETURN
       ENDIF
 
-      CALL CheckRealVar( Var, ExpVarName, ErrStat, ErrMsg)
+      CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev )  RETURN
       
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words !bjj: not sure this is the best way to echo the number being read (in case of truncation, etc)
