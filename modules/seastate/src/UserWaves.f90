@@ -366,7 +366,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                                         :: iFile              ! Generic index
    CHARACTER(10)                                   :: Delim
    CHARACTER(64), ALLOCATABLE                      :: WaveDataStr(:)
-   REAL(SiKi), ALLOCATABLE                         :: WaveData(:)
+   REAL(SiKi)                                      :: WaveData
   
    ! Temporary error handling variables
    INTEGER(IntKi)                                  :: ErrStatTmp         ! Temporarary error status for procesing
@@ -407,10 +407,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
    InitOut%nodeInWater = 1
-   
-   ALLOCATE ( WaveData     ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveData.',  ErrStat,ErrMsg,RoutineName)
-   WaveData = 0.0_SiKi
    
    ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
@@ -472,29 +468,29 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                END IF
                DO i = 1, InitInp%NGrid(1)
             
-                  isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+                  isNumeric = is_numeric(WaveDataStr(i), WaveData)
                   IF (.NOT. isNumeric ) THEN
                      InitOut%nodeInWater(m,icount) = 0
-                     WaveData(i)            = 0.0
+                     WaveData            = 0.0
                   ELSE              
                      InitOut%nodeInWater(m,icount) = 1
                   END IF
                   
                   SELECT CASE (iFile)
                      CASE (1)              
-                        InitOut%WaveVel (m,i,j,k,1)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,1)  = WaveData
                      CASE (2)
-                        InitOut%WaveVel (m,i,j,k,2)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,2)  = WaveData
                      CASE (3)
-                        InitOut%WaveVel (m,i,j,k,3)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,3)  = WaveData
                      CASE (4)
-                        InitOut%WaveAcc (m,i,j,k,1)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,1)  = WaveData
                      CASE (5)
-                        InitOut%WaveAcc (m,i,j,k,2)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,2)  = WaveData
                      CASE (6)
-                        InitOut%WaveAcc (m,i,j,k,3)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,3)  = WaveData
                      CASE (7)              
-                        InitOut%WaveDynP(m,i,j,k  )  = WaveData(i)
+                        InitOut%WaveDynP(m,i,j,k  )  = WaveData
                   END SELECT
                   icount = icount + 1
                END DO
@@ -538,11 +534,11 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
          DO i = 1, InitInp%NGrid(1)
             
-            isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+            isNumeric = is_numeric(WaveDataStr(i), WaveData)
             IF (.NOT. isNumeric ) THEN
                InitOut%WaveElev(m,i,j )  = 0.0
             ELSE              
-               InitOut%WaveElev(m,i,j )  = WaveData(i)
+               InitOut%WaveElev(m,i,j )  = WaveData
             END IF
          END DO
       end do
@@ -592,10 +588,6 @@ CONTAINS
    SUBROUTINE CleanUp( )
 
       IF (ALLOCATED( WaveDataStr ))         DEALLOCATE( WaveDataStr,        STAT=ErrStatTmp)
-      IF (ALLOCATED( WaveData ))        DEALLOCATE( WaveData,       STAT=ErrStatTmp)
-      !IF (ALLOCATED( outOfWaterFlag ))         DEALLOCATE( outOfWaterFlag,        STAT=ErrStatTmp)
-      !IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
-      !IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
       CLOSE(UnWv)
       RETURN
    END SUBROUTINE CleanUp
