@@ -217,11 +217,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ErrMsg   = ""               
       InitOut%NULLVAL = 0 ! set to avoid compiler warnings about INTENT(OUT) not getting set
       
-      
-         ! Initialize the NWTC Subroutine Library (set pi constants)
-         
-      CALL NWTC_Init(  )
-
          ! Copy Output Init data from Waves Module Init call
          
       p%NStepWave    = InitInp%NStepWave

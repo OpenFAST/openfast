@@ -182,12 +182,6 @@ SUBROUTINE Current_Init( InitInp, InitOut, ErrStat, ErrMsg )
          
    ErrStat = ErrID_None         
    ErrMsg  = ""               
-      
-      
-      ! Initialize the NWTC Subroutine Library
-         
-   CALL NWTC_Init(  )
-
   
    
       ! IF there are Morison elements, then compute the current components at each morison node elevation
