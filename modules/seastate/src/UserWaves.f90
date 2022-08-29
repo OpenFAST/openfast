@@ -564,7 +564,7 @@ CONTAINS
       CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       LOGICAL                   :: OK
       ! Local var
-      CHARACTER(2048)           :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen*64)  :: TextLine          !< One line of text read from the file : length should be > n*(1+length(s(1)))
       OK=.TRUE.
 
       ! Read line
