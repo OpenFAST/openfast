@@ -1725,8 +1725,10 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: NacmomentB       !< Buoyant moment at nacelle node in global coordinates
    REAL(ReKi), DIMENSION(3,p%NumBlades)             :: BlforceBroot     !< Buoyant force on blade root in global coordinates
    REAL(ReKi), DIMENSION(3,p%NumBlades)             :: BlmomentBroot    !< Buoyant moment on blade root in global coordinates
-   REAL(ReKi), DIMENSION(3)                         :: BlforceBtip      !< Buoyant force on blade tip in global coordinates
-   REAL(ReKi), DIMENSION(3)                         :: BlmomentBtip     !< Buoyant moment on blade tip in global coordinates
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: BlforceRoot      !< Buoyant force on element root in global coordinates
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: BlmomentRoot     !< Buoyant moment on element root in global coordinates   
+   REAL(ReKi), DIMENSION(3)                         :: BlforceTip       !< Buoyant force on element tip in global coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlmomentTip      !< Buoyant moment on element tip in global coordinates
    REAL(ReKi), DIMENSION(3)                         :: TwrforceBtop     !< Buoyant force on tower top in global coordinates
    REAL(ReKi), DIMENSION(3)                         :: TwrmomentBtop    !< Buoyant moment on tower top in global coordinates
    REAL(ReKi), DIMENSION(p%NumBlNds,p%NumBlades,3)  :: BlFBtmp          !< Buoyant force at blade nodes in global coordinates, passed to m%BlFB
@@ -1812,29 +1814,32 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          BlmomentBplus = BlmomentB * p%BlAxCent(j,k)
          BlmomentB = BlmomentB * ( 1 - p%BlAxCent(j,k) ) 
 
-            ! Buoyant force and moment on blade root and node position in global coordinates, saved for later use
-         if ( j==1 ) then
-            BlforceBroot(1,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlinclAng ) * cos( BlheadAng )
-            BlforceBroot(2,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlinclAng ) * sin( BlheadAng )
-            BlforceBroot(3,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * cos( BlinclAng )
-            BlmomentBroot(1,k) = p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlinclAng ) * sin( BlheadAng )
-            BlmomentBroot(2,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlinclAng ) * cos( BlheadAng )
-            BlmomentBroot(3,k) = 0.0_ReKi
+            ! Buoyant force and moment on element "root" in global coordinates, added to existing force and moment
+         BlforceRoot(1,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlinclAng ) * cos( BlheadAng )
+         BlforceRoot(2,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * sin( BlinclAng ) * sin( BlheadAng )
+         BlforceRoot(3,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**2 * BlposCB(3) * cos( BlinclAng )
+         BlmomentRoot(1,k) = p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlinclAng ) * sin( BlheadAng )
+         BlmomentRoot(2,k) = -p%AirDens * p%Gravity * pi * p%BlRad(j,k)**4 / 4.0_ReKi * sin( BlinclAng ) * cos( BlheadAng )
+         BlmomentRoot(3,k) = 0.0_ReKi
+         if ( j==1 ) then ! Buoyant force and moment on blade root and node position in global coordinates, saved for later use
+            BlforceBroot(:,k) = BlforceRoot(:,k)
+            BlmomentBroot(:,k) = BlmomentRoot(:,k)
             Blposroot(:,k) = BlposCB
+         else
+            BlforceB = BlforceB + BlforceRoot(:,k)
+            BlmomentB = BlmomentB + BlmomentRoot(:,k)
          end if
 
-            ! Buoyant force and moment on blade tip in global coordinates, added to existing force and moment at tip
-         if ( j==p%NumBlNds - 1 ) then
-            BlforceBtip(1) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlinclAng ) * cos( BlheadAng )
-            BlforceBtip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlinclAng ) * sin( BlheadAng )
-            BlforceBtip(3) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * cos( BlinclAng )
-            BlmomentBtip(1) = -p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlinclAng ) * sin( BlheadAng )
-            BlmomentBtip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlinclAng ) * cos( BlheadAng )
-            BlmomentBtip(3) = 0.0_ReKi
+            ! Buoyant force and moment on element "tip" in global coordinates, added to existing force and moment
+         BlforceTip(1) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlinclAng ) * cos( BlheadAng )
+         BlforceTip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * sin( BlinclAng ) * sin( BlheadAng )
+         BlforceTip(3) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**2 * BlposCBplus(3) * cos( BlinclAng )
+         BlmomentTip(1) = -p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlinclAng ) * sin( BlheadAng )
+         BlmomentTip(2) = p%AirDens * p%Gravity * pi * p%BlRad(j+1,k)**4 / 4.0_ReKi * sin( BlinclAng ) * cos( BlheadAng )
+         BlmomentTip(3) = 0.0_ReKi
 
-            BlforceBplus = BlforceBplus + BlforceBtip
-            BlmomentBplus = BlmomentBplus + BlmomentBtip
-         end if
+         BlforceBplus = BlforceBplus + BlforceTip
+         BlmomentBplus = BlmomentBplus + BlmomentTip
 
             ! Buoyant moment in global coordinates, moved from center of buoyancy to aerodynamic center
          BlmomentB(1) = BlmomentB(1) + BlglobCB(2) * BlforceB(3) - BlglobCB(3) * BlforceB(2)

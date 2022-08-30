@@ -1958,6 +1958,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   tmpHubFB  = 0.0_ReKi
+   tmpHubMB  = 0.0_ReKi
 
    ! Compute max radius and rotor speed
    if (p_AD%WakeMod /= WakeMod_FVW) then
