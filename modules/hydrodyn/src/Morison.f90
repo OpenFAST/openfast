@@ -1897,9 +1897,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    errMsg  = ""               
       
   
-      
-      ! Initialize the NWTC Subroutine Library         
-   CALL NWTC_Init(  )
 
       ! Define parameters here:  
    p%DT         = Interval

@@ -2467,10 +2467,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
       ErrMsgTmp   = ""
 
 
-         ! Initialize the NWTC Subroutine Library
-
-      CALL NWTC_Init(  )
-
          ! Initialize the pRNG
       CALL RandNum_Init(InitInp%RNG, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN

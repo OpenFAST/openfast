@@ -114,11 +114,6 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
       ! For now, this is the only model we have implemented
       RdtnFrmAM = .FALSE.
 
-         ! Initialize the NWTC Subroutine Library
-
-      CALL NWTC_Init(  )
-
-
 
          !    If HighFreq is greater than
          !   RdtnOmegaMax, Abort because RdtnDT must be reduced in order to have

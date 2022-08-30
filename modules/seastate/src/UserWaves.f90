@@ -67,8 +67,8 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    REAL(SiKi)                                      :: TmpWaveElevRow(2)    !< row read in from the wave elevation input file
  
    ! Local Variables
-   CHARACTER(1024)                                 :: TextLine          !< One line of text read from the file
-   INTEGER(IntKi)                                  :: LineLen           !< The length of the line read in
+   CHARACTER(MaxFileInfoLineLen)                   :: TextLine             !< One line of text read from the file
+   INTEGER(IntKi)                                  :: LineLen              !< The length of the line read in
    INTEGER(IntKi)                                  :: I                    !< Generic counter integer
    INTEGER(IntKi)                                  :: NumDataColumns       !< Number of columns of data found in the file
    INTEGER(IntKi)                                  :: NumHeaderLines       !< Number of header lines in the file.
@@ -366,7 +366,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                                         :: iFile              ! Generic index
    CHARACTER(10)                                   :: Delim
    CHARACTER(64), ALLOCATABLE                      :: WaveDataStr(:)
-   REAL(SiKi), ALLOCATABLE                         :: WaveData(:)
+   REAL(SiKi)                                      :: WaveData
   
    ! Temporary error handling variables
    INTEGER(IntKi)                                  :: ErrStatTmp         ! Temporarary error status for procesing
@@ -407,10 +407,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
    InitOut%nodeInWater = 1
-   
-   ALLOCATE ( WaveData     ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveData.',  ErrStat,ErrMsg,RoutineName)
-   WaveData = 0.0_SiKi
    
    ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
@@ -472,29 +468,29 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                END IF
                DO i = 1, InitInp%NGrid(1)
             
-                  isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+                  isNumeric = is_numeric(WaveDataStr(i), WaveData)
                   IF (.NOT. isNumeric ) THEN
                      InitOut%nodeInWater(m,icount) = 0
-                     WaveData(i)            = 0.0
+                     WaveData            = 0.0
                   ELSE              
                      InitOut%nodeInWater(m,icount) = 1
                   END IF
                   
                   SELECT CASE (iFile)
                      CASE (1)              
-                        InitOut%WaveVel (m,i,j,k,1)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,1)  = WaveData
                      CASE (2)
-                        InitOut%WaveVel (m,i,j,k,2)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,2)  = WaveData
                      CASE (3)
-                        InitOut%WaveVel (m,i,j,k,3)  = WaveData(i)
+                        InitOut%WaveVel (m,i,j,k,3)  = WaveData
                      CASE (4)
-                        InitOut%WaveAcc (m,i,j,k,1)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,1)  = WaveData
                      CASE (5)
-                        InitOut%WaveAcc (m,i,j,k,2)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,2)  = WaveData
                      CASE (6)
-                        InitOut%WaveAcc (m,i,j,k,3)  = WaveData(i)
+                        InitOut%WaveAcc (m,i,j,k,3)  = WaveData
                      CASE (7)              
-                        InitOut%WaveDynP(m,i,j,k  )  = WaveData(i)
+                        InitOut%WaveDynP(m,i,j,k  )  = WaveData
                   END SELECT
                   icount = icount + 1
                END DO
@@ -538,11 +534,11 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
          DO i = 1, InitInp%NGrid(1)
             
-            isNumeric = is_numeric(WaveDataStr(i), WaveData(i))
+            isNumeric = is_numeric(WaveDataStr(i), WaveData)
             IF (.NOT. isNumeric ) THEN
                InitOut%WaveElev(m,i,j )  = 0.0
             ELSE              
-               InitOut%WaveElev(m,i,j )  = WaveData(i)
+               InitOut%WaveElev(m,i,j )  = WaveData
             END IF
          END DO
       end do
@@ -564,7 +560,7 @@ CONTAINS
       CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       LOGICAL                   :: OK
       ! Local var
-      CHARACTER(2048)           :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen*64)  :: TextLine          !< One line of text read from the file : length should be > n*(1+length(s(1)))
       OK=.TRUE.
 
       ! Read line
@@ -592,10 +588,6 @@ CONTAINS
    SUBROUTINE CleanUp( )
 
       IF (ALLOCATED( WaveDataStr ))         DEALLOCATE( WaveDataStr,        STAT=ErrStatTmp)
-      IF (ALLOCATED( WaveData ))        DEALLOCATE( WaveData,       STAT=ErrStatTmp)
-      !IF (ALLOCATED( outOfWaterFlag ))         DEALLOCATE( outOfWaterFlag,        STAT=ErrStatTmp)
-      !IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
-      !IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
       CLOSE(UnWv)
       RETURN
    END SUBROUTINE CleanUp
@@ -628,7 +620,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
  
 
    ! Local Variables
-   CHARACTER(1024)                                 :: TextLine             !< One line of text read from the file
+   CHARACTER(MaxFileInfoLineLen)                   :: TextLine             !< One line of text read from the file
    INTEGER(IntKi)                                  :: LineLen              !< The length of the line read in
    INTEGER(IntKi)                                  :: I                    !< Generic counter integer
    INTEGER(IntKi)                                  :: NumDataColumns       !< Number of columns of data found in the file
@@ -693,7 +685,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       ! Go through the SEA headerlines
       DO I = 2,NumHeaderLines   
          CALL ReadLine( WaveCompUnit, '', TextLine, LineLen, ErrStatTmp )
-         CALL GetWords( TextLine, Words, 20 )
+         CALL GetWords( TextLine, Words, SIZE(Words) )
          
          ! Make sure the wave direction convention is not nautial, which is not supported
          IF (TRIM(Words(1)) == 'dconv:' .AND. TRIM(Words(2)) == 'naut') THEN
@@ -989,9 +981,9 @@ SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, N
    INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
    LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
    
-   CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+   CHARACTER(MaxFileInfoLineLen*4)                    :: TextLine          !< One line of text read from the file
    INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
-   CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
+   CHARACTER(MaxFileInfoLineLen)                      :: StrRead           !< String containing the first word read in
    REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
    CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
    INTEGER(IntKi)                                     :: i                 !< simple integer counter
@@ -1044,16 +1036,10 @@ SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, N
    
       !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
       !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
-      CALL GetWords( TextLine, Words, 20 )
+      CALL GetWords( TextLine, Words, SIZE(Words), NumWords )
    
-      !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
-      !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
-      DO i=1,20
-         IF (TRIM(Words(i)) .ne. '') NumWords=i
-      ENDDO
-      
       !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
-      !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
+      !! everything that is on the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
       !! when the value in Words(i) can be read as a real(SiKi).  'StrRead' will contain the string equivalent.
       DO i=1,NumWords
          CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )

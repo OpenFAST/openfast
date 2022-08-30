@@ -197,11 +197,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       ErrMsgTmp   = ""
 
 
-         ! Initialize the NWTC Subroutine Library and display the information about this module.
-
-      CALL NWTC_Init( )
-
-
       !-----------------------------------------------------------------------------
       !> Before attempting to do any real calculations, we first check what was
       !! passed in through _InitInp_ to make sure it makes sense.  That routine will

@@ -180,7 +180,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    CHARACTER(   2)                              :: strI                 ! string version of the loop counter
    INTEGER                                      :: UnEc                 ! The local unit number for this module's echo file
    CHARACTER(1024)                              :: EchoFile             ! Name of HydroDyn echo file
-   CHARACTER(1024)                              :: Line                 ! String to temporarially hold value of read line
+   CHARACTER(MaxFileInfoLineLen)                :: Line                 ! String to temporarially hold value of read line
    real(ReKi), ALLOCATABLE                      :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
    integer(IntKi)                               :: startIndx, endIndx   ! indices into working arrays
    INTEGER, ALLOCATABLE                         :: tmpArray(:)          ! Temporary array storage of the joint output list

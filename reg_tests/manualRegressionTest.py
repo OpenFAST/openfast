@@ -35,9 +35,8 @@ def strFormat(string):
 ### Verify input arguments
 parser = argparse.ArgumentParser(description="Executes OpenFAST or driver and a regression test for a single test case.")
 parser.add_argument("executable", metavar="Executable-Name", type=str, nargs=1, help="path to the executable")
-parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="current system's name: [Darwin,Linux,Windows]")
-parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="compiler's id: [Intel,GNU]")
-parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="tolerance defining pass or failure in the regression test")
+parser.add_argument("rtol", metavar="Relative-Tolerance", type=float, nargs=1, help="Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.")
+parser.add_argument("atol", metavar="Absolute-Tolerance", type=float, nargs=1, help="Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.")
 parser.add_argument("-p", "-plot", dest="plot", const=True, default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", const=True, default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", const=True, default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
@@ -47,9 +46,9 @@ parser.add_argument("-module", "-mod", default="", metavar="Module-Name", type=s
 args = parser.parse_args()
 openfast_executable = args.executable[0]
 sourceDirectory = os.path.abspath( os.path.join(os.getcwd(),os.pardir) )  # need abs path because module drivers use os.chdir()  ; pretty sure they shouldn't need to do that
-machine = args.systemName[0]
-compiler = args.compilerId[0]
-tolerance = args.tolerance[0]
+rtol = args.rtol[0]
+atol = args.atol[0]
+
 plotError = args.plot if args.plot is False else True
 plotFlag = "-p" if plotError else ""
 noExec = args.noExec if args.noExec is False else True
@@ -86,9 +85,9 @@ longestName = max(casenames, key=len)
 for case in casenames:
     print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
     if "linear" in case.lower():
-        command = "\"{}\" execute{}LinearRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+        command = "\"{}\" execute{}LinearRegressionCase.py {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, rtol, atol, plotFlag, noExecFlag)
     else:
-        command = "\"{}\" execute{}RegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+        command = "\"{}\" execute{}RegressionCase.py {} {} {} {} {} {} {} {}".format(pythonCommand, moduleName, case, openfast_executable, sourceDirectory, buildDirectory, rtol, atol, plotFlag, noExecFlag)
     # print("command = '{}'".format(command), flush=True)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
 
