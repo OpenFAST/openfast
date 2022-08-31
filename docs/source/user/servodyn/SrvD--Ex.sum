@@ -74,6 +74,9 @@
           95      -->  Reserved (SrvD customization: set to SrvD AirDens parameter)
           96      -->  Reserved (SrvD customization: set to SrvD AvgWindSpeed parameter)
          109      -->  Shaft torque (=hub Mx for clockwise rotor) (Nm) [SrvD input]
+         110      -->  Thrust - Rotating low-speed shaft force x (GL co-ords) (N) [SrvD input]
+         111      -->  Nonrotating low-speed shaft force y (GL co-ords) (N) [SrvD input]
+         112      -->  Nonrotating low-speed shaft force z (GL co-ords) (N) [SrvD input]		 
          117      -->  Controller state [always set to 0]
          120      <--  Airfoil command, blade 1
          121      <--  Airfoil command, blade 2

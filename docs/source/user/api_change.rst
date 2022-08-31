@@ -10,10 +10,38 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.0.0 to OpenFAST `dev`
----------------------------------
+OpenFAST v3.2.0 to OpenFAST `dev`
+----------------------------------
 
-No change
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST dev 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+AeroDyn driver                                54\* WrVTK_Type      1           WrVTK_Type    - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
+OpenFAST v3.1.0 to OpenFAST v3.2.0
+----------------------------------
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       13   WrHAWCFF         False      WrHAWCFF          - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       14   Clockwise        True           Clockwise       - Clockwise rotation looking downwind? (used only for full-field binary files - not necessary for AeroDyn)
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 
@@ -27,9 +55,9 @@ Module                                        Line  Flag Name        Example Val
 ============================================= ==== =============== ========================================================================================================================================================================================================
 ServoDyn                                      60   AeroControlSec  ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
 ServoDyn                                      61   AfCmode         0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
-ServoDyn                                      61   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      62   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      63   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      64   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
 ServoDyn                                      74   CablesSection   ---------------------- CABLE CONTROL -------------------------------------------
 ServoDyn                                      75   CCmode          0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
@@ -118,19 +146,32 @@ SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
 
--  ServoDyn
+**ServoDyn Changes**
 
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
+-  The input file parser is updated to a keyword/value pair based input.
+   Each entry must have a corresponding keyword with the same spelling as
+   expected.
+-  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+   module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- TUNED MASS DAMPER ---------------------------------------
+ServoDyn                                      61   CompNTMD        False         CompNTMD     - Compute nacelle tuned mass damper {true/false} (flag)
+ServoDyn                                      62   NTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    NTMDfile     - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]
+ServoDyn                                      63   CompTTMD        False         CompTTMD     - Compute tower tuned mass damper {true/false} (flag)
+ServoDyn                                      64   TTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    TTMDfile     - Name of the file for tower tuned mass damper (quoted string) [unused when CompTTMD is false]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v3.0.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------
 ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
 ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
@@ -269,12 +310,22 @@ Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                       Line    Flag Name / section                              Example Value
 ============================ ====== ================================================ ====================================================================================
-MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table  .. code-block:: none
-
-                                                                                        Line    LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Outputs  CtrlChan
-                                                                                        (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
-                                                                                        1         main     835.35      20        1         4         -        0
+MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table    
 ============================ ====== ================================================ ====================================================================================
+
+============== ====== =============== ============== =============================================================================================================================================================================
+Renamed in OpenFAST v2.5.0
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module          Line   Previous Name   New Name       Example Value
+============== ====== =============== ============== =============================================================================================================================================================================
+InflowWind      17    Filename         FileName_Uni   "Shr11_30.wnd"    FileName_Uni   - Filename of time series data for uniform wind field.      (-)
+InflowWind      18    RefHt            RefHt_Uni      90                RefHt_Uni      - Reference height for horizontal wind speed                (m)
+InflowWind      21    Filename         FileName_BTS   "unused"          FileName_BTS   - Name of the Full field wind file to use (.bts)            (-)
+InflowWind      23    Filename         FileNameRoot   "unused"          FileNameRoot   - WindType=4: Rootname of the full-field wind file to use (.wnd, .sum); WindType=7: name of the intermediate file with wind scaling values
+InflowWind      35    RefHt            RefHt_Hawc     90                RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid  (m)
+InflowWind      47    PLExp            PLExp_Hawc     0.2               PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)
+InflowWind      49    InitPosition(x)  XOffset        0                 XOffset        - Initial offset in +x direction (shift of wind box)
+============== ====== =============== ============== =============================================================================================================================================================================
 
 
 
@@ -309,11 +360,6 @@ Modified in OpenFAST v2.4.0
  Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
 ============== ==== ================== ======================================================================================================================================================= =========================
 AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
-InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
-InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
-InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
-InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
-InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.

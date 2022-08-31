@@ -5920,6 +5920,25 @@ SUBROUTINE FAST_CalcSteady( n_t_global, t_global, p_FAST, y_FAST, m_FAST, ED, BD
                m_FAST%Lin%AzimIndx = 1
                m_FAST%Lin%CopyOP_CtrlCode = MESH_UPDATECOPY
             end if
+            ! Forcing linearization if time is close to tmax (with sufficient margin) 
+            if (.not.m_FAST%Lin%FoundSteady) then
+               if (ED%p%RotSpeed>0) then
+                  ! If simulation is at least 10 revolutions, and error in rotor speed less than 0.1%
+                  if ((p_FAST%TMax>10*(TwoPi_D)/ED%p%RotSpeed) .and. ( t_global >= p_FAST%TMax - 2._DbKi*(TwoPi_D)/ED%p%RotSpeed)) then
+                     if (abs(ED%y%RotSpeed-ED%p%RotSpeed)/ED%p%RotSpeed<0.001) then
+                        call WrScr('')
+                        call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+                        m_FAST%Lin%ForceLin = .True. 
+                     endif
+                  endif
+               else
+                  if (t_global >= p_FAST%TMax - 1.5_DbKi*p_FAST%DT) then
+                     call WrScr('')
+                     call WrScr('[WARNING] Steady state not found before end of simulation. Forcing linearization.')
+                     m_FAST%Lin%ForceLin = .True. 
+                  endif
+               endif
+            endif
          end if
          
       end if
@@ -6386,7 +6405,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
       
          call ED_GetOP( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                           ED%y_interp, ED%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, NeedLogMap=.true.)
+                           ED%y_interp, ED%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_ED)%Instance(1)%op_y, NeedPackedOrient=.true.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
          ! BeamDyn
@@ -6398,7 +6417,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
                call BD_GetOP( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
-                           BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedLogMap=.true.)
+                           BD%y_interp(k), BD%m(k), ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_BD)%Instance(k)%op_y, NeedPackedOrient=.true.)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             END DO ! k=p_FAST%nBeams
          
@@ -6459,7 +6478,7 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
          call SD_GetOP( t_global, SD%Input(1), SD%p, SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR), SD%OtherSt(STATE_CURR), &
-                           SD%y_interp, SD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_SD)%Instance(1)%op_y)
+                           SD%y_interp, SD%m, ErrStat2, ErrMsg2, y_op=y_FAST%Lin%Modules(Module_SD)%Instance(1)%op_y, NeedPackedOrient=.true.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
       END IF  ! SubDyn/ExtPtfm_MCKF

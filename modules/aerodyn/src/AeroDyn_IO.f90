@@ -22,7 +22,7 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
+   use BEMTUncoupled, only : SkewMod_Orthogonal, SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
    use FVW_Subs,      only : FVW_AeroOuts
 
    USE AeroDyn_AllBldNdOuts_IO
@@ -1985,7 +1985,7 @@ CONTAINS
             m%AllOuts( BNPhi(  beta,k) ) = m_AD%FVW%W(iW)%BN_phi(j)*R2D
 !             m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D ! TODO
 
-!             m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(jk) ! TODO
+            m%AllOuts( BNCpmin(beta,k) ) = m_AD%FVW%W(iW)%BN_Cpmin(j)
             m%AllOuts( BNCl(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cl(j)
             m%AllOuts( BNCd(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cd(j)
             m%AllOuts( BNCm(   beta,k) ) = m_AD%FVW%W(iW)%BN_Cm(j)
@@ -2700,6 +2700,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
       ! SkewMod 
       select case (InputFileData%SkewMod)
+         case (SkewMod_Orthogonal)
+            Msg = 'orthogonal'
          case (SkewMod_Uncoupled)
             Msg = 'uncoupled'
          case (SkewMod_PittPeters)

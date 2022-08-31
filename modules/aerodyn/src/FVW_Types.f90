@@ -194,6 +194,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cl_Static      !< Coefficient lift,   excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cd_Static      !< Coefficient drag.   excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cm_Static      !< Coefficient moment, excluding unsteady aero effects [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cpmin      !< Coefficient minimum pressure, excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cl      !< Coefficient lift,   including unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cd      !< Coefficient drag,   including unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cm      !< Coefficient moment, including unsteady aero effects [-]
@@ -4070,6 +4071,18 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cm_Static)) THEN
   END IF
     DstWng_MiscVarTypeData%BN_Cm_Static = SrcWng_MiscVarTypeData%BN_Cm_Static
 ENDIF
+IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cpmin)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%BN_Cpmin,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%BN_Cpmin,1)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%BN_Cpmin)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%BN_Cpmin(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%BN_Cpmin.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWng_MiscVarTypeData%BN_Cpmin = SrcWng_MiscVarTypeData%BN_Cpmin
+ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cl)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%BN_Cl,1)
   i1_u = UBOUND(SrcWng_MiscVarTypeData%BN_Cl,1)
@@ -4247,6 +4260,9 @@ IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cd_Static)) THEN
 ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cm_Static)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%BN_Cm_Static)
+ENDIF
+IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cpmin)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%BN_Cpmin)
 ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cl)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%BN_Cl)
@@ -4538,6 +4554,11 @@ ENDIF
   IF ( ALLOCATED(InData%BN_Cm_Static) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BN_Cm_Static upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%BN_Cm_Static)  ! BN_Cm_Static
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BN_Cpmin allocated yes/no
+  IF ( ALLOCATED(InData%BN_Cpmin) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BN_Cpmin upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BN_Cpmin)  ! BN_Cpmin
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! BN_Cl allocated yes/no
   IF ( ALLOCATED(InData%BN_Cl) ) THEN
@@ -5317,6 +5338,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%BN_Cm_Static,1), UBOUND(InData%BN_Cm_Static,1)
         ReKiBuf(Re_Xferred) = InData%BN_Cm_Static(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BN_Cpmin) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BN_Cpmin,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BN_Cpmin,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BN_Cpmin,1), UBOUND(InData%BN_Cpmin,1)
+        ReKiBuf(Re_Xferred) = InData%BN_Cpmin(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -6299,6 +6335,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%BN_Cm_Static,1), UBOUND(OutData%BN_Cm_Static,1)
         OutData%BN_Cm_Static(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BN_Cpmin not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BN_Cpmin)) DEALLOCATE(OutData%BN_Cpmin)
+    ALLOCATE(OutData%BN_Cpmin(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BN_Cpmin.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BN_Cpmin,1), UBOUND(OutData%BN_Cpmin,1)
+        OutData%BN_Cpmin(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
