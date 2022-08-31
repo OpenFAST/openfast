@@ -1,0 +1,5 @@
+
+The AeroDyn documentation should not reference images that are prefixed with "ad_".
+This can lead to ad-blockers in browsers blocking these images. Instead, simply
+use the prefix "aerodyn_".
+See https://github.com/OpenFAST/openfast/issues/912 for details.

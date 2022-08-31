@@ -4578,29 +4578,60 @@ end function Rad2M180to180Deg
 
    END FUNCTION OuterProductR16 
 !=======================================================================
-!> This subroutine perturbs an orientation matrix by a small angle, using 
-!! a logarithmic map. For small angles, the change in angle is equivalent to 
-!! a change in log map parameters.
-   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations )
+!> This subroutine perturbs an orientation matrix by a small angle.  Two methods
+!! are used:
+!!    small angle DCM:  perturb small angles extracted from DCM
+!!    large angle DCM:  multiply input DCM with DCM created with small angle
+!!                      perturbations
+!! NOTE1: this routine originally used logarithmic mapping for small angle
+!!          perturbations
+!! NOTE2: all warnings from SmllRotTrans are ignored.
+!! NOTE3: notice no checks are made to verify correct set of inputs given
+!!          one of the follwing combinations must be provided (others truly
+!!          optional):
+!!             Perturbations
+!!             Perturbation + AngleDim
+   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations, UseSmlAngle )
       REAL(R8Ki),           INTENT(INOUT)  :: Orientation(3,3)
       REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
       INTEGER,    OPTIONAL, INTENT(IN)     :: AngleDim
       REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbations(3) ! angles (radians) of the perturbations
+      LOGICAL,    OPTIONAL, INTENT(IN)     :: UseSmlAngle
    
            ! Local variables
       REAL(R8Ki)                 :: angles(3)
+      REAL(R8Ki)                 :: OrientationTmp(3,3)
+      LOGICAL                    :: OutputSmlAngle
       integer(intKi)             :: ErrStat2
       character(ErrMsgLen)       :: ErrMsg2
       
-      CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+      if (present(UseSmlAngle)) then
+         OutputSmlAngle = UseSmlAngle
+      else
+         OutputSmlAngle = .false.
+      end if
+
+      if (OutputSmlAngle) then
+!         CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+         angles =  GetSmllRotAngs ( Orientation, ErrStat2, ErrMsg2 )
+         IF (PRESENT(Perturbations)) THEN
+            angles = angles + Perturbations
+         ELSE
+            angles(AngleDim) = angles(AngleDim) + Perturbation
+         END IF
+!         Orientation = DCM_exp( angles )
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), Orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      else !Only works if AngleDim is specified
+         IF (PRESENT(Perturbations)) THEN
+            angles = Perturbations
+         ELSE
+            angles = 0.0_R8Ki
+            angles(AngleDim) = Perturbation
+         END IF
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), OrientationTmp, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         Orientation = matmul(Orientation, OrientationTmp)
+      endif
       
-      IF (PRESENT(Perturbations)) THEN
-         angles = angles + Perturbations
-      ELSE
-         angles(AngleDim) = angles(AngleDim) + Perturbation
-      END IF
-      
-      Orientation = DCM_exp( angles )
 
    END SUBROUTINE PerturbOrientationMatrix
 !=======================================================================
