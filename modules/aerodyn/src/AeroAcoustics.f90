@@ -1,6 +1,27 @@
 !**********************************************************************************************************************************
-! File last committed: 2020-02-12
+! LICENSING
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
+!
+!    This file is part of AeroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
 !**********************************************************************************************************************************
+!
+! References:
+!  [1] Brooks, T. F.; Pope, D. S. & Marcolini, M. A., Airfoil self-noise and prediction, 
+!      NASA, NASA, 1989. https://ntrs.nasa.gov/search.jsp?R=19890016302
 module AeroAcoustics
     
    use NWTC_Library
@@ -2147,31 +2168,36 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,StallVal,errStat,errMsg)
     real(ReKi)              :: DSTR0      ! DISPLACEMENT THICKNESS AT ZERO   ANGLE OF ATTACK METERS
     ErrStat = ErrID_None
     ErrMsg  = ""
-    !
-    DELTA0   = 10.**(1.6569-.9045*LOG10(RC)+.0596*LOG10(RC)**2.)*C
-    IF (p%ITRIP .GT. 0) DELTA0 = 10.**(1.892-0.9045*LOG(RC)+0.0596*LOG(RC)**2.)*C
+    ! Boundary layer thickness
+    DELTA0                     = 10.**(1.6569-0.9045*LOG10(RC)+0.0596*LOG10(RC)**2.)*C ! (untripped)         Eq. (5) of [1]
+    IF (p%ITRIP .GT. 0) DELTA0 = 10.**(1.892 -0.9045*LOG10(RC)+0.0596*LOG10(RC)**2.)*C ! (heavily tripped)   Eq. (2) of [1]
     IF (p%ITRIP .EQ. 2) DELTA0=.6*DELTA0
-    ! Pressure side boundary layer thickness
+    ! Pressure side boundary layer thickness, Eq (8) of [1]
     DELTAP   = 10.**(-.04175*ALPSTAR+.00106*ALPSTAR**2.)*DELTA0
     ! Compute zero angle of attack displacement thickness
     IF ((p%ITRIP .EQ. 1) .OR. (p%ITRIP .EQ. 2)) THEN
+        ! Heavily tripped, Eq. (3) of [1]
         IF (RC .LE. .3E+06) DSTR0 = .0601 * RC **(-.114)*C
         IF (RC .GT. .3E+06) &
             DSTR0=10.**(3.411-1.5397*LOG10(RC)+.1059*LOG10(RC)**2.)*C
+        ! Lightly tripped
         IF (p%ITRIP .EQ. 2) DSTR0 = DSTR0 * .6
     ELSE
+        ! Untripped, Eq. (6) of [1]
         DSTR0=10.**(3.0187-1.5397*LOG10(RC)+.1059*LOG10(RC)**2.)*C
     ENDIF
-    ! Pressure side displacement thickness
+    ! Pressure side displacement thickness, Eq. (9) of [1]
     DSTRP   = 10.**(-.0432*ALPSTAR+.00113*ALPSTAR**2.)*DSTR0
     !      IF (p%ITRIP .EQ. 3) DSTRP = DSTRP * 1.48 ! commented since itrip is never 3 check if meant 2.(EB_DTU)
     ! Suction side displacement thickness
     IF (p%ITRIP .EQ. 1) THEN
+        ! Heavily tripped, Eq. (12) of [1]
         IF (ALPSTAR .LE. 5.) DSTRS=10.**(.0679*ALPSTAR)*DSTR0
         IF((ALPSTAR .GT. 5.).AND.(ALPSTAR .LE. StallVal)) &
             DSTRS = .381*10.**(.1516*ALPSTAR)*DSTR0
         IF (ALPSTAR .GT. StallVal)DSTRS=14.296*10.**(.0258*ALPSTAR)*DSTR0
     ELSE
+        ! Untripped or lightly tripped, Eq. (15) of [1]
         IF (ALPSTAR .LE. 7.5)DSTRS =10.**(.0679*ALPSTAR)*DSTR0
         IF((ALPSTAR .GT. 7.5).AND.(ALPSTAR .LE. StallVal)) &
             DSTRS = .0162*10.**(.3066*ALPSTAR)*DSTR0
