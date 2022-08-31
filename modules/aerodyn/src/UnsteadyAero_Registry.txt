@@ -69,6 +69,8 @@ typedef   ^                            UA_KelvinChainType            ReKi       
 typedef   ^                            UA_KelvinChainType            ReKi                     X4                               -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_alpha                     -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_q                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     K3prime_q                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprimeprime_q                    -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Dp                               -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Cn_pot                           -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Cc_pot                           -             -         -        "" -

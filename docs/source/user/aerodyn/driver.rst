@@ -152,7 +152,7 @@ Two turbine input formats are supported:
   In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height  (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`), the precone (`Precone`), and the vertical distance from the tower-top to the rotor shaft (`Twr2Shft`), as shown in :numref:`fig:BasicGeometry`.
   The definition of each parameter follows the ElastoDyn convention. For example, `HubRad` specifies the radius from the center-of-rotation to the blade root along the (possibly preconed) blade-pitch axis and must be greater than zero. `HubHt` specifies the elevation of the hub center above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for MHK turbines. `Overhang` specifies the distance along the (possibly tilted) rotor shaft between the tower centerline and hub center and is positive downwind (use a negative number for upwind rotors). `ShftTilt` is the angle (in degrees) between the rotor shaft and the horizontal plane, and positive `ShftTilt` means that the downwind end of the shaft is the highest (upwind turbines have negative `ShftTilt` for improved tower clearance). `Precone` is the angle (in degrees) between a flat rotor disk and the cone swept by the blades, positive downwind (upwind turbines have negative `Precone` for improved tower clearance).
 
-  .. figure:: figs/ad_driver_geom.png
+  .. figure:: figs/aerodyn_driver_geom.png
    :width: 60%
    :name: fig:BasicGeometry
 

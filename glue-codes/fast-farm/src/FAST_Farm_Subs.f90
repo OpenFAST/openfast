@@ -2202,9 +2202,18 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 
    call Transfer_WD_to_AWAE(farm)
    
+   if ( farm%p%UseSC ) then
+
+         !--------------------
+         ! 3a. Transfer y_F to u_SC, at n+1
+      do nt = 1,farm%p%NumTurbines
+
+         farm%SC%uInputs%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%toSC    
+
+      end do
+
       !--------------------
       ! 2. call SC_CO and transfer y_SC to u_F, at n+1 
-   if ( farm%p%UseSC ) then
       call SC_CalcOutput(t, farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
                            farm%SC%OtherState, farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2 ) 
       
@@ -2212,9 +2221,6 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
             
          farm%FWrap(nt)%u%fromSCglob  = farm%SC%y%fromSCglob
          farm%FWrap(nt)%u%fromSC      = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl + 1 : nt*farm%SC%p%NumSC2Ctrl )
-         !--------------------
-         ! 3a. Transfer y_F to u_SC, at n+1
-         farm%SC%uInputs%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%toSC
          
       end do
       
