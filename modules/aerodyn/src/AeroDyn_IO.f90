@@ -1945,6 +1945,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot,
    
    INTEGER(IntKi)                               :: j,k,beta
    REAL(ReKi)                                   :: tmp(3)
+   REAL(ReKi)                                   :: tmpHubFB(3)
+   REAL(ReKi)                                   :: tmpHubMB(3)   
    REAL(ReKi)                                   :: force(3)
    REAL(ReKi)                                   :: moment(3)
    REAL(ReKi)                                   :: denom, rmax, omega
@@ -1956,6 +1958,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   tmpHubFB  = 0.0_ReKi
+   tmpHubMB  = 0.0_ReKi
 
    ! Compute max radius and rotor speed
    if (p_AD%WakeMod /= WakeMod_FVW) then
@@ -2024,15 +2028,15 @@ CONTAINS
    
          ! hub outputs
       if ( p%Buoyancy ) then
-         tmp = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
-         m%AllOuts( HbFbx ) = tmp(1)
-         m%AllOuts( HbFby ) = tmp(2)
-         m%AllOuts( HbFbz ) = tmp(3)
+         tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
+         m%AllOuts( HbFbx ) = tmpHubFB(1)
+         m%AllOuts( HbFby ) = tmpHubFB(2)
+         m%AllOuts( HbFbz ) = tmpHubFB(3)
    
-         tmp = matmul( u%HubMotion%Orientation(:,:,1) , m%HubMB )
-         m%AllOuts( HbMbx ) = tmp(1)
-         m%AllOuts( HbMby ) = tmp(2)
-         m%AllOuts( HbMbz ) = tmp(3)
+         tmpHubMB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubMB )
+         m%AllOuts( HbMbx ) = tmpHubMB(1)
+         m%AllOuts( HbMby ) = tmpHubMB(2)
+         m%AllOuts( HbMbz ) = tmpHubMB(3)
       end if
    
          ! nacelle outputs
@@ -2114,8 +2118,8 @@ CONTAINS
       
 
          ! integrate force/moments over blades by performing mesh transfer to hub point:
-      force  = 0.0_ReKi
-      moment = 0.0_ReKi
+      force  = tmpHubFB
+      moment = tmpHubMB
       do k=1,p%NumBlades
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%HubLoad, m%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
          force  = force  + m%HubLoad%force( :,1)
