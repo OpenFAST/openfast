@@ -1461,7 +1461,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    member%kkt    = matmul(transpose(tk),tk)
    call Eye(Imat,errStat,errMsg)
    member%Ak     =  Imat - member%kkt
-   phi = acos(vec(3)/memLength)  ! incline angle   
+   phi = acos( max(-1.0_ReKi, min(1.0_ReKi, vec(3)/memLength) ) )  ! incline angle   
    sinPhi = sin(phi)
    cosPhi = cos(phi)  
    member%cosPhi_ref = cosPhi
