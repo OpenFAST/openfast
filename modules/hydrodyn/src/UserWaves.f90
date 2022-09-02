@@ -944,7 +944,7 @@ CONTAINS
       CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       LOGICAL                   :: OK
       ! Local var
-      CHARACTER(2048)           :: TextLine          !< One line of text read from the file
+      CHARACTER(65536)          :: TextLine          !< One line of text read from the file
       OK=.TRUE.
 
       ! Read line
