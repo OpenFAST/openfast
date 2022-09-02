@@ -2903,7 +2903,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_IMG = 0.0_ReKi
       m%memberLoads(im)%F_If = 0.0_ReKi
 
-      DO i = mem%i_floor, N    ! loop through member elements that are not completely buried in the seabed
+      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
          ! calculate instantaneous incline angle and heading, and related trig values
          ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
@@ -3270,7 +3270,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
          end if
    
-      END DO ! i = mem%i_floor, N    ! loop through member elements that are not fully buried in the seabed   
+      END DO ! i = max(mem%i_floor,1), N    ! loop through member elements that are not fully buried in the seabed   
 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
