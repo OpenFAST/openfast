@@ -367,7 +367,6 @@ CONTAINS
    SUBROUTINE Cleanup()
    
       call WD_DestroyInitInput(WD_InitInput, ErrStat2, ErrMsg2)
-      ! add something for MD?
       call AWAE_DestroyInitInput(AWAE_InitInput, ErrStat2, ErrMsg2)
       call AWAE_DestroyInitOutput(AWAE_InitOutput, ErrStat2, ErrMsg2)
          
@@ -602,7 +601,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
    IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
    
-      ! DT_Mooring - ime step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]:
+      ! DT_Mooring - time step for farm-level mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]:
    CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -1836,6 +1835,10 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
 
+      ! Since SubDyn connections are not enabled yet, issue warning
+      if (allocated(farm%FWrap(nt)%m%Turbine%SD%Input)) then
+         call SetErrStat( ErrID_Warn, 'Turbine '//trim(Num2LStr(nt))//': Farm moorings connected to ElastoDyn platform reference instead of SubDyn', Errstat, ErrMsg, RoutineName//':MD_2_FWrap' )
+      endif
       
       ! SubDyn alternative:
       !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
