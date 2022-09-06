@@ -242,6 +242,7 @@ of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extpt
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
+of_regression("OC6_phaseII"                            "openfast;soildyn;subdyn;hydrodyn;offshore;stc")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)

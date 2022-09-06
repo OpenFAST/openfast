@@ -1,0 +1,144 @@
+###################################################################################################################################
+# Registry for SoilDyn in the FAST Modularization Framework
+# This Registry file is used to create MODULE SoilDyn_Types, which contains all of the user-defined types needed in SoilDyn.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <SoilDyn/SlD> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+
+#Parameters    CalcOptions: {1: Stiffness / Damping matrices [unavailable], 2: P-Y curves [unavailable], 3: coupled REDWIN DLL}
+param    SoilDyn/SlD    -              IntKi             Calc_StiffDamp - 1 -     "Stiffness / Damping calculations (currently unavailable)"  -
+param    SoilDyn/SlD    -              IntKi             Calc_PYcurve   - 2 -     "P-Y curve calculations (currently unavailable)"  -
+param    SoilDyn/SlD    -              IntKi             Calc_REDWIN    - 3 -     "Coupled to REDWIN dll for soil reaction forces" -
+
+
+
+# REDWIN interface DLL type
+# ..... Data for using REDWIN DLLs .......................................................................................................
+# Values set to type R8Ki are defined in the REDWIN fortran code as kind=selected_real_kind(p=15)
+typedef SoilDyn/SlD    REDWINdllType   character(45)  PROPSFILE      -          - - "" -
+typedef SoilDyn/SlD    REDWINdllType   character(45)  LDISPFILE      -          - - "" -
+typedef SoilDyn/SlD    REDWINdllType   IntKi          IDtask         -          - - "Task identifier for what DLL should do: IDTask = 1: Read input properties, initialize and calibrate model IDTask = 2: Calculate forces based on displacement at end of step IDTask = 3: Calculate elastic macro-element stiffness matrix" -
+typedef  ^             REDWINdllType   IntKi          nErrorCode     -          - - "number of returned error codes" -
+typedef  ^             REDWINdllType   IntKi          ErrorCode      {100}      - - "Array containing one or more error codes. These are specific to each model." -
+typedef  ^             REDWINdllType   R8Ki           Props          {100}{200} - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
+typedef  ^             REDWINdllType   R8Ki           StVar          {12}{100}  - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
+typedef  ^             REDWINdllType   IntKi          StVarPrint     {12}{100}  - - "Array indicating which state variables should be printed to the screen. This feature is currently not supported." -
+typedef  ^             REDWINdllType   R8Ki           Disp           {6}        - - "Displacements.  Follows convention of REDWIN orientation." '(m, rad)'
+typedef  ^             REDWINdllType   R8Ki           Force          {6}        - - "Forces.  Follows convention of REDWIN orientations." '(N)'
+typedef  ^             REDWINdllType   R8Ki           D              {6}{6}     - - "The 6 x 6 elastic macro-element stiffness matrix at the SFI." -
+typedef  ^             REDWINdllType   LOGICAL        SuppressWarn   - .FALSE. -    "Supress further warnings." -
+typedef  ^             REDWINdllType   IntKi          RunMode        -          0 - "RunMode of DLL (read from Props(1,1) in Model 1 during initialization" -
+
+
+typedef SoilDyn/SlD    REDWINdllStates R8Ki           Props          {100}{200} - - "Array containing foundation model properties (used internally by the REDWIN models). Specific to each model." -
+typedef  ^             REDWINdllStates R8Ki           StVar          {12}{100}  - - "Array containing the state variables at the end of the step (used internally by the REDWIN models). Specific to each model." -
+
+
+# SoilDyn input file
+typedef  ^    SlD_InputFile   LOGICAL              EchoFlag       -   -   -   "Echo the input file"                                    -
+typedef  ^    SlD_InputFile   CHARACTER(ChanLen)   OutList        :   -   -   "List of user-requested output channels"                 -
+typedef  ^    SlD_InputFile   R8Ki                 DT             -   -   -   "Timestep requested"                                     '(s)'
+typedef  ^    SlD_InputFile   IntKi                CalcOption     -   -   -   "Calculation methodology to use"                         -
+typedef  ^    SlD_InputFile   ReKi                 SD_locations   ::  -   -   "Location of the Stiffness damping point"                '(m)'
+typedef  ^    SlD_InputFile   R8Ki                 Stiffness      ::: -   -   "Stiffness matrix 6x6"                                   '(N/m, N-m/rad)'
+typedef  ^    SlD_InputFile   R8Ki                 Damping        ::: -   -   "Damping ratio matrix 6x6"                               -
+typedef  ^    SlD_InputFile   IntKi                PY_numpoints   -   -   -   "Number of P-Y curve mesh points"                        -
+typedef  ^    SlD_InputFile   ReKi                 PY_locations   ::  -   -   "P-Y curve location points for mesh"                     '(m)'
+typedef  ^    SlD_InputFile   character(1024)      PY_inputFile   :   -   -   "Input file with P-Y curve data"                         - 
+typedef  ^    SlD_InputFile   IntKi                DLL_model      -   -   -   "REDWIN DLL model type to use"                           -
+typedef  ^    SlD_InputFile   CHARACTER(2)         DLL_modelChr   -   -   -   "REDWIN DLL model type to use - character string"        -
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_FileName   -   -   -   "Name of the DLL file including the full path"           -
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_ProcName   -   -   -   "Name of the procedure in the DLL that will be called"   -
+typedef  ^    SlD_InputFile   IntKi                DLL_numpoints  -   -   -   "Number of points to interface to DLL"                   -
+typedef  ^    SlD_InputFile   ReKi                 DLL_locations  ::  -   -   "DLL location points for mesh"                           '(m)'
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_PROPSFILE  :   -   -   "Name of PROPSFILE input file used in DLL"               -
+typedef  ^    SlD_InputFile   CHARACTER(1024)      DLL_LDISPFILE  :   -   -   "Name of LDISPFILE input file used in DLL"               -
+typedef  ^    SlD_InputFile   LOGICAL              SumPrint       -   -   -   "Print summary information to file (.SlD.sum)"           -
+typedef  ^    SlD_InputFile   IntKi                NumOuts        -   -   -   "Number of outputs requested"                            -
+typedef  ^    SlD_InputFile   logical              DLL_OnlyStiff  -   -   -   "use only the DLL stiffness matrices in calculating response" -
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g., the name of the input file, the file root name, etc.
+typedef  ^     InitInputType  CHARACTER(1024)      InputFile      - - -          "Name of the input file" -
+typedef  ^     InitInputType  CHARACTER(1024)      RootName       - - -          "Root name of the input file" -
+typedef  ^     InitInputType  LOGICAL              Linearize      - .FALSE. -    "Flag that tells this module if the glue code wants to linearize." -
+typedef  ^     InitInputType  ReKi                 WtrDpth        - - -          "Water depth to mudline (global coordinates)" '(m)'
+typedef  ^     InitInputType  logical              SlDNonLinearForcePortionOnly - .FALSE. - "Only the non-linear portion of the reaction forces is returned" -
+
+# Define outputs from the initialization routine here:
+typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
+typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^               InitOutputType ProgDesc              Ver             -   - -   "This module's name, version, and date"  -
+typedef   ^               InitOutputType ReKi                  SoilStiffness   {:}{:}{:} - - "Soil stiffness at each mesh point (in order)" '(N/m, N-m/rad)'
+# if this module has implemented linearization, return the names of the rows/columns of the Jacobian matrices:
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_x      {:} - -   "Names of the continuous states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_xd     {:} - -   "Names of the discrete states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_z      {:} - -   "Names of the constraint states used in linearization" -
+#typedef   ^               InitOutputType CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_x      {:} - -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_xd     {:} - -   "Flag that tells FAST if the discrete states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_z      {:} - -   "Flag that tells FAST if the constraint states used in linearization are in the rotating frame" -
+#typedef   ^               InitOutputType LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef    ^              ContinuousStateType ReKi     DummyContState - - -  "Remove this variable if you have continuous states" -
+
+# Define discrete (nondifferentiable) states here:
+typedef   ^            DiscreteStateType       REDWINdllStates   dll_states             : - - "state data used for REDWIN DLL (we think)"   -
+
+# Define constraint states here:
+typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
+
+# Define any other states, including integer or logical states here:
+typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^             MiscVarType       REDWINdllType     dll_data             : - - "data used for REDWIN DLL"   -
+typedef   ^             MiscVarType       R8Ki              ForceTotal           :: - - "Total reaction force at each node" -
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef   ^             ParameterType     DbKi              DT                   - - - "Time step for cont. state integration & disc. state update" seconds
+typedef  ^              ParameterType     DLL_Type          DLL_Trgt             - - - "The addresses and names of the Bladed DLL and its procedure"   -
+typedef  ^              ParameterType     DbKi              DLL_DT               - - - "Time step for DLL" seconds
+typedef  ^              ParameterType     CHARACTER(1024)   RootName             - - - "RootName for writing output files"   -
+typedef  ^              ParameterType     LOGICAL           UseREDWINinterface   - .FALSE. - "True if interface successfully initialized" -
+typedef  ^              ParameterType     CHARACTER(1024)   RootFileName         - - - "Root file name" -
+typedef  ^              ParameterType     CHARACTER(1024)   EchoFileName         - - - "Name of echo file" -
+typedef  ^              ParameterType     CHARACTER(1024)   SumFileName          - - - "Name of summary file" -
+typedef  ^              ParameterType     IntKi             DLL_model            - - - "REDWIN DLL model type to use" -
+typedef  ^              ParameterType     IntKi             CalcOption           - - - "Calculation methodology to use" -
+typedef  ^              ParameterType     OutParmType       OutParam           {:} - - "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^              ParameterType     IntKi             NumOuts              - - - "Number of parameters in the output list (number of outputs requested)" -
+typedef  ^              ParameterType     IntKi             NumPoints            - - - "Number of points interfacing soil with" -
+typedef  ^              ParameterType     ReKi              WtrDepth             - - - "Water depth to mudline (global coordinates)" '(m)'
+typedef  ^              ParameterType     R8Ki              Stiffness          ::: - - "Stiffness matrix" '(N/m, N-m/rad)'
+#typedef  ^              ParameterType     R8Ki              Damping           ::: - - "Damping matrix" '(N/m, N-m/rad)'
+typedef  ^              ParameterType     logical           DLL_OnlyStiff        - - - "Use only the stiffness matrix in calculating the restoring forces" -
+typedef  ^              ParameterType     logical           SlDNonLinearForcePortionOnly - .FALSE. - "Only the non-linear portion of the reaction forces is returned" -
+# ..... Inputs ....................................................................................................................
+typedef  ^              InputType         MeshType          SoilMesh             - - - "Mesh of soil contact points" -
+
+# ..... Outputs ...................................................................................................................
+typedef  ^              OutputType        ReKi              DummyOutput          -  - -   "Remove this variable if you have output data" -
+typedef  ^              OutputType        ReKi              WriteOutput          {:} - -  "Example of data to be written to an output file" "s,-"
+typedef  ^              OutputType        MeshType          SoilMesh             - - -    "reaction forces and moments point mesh (may be multiple points)" -
+

@@ -33,6 +33,7 @@ target_link_libraries(openfast_prelib
   elastodynlib
   beamdynlib
   subdynlib
+  soildynlib
   hydrodynlib
   orcaflexlib
   extptfm_mckflib

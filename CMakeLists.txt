@@ -34,7 +34,7 @@ option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
-option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
+option(WIN_DLL_LOAD "Enable loading of Windows only DLL's (OrcaFlex, SoilDyn)" on)  # This is mostly for testing purposes
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(OPENMP "Enable OpenMP support" off)
@@ -131,6 +131,7 @@ set(OPENFAST_MODULES
   aerodyn
   aerodyn14
   servodyn
+  soildyn
   elastodyn
   beamdyn
   subdyn

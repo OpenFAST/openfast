@@ -63,6 +63,7 @@ ServoDyn                                      75   CCmode          0            
 HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
 HydroDyn driver                               7    WtrDpth         200        WtrDpth           - Water depth (m)
 HydroDyn driver                               8    MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
+OpenFAST                                      20   CompSoil        0          CompSoil          - Compute soil-structural dynamics (switch) {0=None; 1=with SubDyn mesh}
 OpenFAST                                      21   MHK             0          MHK               - MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}
 OpenFAST                                      22   N/A             ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
 OpenFAST                                      23   Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
@@ -74,6 +75,7 @@ OpenFAST                                      28   Patm            103500     Pa
 OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
 OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
 OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
+OpenFAST                                      45   SoilFile        "unused"   SoilFile          - Name of the file containing the SoilDyn input parameters (quoted string)
 AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
 AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 AeroDyn driver                                34   Twr2Shft        3.09343    Twr2Shft          - Vertical distance from the tower-top to the rotor shaft (m)

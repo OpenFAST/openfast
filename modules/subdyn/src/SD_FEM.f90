@@ -2144,8 +2144,12 @@ logical function isFloating(Init, p)
    type(SD_InitType),     intent(in   ):: Init
    type(SD_ParameterType),intent(in   ) :: p
    integer(IntKi) :: i
-   !isFloating=size(p%Nodes_C)>0
    isFloating=.True.
+   ! If soil stiffness is provided by SoilDyn, return false
+   if (allocated(Init%Soil_K)) then
+      isFloating=.false.
+      return
+   end if
    do i =1,size(p%Nodes_C,1)
       if ((all(p%Nodes_C(I,2:7)==idBC_Internal)) .and. (Init%SSIfile(i)=='')) then
          continue

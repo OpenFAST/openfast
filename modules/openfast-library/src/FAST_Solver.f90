@@ -40,6 +40,7 @@ MODULE FAST_Solver
    USE IceDyn
    USE IceFloe
    USE ServoDyn
+   USE SoilDyn
    USE SubDyn
    USE OpenFOAM
    Use ExtPtfm_MCKF
@@ -1486,6 +1487,27 @@ SUBROUTINE IceD_InputSolve( u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg )
 
 END SUBROUTINE IceD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the inputs required for SoilDyn.
+SUBROUTINE SlD_InputSolve( u_SlD, y_SD, MeshMapData, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+      ! Passed variables
+   TYPE(SlD_InputType),         INTENT(INOUT) :: u_SlD                        !< SoilDyn input
+   TYPE(SD_OutputType),         INTENT(IN   ) :: y_SD                         !< SubDyn outputs
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
+
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      !< Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
+
+
+      !----------------------------------------------------------------------------------------------------
+      ! Map SD outputs to SoilDyn inputs
+      !----------------------------------------------------------------------------------------------------
+      ! motions:
+   CALL Transfer_Point_to_Point( y_SD%y3Mesh, u_SlD%SoilMesh, MeshMapData%SD_P_3_SlD_P, ErrStat, ErrMsg )
+
+END SUBROUTINE SlD_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for BeamDyn.
 SUBROUTINE Transfer_ED_to_BD( y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -2162,11 +2184,13 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
                                      , u_IceF, y_IceF & 
                                      , u_IceD, y_IceD & 
                                      , u_SrvD, y_SrvD & 
+                                     , u_SlD,  y_SlD  & 
                                      , MeshMapData , ErrStat, ErrMsg, WriteThisStep )
 !..................................................................................................................................
 
    USE ElastoDyn
    USE SubDyn
+   USE SoilDyn
    USE HydroDyn
    USE BeamDyn
    USE OrcaFlexInterface
@@ -2206,8 +2230,8 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(SD_InputType)                , INTENT(INOUT) :: u_SD                      !< System inputs
    TYPE(SD_OutputType)               , INTENT(INOUT) :: y_SD                      !< System outputs
    TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m_SD                      !< misc/optimization variables
-          
-      !ExtPtfm:                                                                    
+
+      !ExtPtfm:
    TYPE(ExtPtfm_ContinuousStateType) , INTENT(IN   ) :: x_ExtPtfm                 !< Continuous states
    TYPE(ExtPtfm_DiscreteStateType)   , INTENT(IN   ) :: xd_ExtPtfm                !< Discrete states
    TYPE(ExtPtfm_ConstraintStateType) , INTENT(IN   ) :: z_ExtPtfm                 !< Constraint states
@@ -2236,6 +2260,10 @@ SUBROUTINE FullOpt1_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(Orca_InputType)          ,     INTENT(INOUT) :: u_Orca                    !< System inputs
    TYPE(Orca_OutputType)         ,     INTENT(INOUT) :: y_Orca                    !< System outputs
    TYPE(Orca_MiscVarType)        ,     INTENT(INOUT) :: m_Orca                    !< misc/optimization variables
+
+      !SoilDyn:
+   TYPE(SlD_InputType),                INTENT(INOUT) :: u_SlD                     !< System inputs
+   TYPE(SlD_OutputType),               INTENT(IN   ) :: y_SlD                     !< System outputs
    
    
       ! MAP/FEAM/MoorDyn/IceFloe/IceDyn:
@@ -2686,7 +2714,7 @@ END IF
       CALL WrFileNR(UnJac, ' SD_TPMesh_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
    END DO
             
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   ! this SD mesh linked only when HD is enabled
+   IF ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) THEN  ! this SD mesh linked only when HD or SlD are enabled
       DO TmpIndx=1,u_SD%LMesh%NNodes
          CALL WrFileNR(UnJac, ' SD_LMesh_Force_X_'//TRIM(Num2LStr(TmpIndx))) 
          CALL WrFileNR(UnJac, ' SD_LMesh_Force_Y_'//TRIM(Num2LStr(TmpIndx))) 
@@ -2747,8 +2775,8 @@ END IF
       CALL WrFileNR(UnJac, ' ExtPtfm_PtfmMesh_RotationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
       CALL WrFileNR(UnJac, ' ExtPtfm_PtfmMesh_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
    END DO
-   
-   
+
+
    WRITE(UnJac,'()')    
       
    CALL WrMatrix(MeshMapData%Jacobian_Opt1,UnJac, p_FAST%OutFmt)
@@ -2863,10 +2891,10 @@ END IF
          END IF
 
          
-         ! put the acceleration data (calucluted in this routine) back         
+         ! put the acceleration data (calculated in this routine) back
          IF (MeshMapData%u_HD_M_Mesh%Committed) THEN
              u_HD%Morison%Mesh%RotationAcc     = MeshMapData%u_HD_M_Mesh%RotationAcc
-             u_HD%Morison%Mesh%TranslationAcc  = MeshMapData%u_HD_M_Mesh%TranslationAcc  
+             u_HD%Morison%Mesh%TranslationAcc  = MeshMapData%u_HD_M_Mesh%TranslationAcc
          ENDIF
         
          IF (MeshMapData%u_HD_W_Mesh%Committed) THEN
@@ -2926,7 +2954,7 @@ END IF
          u_Orca%PtfmMesh%RotationAcc    = MeshMapData%u_Orca_PtfmMesh%RotationAcc    
          u_Orca%PtfmMesh%TranslationAcc = MeshMapData%u_Orca_PtfmMesh%TranslationAcc    
       END IF
-      
+
       !...............................................
       ! We're finished
       !...............................................
@@ -3020,6 +3048,10 @@ CONTAINS
          
       END IF  
 
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         CALL SlD_InputSolve(  u_SlD, y_SD2, MeshMapData, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      END IF
 
    !..................
    ! Set motions for the ServoDyn Structural control for platform inputs (this has accelerations, but we assume the loads generated are small)
@@ -3079,6 +3111,9 @@ CONTAINS
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
          
 
+      !..................
+      ! Ice
+      !..................
             IF ( p_FAST%CompIce == Module_IceF ) THEN
                
                ! SD loads from IceFloe:
@@ -3143,7 +3178,19 @@ CONTAINS
          ENDIF
 
 
-         
+      !..................
+      ! SoilDyn force to SD
+      !..................
+
+         if (p_FAST%CompSoil == Module_SlD) then
+            ! SlD loads to SD
+            CALL Transfer_Point_to_Point( y_SlD%SoilMesh, MeshMapData%u_SD_LMesh_2, MeshMapData%SlD_P_3_SD_P, ErrStat2, ErrMsg2, u_SlD%SoilMesh, y_SD2%Y3Mesh )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'Transfer_SlD_to_SD (y_SlD2%SoilMesh -> y_SD2%Y3Mesh)' )
+            MeshMapData%u_SD_LMesh%Force  = MeshMapData%u_SD_LMesh%Force  + MeshMapData%u_SD_LMesh_2%Force
+            MeshMapData%u_SD_LMesh%Moment = MeshMapData%u_SD_LMesh%Moment + MeshMapData%u_SD_LMesh_2%Moment
+         endif !  SoilDyn
+
+
       !..................
       ! Get SD motions input
       !..................
@@ -3415,7 +3462,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
                   
    p_FAST%SizeJac_Opt1(3) = SD_TPMesh%NNodes*6                    ! SD inputs: 6 accelerations per node (size of SD input from ED) 
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   
+   IF ( p_FAST%CompHydro == Module_HD  .or. p_FAST%CompSoil == Module_SlD ) THEN
       p_FAST%SizeJac_Opt1(3) = p_FAST%SizeJac_Opt1(3) &   
                                     + SD_LMesh%NNodes *6          ! SD inputs: 6 loads per node (size of SD input from HD)       
    END IF
@@ -3446,7 +3493,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       p_FAST%SizeJac_Opt1(9) = 0
    end if
    
-                       
+                              
                               
    p_FAST%SizeJac_Opt1(1) = sum( p_FAST%SizeJac_Opt1 )   ! all the inputs from these modules
                   
@@ -3544,7 +3591,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       end do !j      
    end do !i   
    
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) then   ! this SD mesh linked only when HD, or SlD is enabled
    
       ! SD_LMesh
       do i=1,SD_LMesh%NNodes
@@ -3686,7 +3733,7 @@ SUBROUTINE Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       end do !j      
    end do !i
    
-   
+
 END SUBROUTINE Init_FullOpt1_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine basically packs the relevant parts of the modules' input meshes for use in this InputOutput solve.
@@ -3713,6 +3760,8 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
    
       ! local variables:
    INTEGER(IntKi)                :: i, k, indx_first, indx_last
+   integer(IntKi)                :: ErrStat2    ! error status  from get small rot angles (we are completely ignoring it)
+   character(ErrMsgLen)          :: ErrMsg2     ! error message from get small rot angles (we are completely ignoring it)
    
    !...............
    ! ED inputs:   
@@ -3758,7 +3807,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do
          
-   if ( p_FAST%CompHydro == Module_HD ) then   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) then   ! this SD mesh linked only when HD, or SlD is enabled
       ! SD inputs (SD_LMesh):        
       do i=1,SD_LMesh%NNodes
          indx_last  = indx_first + 2 
@@ -3854,7 +3903,7 @@ SUBROUTINE Create_FullOpt1_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do   
    
-   
+  
 END SUBROUTINE Create_FullOpt1_UVector
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine adds u_delta to the corresponding mesh field and scales it as appropriate
@@ -3938,7 +3987,7 @@ SUBROUTINE Add_FullOpt1_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD, 
       END SELECT
                                    
    END DO
-   
+
 END SUBROUTINE Add_FullOpt1_u_delta
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
@@ -4049,7 +4098,7 @@ SUBROUTINE Perturb_u_FullOpt1( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u
 END SUBROUTINE Perturb_u_FullOpt1
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine resets the remap flags on all of the meshes
-SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD )
+SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD )
 !...............................................................................................................................
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -4068,6 +4117,7 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
 
    !local variable(s)
 
@@ -4255,10 +4305,18 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
       END DO         
    END IF
       
+   ! SoilDyn
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+      IF (SlD%Input(1)%SoilMesh%Committed) THEN
+         SlD%Input(1)%SoilMesh%RemapFlag = .FALSE.
+                SlD%y%SoilMesh%RemapFlag = .FALSE.
+      END IF    
+   END IF
+
 END SUBROUTINE ResetRemapFlags  
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all of the mapping data structures needed between the various modules.
-SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
+SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD, MeshMapData, ErrStat, ErrMsg)
 !...............................................................................................................................
    
    TYPE(FAST_ParameterType),   INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
@@ -4277,6 +4335,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    TYPE(OrcaFlex_Data),        INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),         INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),          INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),         INTENT(INOUT) :: SlD                 !< SoilDyn data
 
    TYPE(FAST_ModuleMapType),   INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
@@ -4857,7 +4916,22 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    END IF   ! SubDyn-IceFloe
       
    IF (ErrStat >= AbortErrLev ) RETURN   
-      
+
+!-------------------------
+!  SubDyn <-> SoilDyn
+!-------------------------
+
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         ! SoilDyn output SoilMesh point mesh to SubDyn input LMesh point mesh
+      CALL MeshMapCreate( SlD%y%SoilMesh, SD%Input(1)%LMesh,  MeshMapData%SlD_P_3_SD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SlD_P_3_SD_P' )
+         ! SubDyn output y2Mesh point mesh to SoilDyn input SoilMesh point mesh
+      CALL MeshMapCreate( SD%y%y3Mesh, SlD%Input(1)%SoilMesh,  MeshMapData%SD_P_3_SlD_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_3_SlD_P' )
+   END IF   ! SubDyn-SoilDyn
+
+   IF (ErrStat >= AbortErrLev ) RETURN
+
    !............................................................................................................................
    ! Initialize the Jacobian structures:
    !............................................................................................................................
@@ -4882,7 +4956,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    !............................................................................................................................
    ! reset the remap flags (do this before making the copies else the copies will always have remap = true)
    !............................................................................................................................
-   CALL ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD )      
+   CALL ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD )
             
    !............................................................................................................................
    ! initialize the temporary input meshes (for input-output solves in Solve Option 1):
@@ -4927,8 +5001,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )                 
                
-         IF ( p_FAST%CompHydro == Module_HD ) THEN
-               
+         IF ( p_FAST%CompHydro == Module_HD .or. p_FAST%CompSoil == Module_SlD ) THEN
+
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
 
@@ -4986,7 +5060,7 @@ END SUBROUTINE InitModuleMappings
 !! *** Note that modules that do not have direct feedthrough should be called first. ***
 SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, calcJacobian, NextJacCalcTime, &
                p_FAST, m_FAST, WriteThisStep, ED, BD, &
-               SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+               SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SlD, MeshMapData, ErrStat, ErrMsg )
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
    INTEGER(IntKi)          , intent(in   ) :: n_t_global          !< current time step (used only for SrvD hack)
@@ -5013,6 +5087,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
 
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
@@ -5087,26 +5162,34 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
                                          MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
                                          Orca%Input(1), BD%Input(1,:), SrvD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                                     
-      
-   IF ( p_FAST%CompSub == Module_SD .and. p_FAST%CompHydro == Module_HD ) THEN            
+    
+      ! Calculate SubDyn and transfer outputs to HydroDyn or SoilDyn
+   IF ( p_FAST%CompSub == Module_SD ) THEN
       CALL SD_CalcOutput( this_time, SD%Input(1), SD%p, SD%x(this_state), SD%xd(this_state), SD%z(this_state), SD%OtherSt(this_state), SD%y, SD%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-      call Transfer_SD_to_HD( SD%y, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat, ErrMsg )
-      
-      IF ( p_FAST%CompMooring == Module_MAP ) THEN         
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-         CALL Transfer_Point_to_Point( SD%y%y3Mesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)                  
-      END IF     
+      END IF
+
+      IF ( p_FAST%CompHydro == Module_HD ) THEN            
+         call Transfer_SD_to_HD( SD%y, HD%Input(1)%WAMITMesh, HD%Input(1)%Morison%Mesh, MeshMapData, ErrStat, ErrMsg )
+
+         IF ( p_FAST%CompMooring == Module_MAP ) THEN         
+            CALL Transfer_Point_to_Point( SD%y%y3Mesh, MAPp%Input(1)%PtFairDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
+            CALL Transfer_Point_to_Point( SD%y%y3Mesh, MD%Input(1)%PtFairleadDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
+            CALL Transfer_Point_to_Point( SD%y%y3Mesh, FEAM%Input(1)%PtFairleadDisplacement, MeshMapData%SDy3_P_2_Mooring_P, ErrStat, ErrMsg )
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)                  
+         END IF     
+      END IF
    END IF
-   
+
       !> Solve option 1 (rigorous solve on loads/accelerations)
-   CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
+   CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, SlD, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
       
@@ -5162,14 +5245,14 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
    !.....................................................................              
          
-   CALL ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)         
+   CALL ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, SlD)
          
                         
 END SUBROUTINE CalcOutputs_And_SolveForInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine implements the "option 1" solve for all inputs with direct links to HD, SD, ExtPtfm, MAP, OrcaFlex interface, and the ED 
 !! platform reference point. Also in solve option 1 are the BD-ED blade root coupling.
-SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
+SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, SrvD, SlD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
 !...............................................................................................................................
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
@@ -5190,6 +5273,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
 
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
@@ -5250,7 +5334,15 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       END DO
          
    END IF
-      
+
+
+      ! SoilDyn
+   IF ( p_FAST%CompSoil == Module_SlD ) THEN
+      CALL SlD_CalcOutput( this_time, SlD%Input(1), SlD%p, SlD%x(this_state), SlD%xd(this_state), SlD%z(this_state), &
+                            SlD%OtherSt(this_state), SlD%y, SlD%m, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
 
    ! the Structural control (TMD) from ServoDyn requires recalculating SrvD if we are using it.  While it uses accelerations,
    ! the masses involved are small enough compared to the platform that we don't need to account for them in the jacobian
@@ -5265,7 +5357,8 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    IF (ErrStat >= AbortErrLev) RETURN      
    
    IF ( p_FAST%CompSub /= Module_None .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
-                                 
+      ! .or. p_FAST%CompSoil == Module_SlD  NOTE: this is only if CompSub /= Module_None
+
       CALL FullOpt1_InputOutputSolve(  this_time, p_FAST, calcJacobian &
           ,      ED%Input(1),     ED%p,     ED%x(  this_state),     ED%xd(  this_state),     ED%z(  this_state),     ED%OtherSt(  this_state),     ED%y, ED%m &
           ,      SD%Input(1),     SD%p,     SD%x(  this_state),     SD%xd(  this_state),     SD%z(  this_state),     SD%OtherSt(  this_state),     SD%y    , SD%m & 
@@ -5279,6 +5372,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
           ,    IceF%Input(1),   IceF%y &
           ,    IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure? (likewise for BD)...
           ,    SrvD%Input(1),   SrvD%y &
+          ,     SlD%Input(1),    SlD%y &     ! only couples to SD at present 
           , MeshMapData , ErrStat2, ErrMsg2, WriteThisStep )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         
@@ -5381,6 +5475,15 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
       !print *
       !pause         
 #endif         
+
+!..................
+! Set SoilDyn inputs (which don't have acceleration fields)
+!..................
+   IF (p_FAST%CompSoil == Module_SlD) THEN
+         ! Map Subdyn motion to SoilDyn
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END IF 
                   
 END SUBROUTINE SolveOption1
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -5681,7 +5784,7 @@ END SUBROUTINE SolveOption2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routines advances the states of each module
 SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
+                               MAPp, FEAM, MD, Orca, IceF, IceD, SlD, MeshMapData, ErrStat, ErrMsg, WriteThisStep )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial simulation time (almost always 0)
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< integer time step   
@@ -5704,6 +5807,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
    
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules (added to help BD get better root motion inputs)
 
@@ -5881,7 +5985,6 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
       END DO !j_ss
    END IF            
             
-
    ! HydroDyn: get predicted states
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       CALL HydroDyn_CopyContState   (HD%x( STATE_CURR), HD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5907,6 +6010,13 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
          
    ! SubDyn/ExtPtfm: get predicted states
    IF ( p_FAST%CompSub == Module_SD ) THEN
+
+      ! Transfer platform ED to SD if SlD is active (Map ED (motion) outputs to SD inputs)
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+         CALL Transfer_Point_to_Point( ED%y%PlatformPtMesh, SD%Input(1)%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
       CALL SD_CopyContState   (SD%x( STATE_CURR), SD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SD_CopyDiscState   (SD%xd(STATE_CURR), SD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -5946,6 +6056,37 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, Sr
    END IF
             
             
+   ! SoilDyn: get predicted states
+   IF (p_FAST%CompSoil == Module_SlD) THEN
+         ! Get SD output
+      CALL SD_CalcOutput( t_global_next, SD%Input(1), SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), SD%z(STATE_PRED), SD%OtherSt(STATE_PRED), SD%y, SD%m, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+
+         ! Copy over SD outputs
+      CALL SlD_InputSolve(  SlD%Input(1), SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+
+      CALL SlD_CopyContState   (SlD%x( STATE_CURR), SlD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyDiscState   (SlD%xd(STATE_CURR), SlD%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyConstrState (SlD%z( STATE_CURR), SlD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SlD_CopyOtherState( SlD%OtherSt(STATE_CURR), SlD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      DO j_ss = 1, p_FAST%n_substeps( Module_SlD )
+         n_t_module = n_t_global*p_FAST%n_substeps( Module_SlD ) + j_ss - 1
+         t_module   = n_t_module*p_FAST%dt_module( Module_SlD ) + t_initial
+
+         CALL SlD_UpdateStates( t_module, n_t_module, SlD%Input, SlD%InputTimes, SlD%p, SlD%x(STATE_PRED), SlD%xd(STATE_PRED), &
+                               SlD%z(STATE_PRED), SlD%OtherSt(STATE_PRED), SlD%m, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO !j_ss
+   END IF
+
+
    ! Mooring: MAP/FEAM/MD/Orca: get predicted states
    IF (p_FAST%CompMooring == Module_MAP) THEN
       CALL MAP_CopyContState   (MAPp%x( STATE_CURR), MAPp%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -6075,7 +6216,7 @@ END SUBROUTINE FAST_AdvanceStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine extrapolates inputs to modules to give predicted values at t+dt.
 SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, &
-                   IceF, IceD, ErrStat, ErrMsg )
+                   IceF, IceD, SlD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_global_next       !< next global time step (t + dt), at which we're extrapolating inputs (and ED outputs)
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -6096,6 +6237,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
    TYPE(OrcaFlex_Data),      INTENT(INOUT) :: Orca                !< OrcaFlex interface data
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
+   TYPE(SoilDyn_Data),       INTENT(INOUT) :: SlD                 !< SoilDyn data
 
    !TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         ! Data for mapping between modules
       
@@ -6419,6 +6561,35 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, m_FAST, ED, BD, SrvD, A
       END IF  ! IceFloe/IceDyn
 
 
+      ! SoilDyn
+      IF ( p_FAST%CompSoil == Module_SlD ) THEN
+
+         CALL SlD_Input_ExtrapInterp(SlD%Input, SlD%InputTimes, SlD%u, t_global_next, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+                        
+         !CALL SlD_Output_ExtrapInterp(SlD_Output, SlD_OutputTimes, SlD%y, t_global_next, ErrStat2, ErrMsg2)
+         !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+            
+            
+         ! Shift "window" of SlD%Input and SlD_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL SlD_CopyInput (SlD%Input(j),  SlD%Input(j+1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+           !CALL SlD_CopyOutput(SlD_Output(j), SlD_Output(j+1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            SlD%InputTimes(j+1) = SlD%InputTimes(j)
+            !SlD_OutputTimes(j+1) = SlD_OutputTimes(j)
+         END DO
+  
+         CALL SlD_CopyInput (SlD%u,  SlD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+         !CALL SlD_CopyOutput(SlD%y,  SlD_Output(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         SlD%InputTimes(1) = t_global_next          
+         !SlD_OutputTimes(1) = t_global_next 
+
+      END IF   ! SoilDyn
+
+ 
 END SUBROUTINE FAST_ExtrapInterpMods
 !----------------------------------------------------------------------------------------------------------------------------------
                    

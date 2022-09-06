@@ -17,6 +17,7 @@ usefrom	ServoDyn_Registry.txt
 usefrom	Registry-AD14.txt
 usefrom	AeroDyn_Registry.txt
 usefrom	SubDyn_Registry.txt
+usefrom	SoilDyn_Registry.txt
 usefrom	HydroDyn.txt
 usefrom	IceFloe_FASTRegistry.inp
 usefrom	InflowWind.txt
@@ -53,7 +54,8 @@ param	^	-	INTEGER	Module_MD	-	14	-	"MoorDyn"	-
 param	^	-	INTEGER	Module_Orca	-	15	-	"OrcaFlex integration (HD/Mooring)"	-
 param	^	-	INTEGER	Module_IceF	-	16	-	"IceFloe"	-
 param	^	-	INTEGER	Module_IceD	-	17	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	17	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_SlD	-	18	-	"SoilDyn"	-
+param	^	-	INTEGER	NumModules	-	18	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -112,9 +114,10 @@ typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditi
 typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
-typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_SD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSoil	-	-	-	"Compute soil-structural dynamics (switch) {Module_None; Module_SlD}"	-
 typedef	^	FAST_ParameterType	IntKi	MHK	        -	-	-	"MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}"	-
 typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
@@ -138,6 +141,7 @@ typedef	^	FAST_ParameterType	CHARACTER(1024)	HydroFile	-	-	-	"Name of file conta
 typedef	^	FAST_ParameterType	CHARACTER(1024)	SubFile	-	-	-	"Name of file containing sub-structural input parameters"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	MooringFile	-	-	-	"Name of file containing mooring system input parameters"	-
 typedef	^	FAST_ParameterType	CHARACTER(1024)	IceFile	-	-	-	"Name of file containing ice loading input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	SoilFile	-	-	-	"Name of file containing soil-structure input parameters"	-
 #  Parameters for file/screen output
 #typedef	^	FAST_ParameterType	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
 typedef	^	FAST_ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
@@ -485,6 +489,18 @@ typedef	^	^	SD_OutputType	Output	{:}	-	-	"Array of outputs associated with CalcS
 typedef	^	^	SD_OutputType	y_interp	-	-	-	"interpolated system outputs for CalcSteady"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
+# ..... SoilDyn data .......................................................................................................
+typedef	FAST	SoilDyn_Data	SlD_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	SlD_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	SlD_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	SlD_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	^	^	SlD_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	SlD_InputType	u	-	-	-	"System inputs"
+typedef	^	^	SlD_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	SlD_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	SlD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
 # ..... ExtPtfm data .......................................................................................................
 typedef	FAST	ExtPtfm_Data	ExtPtfm_ContinuousStateType	x	{2}	-	-	"Continuous states"
 typedef	^	^	ExtPtfm_DiscreteStateType	xd	{2}	-	-	"Discrete states"
@@ -632,6 +648,9 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceF_P	-	-	-	"Map SubDyn y3Mes
 # IceD <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn LMesh point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SDy3_P_2_IceD_P	{:}	-	-	"Map SubDyn y3Mesh point mesh to IceDyn point mesh"
+# SlD <-> SD
+typedef	^	FAST_ModuleMapType	MeshMapType	SlD_P_3_SD_P	-	-	-	"Map SoilDyn point mesh to SubDyn y3Mesh point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_3_SlD_P	-	-	-	"Map SubDyn y3Mesh point mesh to SoilDyn point mesh"
 # Stored Jacobians:
 typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or FullOpt1_InputOutputSolve"
 typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"
@@ -716,6 +735,8 @@ typedef   ^   FAST_InitData    IceFloe_InitInputType        InData_IceF     -  -
 typedef   ^   FAST_InitData    IceFloe_InitOutputType      OutData_IceF     -  -  -  "IceF Initialization output data"
 typedef   ^   FAST_InitData    IceD_InitInputType           InData_IceD     -  -  -  "IceD Initialization input data"
 typedef   ^   FAST_InitData    IceD_InitOutputType         OutData_IceD     -  -  -  "IceD Initialization output data (each instance will have the same output channels)"
+typedef   ^   FAST_InitData    SlD_InitInputType            InData_SlD      -  -  -  "SlD Initialization input data"
+typedef   ^   FAST_InitData    SlD_InitOutputType          OutData_SlD      -  -  -  "SlD Initialization output data"
 
 
 # ..... FAST External Initialization Input data .......................................................................................................
@@ -754,6 +775,7 @@ typedef	^	FAST_TurbineType	OpenFOAM_Data	OpFM	-	-	-	"Data for OpenFOAM integrati
 typedef	^	FAST_TurbineType	SCDataEx_Data	SC_DX	-	-	-	"Data for SuperController integration module"	-
 typedef	^	FAST_TurbineType	HydroDyn_Data	HD	-	-	-	"Data for the HydroDyn module"	-
 typedef	^	FAST_TurbineType	SubDyn_Data	SD	-	-	-	"Data for the SubDyn module"	-
+typedef	^	FAST_TurbineType	SoilDyn_Data	SlD	-	-	-	"Data for the SoilDyn module"	-
 typedef	^	FAST_TurbineType	MAP_Data	MAP	-	-	-	"Data for the MAP (Mooring Analysis Program) module"	-
 typedef	^	FAST_TurbineType	FEAMooring_Data	FEAM	-	-	-	"Data for the FEAMooring module"	-
 typedef	^	FAST_TurbineType	MoorDyn_Data	MD	-	-	-	"Data for the MoorDyn module"	-

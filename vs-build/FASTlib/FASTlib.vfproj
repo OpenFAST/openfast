@@ -1734,6 +1734,15 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\orcaflex-interface\src\OrcaFlexInterface.F90"/></Filter></Filter>
+		<Filter Name="SoilDyn">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn_Registry.txt">
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SoilDyn" Description="Running Registry for SoilDyn" Outputs="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\soildyn\src\REDWINinterface.f90"/>
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn.f90"/>
+		<File RelativePath="..\..\modules\soildyn\src\SoilDyn_IO.f90"/></Filter>
 		<Filter Name="NWTC_Library">
 		<Filter Name="NetLib">
 		<Filter Name="FFTPACK">
