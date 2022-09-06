@@ -40,13 +40,7 @@ from errorPlotting import exportCaseSummary
 import openfast_library
 
 ##### Helper functions
-def ignoreBaselineItems(directory, contents):
-    itemFilter = ['linux-intel', 'linux-gnu', 'macos-gnu', 'windows-intel']
-    caught = []
-    for c in contents:
-        if c in itemFilter:
-            caught.append(c)
-    return tuple(caught)
+excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -104,13 +98,13 @@ if not os.path.isdir(inputsDirectory):
 for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
-        shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
+        rtl.copyTree(os.path.join(moduleDirectory, data), dataDir, excludeExt=excludeExt)
 
 # Special copy for the 5MW_Baseline folder because the Windows python-only workflow may have already created data in the subfolder ServoData
 dst = os.path.join(buildDirectory, "5MW_Baseline")
 src = os.path.join(moduleDirectory, "5MW_Baseline")
 if not os.path.isdir(dst):
-    shutil.copytree(src, dst)
+    rtl.copyTree(src, dst, excludeExt=excludeExt)
 else:
     names = os.listdir(src)
     for name in names:
@@ -120,12 +114,12 @@ else:
         dstname = os.path.join(dst, name)
         if os.path.isdir(srcname):
             if not os.path.isdir(dstname):
-                shutil.copytree(srcname, dstname)
+                rtl.copyTree(srcname, dstname, excludeExt=excludeExt)
         else:
             shutil.copy2(srcname, dstname)
 
 if not os.path.isdir(testBuildDirectory):
-    shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
 ### Run openfast on the test case
 if not noExec:
