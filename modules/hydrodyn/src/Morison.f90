@@ -2903,11 +2903,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_IMG = 0.0_ReKi
       m%memberLoads(im)%F_If = 0.0_ReKi
 
-      DO i =1,N    ! loop through member elements
-
-         if ( i >= mem%i_floor )  then ! Member element is not completely buried in the seabed. Bug fix for OpenFast issue #847 GJH 2/3/2022
+      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
-            ! calculate isntantaneous incline angle and heading, and related trig values
+         ! calculate instantaneous incline angle and heading, and related trig values
          ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
@@ -3271,15 +3269,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! no load for unflooded element or element fully below seabed
         
          end if
-
-      endif    ! i >= ifloor  
-           
-         
    
-      END DO ! i =1,N    ! loop through member elements       
+      END DO ! i = max(mem%i_floor,1), N    ! loop through member elements that are not fully buried in the seabed   
 
-       
-       
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
@@ -3746,10 +3738,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
       if ( N == 1 ) then       ! Only one element in member
-         sinPhi2 = sinPhi1
-         cosPhi2 = cosPhi1
-         sinBeta2  = sinBeta1
-         cosBeta2  = cosBeta1
+         sinPhi2  = sinPhi1
+         cosPhi2  = cosPhi1
+         sinBeta2 = sinBeta1
+         cosBeta2 = cosBeta1
+         k_hat2   = k_hat1
       else
          !  We need to subtract the MSL2SWL offset to place this  in the SWL reference system
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N))   + u%Mesh%Position(:, mem%NodeIndx(N))
@@ -3809,19 +3802,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       if ( .not. mem%PropPot ) then
 
          ! Get positions of member end nodes
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
+         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1  )) + u%Mesh%Position(:, mem%NodeIndx(1  )) 
          pos1(3) = pos1(3) - p%MSL2SWL
          z1      = pos1(3)
+         r1      = mem%RMG(1  )
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
          z2      = pos2(3)
+         r2      = mem%RMG(N+1)
 
          ! Get free surface elevation vertically above or below the end nodes
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, computed buoyancy based on free-surface elevation
+         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to the instantaneous free surface
             CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
             CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         ELSE ! Without wave stretching, computed buoyancy based on SWL
+         ELSE ! Without wave stretching, compute buoyancy up to the SWL
             Zeta1 = 0.0_ReKi
             Zeta2 = 0.0_ReKi
          END IF
@@ -3845,12 +3840,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
          
          ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat,n_hat)
+         t_hat    = Cross_Product(k_hat1,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
          IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
             ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+            IF ( k_hat1(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat1(2),k_hat1(1),0.0_ReKi/)   
                t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
             ELSE ! k_hat is close to vertical (0,0,1)
                t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
@@ -3858,7 +3853,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ELSE
             t_hat = t_hat / sinGamma
          END IF
-            r_hat = Cross_Product(t_hat,k_hat)
+         r_hat = Cross_Product(t_hat,k_hat1)
          IF ( ABS((Zeta1-z1)*n_hat(3)) < r1*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
             CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
          END IF
@@ -3881,12 +3876,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
          
          ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat,n_hat)
+         t_hat    = Cross_Product(k_hat2,n_hat)
          sinGamma = SQRT(Dot_Product(t_hat,t_hat))
          IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
             ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+            IF ( k_hat2(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat2(2),k_hat2(1),0.0_ReKi/)   
                t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
             ELSE ! k_hat is close to vertical (0,0,1)
                t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
@@ -3894,7 +3889,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ELSE
             t_hat = t_hat / sinGamma
          END IF
-            r_hat = Cross_Product(t_hat,k_hat)
+         r_hat = Cross_Product(t_hat,k_hat2)
          IF ( ABS((Zeta2-z2)*n_hat(3)) < r2*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
             CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
          END IF
