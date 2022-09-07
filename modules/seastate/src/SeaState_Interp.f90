@@ -188,7 +188,7 @@ subroutine SetCartesianZIndex(p, z_depth, delta, nMax, Indx_Lo, Indx_Hi, isopc, 
    
   
    !Tmp =  acos(-p / z_depth) / delta
-   Tmp = acos(1+(p / z_depth)) / delta
+   Tmp = acos( max(-1.0_ReKi, min(1.0_ReKi, 1+(p / z_depth)) ) ) / delta
    Tmp =  nmax - 1 - Tmp
    Indx_Lo = INT( Tmp ) + 1    ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
    isopc = 2.0_ReKi * (Tmp - REAL(Indx_Lo - 1, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
