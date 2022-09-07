@@ -16,7 +16,6 @@ include   Registry_NWTC_Library.txt
 usefrom   SeaState_Interp.txt
 #
 #
-param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs           -       4626        -         "Total number of possible Morison module output channels"    -
 typedef   ^                            Morison_JointType             INTEGER          JointID                  -          -        -         "User-specified integer ID for the given joint"    -
 typedef   ^                            ^                             ReKi             Position                {3}         -        -         "Undisplaced location of the joint in the platform coordinate system"    m
 typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         "Axial ID (found in the user-supplied Axial Coefficients Table) for this joint: used to determine axial coefs"    -
@@ -256,12 +255,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4626}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
-typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {:}        -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
-typedef   ^                            ^                             CHARACTER(1024)          OutRootName                      -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation (points to SeaState module data)"        -
 typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation (points to SeaState module data)"        -
@@ -388,10 +383,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                         {:}        -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                        {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -         -         ""        -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType   SeaSt_Interp_p                    -          -         -       "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 #

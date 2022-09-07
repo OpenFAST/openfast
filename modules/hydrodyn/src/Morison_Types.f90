@@ -319,8 +319,7 @@ IMPLICIT NONE
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs      !<  [-]
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
-    CHARACTER(ChanLen) , DIMENSION(1:4626)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     CHARACTER(1024)  :: OutRootName      !<  [-]
     INTEGER(IntKi)  :: UnOutFile      !<  [-]
@@ -6359,18 +6358,17 @@ IF (ALLOCATED(SrcInitInputData%JOutLst)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-    DstInitInputData%OutList = SrcInitInputData%OutList
-IF (ALLOCATED(SrcInitInputData%ValidOutList)) THEN
-  i1_l = LBOUND(SrcInitInputData%ValidOutList,1)
-  i1_u = UBOUND(SrcInitInputData%ValidOutList,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%ValidOutList)) THEN 
-    ALLOCATE(DstInitInputData%ValidOutList(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%OutList)) THEN
+  i1_l = LBOUND(SrcInitInputData%OutList,1)
+  i1_u = UBOUND(SrcInitInputData%OutList,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%OutList)) THEN 
+    ALLOCATE(DstInitInputData%OutList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%ValidOutList.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%OutList.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%ValidOutList = SrcInitInputData%ValidOutList
+    DstInitInputData%OutList = SrcInitInputData%OutList
 ENDIF
     DstInitInputData%NumOuts = SrcInitInputData%NumOuts
     DstInitInputData%OutRootName = SrcInitInputData%OutRootName
@@ -6688,8 +6686,8 @@ DO i1 = LBOUND(InitInputData%JOutLst,1), UBOUND(InitInputData%JOutLst,1)
 ENDDO
   DEALLOCATE(InitInputData%JOutLst)
 ENDIF
-IF (ALLOCATED(InitInputData%ValidOutList)) THEN
-  DEALLOCATE(InitInputData%ValidOutList)
+IF (ALLOCATED(InitInputData%OutList)) THEN
+  DEALLOCATE(InitInputData%OutList)
 ENDIF
 IF (ASSOCIATED(InitInputData%WaveElev1)) THEN
  IF (DEALLOCATEpointers_local) &
@@ -7074,11 +7072,10 @@ ENDIF
       END IF
     END DO
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
+  IF ( ALLOCATED(InData%OutList) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! OutList upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
-  Int_BufSz   = Int_BufSz   + 1     ! ValidOutList allocated yes/no
-  IF ( ALLOCATED(InData%ValidOutList) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ValidOutList upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%ValidOutList)  ! ValidOutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutRootName)  ! OutRootName
@@ -7706,25 +7703,21 @@ ENDIF
       ENDIF
     END DO
   END IF
-    DO i1 = LBOUND(InData%OutList,1), UBOUND(InData%OutList,1)
-      DO I = 1, LEN(InData%OutList)
-        IntKiBuf(Int_Xferred) = ICHAR(InData%OutList(i1)(I:I), IntKi)
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-  IF ( .NOT. ALLOCATED(InData%ValidOutList) ) THEN
+  IF ( .NOT. ALLOCATED(InData%OutList) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ValidOutList,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ValidOutList,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%OutList,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%OutList,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%ValidOutList,1), UBOUND(InData%ValidOutList,1)
-        IntKiBuf(Int_Xferred) = TRANSFER(InData%ValidOutList(i1), IntKiBuf(1))
-        Int_Xferred = Int_Xferred + 1
+      DO i1 = LBOUND(InData%OutList,1), UBOUND(InData%OutList,1)
+        DO I = 1, LEN(InData%OutList)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%OutList(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
@@ -8819,30 +8812,24 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-    i1_l = LBOUND(OutData%OutList,1)
-    i1_u = UBOUND(OutData%OutList,1)
-    DO i1 = LBOUND(OutData%OutList,1), UBOUND(OutData%OutList,1)
-      DO I = 1, LEN(OutData%OutList)
-        OutData%OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ValidOutList not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutList not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ValidOutList)) DEALLOCATE(OutData%ValidOutList)
-    ALLOCATE(OutData%ValidOutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%OutList)) DEALLOCATE(OutData%OutList)
+    ALLOCATE(OutData%OutList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ValidOutList.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutList.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%ValidOutList,1), UBOUND(OutData%ValidOutList,1)
-        OutData%ValidOutList(i1) = TRANSFER(IntKiBuf(Int_Xferred), OutData%ValidOutList(i1))
-        Int_Xferred = Int_Xferred + 1
+      DO i1 = LBOUND(OutData%OutList,1), UBOUND(OutData%OutList,1)
+        DO I = 1, LEN(OutData%OutList)
+          OutData%OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)

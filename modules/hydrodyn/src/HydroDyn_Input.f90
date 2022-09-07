@@ -30,106 +30,9 @@ MODULE HydroDyn_Input
    USE                              NWTC_RandomNumber
    IMPLICIT                         NONE
 
-   PRIVATE :: CheckMeshOutput
-
 CONTAINS
    
-!====================================================================================================
-FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
-!     The routine
-!----------------------------------------------------------------------------------------------------
-!
-   CHARACTER(ChanLen),        INTENT ( IN    )  :: output
-   INTEGER,                   INTENT ( IN    )  :: numMemberOut
-   TYPE(Morison_MOutput),     INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                   INTENT ( IN    )  :: numJointOut
-   !INTEGER,                   INTENT (   OUT )  :: ErrStat              ! returns a non-zero value when an error occurs
-   !CHARACTER(*),              INTENT (   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
-   LOGICAL                                      :: CheckMeshOutput
-
-   INTEGER                                      :: ErrStat
-   CHARACTER(ChanLen)                           :: outputTmp
-   INTEGER                                      :: indx1, indx2
-   CHARACTER(4)                                 :: testStr
-   outputTmp         = TRIM(output)
-
-   testStr = outputTmp(1:4)
-   CALL Conv2UC( testStr )
-
-      ! Reverse the sign (+/-) of the output channel if the user prefixed the
-      !   channel name with a '-', '_', 'm', or 'M' character indicating "minus".
-
-      IF      ( INDEX( '-_', outputTmp(1:1) ) > 0 ) THEN
-
-            ! ex, '-TipDxc1' causes the sign of TipDxc1 to be switched.
-         outputTmp                   = outputTmp(2:)
-         testStr = outputTmp(1:4)
-         CALL Conv2UC( testStr )
-
-      ELSE IF ( INDEX( 'mM', outputTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
-
-         IF ( ( INDEX( 'mM', outputTmp(2:2) ) > 0 ) .OR. ( INDEX( 'jJ', outputTmp(2:2) ) > 0 ) )  THEN
-            outputTmp                   = outputTmp(2:)
-
-         END IF
-
-      ELSE IF ( INDEX( 'jJ', outputTmp(1:1) ) == 0  .AND. ( testStr /= 'WAVE' )  ) THEN
-         ! Invalid output label because the label does not start: -M,-m,-J,-j,_M,_m,_J,_j,MM,mM,Mm,mm,MJ,mJ,Mj,mj, j,J,m,M
-         CheckMeshOutput = .FALSE.
-         RETURN
-      END IF
-
-      IF (( INDEX( 'mM', outputTmp(1:1) ) > 0 ) .OR. ( INDEX( 'jJ', outputTmp(1:1) ) > 0 )) THEN
-         ! Read the second character, it should be a number from 1 to 9
-      
-         READ( outputTmp(2:2), '(i1)', IOSTAT = ErrStat) indx1
-         IF ( ErrStat /=0 ) THEN
-            ! Not a numerical digit!!!
-            CheckMeshOutput = .FALSE.
-            RETURN
-         END IF
-      
-            ! Examine members
-         IF ( INDEX( 'mM', outputTmp(1:1) ) > 0 ) THEN 
-            IF ( indx1 > numMemberOut ) THEN
-               CheckMeshOutput = .FALSE.
-               RETURN
-            END IF
-               ! Now make sure the next letter is n or N and then look for the second index
-               IF ( INDEX( 'nN', outputTmp(3:3) ) == 0 ) THEN
-                     ! Invalid member label
-                  CheckMeshOutput = .FALSE.
-                  RETURN
-               END IF
-               READ( outputTmp(4:4), '(i1)', IOSTAT = ErrStat) indx2
-               IF ( indx2 > MOutLst(indx1)%NOutLoc ) THEN
-                  CheckMeshOutput = .FALSE.
-                  RETURN
-               END IF
-            
-         
-         END IF 
-      
-         IF ( INDEX( 'jJ', outputTmp(1:1) ) > 0 ) THEN 
-            IF ( indx1 > numJointOut ) THEN
-               CheckMeshOutput = .FALSE.
-               RETURN
-            END IF
-         END IF 
-   ELSE 
-         ! This should be a wave elevation channel
-      READ( outputTmp(5:5), '(i1)', IOSTAT = ErrStat) indx1
-      IF ( ErrStat /=0 ) THEN
-         ! Not a numerical digit!!!
-         CheckMeshOutput = .FALSE.
-         RETURN
-      END IF   
-   END IF
-
-      CheckMeshOutput = .TRUE.
-
-END FUNCTION CheckMeshOutput
 
 !====================================================================================================
 SUBROUTINE PrintBadChannelWarning(NUserOutputs, UserOutputs , foundMask, ErrStat, ErrMsg )
@@ -2492,31 +2395,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    
-   
-   
-   
-   !----------------------------------------------------------
-   ! Mesh-related Output List
-   !----------------------------------------------------------
-
-   IF ( InputFileData%Morison%NumOuts > 0 ) THEN
-
-         ! Create an  output list for validated outputs
-      ALLOCATE ( InputFileData%Morison%ValidOutList(InputFileData%Morison%NumOuts), STAT = ErrStat2 )
-      IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating valid output list array.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
-      DO I =1, InputFileData%Morison%NumOuts
-
-         InputFileData%Morison%ValidOutList(I) = CheckMeshOutput( InputFileData%Morison%OutList(I), InputFileData%Morison%NMOutputs, InputFileData%Morison%MOutLst, InputFileData%Morison%NJOutputs )
-
-      END DO
-
-   END IF
-
-
    !----------------------------------------------------------
    ! Populate data in sub-types from parent or other module types
    !----------------------------------------------------------
