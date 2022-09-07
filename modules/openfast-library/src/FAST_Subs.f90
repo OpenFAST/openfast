@@ -3532,7 +3532,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
       call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
       do i=1,N
-         angle = (i-1)*TwoPi/N
+         angle = (i-1)*TwoPi/(N-1)
          xc(i) = (cos(angle)+1)/2        ! between 0 and 1, 0.5 substracted later
          yc(i) = (sin(angle)+1)/2-0.5    ! between -0.5 and 0.5
       enddo
