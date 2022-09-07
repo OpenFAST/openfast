@@ -1,6 +1,7 @@
 
 #include "FastLibAPI.h"
 #include <string>
+#include <sstream>
 #include <stdlib.h>
 #include <iostream>
 #include <math.h>
@@ -12,6 +13,7 @@ FastLibAPI::FastLibAPI(std::string input_file):
 n_turbines(1),
 i_turb(0),
 dt(0.0),
+dt_out(0.0),
 t_max(0.0),
 abort_error_level(4),
 end_early(false),
@@ -33,6 +35,7 @@ bool FastLibAPI::fatal_error(int error_status) {
 void FastLibAPI::fast_init() {
     int _error_status = 0;
     char _error_message[INTERFACE_STRING_LENGTH];
+    char channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
 
     std::cout << input_file_name;
 
@@ -51,6 +54,7 @@ void FastLibAPI::fast_init() {
         &abort_error_level,
         &num_outs,
         &dt,
+        &dt_out,
         &t_max,
         &_error_status,
         _error_message,
@@ -61,16 +65,16 @@ void FastLibAPI::fast_init() {
     }
 
     // Allocate the data for the outputs
+    output_values.resize(total_output_steps(), std::vector<double>(num_outs, 0));
 
-    // Create a dynamic array of pointers
-    // Then, create a row for every pointer and initialize all elements to 0.0
-    output_values = new double *[total_time_steps()];
-    for (int i=0; i<total_time_steps(); i++) {
-        output_values[i] = new double[num_outs];
-        memset(output_values[i], 0.0, num_outs * sizeof(double));
+    // Get output channel names
+    std::istringstream ss(channel_names);
+    std::string channel_name;
+    output_channel_names.clear();
+    while (ss >> channel_name) 
+    {
+        output_channel_names.push_back(channel_name);
     }
-
-    output_array.resize(num_outs);
 }
 
 void FastLibAPI::fast_sim() {
@@ -82,15 +86,17 @@ void FastLibAPI::fast_sim() {
         &num_inputs,
         &num_outs,
         inp_array,
-        output_array.data(),
+        output_values[0].data(),
         &_error_status,
         _error_message
     );
-    output_values[0] = output_array.data();
     if (fatal_error(_error_status)) {
         fast_deinit();
         throw std::runtime_error( "Error " + std::to_string(_error_status) + ": " + _error_message );
     }
+
+    int output_frequency = round(dt_out/dt);
+    int i_out = 1;
 
     for (int i=1; i<total_time_steps(); i++) {
         FAST_Update(
@@ -98,12 +104,14 @@ void FastLibAPI::fast_sim() {
             &num_inputs,
             &num_outs,
             inp_array,
-            output_array.data(),
+            output_values[i_out].data(),
             &end_early,
             &_error_status,
             _error_message
         );
-        output_values[i] = output_array.data();
+        if (i%output_frequency == 0) {
+            i_out++;
+        }
         if (fatal_error(_error_status)) {
             fast_deinit();
             throw std::runtime_error( "Error " + std::to_string(_error_status) + ": " + _error_message );
@@ -164,6 +172,12 @@ int FastLibAPI::total_time_steps() {
     // We assume here t_initial is always 0
     return ceil( t_max / dt ) + 1;
 }
+
+int FastLibAPI::total_output_steps() {
+    // Calculate number of output steps using same method as total_time_steps.
+    // This assumes that the initial time is zero.
+    return ceil( t_max / dt_out ) + 1;
+} 
 
 void FastLibAPI::get_hub_position(float *absolute_position, float *rotational_velocity, double *orientation_dcm) {
     int _error_status = 0;

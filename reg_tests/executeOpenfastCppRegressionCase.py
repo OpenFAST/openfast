@@ -28,7 +28,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.out','.outb','.ech','.sum','.log']
 
 ##### Main program
 
