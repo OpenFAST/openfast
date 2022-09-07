@@ -3514,14 +3514,18 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
    integer :: N  ! Number of points for airfoil
    real, allocatable, dimension(:) :: xc, yc ! Coordinate of airfoil
 
-   if (iShape==1) then
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   select case (iShape)
+   case (1)
       N=66
       call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
       call AllocAry(yc, N, 'yc', Errstat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
       xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
       yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
-   else if (iShape==2) then
+   case (2)
       ! Circle
       N=21
       call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
@@ -3532,7 +3536,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
          xc(i) = (cos(angle)+1)/2        ! between 0 and 1, 0.5 substracted later
          yc(i) = (sin(angle)+1)/2-0.5    ! between -0.5 and 0.5
       enddo
-   else if (iShape==3) then
+   case (3)
       ! Square
       N=5
       call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
@@ -3540,7 +3544,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
       xc = (/1.0  , 0.0  , 0.0 , 1.0 , 1.0/)  ! between 0 and 1, 0.5 substracted later
       yc = (/-0.5 , -0.5 , 0.5 , 0.5 , -0.5/) ! between -0.5 and 0.5
-   else if (iShape==4) then
+   case (4)
       ! Rectangle
       N=5
       call AllocAry(xc, N, 'xc', Errstat2, ErrMsg2)
@@ -3548,7 +3552,10 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, i
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
       xc = (/1.0   , 0.0   , 0.0  , 1.0  , 1.0/) ! between 0 and 1, 0.5 substracted later
       yc = (/-0.25 , -0.25 , 0.25 , 0.25 , 0.0/) ! between 0.25 and 0.25
-   endif
+   case default
+      call SetErrStat(ErrID_Fatal, 'Unknown iShape specfied for VTK default shapes',ErrStat,ErrMsg,RoutineName)
+      return
+   end select
 
    ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:
    call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
