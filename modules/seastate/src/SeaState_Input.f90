@@ -475,8 +475,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call AllocAry( InputFileData%OutList, MaxOutPts, 'InputFileData%OutList', ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
-   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
-            InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, InputFileData%NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
 
 contains

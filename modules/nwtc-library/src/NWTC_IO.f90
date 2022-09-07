@@ -6248,7 +6248,7 @@ END SUBROUTINE CheckR16Var
 !! These values represent the names of output channels, and they are specified in the format
 !! required for OutList(:) in FAST input files.
 !! The end of this list is specified with the line beginning with the 3 characters "END".
-   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, ErrStat, ErrMsg, UnEc )
 
       ! Argument declarations:
 
@@ -6261,9 +6261,6 @@ END SUBROUTINE CheckR16Var
 
    CHARACTER(*),        INTENT(OUT)  :: CharAry(:)                                 !< Character array being read (calling routine dimensions it to max allowable size).
 
-   CHARACTER(*),        INTENT(IN)   :: AryDescr                                   !< Text string describing the variable.
-   CHARACTER(*),        INTENT(IN)   :: AryName                                    !< Text string containing the variable name.
-
 
       ! Local declarations:
 
@@ -6271,7 +6268,7 @@ END SUBROUTINE CheckR16Var
    INTEGER                          :: NumWords                                    ! Number of words contained on a line
    INTEGER                          :: ErrStat2
 
-   INTEGER                          :: QuoteCh                                     ! Character position.
+!   INTEGER                          :: QuoteCh                                     ! Character position.
 
    CHARACTER(MaxFileInfoLineLen)    :: OutLine                                     ! Character string read from file, containing output list
    CHARACTER(3)                     :: EndOfFile

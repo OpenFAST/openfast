@@ -767,14 +767,14 @@ END SUBROUTINE WAMIT2_Init
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
-      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
+!      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+!      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
       INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
       INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
-      INTEGER(IntKi)                                     :: K                    !< Generic counter
+!      INTEGER(IntKi)                                     :: K                    !< Generic counter
       CHARACTER(*), PARAMETER                            :: RoutineName = 'MnDrift_InitCalc'
 
 
@@ -1306,13 +1306,13 @@ END SUBROUTINE WAMIT2_Init
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
       REAL(SiKi)                                         :: TmpReal1             !< Temporary real
-      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
+!     REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
       INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
       INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
-      INTEGER(IntKi)                                     :: K                    !< Generic counter
+!      INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
       CHARACTER(*), PARAMETER                            :: RoutineName = 'NewmanApp_InitCalc'
 
@@ -3059,7 +3059,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Temporary Error Variables
       INTEGER(IntKi)                                     :: ErrStatTmp     !< Temporary variable for the local error status
-      CHARACTER(2048)                                    :: ErrMsgTmp      !< Temporary error message variable
+!      CHARACTER(2048)                                    :: ErrMsgTmp      !< Temporary error message variable
       CHARACTER(*), PARAMETER                            :: RoutineName = 'CheckInitInput'
 
       !> ## Subroutine contents
@@ -4976,7 +4976,7 @@ END SUBROUTINE WAMIT2_Init
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Message about the error
 
          ! Local variables
-      REAL(SiKi)                                         :: TmpReal           !< Temporary real value
+!      REAL(SiKi)                                         :: TmpReal           !< Temporary real value
       INTEGER(IntKi)                                     :: I                 !< Generic counter
       INTEGER(IntKi)                                     :: J                 !< Generic counter
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArray(:)   !< Temporary real array
@@ -5119,9 +5119,9 @@ END SUBROUTINE WAMIT2_Init
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
       REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
+!      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(NWTC_SizeOfNumWord)                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-      INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+      INTEGER(IntKi)                                     :: i !,j,k             !< simple integer counters
       INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
       LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
       LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.

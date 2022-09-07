@@ -987,8 +987,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    call AllocAry( InputFileData%UserOutputs, MaxUserOutputs, 'InputFileData%UserOutputs', ErrStat2, ErrMsg2 )  ! MaxUserOutputs is set in registry 
       if (Failed())  return;
    
-   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%UserOutputs, &
-            InputFileData%NUserOutputs, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%UserOutputs, InputFileData%NUserOutputs, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
 
    
