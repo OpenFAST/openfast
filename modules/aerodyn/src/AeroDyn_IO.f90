@@ -2430,7 +2430,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
 
-   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%BldNd_OutList, &InputFileData%BldNd_NumOuts, ErrStat2, ErrMsg2, UnEc )
+   call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (FailedNodal()) return;
 
    RETURN

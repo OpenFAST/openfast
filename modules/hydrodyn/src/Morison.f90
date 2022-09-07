@@ -4005,13 +4005,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!
    !                                      External Hydrodynamic Joint Loads - End                                  !
    !---------------------------------------------------------------------------------------------------------------!    
-   ! Map calculated results into the AllOuts Array
-   CALL MrsnOut_MapOutputs(y, p, u, m, AllOuts)
+   ! Map calculated results into the y%WriteOutput Array
+   CALL MrsnOut_MapOutputs(y, p, u, m)
         
-   ! Put the output data in the WriteOutput array
-   DO I = 1,p%NumOuts
-      y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-   END DO
 
 
    CONTAINS

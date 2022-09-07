@@ -933,7 +933,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
-         CALL SetErrStat(ErrID_Severe, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
 
    END DO

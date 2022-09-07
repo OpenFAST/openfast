@@ -1277,7 +1277,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
      
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
-      REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
       integer(IntKi)                       :: iBody, indxStart, indxEnd  ! Counters
       
          ! Initialize ErrStat
@@ -1451,28 +1450,18 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
         
       
       
-         ! Map calculated results into the AllOuts Array
-      CALL HDOut_MapOutputs( p, y, m%WAMIT, m%WAMIT2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
+         ! Map calculated results into the first p%NumOuts values of the y%WriteOutput Array
+      CALL HDOut_MapOutputs( p, y, m%WAMIT, m%WAMIT2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, q, qdot, qdotdot, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
-      DO I = 1,p%NumOuts
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO    
       
          ! Aggregate the sub-module outputs 
-         
-      IF ( p%OutSwtch > 0) THEN
-         
-         J = p%NumOuts + 1        
-         
-
-         IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
-            DO I=1, p%Morison%NumOuts
-               y%WriteOutput(J) = y%Morison%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-         
+      IF (p%Morison%NumOuts > 0) THEN
+         J = p%NumOuts + 1
+         DO I=1, p%Morison%NumOuts
+            y%WriteOutput(J) = y%Morison%WriteOutput(I)
+            J = J + 1
+         END DO
       END IF
       
       m%LastOutTime   = Time

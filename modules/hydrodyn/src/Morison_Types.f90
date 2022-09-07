@@ -34,7 +34,6 @@ MODULE Morison_Types
 USE SeaState_Interp_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxMrsnOutputs = 4626      ! Total number of possible Morison module output channels [-]
 ! =========  Morison_JointType  =======
   TYPE, PUBLIC :: Morison_JointType
     INTEGER(IntKi)  :: JointID      !< User-specified integer ID for the given joint [-]
@@ -321,8 +320,6 @@ IMPLICIT NONE
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    CHARACTER(1024)  :: OutRootName      !<  [-]
-    INTEGER(IntKi)  :: UnOutFile      !<  [-]
     INTEGER(IntKi)  :: UnSum      !<  [-]
     INTEGER(IntKi)  :: NStepWave      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
@@ -438,10 +435,6 @@ IMPLICIT NONE
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    INTEGER(IntKi)  :: UnOutFile      !<  [-]
-    CHARACTER(20)  :: OutFmt      !<  [-]
-    CHARACTER(20)  :: OutSFmt      !<  [-]
-    CHARACTER(ChanLen)  :: Delim      !<  [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     INTEGER(IntKi)  :: WaveStMod      !<  [-]
   END TYPE Morison_ParameterType
@@ -6371,8 +6364,6 @@ IF (ALLOCATED(SrcInitInputData%OutList)) THEN
     DstInitInputData%OutList = SrcInitInputData%OutList
 ENDIF
     DstInitInputData%NumOuts = SrcInitInputData%NumOuts
-    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
-    DstInitInputData%UnOutFile = SrcInitInputData%UnOutFile
     DstInitInputData%UnSum = SrcInitInputData%UnSum
     DstInitInputData%NStepWave = SrcInitInputData%NStepWave
 IF (ASSOCIATED(SrcInitInputData%WaveElev1)) THEN
@@ -7078,8 +7069,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutRootName)  ! OutRootName
-      Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
       Int_BufSz  = Int_BufSz  + 1  ! UnSum
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
   Int_BufSz   = Int_BufSz   + 1     ! WaveElev1 allocated yes/no
@@ -7721,12 +7710,6 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutRootName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutRootName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    IntKiBuf(Int_Xferred) = InData%UnOutFile
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%UnSum
     Int_Xferred = Int_Xferred + 1
@@ -8833,12 +8816,6 @@ ENDIF
       END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutRootName)
-      OutData%OutRootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%UnOutFile = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%UnSum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -12008,10 +11985,6 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%UnOutFile = SrcParamData%UnOutFile
-    DstParamData%OutFmt = SrcParamData%OutFmt
-    DstParamData%OutSFmt = SrcParamData%OutSFmt
-    DstParamData%Delim = SrcParamData%Delim
       CALL SeaSt_Interp_CopyParam( SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -12443,10 +12416,6 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt)  ! OutFmt
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -13319,20 +13288,6 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%UnOutFile
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutFmt)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFmt(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%OutSFmt)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutSFmt(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%Delim)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%Delim(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -14361,20 +14316,6 @@ ENDIF
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%UnOutFile = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutFmt)
-      OutData%OutFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%OutSFmt)
-      OutData%OutSFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%Delim)
-      OutData%Delim(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN

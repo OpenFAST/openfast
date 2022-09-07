@@ -194,7 +194,6 @@ GOTO checkError
 :WAMIT
 :WAMIT2
 :Morison
-
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -I "%SEAST_Loc%" -O "%Output_Loc%"

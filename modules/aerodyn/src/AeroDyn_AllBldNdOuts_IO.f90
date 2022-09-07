@@ -19,7 +19,7 @@ MODULE AeroDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N##namesuffix
+!   INTEGER(IntKi), PARAMETER      :: OutStrLenM1_Msuffix = ChanLen - 6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N##namesuffix
 
 
 ! ===================================================================================================
@@ -1427,7 +1427,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 
       Indx = FindValidChannelIndx(BldNd_OutList(I), ValidParamAry, p%BldNd_OutParam(I)%SignM)
 
-      if (p%BldNd_OutParam(I)%SignM <> 1) then   ! this won't be used
+      if (p%BldNd_OutParam(I)%SignM /= 1) then   ! this won't be used
          CALL SetErrStat(ErrID_Severe, "Negative channels not allowed for nodal outputs. Resetting channel name.", ErrStat, ErrMsg, RoutineName)
          p%BldNd_OutParam(I)%SignM = 1
          p%BldNd_OutParam(I)%Name  = p%BldNd_OutParam(I)%Name(2:) ! remove the first character that makes this a negative value

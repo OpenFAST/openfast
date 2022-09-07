@@ -2378,13 +2378,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       foundMask = .FALSE.
       
          ! Extract Morison list
-         !foundMask = .FALSE.
       InputFileData%Morison%NumOuts = GetMorisonChannels  ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%Morison%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
          ! Attach remaining items to the HydroDyn list
-         !foundMask = .FALSE.
-      call Allocary(InputFileData%OutList, InputFileData%NUserOutputs, "InputFileData%OutList", ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      InputFileData%NumOuts       = HDOut_GetChannels ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%OutList        , foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      InputFileData%NumOuts        = HDOut_GetChannels ( InputFileData%NUserOutputs, InputFileData%UserOutputs, InputFileData%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
       CALL PrintBadChannelWarning(InputFileData%NUserOutputs, InputFileData%UserOutputs , foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       IF (ErrStat >= AbortErrLev ) RETURN

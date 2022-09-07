@@ -7775,7 +7775,7 @@ MODULE Morison_Output
 CONTAINS
 
 !====================================================================================================
-SUBROUTINE MrsnOut_MapOutputs( y, p, u, m, AllOuts )
+SUBROUTINE MrsnOut_MapOutputs( y, p, u, m )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
@@ -7783,7 +7783,6 @@ SUBROUTINE MrsnOut_MapOutputs( y, p, u, m, AllOuts )
    TYPE(Morison_ParameterType),        INTENT( IN    )  :: p                    ! Morison module's parameter data
    TYPE(Morison_InputType),            INTENT( IN    )  :: u                    ! Morison module's input data
    TYPE(Morison_MiscVarType),          INTENT( INOUT )  :: m                    ! Misc/optimization variables
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxOutPts)   ! Array of output data for all possible outputs
 
    INTEGER                                              :: I, J
    
@@ -7791,6 +7790,7 @@ SUBROUTINE MrsnOut_MapOutputs( y, p, u, m, AllOuts )
    real(ReKi)                                           :: mult1, mult2 ! Load multiplier for joint nodes vs interior nodes
    real(ReKi)                                           :: dl           ! member element length (m)
    REAL(ReKi)                                           :: s            ! The linear interpolation factor for the requested location
+   REAL(ReKi)                                           :: AllOuts(MaxOutPts)   ! Array of output data for all possible outputs
    
    AllOuts = 0.0_ReKi
    
@@ -7917,8 +7917,14 @@ SUBROUTINE MrsnOut_MapOutputs( y, p, u, m, AllOuts )
 
       END DO
    
-     
-   END IF 
+   
+      ! Put the output data in the WriteOutput array
+      DO I = 1,p%NumOuts
+         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      END DO
+   
+   END IF ! p%NumOuts > 0
+   
 END SUBROUTINE MrsnOut_MapOutputs
 
 
@@ -8097,14 +8103,10 @@ FUNCTION   GetMorisonChannels    ( NUserOutputs, UserOutputs, OutList, foundMask
    INTEGER                                :: I                                         ! Generic loop-counting index.
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
+   LOGICAL                                :: newFoundMask (NUserOutputs)               ! A mask indicating whether a user requested channel belongs to a module's output channels
    
-   CHARACTER(ChanLen)                     :: OutListTmp                                ! A string to temporarily hold OutList(I).
-   CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
-   LOGICAL                                :: CheckOutListAgain
-   LOGICAL                                :: newFoundMask (NUserOutputs)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
        ! Initialize ErrStat
-         
-   ErrStat = ErrID_None         
+   ErrStat = ErrID_None
    ErrMsg  = "" 
    
    GetMorisonChannels = 0
@@ -8977,7 +8979,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
-         CALL SetErrStat(ErrID_Severe, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
 
    END DO
