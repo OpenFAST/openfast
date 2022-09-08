@@ -1777,7 +1777,7 @@ MAP_ERROR_CODE allocate_types_for_nodes(MAP_InputType_t* u_type, MAP_ConstraintS
     while (i_parsed<parsed->qty-1) { /* iterating through all strings */              
       if (parsed->entry[i_parsed]->slen) { /* if the string length is not 0 */
         if (next==1) {
-          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX")) {
+          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX") || biseqcstrcaseless(parsed->entry[i_parsed],"FIXED")) {
             fix_num++;
             break; /* break the while-loop because the agenda is reached */
           } else if (biseqcstrcaseless(parsed->entry[i_parsed],"CONNECT")) {
@@ -1898,7 +1898,7 @@ MAP_ERROR_CODE set_node_list(const MAP_ParameterType_t* p_type,  MAP_InputType_t
         if (next==0) {            
           next++;
         } else if (next==1) {
-          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX")) {
+          if (biseqcstrcaseless(parsed->entry[i_parsed],"FIX") || biseqcstrcaseless(parsed->entry[i_parsed],"FIXED")) {
             node_iter->type = FIX;
             fix_num++;                   /* VarTypePtr              FAST derived  array index */
             success = associate_vartype_ptr(&node_iter->position_ptr.x, other_type->x, fix_num);
@@ -2433,19 +2433,19 @@ MAP_ERROR_CODE set_output_list(Domain* domain, MAP_InitOutputType_t* io_type, ch
     };
 
     if (line_iter->options.azimuth_flag) {
-      success = push_variable_to_output_list(y_list, line_num, &line_iter->psi, "psi", "[m]");
+      success = push_variable_to_output_list(y_list, line_num, &line_iter->psi, "psi", "[rad]");
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.altitude_flag) {
-      success = push_variable_to_output_list(y_list, line_num, &line_iter->alpha, "alpha", "[m]");
+      success = push_variable_to_output_list(y_list, line_num, &line_iter->alpha, "alpha", "[rad]");
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
 
     if (line_iter->options.altitude_anchor_flag) {
-      success = push_variable_to_output_list(y_list, line_num, &line_iter->alpha_at_anchor, "alpha_a", "[m]");
+      success = push_variable_to_output_list(y_list, line_num, &line_iter->alpha_at_anchor, "alpha_a", "[rad]");
       io_type->writeOutputHdr_Len++;
       io_type->writeOutputUnt_Len++;
     };
@@ -2797,8 +2797,8 @@ MAP_ERROR_CODE print_help_to_screen()
   printf("      -v_anch,       --Vertical force at anchor (does NOT include applied forces) [N]\n");
   printf("      -tension_fair, --Line force-magnitude at fairlead (include applied loads) [N]\n");
   printf("      -tension_anch, --Line force-magnitude at anchor (include applied loads) [N]\n");
-  printf("      -azimuth,      --Line lateral offset angle global X axis [deg]\n");
-  printf("      -altitude,     --Line inclination angle relative to global XY plane at fairlead [deg]\n");
+  printf("      -azimuth,      --Line lateral offset angle global X axis [rad]\n");
+  printf("      -altitude,     --Line inclination angle relative to global XY plane at fairlead [rad]\n");
   printf("      -lay_length,   --Length of line on seabed [m]\n");
   printf("      -line_tension, -- \n");
   printf("    Model features:\n");

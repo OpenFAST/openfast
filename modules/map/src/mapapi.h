@@ -206,6 +206,16 @@ MAP_EXTERNCALL double** map_linearize_matrix(MAP_InputType_t* u_type, MAP_Parame
  */
 MAP_EXTERNCALL void map_free_linearize_matrix(double** array);
 
+/**
+ * lib.map_f_op.argtypes = [MapInput_Type, MapData_Type, MapOutnput_Type, c_double, c_char_p, POINTER(c_int)]        
+ */
+MAP_EXTERNCALL double* map_f_op(MAP_InputType_t* u_type, MAP_ParameterType_t* p_type, MAP_OtherStateType_t* other_type, MAP_OutputType_t* y_type, MAP_ConstraintStateType_t* z_type, MAP_ERROR_CODE* ierr, char* map_msg);
+
+/**
+ * lib.map_free_f_op.argtypes = [POINTER(c_double)]
+ */
+MAP_EXTERNCALL void map_free_f_op(double* array);
+
 
 /**
  * @brief     Initializes the MAP model and allocates memory. Inconsistencies with the input file is reported here. 

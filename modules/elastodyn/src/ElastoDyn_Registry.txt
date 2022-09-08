@@ -38,7 +38,9 @@ typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
 typedef	^	InitOutputType	ReKi	BldRNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
 typedef	^	InitOutputType	ReKi	TwrHNodes	{:}	-	-	"Location of variable-spaced tower nodes (relative to the tower rigid base height"
 typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
-typedef	^	InitOutputType	ReKi	TwrBasePos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	ReKi	TwrBaseRefPos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseTransDisp	{3}	-	-	"initial displacement of the tower base (for SrvD)"	m
+typedef	^	InitOutputType	R8Ki	TwrBaseRefOrient	{3}{3}	-	-	"reference orientation of the tower base (for SrvD)"
 typedef	^	InitOutputType	R8Ki	TwrBaseOrient	{3}{3}	-	-	"initial orientation of the tower base (for SrvD)"
 typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	InitOutputType	ReKi	RotSpeed	-	-	-	"Initial or fixed rotor speed"	rad/s
@@ -873,3 +875,6 @@ typedef	^	OutputType	ReKi	NcIMURAxs	-	-	-	"Nacelle inertial measurement unit ang
 typedef	^	OutputType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
+typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N

@@ -41,11 +41,11 @@ def validateInputOrExit(argv, nArgsExpected, usage):
 
 def validateFileOrExit(path):
     if not os.path.isfile(path):
-        exitWithError("Error: file does not exist at {}".format(path))
+        exitWithError("Error: file does not exist at \"{}\"".format(path))
 
 def validateDirOrExit(path):
     if not os.path.isdir(path):
-        exitWithError("Error: directory does not exist at {}".format(path))
+        exitWithError("Error: directory does not exist at \"{}\"".format(path))
 
 def validateDirOrMkdir(path):
     if not os.path.exists(path):

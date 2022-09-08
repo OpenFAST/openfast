@@ -238,7 +238,8 @@ value, *f’*, will be calculated. When ``FLookup`` is set to TRUE, *f’*
 is determined via a lookup into the static lift-force coefficient and
 drag-force coefficient data. **Using best-fit exponential equations
 (``FLookup = FALSE``) is not yet available, so ``FLookup`` must be
-``TRUE`` in this version of AeroDyn.** Note, ``FLookup`` is not used when ``UAMod=5``.
+``TRUE`` in this version of AeroDyn.** Note, ``FLookup`` is not used 
+when ``UAMod=4`` or ``UAMod=5``.
 
 ``UAStartRad`` is the starting rotor radius where dynamic stall
 will be turned on. Enter a number between 0 and 1, representing a fraction of rotor radius,
@@ -370,10 +371,10 @@ quantities are actually output at these nodes.
 
 .. _ad_tower_geom:
 
-.. figure:: figs/ad_tower_geom.png
+.. figure:: figs/aerodyn_tower_geom.png
    :width: 60%
    :align: center
-   :alt: ad_tower_geom.png
+   :alt: aerodyn_tower_geom.png
 
    AeroDyn Tower Geometry
 
@@ -434,6 +435,7 @@ The default value of 0.2 if provided for convenience.
 
 ``NonDimArea`` is the nondimensional airfoil area (normalized by the
 local ``BlChord`` squared), but is currently unused by AeroDyn.
+
 ``NumCoords`` is the number of points to define the exterior shape of
 the airfoil, plus one point to define the aerodynamic center, and
 determines the number of rows in the subsequent table; ``NumCoords``
@@ -449,6 +451,7 @@ used by OpenFAST for blade surface visualization when enabled.
 
 ``BL_file`` is the name of the file containing boundary-layer characteristics
 of the profile. It is ignored if the aeroacoustic module is not used.
+This parameter may also be omitted from the file if the aeroacoustic module is not used.
 
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
@@ -472,18 +475,22 @@ or calculating it based on the polar coefficient data in the airfoil table:
 
 -  ``alpha1`` specifies the AoA (in degrees) larger than ``alpha0``
    for which *f* equals 0.7; approximately the positive stall angle;
+   This parameter is used when ``flookup=false`` and when determining
+   a default value of ``Cn1``.
 
 -  ``alpha2`` specifies the AoA (in degrees) less than ``alpha0``
    for which *f* equals 0.7; approximately the negative stall angle;
+   This parameter is used when ``flookup=false`` and when determining
+   a default value of ``Cn2``.
 
 -  ``alphaUpper`` specifies the AoA (in degrees) of the upper boundary of 
-    fully-attached region of the cn or cl curve. It is used to 
-    compute the separation function when ``UAMod=5``.
+   fully-attached region of the cn or cl curve. It is used to 
+   compute the separation function when ``UAMod=5``.
 
 -  ``alphaLower`` specifies the AoA (in degrees) of the lower boundary of 
-    fully-attached region of the cn or cl curve. It is used to 
-    compute the separation function when ``UAMod=5``. (The separation function
-    will have a value of 1 between ``alphaUpper`` and ``alphaLower``.)   
+   fully-attached region of the cn or cl curve. It is used to 
+   compute the separation function when ``UAMod=5``. (The separation function
+   will have a value of 1 between ``alphaUpper`` and ``alphaLower``.)   
 
 -  ``eta_e`` is the recovery factor and typically has a value in the
    range [0.85 to 0.95] for ``UAMod = 1``; if the keyword ``DEFAULT`` is
@@ -733,10 +740,10 @@ See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :n
 
 .. _ad_blade_geom:
 
-.. figure:: figs/ad_blade_geom.png
+.. figure:: figs/aerodyn_blade_geom.png
    :width: 90%
    :align: center
-   :alt: ad_blade_geom.png
+   :alt: aerodyn_blade_geom.png
 
    AeroDyn Blade Geometry – Left: Side View; Right: Front View (Looking Downwind)
 

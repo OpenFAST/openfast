@@ -18,3 +18,9 @@ For example, ``OpenFAST-v1.0.0-123-gabcd1234-dirty`` describes OpenFAST as:
   build [the ``-g`` is for ``git``]
 - abcd1234 is the first 8 characters of the current commit hash
 - dirty denotes that local changes have been made but not committed
+
+To make use of version information when checking command-line arguments, 
+the `CheckArgs` routine that was previously in NWTC_Library has been moved
+to this module. This ensures that the version information does not have to
+be one of the first modules to be compiled. (The goal is that NWTC Library 
+does not depend on the VersionInfo module.)

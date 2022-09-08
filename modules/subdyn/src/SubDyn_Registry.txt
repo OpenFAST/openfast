@@ -67,6 +67,7 @@ typedef  ^  InitOutputType  LOGICAL                RotFrame_x   {:}  -   -   "Fl
 typedef  ^  InitOutputType  LOGICAL                RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^  InitOutputType  LOGICAL                IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef  ^  InitOutputType  IntKi                  DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef  ^  ^               LOGICAL                CableCChanRqst  {:}  .FALSE.  -   "flag indicating control channel for active cable tensioning is requested"   -
 
 # ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
 typedef  ^  SD_InitType   CHARACTER(1024)    RootName - - -           "SubDyn rootname" 

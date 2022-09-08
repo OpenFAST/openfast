@@ -32,7 +32,6 @@ include_directories(
 
 set(testlist
     NWTC_Library_test_tools
-    test_NWTC_IO_CheckArgs
     test_NWTC_IO_FileInfo
     test_NWTC_RandomNumber
 )
