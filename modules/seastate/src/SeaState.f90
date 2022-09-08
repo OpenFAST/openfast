@@ -536,6 +536,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
+       InitOut%WtrDens      =  InputFileData%Waves%WtrDens
+       InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
+       InitOut%MSL2SWL      =  InputFileData%MSL2SWL
+       
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:

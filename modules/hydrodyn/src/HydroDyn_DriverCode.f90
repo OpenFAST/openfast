@@ -316,9 +316,6 @@ CONTAINS
 subroutine SetHD_InitInputs()
 
    InitInData_HD%Gravity      = drvrData%Gravity
-   InitInData_HD%defWtrDens   = drvrData%WtrDens
-   InitInData_HD%defWtrDpth   = drvrData%WtrDpth
-   InitInData_HD%defMSL2SWL   = drvrData%MSL2SWL
    InitInData_HD%UseInputFile = .TRUE.
    InitInData_HD%InputFile    = drvrData%HDInputFile
    InitInData_HD%OutRootName  = trim(drvrData%OutRootName)//'.HD'
@@ -326,18 +323,21 @@ subroutine SetHD_InitInputs()
    InitInData_HD%Linearize    = drvrData%Linearize
    
    ! Data from InitOutData_SeaSt:
-   InitInData_HD%NStepWave      =  InitOutData_SeaSt%NStepWave
-   InitInData_HD%NStepWave2     =  InitOutData_SeaSt%NStepWave2
-   InitInData_HD%RhoXg          =  InitOutData_SeaSt%RhoXg
-   InitInData_HD%WaveMod        =  InitOutData_SeaSt%WaveMod
-   InitInData_HD%WaveStMod      =  InitOutData_SeaSt%WaveStMod
-   InitInData_HD%WaveDirMod     =  InitOutData_SeaSt%WaveDirMod
-   InitInData_HD%WvLowCOff      =  InitOutData_SeaSt%WvLowCOff 
-   InitInData_HD%WvHiCOff       =  InitOutData_SeaSt%WvHiCOff  
-   InitInData_HD%WvLowCOffD     =  InitOutData_SeaSt%WvLowCOffD
-   InitInData_HD%WvHiCOffD      =  InitOutData_SeaSt%WvHiCOffD 
-   InitInData_HD%WvLowCOffS     =  InitOutData_SeaSt%WvLowCOffS
-   InitInData_HD%WvHiCOffS      =  InitOutData_SeaSt%WvHiCOffS
+   InitInData_HD%WtrDens      = InitOutData_SeaSt%WtrDens
+   InitInData_HD%WtrDpth      = InitOutData_SeaSt%WtrDpth
+   InitInData_HD%MSL2SWL      = InitOutData_SeaSt%MSL2SWL
+   InitInData_HD%NStepWave    = InitOutData_SeaSt%NStepWave
+   InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
+   InitInData_HD%RhoXg        = InitOutData_SeaSt%RhoXg
+   InitInData_HD%WaveMod      = InitOutData_SeaSt%WaveMod
+   InitInData_HD%WaveStMod    = InitOutData_SeaSt%WaveStMod
+   InitInData_HD%WaveDirMod   = InitOutData_SeaSt%WaveDirMod
+   InitInData_HD%WvLowCOff    = InitOutData_SeaSt%WvLowCOff 
+   InitInData_HD%WvHiCOff     = InitOutData_SeaSt%WvHiCOff  
+   InitInData_HD%WvLowCOffD   = InitOutData_SeaSt%WvLowCOffD
+   InitInData_HD%WvHiCOffD    = InitOutData_SeaSt%WvHiCOffD 
+   InitInData_HD%WvLowCOffS   = InitOutData_SeaSt%WvLowCOffS
+   InitInData_HD%WvHiCOffS    = InitOutData_SeaSt%WvHiCOffS
    
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
    

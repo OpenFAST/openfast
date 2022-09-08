@@ -1367,7 +1367,6 @@ end if
             Conv_Rdtn_InitInp%HighFreq            = HighFreq                          
             Conv_Rdtn_InitInp%WAMITFile           = InitInp%WAMITFile                      
             Conv_Rdtn_InitInp%NInpFreq            = NInpFreq                         
-            Conv_Rdtn_InitInp%UnSum               = InitInp%Conv_Rdtn%UnSum
     
          
             CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &

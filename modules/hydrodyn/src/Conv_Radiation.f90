@@ -339,24 +339,6 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
 
       END IF
 
-   !   IF ( InitInp%UnSum > 0 ) THEN
-   !
-   !      ! Write the header for this section
-   !   WRITE( InitInp%UnSum,  '(//)' )
-   !   WRITE( InitInp%UnSum,  '(A)' ) 'Radiation memory effect kernel'
-   !   WRITE( InitInp%UnSum,  '(//)' )
-   !   WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '    n    ' , '     t    ', '   K11    ', '   K12    ', '    K13   ', '    K14    ', '    K15    ', '    K16    ', '    K22   ', '    K23   ', '    K24    ', '    K25    ', '    K26    ', '    K33    ', '    K34    ', '    K35    ',     'K36    ', '    K44    ', '    K45    ', '    K46    ', '    K55    ', '    K56    ', '    K66    '
-   !   WRITE( InitInp%UnSum, '(1X,A10,2X,A10,21(2X,A16))' )    '   (-)   ' , '    (s)   ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2) ', ' (kg/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kg/s^2)  ', ' (kgm/s^2) ', ' (kgm/s^2) ', ' (kgm/s^2) ', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)', '(kgm^2/s^2)'
-   !
-   !      ! Write the data
-   !   DO I = 0,p%NStepRdtn-1
-   !
-   !            WRITE( InitInp%UnSum, '(1X,I10,2X,E12.5,21(2X,ES16.5))' ) I, I*p%RdtnDT, p%RdtnKrnl(I,1,1), p%RdtnKrnl(I,1,2), p%RdtnKrnl(I,1,3), p%RdtnKrnl(I,1,4), p%RdtnKrnl(I,1,5), p%RdtnKrnl(I,1,6), p%RdtnKrnl(I,2,2), p%RdtnKrnl(I,2,3), p%RdtnKrnl(I,2,4), p%RdtnKrnl(I,2,5), p%RdtnKrnl(I,2,6), p%RdtnKrnl(I,3,3), p%RdtnKrnl(I,3,4), p%RdtnKrnl(I,3,5), p%RdtnKrnl(I,3,6), p%RdtnKrnl(I,4,4), p%RdtnKrnl(I,4,5), p%RdtnKrnl(I,4,6), p%RdtnKrnl(I,5,5), p%RdtnKrnl(I,5,6), p%RdtnKrnl(I,6,6)
-   !
-   !   END DO
-   !
-   !END IF
-
 
    IF ( ALLOCATED( RdtnTime     ) ) DEALLOCATE( RdtnTime     )
 

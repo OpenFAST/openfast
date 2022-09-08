@@ -86,9 +86,9 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: defWtrDens      !< Default water density from the driver; may be overwritten                       [(kg/m^3)]
-    REAL(ReKi)  :: defWtrDpth      !< Default water depth from the driver; may be overwritten                         [m]
-    REAL(ReKi)  :: defMSL2SWL      !< Default mean sea level to still water level from the driver; may be overwritten [m]
+    REAL(ReKi)  :: WtrDens      !< Water density from the driver; may be overwritten                       [(kg/m^3)]
+    REAL(ReKi)  :: WtrDpth      !< Water depth from the driver; may be overwritten                         [m]
+    REAL(ReKi)  :: MSL2SWL      !< Mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
@@ -136,9 +136,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
     TYPE(ProgDesc)  :: Ver      !< Version of HydroDyn [-]
-    REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [(m)]
-    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [(m)]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -1772,9 +1769,9 @@ ENDIF
     DstInitInputData%OutRootName = SrcInitInputData%OutRootName
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
-    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
-    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
+    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
     DstInitInputData%TMax = SrcInitInputData%TMax
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
@@ -2204,9 +2201,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutRootName)  ! OutRootName
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
-      Re_BufSz   = Re_BufSz   + 1  ! defWtrDens
-      Re_BufSz   = Re_BufSz   + 1  ! defWtrDpth
-      Re_BufSz   = Re_BufSz   + 1  ! defMSL2SWL
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDens
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Db_BufSz   = Db_BufSz   + 1  ! TMax
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
@@ -2390,11 +2387,11 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Gravity
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%defWtrDens
+    ReKiBuf(Re_Xferred) = InData%WtrDens
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%defWtrDpth
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%defMSL2SWL
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%TMax
     Db_Xferred = Db_Xferred + 1
@@ -2945,11 +2942,11 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%Gravity = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%defWtrDens = ReKiBuf(Re_Xferred)
+    OutData%WtrDens = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%defWtrDpth = ReKiBuf(Re_Xferred)
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%defMSL2SWL = ReKiBuf(Re_Xferred)
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -3533,9 +3530,6 @@ ENDIF
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstInitOutputData%WtrDens = SrcInitOutputData%WtrDens
-    DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
-    DstInitOutputData%MSL2SWL = SrcInitOutputData%MSL2SWL
 IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
   i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
   i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
@@ -3756,9 +3750,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Re_BufSz   = Re_BufSz   + 1  ! WtrDens
-      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
-      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
   Int_BufSz   = Int_BufSz   + 1     ! LinNames_y allocated yes/no
   IF ( ALLOCATED(InData%LinNames_y) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_y upper/lower bounds for each dimension
@@ -3942,12 +3933,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    ReKiBuf(Re_Xferred) = InData%WtrDens
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WtrDpth
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%MSL2SWL
-    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%LinNames_y) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4234,12 +4219,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%WtrDens = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%WtrDpth = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_y not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

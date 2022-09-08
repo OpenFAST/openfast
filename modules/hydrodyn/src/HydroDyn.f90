@@ -181,13 +181,18 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
 
       ! Parse all HydroDyn-related input and populate the InputFileData structure 
-      CALL HydroDyn_ParseInput( InitInp%InputFile, InitInp%OutRootName, InitInp%defWtrDens, InitInp%defWtrDpth, InitInp%defMSL2SWL, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_ParseInput( InitInp%InputFile, InitInp%OutRootName, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF
       
+      InputFileData%Morison%WtrDens = InitInp%WtrDens
+      InputFileData%Morison%WtrDpth = InitInp%WtrDpth
+      InputFileData%Morison%MSL2SWL = InitInp%MSL2SWL
+   
+         
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
          !   because the HydroDynInput module is also responsible for parsing all this 
@@ -256,10 +261,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       
          ! Set summary unit number in Waves, Radiation, and Morison initialization input data
-         
-     ! InputFileData%Waves%UnSum           = InputFileData%UnSum
-      InputFileData%WAMIT%Conv_Rdtn%UnSum = InputFileData%UnSum
-      InputFileData%Morison%UnSum         = InputFileData%UnSum      
+      InputFileData%Morison%UnSum         = InputFileData%UnSum
     
       
          ! Now call each sub-module's *_Init subroutine
@@ -730,15 +732,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
 !==========================================
       
-         ! Deallocate any remaining Waves Output data
-      !IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-      !IF(ALLOCATED( Waves_InitOut%WaveAcc   ))  DEALLOCATE( Waves_InitOut%WaveAcc   )
-      !IF(ALLOCATED( Waves_InitOut%WaveDynP  ))  DEALLOCATE( Waves_InitOut%WaveDynP  )
-      !IF(ALLOCATED( Waves_InitOut%WaveTime   ))  DEALLOCATE( Waves_InitOut%WaveTime   )
-      !IF(ALLOCATED( Waves_InitOut%WaveVel   ))  DEALLOCATE( Waves_InitOut%WaveVel   )
-      !IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-      !IF(ALLOCATED( InputFileData%WAMIT%WaveElevC0 ))  DEALLOCATE( InputFileData%WAMIT%WaveElevC0)
-      
          ! Close the summary file
       IF ( InputFileData%HDSum ) THEN
          CALL HDOut_CloseSum( InputFileData%UnSum, ErrStat2, ErrMsg2 )
@@ -890,15 +883,15 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       END IF
       m%AllHdroOrigin%RemapFlag  = .TRUE.
 
-         ! Create the Output file if requested      
+         ! Set some more parameters
       p%OutSwtch      = InputFileData%OutSwtch 
       p%Delim         = ''
-      !p%Morison%Delim = p%Delim  ! Need to set this from within Morison to follow framework
-      !p%WAMIT%Delim   = p%Delim  ! Need to set this from within Morison to follow framework
       p%OutFmt        = InputFileData%OutFmt
       p%OutSFmt       = InputFileData%OutSFmt
       p%NumOuts       = InputFileData%NumOuts
-      
+      p%WtrDpth       = InputFileData%Morison%WtrDpth
+
+
       CALL HDOUT_Init( HydroDyn_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -920,11 +913,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       ! Define initialization-routine output here:
       InitOut%Ver = HydroDyn_ProgDesc         
-         ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
-      InitOut%WtrDens = InputFileData%Morison%WtrDens
-      InitOut%WtrDpth = InputFileData%Morison%WtrDpth
-      InitOut%MSL2SWL = InputFileData%Morison%MSL2SWL
-      p%WtrDpth       = InitOut%WtrDpth  
          
       
       !............................................................................................

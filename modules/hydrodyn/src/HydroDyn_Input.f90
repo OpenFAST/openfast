@@ -62,7 +62,7 @@ END SUBROUTINE PrintBadChannelWarning
 
 
 !====================================================================================================
-SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth, defMSL2SWL, FileInfo_In, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFileData, ErrStat, ErrMsg )
 !     This public subroutine reads the input required for HydroDyn from the file whose name is an
 !     input parameter.
 !----------------------------------------------------------------------------------------------------
@@ -70,9 +70,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
       ! Passed variables
    CHARACTER(*),                  intent(in   ) :: InputFileName        !< The name of the input file, for putting in echo file.
    CHARACTER(*),                  intent(in   ) :: OutRootName          !< The rootname of the echo file, possibly opened in this routine
-   real(ReKi),                    intent(in   ) :: defWtrDens           !< default value for water density
-   real(ReKi),                    intent(in   ) :: defWtrDpth           !< default value for water depth
-   real(ReKi),                    intent(in   ) :: defMSL2SWL           !< default value for mean sea level to still water level
    TYPE(FileInfoType),            INTENT(IN   ) :: FileInfo_In          !< The derived type for holding the file information
    TYPE(HydroDyn_InputFile),      INTENT(INOUT) :: InputFileData        ! the hydrodyn input file data
    INTEGER,                       INTENT(  OUT) :: ErrStat              ! returns a non-zero value when an error occurs
@@ -123,27 +120,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          if (Failed()) return
    endif
 
-
-   !-------------------------------------------------------------------------------------------------
-   ! Environmental conditions section
-   !-------------------------------------------------------------------------------------------------
-   if ( InputFileData%Echo )   WRITE(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
-   CurLine = CurLine + 1
-
-      ! WtrDens - Water density.
-   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Morison%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! WtrDpth - Water depth
-   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', InputFileData%Morison%WtrDpth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-      ! MSL2SWL
-   CALL ParseVarWDefault ( FileInfo_In, CurLine, 'MSL2SWL', InputFileData%Morison%MSL2SWL, defMSL2SWL, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
-
-
-   
    !-------------------------------------------------------------------------------------------------
    ! Data section for floating platform
    !-------------------------------------------------------------------------------------------------

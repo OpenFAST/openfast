@@ -814,9 +814,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    IF ( p_FAST%CompHydro == Module_HD ) THEN
 
       Init%InData_HD%Gravity       = p_FAST%Gravity
-      Init%InData_HD%defWtrDens    = p_FAST%WtrDens
-      Init%InData_HD%defWtrDpth    = p_FAST%WtrDpth
-      Init%InData_HD%defMSL2SWL    = p_FAST%MSL2SWL
+      Init%InData_HD%WtrDens       = Init%OutData_SeaSt%WtrDens
+      Init%InData_HD%WtrDpth       = Init%OutData_SeaSt%WtrDpth
+      Init%InData_HD%MSL2SWL       = Init%OutData_SeaSt%MSL2SWL
       Init%InData_HD%UseInputFile  = .TRUE.
       Init%InData_HD%InputFile     = p_FAST%HydroFile
       Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
