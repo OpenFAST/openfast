@@ -324,6 +324,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ELSEIF   ( TRIM(ThisArgUC) == "VTK"   )   THEN
             CLFlags%WrVTK        = .TRUE.
             RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "UNIFORM"   )   THEN
+            CLFlags%WrUniform    = .TRUE.
+            RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
                ErrStat,ErrMsg,'ParseArg')
@@ -867,6 +870,10 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName, DvrFlags%WrVTK, 'WrVTK', 'Convert wind data to VTK format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
+      ! WrUniform
+   CALL ReadVar( UnIn, FileName, DvrFlags%WrUniform, 'WrUniform', 'Convert wind data to Uniform Wind format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
@@ -1329,9 +1336,10 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    ErrMsgTmp   =  ''
 
 
-   DvrFlags%WrHAWC   = DvrFlags%WrHAWC   .or. CLFlags%WrHAWC      ! create file if specified in either place
-   DvrFlags%WrBladed = DvrFlags%WrBladed .or. CLFlags%WrBladed    ! create file if specified in either place
-   DvrFlags%WrVTK    = DvrFlags%WrVTK .or. CLFlags%WrVTK          ! create file if specified in either place
+   DvrFlags%WrHAWC    = DvrFlags%WrHAWC    .or. CLFlags%WrHAWC             ! create file if specified in either place
+   DvrFlags%WrBladed  = DvrFlags%WrBladed  .or. CLFlags%WrBladed           ! create file if specified in either place
+   DvrFlags%WrVTK     = DvrFlags%WrVTK     .or. CLFlags%WrVTK              ! create file if specified in either place
+   DvrFlags%WrUniform = DvrFlags%WrUniform .or. CLFlags%WrUniform          ! create file if specified in either place
 
 !      ! Due to the complexity, we are handling overwriting driver input file settings with
 !      ! command line settings and the instance where no driver input file is read separately.

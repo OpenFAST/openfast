@@ -563,6 +563,10 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
       
    END IF
    
+   
+   u_IfW%HubPosition    = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1)
+   u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
+   
                
    CALL IfW_SetExternalInputs( p_FAST, p_IfW, m_FAST, y_ED, y_SED, u_IfW )
 

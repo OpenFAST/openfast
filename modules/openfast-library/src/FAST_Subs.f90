@@ -661,6 +661,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          Init%InData_IfW%lidar%HubPosition            = ED%y%HubPtMotion%Position(:,1)
       endif
 
+      Init%InData_IfW%lidar%HubPosition = ED%y%HubPtMotion%Position(:,1)
+      if ( p_FAST%CompElast == Module_BD ) then  
+         Init%InData_IfW%RadAvg = TwoNorm(BD%y(1)%BldMotion%Position(:,1) - BD%y(1)%BldMotion%Position(:,BD%y(1)%BldMotion%Nnodes))
+      else
+         Init%InData_IfW%RadAvg = Init%OutData_ED%BladeLength
+      end if
+      
       IF ( PRESENT(ExternInitData) ) THEN
          Init%InData_IfW%Use4Dext = ExternInitData%FarmIntegration
 
