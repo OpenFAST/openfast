@@ -37,6 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Main program
+excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
 
 ### Store the python executable for future python calls
 pythonCommand = sys.executable
@@ -103,7 +104,7 @@ dirToCopy = os.path.join("glue-codes","openfast","5MW_Baseline","HydroData")
 buildDirectoryGlue = os.path.join(buildDirectory,os.pardir,os.pardir,dirToCopy)
 if not os.path.isdir(buildDirectoryGlue):
     src = os.path.join(rtest,dirToCopy)
-    shutil.copytree(src, buildDirectoryGlue)
+    rtl.copyTree(src, buildDirectoryGlue, excludeExt=excludeExt)
     
 ### Run HydroDyn on the test case
 if not noExec:
