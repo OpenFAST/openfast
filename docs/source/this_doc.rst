@@ -19,7 +19,7 @@ and link to other relevant websites.
 
 While OpenFAST developer documentation is being enhanced here, developers are
 encouraged to consult the legacy FAST v8
-`Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
+:download:`NWTC Programmer's Handbook <../OtherSupporting/NWTC_Programmers_Handbook.pdf>`.
 Instructions on obtaining and installing OpenFAST are available in
 :ref:`installation`, and documentation for verifying an installation with the
 automated tests is at :ref:`testing`.

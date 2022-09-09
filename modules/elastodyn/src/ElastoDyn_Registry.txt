@@ -875,3 +875,6 @@ typedef	^	OutputType	ReKi	NcIMURAxs	-	-	-	"Nacelle inertial measurement unit ang
 typedef	^	OutputType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
+typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
+typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
+typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N

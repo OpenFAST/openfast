@@ -32,23 +32,22 @@ MODULE InflowWind_C_BINDING
    PUBLIC :: IfW_C_End
 
    ! Accessible to all routines inside module
-   TYPE(InflowWind_InputType)              :: InputGuess        !< An initial guess for the input; the input mesh must be defined, returned by Init
-   TYPE(InflowWind_InputType)              :: InputData         !< Created by IFW_CALCOUTPUT_C and used by IFW_END_C
+   TYPE(InflowWind_InputType)              :: InputData         !< Inputs to InflowWind
    TYPE(InflowWind_InitInputType)          :: InitInp
    TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
    TYPE(InflowWind_ParameterType)          :: p                 !< Parameters
    TYPE(InflowWind_ContinuousStateType)    :: ContStates        !< Initial continuous states
    TYPE(InflowWind_DiscreteStateType)      :: DiscStates        !< Initial discrete states
-   TYPE(InflowWind_ConstraintStateType)    :: ConstrStateGuess  !< Initial guess of the constraint states
    TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint states at Time
    TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
    TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
    TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
 
-   !  This must exactly match the value in the Python interface. If ErrMsgLen changes
-   !  in the NWTC Library, this should be updated, but the logic
-   !  exists to correctly handle different lengths of the strings
-   integer(IntKi),   parameter            :: ErrMsgLen_C=1025
+   !  This must exactly match the value in the Python interface. We are not using the variable 'ErrMsgLen'
+   !  so that we avoid issues if ErrMsgLen changes in the NWTC Library. If the value of ErrMsgLen does change
+   !  in the NWTC Library, ErrMsgLen_C (and the equivalent value in the Python interface) can be updated 
+   !  to be equivalent to ErrMsgLen + 1, but the logic exists to correctly handle different lengths of the strings
+   integer(IntKi),   parameter            :: ErrMsgLen_C=1025  ! Numerical equivalent of ErrMsgLen + 1
 
 CONTAINS
 
@@ -76,8 +75,8 @@ end subroutine SetErr
 SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformString_C, InputUniformStringLength_C, NumWindPts_C, DT_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='IfW_C_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_Init_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_Init
 #endif
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C
@@ -130,7 +129,7 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    TimeInterval                  = REAL(DT_C, DbKi)
 
    ! Call the main subroutine InflowWind_Init - only need InitInp and TimeInterval as inputs, the rest are set by InflowWind_Init
-   CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
+   CALL InflowWind_Init( InitInp, InputData, p, ContStates, DiscStates, ConstrStates, OtherStates, y, m, TimeInterval, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed()) return
 
    ! Number of channels
@@ -150,11 +149,6 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    OutputChannelNames_C(k) = C_NULL_CHAR
    OutputChannelUnits_C(k) = C_NULL_CHAR
 
-   ! Clean up variables and set up for IFW_CALCOUTPUT_C
-   CALL InflowWind_CopyInput(InputGuess, InputData, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      if (Failed())  return
-   CALL InflowWind_CopyConstrState(ConstrStateGuess, ConstrStates, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      if (Failed())  return
 
    call Cleanup()
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -169,8 +163,6 @@ CONTAINS
       endif
    end function Failed
    subroutine Cleanup()    ! NOTE: we are ignoring any error reporting from here
-      CALL InflowWind_DestroyInput(InputGuess, ErrStat2, ErrMsg2 )
-      CALL InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat2, ErrMsg2 )
    end subroutine Cleanup 
 END SUBROUTINE IfW_C_Init
 
@@ -181,8 +173,8 @@ END SUBROUTINE IfW_C_Init
 SUBROUTINE IfW_C_CalcOutput(Time_C,Positions_C,Velocities_C,OutputChannelValues_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_CalcOutput')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_CalcOutput_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_CalcOutput
 #endif
    REAL(C_DOUBLE)                , INTENT(IN   )      :: Time_C
    REAL(C_FLOAT)                 , INTENT(IN   )      :: Positions_C(3*InitInp%NumWindPoints)
@@ -234,8 +226,8 @@ END SUBROUTINE IfW_C_CalcOutput
 SUBROUTINE IfW_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='IfW_C_End')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
-!GCC$ ATTRIBUTES DLLEXPORT :: IfW_End_c
+!DEC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
+!GCC$ ATTRIBUTES DLLEXPORT :: IfW_C_End
 #endif
    INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
    CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(ErrMsgLen_C)
