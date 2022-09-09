@@ -76,6 +76,8 @@ typedef struct node_struct {
 
   int is_interface_type ;
 
+/* array pointer instead of allocatable*/
+  int is_pointer; /* 0 = allocatable, 1 = pointer */
 /* marker */
   int mark ;
 
