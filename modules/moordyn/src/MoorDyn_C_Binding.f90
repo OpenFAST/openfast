@@ -83,8 +83,6 @@ CONTAINS
 !===============================================================================================================
 SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
 
-    !TEMPORARY hack until Waves handling is finalized
-    USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_y0, WaveGrid_dx, WaveGrid_dy, WaveGrid_nx, WaveGrid_ny, WaveGrid_nz
 
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
@@ -107,9 +105,6 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, LocMsg
     INTEGER                                                          :: I, J, K
 
-    ! NOTE: Wave info will be handled differently in the future.  So the following is a temporary hack until that is finalized
-    ! Hard coded for 10 wave steps.  Doesn't actually matter since it will get zeroed
-    INTEGER(IntKi)                                                   :: NStepWave = 10
 
     ! Set up error handling for MD_CALCOUTPUT_C
     ErrStat = ErrID_None
@@ -150,26 +145,10 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
 
     ! Platform position (x,y,z,Rx,Ry,Rz) -- where rotations are small angle assumption in radians.
     ! This data is used to set the CoupledKinematics mesh that will be used at each timestep call
-    CALL AllocAry (InitInp%PtfmInit, 6, 'InitInp%PtfmInit', ErrStat, ErrMsg ); IF (Failed(LocMsg)) RETURN
+    CALL AllocAry (InitInp%PtfmInit, 6, 1, 'InitInp%PtfmInit', ErrStat, ErrMsg ); IF (Failed(LocMsg)) RETURN
     DO I = 1,6
-        InitInp%PtfmInit(I)  = REAL(PtfmInit_C(I),ReKi)
+        InitInp%PtfmInit(I,1)  = REAL(PtfmInit_C(I),ReKi)
     END DO
-
-    ! Wave Information - THIS IS A SHORT TERM HACK
-    ! Fake wave info -- completely still, with no dynamic pressure terms
-    ! Set wave info to zeros -- assume 10 timesteps for now (doesn't really matter since it isn't getting used)
-    CALL AllocAry ( InitInp%WaveVel  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveVel' , ErrStat, ErrMsg );    IF (Failed(LocMsg)) RETURN
-    CALL AllocAry ( InitInp%WaveAcc  ,NStepWave, WaveGrid_n, 3, 'InitInp%WaveAcc' , ErrStat, ErrMsg );    IF (Failed(LocMsg)) RETURN
-    CALL AllocAry ( InitInp%WavePDyn ,NStepWave, WaveGrid_n,    'InitInp%WavePDyn', ErrStat, ErrMsg );    IF (Failed(LocMsg)) RETURN
-    CALL AllocAry ( InitInp%WaveElev ,NStepWave, WaveGrid_n,    'InitInp%WaveElev', ErrStat, ErrMsg );    IF (Failed(LocMsg)) RETURN
-    CALL AllocAry ( InitInp%WaveTime ,NStepWave,                'InitInp%WaveTime', ErrStat, ErrMsg );    IF (Failed(LocMsg)) RETURN
-    DO i=1,NStepWave
-       InitInp%WaveTime(i) = DTcoupling * REAL(i-1, DbKi)
-    END DO
-    InitInp%WaveVel          = 0.0_ReKi
-    InitInp%WaveAcc          = 0.0_ReKi
-    InitInp%WavePDyn         = 0.0_ReKi
-    InitInp%WaveElev         = 0.0_ReKi
 
     ALLOCATE(u(InterpOrder+1), STAT=ErrStat)
     LocMsg = "MD_INIT_C: Could not allocate input u"
@@ -689,12 +668,12 @@ SUBROUTINE SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
     !-------------------------------------------------------------
     ! Set the mapping meshes
     ! WAMIT - floating bodies using potential flow
-    IF ( u(1)%CoupledKinematics%Committed ) THEN      ! input motions
-        CALL MeshMapCreate( MD_MotionMesh, u(1)%CoupledKinematics, Map_Motion_2_MD_WB, ErrStat, ErrMsg )
+    IF ( allocated(u(1)%CoupledKinematics) ) THEN      ! input motions
+        CALL MeshMapCreate( MD_MotionMesh, u(1)%CoupledKinematics(1), Map_Motion_2_MD_WB, ErrStat, ErrMsg )
         IF (ErrStat >= AbortErrLev) RETURN
     END IF
-    IF ( y%CoupledLoads%Committed ) THEN              ! output loads
-        CALL MeshMapCreate( y%CoupledLoads, MD_LoadMesh, Map_MD_WB_2_Load, ErrStat, ErrMsg )
+    IF ( allocated(y%CoupledLoads) ) THEN              ! output loads
+        CALL MeshMapCreate( y%CoupledLoads(1), MD_LoadMesh, Map_MD_WB_2_Load, ErrStat, ErrMsg )
         IF (ErrStat >= AbortErrLev) RETURN
     END IF
 
@@ -728,8 +707,8 @@ SUBROUTINE MD_SetInputMotion( u_local, ErrStat, ErrMsg )
     INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat
     CHARACTER(ErrMsgLen),      INTENT(  OUT)  :: ErrMsg
     !  WAMIT mesh
-    IF ( u_local%CoupledKinematics%Committed ) THEN
-        CALL Transfer_Point_to_Point( MD_MotionMesh, u_local%CoupledKinematics, Map_Motion_2_MD_WB, ErrStat, ErrMsg )
+    IF ( allocated(u_local%CoupledKinematics) ) THEN
+        CALL Transfer_Point_to_Point( MD_MotionMesh, u_local%CoupledKinematics(1), Map_Motion_2_MD_WB, ErrStat, ErrMsg )
         IF (ErrStat >= AbortErrLev) RETURN
     END IF
 
@@ -750,11 +729,11 @@ SUBROUTINE MD_TransferLoads( u_local, y_local, ErrStat, ErrMsg )
     MD_LoadMesh%Force            = 0.0_ReKi
     MD_LoadMesh%Moment           = 0.0_ReKi
 
-    !  WAMIT mesh
-    IF ( y_local%CoupledLoads%Committed ) THEN
+    !  mesh
+    IF ( allocated(y_local%CoupledLoads) ) THEN
         MD_LoadMesh_tmp%Force    = 0.0_ReKi
         MD_LoadMesh_tmp%Moment   = 0.0_ReKi
-        CALL Transfer_Point_to_Point( y_local%CoupledLoads, MD_LoadMesh_tmp, Map_MD_WB_2_Load, ErrStat, ErrMsg, u_local%CoupledKinematics, MD_MotionMesh )
+        CALL Transfer_Point_to_Point( y_local%CoupledLoads(1), MD_LoadMesh_tmp, Map_MD_WB_2_Load, ErrStat, ErrMsg, u_local%CoupledKinematics(1), MD_MotionMesh )
         IF (ErrStat >= AbortErrLev)  RETURN
         MD_LoadMesh%Force        = MD_LoadMesh%Force  + MD_LoadMesh_tmp%Force
         MD_LoadMesh%Moment       = MD_LoadMesh%Moment + MD_LoadMesh_tmp%Moment
