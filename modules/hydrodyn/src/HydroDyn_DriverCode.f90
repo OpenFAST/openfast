@@ -34,6 +34,9 @@ PROGRAM HydroDynDriver
    TYPE HD_Drvr_InitInput
       LOGICAL                 :: Echo
       REAL(ReKi)              :: Gravity
+      REAL(ReKi)              :: WtrDens
+      REAL(ReKi)              :: WtrDpth
+      REAL(ReKi)              :: MSL2SWL
       CHARACTER(1024)         :: HDInputFile
       CHARACTER(1024)         :: OutRootName
       LOGICAL                 :: Linearize
@@ -162,12 +165,9 @@ PROGRAM HydroDynDriver
    CALL CheckArgs( drvrFilename, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
-      ! Display the copyright notice
+   ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
-     ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-     ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL DispCompileRuntimeInfo( version%Name )
    
       ! Parse the driver input file and run the simulation based on that file
    CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
@@ -176,6 +176,9 @@ PROGRAM HydroDynDriver
       STOP
    END IF
    InitInData%Gravity      = drvrInitInp%Gravity
+   InitInData%defWtrDens   = drvrInitInp%WtrDens
+   InitInData%defWtrDpth   = drvrInitInp%WtrDpth
+   InitInData%defMSL2SWL   = drvrInitInp%MSL2SWL
    InitInData%UseInputFile = .TRUE. 
    InitInData%InputFile    = drvrInitInp%HDInputFile
    InitInData%OutRootName  = drvrInitInp%OutRootName
@@ -778,6 +781,41 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
+      ! WtrDens - Water density.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDens, 'WtrDens', 'Water density', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDens parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! WtrDpth - Water depth.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%WtrDpth, 'WtrDpth', 'Water depth', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WtrDpth parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+      ! MSL2SWL - Offset between still-water level and mean sea level.
+      
+   CALL ReadVar ( UnIn, FileName, InitInp%MSL2SWL, 'MSL2SWL', 'Offset between still-water level and mean sea level', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read MSL2SWL parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF
    
    !-------------------------------------------------------------------------------------------------
    ! HYDRODYN section

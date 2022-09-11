@@ -37,8 +37,6 @@ IMPLICIT NONE
 ! =========  OpFM_InitInputType_C  =======
   TYPE, BIND(C) :: OpFM_InitInputType_C
    TYPE(C_PTR) :: object = C_NULL_PTR
-    INTEGER(KIND=C_INT) :: NumSC2Ctrl 
-    INTEGER(KIND=C_INT) :: NumCtrl2SC 
     INTEGER(KIND=C_INT) :: NumActForcePtsBlade 
     INTEGER(KIND=C_INT) :: NumActForcePtsTower 
     TYPE(C_ptr) :: StructBldRNodes = C_NULL_PTR 
@@ -51,8 +49,6 @@ IMPLICIT NONE
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
     INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
     INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructBldRNodes => NULL()      !< Radius to structural model analysis nodes relative to hub [-]
@@ -164,8 +160,6 @@ IMPLICIT NONE
     INTEGER(C_int) :: momentz_Len = 0 
     TYPE(C_ptr) :: forceNodesChord = C_NULL_PTR 
     INTEGER(C_int) :: forceNodesChord_Len = 0 
-    TYPE(C_ptr) :: SuperController = C_NULL_PTR 
-    INTEGER(C_int) :: SuperController_Len = 0 
   END TYPE OpFM_InputType_C
   TYPE, PUBLIC :: OpFM_InputType
     TYPE( OpFM_InputType_C ) :: C_obj
@@ -186,7 +180,6 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: momenty => NULL()      !< normalized y moment at actuator force nodes [Nm/kg/m^3]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: momentz => NULL()      !< normalized z moment at actuator force nodes [Nm/kg/m^3]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceNodesChord => NULL()      !< chord distribution at the actuator force nodes [m]
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: SuperController => NULL()      !< inputs to the super controller (from the turbine controller) [-]
   END TYPE OpFM_InputType
 ! =======================
 ! =========  OpFM_OutputType_C  =======
@@ -198,8 +191,6 @@ IMPLICIT NONE
     INTEGER(C_int) :: v_Len = 0 
     TYPE(C_ptr) :: w = C_NULL_PTR 
     INTEGER(C_int) :: w_Len = 0 
-    TYPE(C_ptr) :: SuperController = C_NULL_PTR 
-    INTEGER(C_int) :: SuperController_Len = 0 
     TYPE(C_ptr) :: WriteOutput = C_NULL_PTR 
     INTEGER(C_int) :: WriteOutput_Len = 0 
   END TYPE OpFM_OutputType_C
@@ -208,7 +199,6 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: u => NULL()      !< U-component wind speed (in the X-direction) at interface nodes [m/s]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: v => NULL()      !< V-component wind speed (in the Y-direction) at interface nodes [m/s]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: w => NULL()      !< W-component wind speed (in the Z-direction) at interface nodes [m/s]
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: SuperController => NULL()      !< outputs of the super controller (to the turbine controller) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
   END TYPE OpFM_OutputType
 ! =======================
@@ -228,10 +218,6 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-    DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
-    DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
-    DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
     DstInitInputData%NumActForcePtsBlade = SrcInitInputData%NumActForcePtsBlade
     DstInitInputData%C_obj%NumActForcePtsBlade = SrcInitInputData%C_obj%NumActForcePtsBlade
     DstInitInputData%NumActForcePtsTower = SrcInitInputData%NumActForcePtsTower
@@ -332,8 +318,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
-      Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
       Int_BufSz  = Int_BufSz  + 1  ! NumActForcePtsBlade
       Int_BufSz  = Int_BufSz  + 1  ! NumActForcePtsTower
   Int_BufSz   = Int_BufSz   + 1     ! StructBldRNodes allocated yes/no
@@ -378,10 +362,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%NumSC2Ctrl
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumCtrl2SC
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsBlade
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsTower
@@ -451,12 +431,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%NumSC2Ctrl = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-    OutData%NumCtrl2SC = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
     OutData%NumActForcePtsBlade = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumActForcePtsBlade = OutData%NumActForcePtsBlade
@@ -531,8 +505,6 @@ ENDIF
     ELSE
        SkipPointers_local = .false.
     END IF
-    InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
-    InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
     InitInputData%NumActForcePtsBlade = InitInputData%C_obj%NumActForcePtsBlade
     InitInputData%NumActForcePtsTower = InitInputData%C_obj%NumActForcePtsTower
 
@@ -573,8 +545,6 @@ ENDIF
     ELSE
        SkipPointers_local = .false.
     END IF
-    InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
-    InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
     InitInputData%C_obj%NumActForcePtsBlade = InitInputData%NumActForcePtsBlade
     InitInputData%C_obj%NumActForcePtsTower = InitInputData%NumActForcePtsTower
 
@@ -2954,21 +2924,6 @@ IF (ASSOCIATED(SrcInputData%forceNodesChord)) THEN
   END IF
     DstInputData%forceNodesChord = SrcInputData%forceNodesChord
 ENDIF
-IF (ASSOCIATED(SrcInputData%SuperController)) THEN
-  i1_l = LBOUND(SrcInputData%SuperController,1)
-  i1_u = UBOUND(SrcInputData%SuperController,1)
-  IF (.NOT. ASSOCIATED(DstInputData%SuperController)) THEN 
-    ALLOCATE(DstInputData%SuperController(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%SuperController.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%c_obj%SuperController_Len = SIZE(DstInputData%SuperController)
-    IF (DstInputData%c_obj%SuperController_Len > 0) &
-      DstInputData%c_obj%SuperController = C_LOC( DstInputData%SuperController(i1_l) ) 
-  END IF
-    DstInputData%SuperController = SrcInputData%SuperController
-ENDIF
  END SUBROUTINE OpFM_CopyInput
 
  SUBROUTINE OpFM_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -3081,12 +3036,6 @@ IF (ASSOCIATED(InputData%forceNodesChord)) THEN
   InputData%forceNodesChord => NULL()
   InputData%C_obj%forceNodesChord = C_NULL_PTR
   InputData%C_obj%forceNodesChord_Len = 0
-ENDIF
-IF (ASSOCIATED(InputData%SuperController)) THEN
-  DEALLOCATE(InputData%SuperController)
-  InputData%SuperController => NULL()
-  InputData%C_obj%SuperController = C_NULL_PTR
-  InputData%C_obj%SuperController_Len = 0
 ENDIF
  END SUBROUTINE OpFM_DestroyInput
 
@@ -3209,11 +3158,6 @@ ENDIF
   IF ( ASSOCIATED(InData%forceNodesChord) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! forceNodesChord upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%forceNodesChord)  ! forceNodesChord
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SuperController allocated yes/no
-  IF ( ASSOCIATED(InData%SuperController) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! SuperController upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SuperController)  ! SuperController
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3496,21 +3440,6 @@ ENDIF
 
       DO i1 = LBOUND(InData%forceNodesChord,1), UBOUND(InData%forceNodesChord,1)
         ReKiBuf(Re_Xferred) = InData%forceNodesChord(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%SuperController) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SuperController,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperController,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%SuperController,1), UBOUND(InData%SuperController,1)
-        ReKiBuf(Re_Xferred) = InData%SuperController(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3900,27 +3829,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperController not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%SuperController)) DEALLOCATE(OutData%SuperController)
-    ALLOCATE(OutData%SuperController(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SuperController.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%c_obj%SuperController_Len = SIZE(OutData%SuperController)
-    IF (OutData%c_obj%SuperController_Len > 0) &
-       OutData%c_obj%SuperController = C_LOC( OutData%SuperController(i1_l) ) 
-      DO i1 = LBOUND(OutData%SuperController,1), UBOUND(OutData%SuperController,1)
-        OutData%SuperController(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
  END SUBROUTINE OpFM_UnPackInput
 
  SUBROUTINE OpFM_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
@@ -4089,15 +3997,6 @@ ENDIF
           NULLIFY( InputData%forceNodesChord )
        ELSE
           CALL C_F_POINTER(InputData%C_obj%forceNodesChord, InputData%forceNodesChord, (/InputData%C_obj%forceNodesChord_Len/))
-       END IF
-    END IF
-
-    ! -- SuperController Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%SuperController ) ) THEN
-          NULLIFY( InputData%SuperController )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%SuperController, InputData%SuperController, (/InputData%C_obj%SuperController_Len/))
        END IF
     END IF
  END SUBROUTINE OpFM_C2Fary_CopyInput
@@ -4321,18 +4220,6 @@ ENDIF
              InputData%c_obj%forceNodesChord = C_LOC( InputData%forceNodesChord( LBOUND(InputData%forceNodesChord,1) ) ) 
        END IF
     END IF
-
-    ! -- SuperController Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%SuperController)) THEN 
-          InputData%c_obj%SuperController_Len = 0
-          InputData%c_obj%SuperController = C_NULL_PTR
-       ELSE
-          InputData%c_obj%SuperController_Len = SIZE(InputData%SuperController)
-          IF (InputData%c_obj%SuperController_Len > 0) &
-             InputData%c_obj%SuperController = C_LOC( InputData%SuperController( LBOUND(InputData%SuperController,1) ) ) 
-       END IF
-    END IF
  END SUBROUTINE OpFM_F2C_CopyInput
 
  SUBROUTINE OpFM_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -4395,21 +4282,6 @@ IF (ASSOCIATED(SrcOutputData%w)) THEN
   END IF
     DstOutputData%w = SrcOutputData%w
 ENDIF
-IF (ASSOCIATED(SrcOutputData%SuperController)) THEN
-  i1_l = LBOUND(SrcOutputData%SuperController,1)
-  i1_u = UBOUND(SrcOutputData%SuperController,1)
-  IF (.NOT. ASSOCIATED(DstOutputData%SuperController)) THEN 
-    ALLOCATE(DstOutputData%SuperController(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%SuperController.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstOutputData%c_obj%SuperController_Len = SIZE(DstOutputData%SuperController)
-    IF (DstOutputData%c_obj%SuperController_Len > 0) &
-      DstOutputData%c_obj%SuperController = C_LOC( DstOutputData%SuperController(i1_l) ) 
-  END IF
-    DstOutputData%SuperController = SrcOutputData%SuperController
-ENDIF
 IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   i1_l = LBOUND(SrcOutputData%WriteOutput,1)
   i1_u = UBOUND(SrcOutputData%WriteOutput,1)
@@ -4450,12 +4322,6 @@ IF (ASSOCIATED(OutputData%w)) THEN
   OutputData%w => NULL()
   OutputData%C_obj%w = C_NULL_PTR
   OutputData%C_obj%w_Len = 0
-ENDIF
-IF (ASSOCIATED(OutputData%SuperController)) THEN
-  DEALLOCATE(OutputData%SuperController)
-  OutputData%SuperController => NULL()
-  OutputData%C_obj%SuperController = C_NULL_PTR
-  OutputData%C_obj%SuperController_Len = 0
 ENDIF
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
@@ -4511,11 +4377,6 @@ ENDIF
   IF ( ASSOCIATED(InData%w) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! w upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%w)  ! w
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! SuperController allocated yes/no
-  IF ( ASSOCIATED(InData%SuperController) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! SuperController upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SuperController)  ! SuperController
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
   IF ( ALLOCATED(InData%WriteOutput) ) THEN
@@ -4593,21 +4454,6 @@ ENDIF
 
       DO i1 = LBOUND(InData%w,1), UBOUND(InData%w,1)
         ReKiBuf(Re_Xferred) = InData%w(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%SuperController) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%SuperController,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperController,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%SuperController,1), UBOUND(InData%SuperController,1)
-        ReKiBuf(Re_Xferred) = InData%SuperController(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -4718,27 +4564,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperController not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%SuperController)) DEALLOCATE(OutData%SuperController)
-    ALLOCATE(OutData%SuperController(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%SuperController.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%c_obj%SuperController_Len = SIZE(OutData%SuperController)
-    IF (OutData%c_obj%SuperController_Len > 0) &
-       OutData%c_obj%SuperController = C_LOC( OutData%SuperController(i1_l) ) 
-      DO i1 = LBOUND(OutData%SuperController,1), UBOUND(OutData%SuperController,1)
-        OutData%SuperController(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4801,15 +4626,6 @@ ENDIF
           CALL C_F_POINTER(OutputData%C_obj%w, OutputData%w, (/OutputData%C_obj%w_Len/))
        END IF
     END IF
-
-    ! -- SuperController Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%SuperController ) ) THEN
-          NULLIFY( OutputData%SuperController )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%SuperController, OutputData%SuperController, (/OutputData%C_obj%SuperController_Len/))
-       END IF
-    END IF
  END SUBROUTINE OpFM_C2Fary_CopyOutput
 
  SUBROUTINE OpFM_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
@@ -4861,18 +4677,6 @@ ENDIF
           OutputData%c_obj%w_Len = SIZE(OutputData%w)
           IF (OutputData%c_obj%w_Len > 0) &
              OutputData%c_obj%w = C_LOC( OutputData%w( LBOUND(OutputData%w,1) ) ) 
-       END IF
-    END IF
-
-    ! -- SuperController Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%SuperController)) THEN 
-          OutputData%c_obj%SuperController_Len = 0
-          OutputData%c_obj%SuperController = C_NULL_PTR
-       ELSE
-          OutputData%c_obj%SuperController_Len = SIZE(OutputData%SuperController)
-          IF (OutputData%c_obj%SuperController_Len > 0) &
-             OutputData%c_obj%SuperController = C_LOC( OutputData%SuperController( LBOUND(OutputData%SuperController,1) ) ) 
        END IF
     END IF
  END SUBROUTINE OpFM_F2C_CopyOutput
@@ -5074,12 +4878,6 @@ IF (ASSOCIATED(u_out%forceNodesChord) .AND. ASSOCIATED(u1%forceNodesChord)) THEN
     u_out%forceNodesChord(i1) = u1%forceNodesChord(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%SuperController) .AND. ASSOCIATED(u1%SuperController)) THEN
-  DO i1 = LBOUND(u_out%SuperController,1),UBOUND(u_out%SuperController,1)
-    b = -(u1%SuperController(i1) - u2%SuperController(i1))
-    u_out%SuperController(i1) = u1%SuperController(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
  END SUBROUTINE OpFM_Input_ExtrapInterp1
 
 
@@ -5256,13 +5054,6 @@ IF (ASSOCIATED(u_out%forceNodesChord) .AND. ASSOCIATED(u1%forceNodesChord)) THEN
     u_out%forceNodesChord(i1) = u1%forceNodesChord(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%SuperController) .AND. ASSOCIATED(u1%SuperController)) THEN
-  DO i1 = LBOUND(u_out%SuperController,1),UBOUND(u_out%SuperController,1)
-    b = (t(3)**2*(u1%SuperController(i1) - u2%SuperController(i1)) + t(2)**2*(-u1%SuperController(i1) + u3%SuperController(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%SuperController(i1) + t(3)*u2%SuperController(i1) - t(2)*u3%SuperController(i1) ) * scaleFactor
-    u_out%SuperController(i1) = u1%SuperController(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
  END SUBROUTINE OpFM_Input_ExtrapInterp2
 
 
@@ -5378,12 +5169,6 @@ IF (ASSOCIATED(y_out%w) .AND. ASSOCIATED(y1%w)) THEN
     y_out%w(i1) = y1%w(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%SuperController) .AND. ASSOCIATED(y1%SuperController)) THEN
-  DO i1 = LBOUND(y_out%SuperController,1),UBOUND(y_out%SuperController,1)
-    b = -(y1%SuperController(i1) - y2%SuperController(i1))
-    y_out%SuperController(i1) = y1%SuperController(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
@@ -5466,13 +5251,6 @@ IF (ASSOCIATED(y_out%w) .AND. ASSOCIATED(y1%w)) THEN
     b = (t(3)**2*(y1%w(i1) - y2%w(i1)) + t(2)**2*(-y1%w(i1) + y3%w(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%w(i1) + t(3)*y2%w(i1) - t(2)*y3%w(i1) ) * scaleFactor
     y_out%w(i1) = y1%w(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%SuperController) .AND. ASSOCIATED(y1%SuperController)) THEN
-  DO i1 = LBOUND(y_out%SuperController,1),UBOUND(y_out%SuperController,1)
-    b = (t(3)**2*(y1%SuperController(i1) - y2%SuperController(i1)) + t(2)**2*(-y1%SuperController(i1) + y3%SuperController(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%SuperController(i1) + t(3)*y2%SuperController(i1) - t(2)*y3%SuperController(i1) ) * scaleFactor
-    y_out%SuperController(i1) = y1%SuperController(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN

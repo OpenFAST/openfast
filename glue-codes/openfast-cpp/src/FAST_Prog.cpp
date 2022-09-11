@@ -68,8 +68,6 @@ void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, doubl
             if(cDriverInp["superController"]) {
                 fi.scStatus = cDriverInp["superController"].as<bool>();
                 fi.scLibFile = cDriverInp["scLibFile"].as<std::string>();
-                fi.numScInputs = cDriverInp["numScInputs"].as<int>();
-                fi.numScOutputs = cDriverInp["numScOutputs"].as<int>();
             }
 
             fi.globTurbineData.resize(fi.nTurbinesGlob);

@@ -23,14 +23,19 @@ MODULE MoorDyn
    USE MoorDyn_Types
    USE MoorDyn_IO
    USE NWTC_Library
+   USE MoorDyn_Line
+   USE MoorDyn_Point
+   USE MoorDyn_Rod
+   USE MoorDyn_Body
+   USE MoorDyn_Misc
    
-   USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_dx, WaveGrid_nx, WaveGrid_y0, WaveGrid_dy, WaveGrid_ny, WaveGrid_nz  ! seeing if I can get waves data here directly...
+   !USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_dx, WaveGrid_nx, WaveGrid_y0, WaveGrid_dy, WaveGrid_ny, WaveGrid_nz  ! seeing if I can get waves data here directly...
 
    IMPLICIT NONE
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn-F', 'v2.a9', '24 March 2021' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a27', '2022-07-20' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -39,6 +44,11 @@ MODULE MoorDyn
    PUBLIC :: MD_CalcOutput
    PUBLIC :: MD_CalcContStateDeriv
    PUBLIC :: MD_End
+   PUBLIC :: MD_JacobianPContState 
+   PUBLIC :: MD_JacobianPInput 
+   PUBLIC :: MD_JacobianPDiscState 
+   PUBLIC :: MD_JacobianPConstrState 
+   PUBLIC :: MD_GetOP 
 
 CONTAINS
 
@@ -64,16 +74,20 @@ CONTAINS
       ! local variables
       TYPE(MD_InputFileType)                       :: InputFileDat   ! Data read from input file for setup, but not stored after Init
       type(FileInfoType)                           :: FileInfo_In    !< The derived type for holding the full input file for parsing -- we may pass this in the future
+  !    CHARACTER(1024)                              :: priPath        ! The path to the primary MoorDyn input file
       REAL(DbKi)                                   :: t              ! instantaneous time, to be used during IC generation
       INTEGER(IntKi)                               :: l              ! index
       INTEGER(IntKi)                               :: I              ! Current line number of input file 
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
       INTEGER(IntKi)                               :: Itemp          ! index
+      INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
-      REAL(ReKi)                                   :: Pos(3)         ! array for setting absolute fairlead positions in mesh
+      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
+      REAL(ReKi)                                   :: OrMat2(3,3)
+      REAL(R8Ki)                                   :: OrMatRef(3,3)
       REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size nCpldCons, 3 to store three latest fairlead tensions of each line
       CHARACTER(20)                                :: TempString     ! temporary string for incidental use
       INTEGER(IntKi)                               :: ErrStat2       ! Error status of the operation
@@ -93,20 +107,27 @@ CONTAINS
       
       ! Local variables for reading file input (Previously in MDIO_ReadInput)
       INTEGER(IntKi)               :: UnEc                 ! The local unit number for this module's echo file
-    INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
-    CHARACTER(200)   :: Frmt     ! a string to hold a format statement
+      INTEGER(IntKi)               :: UnOut    ! for outputing wave kinematics data
+      CHARACTER(200)               :: Frmt     ! a string to hold a format statement
 
       CHARACTER(1024)              :: EchoFile             ! Name of MoorDyn echo file
       CHARACTER(1024)              :: Line                 ! String to temporarially hold value of read line
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
-      CHARACTER(20)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: OptValue             ! String to temporarially hold value of options variable input
+      CHARACTER(40)                :: DepthValue           ! Temporarily stores the optional WtrDpth setting for MD, which could be a number or a filename
+      CHARACTER(40)                :: WaterKinValue        ! Temporarily stores the optional WaterKin setting for MD, which is typically a filename
       INTEGER(IntKi)               :: nOpts                ! number of options lines in input file
       CHARACTER(40)                :: TempString1          !
       CHARACTER(40)                :: TempString2          !
       CHARACTER(40)                :: TempString3          !
       CHARACTER(40)                :: TempString4          !
+      CHARACTER(40)                :: TempString5          !
+      CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
       CHARACTER(1024)              :: FileName             !
+
+      REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
+      Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
       
       
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
@@ -119,7 +140,6 @@ CONTAINS
       REAL(ReKi)                    :: rRef(6)             ! used to pass positions to mesh (real type precision)
       REAL(DbKi)                    :: rRefDub(3)
       
-      CHARACTER(500)               :: TempString5          ! long string used to hold CtrlChan inputs
       INTEGER(IntKi)               :: TempIDnums(100)      ! array to hold IdNums of controlled lines for each CtrlChan
       
       ! for reading output channels
@@ -127,6 +147,7 @@ CONTAINS
       INTEGER                       :: MaxAryLen = 1000    ! Maximum length of the array being read
       INTEGER                       :: NumWords            ! Number of words contained on a line
       INTEGER                       :: Nx
+      INTEGER                       :: QuoteCh                                     ! Character position.
       CHARACTER(*), PARAMETER       :: RoutineName = 'MD_Init'
 
       
@@ -150,42 +171,63 @@ CONTAINS
       !                   Get all the inputs taken care of
       !---------------------------------------------------------------------------------------------
 
-
-      ! set environmental parameters from input data and error check
-      ! (should remove these values as options from MoorDyn input file for consistency?)
-
-      p%g        = InitInp%g
-      p%WtrDpth  = InitInp%WtrDepth
-      p%rhoW     = InitInp%rhoW
-
       p%RootName = TRIM(InitInp%RootName)//'.MD'  ! all files written from this module will have this root name
 
-!FIXME: Set some of the options -- the way parsing is written, they don't have to exist in the input file, but get used anyhow.
-! Setting these to some value for the moment -- trying to figure out why I get NaN's with the -Wuninitialized -finit-real=inf -finit-integer=9999 flags set.
-p%dtM0      = DTcoupling      ! default to the coupling
-!p%WtrDpth   = InitInp%WtrDpth      ! This will be passed in later.  Right now use the default of -9999 in the registry
-p%kBot      = 0
-p%cBot      = 0
-p%WaterKin  = 0
+      ! set default values for the simulation settings
+      ! these defaults are based on the glue code
+      p%dtM0                 = DTcoupling      ! default to the coupling interval (but will likely need to be smaller)
+      p%Tmax                 = InitInp%Tmax
+      p%g                    = InitInp%g
+      p%rhoW                 = InitInp%rhoW
+      ! TODO:   add MSL2SWL from OpenFAST <<<<
+      ! set the following to some defaults
+      p%kBot                 = 3.0E6
+      p%cBot                 = 3.0E5
+      InputFileDat%dtIC      = 2.0_DbKi
+      InputFileDat%TMaxIC    = 60.0_DbKi
+      InputFileDat%CdScaleIC = 4.0_ReKi
+      InputFileDat%threshIC  = 0.01_ReKi
+      p%WaveKin              = 0_IntKi
+      p%Current              = 0_IntKi
+      p%dtOut                = 0.0_DbKi
+      p%mu_kT                = 0.0_DbKi
+      p%mu_kA                = 0.0_DbKi
+      p%mc                   = 1.0_DbKi
+      p%cv                   = 200.0_DbKi
+      DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
+                       ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
+      WaterKinValue = ""
+      
+      m%PtfmInit = InitInp%PtfmInit(:,1)   ! is this copying necssary in case this is an individual instance in FAST.Farm?
 
-      ! Check for farm-level inputs (indicating that this MoorDyn isntance is being run from FAST.Farm)
-      !intead of below, check first dimension of PtfmInit
-      !p%nTurbines = SIZE(InitInp%FarmCoupledKinematics)  ! the number of turbines in the array (0 indicates a regular OpenFAST simulation with 1 turbine)
-      !
-      !IF (p%nTurbines > 0) then
-      !   WrScr('   >>> MoorDyn is running in array mode <<< ')
-      !   
-      !   ! copy over the meshes to be this instance's array of mesh inputs (a duplicate)
-      !   ! >>> initialize array u%FarmCoupledKinematics                 
-      !   ! >>> copy each mesh from InitInp%FarmCoupledKinematics into it
-      !       ! CALL MeshCopy ( SrcMesh  = InitInp%FarmCoupledKinematics, DestMesh = u%FarmCoupledKinematics, CtrlCode = MESH_SIBLING, IOS=COMPONENT_OUTPUT, Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
-      !   
-      !   !   OR instead of copying the meshes, could just make empty meshes, then populate with exactly the elements needed at the farm level
-      !   !InitInp%FarmNCpldBodies      
-      !   !InitInp%FarmNCpldRods        
-      !   !InitInp%FarmNCpldCons        
-      !   
-      !END IF
+
+
+      ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
+      if (InitInp%FarmSize > 0) then
+         CALL WrScr('   >>> MoorDyn is running in array mode <<< ')
+         ! could make sure the size of this is right: SIZE(InitInp%FarmCoupledKinematics)  
+         p%nTurbines = InitInp%FarmSize
+      else    ! FarmSize==0 indicates normal, FAST module mode
+         p%nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
+      END IF
+
+      ! allocate some parameter arrays that are for each turbine (size 1 if regular OpenFAST use)
+      allocate( p%nCpldBodies(     p%nTurbines)) 
+      allocate( p%nCpldRods  (     p%nTurbines)) 
+      allocate( p%nCpldCons  (     p%nTurbines)) 
+      allocate( p%TurbineRefPos(3, p%nTurbines))
+      
+      ! initialize the arrays (to zero, except for passed in farm turbine reference positions)
+      p%nCpldBodies = 0
+      p%nCpldRods   = 0
+      p%nCpldCons   = 0
+      
+      if (InitInp%FarmSize > 0) then
+         p%TurbineRefPos = InitInp%TurbineRefPos  ! copy over turbine reference positions for later use
+      else    
+         p%TurbineRefPos = 0.0_DbKi               ! for now assuming this is zero for FAST use
+      end if
+
       
       !---------------------------------------------------------------------------------------------
       !            read input file and create cross-referenced mooring system objects
@@ -206,8 +248,10 @@ p%WaterKin  = 0
       ! Read the entire input file, minus any comment lines, into the FileInfo_In
       ! data structure in memory for further processing.
       call ProcessComFile( InitInp%FileName, FileInfo_In, ErrStat2, ErrMsg2 )
+      CALL GetPath( InitInp%FileName, p%PriPath )    ! Input files will be relative to the path where the primary input file is located.
    else
       call NWTC_Library_CopyFileInfoType( InitInp%PassedPrimaryInputData, FileInfo_In, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      p%PriPath = ""
    endif
    if (Failed()) return;
 
@@ -351,11 +395,72 @@ p%WaterKin  = 0
                
             else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
 
-               ! don't skip any lines (no column headers for the options section)
-
-               ! find how many options have been specified
+               IF (wordy > 0) print *, "Reading Options"
+               
+               ! don't skip any lines (no column headers for the options section)               
+               ! process each line in this section
                Line = NextLine(i)
                DO while (INDEX(Line, "---") == 0) ! while we DON'T find another header line
+                  
+                  ! parse out entries:  value, option keyword
+                  READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
+                  IF ( ErrStat2 /= 0 ) THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read options.', ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line had the error
+                     CALL CleanUp()
+                     RETURN
+                  END IF
+                              
+                  CALL Conv2UC(OptString)
+
+                  ! check all possible options types and see if OptString is one of them, in which case set the variable.
+                  if ( OptString == 'WRITELOG') THEN
+                     read (OptValue,*) p%writeLog
+                     if (p%writeLog > 0) then   ! if not zero, open a log file for output
+                        CALL GetNewUnit( p%UnLog )
+                        CALL OpenFOutFile ( p%UnLog, TRIM(p%RootName)//'.log', ErrStat, ErrMsg )
+                        IF ( ErrStat > AbortErrLev ) THEN
+                           ErrMsg = ' Failed to open MoorDyn log file: '//TRIM(ErrMsg)
+                           RETURN
+                        END IF
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) "MoorDyn v2 log file with output level "//TRIM(Num2LStr(p%writeLog))
+                        write(p%UnLog,'(A)', IOSTAT=ErrStat2) "Note: options above the writeLog line in the input file will not be recorded."
+                     end if
+                  else if ( OptString == 'DTM') THEN
+                     read (OptValue,*) p%dtM0 
+                  else if ( OptString == 'G') then
+                     read (OptValue,*) p%g
+                  else if (( OptString == 'RHOW') .or. ( OptString == 'RHO')) then
+                     read (OptValue,*) p%rhoW
+                  else if (( OptString == 'WTRDPTH') .or. ( OptString == 'DEPTH') .or. ( OptString == 'WATERDEPTH')) then
+                     read (OptValue,*) DepthValue    ! water depth input read in as a string to be processed by setupBathymetry
+                  else if (( OptString == 'KBOT') .or. ( OptString == 'KB'))  then
+                     read (OptValue,*) p%kBot
+                  else if (( OptString == 'CBOT') .or. ( OptString == 'CB'))  then
+                     read (OptValue,*) p%cBot
+                  else if ( OptString == 'DTIC')  then
+                     read (OptValue,*) InputFileDat%dtIC
+                  else if ( OptString == 'TMAXIC')  then
+                     read (OptValue,*) InputFileDat%TMaxIC
+                  else if ( OptString == 'CDSCALEIC')  then
+                     read (OptValue,*) InputFileDat%CdScaleIC
+                  else if ( OptString == 'THRESHIC')  then
+                     read (OptValue,*) InputFileDat%threshIC
+                  else if ( OptString == 'WATERKIN')  then
+                     read (OptValue,*) WaterKinValue
+                  else if ( OptString == 'DTOUT')  then
+                     read (OptValue,*) p%dtOut
+                  else if ( OptString == 'MU_KT')  then
+                     read (OptValue,*) p%mu_kT
+                  else if ( OptString == 'MU_KA')  then
+                     read (OptValue,*) p%mu_kA
+                  else if ( OptString == 'MC')  then
+                     read (OptValue,*) p%mc
+                  else if ( OptString == 'CV')  then
+                     read (OptValue,*) p%cv
+                  else
+                     CALL SetErrStat( ErrID_Warn, 'Unable to interpret input '//trim(OptString)//' in OPTIONS section.', ErrStat, ErrMsg, RoutineName )
+                  end if
+
                   nOpts = nOpts + 1
                   Line = NextLine(i)
                END DO
@@ -387,6 +492,15 @@ p%WaterKin  = 0
       IF (wordy > 0) print *, "  Identified ", p%nConnects   , "Connections in input file."
       IF (wordy > 0) print *, "  Identified ", p%nLines      , "Lines in input file."
       IF (wordy > 0) print *, "  Identified ", nOpts         , "Options in input file."
+
+
+      ! set up seabed bathymetry
+      CALL setupBathymetry(DepthValue, InitInp%WtrDepth, m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, ErrStat2, ErrMsg2)
+      CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, 0.0_DbKi, 0.0_DbKi, p%WtrDpth, nvec)  ! set depth at 0,0 as nominal for waves etc
+      
+      
+      ! set up wave and current kinematics 
+      CALL setupWaterKin(WaterKinValue, p, InitInp%Tmax, ErrStat2, ErrMsg2); if(Failed()) return
 
 
 
@@ -433,13 +547,20 @@ p%WaterKin  = 0
       ALLOCATE(m%ConStateIs1(p%nConnects), m%ConStateIsN(p%nConnects), STAT=ErrStat2); if(AllocateFailed("ConStateIs1/N" )) return
       ALLOCATE(m%LineStateIs1(p%nLines)  , m%LineStateIsN(p%nLines)  , STAT=ErrStat2); if(AllocateFailed("LineStateIs1/N")) return
 
-      ALLOCATE(m%FreeBodyIs(   p%nBodies ), m%CpldBodyIs(p%nBodies ), STAT=ErrStat2); if(AllocateFailed("BodyIs")) return
-      ALLOCATE(m%FreeRodIs(    p%nRods   ), m%CpldRodIs( p%nRods   ), STAT=ErrStat2); if(AllocateFailed("RodIs")) return
-      ALLOCATE(m%FreeConIs(   p%nConnects), m%CpldConIs(p%nConnects),STAT=ErrStat2); if(AllocateFailed("ConnectIs")) return
+      ALLOCATE(m%FreeBodyIs(   p%nBodies ),  STAT=ErrStat2); if(AllocateFailed("FreeBodyIs")) return
+      ALLOCATE(m%FreeRodIs(    p%nRods   ),  STAT=ErrStat2); if(AllocateFailed("FreeRodIs")) return
+      ALLOCATE(m%FreeConIs(   p%nConnects),  STAT=ErrStat2); if(AllocateFailed("FreeConnectIs")) return
+
+      ALLOCATE(m%CpldBodyIs(p%nBodies , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldBodyIs")) return
+      ALLOCATE(m%CpldRodIs( p%nRods   , p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldRodIs")) return
+      ALLOCATE(m%CpldConIs(p%nConnects, p%nTurbines), STAT=ErrStat2); if(AllocateFailed("CpldConnectIs")) return
 
 
       ! ---------------------- now go through again and process file contents --------------------
 
+      call Body_Setup( m%GroundBody, m%zeros6, p, ErrStat2, ErrMsg2)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
 
       ! note: no longer worrying about "Echo" option
       
@@ -450,6 +571,8 @@ p%WaterKin  = 0
       do while ( i <= FileInfo_In%NumLines )
       
          if (INDEX(Line, "---") > 0) then ! look for a header line
+             
+            CALL Conv2UC(Line)  ! allow lowercase section header names as well
 
             !-------------------------------------------------------------------------------------------
             if ( ( INDEX(Line, "LINE DICTIONARY") > 0) .or. ( INDEX(Line, "LINE TYPES") > 0) ) then ! if line dictionary header
@@ -465,8 +588,15 @@ p%WaterKin  = 0
                    
                    !read into a line
                    Line = NextLine(i)
+                   
+                   ! check for correct number of columns in current line
+                   IF ( CountWords( Line ) /= 10 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 10 columns.', ErrStat, ErrMsg, RoutineName )
+                       CALL CleanUp()
+                       RETURN
+                   END IF
 
-                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp >>EI(new)<<  Can  Cat Cdn  Cdt 
+                   ! parse out entries: Name  Diam MassDenInAir EA cIntDamp EI    Cd  Ca  CdAx  CaAx 
                    READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(l)%name, m%LineTypeList(l)%d,  &
                       m%LineTypeList(l)%w, tempString1, tempString2, tempString3, &
                       m%LineTypeList(l)%Cdn, m%LineTypeList(l)%Can, m%LineTypeList(l)%Cdt, m%LineTypeList(l)%Cat
@@ -477,15 +607,43 @@ p%WaterKin  = 0
                       RETURN
                    END IF
                    
-                   ! process stiffness, damping, and bending coefficients (which might use lookup tables)
-                   CALL getCoefficientOrCurve(tempString1, m%LineTypeList(l)%EA,        &
+                   !TODO: add check if %name is maximum length, which might indicate the full name was too long <<<
+                   
+                   ! process stiffness coefficients
+                   CALL SplitByBars(tempString1, N, tempStrings)
+                   if (N > 2) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type EA entry can have at most 2 (comma-separated) values.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                   else if (N==2) then                               ! visco-elastic case!
+                      m%LineTypeList(l)%ElasticMod = 2
+                      read(tempStrings(2), *) m%LineTypeList(l)%EA_D 
+                   else
+                     m%LineTypeList(l)%ElasticMod = 1                ! normal case
+                   end if
+                   ! get the regular/static coefficient or relation in all cases (can be from a lookup table)
+                   CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%EA,     &
                                                            m%LineTypeList(l)%nEApoints, &
                                                            m%LineTypeList(l)%stiffXs,   &
                                                            m%LineTypeList(l)%stiffYs,  ErrStat2, ErrMsg2)
-                   CALL getCoefficientOrCurve(tempString2, m%LineTypeList(l)%BA,        &
-                                                           m%LineTypeList(l)%nBpoints,  &
+
+                   
+                   ! process damping coefficients 
+                   CALL SplitByBars(tempString2, N, tempStrings)
+                   if (N > m%LineTypeList(l)%ElasticMod) then
+                      CALL SetErrStat( ErrID_Fatal, 'A line type BA entry cannot have more (comma-separated) values its EA entry.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                   else if (N==2) then                               ! visco-elastic case when two BA values provided
+                      read(tempStrings(2), *) m%LineTypeList(l)%BA_D 
+                   else if (m%LineTypeList(l)%ElasticMod == 2) then  ! case where there is no dynamic damping for viscoelastic model (will it work)?
+                      CALL WrScr("Warning, viscoelastic model being used with zero damping on the dynamic stiffness.")
+                   end if
+                   ! get the regular/static coefficient or relation in all cases (can be from a lookup table?)
+                   CALL getCoefficientOrCurve(tempStrings(1), m%LineTypeList(l)%BA,     &
+                                                           m%LineTypeList(l)%nBApoints,  &
                                                            m%LineTypeList(l)%dampXs,    &
                                                            m%LineTypeList(l)%dampYs,   ErrStat2, ErrMsg2)
+                                                           
+                   ! process bending stiffness coefficients (which might use lookup tables)
                    CALL getCoefficientOrCurve(tempString3, m%LineTypeList(l)%EI,        &
                                                            m%LineTypeList(l)%nEIpoints, &
                                                            m%LineTypeList(l)%bstiffXs,  &
@@ -493,15 +651,26 @@ p%WaterKin  = 0
 
                    ! specify IdNum of line type for error checking
                    m%LineTypeList(l)%IdNum = l  
+                   
+                  ! write lineType information to log file
+                  if (p%writeLog > 1) then
+                      write(p%UnLog, '(A12,A20)'  ) " LineType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%LineTypeList(l)%name
+                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%LineTypeList(l)%d  
+                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%LineTypeList(l)%w  
+                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%LineTypeList(l)%Cdn
+                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%LineTypeList(l)%Can
+                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%LineTypeList(l)%Cdt
+                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%LineTypeList(l)%Cat
+                  end if
 
+                  IF ( ErrStat2 /= ErrID_None ) THEN
+                     CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     CALL CleanUp()
+                     RETURN
+                  END IF
 
-                   IF ( ErrStat2 /= ErrID_None ) THEN
-                      CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      CALL CleanUp()
-                      RETURN
-                   END IF
-
-                END DO
+               END DO
 
 
             !-------------------------------------------------------------------------------------------
@@ -519,7 +688,14 @@ p%WaterKin  = 0
                    !read into a line
                    Line = NextLine(i)
 
-                   ! parse out entries: Name  Diam MassDenInAir Can  Cat Cdn  Cdt 
+                   ! check for correct number of columns in current line
+                   IF ( CountWords( Line ) /= 7 ) THEN
+                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod Type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                       CALL CleanUp()
+                       RETURN
+                   END IF
+                   
+                   ! parse out entries: Name  Diam MassDen Cd  Ca  CdEnd  CaEnd
                    IF (ErrStat2 == 0) THEN
                       READ(Line,*,IOSTAT=ErrStat2) m%RodTypeList(l)%name, m%RodTypeList(l)%d, m%RodTypeList(l)%w, &
                          m%RodTypeList(l)%Cdn, m%RodTypeList(l)%Can, m%RodTypeList(l)%CdEnd, m%RodTypeList(l)%CaEnd   
@@ -530,10 +706,21 @@ p%WaterKin  = 0
 
                    ! specify IdNum of rod type for error checking
                    m%RodTypeList(l)%IdNum = l  
-
+                   
+                  ! write lineType information to log file
+                  if (p%writeLog > 1) then
+                      write(p%UnLog, '(A12,A20)'  ) " RodType"//trim(num2lstr(l))//":"
+                      write(p%UnLog, '(A12,A20)'  ) " name: ", m%RodTypeList(l)%name
+                      write(p%UnLog, '(A12,f12.4)') " d   : ", m%RodTypeList(l)%d  
+                      write(p%UnLog, '(A12,f12.4)') " w   : ", m%RodTypeList(l)%w  
+                      write(p%UnLog, '(A12,f12.4)') " Cdn : ", m%RodTypeList(l)%Cdn
+                      write(p%UnLog, '(A12,f12.4)') " Can : ", m%RodTypeList(l)%Can
+                      write(p%UnLog, '(A12,f12.4)') " Cdt : ", m%RodTypeList(l)%CdEnd
+                      write(p%UnLog, '(A12,f12.4)') " Cat : ", m%RodTypeList(l)%CaEnd
+                  end if
 
                    IF ( ErrStat2 /= ErrID_None ) THEN
-                      CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                      CALL SetErrStat( ErrID_Fatal, 'Failed to process rod type properties for rod '//trim(Num2LStr(l))//'. Check formatting and correct number of columns.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                       RETURN
                    END IF
@@ -553,44 +740,106 @@ p%WaterKin  = 0
                   
                   !read into a line
                   Line = NextLine(i)
-
-                  ! parse out entries: Name/ID X0 Y0 Z0 r0 p0 y0 Xcg Ycg Zcg M  V  IX IY IZ CdA-x,y,z Ca-x,y,z
-                  IF (ErrStat2 == 0) THEN
-                     READ(Line,*,IOSTAT=ErrStat2) tempString1, &
-                        tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
-                        m%BodyList(l)%rCG(1), m%BodyList(l)%rCG(2), m%BodyList(l)%rCG(3), &
-                        m%BodyList(l)%bodyM, m%BodyList(l)%bodyV, &
-                        m%BodyList(l)%bodyI(1), m%BodyList(l)%bodyCdA(1), m%BodyList(l)%bodyCa(1)
+                   
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 14 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 14 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
                   END IF
+
+                  ! parse out entries: ID   Attachment  X0  Y0  Z0  r0  p0  y0    M  CG*  I*    V  CdA*  Ca*
+                  IF (ErrStat2 == 0) THEN
+                     READ(Line,*,IOSTAT=ErrStat2) m%BodyList(l)%IdNum, tempString1, &
+                        tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
+                        m%BodyList(l)%bodyM, tempString2, tempString3, m%BodyList(l)%bodyV, tempString4, tempString5
+                  END IF
+                  
+                  ! process CG
+                  CALL SplitByBars(tempString2, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, it is the z coordinate
+                     m%BodyList(l)%rCG(1) = 0.0_DbKi
+                     m%BodyList(l)%rCG(2) = 0.0_DbKi
+                     READ(tempString2, *) m%BodyList(l)%rCG(3)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%rCG(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%rCG(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%rCG(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CG entry (col 10) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process mements of inertia
+                  CALL SplitByBars(tempString3, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString3, *) m%BodyList(l)%BodyI(1)
+                     m%BodyList(l)%BodyI(2) = m%BodyList(l)%BodyI(1)
+                     m%BodyList(l)%BodyI(3) = m%BodyList(l)%BodyI(1)
+                  else if (N==3) then                                ! all three directions provided separately
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyI(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyI(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyI(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' inertia entry (col 11) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process drag ceofficient by area product
+                  CALL SplitByBars(tempString4, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString4, *) m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(2) = m%BodyList(l)%BodyCdA(1)
+                     m%BodyList(l)%BodyCdA(3) = m%BodyList(l)%BodyCdA(1)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCdA(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCdA(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCdA(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CdA entry (col 13) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+                  ! process added mass coefficient
+                  CALL SplitByBars(tempString5, N, tempStrings)
+                  if (N == 1) then                                   ! if only one entry, use it for all directions
+                     READ(tempString5, *) m%BodyList(l)%BodyCa(1)
+                     m%BodyList(l)%BodyCa(2) = m%BodyList(l)%BodyCa(1)
+                     m%BodyList(l)%BodyCa(3) = m%BodyList(l)%BodyCa(1)
+                  else if (N==3) then                                ! all three coordinates provided
+                     READ(tempStrings(1), *) m%BodyList(l)%BodyCa(1)
+                     READ(tempStrings(2), *) m%BodyList(l)%BodyCa(2)
+                     READ(tempStrings(3), *) m%BodyList(l)%BodyCa(3)
+                  else
+                     CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' Ca entry (col 14) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
+                  end if
+
 
                   IF ( ErrStat2 /= 0 ) THEN
                      CALL WrScr('   Unable to parse Body '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file.')  ! Specific screen output because errors likely
-                     CALL WrScr('   Ensure row has all 17 columns.')  
+                     CALL WrScr('   Ensure row has all 13 columns needed in MDv2 input file (13th Dec 2021).')  
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read bodies.' , ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
                   
 
-
                   !----------- process body type -----------------
 
-                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)
+                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)   ! note: this call is overkill (it's just a string) but leaving it here for potential future expansions
                   
-                  READ(num1, *) m%BodyList(l)%IdNum   ! convert to int, representing parent body index
-                                          
-                     if ((let2 == "COUPLED") .or. (let2 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
+                  if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then   ! if a fixed body (this would just be used if someone wanted to temporarly fix a body that things were attached to)
+                  
+                     m%BodyList(l)%typeNum = 1
+                     
+                  else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
                      m%BodyList(l)%typeNum = -1
-                     p%nCpldBodies=p%nCpldBodies+1  ! add this rod to coupled list                          
-                     m%CpldBodyIs(p%nCpldBodies) = l
+                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add this body to coupled list                          
+                     m%CpldBodyIs(p%nCpldBodies(1),1) = l
 
                      ! body initial position due to coupling will be adjusted later
                      
-                  else if ((let2 == "FREE") .or. (LEN_TRIM(let2)== 0)) then    ! if a free body
+                  ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
+                     
+                  else if (let1 == "FREE") then    ! if a free body
                      m%BodyList(l)%typeNum = 0
                      
-                     p%nFreeBodies=p%nFreeBodies+1             ! add this pinned rod to the free list because it is half free
+                     p%nFreeBodies=p%nFreeBodies+1
                      
                      m%BodyStateIs1(p%nFreeBodies) = Nx+1
                      m%BodyStateIsN(p%nFreeBodies) = Nx+12
@@ -601,7 +850,7 @@ p%WaterKin  = 0
                      m%BodyList(l)%r6 = tempArray     ! set initial body position and orientation
                      
                   else 
-                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Body type string for Body "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Body type string for Body "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
                      return
                   end if
                   
@@ -615,7 +864,7 @@ p%WaterKin  = 0
                   
                   
                   ! set up body
-                  CALL Body_Setup( m%BodyList(l), tempArray, p%rhoW, ErrStat2, ErrMsg2)
+                  CALL Body_Setup( m%BodyList(l), tempArray, p, ErrStat2, ErrMsg2)
                      CALL CheckError( ErrStat2, ErrMsg2 )
                      IF (ErrStat >= AbortErrLev) RETURN
 
@@ -645,20 +894,40 @@ p%WaterKin  = 0
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: RodID  Type/BodyID  RodType  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 11 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 11 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+                  
+                  ! parse out entries: RodID  RodType  Attachment  Xa   Ya   Za   Xb   Yb   Zb  NumSegs  Flags/Outputs
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%RodList(l)%IdNum, tempString1, tempString2, &
                          tempArray(1), tempArray(2), tempArray(3), tempArray(4), tempArray(5), tempArray(6), &
                          m%RodList(l)%N, LineOutString
                   END IF
 
+                  ! find Rod properties index
+                  DO J = 1,p%nRodTypes
+                     IF (trim(tempString1) == trim(m%RodTypeList(J)%name)) THEN
+                       m%RodList(l)%PropsIdNum = J
+                       EXIT
+                     END IF
+                     IF (J == p%nRodTypes) THEN   ! call an error if there is no match
+                         CALL SetErrStat( ErrID_Fatal, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
+                         RETURN
+                     END IF
+                  END DO
+
 
                   !----------- process rod type -----------------
 
-                  call DecomposeString(tempString1, let1, num1, let2, num2, let3)
+                  call DecomposeString(tempString2, let1, num1, let2, num2, let3)
                   
-                     if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
-                         m%RodList(l)%typeNum = 2
+                  if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
+                     
+                     m%RodList(l)%typeNum = 2
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                            
 
@@ -684,7 +953,7 @@ p%WaterKin  = 0
                         
                            CALL Body_AddRod(m%BodyList(J), l, tempArray)   ! add rod l to the body
                            
-                           if ((INDEX(let2, "PINNED") > 0) .or. (INDEX(let2, "PIN") > 0)) then
+                           if ( (let2 == "PINNED") .or. (let2 == "PIN") ) then
                               m%RodList(l)%typeNum = 1
                               
                               p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
@@ -695,40 +964,46 @@ p%WaterKin  = 0
                               
                               m%FreeRodIs(p%nFreeRods) = l
                      
-                           else
+                           else if (let2 == " ") then ! rod is not requested to be pinned, so add this rod as a fixed one
                               m%RodList(l)%typeNum = 2
+                     
+                           else
+                               CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
+                               return
                            end if
                         
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Body ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Rod "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if
                      
                   else
-                     CALL SetErrStat( ErrID_Severe,  "No number provided for Rod "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "No number provided for Rod "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
                          return
                   end if
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a rigidly coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -2            
 
-                     p%nCpldRods=p%nCpldRods+1     ! add this rod to coupled list
+                     p%nCpldRods(1)=p%nCpldRods(1)+1     ! add this rod to coupled list
                      
-                     m%CpldRodIs(p%nCpldRods) = l
+                     m%CpldRodIs(p%nCpldRods(1),1) = l
                  
                   else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN") .or. (let1 == "COUPLEDPINNED") .or. (let1 == "CPLDPIN")) then  ! if a pinned coupled rod, add to list and add 
                      m%RodList(l)%typeNum = -1
                      
-                     p%nCpldRods=p%nCpldRods+1  ! add
-                     p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
+                     p%nCpldRods(1)=p%nCpldRods(1)+1  ! add
+                     p%nFreeRods   =p%nFreeRods+1     ! add this pinned rod to the free list because it is half free
                      
                      m%RodStateIs1(p%nFreeRods) = Nx+1
                      m%RodStateIsN(p%nFreeRods) = Nx+6
                      Nx = Nx + 6                                               ! add 6 state variables for each pinned rod
                      
-                     m%CpldRodIs(p%nCpldRods) = l
+                     m%CpldRodIs(p%nCpldRods(1),1) = l
                      m%FreeRodIs(p%nFreeRods) = l
-                     
+                   
+                  ! TODO: add option for body coupling to different turbines in FAST.Farm <<<
+                   
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%RodList(l)%typeNum = 0
                      
@@ -742,21 +1017,9 @@ p%WaterKin  = 0
                      
                   else 
                   
-                     CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Rod "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
                      return
                   end if
-
-
-                  ! find Rod properties index
-                  DO J = 1,p%nRodTypes
-                     IF (trim(tempString2) == trim(m%RodTypeList(J)%name)) THEN
-                       m%RodList(l)%PropsIdNum = J
-                       EXIT
-                       IF (J == p%nRodTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Severe, 'Unable to find matching rod type name for Rod '//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )
-                       END IF
-                     END IF
-                  END DO
                   
                 
                   ! process output flag characters (LineOutString) and set line output flag array (OutFlagList)
@@ -794,7 +1057,7 @@ p%WaterKin  = 0
                   END IF
                   
                   ! set up rod
-                  CALL Rod_Setup( m%RodList(l), m%RodTypeList(m%RodList(l)%PropsIdNum), tempArray, p%rhoW, ErrStat2, ErrMsg2)
+                  CALL Rod_Setup( m%RodList(l), m%RodTypeList(m%RodList(l)%PropsIdNum), tempArray, p, ErrStat2, ErrMsg2)
                      CALL CheckError( ErrStat2, ErrMsg2 )
                      IF (ErrStat >= AbortErrLev) RETURN
                      
@@ -824,11 +1087,29 @@ p%WaterKin  = 0
                   !read into a line
                   Line = NextLine(i)
 
-                  ! parse out entries: Node Type X Y Z M V FX FY FZ CdA Ca 
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 9 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Point '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 9 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
+                  END IF
+                  
+                  ! parse out entries: PointID Attachment  X  Y  Z  M  V  CdA Ca 
                   IF (ErrStat2 == 0) THEN
                      READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(l)%IdNum, tempString1, tempArray(1), &
-                        tempArray(2), tempArray(3), m%ConnectList(l)%conM, &
+                        tempArray(2), tempString4, m%ConnectList(l)%conM, &
                         m%ConnectList(l)%conV, m%ConnectList(l)%conCdA, m%ConnectList(l)%conCa
+                                          
+                     CALL Conv2UC(tempString4) ! convert to uppercase so that matching is not case-sensitive
+                     
+                     if ((INDEX(tempString4, "SEABED") > 0 ) .or. (INDEX(tempString4, "GROUND") > 0 ) .or. (INDEX(tempString4, "FLOOR") > 0 )) then  ! if keyword used
+                        CALL WrScr('Point '//trim(Num2LStr(l))//' depth set to be on the seabed; finding z location based on depth/bathymetry')      ! interpret the anchor depth value as a 'seabed' input
+                        CALL getDepthFromBathymetry(m%BathymetryGrid, m%BathGrid_Xs, m%BathGrid_Ys, tempArray(1), tempArray(2), depth, nvec)         ! meaning the anchor should be at the depth of the local bathymetry
+                        tempArray(3) = -depth
+                     else                                                       ! if the anchor depth input isn't one of the supported keywords, 
+                        READ(tempString4, *, IOSTAT=ErrStat2) tempArray(3)      ! assume it's a scalar depth value
+                        !TODO: add error check for if the above read fails
+                     end if
                         
                      ! not used
                      m%ConnectList(l)%conFX = 0.0_DbKi 
@@ -839,14 +1120,14 @@ p%WaterKin  = 0
                   
 
                   IF ( ErrStat2 /= 0 ) THEN
-                     CALL WrScr('   Unable to parse Connection '//trim(Num2LStr(I))//' row in input file.')  ! Specific screen output because errors likely
-                     CALL WrScr('   Ensure row has all 12 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
+                     CALL WrScr('   Unable to parse Point '//trim(Num2LStr(l))//' row in input file.')  ! Specific screen output because errors likely
+                     CALL WrScr('   Ensure row has all 9 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
                         CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
                      CALL CleanUp()
                      RETURN
                   END IF
                   
-
+                  m%ConnectList(l)%r = tempArray(1:3)   ! set initial, or reference, node position (for coupled or child objects, this will be the local reference location about the parent)
 
                   !----------- process connection type -----------------
 
@@ -855,7 +1136,7 @@ p%WaterKin  = 0
                      if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then
                          m%ConnectList(l)%typeNum = 1
                      
-                     m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
                      CALL Body_AddConnect(m%GroundBody, l, tempArray(1:3))   ! add connection l to Ground body                     
 
@@ -869,23 +1150,18 @@ p%WaterKin  = 0
                            CALL Body_AddConnect(m%BodyList(J), l, tempArray(1:3))   ! add connection l to Ground body
                            
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Body ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Body ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
                            return
                         end if                     
                      else
-                        CALL SetErrStat( ErrID_Severe,  "No number provided for Connection "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Body attachment.", ErrStat, ErrMsg, RoutineName )   
                             return
                      end if
                   
                   else if ((let1 == "VESSEL") .or. (let1 == "VES") .or. (let1 == "COUPLED") .or. (let1 == "CPLD")) then    ! if a fairlead, add to list and add 
                      m%ConnectList(l)%typeNum = -1
-                     p%nCpldCons=p%nCpldCons+1  ! add this point to coupled list                          
-                     m%CpldConIs(p%nCpldCons) = l
-
-                     ! temporarily set node position to relative position in input file
-                     m%ConnectList(l)%r(1) = tempArray(1)
-                     m%ConnectList(l)%r(2) = tempArray(2)
-                     m%ConnectList(l)%r(3) = tempArray(3)
+                     p%nCpldCons(1)=p%nCpldCons(1)+1                       
+                     m%CpldConIs(p%nCpldCons(1),1) = l
                  
                   else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
                      m%ConnectList(l)%typeNum = 0
@@ -898,17 +1174,32 @@ p%WaterKin  = 0
                      
                      m%FreeConIs(p%nFreeCons) = l
                      
-                     m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
+                     !m%ConnectList(l)%r = tempArray(1:3)   ! set initial node position
                      
-                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then
-                     print *, 'FUTURE FAST.Farm feature'
-                     ! iTurbine = num1
-                     ! >>> nvm: this is where we could identify the element index in the corresponding mesh in u%FarmCoupledKinematics(iTurbine) for this coupled point
-                     !          nvm:   using info from InitInp%FarmNCpldBodies, InitInp%FarmNCpldRods, !InitInp%FarmNCpldCons  
-                     ! >>> nvm: Then store iTurbine and the element index IN THIS POINT OBJECT, for easy use with input and output meshes! <<<
-                     ! >>> Do all the initialization stuff as is done with normal coupled points. 
+                  else if ((let1 == "TURBINE") .or. (let1 == "T")) then  ! turbine-coupled in FAST.Farm case
+                  
+                     if (len_trim(num1) > 0) then                     
+                        READ(num1, *) J   ! convert to int, representing turbine index
+                        
+                        if ((J <= p%nTurbines) .and. (J > 0)) then
+                           
+                           m%ConnectList(l)%TypeNum = -1            ! set as coupled type   
+                           p%nCpldCons(J) = p%nCpldCons(J) + 1      ! increment counter for the appropriate turbine                   
+                           m%CpldConIs(p%nCpldCons(J),J) = l
+                           CALL WrScr(' added connection '//TRIM(int2lstr(l))//' as fairlead for turbine '//trim(int2lstr(J)))
+                           
+                           
+                        else
+                           CALL SetErrStat( ErrID_Fatal,  "Turbine ID out of bounds for Connection "//trim(Num2LStr(l))//".", ErrStat, ErrMsg, RoutineName )  
+                           return
+                        end if   
+                     else
+                        CALL SetErrStat( ErrID_Fatal,  "No number provided for Connection "//trim(Num2LStr(l))//" Turbine attachment.", ErrStat, ErrMsg, RoutineName )   
+                            return
+                     end if
+                  
                   else 
-                     CALL SetErrStat( ErrID_Severe,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString2), ErrStat, ErrMsg, RoutineName )   
+                     CALL SetErrStat( ErrID_Fatal,  "Unidentified Type/BodyID for Connection "//trim(Num2LStr(l))//": "//trim(tempString1), ErrStat, ErrMsg, RoutineName )
                      return
                   end if
                   
@@ -916,13 +1207,7 @@ p%WaterKin  = 0
                   m%ConnectList(l)%rd(1) = 0.0_DbKi
                   m%ConnectList(l)%rd(2) = 0.0_DbKi
                   m%ConnectList(l)%rd(3) = 0.0_DbKi
-                  
-                  ! possibly redundant <<< should revisit                  
-                  m%ConnectList(l)%conX = tempArray(1)
-                  m%ConnectList(l)%conY = tempArray(2)
-                  m%ConnectList(l)%conZ = tempArray(3)
-
-         
+                           
                   !also set number of attached lines to zero initially
                   m%ConnectList(l)%nAttached = 0
 
@@ -936,7 +1221,7 @@ p%WaterKin  = 0
                   
 
                   IF ( ErrStat2 /= 0 ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Failed to read rod data for Connection '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                     CALL SetErrStat( ErrID_Fatal, 'Failed to read data for Connection '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                      CALL CleanUp()
                      RETURN
                   END IF
@@ -960,30 +1245,41 @@ p%WaterKin  = 0
                   !read into a line
                   Line = NextLine(i)
 
-                   ! parse out entries: LineID  LineType  UnstrLen  NumSegs  NodeA  NodeB  Flags/Outputs
-                  IF (ErrStat2 == 0) THEN
-                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
-                        m%LineList(l)%N, tempString2, tempString3, LineOutString
+                  ! check for correct number of columns in current line
+                  IF ( CountWords( Line ) /= 7 ) THEN
+                      CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
+                      CALL CleanUp()
+                      RETURN
                   END IF
                   
-                  !note: m%LineList(I)%CtrlChan should aready be initialized to zero as per the registry
-                  
+                   ! parse out entries: ID  LineType  AttachA  AttachB     UnstrLen  NumSegs   Outputs  (note: order changed Dec 13, 2021 before MDv2 release) 
+                  IF (ErrStat2 == 0) THEN
+                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, tempString2, tempString3, &
+                        m%LineList(l)%UnstrLen, m%LineList(l)%N,  LineOutString
+                  END IF
+                                    
                   ! identify index of line type
                   DO J = 1,p%nLineTypes
                      IF (trim(tempString1) == trim(m%LineTypeList(J)%name)) THEN
                        m%LineList(l)%PropsIdNum = J
                        EXIT
-                       IF (J == p%nLineTypes) THEN   ! call an error if there is no match
-                           CALL SetErrStat( ErrID_Severe, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
                        END IF
-                     END IF
+                       IF (J == p%nLineTypes) THEN   ! call an error if there is no match
+                           CALL SetErrStat( ErrID_Fatal, 'Unable to find matching line type name for Line '//trim(Num2LStr(l)), ErrStat, ErrMsg, RoutineName )
+                           RETURN
+                       END IF
                   END DO
                   
                   ! account for states of line
                   m%LineStateIs1(l) = Nx + 1
-                  m%LineStateIsN(l) = Nx + 6*m%LineList(l)%N - 6
-                  Nx = Nx + 6*(m%LineList(l)%N - 1)       
-                
+                  if (m%LineTypeList(m%LineList(l)%PropsIdNum)%ElasticMod == 2) then
+                     Nx = Nx + 7*m%LineList(l)%N - 6       ! if using viscoelastic model, need one more state per segment
+                     m%LineStateIsN(l) = Nx          
+                  else
+                     Nx = Nx + 6*m%LineList(l)%N - 6       ! normal case, just 6 states per internal node   
+                     m%LineStateIsN(l) = Nx          
+                  end if
+                  
                   ! Process attachment identfiers and attach line ends 
                   
                   ! First for the anchor (or end A)...
@@ -991,7 +1287,7 @@ p%WaterKin  = 0
                   call DecomposeString(tempString2, let1, num1, let2, num2, let3)
                   
                   if (len_trim(num1)<1) then
-                     CALL SetErrStat( ErrID_Severe,  "Error: no number provided for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                      return
                   end if 
 
@@ -1006,11 +1302,11 @@ p%WaterKin  = 0
                         else if (let2 == "B") then 
                            CALL Rod_AddLine(m%RodList(J), l, 0, 1)   ! add line l (end A, denoted by 0) to rod J (end B, denoted by 1)
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end A attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                   
@@ -1020,7 +1316,7 @@ p%WaterKin  = 0
                      if ((J <= p%nConnects) .and. (J > 0)) then                  
                         CALL Connect_AddLine(m%ConnectList(J), l, 0)   ! add line l (end A, denoted by 0) to connection J
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end A attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1032,7 +1328,7 @@ p%WaterKin  = 0
                   call DecomposeString(tempString3, let1, num1, let2, num2, let3)
 
                   if (len_trim(num1)<1) then
-                     CALL SetErrStat( ErrID_Severe,  "Error: no number provided for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                     CALL SetErrStat( ErrID_Fatal,  "Error: no number provided for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                      return
                   end if 
 
@@ -1047,11 +1343,11 @@ p%WaterKin  = 0
                         else if (let2 == "B") then 
                            CALL Rod_AddLine(m%RodList(J), l, 1, 1)   ! add line l (end B, denoted by 1) to rod J (end B, denoted by 1)
                         else
-                           CALL SetErrStat( ErrID_Severe,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
+                           CALL SetErrStat( ErrID_Fatal,  "Error: rod end (A or B) must be specified for line "//trim(Num2LStr(l))//" end B attachment. Instead seeing "//let2, ErrStat, ErrMsg, RoutineName )  
                             return
                         end if
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: rod connection ID out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
 
@@ -1061,7 +1357,7 @@ p%WaterKin  = 0
                      if ((J <= p%nConnects) .and. (J > 0)) then                  
                         CALL Connect_AddLine(m%ConnectList(J), l, 1)   ! add line l (end B, denoted by 1) to connection J
                      else
-                        CALL SetErrStat( ErrID_Severe,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
+                        CALL SetErrStat( ErrID_Fatal,  "Error: connection out of bounds for line "//trim(Num2LStr(l))//" end B attachment.", ErrStat, ErrMsg, RoutineName )  
                         return
                      end if
                         
@@ -1084,6 +1380,7 @@ p%WaterKin  = 0
                   IF ( scan( LineOutString, 'c') > 0 )  m%LineList(l)%OutFlagList(11) = 1  ! segment internal damping force
                   IF ( scan( LineOutString, 's') > 0 )  m%LineList(l)%OutFlagList(12) = 1  ! Segment strain
                   IF ( scan( LineOutString, 'd') > 0 )  m%LineList(l)%OutFlagList(13) = 1  ! Segment strain rate
+                  IF ( scan( LineOutString, 'l') > 0 )  m%LineList(l)%OutFlagList(14) = 1  ! Segment stretched length
 
                   IF (SUM(m%LineList(l)%OutFlagList) > 0)   m%LineList(l)%OutFlagList(1) = 1  ! this first entry signals whether to create any output file at all
                   ! the above letter-index combinations define which OutFlagList entry corresponds to which output type
@@ -1102,7 +1399,7 @@ p%WaterKin  = 0
                   
                   
                   ! setup line
-                  CALL SetupLine( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
+                  CALL SetupLine( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p, ErrStat2, ErrMsg2)
                      CALL CheckError( ErrStat2, ErrMsg2 )
                      IF (ErrStat >= AbortErrLev) RETURN
                      
@@ -1144,12 +1441,12 @@ p%WaterKin  = 0
                      if (TempIDnums(J) <= p%nLines) then      ! ensure line ID is in range
                         if (m%LineList( TempIDnums(J) )%CtrlChan == 0) then      ! ensure line doesn't already have a CtrlChan assigned 
                            m%LineList( TempIDnums(J) )%CtrlChan = Itemp
-                           print *, 'Assigned Line ', TempIDnums(J), ' to control channel ', Itemp
+                           CALL WrScr('Assigned Line '//TRIM(Int2LStr(TempIDnums(J)))//' to control channel '//TRIM(Int2LStr(Itemp)))
                         else
-                           print *, 'Error: Line ', TempIDnums(J), ' already is assigned to control channel ', m%LineList( TempIDnums(J) )%CtrlChan, ' so cannot also be assigned to channel ', Itemp 
+                           CALL WrScr('Error: Line '//TRIM(Int2LStr(TempIDnums(J)))//' already is assigned to control channel '//TRIM(Int2LStr(m%LineList( TempIDnums(J) )%CtrlChan))//' so cannot also be assigned to channel '//TRIM(Int2LStr(Itemp)))
                         end if                     
                      else
-                        print *, 'Error: Line ID ', TempIDnums(J), ' of CtrlChan ', Itemp, ' is out of range' 
+                        CALL WrScr('Error: Line ID '//TRIM(Int2LStr(TempIDnums(J)))//' of CtrlChan '//TRIM(Int2LStr(Itemp))//' is out of range')
                      end if
                   
                   END DO
@@ -1182,62 +1479,6 @@ p%WaterKin  = 0
                
                
             !-------------------------------------------------------------------------------------------
-            else if (INDEX(Line, "OPTIONS") > 0) then ! if options header
-
-               IF (wordy > 0) print *, "Reading Options"
-               
-               ! (don't skip any lines)
-               
-               ! process each line
-               DO l = 1,nOpts
-                  
-                  !read into a line
-                  Line = NextLine(i)
-
-                  ! parse out entries:  value, option keyword
-                  READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
-                  
-
-                  IF ( ErrStat2 /= 0 ) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Failed to read options.', ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line had the error
-                     CALL CleanUp()
-                     RETURN
-                  END IF
-                              
-                  CALL Conv2UC(OptString)
-
-                  ! check all possible options types and see if OptString is one of them, in which case set the variable.
-!FIXME: if some of these are not found in the input file they won't get set
-                  if ( OptString == 'DTM') THEN
-                     read (OptValue,*) p%dtM0   ! InitInp%DTmooring
-                  else if ( OptString == 'G') then
-                     read (OptValue,*) p%g
-                  else if ( OptString == 'RHOW') then
-                     read (OptValue,*) p%rhoW
-                  else if ( OptString == 'WTRDPTH') then
-                     read (OptValue,*) p%WtrDpth
-                  else if ( OptString == 'KBOT')  then
-                     read (OptValue,*) p%kBot
-                  else if ( OptString == 'CBOT')  then
-                     read (OptValue,*) p%cBot
-                  else if ( OptString == 'DTIC')  then
-                     read (OptValue,*) InputFileDat%dtIC
-                  else if ( OptString == 'TMAXIC')  then
-                     read (OptValue,*) InputFileDat%TMaxIC
-                  else if ( OptString == 'CDSCALEIC')  then
-                     read (OptValue,*) InputFileDat%CdScaleIC
-                  else if ( OptString == 'THRESHIC')  then
-                     read (OptValue,*) InputFileDat%threshIC
-                  else if ( OptString == 'WATERKIN')  then
-                     read (OptValue,*) p%WaterKin
-                  else
-                     CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
-                  end if
-
-               END DO
-
-
-            !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "OUTPUT") > 0) then ! if output header
 
                IF (wordy > 0) print *, "Reading Outputs"
@@ -1258,11 +1499,19 @@ p%WaterKin  = 0
                DO
                   ! read a line
                   Line = NextLine(i)
+                  Line = adjustl(trim(Line))   ! remove leading whitespace
 
                   CALL Conv2UC(Line)   ! convert to uppercase for easy string matching
 
                   if ((INDEX(Line, "---") > 0) .or. (INDEX(Line, "END") > 0)) EXIT ! stop if we hit a header line or the keyword "END"
                      
+                  ! Check if we have a quoted string at the beginning.  Ignore anything outside the quotes if so (this is the ReadVar behaviour for quoted strings).
+                  IF (SCAN(Line(1:1), '''"' ) == 1_IntKi ) THEN
+                     QuoteCh = SCAN( Line(2:), '''"' )            ! last quote
+                     IF (QuoteCh < 1)  QuoteCh = LEN_TRIM(Line)   ! in case no end quote
+                     Line(QuoteCh+2:) = ' '    ! blank out everything after last quote
+                  END IF
+
                   NumWords = CountWords( Line )    ! The number of words in Line.
 
                   p%NumOuts = p%NumOuts + NumWords  ! The total number of output channels read in so far.
@@ -1364,6 +1613,13 @@ p%WaterKin  = 0
    IF (wordy > 2) print *, "CpldConIs are ", m%CpldConIs
 
 
+   ! write system description to log file
+   if (p%writeLog > 1) then
+      write(p%UnLog, '(A)') "----- MoorDyn Model Summary (to be written) -----"
+   end if
+
+
+
       !------------------------------------------------------------------------------------
       !                          fill in state vector index record holders
       !------------------------------------------------------------------------------------
@@ -1427,21 +1683,23 @@ p%WaterKin  = 0
       IF (wordy > 0) print *, "allocating state vectors to size ", Nx
 
       ! allocate state vector and temporary state vectors based on size just calculated
-      ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
+      ALLOCATE ( x%states(m%Nx), m%xTemp%states(m%Nx), m%xdTemp%states(m%Nx), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating state vectors.'
         !CALL CleanUp()
         RETURN
       END IF
-
+      x%states        = 0.0_DbKi
+      m%xTemp%states  = 0.0_DbKi
+      m%xdTemp%states = 0.0_DbKi
 
 
 
       ! ================================ initialize system ================================
-
-
+      ! This will also set the initial positions of any dependent (child) objects
 
       ! call ground body to update all the fixed things...
+      m%GroundBody%r6(4:6) = 0.0_DbKi
       CALL Body_SetDependentKin(m%GroundBody, 0.0_DbKi, m)
 
     ! m%GroundBody%OrMat = EulerConstruct( m%GroundBody%r6(4:6) ) ! make sure it's OrMat is set up  <<< need to check this approach
@@ -1456,107 +1714,157 @@ p%WaterKin  = 0
    !   END DO 
       
       
-      
-      
       ! Initialize coupled objects based on passed kinematics
       ! (set up initial condition of each coupled object based on values specified by glue code) 
-      ! Also create i/o meshes 
+      ! Also create i/o meshes       
       
-      ! <<<<<<<< look here when changing to shared mooring compatibility
+      ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
+        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledKinematics input array.')
+        RETURN
+      END IF
+      ALLOCATE ( y%CoupledLoads(p%nTurbines), STAT = ErrStat2 )
+      IF ( ErrStat2 /= ErrID_None ) THEN
+        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledLoads output array.')
+        RETURN
+      END IF
+      
+      ! Go through each turbine and set up its mesh and initial positions of coupled objects
+      DO iTurb = 1,p%nTurbines
 
-      ! create input mesh for all coupled objects (as mesh node points)
-      CALL MeshCreate(BlankMesh=u%CoupledKinematics, IOS= COMPONENT_INPUT, &
-                    Nnodes = p%nCpldBodies + p%nCpldRods + p%nCpldCons, &
-                    TranslationDisp=.TRUE., TranslationVel=.TRUE., &
-                    Orientation=.TRUE., RotationVel=.TRUE., &
-                    TranslationAcc=.TRUE., RotationAcc= .TRUE., &
-                     ErrStat=ErrStat2, ErrMess=ErrMsg2)
+         ! calculate rotation matrix OrMat for the initial orientation provided for this turbine
+         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4,iTurb),InitInp%PtfmInit(5,iTurb),InitInp%PtfmInit(6,iTurb), OrMat, '', ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+         ! count number of coupling nodes needed for the mesh of this turbine
+         K = p%nCpldBodies(iTurb) + p%nCpldRods(iTurb) + p%nCpldCons(iTurb)
+         if (K == 0) K = 1         ! Always have at least one node (it will be a dummy node if no fairleads are attached)
 
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF (ErrStat >= AbortErrLev) RETURN
+         ! create input mesh for fairlead kinematics
+         CALL MeshCreate(BlankMesh=u%CoupledKinematics(iTurb) , &
+                       IOS= COMPONENT_INPUT, Nnodes = K, &
+                       TranslationDisp=.TRUE., TranslationVel=.TRUE., &
+                       Orientation=.TRUE., RotationVel=.TRUE., &
+                       TranslationAcc=.TRUE., RotationAcc= .TRUE., &
+                       ErrStat=ErrStat2, ErrMess=ErrMsg2)
+
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+         ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
+         ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation -- below or where the objects are first created <<<<
+         
+         
+         J = 0 ! this is the counter through the mesh points for each turbine
+         
+         DO l = 1,p%nCpldBodies(iTurb)
+            J = J + 1
+         
+            rRef = m%BodyList(m%CpldBodyIs(l,iTurb))%r6              ! for now set reference position as per input file <<< 
+            !OrMatRef = 
             
-      ! note: in MoorDyn-F v2, the points in the mesh correspond in order to all the coupled bodies, then rods, then connections
-      ! >>> make sure all coupled objects have been offset correctly by the PtfmInit values, including if it's a farm situation below
-      
-      J = 0 ! this is the counter through the mesh points
-      
-      DO l = 1,p%nCpldBodies
-      
-         J = J + 1
-      
-         rRef = m%BodyList(m%CpldBodyIs(l))%r6              ! for now set reference position as per input file <<< 
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
+            !TODO: >>> should also maybe set reference orientation (which might make part of a couple lines down redundant) <<<
+            
+            ! calculate initial point relative position, adjusted due to initial platform translations
+            u%CoupledKinematics(iTurb)%TranslationDisp(:,J) = InitInp%PtfmInit(1:3,iTurb) - rRef(1:3)
+            
+            OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Body's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the body <<<
+
+            ! set absolute initial positions in MoorDyn
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            m%BodyList(m%CpldBodyIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6)))))     ! apply rotation from PtfmInit onto input file's body orientation to get its true initial orientation
+
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
+            
+            ! lastly, do this to initialize any attached Rods or Points and set their positions
+            CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l,iTurb)), m )
+
+         END DO 
          
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef(1:3), ErrStat2, ErrMsg2) ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
+         DO l = 1,p%nCpldRods(iTurb)   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
+            J = J + 1
+            
+            rRef = m%RodList(m%CpldRodIs(l,iTurb))%r6          ! for now set reference position as per input file <<< 
+            OrMatRef = TRANSPOSE( m%RodList(m%CpldRodIs(l,iTurb))%OrMat )  ! for now set reference orientation as per input file <<< 
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2, OrMatRef)  ! assign the reference position and orientation
+            
+            ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+            
+            OrMat2 = MATMUL(OrMat, TRANSPOSE( EulerConstruct( rRef(4:6))))  ! combine the Rod's relative orientation with the turbine's initial orientation
+            u%CoupledKinematics(iTurb)%Orientation(:,:,J) = OrMat2          ! set the result as the current orientation of the rod <<<
+            
+            ! set absolute initial positions in MoorDyn
+            m%RodList(m%CpldRodIs(l,iTurb))%r6(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            m%RodList(m%CpldRodIs(l,iTurb))%r6(4:6) = EulerExtract(MATMUL(OrMat, OrMatRef))     ! apply rotation from PtfmInit onto input file's rod orientation to get its true initial orientation
+            
+            ! >>> still need to set Rod initial orientations accounting for PtfmInit rotation <<<
+            
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+            
+            ! lastly, do this to set the attached line endpoint positions:
+            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
+         END DO 
+
+         DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
+            J = J + 1
+            
+            ! set reference position as per input file  <<< what about turbine positions in array?
+            rRef(1:3) = m%ConnectList(m%CpldConIs(l,iTurb))%r                           
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), J, rRef(1:3), ErrStat2, ErrMsg2)  
+            
+            ! calculate initial point relative position, adjusted due to initial platform rotations and translations  <<< could convert to array math
+            u%CoupledKinematics(iTurb)%TranslationDisp(1,J) = InitInp%PtfmInit(1,iTurb) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
+            u%CoupledKinematics(iTurb)%TranslationDisp(2,J) = InitInp%PtfmInit(2,iTurb) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
+            u%CoupledKinematics(iTurb)%TranslationDisp(3,J) = InitInp%PtfmInit(3,iTurb) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
+                 
+            ! set absolute initial positions in MoorDyn
+            m%ConnectList(m%CpldConIs(l,iTurb))%r = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
+
+            ! lastly, do this to set the attached line endpoint positions:
+            rRefDub = rRef(1:3)
+            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
+         END DO 
+
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+         ! if no coupled objects exist for this turbine, add a single dummy element to keep I/O interp/extrap routines happy
+         if (J == 0) then
+            rRef = 0.0_DbKi       ! position at PRP
+            CALL MeshPositionNode(u%CoupledKinematics(iTurb), 1, rRef, ErrStat2, ErrMsg2)
+            CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, 1)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+         end if
+         
+         ! set velocities/accelerations of all mesh nodes to zero
+         u%CoupledKinematics(iTurb)%TranslationVel = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%TranslationAcc = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%RotationVel    = 0.0_ReKi
+         u%CoupledKinematics(iTurb)%RotationAcc    = 0.0_ReKi
+
+         CALL MeshCommit ( u%CoupledKinematics(iTurb), ErrStat2, ErrMsg )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+         ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
+         CALL MeshCopy ( SrcMesh  = u%CoupledKinematics(iTurb),   DestMesh = y%CoupledLoads(iTurb), &
+                         CtrlCode = MESH_SIBLING,  IOS = COMPONENT_OUTPUT, &
+                         Force = .TRUE.,  Moment = .TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
 
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
-      !   ! Apply offsets due to initial platform rotations and translations (fixed Jun 19, 2015)
-      !   CALL SmllRotTrans('body rotation matrix', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
-      !   u%CoupledKinematics%TranslationDisp(1, i) = InitInp%PtfmInit(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-      !   u%CoupledKinematics%TranslationDisp(2, i) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-      !   u%CoupledKinematics%TranslationDisp(3, i) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-         
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)      ! set node as point element
-         CALL Body_InitializeUnfree( m%BodyList(m%CpldBodyIs(l)), m )
-
-      END DO 
-      
-      DO l = 1,p%nCpldRods   ! keeping this one simple for now, positioning at whatever is specified in input file <<<<< should change to glue code!
-
-         J = J + 1
-         
-         rRef = m%RodList(m%CpldRodIs(l))%r6    ! for now set reference position as per input file <<< 
-         
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)  ! defaults to identity orientation matrix
-         u%CoupledKinematics%TranslationDisp(:,J) = 0.0_ReKi   ! no displacement from reference position
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
-         
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
-      END DO 
-
-      DO l = 1,p%nCpldCons   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
-      
-         J = J + 1
-         
-         ! set reference position as per input file
-         rRef(1:3) = m%ConnectList(m%CpldConIs(l))%r                             
-         CALL MeshPositionNode(u%CoupledKinematics, J, rRef, ErrStat2, ErrMsg2)
-         
-         ! set initial node position, including adjustments due to initial platform rotations and translations  <<< could convert to array math
-         CALL SmllRotTrans('PtfmInit', InitInp%PtfmInit(4),InitInp%PtfmInit(5),InitInp%PtfmInit(6), OrMat, '', ErrStat2, ErrMsg2)
-         m%ConnectList(m%CpldConIs(l))%r(1) = InitInp%PtfmInit(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3)
-         m%ConnectList(m%CpldConIs(l))%r(2) = InitInp%PtfmInit(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3)
-         m%ConnectList(m%CpldConIs(l))%r(3) = InitInp%PtfmInit(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3)
-         
-         u%CoupledKinematics%TranslationDisp(:,J) = m%ConnectList(m%CpldConIs(l))%r - rRef(1:3)   ! initial displacement from reference position
-         CALL MeshConstructElement(u%CoupledKinematics, ELEMENT_POINT, ErrStat2, ErrMsg2, J)
-
-         ! lastly, do this to set the attached line endpoint positions:
-         rRefDub = rRef(1:3)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), rRefDub, m%zeros6(1:3), m%zeros6(1:3), 0.0_DbKi, m)
-      END DO 
-
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-         
-      ! set velocities/accelerations of all mesh nodes to zero
-      u%CoupledKinematics%TranslationVel = 0.0_ReKi
-      u%CoupledKinematics%TranslationAcc = 0.0_ReKi
-      u%CoupledKinematics%RotationVel    = 0.0_ReKi
-      u%CoupledKinematics%RotationAcc    = 0.0_ReKi
-
-      CALL MeshCommit ( u%CoupledKinematics, ErrStat, ErrMsg )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-      ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
-      CALL MeshCopy ( SrcMesh  = u%CoupledKinematics, DestMesh = y%CoupledLoads, &
-                      CtrlCode = MESH_SIBLING,             IOS      = COMPONENT_OUTPUT, &
-                      Force=.TRUE.,  Moment=.TRUE.,  ErrStat  = ErrStat2, ErrMess=ErrMsg2 )
-
-      
+      end do  ! iTurb
+   
       ! >>>>>> ensure the output mesh includes all elements from u%(Farm)CoupledKinematics, OR make a seperate array of output meshes for each turbine <<<<<<<<<
       
 
@@ -1598,268 +1906,10 @@ p%WaterKin  = 0
       endif
       
       
-      ! ----------------------------- Arrays for wave kinematics -----------------------------
+      ! >>> set up wave stuff here??? <<<
+      
       
       m%WaveTi = 1   ! set initial wave grid time interpolation index to 1 to start with
-      
-  !   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
-  !   ! The rAll array contains all nodes or reference points in the system 
-  !   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
-  !   
-  !   ! count the number of nodes to use for passing wave kinematics
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   J = J + p%nBodies
-  !   ! Rod node coordinates (including ends)
-  !   DO l = 1, p%nRods
-  !      J = J + (m%RodList(l)%N + 1)
-  !   END DO
-  !   ! Point reference point coordinates
-  !   J = J + p%nConnects
-  !   ! Line internal node coordinates
-  !   DO l = 1, p%nLines
-  !      J = J + (m%LineList(l)%N - 1)
-  !   END DO
-  !
-  !   ! allocate all relevant arrays
-  !   ! allocate state vector and temporary state vectors based on size just calculated
-  !   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
-  !   IF ( ErrStat /= ErrID_None ) THEN
-  !     ErrMsg  = ' Error allocating wave kinematics vectors.'
-  !     RETURN
-  !   END IF
-  !
-  !
-  !   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   DO I = 1, p%nBodies
-  !      J = J + 1                     
-  !      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
-  !   END DO
-  !   ! Rod node coordinates
-  !   DO I = 1, p%nRods
-  !      DO K = 0,m%RodList(I)%N  
-  !         J = J + 1             
-  !         y%rAll(:,J) = m%RodList(I)%r(:,K)
-  !      END DO
-  !   END DO
-  !   ! Point reference point coordinates
-  !   DO I = 1, p%nConnects
-  !      J = J + 1
-  !      y%rAll(:,J) = m%ConnectList(I)%r
-  !   END DO      
-  !   ! Line internal node coordinates
-  !   DO I = 1, p%nLines
-  !      DO K = 1,m%LineList(I)%N-1
-  !         J = J + 1               
-  !         y%rAll(:,J) = m%LineList(I)%r(:,K)
-  !      END DO
-  !   END DO  
-      
-      ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
-      ! allocate arrays
-      ntWave = SIZE(InitInp%WaveTime)      
-      ALLOCATE ( p%ux  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%uy  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%uz  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%ax  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%ay  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%az  (ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%PDyn(ntWave,WaveGrid_nz,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%zeta(ntWave,WaveGrid_ny,WaveGrid_nx), STAT = ErrStat2 )    ! 2D grid over x and y only
-      ALLOCATE ( p%px(WaveGrid_nx), STAT = ErrStat2 )
-      ALLOCATE ( p%py(WaveGrid_ny), STAT = ErrStat2 )
-      ALLOCATE ( p%pz(WaveGrid_nz), STAT = ErrStat2 )
-      ALLOCATE ( p%tWave(ntWave), STAT = ErrStat2 )
-      
-      ! get grid and time info (currenltly this is hard-coded to match what's in HydroDyn_Input
-      DO I=1,WaveGrid_nz
-         p%pz(I) =  1.0 - 2.0**(WaveGrid_nz-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-      END DO
-      DO J = 1,WaveGrid_ny
-         p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
-      END DO
-      DO K = 1,WaveGrid_nx
-         p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
-      END DO
-
-      p%tWave = InitInp%WaveTime
-      
-      ! fill in the grid data (the for loops match those in HydroDyn_Input)
-      DO I=1,WaveGrid_nz
-         DO J = 1,WaveGrid_ny
-            DO K = 1,WaveGrid_nx 
-               Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node on 3D grid
-               
-               p%ux  (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
-               p%uy  (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
-               p%uz  (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
-               p%ax  (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
-               p%ay  (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
-               p%az  (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
-               p%PDyn(:,I,J,K) = InitInp%WavePDyn(:,Itemp)
-            END DO
-         END DO
-      END DO
-      
-      ! fill in the grid data (the for loops match those in HydroDyn_Input)      
-      DO J = 1,WaveGrid_ny
-         DO K = 1,WaveGrid_nx
-            Itemp = (J-1)*WaveGrid_nx + K    ! index of actual node on surface 2D grid   
-            p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
-         END DO
-      END DO
-      
-      
-      ! write the date to an output file for testing purposes
-      
-      CALL GetNewUnit( UnOut)
-
-      CALL OpenFOutFile ( UnOut, "waves.txt", ErrStat, ErrMsg )
-      IF ( ErrStat > ErrID_None ) THEN
-         ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-
-      WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'MoorDyn v2 wave/current kinematics grid file' )
-      WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( '---------------------------------------------' )
-      WRITE(UnOut, *, IOSTAT=ErrStat2)  TRIM( 'The following 6 lines (4-9) specify the input type then the inputs for x, then, y, then z coordinates.' )
-      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - X input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-      Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%px(I))), I=1,WaveGrid_nx )
-      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Y input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-      Frmt = '('//TRIM(Int2LStr(5))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%py(I))), I=1,WaveGrid_ny )
-      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  TRIM( '1  - Z input type (0: not used; 1: list values in ascending order; 2: uniform specified by -xlim, xlim, num)' )
-      Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
-      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pz(I))), I=1,WaveGrid_nz )
-      
-      CLOSE(UnOut, IOSTAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         ErrMsg = 'Error closing wave grid file'
-      END IF
-      
-      
-      CALL GetNewUnit( UnOut)
-
-      CALL OpenFOutFile ( UnOut, "wave data.txt", ErrStat, ErrMsg )
-      IF ( ErrStat > ErrID_None ) THEN
-         ErrMsg = ' Error opening wave grid file: '//TRIM(ErrMsg)
-         ErrStat = ErrID_Fatal
-         RETURN
-      END IF
-      
-      ! write channel labels
-      
-      
-      ! time
-      WRITE(UnOut,"(A10)", IOSTAT=ErrStat2, advance="no") "Time"
-   
-      DO J = 1,WaveGrid_ny     !y
-         DO K = 1,WaveGrid_nx  !x 
-            WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ze0", Num2Lstr(J+10*K)
-         END DO
-      END DO
-      DO I=1,WaveGrid_nz          !z
-         DO J = 1,WaveGrid_ny     !y
-            DO K = 1,WaveGrid_nx  !x 
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ux", Num2Lstr(I+10*J+100*K)
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uy", Num2Lstr(I+10*J+100*K)
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " uz", Num2Lstr(I+10*J+100*K)
-            END DO
-         END DO
-      END DO
-      DO I=1,WaveGrid_nz          !z
-         DO J = 1,WaveGrid_ny     !y
-            DO K = 1,WaveGrid_nx  !x 
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ax", Num2Lstr(I+10*J+100*K)
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " ay", Num2Lstr(I+10*J+100*K)
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " az", Num2Lstr(I+10*J+100*K)
-            END DO
-         END DO
-      END DO
-      DO I=1,WaveGrid_nz          !z
-         DO J = 1,WaveGrid_ny     !y
-            DO K = 1,WaveGrid_nx  !x 
-               WRITE(UnOut,"(A3,A8)", IOSTAT=ErrStat2, advance="no") " pd", Num2Lstr(I+10*J+100*K)
-            END DO
-         END DO
-      END DO
-   
-      ! end the line
-      WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
-      
-      
-      
-      DO l=1, SIZE(InitInp%WaveTime)  ! loop through all time steps
-      
-         ! time
-         WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") p%tWave(l)
-         !WRITE(UnOut,"(F10.4)", IOSTAT=ErrStat2, advance="no") InitInp%WaveTime(l)
-      
-         ! wave elevation (all slices for now, to check)
-         DO J = 1,WaveGrid_ny     !y
-            DO K = 1,WaveGrid_nx  !x 
-               Itemp = (J-1)*WaveGrid_nx + K    ! index of actual node
-               
-               WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%zeta(l,J,K)
-            END DO
-         END DO
-      
-         ! wave velocities
-         DO I=1,WaveGrid_nz          !z
-            DO J = 1,WaveGrid_ny     !y
-               DO K = 1,WaveGrid_nx  !x 
-                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
-                  
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ux(l,I,J,K)
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uy(l,I,J,K)
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%uz(l,I,J,K)
-               END DO
-            END DO
-         END DO
-         
-         ! wave accelerations
-         DO I=1,WaveGrid_nz          !z
-            DO J = 1,WaveGrid_ny     !y
-               DO K = 1,WaveGrid_nx  !x 
-                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
-                  
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ax(l,I,J,K)
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%ay(l,I,J,K)
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%az(l,I,J,K)
-               END DO
-            END DO
-         END DO
-      
-         ! dynamic pressure
-         DO I=1,WaveGrid_nz          !z
-            DO J = 1,WaveGrid_ny     !y
-               DO K = 1,WaveGrid_nx  !x 
-                  Itemp = (I-1)*WaveGrid_nx*WaveGrid_ny + (J-1)*WaveGrid_nx + K    ! index of actual node
-                  
-                  WRITE(UnOut,"(A1,e10.3)", IOSTAT=ErrStat2, advance="no") " ", p%PDyn(l,I,J,K)
-               END DO
-            END DO
-         END DO
-      
-         ! end the line
-         WRITE(UnOut, "(A1)", IOSTAT=ErrStat2) " "
-      
-      
-      END DO
-      
-      
-      CLOSE(UnOut, IOSTAT = ErrStat )
-      IF ( ErrStat /= 0 ) THEN
-         ErrMsg = 'Error closing wave grid file'
-      END IF
-      
       
       
    !   Frmt = '(A10,'//TRIM(Int2LStr(p%NumOuts))//'(A1,A12))'
@@ -1937,6 +1987,14 @@ p%WaterKin  = 0
             END DO
 !            print *, m%LineList(l)%r(:,I)
          END DO
+               
+         ! if using viscoelastic model, initialize the internal states
+         if (m%LineList(l)%ElasticMod == 2) then
+            do I = 1,N
+               x%states(m%LineStateIs1(l) + 6*N-6 + I-1) = m%LineList(l)%dl_1(I)   ! should be zero
+            end do
+         end if
+         
 
       END DO    !l = 1, p%NLines
 
@@ -1966,6 +2024,38 @@ p%WaterKin  = 0
 !      END IF
 !      END DO
 
+      ! -------------------------------------------------------------------
+      !        if log file, compute and write some object properties
+      ! -------------------------------------------------------------------
+      if (p%writeLog > 1) then
+      
+         write(p%UnLog, '(A)'  ) "  Bodies:"         
+         DO l = 1,p%nBodies
+            write(p%UnLog, '(A)'  )         "    Body"//trim(num2lstr(l))//":"            
+            write(p%UnLog, '(A12, f12.4)')  "      mass: ", m%BodyList(l)%M(1,1)
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Rods:"
+         DO l = 1,p%nRods
+            write(p%UnLog, '(A)'  )         "    Rod"//trim(num2lstr(l))//":"  
+            ! m%RodList(l) 
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Points:"
+         DO l = 1,p%nFreeCons
+            write(p%UnLog, '(A)'  )         "    Point"//trim(num2lstr(l))//":"  
+            ! m%ConnectList(l)
+         END DO
+         
+         write(p%UnLog, '(A)'  ) "  Lines:"
+         DO l = 1,p%nLines
+            write(p%UnLog, '(A)'  )         "    Line"//trim(num2lstr(l))//":"  
+            ! m%LineList(l)
+         END DO
+      
+      end if
+
+
       ! --------------------------------------------------------------------
       !           do dynamic relaxation to get ICs
       ! --------------------------------------------------------------------
@@ -1982,8 +2072,8 @@ p%WaterKin  = 0
          END DO
 
          ! allocate array holding 10 latest fairlead tensions
-         ALLOCATE ( FairTensIC(p%nLines, 10), STAT = ErrStat )
-         IF ( ErrStat /= ErrID_None ) THEN
+         ALLOCATE ( FairTensIC(p%nLines, 10), STAT = ErrStat2 )
+         IF ( ErrStat2 /= ErrID_None ) THEN
             CALL CheckError( ErrID_Fatal, ErrMsg2 )
             RETURN
          END IF
@@ -2025,7 +2115,7 @@ p%WaterKin  = 0
                END DO
                
                IF (ErrStat == ErrID_Fatal) THEN
-                  print *, "NaN detected at time ", t, " during MoorDyn's dynamic relaxation process."
+                  CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t))//" during MoorDyn's dynamic relaxation process.")
                   IF (wordy > 1) THEN
                      print *, "Here is the state vector: "
                      print *, x%states
@@ -2109,7 +2199,13 @@ p%WaterKin  = 0
       xd%dummy    = 0
       z%dummy     = 0      
       
+      if (InitInp%Linearize) then
+         call MD_Init_Jacobian(InitInp, p, u, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
+      endif
+      
       CALL WrScr('   MoorDyn initialization completed.')
+      
+      m%LastOutTime = -1.0_DbKi    ! set to nonzero to ensure that output happens at the start of simulation at t=0
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
 
@@ -2128,7 +2224,7 @@ p%WaterKin  = 0
       
       LOGICAL FUNCTION Failed()
 
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MDIO_ReadInput') 
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_Init') 
          Failed = ErrStat >= AbortErrLev
          if (Failed) call CleanUp()
       END FUNCTION Failed
@@ -2174,7 +2270,7 @@ p%WaterKin  = 0
       SUBROUTINE CleanUp()
         ! ErrStat = ErrID_Fatal  
         call MD_DestroyInputFileType( InputFileDat, ErrStat2, ErrMsg2 )    ! Ignore any error messages from this
- !       IF (InitInp%Echo) CLOSE( UnEc )
+        IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )       ! Remove this when the log file is kept open during the full simulation
       END SUBROUTINE
 
       !> If for some reason the file is truncated, it is possible to get into an infinite loop
@@ -2187,6 +2283,7 @@ p%WaterKin  = 0
             NextLine="---"       ! Set as a separator so we can escape some of the while loops
          else
             NextLine=trim(FileInfo_In%Lines(i))
+            !TODO: add comment character recognition here? (discard any characters past a #)
          endif
       end function NextLine
 
@@ -2284,7 +2381,7 @@ p%WaterKin  = 0
          END DO
          
          IF (ErrStat == ErrID_Fatal) THEN
-            print *, "NaN detected at time ", t2, " in MoorDyn."
+            CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
             IF (wordy > 1) THEN
                print *, ". Here is the state vector: "
                print *, x%states
@@ -2315,7 +2412,7 @@ p%WaterKin  = 0
       END DO
       
       IF (ErrStat == ErrID_Fatal) THEN
-         print *, "NaN detected at time ", t2, " in MoorDyn."
+         CALL WrScr("NaN detected at time "//TRIM(Num2LStr(t2))//" in MoorDyn.")
          IF (wordy > 1) THEN
             print *, ". Here is the state vector: "
             print *, x%states
@@ -2372,6 +2469,7 @@ p%WaterKin  = 0
       INTEGER(IntKi)                                 :: J         ! counter
       INTEGER(IntKi)                                 :: K         ! counter
       INTEGER(IntKi)                                 :: l         ! index used for objects
+      INTEGER(IntKi)                                 :: iTurb   ! counter
       
       Real(DbKi)                                     :: F6net(6)  ! net force and moment calculated on coupled objects
     
@@ -2390,7 +2488,7 @@ p%WaterKin  = 0
     !  END DO
       
       
-    ! ! go through nodes and apply wave kinematics from driver
+    ! ! go through nodes and apply wave kinematics from driver (if water kinematics were passed in at each node in future)
     ! IF (p%WaterKin > 0) THEN
     ! 
     !    J=0
@@ -2443,32 +2541,33 @@ p%WaterKin  = 0
     !  END DO
       
       ! now that forces have been updated, write them to the output mesh
-      J = 0
-      DO l = 1,p%nCpldBodies
-         J = J + 1
-         CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l)), F6net, m, p)
-         y%CoupledLoads%Force( :,J) = F6net(1:3)
-         y%CoupledLoads%Moment(:,J) = F6net(4:6)
-      END DO
-            
-      DO l = 1,p%nCpldRods
-         J = J + 1
-         CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l)), F6net, m, p)
-         y%CoupledLoads%Force( :,J) = F6net(1:3)
-         y%CoupledLoads%Moment(:,J) = F6net(4:6)
-      END DO
       
-      DO l = 1,p%nCpldCons
-         J = J + 1
-         CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l)), F6net(1:3), m, p)
-         y%CoupledLoads%Force(:,J) = F6net(1:3)
-      END DO
+      do iTurb = 1,p%nTurbines
       
+         J = 0    ! mesh index
+         DO l = 1,p%nCpldBodies(iTurb)
+            J = J + 1
+            CALL Body_GetCoupledForce(m%BodyList(m%CpldBodyIs(l,iTurb)), F6net, m, p)
+            y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+            y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
+         END DO
+               
+         DO l = 1,p%nCpldRods(iTurb)
+            J = J + 1
+            CALL Rod_GetCoupledForce(m%RodList(m%CpldRodIs(l,iTurb)), F6net, m, p)
+            y%CoupledLoads(iTurb)%Force( :,J) = F6net(1:3)
+            y%CoupledLoads(iTurb)%Moment(:,J) = F6net(4:6)
+         END DO
+         
+         DO l = 1,p%nCpldCons(iTurb)
+            J = J + 1
+            CALL Connect_GetCoupledForce(m%ConnectList(m%CpldConIs(l,iTurb)), F6net(1:3), m, p)
+            y%CoupledLoads(iTurb)%Force(:,J) = F6net(1:3)
+         END DO
+         
+      end do
       
-      
-      
-
-   !  ! write all node positions to the node positons output array
+   !  ! write all node positions to the node positons output array (if water kinematics were passed in at each node in future)
    !  ! go through the nodes and fill in the data (this should maybe be turned into a global function)
    !  J=0
    !  ! Body reference point coordinates
@@ -2560,6 +2659,7 @@ p%WaterKin  = 0
       INTEGER(IntKi)                                     :: I       ! index
       INTEGER(IntKi)                                     :: J       ! index
       INTEGER(IntKi)                                     :: K       ! index
+      INTEGER(IntKi)                                     :: iTurb   ! index
       INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
       INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
 
@@ -2572,16 +2672,20 @@ p%WaterKin  = 0
       REAL(DbKi)                                         :: rd_in(3) ! temporary for passing kinematics
       REAL(DbKi)                                         :: a_in(3)  ! temporary for passing kinematics
 
+      INTEGER(IntKi)                                     :: ErrStat2 ! Error status of the operation
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2  ! Error message if ErrStat2 /= ErrID_None
+      character(*), parameter                            :: RoutineName = 'MD_CalcContStateDeriv'
+      
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg = ""
 
-!      ! allocations of dxdt (as in SubDyn.  "INTENT(OUT) automatically deallocates the arrays on entry, we have to allocate them here"  is this right/efficient?)
-!      ALLOCATE ( dxdt%states(size(x%states)), STAT = ErrStat )
-!      IF ( ErrStat /= ErrID_None ) THEN
-!          ErrMsg  = ' Error allocating dxdt%states array.'
-!          RETURN
-!      END IF
+      ! allocate dxdt if not already allocated (e.g. if called for linearization)
+      IF (.NOT. ALLOCATED(dxdt%states) ) THEN
+         CALL AllocAry( dxdt%states,  SIZE(x%states),  'dxdt%states',  ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      END IF
 
       ! clear connection force and mass values <M<<<<<<<<<<<<<<<<<<<<<<<
       DO L = 1, p%NConnects
@@ -2604,50 +2708,55 @@ p%WaterKin  = 0
       
       ! ---------------------------------- coupled things ---------------------------------
       ! Apply displacement and velocity terms here. Accelerations will be considered to calculate inertial loads at the end.      
+      ! Note: TurbineRefPos is to offset into farm's true global reference based on turbine X and Y reference positions (these should be 0 for regular FAST use)
+         
       
-      J = 0  ! J is the index of the coupling points in the input mesh CoupledKinematics
-      ! any coupled bodies (type -1)
-      DO l = 1,p%nCpldBodies
-         J = J + 1
-         r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics%Orientation(:,:,J) ) )
-         r6_in(4:6) = EulerExtract( u%CoupledKinematics%Orientation(:,:,J) )   ! <<< changing back
-         v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
-      
-         CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l)), r6_in, v6_in, a6_in, t, m)
-      END DO
-      
-      ! any coupled rods (type -1 or -2)    note, rotations ignored if it's a pinned rod
-      DO l = 1,p%nCpldRods
-         J = J + 1
+      DO iTurb = 1, p%nTurbines
+         
+         J = 0  ! J is the index of the coupling points in the input mesh CoupledKinematics
+         ! any coupled bodies (type -1)
+         DO l = 1,p%nCpldBodies(iTurb)
+            J = J + 1
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            !r6_in(4:6) = EulerExtract( TRANSPOSE( u%CoupledKinematics(iTurb)%Orientation(:,:,J) ) )
+            r6_in(4:6) = EulerExtract( u%CoupledKinematics(iTurb)%Orientation(:,:,J) )   ! <<< changing back
+            v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+            a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
+         
+            CALL Body_SetKinematics(m%BodyList(m%CpldBodyIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
+         END DO
+         
+         ! any coupled rods (type -1 or -2)    note, rotations ignored if it's a pinned rod
+         DO l = 1,p%nCpldRods(iTurb)
+            J = J + 1
 
-         r6_in(1:3) = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         r6_in(4:6) = MATMUL( u%CoupledKinematics%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
-         v6_in(1:3) = u%CoupledKinematics%TranslationVel(:,J)
-         v6_in(4:6) = u%CoupledKinematics%RotationVel(:,J)
-         a6_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         a6_in(4:6) = u%CoupledKinematics%RotationAcc(:,J)
-      
-         CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l)), r6_in, v6_in, a6_in, t, m)
- 
-      END DO
-      
-      ! any coupled points (type -1)
-      DO l = 1, p%nCpldCons
-         J = J + 1
+            r6_in(1:3) = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            r6_in(4:6) = MATMUL( u%CoupledKinematics(iTurb)%Orientation(:,:,J) , (/0.0, 0.0, 1.0/) ) ! <<<< CHECK ! adjustment because rod's rotational entries are a unit vector, q
+            v6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            v6_in(4:6) = u%CoupledKinematics(iTurb)%RotationVel(:,J)
+            a6_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            a6_in(4:6) = u%CoupledKinematics(iTurb)%RotationAcc(:,J)
          
-         r_in  = u%CoupledKinematics%Position(:,J) + u%CoupledKinematics%TranslationDisp(:,J)
-         rd_in = u%CoupledKinematics%TranslationVel(:,J)
-         a_in(1:3) = u%CoupledKinematics%TranslationAcc(:,J)
-         CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l)), r_in, rd_in, a_in, t, m)
+            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), r6_in, v6_in, a6_in, t, m)
+    
+         END DO
          
-         !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
-         !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+         ! any coupled points (type -1)
+         DO l = 1, p%nCpldCons(iTurb)
+            J = J + 1
+            
+            r_in  = u%CoupledKinematics(iTurb)%Position(:,J) + u%CoupledKinematics(iTurb)%TranslationDisp(:,J) + p%TurbineRefPos(:,iTurb)
+            rd_in = u%CoupledKinematics(iTurb)%TranslationVel(:,J)
+            a_in(1:3) = u%CoupledKinematics(iTurb)%TranslationAcc(:,J)
+            CALL Connect_SetKinematics(m%ConnectList(m%CpldConIs(l,iTurb)), r_in, rd_in, a_in, t, m)
+            
+            !print "(f8.5, f12.6, f12.6, f8.4, f8.4, f8.4, f8.4)", t, r_in(1), r_in(3), rd_in(1), rd_in(3), a_in(1), a_in(3)
+            
+         END DO
          
-      END DO
+      end do  ! iTurb
       
       
       ! >>>>> in theory I would repeat the above but for each turbine in the case of array use here <<<<<
@@ -2667,7 +2776,7 @@ p%WaterKin  = 0
             IF ( u%DeltaL(m%LineList(L)%CtrlChan) > m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
                 ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment longer than the limit of twice its original length.'
-                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is an increase of more than ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is an increase of more than "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2675,7 +2784,7 @@ p%WaterKin  = 0
             IF ( u%DeltaL(m%LineList(L)%CtrlChan) < -0.5 * m%LineList(L)%UnstrLen / m%LineList(L)%N ) then
              ErrStat = ErrID_Fatal
                 ErrMsg  = ' Active tension command will make a segment shorter than the limit of half its original length.'
-                print *, u%DeltaL(m%LineList(L)%CtrlChan), " is a reduction of more than half of ", (m%LineList(L)%UnstrLen / m%LineList(L)%N)
+                call WrScr(trim(Num2LStr(u%DeltaL(m%LineList(L)%CtrlChan)))//" is a reduction of more than half of "//trim(Num2LStr(m%LineList(L)%UnstrLen / m%LineList(L)%N)))
                 IF (wordy > 0) print *, u%DeltaL
                 IF (wordy > 0) print*, m%LineList(L)%CtrlChan
                 RETURN
@@ -2688,7 +2797,7 @@ p%WaterKin  = 0
       END DO      
       
       
-   !  ! go through nodes and apply wave kinematics from driver
+   !  ! go through nodes and apply wave kinematics from driver (if water kinematics were passed in at each node in future)
    !  IF (p%WaterKin > 0) THEN
    !  
    !     J=0
@@ -2781,27 +2890,30 @@ p%WaterKin  = 0
       ! get dynamics/forces (doRHS()) of coupled objects, which weren't addressed in above calls (this includes inertial loads)
       ! note: can do this in any order since there are no dependencies among coupled objects
       
-      
-      DO l = 1,p%nCpldCons
-      
- !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
- !               in other words are the below good enough or do I need to call _getCoupledFOrce??
-      
-         CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l)), m, p)
-      END DO
-      
-      DO l = 1,p%nCpldRods
-         CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l)), m, p)
-         ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
-      END DO
-      
-      DO l = 1,p%nCpldBodies
-         CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l)), m, p)
-      END DO
+      DO iTurb = 1,p%nTurbines
+         DO l = 1,p%nCpldCons(iTurb)
+         
+    !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
+    !               in other words are the below good enough or do I need to call _getCoupledFOrce??
+         
+            CALL Connect_DoRHS(m%ConnectList(m%CpldConIs(l,iTurb)), m, p)
+         END DO
+         
+         DO l = 1,p%nCpldRods(iTurb)
+            CALL Rod_DoRHS(m%RodList(m%CpldRodIs(l,iTurb)), m, p)
+            ! NOTE: this won't compute net loads on Rod. Need Rod_GetNetForceAndMass for that. Change? <<<<
+         END DO
+         
+         DO l = 1,p%nCpldBodies(iTurb)
+            CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+         END DO
+      end do
 
       ! call ground body to update all the fixed things
       CALL Body_DoRHS(m%GroundBody, m, p)
       
+      
+      !print *, t, m%LineList(1)%T(1,9), m%LineList(1)%T(2,9), m%LineList(1)%T(3,9), m%LineList(3)%T(1,9), m%LineList(3)%T(2,9), m%LineList(3)%T(3,9)
 
    
    END SUBROUTINE MD_CalcContStateDeriv
@@ -2856,7 +2968,7 @@ p%WaterKin  = 0
       CALL MD_DestroyMisc(m, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          
-         
+      IF (p%UnLog > 0_IntKi) CLOSE( p%UnLog )  ! close log file if it's open
          !TODO: any need to specifically deallocate things like m%xTemp%states in the above? <<<<
 
  !     IF ( ErrStat==ErrID_None) THEN
@@ -3071,1298 +3183,6 @@ p%WaterKin  = 0
 
 
 
-   !-----------------------------------------------------------------------
-   ! >>>>>>>>>>>>>> rename/reorganize this subroutine >>>>>>>>>>>>>
-   SUBROUTINE SetupLine (Line, LineProp, rhoW, ErrStat, ErrMsg)
-      ! allocate arrays in line object
-
-      TYPE(MD_Line), INTENT(INOUT)       :: Line          ! the single line object of interest
-      TYPE(MD_LineProp), INTENT(INOUT)   :: LineProp      ! the single line property set for the line of interest
-      REAL(DbKi),    INTENT(IN)          :: rhoW
-      INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
-      CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      INTEGER(4)                         :: J             ! Generic index
-      INTEGER(4)                         :: K             ! Generic index
-      INTEGER(IntKi)                     :: N
-      REAL(DbKi)                         :: temp
-
-      N = Line%N  ! number of segments in this line (for code readability)
-
-      ! -------------- save some section properties to the line object itself -----------------
-
-      Line%d   = LineProp%d
-      Line%rho = LineProp%w/(Pi/4.0 * Line%d * Line%d)
-      
-      Line%EA   = LineProp%EA
-      
-      Line%Can   = LineProp%Can
-      Line%Cat   = LineProp%Cat
-      Line%Cdn   = LineProp%Cdn
-      Line%Cdt   = LineProp%Cdt      
-      
-      ! Specify specific internal damping coefficient (BA) for this line.
-      ! Will be equal to inputted BA of LineType if input value is positive.
-      ! If input value is negative, it is considered to be desired damping ratio (zeta)
-      ! from which the line's BA can be calculated based on the segment natural frequency.
-      IF (LineProp%BA < 0) THEN
-         ! - we assume desired damping coefficient is zeta = -LineProp%BA
-         ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
-         Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
-         IF (wordy > 1) print *, 'Based on zeta, BA set to ', Line%BA
-         
-         IF (wordy > 1) print *, 'Negative BA input detected, treating as -zeta.  For zeta = ', -LineProp%BA, ', setting BA to ', Line%BA
-         
-      ELSE
-         Line%BA = LineProp%BA
-         IF (wordy > 1) temp = Line%N * Line%BA / Line%UnstrLen * SQRT(1.0/(LineProp%EA * LineProp%w))
-         IF (wordy > 1) print *, 'BA set as input to ', Line%BA, '. Corresponding zeta is ', temp
-      END IF
-      
-      !temp = 2*Line%N / Line%UnstrLen * sqrt( LineProp%EA / LineProp%w) / TwoPi
-      !print *, 'Segment natural frequency is ', temp, ' Hz'
-      
-      
-
-      ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
-      ALLOCATE ( Line%r(3, 0:N), Line%rd(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating r and rd arrays.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-
-      ! allocate node tangent vectors
-      ALLOCATE ( Line%q(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating q array.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-
-      ! allocate segment scalar quantities
-      ALLOCATE ( Line%l(N), Line%ld(N), Line%lstr(N), Line%lstrd(N), Line%V(N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating segment scalar quantity arrays.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-
-      ! assign values for l, ld, and V
-      DO J=1,N
-         Line%l(J) = Line%UnstrLen/REAL(N, DbKi)
-         Line%ld(J)= 0.0_DbKi
-         Line%V(J) = Line%l(J)*0.25*Pi*LineProp%d*LineProp%d
-      END DO
-      
-      ! allocate water related vectors
-      ALLOCATE ( Line%U(3, 0:N), Line%Ud(3, 0:N), Line%zeta(0:N), Line%PDyn(0:N), STAT = ErrStat )
-      ! set to zero initially (important of wave kinematics are not being used)
-      Line%U    = 0.0_DbKi
-      Line%Ud   = 0.0_DbKi
-      Line%zeta = 0.0_DbKi
-      Line%PDyn = 0.0_DbKi
-
-      ! allocate segment tension and internal damping force vectors
-      ALLOCATE ( Line%T(3, N), Line%Td(3, N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating T and Td arrays.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-
-      ! allocate node force vectors
-      ALLOCATE ( Line%W(3, 0:N), Line%Dp(3, 0:N), Line%Dq(3, 0:N), Line%Ap(3, 0:N), &
-         Line%Aq(3, 0:N), Line%B(3, 0:N), Line%Fnet(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating node force arrays.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-
-      ! set gravity and bottom contact forces to zero initially (because the horizontal components should remain at zero)
-      DO J = 0,N
-         DO K = 1,3
-            Line%W(K,J) = 0.0_DbKi
-            Line%B(K,J) = 0.0_DbKi
-         END DO
-      END DO
-
-      ! allocate mass and inverse mass matrices for each node (including ends)
-      ALLOCATE ( Line%S(3, 3, 0:N), Line%M(3, 3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Error allocating T and Td arrays.'
-         !CALL CleanUp()
-         RETURN
-      END IF
-      
-    
-      
-      ! need to add cleanup sub <<<
-
-
-   END SUBROUTINE SetupLine
-   !--------------------------------------------------------------
-
-
-
-
-
-   !----------------------------------------------------------------------------------------=======
-   SUBROUTINE Line_Initialize (Line, LineProp, rhoW, ErrStat, ErrMsg)
-      ! calculate initial profile of the line using quasi-static model
-
-      TYPE(MD_Line),     INTENT(INOUT)       :: Line        ! the single line object of interest
-      TYPE(MD_LineProp), INTENT(INOUT)       :: LineProp    ! the single line property set for the line of interest
-      REAL(DbKi),        INTENT(IN)          :: rhoW
-      INTEGER,           INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
-      CHARACTER(*),      INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      REAL(DbKi)                             :: COSPhi      ! Cosine of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
-      REAL(DbKi)                             :: SINPhi      ! Sine   of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
-      REAL(DbKi)                             :: XF          ! Horizontal distance between anchor and fairlead of the current mooring line (meters)
-      REAL(DbKi)                             :: ZF          ! Vertical   distance between anchor and fairlead of the current mooring line (meters)
-      INTEGER(4)                             :: I           ! Generic index
-      INTEGER(4)                             :: J           ! Generic index
-
-
-      INTEGER(IntKi)                         :: ErrStat2      ! Error status of the operation
-      CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
-      REAL(DbKi)                             :: WetWeight
-      REAL(DbKi)                             :: SeabedCD = 0.0_DbKi
-      REAL(DbKi)                             :: TenTol = 0.0001_DbKi
-      REAL(DbKi), ALLOCATABLE                :: LSNodes(:)
-      REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
-      REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
-      INTEGER(IntKi)                         :: N
-
-
-      N = Line%N ! for convenience
-
-       ! try to calculate initial line profile using catenary routine (from FAST v.7)
-       ! note: much of this function is adapted from the FAST source code
-
-          ! Transform the fairlead location from the inertial frame coordinate system
-          !   to the local coordinate system of the current line (this coordinate
-          !   system lies at the current anchor, Z being vertical, and X directed from
-          !   current anchor to the current fairlead).  Also, compute the orientation
-          !   of this local coordinate system:
-
-             XF         = SQRT( ( Line%r(1,N) - Line%r(1,0) )**2.0 + ( Line%r(2,N) - Line%r(2,0) )**2.0 )
-             ZF         =         Line%r(3,N) - Line%r(3,0)
-
-             IF ( XF == 0.0 )  THEN  ! .TRUE. if the current mooring line is exactly vertical; thus, the solution below is ill-conditioned because the orientation is undefined; so set it such that the tensions and nodal positions are only vertical
-                COSPhi  = 0.0_DbKi
-                SINPhi  = 0.0_DbKi
-             ELSE                    ! The current mooring line must not be vertical; use simple trigonometry
-                COSPhi  =       ( Line%r(1,N) - Line%r(1,0) )/XF
-                SINPhi  =       ( Line%r(2,N) - Line%r(2,0) )/XF
-             ENDIF
-
-        WetWeight = LineProp%w - 0.25*Pi*LineProp%d*LineProp%d*rhoW
-
-        !LineNodes = Line%N + 1  ! number of nodes in line for catenary model to worry about
-
-        ! allocate temporary arrays for catenary routine
-        ALLOCATE ( LSNodes(N+1), STAT = ErrStat )
-        IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Error allocating LSNodes array.'
-          CALL CleanUp()
-          RETURN
-        END IF
-
-        ALLOCATE ( LNodesX(N+1), STAT = ErrStat )
-        IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Error allocating LNodesX array.'
-          CALL CleanUp()
-          RETURN
-        END IF
-
-        ALLOCATE ( LNodesZ(N+1), STAT = ErrStat )
-        IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Error allocating LNodesZ array.'
-          CALL CleanUp()
-          RETURN
-        END IF
-
-        ! Assign node arc length locations
-        LSNodes(1) = 0.0_DbKi
-        DO I=2,N
-          LSNodes(I) = LSNodes(I-1) + Line%l(I-1)  ! note: l index is because line segment indices start at 1
-        END DO
-        LSNodes(N+1) = Line%UnstrLen  ! ensure the last node length isn't longer than the line due to numerical error
-
-          ! Solve the analytical, static equilibrium equations for a catenary (or
-          !   taut) mooring line with seabed interaction in order to find the
-          !   horizontal and vertical tensions at the fairlead in the local coordinate
-          !   system of the current line:
-          ! NOTE: The values for the horizontal and vertical tensions at the fairlead
-          !       from the previous time step are used as the initial guess values at
-          !       at this time step (because the LAnchHTe(:) and LAnchVTe(:) arrays
-          !       are stored in a module and thus their values are saved from CALL to
-          !       CALL).
-
-
-             CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
-                             WetWeight    , SeabedCD,    TenTol,     (N+1)     , &
-                             LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
-
-      IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
-          ! Transform the positions of each node on the current line from the local
-          !   coordinate system of the current line to the inertial frame coordinate
-          !   system:
-
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
-             Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
-             Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
-          ENDDO              ! J - All nodes per line where the line position and tension can be output
-
-
-      ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
-
-          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
-
-!          print *, "Node positions: "
-
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             
-!             print*, Line%r(:,J)
-          ENDDO
-          
-!          print*,"FYI line end A and B node coords are"
-!          print*, Line%r(:,0)
-!          print*, Line%r(:,N)
-      ENDIF
-
-
-
-      CALL CleanUp()  ! deallocate temporary arrays
-
-
-
-   CONTAINS
-
-
-      !-----------------------------------------------------------------------
-      SUBROUTINE CleanUp()
-           ! deallocate temporary arrays
-
-           IF (ALLOCATED(LSNodes))  DEALLOCATE(LSNodes)
-           IF (ALLOCATED(LNodesX))  DEALLOCATE(LNodesX)
-           IF (ALLOCATED(LNodesZ))  DEALLOCATE(LNodesZ)
-
-        END SUBROUTINE CleanUp
-      !-----------------------------------------------------------------------
-
-
-      !-----------------------------------------------------------------------
-      SUBROUTINE Catenary ( XF_In, ZF_In, L_In  , EA_In, &
-                            W_In , CB_In, Tol_In, N    , &
-                            s_In , X_In , Z_In , ErrStat, ErrMsg    )
-
-         ! This subroutine is copied from FAST v7 with minor modifications
-
-         ! This routine solves the analytical, static equilibrium equations
-         ! for a catenary (or taut) mooring line with seabed interaction.
-         ! Stretching of the line is accounted for, but bending stiffness
-         ! is not.  Given the mooring line properties and the fairlead
-         ! position relative to the anchor, this routine finds the line
-         ! configuration and tensions.  Since the analytical solution
-         ! involves two nonlinear equations (XF and  ZF) in two unknowns
-         ! (HF and VF), a Newton-Raphson iteration scheme is implemented in
-         ! order to solve for the solution.  The values of HF and VF that
-         ! are passed into this routine are used as the initial guess in
-         ! the iteration.  The Newton-Raphson iteration is only accurate in
-         ! double precision, so all of the input/output arguments are
-         ! converteds to/from double precision from/to default precision.
-
-         ! >>>> TO DO: streamline this function, if it's still to be used at all <<<<
-
-         !     USE                             Precision
-
-
-         IMPLICIT                        NONE
-
-
-            ! Passed Variables:
-
-         INTEGER(4), INTENT(IN   )    :: N                                               ! Number of nodes where the line position and tension can be output (-)
-
-         REAL(DbKi), INTENT(IN   )    :: CB_In                                           ! Coefficient of seabed static friction drag (a negative value indicates no seabed) (-)
-         REAL(DbKi), INTENT(IN   )    :: EA_In                                           ! Extensional stiffness of line (N)
-     !    REAL(DbKi), INTENT(  OUT)    :: HA_In                                           ! Effective horizontal tension in line at the anchor   (N)
-     !    REAL(DbKi), INTENT(INOUT)    :: HF_In                                           ! Effective horizontal tension in line at the fairlead (N)
-         REAL(DbKi), INTENT(IN   )    :: L_In                                            ! Unstretched length of line (meters)
-         REAL(DbKi), INTENT(IN   )    :: s_In     (N)                                    ! Unstretched arc distance along line from anchor to each node where the line position and tension can be output (meters)
-     !    REAL(DbKi), INTENT(  OUT)    :: Te_In    (N)                                    ! Effective line tensions at each node (N)
-         REAL(DbKi), INTENT(IN   )    :: Tol_In                                          ! Convergence tolerance within Newton-Raphson iteration specified as a fraction of tension (-)
-     !    REAL(DbKi), INTENT(  OUT)    :: VA_In                                           ! Effective vertical   tension in line at the anchor   (N)
-     !    REAL(DbKi), INTENT(INOUT)    :: VF_In                                           ! Effective vertical   tension in line at the fairlead (N)
-         REAL(DbKi), INTENT(IN   )    :: W_In                                            ! Weight of line in fluid per unit length (N/m)
-         REAL(DbKi), INTENT(  OUT)    :: X_In     (N)                                    ! Horizontal locations of each line node relative to the anchor (meters)
-         REAL(DbKi), INTENT(IN   )    :: XF_In                                           ! Horizontal distance between anchor and fairlead (meters)
-         REAL(DbKi), INTENT(  OUT)    :: Z_In     (N)                                    ! Vertical   locations of each line node relative to the anchor (meters)
-         REAL(DbKi), INTENT(IN   )    :: ZF_In                                           ! Vertical   distance between anchor and fairlead (meters)
-             INTEGER,                      INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
-             CHARACTER(*),                 INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-
-            ! Local Variables:
-
-         REAL(DbKi)                   :: CB                                              ! Coefficient of seabed static friction (a negative value indicates no seabed) (-)
-         REAL(DbKi)                   :: CBOvrEA                                         ! = CB/EA
-         REAL(DbKi)                   :: DET                                             ! Determinant of the Jacobian matrix (m^2/N^2)
-         REAL(DbKi)                   :: dHF                                             ! Increment in HF predicted by Newton-Raphson (N)
-         REAL(DbKi)                   :: dVF                                             ! Increment in VF predicted by Newton-Raphson (N)
-         REAL(DbKi)                   :: dXFdHF                                          ! Partial derivative of the calculated horizontal distance with respect to the horizontal fairlead tension (m/N): dXF(HF,VF)/dHF
-         REAL(DbKi)                   :: dXFdVF                                          ! Partial derivative of the calculated horizontal distance with respect to the vertical   fairlead tension (m/N): dXF(HF,VF)/dVF
-         REAL(DbKi)                   :: dZFdHF                                          ! Partial derivative of the calculated vertical   distance with respect to the horizontal fairlead tension (m/N): dZF(HF,VF)/dHF
-         REAL(DbKi)                   :: dZFdVF                                          ! Partial derivative of the calculated vertical   distance with respect to the vertical   fairlead tension (m/N): dZF(HF,VF)/dVF
-         REAL(DbKi)                   :: EA                                              ! Extensional stiffness of line (N)
-         REAL(DbKi)                   :: EXF                                             ! Error function between calculated and known horizontal distance (meters): XF(HF,VF) - XF
-         REAL(DbKi)                   :: EZF                                             ! Error function between calculated and known vertical   distance (meters): ZF(HF,VF) - ZF
-         REAL(DbKi)                   :: HA                                              ! Effective horizontal tension in line at the anchor   (N)
-         REAL(DbKi)                   :: HF                                              ! Effective horizontal tension in line at the fairlead (N)
-         REAL(DbKi)                   :: HFOvrW                                          ! = HF/W
-         REAL(DbKi)                   :: HFOvrWEA                                        ! = HF/WEA
-         REAL(DbKi)                   :: L                                               ! Unstretched length of line (meters)
-         REAL(DbKi)                   :: Lamda0                                          ! Catenary parameter used to generate the initial guesses of the horizontal and vertical tensions at the fairlead for the Newton-Raphson iteration (-)
-         REAL(DbKi)                   :: LMax                                            ! Maximum stretched length of the line with seabed interaction beyond which the line would have to double-back on itself; here the line forms an "L" between the anchor and fairlead (i.e. it is horizontal along the seabed from the anchor, then vertical to the fairlead) (meters)
-         REAL(DbKi)                   :: LMinVFOvrW                                      ! = L - VF/W
-         REAL(DbKi)                   :: LOvrEA                                          ! = L/EA
-         REAL(DbKi)                   :: s        (N)                                    ! Unstretched arc distance along line from anchor to each node where the line position and tension can be output (meters)
-         REAL(DbKi)                   :: sOvrEA                                          ! = s(I)/EA
-         REAL(DbKi)                   :: SQRT1VFOvrHF2                                   ! = SQRT( 1.0_DbKi + VFOvrHF2      )
-         REAL(DbKi)                   :: SQRT1VFMinWLOvrHF2                              ! = SQRT( 1.0_DbKi + VFMinWLOvrHF2 )
-         REAL(DbKi)                   :: SQRT1VFMinWLsOvrHF2                             ! = SQRT( 1.0_DbKi + VFMinWLsOvrHF*VFMinWLsOvrHF )
-         REAL(DbKi)                   :: Te       (N)                                    ! Effective line tensions at each node (N)
-         REAL(DbKi)                   :: Tol                                             ! Convergence tolerance within Newton-Raphson iteration specified as a fraction of tension (-)
-         REAL(DbKi)                   :: VA                                              ! Effective vertical   tension in line at the anchor   (N)
-         REAL(DbKi)                   :: VF                                              ! Effective vertical   tension in line at the fairlead (N)
-         REAL(DbKi)                   :: VFMinWL                                         ! = VF - WL
-         REAL(DbKi)                   :: VFMinWLOvrHF                                    ! = VFMinWL/HF
-         REAL(DbKi)                   :: VFMinWLOvrHF2                                   ! = VFMinWLOvrHF*VFMinWLOvrHF
-         REAL(DbKi)                   :: VFMinWLs                                        ! = VFMinWL + Ws
-         REAL(DbKi)                   :: VFMinWLsOvrHF                                   ! = VFMinWLs/HF
-         REAL(DbKi)                   :: VFOvrHF                                         ! = VF/HF
-         REAL(DbKi)                   :: VFOvrHF2                                        ! = VFOvrHF*VFOvrHF
-         REAL(DbKi)                   :: VFOvrWEA                                        ! = VF/WEA
-         REAL(DbKi)                   :: W                                               ! Weight of line in fluid per unit length (N/m)
-         REAL(DbKi)                   :: WEA                                             ! = W*EA
-         REAL(DbKi)                   :: WL                                              ! Total weight of line in fluid (N): W*L
-         REAL(DbKi)                   :: Ws                                              ! = W*s(I)
-         REAL(DbKi)                   :: X        (N)                                    ! Horizontal locations of each line node relative to the anchor (meters)
-         REAL(DbKi)                   :: XF                                              ! Horizontal distance between anchor and fairlead (meters)
-         REAL(DbKi)                   :: XF2                                             ! = XF*XF
-         REAL(DbKi)                   :: Z        (N)                                    ! Vertical   locations of each line node relative to the anchor (meters)
-         REAL(DbKi)                   :: ZF                                              ! Vertical   distance between anchor and fairlead (meters)
-         REAL(DbKi)                   :: ZF2                                             ! = ZF*ZF
-
-         INTEGER(4)                   :: I                                               ! Index for counting iterations or looping through line nodes (-)
-         INTEGER(4)                   :: MaxIter                                         ! Maximum number of Newton-Raphson iterations possible before giving up (-)
-
-         LOGICAL                      :: FirstIter                                       ! Flag to determine whether or not this is the first time through the Newton-Raphson interation (flag)
-
-
-         ErrStat = ERrId_None
-
-
-            ! The Newton-Raphson iteration is only accurate in double precision, so
-            !   convert the input arguments into double precision:
-
-         CB     = REAL( CB_In    , DbKi )
-         EA     = REAL( EA_In    , DbKi )
-         HF = 0.0_DbKi  !    = REAL( HF_In    , DbKi )
-         L      = REAL( L_In     , DbKi )
-         s  (:) = REAL( s_In  (:), DbKi )
-         Tol    = REAL( Tol_In   , DbKi )
-         VF = 0.0_DbKi   ! keeping this for some error catching functionality? (at first glance)  ! VF     = REAL( VF_In    , DbKi )
-         W      = REAL( W_In     , DbKi )
-         XF     = REAL( XF_In    , DbKi )
-         ZF     = REAL( ZF_In    , DbKi )
-
-
-         
-      !  HF and VF cannot be initialized to zero when a  portion of the line rests on the seabed and the anchor tension is nonzero
-         
-      ! Generate the initial guess values for the horizontal and vertical tensions
-      !   at the fairlead in the Newton-Raphson iteration for the catenary mooring
-      !   line solution.  Use starting values documented in: Peyrot, Alain H. and
-      !   Goulois, A. M., "Analysis Of Cable Structures," Computers & Structures,
-      !   Vol. 10, 1979, pp. 805-813:
-         XF2     = XF*XF
-         ZF2     = ZF*ZF
-
-         IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
-            Lamda0 = 1.0D+06
-         ELSEIF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
-            Lamda0 = 0.2_DbKi
-         ELSE                                    ! The current mooring line must be slack and not vertical
-            Lamda0 = SQRT( 3.0_DbKi*( ( L**2 - ZF2 )/XF2 - 1.0_DbKi ) )
-         ENDIF
-
-         HF = ABS( 0.5_DbKi*W*  XF/     Lamda0      )
-         VF =      0.5_DbKi*W*( ZF/TANH(Lamda0) + L )         
-                                    
-
-            ! Abort when there is no solution or when the only possible solution is
-            !   illogical:
-
-         IF (    Tol <= EPSILON(TOL) )  THEN   ! .TRUE. when the convergence tolerance is specified incorrectly
-           ErrStat = ErrID_Warn
-           ErrMsg = ' Convergence tolerance must be greater than zero in routine Catenary().'
-           return
-         ELSEIF ( XF <  0.0_DbKi )  THEN   ! .TRUE. only when the local coordinate system is not computed correctly
-           ErrStat = ErrID_Warn
-           ErrMsg =  ' The horizontal distance between an anchor and its'// &
-                         ' fairlead must not be less than zero in routine Catenary().'
-           return
-
-         ELSEIF ( ZF <  0.0_DbKi )  THEN   ! .TRUE. if the fairlead has passed below its anchor
-           ErrStat = ErrID_Warn
-           ErrMsg =  " A line's fairlead is defined as below its anchor. You may need to swap a line's fairlead and anchor end nodes."
-           return
-
-         ELSEIF ( L  <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
-           ErrStat = ErrID_Warn
-           ErrMsg =  ' Unstretched length of line must be greater than zero in routine Catenary().'
-           return
-
-         ELSEIF ( EA <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
-           ErrStat = ErrID_Warn
-           ErrMsg =  ' Extensional stiffness of line must be greater than zero in routine Catenary().'
-           return
-
-         ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
-           ErrStat = ErrID_Warn
-           ErrMsg = ' The weight of the line in fluid must not be zero. '// &
-                         ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-           return
-
-
-         ELSEIF ( W  >  0.0_DbKi )  THEN   ! .TRUE. when the line will sink in fluid
-
-            LMax      = XF - EA/W + SQRT( (EA/W)*(EA/W) + 2.0_DbKi*ZF*EA/W )  ! Compute the maximum stretched length of the line with seabed interaction beyond which the line would have to double-back on itself; here the line forms an "L" between the anchor and fairlead (i.e. it is horizontal along the seabed from the anchor, then vertical to the fairlead)
-
-            IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
-               ErrStat = ErrID_Warn
-               ErrMsg =  ' Unstretched mooring line length too large. '// &
-                            ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-               return
-            END IF
-
-         ENDIF
-
-
-            ! Initialize some commonly used terms that don't depend on the iteration:
-
-         WL      =          W  *L
-         WEA     =          W  *EA
-         LOvrEA  =          L  /EA
-         CBOvrEA =          CB /EA
-         MaxIter = INT(1.0_DbKi/Tol)   ! Smaller tolerances may take more iterations, so choose a maximum inversely proportional to the tolerance
-
-
-
-            ! To avoid an ill-conditioned situation, ensure that the initial guess for
-            !   HF is not less than or equal to zero.  Similarly, avoid the problems
-            !   associated with having exactly vertical (so that HF is zero) or exactly
-            !   horizontal (so that VF is zero) lines by setting the minimum values
-            !   equal to the tolerance.  This prevents us from needing to implement
-            !   the known limiting solutions for vertical or horizontal lines (and thus
-            !   complicating this routine):
-
-         HF = MAX( HF, Tol )
-         XF = MAX( XF, Tol )
-         ZF = MAX( ZF, TOl )
-
-
-
-            ! Solve the analytical, static equilibrium equations for a catenary (or
-            !   taut) mooring line with seabed interaction:
-
-            ! Begin Newton-Raphson iteration:
-
-         I         = 1        ! Initialize iteration counter
-         FirstIter = .TRUE.   ! Initialize iteration flag
-
-         DO
-
-
-            ! Initialize some commonly used terms that depend on HF and VF:
-
-            VFMinWL            = VF - WL
-            LMinVFOvrW         = L  - VF/W
-            HFOvrW             =      HF/W
-            HFOvrWEA           =      HF/WEA
-            VFOvrWEA           =      VF/WEA
-            VFOvrHF            =      VF/HF
-            VFMinWLOvrHF       = VFMinWL/HF
-            VFOvrHF2           = VFOvrHF     *VFOvrHF
-            VFMinWLOvrHF2      = VFMinWLOvrHF*VFMinWLOvrHF
-            SQRT1VFOvrHF2      = SQRT( 1.0_DbKi + VFOvrHF2      )
-            SQRT1VFMinWLOvrHF2 = SQRT( 1.0_DbKi + VFMinWLOvrHF2 )
-
-
-            ! Compute the error functions (to be zeroed) and the Jacobian matrix
-            !   (these depend on the anticipated configuration of the mooring line):
-
-            IF ( ( CB <  0.0_DbKi ) .OR. ( W  <  0.0_DbKi ) .OR. ( VFMinWL >  0.0_DbKi ) )  THEN   ! .TRUE. when no portion of the line      rests on the seabed
-
-               EXF    = (   LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                       &
-                          - LOG( VFMinWLOvrHF +               SQRT1VFMinWLOvrHF2 )                                         )*HFOvrW &
-                      + LOvrEA*  HF                         - XF
-               EZF    = (                                     SQRT1VFOvrHF2                                              &
-                          -                                   SQRT1VFMinWLOvrHF2                                           )*HFOvrW &
-                      + LOvrEA*( VF - 0.5_DbKi*WL )         - ZF
-
-               dXFdHF = (   LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                       &
-                          - LOG( VFMinWLOvrHF +               SQRT1VFMinWLOvrHF2 )                                         )/     W &
-                      - (      ( VFOvrHF      + VFOvrHF2     /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2      ) &
-                          -    ( VFMinWLOvrHF + VFMinWLOvrHF2/SQRT1VFMinWLOvrHF2 )/( VFMinWLOvrHF + SQRT1VFMinWLOvrHF2 )   )/     W &
-                      + LOvrEA
-               dXFdVF = (      ( 1.0_DbKi     + VFOvrHF      /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2      ) &
-                          -    ( 1.0_DbKi     + VFMinWLOvrHF /SQRT1VFMinWLOvrHF2 )/( VFMinWLOvrHF + SQRT1VFMinWLOvrHF2 )   )/     W
-               dZFdHF = (                                     SQRT1VFOvrHF2                                              &
-                          -                                   SQRT1VFMinWLOvrHF2                                           )/     W &
-                      - (                       VFOvrHF2     /SQRT1VFOvrHF2                                              &
-                          -                     VFMinWLOvrHF2/SQRT1VFMinWLOvrHF2                                           )/     W
-               dZFdVF = (                       VFOvrHF      /SQRT1VFOvrHF2                                              &
-                          -                     VFMinWLOvrHF /SQRT1VFMinWLOvrHF2                                           )/     W &
-                      + LOvrEA
-
-
-            ELSEIF (                                           -CB*VFMinWL <  HF         )  THEN   ! .TRUE. when a  portion of the line      rests on the seabed and the anchor tension is nonzero
-
-               EXF    =     LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                          *HFOvrW &
-                      - 0.5_DbKi*CBOvrEA*W*  LMinVFOvrW*LMinVFOvrW                                                                  &
-                      + LOvrEA*  HF           + LMinVFOvrW  - XF
-               EZF    = (                                     SQRT1VFOvrHF2                                   - 1.0_DbKi   )*HFOvrW &
-                      + 0.5_DbKi*VF*VFOvrWEA                - ZF
-
-               dXFdHF =     LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                          /     W &
-                      - (      ( VFOvrHF      + VFOvrHF2     /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2        ) )/     W &
-                      + LOvrEA
-               dXFdVF = (      ( 1.0_DbKi     + VFOvrHF      /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2        ) )/     W &
-                      + CBOvrEA*LMinVFOvrW - 1.0_DbKi/W
-               dZFdHF = (                                     SQRT1VFOvrHF2                                   - 1.0_DbKi &
-                          -                     VFOvrHF2     /SQRT1VFOvrHF2                                                )/     W
-               dZFdVF = (                       VFOvrHF      /SQRT1VFOvrHF2                                                )/     W &
-                      + VFOvrWEA
-
-
-            ELSE                                                ! 0.0_DbKi <  HF  <= -CB*VFMinWL   !             A  portion of the line must rest  on the seabed and the anchor tension is    zero
-
-               EXF    =     LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                          *HFOvrW &
-                      - 0.5_DbKi*CBOvrEA*W*( LMinVFOvrW*LMinVFOvrW - ( LMinVFOvrW - HFOvrW/CB )*( LMinVFOvrW - HFOvrW/CB ) )        &
-                      + LOvrEA*  HF           + LMinVFOvrW  - XF
-               EZF    = (                                     SQRT1VFOvrHF2                                   - 1.0_DbKi   )*HFOvrW &
-                      + 0.5_DbKi*VF*VFOvrWEA                - ZF
-
-               dXFdHF =     LOG( VFOvrHF      +               SQRT1VFOvrHF2      )                                          /     W &
-                      - (      ( VFOvrHF      + VFOvrHF2     /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2      )   )/     W &
-                      + LOvrEA - ( LMinVFOvrW - HFOvrW/CB )/EA
-               dXFdVF = (      ( 1.0_DbKi     + VFOvrHF      /SQRT1VFOvrHF2      )/( VFOvrHF      + SQRT1VFOvrHF2      )   )/     W &
-                      + HFOvrWEA           - 1.0_DbKi/W
-               dZFdHF = (                                     SQRT1VFOvrHF2                                   - 1.0_DbKi &
-                          -                     VFOvrHF2     /SQRT1VFOvrHF2                                                )/     W
-               dZFdVF = (                       VFOvrHF      /SQRT1VFOvrHF2                                                )/     W &
-                      + VFOvrWEA
-
-
-            ENDIF
-
-
-            ! Compute the determinant of the Jacobian matrix and the incremental
-            !   tensions predicted by Newton-Raphson:
-            
-            
-            DET = dXFdHF*dZFdVF - dXFdVF*dZFdHF
-            
-            if ( EqualRealNos( DET, 0.0_DbKi ) ) then               
-!bjj: there is a serious problem with the debugger here when DET = 0
-                ErrStat = ErrID_Warn
-                ErrMsg =  ' Iteration not convergent (DET is 0). '// &
-                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-                return
-            endif
-
-               
-            dHF = ( -dZFdVF*EXF + dXFdVF*EZF )/DET    ! This is the incremental change in horizontal tension at the fairlead as predicted by Newton-Raphson
-            dVF = (  dZFdHF*EXF - dXFdHF*EZF )/DET    ! This is the incremental change in vertical   tension at the fairlead as predicted by Newton-Raphson
-
-            dHF = dHF*( 1.0_DbKi - Tol*I )            ! Reduce dHF by factor (between 1 at I = 1 and 0 at I = MaxIter) that reduces linearly with iteration count to ensure that we converge on a solution even in the case were we obtain a nonconvergent cycle about the correct solution (this happens, for example, if we jump to quickly between a taut and slack catenary)
-            dVF = dVF*( 1.0_DbKi - Tol*I )            ! Reduce dHF by factor (between 1 at I = 1 and 0 at I = MaxIter) that reduces linearly with iteration count to ensure that we converge on a solution even in the case were we obtain a nonconvergent cycle about the correct solution (this happens, for example, if we jump to quickly between a taut and slack catenary)
-
-            dHF = MAX( dHF, ( Tol - 1.0_DbKi )*HF )   ! To avoid an ill-conditioned situation, make sure HF does not go less than or equal to zero by having a lower limit of Tol*HF [NOTE: the value of dHF = ( Tol - 1.0_DbKi )*HF comes from: HF = HF + dHF = Tol*HF when dHF = ( Tol - 1.0_DbKi )*HF]
-
-            ! Check if we have converged on a solution, or restart the iteration, or
-            !   Abort if we cannot find a solution:
-
-            IF ( ( ABS(dHF) <= ABS(Tol*HF) ) .AND. ( ABS(dVF) <= ABS(Tol*VF) ) )  THEN ! .TRUE. if we have converged; stop iterating! [The converge tolerance, Tol, is a fraction of tension]
-
-               EXIT
-
-
-            ELSEIF ( ( I == MaxIter )        .AND. (       FirstIter         ) )  THEN ! .TRUE. if we've iterated MaxIter-times for the first time;
-
-            ! Perhaps we failed to converge because our initial guess was too far off.
-            !   (This could happen, for example, while linearizing a model via large
-            !   pertubations in the DOFs.)  Instead, use starting values documented in:
-            !   Peyrot, Alain H. and Goulois, A. M., "Analysis Of Cable Structures,"
-            !   Computers & Structures, Vol. 10, 1979, pp. 805-813:
-            ! NOTE: We don't need to check if the current mooring line is exactly
-            !       vertical (i.e., we don't need to check if XF == 0.0), because XF is
-            !       limited by the tolerance above.
-
-               XF2 = XF*XF
-               ZF2 = ZF*ZF
-
-               IF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
-                  Lamda0 = 0.2_DbKi
-               ELSE                                ! The current mooring line must be slack and not vertical
-                  Lamda0 = SQRT( 3.0_DbKi*( ( L*L - ZF2 )/XF2 - 1.0_DbKi ) )
-               ENDIF
-
-               HF  = MAX( ABS( 0.5_DbKi*W*  XF/     Lamda0      ), Tol )   ! As above, set the lower limit of the guess value of HF to the tolerance
-               VF  =           0.5_DbKi*W*( ZF/TANH(Lamda0) + L )
-
-
-            ! Restart Newton-Raphson iteration:
-
-               I         = 0
-               FirstIter = .FALSE.
-               dHF       = 0.0_DbKi
-               dVF       = 0.0_DbKi
-
-
-           ELSEIF ( ( I == MaxIter )        .AND. ( .NOT. FirstIter         ) )  THEN ! .TRUE. if we've iterated as much as we can take without finding a solution; Abort
-             ErrStat = ErrID_Warn
-             ErrMsg =  ' Iteration not convergent. '// &
-                       ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-             RETURN
-
-
-           ENDIF
-
-
-            ! Increment fairlead tensions and iteration counter so we can try again:
-
-            HF = HF + dHF
-            VF = VF + dVF
-
-            I  = I  + 1
-
-
-         ENDDO
-
-
-
-            ! We have found a solution for the tensions at the fairlead!
-
-            ! Now compute the tensions at the anchor and the line position and tension
-            !   at each node (again, these depend on the configuration of the mooring
-            !   line):
-
-         IF ( ( CB <  0.0_DbKi ) .OR. ( W  <  0.0_DbKi ) .OR. ( VFMinWL >  0.0_DbKi ) )  THEN   ! .TRUE. when no portion of the line      rests on the seabed
-
-            ! Anchor tensions:
-
-            HA = HF
-            VA = VFMinWL
-
-
-            ! Line position and tension at each node:
-
-            DO I = 1,N  ! Loop through all nodes where the line position and tension are to be computed
-
-               IF ( ( s(I) <  0.0_DbKi ) .OR. ( s(I) >  L ) )  THEN
-                 ErrStat = ErrID_Warn
-                 ErrMsg = ' All line nodes must be located between the anchor ' &
-                                 //'and fairlead (inclusive) in routine Catenary().'
-                 RETURN
-               END IF
-
-               Ws                  = W       *s(I)                                  ! Initialize
-               VFMinWLs            = VFMinWL + Ws                                   ! some commonly
-               VFMinWLsOvrHF       = VFMinWLs/HF                                    ! used terms
-               sOvrEA              = s(I)    /EA                                    ! that depend
-               SQRT1VFMinWLsOvrHF2 = SQRT( 1.0_DbKi + VFMinWLsOvrHF*VFMinWLsOvrHF ) ! on s(I)
-
-               X (I)    = (   LOG( VFMinWLsOvrHF + SQRT1VFMinWLsOvrHF2 ) &
-                            - LOG( VFMinWLOvrHF  + SQRT1VFMinWLOvrHF2  )   )*HFOvrW                     &
-                        + sOvrEA*  HF
-               Z (I)    = (                        SQRT1VFMinWLsOvrHF2   &
-                            -                      SQRT1VFMinWLOvrHF2      )*HFOvrW                     &
-                        + sOvrEA*(         VFMinWL + 0.5_DbKi*Ws    )
-               Te(I)    = SQRT( HF*HF +    VFMinWLs*VFMinWLs )
-
-            ENDDO       ! I - All nodes where the line position and tension are to be computed
-
-
-         ELSEIF (                                           -CB*VFMinWL <  HF         )  THEN   ! .TRUE. when a  portion of the line      rests on the seabed and the anchor tension is nonzero
-
-            ! Anchor tensions:
-
-            HA = HF + CB*VFMinWL
-            VA = 0.0_DbKi
-
-
-            ! Line position and tension at each node:
-
-            DO I = 1,N  ! Loop through all nodes where the line position and tension are to be computed
-
-               IF ( ( s(I) <  0.0_DbKi ) .OR. ( s(I) >  L ) )  THEN
-                 ErrStat = ErrID_Warn
-                 ErrMsg =  ' All line nodes must be located between the anchor ' &
-                                 //'and fairlead (inclusive) in routine Catenary().'
-                 RETURN
-               END IF
-
-               Ws                  = W       *s(I)                                  ! Initialize
-               VFMinWLs            = VFMinWL + Ws                                   ! some commonly
-               VFMinWLsOvrHF       = VFMinWLs/HF                                    ! used terms
-               sOvrEA              = s(I)    /EA                                    ! that depend
-               SQRT1VFMinWLsOvrHF2 = SQRT( 1.0_DbKi + VFMinWLsOvrHF*VFMinWLsOvrHF ) ! on s(I)
-
-               IF (     s(I) <= LMinVFOvrW             )  THEN ! .TRUE. if this node rests on the seabed and the tension is nonzero
-
-                  X (I) = s(I)                                                                          &
-                        + sOvrEA*( HF + CB*VFMinWL + 0.5_DbKi*Ws*CB )
-                  Z (I) = 0.0_DbKi
-                  Te(I) =       HF    + CB*VFMinWLs
-
-               ELSE           ! LMinVFOvrW < s <= L            !           This node must be above the seabed
-
-                  X (I) =     LOG( VFMinWLsOvrHF + SQRT1VFMinWLsOvrHF2 )    *HFOvrW                     &
-                        + sOvrEA*  HF + LMinVFOvrW                    - 0.5_DbKi*CB*VFMinWL*VFMinWL/WEA
-                  Z (I) = ( - 1.0_DbKi           + SQRT1VFMinWLsOvrHF2     )*HFOvrW                     &
-                        + sOvrEA*(         VFMinWL + 0.5_DbKi*Ws    ) + 0.5_DbKi*   VFMinWL*VFMinWL/WEA
-                  Te(I) = SQRT( HF*HF +    VFMinWLs*VFMinWLs )
-
-               ENDIF
-
-            ENDDO       ! I - All nodes where the line position and tension are to be computed
-
-
-         ELSE                                                ! 0.0_DbKi <  HF  <= -CB*VFMinWL   !             A  portion of the line must rest  on the seabed and the anchor tension is    zero
-
-            ! Anchor tensions:
-
-            HA = 0.0_DbKi
-            VA = 0.0_DbKi
-
-
-            ! Line position and tension at each node:
-
-            DO I = 1,N  ! Loop through all nodes where the line position and tension are to be computed
-
-               IF ( ( s(I) <  0.0_DbKi ) .OR. ( s(I) >  L ) )  THEN
-                  ErrStat = ErrID_Warn
-                   ErrMsg =  ' All line nodes must be located between the anchor ' &
-                                 //'and fairlead (inclusive) in routine Catenary().'
-                   RETURN
-               END IF
-
-               Ws                  = W       *s(I)                                  ! Initialize
-               VFMinWLs            = VFMinWL + Ws                                   ! some commonly
-               VFMinWLsOvrHF       = VFMinWLs/HF                                    ! used terms
-               sOvrEA              = s(I)    /EA                                    ! that depend
-               SQRT1VFMinWLsOvrHF2 = SQRT( 1.0_DbKi + VFMinWLsOvrHF*VFMinWLsOvrHF ) ! on s(I)
-
-               IF (     s(I) <= LMinVFOvrW - HFOvrW/CB )  THEN ! .TRUE. if this node rests on the seabed and the tension is    zero
-
-                  X (I) = s(I)
-                  Z (I) = 0.0_DbKi
-                  Te(I) = 0.0_DbKi
-
-               ELSEIF ( s(I) <= LMinVFOvrW             )  THEN ! .TRUE. if this node rests on the seabed and the tension is nonzero
-
-                  X (I) = s(I)                     - ( LMinVFOvrW - 0.5_DbKi*HFOvrW/CB )*HF/EA          &
-                        + sOvrEA*( HF + CB*VFMinWL + 0.5_DbKi*Ws*CB ) + 0.5_DbKi*CB*VFMinWL*VFMinWL/WEA
-                  Z (I) = 0.0_DbKi
-                  Te(I) =       HF    + CB*VFMinWLs
-
-               ELSE           ! LMinVFOvrW < s <= L            !           This node must be above the seabed
-
-                  X (I) =     LOG( VFMinWLsOvrHF + SQRT1VFMinWLsOvrHF2 )    *HFOvrW                     &
-                        + sOvrEA*  HF + LMinVFOvrW - ( LMinVFOvrW - 0.5_DbKi*HFOvrW/CB )*HF/EA
-                  Z (I) = ( - 1.0_DbKi           + SQRT1VFMinWLsOvrHF2     )*HFOvrW                     &
-                        + sOvrEA*(         VFMinWL + 0.5_DbKi*Ws    ) + 0.5_DbKi*   VFMinWL*VFMinWL/WEA
-                  Te(I) = SQRT( HF*HF +    VFMinWLs*VFMinWLs )
-
-               ENDIF
-
-            ENDDO       ! I - All nodes where the line position and tension are to be computed
-
-
-         ENDIF
-
-
-
-            ! The Newton-Raphson iteration is only accurate in double precision, so
-            !   convert the output arguments back into the default precision for real
-            !   numbers:
-
-         !HA_In    = REAL( HA   , DbKi )  !mth: for this I only care about returning node positions
-         !HF_In    = REAL( HF   , DbKi )
-         !Te_In(:) = REAL( Te(:), DbKi )
-         !VA_In    = REAL( VA   , DbKi )
-         !VF_In    = REAL( VF   , DbKi )
-         X_In (:) = REAL( X (:), DbKi )
-         Z_In (:) = REAL( Z (:), DbKi )
-
-      END SUBROUTINE Catenary
-      !-----------------------------------------------------------------------
-
-
-   END SUBROUTINE Line_Initialize
-   !--------------------------------------------------------------
-
-   
-   !--------------------------------------------------------------
-   SUBROUTINE Line_SetState(Line, X, t)
-
-      TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! the current Line object
-      Real(DbKi),       INTENT(IN   )  :: X(:)           ! state vector section for this line
-      Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-
-      INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
-      INTEGER(IntKi)                   :: J              ! index
-   
-
-      ! store current time
-      Line%time = t
-      
-      ! set interior node positions and velocities based on state vector
-      DO I=1,Line%N-1
-         DO J=1,3
-         
-            Line%r( J,I) = X( 3*Line%N-3 + 3*I-3 + J)  ! get positions
-            Line%rd(J,I) = X(              3*I-3 + J)  ! get velocities
-            
-         END DO
-      END DO
-         
-   END SUBROUTINE Line_SetState
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Line_GetStateDeriv(Line, Xd, m, p)  !, FairFtot, FairMtot, AnchFtot, AnchMtot)
-
-      TYPE(MD_Line),          INTENT(INOUT) :: Line    ! the current Line object
-      Real(DbKi),             INTENT(INOUT) :: Xd(:)   ! state derivative vector section for this line
-      TYPE(MD_MiscVarType),   INTENT(INOUT) :: m       ! passing along all mooring objects
-      TYPE(MD_ParameterType), INTENT(IN   ) :: p       ! Parameters
-      
-   !   Real(DbKi), INTENT( IN )      :: X(:)           ! state vector, provided
-   !   Real(DbKi), INTENT( INOUT )   :: Xd(:)          ! derivative of state vector, returned ! cahnged to INOUT
-   !   Real(DbKi), INTENT (IN)       :: t              ! instantaneous time
-   !   TYPE(MD_Line), INTENT (INOUT) :: Line           ! label for the current line, for convenience
-   !   TYPE(MD_LineProp), INTENT(IN) :: LineProp       ! the single line property set for the line of interest
-  !    Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
-  !    Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Connect top of line is attached to
-  !    Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Connect bottom of line is attached to
-  !    Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Connect bottom of line is attached to
-
-
-      INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
-      INTEGER(IntKi)                   :: J              ! index
-      INTEGER(IntKi)                   :: K              ! index
-      INTEGER(IntKi)                   :: N              ! number of segments in line
-      Real(DbKi)                       :: d              ! line diameter
-      Real(DbKi)                       :: rho            ! line material density [kg/m^3]
-      Real(DbKi)                       :: Sum1           ! for summing squares
-      Real(DbKi)                       :: dummyLength    ! 
-      Real(DbKi)                       :: m_i            ! node mass
-      Real(DbKi)                       :: v_i            ! node submerged volume
-      Real(DbKi)                       :: Vi(3)          ! relative water velocity at a given node
-      Real(DbKi)                       :: Vp(3)          ! transverse relative water velocity component at a given node
-      Real(DbKi)                       :: Vq(3)          ! tangential relative water velocity component at a given node
-      Real(DbKi)                       :: SumSqVp        !
-      Real(DbKi)                       :: SumSqVq        !
-      Real(DbKi)                       :: MagVp          !
-      Real(DbKi)                       :: MagVq          !
-
-
-      N = Line%N                      ! for convenience
-      d = Line%d    
-      rho = Line%rho
-
-      ! note that end node kinematics should have already been set by attached objects
-
-!      ! set end node positions and velocities from connect objects' states
-!      DO J = 1, 3
-!         Line%r( J,N) = m%ConnectList(Line%FairConnect)%r(J)
-!         Line%r( J,0) = m%ConnectList(Line%AnchConnect)%r(J)
-!         Line%rd(J,N) = m%ConnectList(Line%FairConnect)%rd(J)
-!         Line%rd(J,0) = m%ConnectList(Line%AnchConnect)%rd(J)
-!      END DO
-
-
-
-      ! calculate instantaneous (stretched) segment lengths and rates << should add catch here for if lstr is ever zero
-      DO I = 1, N
-         Sum1 = 0.0_DbKi
-         DO J = 1, 3
-            Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1)) * (Line%r(J,I) - Line%r(J,I-1))
-         END DO
-         Line%lstr(I) = sqrt(Sum1)                                  ! stretched segment length
-
-         Sum1 = 0.0_DbKi
-         DO J = 1, 3
-            Sum1 = Sum1 + (Line%r(J,I) - Line%r(J,I-1))*(Line%rd(J,I) - Line%rd(J,I-1))
-         END DO
-         Line%lstrd(I) = Sum1/Line%lstr(I)                          ! segment stretched length rate of change
-
- !       Line%V(I) = Pi/4.0 * d*d*Line%l(I)                        !volume attributed to segment
-      END DO
-
-      !calculate unit tangent vectors (q) for each node (including ends) note: I think these are pointing toward 0 rather than N!
-      CALL UnitVector(Line%r(:,0), Line%r(:,1), Line%q(:,0), dummyLength) ! compute unit vector q
-      DO I = 1, N-1
-        CALL UnitVector(Line%r(:,I-1), Line%r(:,I+1), Line%q(:,I), dummyLength) ! compute unit vector q ... using adjacent two nodes!
-      END DO
-      CALL UnitVector(Line%r(:,N-1), Line%r(:,N), Line%q(:,N), dummyLength)     ! compute unit vector q
-
-
-      ! --------------------------------- apply wave kinematics ------------------------------------
-
-      IF (p%WaterKin > 0)  THEN ! wave kinematics interpolated from global grid in Waves object
-         DO i=0,N
-            CALL getWaveKin(p, Line%r(1,i), Line%r(2,i), Line%r(3,i), Line%time, m%WaveTi, Line%U(:,i), Line%Ud(:,i), Line%zeta(i), Line%PDyn(i))
-         END DO
-      END IF
-
-
-      ! --------------- calculate mass (including added mass) matrix for each node -----------------
-      DO I = 0, N
-         IF (I==0) THEN
-            m_i = Pi/8.0 *d*d*Line%l(1)*rho
-            v_i = 0.5 *Line%V(1)
-         ELSE IF (I==N) THEN
-            m_i = pi/8.0 *d*d*Line%l(N)*rho;
-            v_i = 0.5*Line%V(N)
-         ELSE
-            m_i = pi/8.0 * d*d*rho*(Line%l(I) + Line%l(I+1))
-            v_i = 0.5 *(Line%V(I) + Line%V(I+1))
-         END IF
-
-         DO J=1,3
-            DO K=1,3
-               IF (J==K) THEN
-                  Line%M(K,J,I) = m_i + p%rhoW*v_i*( Line%Can*(1 - Line%q(J,I)*Line%q(K,I)) + Line%Cat*Line%q(J,I)*Line%q(K,I) )
-               ELSE
-                  Line%M(K,J,I) = p%rhoW*v_i*( Line%Can*(-Line%q(J,I)*Line%q(K,I)) + Line%Cat*Line%q(J,I)*Line%q(K,I) )
-               END IF
-            END DO
-         END DO
-
-         CALL Inverse3by3(Line%S(:,:,I), Line%M(:,:,I))             ! invert mass matrix
-      END DO
-
-
-      ! ------------------  CALCULATE FORCES ON EACH NODE ----------------------------
-
-      ! loop through the segments
-      DO I = 1, N
-
-         ! line tension, inherently including possibility of dynamic length changes in l term
-         IF (Line%lstr(I)/Line%l(I) > 1.0) THEN
-            DO J = 1, 3
-               Line%T(J,I) = Line%EA *( 1.0/Line%l(I) - 1.0/Line%lstr(I) ) * (Line%r(J,I)-Line%r(J,I-1))
-            END DO
-         ELSE
-            DO J = 1, 3
-               Line%T(J,I) = 0.0_DbKi                              ! cable can't "push"
-            END DO
-         END if
-
-         ! line internal damping force based on line-specific BA value, including possibility of dynamic length changes in l and ld terms
-         DO J = 1, 3
-            !Line%Td(J,I) = Line%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
-            Line%Td(J,I) = Line%BA* ( Line%lstrd(I) -  Line%lstr(I)*Line%ld(I)/Line%l(I) )/Line%l(I)  * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)
-         END DO
-      END DO
-
-
-
-      ! loop through the nodes
-      DO I = 0, N
-
-         !submerged weight (including buoyancy)
-         IF (I==0) THEN
-            Line%W(3,I) = Pi/8.0*d*d* Line%l(1)*(rho - p%rhoW) *(-p%g)   ! assuming g is positive
-         ELSE IF (i==N)  THEN
-            Line%W(3,I) = pi/8.0*d*d* Line%l(N)*(rho - p%rhoW) *(-p%g)
-         ELSE
-            Line%W(3,I) = pi/8.0*d*d* (Line%l(I)*(rho - p%rhoW) + Line%l(I+1)*(rho - p%rhoW) )*(-p%g)  ! left in this form for future free surface handling
-         END IF
-
-         !relative flow velocities
-         DO J = 1, 3
-            Vi(J) = 0.0 - Line%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
-         END DO
-
-         ! decomponse relative flow into components
-         SumSqVp = 0.0_DbKi                                         ! start sums of squares at zero
-         SumSqVq = 0.0_DbKi
-         DO J = 1, 3
-            Vq(J) = DOT_PRODUCT( Vi , Line%q(:,I) ) * Line%q(J,I);   ! tangential relative flow component
-            Vp(J) = Vi(J) - Vq(J)                                    ! transverse relative flow component
-            SumSqVq = SumSqVq + Vq(J)*Vq(J)
-            SumSqVp = SumSqVp + Vp(J)*Vp(J)
-         END DO
-         MagVp = sqrt(SumSqVp)                                      ! get magnitudes of flow components
-         MagVq = sqrt(SumSqVq)
-
-         ! transverse and tangenential drag
-         IF (I==0) THEN
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%l(1) * MagVp * Vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%l(1) * MagVq * Vq
-         ELSE IF (I==N)  THEN
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*Line%l(N) * MagVp * Vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*Line%l(N) * MagVq * Vq
-         ELSE
-            Line%Dp(:,I) = 0.25*p%rhoW*Line%Cdn*    d*(Line%l(I) + Line%l(I+1)) * MagVp * vp
-            Line%Dq(:,I) = 0.25*p%rhoW*Line%Cdt* Pi*d*(Line%l(I) + Line%l(I+1)) * MagVq * vq
-         END IF
-
-         ! F-K force from fluid acceleration not implemented yet
-
-         ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
-
-         IF (Line%r(3,I) < -p%WtrDpth) THEN
-            IF (I==0) THEN
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(            Line%l(I+1) ) 
-            ELSE IF (I==N) THEN
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I)               ) 
-            ELSE
-               Line%B(3,I) = ( (-p%WtrDpth - Line%r(3,I))*p%kBot - Line%rd(3,I)*p%cBot) * 0.5*d*(Line%l(I) + Line%l(I+1) ) 
-
-
-
-            END IF
-         ELSE
-            Line%B(3,I) = 0.0_DbKi
-         END IF
-
-         ! total forces
-         IF (I==0)  THEN
-            Line%Fnet(:,I) = Line%T(:,1)                 + Line%Td(:,1)                  + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I)
-         ELSE IF (I==N)  THEN
-            Line%Fnet(:,I) =                -Line%T(:,N)                  - Line%Td(:,N) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I)
-         ELSE
-            Line%Fnet(:,I) = Line%T(:,I+1) - Line%T(:,I) + Line%Td(:,I+1) - Line%Td(:,I) + Line%W(:,I) + Line%Dp(:,I) + Line%Dq(:,I) + Line%B(:,I)
-         END IF
-
-      END DO  ! I  - done looping through nodes
-
- !     print *, "line ", Line%IdNum, " has N=", N
- !     print *, " and rd shape", shape(Line%rd)
- !     print *, " and Xd shape", shape(Xd)
-      
-      ! loop through internal nodes and update their states  <<< should/could convert to matrix operations instead of all these loops
-      DO I=1, N-1
-         DO J=1,3
-
-            ! calculate RHS constant (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces)
-            Sum1 = 0.0_DbKi                               ! reset temporary accumulator
-            DO K = 1, 3
-              Sum1 = Sum1 + Line%S(K,J,I) * Line%Fnet(K,I)   ! matrix-vector multiplication [S i]{Forces i}  << double check indices
-            END DO ! K
-            
- !           print *, "writing Xd indices ", 3*N-3 + 3*I-3 + J, " and " , 3*I-3 + J
- !
- !           print*, Line%rd(J,I)
-  
-            ! update states
-            Xd(3*N-3 + 3*I-3 + J) = Line%rd(J,I);       ! dxdt = V  (velocities)
-            Xd(        3*I-3 + J) = Sum1                ! dVdt = RHS * A  (accelerations)
-
-         END DO ! J
-      END DO  ! I
-
-
-      ! check for NaNs
-      DO J = 1, 6*(N-1)
-         IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Line%time, " in Line ", Line%IdNum, " in MoorDyn."
-            IF (wordy > 1) THEN
-               print *, "state derivatives:"
-               print *, Xd
-               
-               
-               
-               print *, "m_i  p%rhoW   v_i Line%Can  Line%Cat"
-               print *, m_i 
-               print *, p%rhoW
-               print *, v_i
-               print *, Line%Can
-               print *, Line%Cat
-               
-               print *, "Line%q"
-               print *, Line%q
-               
-               print *, "Line%r"
-               print *, Line%r
-               
-               
-               print *, "Here is the mass matrix set"
-               print *, Line%M
-               
-               print *, "Here is the inverted mass matrix set"
-               print *, Line%S
-               
-               print *, "Here is the net force set"
-               print *, Line%Fnet
-            END IF            
-            
-            EXIT
-         END IF
-      END DO
-
-
-   !   ! add force and mass of end nodes to the Connects they correspond to <<<<<<<<<<<< do this from Connection instead now!
-   !   DO J = 1,3
-   !      FairFtot(J) = FairFtot(J) + Line%F(J,N)
-   !      AnchFtot(J) = AnchFtot(J) + Line%F(J,0)
-   !      DO K = 1,3
-   !         FairMtot(K,J) = FairMtot(K,J) + Line%M(K,J,N)
-   !         AnchMtot(K,J) = AnchMtot(K,J) + Line%M(K,J,0)
-   !      END DO
-   !   END DO
-
-   END SUBROUTINE Line_GetStateDeriv
-   !=====================================================================
-
-
-   !--------------------------------------------------------------
-   SUBROUTINE Line_SetEndKinematics(Line, r_in, rd_in, t, topOfLine)
-
-      TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! the current Line object
-      Real(DbKi),       INTENT(IN   )  :: r_in( 3)       ! state vector section for this line
-      Real(DbKi),       INTENT(IN   )  :: rd_in(3)       ! state vector section for this line
-      Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-      INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
-
-      Integer(IntKi)                   :: I,J      
-      INTEGER(IntKi)                   :: inode
-      
-      IF (topOfLine==1) THEN
-         inode = Line%N      
-         Line%endTypeB = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
-      ELSE
-         inode = 0
-         Line%endTypeA = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
-      END IF 
-      
-      !Line%r( :,inode) = r_in
-      !Line%rd(:,inode) = rd_in
-      
-      DO J = 1,3
-         Line%r( :,inode) = r_in
-         Line%rd(:,inode) = rd_in
-      END DO
-      
-   !   print *, "SetEndKinematics of line ", Line%idNum, " top?:", topOfLine
-   !   print *, r_in
-   !   print *, Line%r( :,inode), "  - confirming, node ", inode
-   !   print *, rd_in
-  
-      Line%time = t
-   
-   END SUBROUTINE Line_SetEndKinematics
-   !--------------------------------------------------------------
-   
-
-   ! get force, moment, and mass of line at line end node
-   !--------------------------------------------------------------
-   SUBROUTINE Line_GetEndStuff(Line, Fnet_out, Moment_out, M_out, topOfLine)
-   
-      TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! label for the current line, for convenience
-      REAL(DbKi),       INTENT(  OUT)  :: Fnet_out(3)    ! net force on end node
-      REAL(DbKi),       INTENT(  OUT)  :: Moment_out(3)  ! moment on end node (future capability)
-      REAL(DbKi),       INTENT(  OUT)  :: M_out(3,3)     ! mass matrix of end node
-      INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
-      
-      Integer(IntKi)                   :: I,J
-      INTEGER(IntKi)                   :: inode
-      
-      IF (topOfLine==1) THEN           ! end B of line
-         Fnet_out   = Line%Fnet(:, Line%N)
-         Moment_out = Line%endMomentB
-         M_out      = Line%M(:,:, Line%N)
-      ELSE                             ! end A of line
-         Fnet_out   = Line%Fnet(:, 0)
-         Moment_out = Line%endMomentA
-         M_out      = Line%M(:,:, 0)
-      END IF
-
-   END SUBROUTINE Line_GetEndStuff
-   !--------------------------------------------------------------
-
-
-   ! set end kinematics of a line that's attached to a Rod, and this includes rotational information
-   !--------------------------------------------------------------
-   SUBROUTINE Line_GetEndSegmentInfo(Line, qEnd, EIout, dlOut, topOfLine)
-
-      TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! label for the current line, for convenience
-      REAL(DbKi),       INTENT(  OUT)  :: qEnd(3)
-      REAL(DbKi),       INTENT(  OUT)  :: EIout
-      REAL(DbKi),       INTENT(  OUT)  :: dlOut
-      INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
-      
-      EIout = Line%EI;
-      
-      if (topOfLine==1) then
-         CALL UnitVector(Line%r(:,Line%N-1), Line%r(:,Line%N), qEnd, dlOut)  ! unit vector of last line segment
-      else
-         CALL UnitVector(Line%r(:,0       ), Line%r(:,1     ), qEnd, dlOut)  ! unit vector of first line segment
-      END IF
-      
-   END SUBROUTINE Line_GetEndSegmentInfo
-   !--------------------------------------------------------------
-
-
-   ! set end node unit vector of a line (this is called by an attached to a Rod, only applicable for bending stiffness)
-   !--------------------------------------------------------------
-   SUBROUTINE Line_SetEndOrientation(Line, qin, topOfLine, rodEndB)
-
-      TYPE(MD_Line),    INTENT(INOUT)  :: Line           ! label for the current line, for convenience
-      REAL(DbKi),       INTENT(IN   )  :: qin(3)         ! the rod's axis unit vector
-      INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
-      INTEGER(IntKi),   INTENT(IN   )  :: rodEndB        ! =0 means the line is attached to Rod end A, =1 means attached to Rod end B (implication for unit vector sign)
-
-      if (topOfLine==1) then
-      
-         Line%endTypeB = 1                  ! indicate attached to Rod (at every time step, just in case line get detached)
-         
-         if (rodEndB==1) then
-            Line%q(:,Line%N) = -qin   ! -----line----->[B<==ROD==A]
-         else
-            Line%q(:,Line%N) =  qin   ! -----line----->[A==ROD==>B]
-         end if
-      else
-         
-         Line%endTypeA = 1                  ! indicate attached to Rod (at every time step, just in case line get detached)                 ! indicate attached to Rod
-         
-         if (rodEndB==1) then
-            Line%q(:,0     ) =  qin   ! [A==ROD==>B]-----line----->
-         else
-            Line%q(:,0     ) = -qin   ! [B<==ROD==A]-----line----->
-         end if
-      end if
-
-   END SUBROUTINE Line_SetEndOrientation
-   !--------------------------------------------------------------
-
-
-
 !--------------------------------------------------------------
 !            Connection-Specific Subroutines
 !--------------------------------------------------------------
@@ -4370,1462 +3190,9 @@ p%WaterKin  = 0
 
 
 
-
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_Initialize(Connect, states, m)
-
-      Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
-      Real(DbKi),       INTENT(INOUT)  :: states(6)      ! state vector section for this Connection
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
-
-      INTEGER(IntKi)                   :: l
-
-
-      if (Connect%typeNum == 0) then  ! error check
-      
-         ! pass kinematics to any attached lines so they have initial positions at this initialization stage
-         DO l=1,Connect%nAttached
-            IF (wordy > 1) print *, "Connect ",  Connect%IdNum, " setting end kinematics of line ", Connect%attached(l), " to ", Connect%r
-            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, 0.0_DbKi, Connect%Top(l))
-         END DO
-
-
-         ! assign initial node kinematics to state vector
-         states(4:6) = Connect%r
-         states(1:3) = Connect%rd
-         
-         
-         IF (wordy > 0) print *, "Initialized Connection ", Connect%IdNum
-      
-      else 
-         print *,"   Error: wrong Point type given to Connect_Initialize for number ", Connect%idNum
-      end if
-      
-   END SUBROUTINE Connect_Initialize
-   !--------------------------------------------------------------
-
-
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_SetKinematics(Connect, r_in, rd_in, a_in, t, m)
-
-      Type(MD_Connect), INTENT(INOUT)  :: Connect        ! the Connection object
-      Real(DbKi),       INTENT(IN   )  :: r_in( 3)       ! position
-      Real(DbKi),       INTENT(IN   )  :: rd_in(3)       ! velocity
-      Real(DbKi),       INTENT(IN   )  :: a_in(3)        ! acceleration (only used for coupled connects)
-      Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
-      
-
-      INTEGER(IntKi)                   :: l
-
-      ! store current time
-      Connect%time = t
-
-      
-    !  if (Connect%typeNum==0) THEN ! anchor ( <<< to be changed/expanded) ... in MoorDyn F also used for coupled connections
-                        
-         ! set position and velocity
-         Connect%r  = r_in
-         Connect%rd = rd_in
-         Connect%a = a_in
-                 
-         ! pass latest kinematics to any attached lines
-         DO l=1,Connect%nAttached
-            CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
-         END DO
-      
-     ! else
-     !    
-     !    PRINT*,"Error: setKinematics called for wrong Connection type. Connection ", Connect%IdNum, " type ", Connect%typeNum
-         
-   !  END IF
-      
-         
-   END SUBROUTINE Connect_SetKinematics
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_SetState(Connect, X, t, m)
-
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect        ! the Connection object
-      Real(DbKi),            INTENT(IN   )  :: X(:)           ! state vector section for this line
-      Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
-
-      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
-   
-
-      ! store current time
-      Connect%time = t
-      
-      ! from state values, get r and rdot values
-      DO J=1,3
-         Connect%r( J) = X(3 + J)  ! get positions
-         Connect%rd(J) = X(    J)  ! get velocities
-      END DO
-           
-     ! pass latest kinematics to any attached lines
-      DO l=1,Connect%nAttached
-         CALL Line_SetEndKinematics(m%LineList(Connect%attached(l)), Connect%r, Connect%rd, t, Connect%Top(l))
-      END DO
-      
-   END SUBROUTINE Connect_SetState
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_GetStateDeriv(Connect, Xd, m, p)
-
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect          ! the Connection object
-      Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
-      
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
-      
-      !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
-
-      !INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)                        :: J                ! index
-      INTEGER(IntKi)                        :: K                ! index      
-      Real(DbKi)                            :: Sum1             ! for adding things
-      
-      Real(DbKi)                            :: S(3,3)           ! inverse mass matrix
-
-
-      CALL Connect_DoRHS(Connect, m, p)
-                  
-!      // solve for accelerations in [M]{a}={f} using LU decomposition
-!      double M_tot[9];                     // serialize total mass matrix for easy processing
-!      for (int I=0; I<3; I++) for (int J=0; J<3; J++) M_tot[3*I+J]=M[I][J];
-!      double LU[9];                        // serialized matrix that will hold LU matrices combined
-!      Crout(3, M_tot, LU);                  // perform LU decomposition on mass matrix
-!      double acc[3];                        // acceleration vector to solve for
-!      solveCrout(3, LU, Fnet, acc);     // solve for acceleration vector
-
-      ! solve for accelerations in [M]{a}={f} using LU decomposition
-!      CALL LUsolve(6, M_out, LU_temp, Fnet_out, y_temp, acc)
-   
-                  
-      ! invert node mass matrix
-      CALL Inverse3by3(S, Connect%M)
-
-      ! accelerations 
-      Connect%a = MATMUL(S, Connect%Fnet)
-
-      ! fill in state derivatives
-      Xd(4:6) = Connect%rd           ! dxdt = V    (velocities)
-      Xd(1:3) = Connect%a            ! dVdt = RHS * A  (accelerations)
-      
-
-      ! check for NaNs
-      DO J = 1, 6
-         IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Connect%time, " in Point ",Connect%IdNum, " in MoorDyn."
-            IF (wordy > 1) print *, "state derivatives:"
-            IF (wordy > 1) print *, Xd
-            EXIT
-         END IF
-      END DO
-
-   END SUBROUTINE Connect_GetStateDeriv
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_DoRHS(Connect, m, p)
-
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect ! the Connection object      
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m       ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p       ! Parameters
-      
-      !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
-
-      INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
-      INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
-
-      Real(DbKi)                 :: Fnet_i(3) ! force from an attached line
-      Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
-      Real(DbKi)                 :: M_i(3,3)  ! mass from an attached line
-
-
-      ! start with the Connection's own forces including buoyancy and weight, and its own mass
-      Connect%Fnet(1) = Connect%conFX
-      Connect%Fnet(2) = Connect%conFY
-      Connect%Fnet(3) = Connect%conFZ + Connect%conV*p%rhoW*p%g - Connect%conM*p%g
-
-      Connect%M    = 0.0_DbKi  ! clear (zero) the connect mass matrix
-      
-      DO J = 1,3
-        Connect%M   (J,J) = Connect%conM  ! set the diagonals to the self-mass (to start with)
-      END DO
-
-
-   !   print *, "connection number", Connect%IdNum
-   !   print *, "attached lines: ", Connect%attached
-   !   print *, "size of line list" , size(m%LineList)
-
-      ! loop through attached lines, adding force and mass contributions
-      DO l=1,Connect%nAttached
-         
-      !   print *, "  l", l
-      !   print *, Connect%attached(l)
-      !   print *, m%LineList(Connect%attached(l))%Fnet
-      !   
-      !   
-      !   print *, "  attached line ID", m%LineList(Connect%attached(l))%IdNum
-         
-         CALL Line_GetEndStuff(m%LineList(Connect%attached(l)), Fnet_i, Moment_dummy, M_i, Connect%Top(l))
-         
-         ! sum quantitites
-         Connect%Fnet = Connect%Fnet + Fnet_i
-         Connect%M    = Connect%M    + M_i
-         
-      END DO
-
-
-      ! XXXWhen this sub is called, any self weight, buoyancy, or external forcing should have already been
-      ! added by the calling subroutine.  The only thing left is any added mass or drag forces from the connection (e.g. float)
-      ! itself, which will be added below.XXX
-
-
-   !   IF (EqualRealNos(t, 0.0_DbKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
-   !
-   !      DO J = 1,3
-   !         Xd(3+J) = X(J)        ! velocities - these are unused in integration
-   !         Xd(J) = 0.0_DbKi           ! accelerations - these are unused in integration
-   !      END DO
-   !   ELSE
-   !      ! from state values, get r and rdot values
-   !      DO J = 1,3
-   !         Connect%r(J)  = X(3 + J)   ! get positions
-   !         Connect%rd(J) = X(J)       ! get velocities
-   !      END DO
-   !   END IF
-      
-
-      ! add any added mass and drag forces from the Connect body itself
-      DO J = 1,3
-         Connect%Fnet(J)   = Connect%Fnet(J) - 0.5 * p%rhoW * Connect%rd(J) * abs(Connect%rd(J)) * Connect%conCdA;  ! add drag forces - corrected Nov 24
-         Connect%M   (J,J) = Connect%M   (J,J) + Connect%conV*p%rhoW*Connect%conCa;                               ! add added mass
-
-      END DO
-
-   END SUBROUTINE Connect_DoRHS
-   !=====================================================================
-
-
-   ! calculate the force including inertial loads on connect that is coupled
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_GetCoupledForce(Connect,  Fnet_out, m, p)
-   
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
-      Real(DbKi),            INTENT(  OUT)  :: Fnet_out(3) ! force and moment vector about rRef
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-
-      Real(DbKi)                            :: F_iner(3)   ! inertial force
-
-      IF (Connect%typeNum == -1) then
-         ! calculate forces and masses of connect
-         CALL Connect_DoRHS(Connect, m, p)
-
-         ! add inertial loads as appropriate
-         F_iner = -MATMUL(Connect%M, Connect%a)    ! inertial loads
-         Fnet_out = Connect%Fnet + F_iner          ! add inertial loads
-
-      ELSE
-         print *, "Connect_GetCoupledForce called for wrong (uncoupled) Point type in MoorDyn!"
-      END IF
-      
-   END SUBROUTINE Connect_GetCoupledForce
-
-
-   ! calculate the force and mass contributions of the connect on the parent body (only for type 3 connects?)
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_GetNetForceAndMass(Connect, rRef, Fnet_out, M_out, m, p)
-   
-      Type(MD_Connect),      INTENT(INOUT)  :: Connect     ! the Connect object
-      Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (i.e. the parent body)
-      Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
-      Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-
-      Real(DbKi)                            :: rRel(  3)   ! position of connection relative to the body reference point (global orientation frame)
-
-
-      CALL Connect_DoRHS(Connect, m, p)
-
-      rRel = Connect%r - rRef    ! vector from body reference point to node
-
-      ! convert net force into 6dof force about body ref point
-      CALL translateForce3to6DOF(rRel, Connect%Fnet, Fnet_out)
-      
-      ! convert mass matrix to 6by6 mass matrix about body ref point
-      CALL translateMass3to6DOF(rRel, Connect%M, M_out)
-
-   END SUBROUTINE Connect_GetNetForceAndMass
-   
-   
- 
- 
-   ! this function handles assigning a line to a connection node
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_AddLine(Connect, lineID, TopOfLine)
-
-      Type(MD_Connect), INTENT (INOUT)   :: Connect        ! the Connection object
-      Integer(IntKi),   INTENT( IN )     :: lineID
-      Integer(IntKi),   INTENT( IN )     :: TopOfLine
-
-      IF (wordy > 0) Print*, "L", lineID, "->C", Connect%IdNum
-      
-      IF (Connect%nAttached <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Connect%nAttached = Connect%nAttached + 1  ! add the line to the number connected
-         Connect%Attached(Connect%nAttached) = lineID
-         Connect%Top(Connect%nAttached) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
-      ELSE
-         Print*, "Too many lines connected to Point ", Connect%IdNum, " in MoorDyn!"
-      END IF
-
-   END SUBROUTINE Connect_AddLine
-
-
-   ! this function handles removing a line from a connection node
-   !--------------------------------------------------------------
-   SUBROUTINE Connect_RemoveLine(Connect, lineID, TopOfLine, rEnd, rdEnd)
-
-      Type(MD_Connect), INTENT (INOUT)   :: Connect        ! the Connection object
-      Integer(IntKi),   INTENT( IN )     :: lineID
-      Integer(IntKi),   INTENT(  OUT)    :: TopOfLine
-      REAL(DbKi),       INTENT(INOUT)    :: rEnd(3)
-      REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
-      
-      Integer(IntKi)    :: l,m,J
-      
-      DO l = 1,Connect%nAttached    ! look through attached lines
-      
-         IF (Connect%Attached(l) == lineID) THEN   ! if this is the line's entry in the attachment list
-         
-            TopOfLine = Connect%Top(l);                ! record which end of the line was attached
-            
-            DO m = l,Connect%nAttached-1 
-            
-               Connect%Attached(m) = Connect%Attached(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
-               Connect%Top(     m) =      Connect%Top(m+1) 
-            
-               Connect%nAttached = Connect%nAttached - 1                      ! reduce attached line counter by 1
-            
-               ! also pass back the kinematics at the end
-               DO J = 1,3
-                  rEnd( J) = Connect%r( J)
-                  rdEnd(J) = Connect%rd(J)
-               END DO
-               
-               print*, "Detached line ", lineID, " from Connection ", Connect%IdNum
-               
-               EXIT
-            END DO
-            
-            IF (l == Connect%nAttached) THEN   ! detect if line not found
-               print *, "Error: failed to find line to remove during removeLineFromConnect call to connection ", Connect%IdNum, ". Line ", lineID
-            END IF
-         
-         END IF
-         
-      END DO
-      
-   END SUBROUTINE Connect_RemoveLine
-
-
-
-
-
-
-
-
 !--------------------------------------------------------------
 !            Rod-Specific Subroutines
 !--------------------------------------------------------------
-
-
-
-   !-----------------------------------------------------------------------
-   SUBROUTINE Rod_Setup(Rod, RodProp, endCoords, rhoW, ErrStat, ErrMsg)
-
-      TYPE(MD_Rod),       INTENT(INOUT)  :: Rod          ! the single rod object of interest
-      TYPE(MD_RodProp),   INTENT(INOUT)  :: RodProp      ! the single rod property set for the line of interest
-      REAL(DbKi),    INTENT(IN)          :: endCoords(6)
-      REAL(DbKi),    INTENT(IN)          :: rhoW
-      INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
-      CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      INTEGER(4)                         :: J             ! Generic index
-      INTEGER(4)                         :: K             ! Generic index
-      INTEGER(IntKi)                     :: N
-
-      N = Rod%N  ! number of segments in this line (for code readability)
-
-      ! -------------- save some section properties to the line object itself -----------------
-
-      Rod%d   = RodProp%d
-      Rod%rho = RodProp%w/(Pi/4.0 * Rod%d * Rod%d)
-      
-      Rod%Can   = RodProp%Can
-      Rod%Cat   = RodProp%Cat
-      Rod%Cdn   = RodProp%Cdn
-      Rod%Cdt   = RodProp%Cdt      
-      Rod%CaEnd = RodProp%CaEnd      
-      Rod%CdEnd = RodProp%CdEnd      
-      
-
-      ! allocate node positions and velocities (NOTE: these arrays start at ZERO)
-      ALLOCATE ( Rod%r(3, 0:N), Rod%rd(3, 0:N), STAT = ErrStat )   ! <<<<<< add error checks here
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 1 in MoorDyn" 
-     
-      ! allocate segment scalar quantities
-      ALLOCATE ( Rod%l(N), Rod%V(N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 2 in MoorDyn"
-
-      ! allocate water related vectors
-      ALLOCATE ( Rod%U(3, 0:N), Rod%Ud(3, 0:N), Rod%zeta(0:N), Rod%PDyn(0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 3 in MoorDyn"
-      ! set to zero initially (important of wave kinematics are not being used)
-      Rod%U    = 0.0_DbKi
-      Rod%Ud   = 0.0_DbKi
-      Rod%zeta = 0.0_DbKi
-      Rod%PDyn = 0.0_DbKi
-
-      ! allocate node force vectors
-      ALLOCATE ( Rod%W(3, 0:N), Rod%Bo(3, 0:N), Rod%Dp(3, 0:N), Rod%Dq(3, 0:N), Rod%Ap(3, 0:N), &
-         Rod%Aq(3, 0:N), Rod%Pd(3, 0:N), Rod%B(3, 0:N), Rod%Fnet(3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 4 in MoorDyn"
-      
-      ! allocate mass and inverse mass matrices for each node (including ends)
-      ALLOCATE ( Rod%M(3, 3, 0:N), STAT = ErrStat )
-      IF ( ErrStat /= ErrID_None ) print *, "Alloc error 5 in MoorDyn"
-
-
-
-      ! ------------------------- set some geometric properties and the starting kinematics -------------------------
-
-      CALL UnitVector(endCoords(1:3), endCoords(4:6), Rod%q, Rod%UnstrLen)  ! get Rod axis direction vector and Rod length
-
-      ! set Rod positions if applicable
-      if (Rod%typeNum==0) then               ! for an independent rod, set the position right off the bat
-
-         Rod%r6(1:3) = endCoords(1:3)      ! (end A coordinates) 
-         Rod%v6(1:3) = 0.0_DbKi            ! (end A velocity, unrotated axes) 
-   
-         Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
-         Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
-
-
-      else if (abs(Rod%typeNum)==1) then    ! for a pinned rod, just set the orientation (position will be set later by parent object)
-
-         Rod%r6(4:6) = Rod%q               ! (Rod direction unit vector)
-         Rod%v6(4:6) = 0.0_DbKi            ! (rotational velocities about unrotated axes) 
-
-      end if
-      ! otherwise (for a fixed rod) the positions will be set by the parent body or via coupling
-
-
-
-      ! save mass for future calculations >>>> should calculate I_l and I_r here in future <<<<
-      Rod%mass  = Rod%UnstrLen*RodProp%w
-
-
-      ! assign values for l and V
-      DO J=1,N
-         Rod%l(J) = Rod%UnstrLen/REAL(N, DbKi)
-         Rod%V(J) = Rod%l(J)*0.25*Pi*RodProp%d*RodProp%d
-      END DO
-      
-      
-
-      ! set gravity and bottom contact forces to zero initially (because the horizontal components should remain at zero)
-      DO J = 0,N
-         DO K = 1,3
-            Rod%W(K,J) = 0.0_DbKi
-            Rod%B(K,J) = 0.0_DbKi
-         END DO
-      END DO
-      
-      ! >>> why are the above assignments making l V W and B appear as "undefined pointer/array"s??? <<<
-      
-      IF (wordy > 0) print *, "Set up Rod ",Rod%IdNum, ", type ", Rod%typeNum
-
-      ! need to add cleanup sub <<<
-
-   END SUBROUTINE Rod_Setup
-   !--------------------------------------------------------------
-
-
-
-
-   ! Make output file for Rod and set end kinematics of any attached lines.
-   ! For free Rods, fill in the initial states into the state vector.
-   ! Notes: r6 and v6 must already be set.  
-   !        ground- or body-pinned rods have already had setKinematics called to set first 3 elements of r6, v6.
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_Initialize(Rod, states, m)
-
-      TYPE(MD_Rod),          INTENT(INOUT)  :: Rod          ! the rod object 
-      Real(DbKi),            INTENT(INOUT)  :: states(:)    ! state vector section for this line
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
-      
-
-      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
-      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
-      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
-   
-      IF (wordy > 0) print *, "initializing Rod ", Rod%idNum
-
-      ! the r6 and v6 vectors should have already been set
-      ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
-
-
-      ! Pass kinematics to any attached lines (this is just like what a Connection does, except for both ends)
-      ! so that they have the correct initial positions at this initialization stage.
-      
-      if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m)  ! don't call this for type -2 coupled Rods as it's already been called
-
-
-      ! assign the resulting kinematics to its part of the state vector (only matters if it's an independent Rod)
-
-      if (Rod%typeNum == 0) then               ! free Rod type
-      
-         states(1:6)   = 0.0_DbKi     ! zero velocities for initialization
-         states(7:9)   = Rod%r(:,0)   ! end A position
-         states(10:12) = Rod%q        ! rod direction unit vector
-      
-      else if (abs(Rod%typeNum) ==1 ) then           ! pinned rod type (coupled or attached to something previously via setPinKin)
-      
-         states(1:3)   = 0.0_DbKi     ! zero velocities for initialization
-         states(4:6)   = Rod%q        ! rod direction unit vector
-         
-      end if
-      
-      ! note: this may also be called by a coupled rod (type = -1) in which case states will be empty
-      
-      
-   END SUBROUTINE Rod_Initialize
-   !--------------------------------------------------------------
-
-
-
-
-   ! set kinematics for Rods ONLY if they are attached to a body (including a coupled body) or coupled (otherwise shouldn't be called)
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_SetKinematics(Rod, r6_in, v6_in, a6_in, t, m)
-
-      Type(MD_Rod),     INTENT(INOUT)  :: Rod            ! the Rod object
-      Real(DbKi),       INTENT(IN   )  :: r6_in(6)       ! 6-DOF position
-      Real(DbKi),       INTENT(IN   )  :: v6_in(6)       ! 6-DOF velocity
-      Real(DbKi),       INTENT(IN   )  :: a6_in(6)       ! 6-DOF acceleration (only used for coupled rods)
-      Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects
-
-      INTEGER(IntKi)                   :: l
-
-      Rod%time = t    ! store current time
-
-      
-      if (abs(Rod%typeNum) == 2) then ! rod rigidly coupled to a body, or ground, or coupling point
-         Rod%r6 = r6_in
-         Rod%v6 = v6_in
-         Rod%a6 = a6_in
-         
-         call ScaleVector(Rod%r6(4:6), 1.0_DbKi, Rod%r6(4:6)); ! enforce direction vector to be a unit vector
-         
-         ! since this rod has no states and all DOFs have been set, pass its kinematics to dependent Lines
-         CALL Rod_SetDependentKin(Rod, t, m)
-      
-      else if (abs(Rod%typeNum) == 1) then ! rod end A pinned to a body, or ground, or coupling point
-      
-         ! set Rod *end A only* kinematics based on BCs (linear model for now) 
-         Rod%r6(1:3) = r6_in(1:3)
-         Rod%v6(1:3) = v6_in(1:3)
-         Rod%a6(1:3) = a6_in(1:3)
-
-         
-         ! Rod is pinned so only end A is specified, rotations are left alone and will be 
-         ! handled, along with passing kinematics to dependent lines, by separate call to setState
-      
-      else
-         print *, "Error: Rod_SetKinematics called for a free Rod in MoorDyn."  ! <<<
-      end if
-
-   
-      ! update Rod direction unit vector (simply equal to last three entries of r6, presumably these were set elsewhere for pinned Rods)
-       Rod%q = Rod%r6(4:6)
-      
-         
-
-   END SUBROUTINE Rod_SetKinematics
-   !--------------------------------------------------------------
-
-   ! pass the latest states to the rod if it has any DOFs/states (then update rod end kinematics including attached lines)
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_SetState(Rod, X, t, m)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod        ! the Rod object
-      Real(DbKi),            INTENT(IN   )  :: X(:)       ! state vector section for this line
-      Real(DbKi),            INTENT(IN   )  :: t          ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
-
-      INTEGER(IntKi)                        :: J          ! index
-   
-
-      ! for a free Rod, there are 12 states:
-      ! [ x, y, z velocity of end A, then rate of change of u/v/w coordinates of unit vector pointing toward end B,
-      ! then x, y, z coordinate of end A, u/v/w coordinates of unit vector pointing toward end B]
-
-      ! for a pinned Rod, there are 6 states (rotational only):
-      ! [ rate of change of u/v/w coordinates of unit vector pointing toward end B,
-      ! then u/v/w coordinates of unit vector pointing toward end B]
-      
-      
-      ! store current time
-      Rod%time = t
-
-
-      ! copy over state values for potential use during derivative calculations
-      if (Rod%typeNum == 0) then                         ! free Rod type
-      
-         ! CALL ScaleVector(X(10:12), 1.0, X(10:12))  ! enforce direction vector to be a unit vector <<<< can't do this with FAST frameowrk, could be a problem!!
-         
-         ! TODO: add "controller" adjusting state derivatives of X(10:12) to artificially force X(10:12) to remain a unit vector <<<<<<<<<<<
-
-         
-         Rod%r6(1:3) = X(7:9)                         ! (end A coordinates)
-         Rod%v6(1:3) = X(1:3)                         ! (end A velocity, unrotated axes) 
-         CALL ScaleVector(X(10:12), 1.0_DbKi, Rod%r6(4:6)) !Rod%r6(4:6) = X(10:12)                    ! (Rod direction unit vector)
-         Rod%v6(4:6) = X(4:6)                         ! (rotational velocities about unrotated axes) 
-         
-         
-         CALL Rod_SetDependentKin(Rod, t, m)
-      
-      else if (abs(Rod%typeNum) == 1) then                       ! pinned rod type (coupled or attached to something)t previously via setPinKin)
-      
-         !CALL ScaleVector(X(4:6), 1.0, X(4:6))      ! enforce direction vector to be a unit vector
-         
-         
-         CALL ScaleVector(X(4:6), 1.0_DbKi, Rod%r6(4:6)) !Rod%r6(3+J) = X(3+J) ! (Rod direction unit vector)
-         Rod%v6(4:6) = X(1:3)                    ! (rotational velocities about unrotated axes) 
-         
-         
-         CALL Rod_SetDependentKin(Rod, t, m)
-      
-      else
-         print *, "Error: Rod::setState called for a non-free rod type in MoorDyn"   ! <<<
-      end if
-
-      ! update Rod direction unit vector (simply equal to last three entries of r6)
-      Rod%q = Rod%r6(4:6)
-      
-   END SUBROUTINE Rod_SetState
-   !--------------------------------------------------------------
-
-
-   ! Set the Rod end kinematics then set the kinematics of dependent objects (any attached lines).
-   ! This also determines the orientation of zero-length rods.
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_SetDependentKin(Rod, t, m)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rod object
-      Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
-
-      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
-      INTEGER(IntKi)                        :: N              ! number of segments
-   
-      REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
-      REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
-      REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
-      REAL(DbKi)                            :: qMomentSum(3)  ! summation of qEnd*EI/dl_stretched (with correct sign) for each attached line
-         
-
-      ! Initialize variables         
-      qMomentSum = 0.0_DbKi
-
-      ! in future pass accelerations here too? <<<<
-   
-      N = Rod%N
-
-      ! from state values, set positions of end nodes 
-      ! end A
-      Rod%r(:,0)  = Rod%r6(1:3)  ! positions
-      Rod%rd(:,0) = Rod%v6(1:3)  ! velocities
-      
-      !print *, Rod%r6(1:3)
-      !print *, Rod%r(:,0)
-      
-      if (Rod%N > 0) then  ! set end B nodes only if the rod isn't zero length
-         CALL transformKinematicsAtoB(Rod%r6(1:3), Rod%r6(4:6), Rod%UnstrLen, Rod%v6, Rod%r(:,N), Rod%rd(:,N))   ! end B    
-      end if
-
-      ! pass end node kinematics to any attached lines (this is just like what a Connection does, except for both ends)
-      DO l=1,Rod%nAttachedA
-         CALL Line_SetEndKinematics(m%LineList(Rod%attachedA(l)), Rod%r(:,0), Rod%rd(:,0), t, Rod%TopA(l))
-      END DO
-      DO l=1,Rod%nAttachedB
-         CALL Line_SetEndKinematics(m%LineList(Rod%attachedB(l)), Rod%r(:,N), Rod%rd(:,N), t, Rod%TopB(l))
-      END DO
-
-
-      ! if this is a zero-length Rod, get bending moment-related information from attached lines and compute Rod's equilibrium orientation
-      if (N==0) then
-      
-         DO l=1,Rod%nAttachedA
-         
-            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedA(l)), qEnd, EIend, dlEnd, Rod%TopA(l))
-            
-            qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
-            
-         END DO
-
-         DO l=1,Rod%nAttachedB
-         
-            CALL Line_GetEndSegmentInfo(m%LineList(Rod%attachedB(l)), qEnd, EIend, dlEnd, Rod%TopB(l))
-            
-            qMomentSum = qMomentSum + qEnd*EIend/dlEnd  ! add each component to the summation vector
-            
-         END DO
-         
-         ! solve for line unit vector that balances all moments (unit vector of summation of qEnd*EI/dl_stretched over each line)
-         CALL ScaleVector(qMomentSum, 1.0_DbKi, Rod%q)
-      END IF
-
-      ! pass Rod orientation to any attached lines (this is just like what a Connection does, except for both ends)
-      DO l=1,Rod%nAttachedA
-         CALL Line_SetEndOrientation(m%LineList(Rod%attachedA(l)), Rod%q, Rod%TopA(l), 0)
-      END DO
-      DO l=1,Rod%nAttachedB
-         CALL Line_SetEndOrientation(m%LineList(Rod%attachedB(l)), Rod%q, Rod%TopB(l), 1)
-      END DO
-      
-   END SUBROUTINE Rod_SetDependentKin
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_GetStateDeriv(Rod, Xd, m, p)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod              ! the Rod object
-      Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
-      
-      !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
-
-      INTEGER(IntKi)                        :: J                ! index
-      
-      Real(DbKi)                            :: Fnet     (6)     ! net force and moment about reference point
-      Real(DbKi)                            :: M_out    (6,6)   ! mass matrix about reference point
-      
-      Real(DbKi)                            :: acc(6)           ! 6DOF acceleration vector about reference point
-      
-      Real(DbKi)                            :: Mcpl(3)          ! moment in response to end A acceleration due to inertial coupling
-      
-      Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
-      Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
-      
-      ! Initialize some things to zero
-      y_temp  = 0.0_DbKi
-! FIXME: should LU_temp be set to M_out before calling LUsolve?????
-      LU_temp = 0.0_DbKi
-
-      CALL Rod_GetNetForceAndMass(Rod, Rod%r(:,0), Fnet, M_out, m, p)
-                  
-                  
-
-   ! TODO: add "controller" adjusting state derivatives of X(10:12) to artificially force X(10:12) to remain a unit vector <<<<<<<<<<<
-
-      ! fill in state derivatives
-      IF (Rod%typeNum == 0) THEN                         ! free Rod type, 12 states  
-         
-         ! solve for accelerations in [M]{a}={f} using LU decomposition
-         CALL LUsolve(6, M_out, LU_temp, Fnet, y_temp, acc)
-         
-         Xd(7:9) = Rod%v6(1:3)  !Xd[6 + I] = v6[  I];       ! dxdt = V   (velocities)
-         Xd(1:6) = acc          !Xd[    I] = acc[  I];      ! dVdt = a   (accelerations) 
-                                !Xd[3 + I] = acc[3+I];        ! rotational accelerations
-      
-         ! rate of change of unit vector components!!  CHECK!   <<<<<
-         Xd(10) =                - Rod%v6(6)*Rod%r6(5) + Rod%v6(5)*Rod%r6(6) ! i.e.  u_dot_x = -omega_z*u_y + omega_y*u_z
-         Xd(11) =  Rod%v6(6)*Rod%r6(4)                 - Rod%v6(4)*Rod%r6(6) ! i.e.  u_dot_y =  omega_z*u_x - omega_x*u_z
-         Xd(12) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x - omega_x*u_y
-
-         ! store accelerations in case they're useful as output
-         Rod%a6 = acc
-
-      ELSE                            ! pinned rod, 6 states (rotational only)
-      
-         ! account for moment in response to end A acceleration due to inertial coupling (off-diagonal sub-matrix terms)
-         !Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  ! <<<check that it's the right submatrix <<<
-         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(1:3,4:6), Rod%a6(1:3))  ! <<< THIS order is stable. Weird. <<<
-         ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the above line seems to be causing the stability problems for USFLOWT! <<<<
-         
-         ! solve for accelerations in [M]{a}={f} using LU decomposition
-         CALL LUsolve(3, M_out(4:6,4:6), LU_temp(4:6,4:6), Fnet(4:6), y_temp(4:6), acc(4:6))
-         ! Note: solving for rotational DOFs only - excluding translational and off-diagonal 3x3 terms -
-         
-         Xd(1:3) = acc(4:6)   !   Xd[    I] = acc[3+I];          ! rotational accelerations
-         
-         ! rate of change of unit vector components!!  CHECK!   <<<<<
-         Xd(4) =                - Rod%v6(6)*Rod%r6(5) + Rod%v6(5)*Rod%r6(6) ! i.e.  u_dot_x = -omega_z*u_y + omega_y*u_z
-         Xd(5) =  Rod%v6(6)*Rod%r6(4)                 - Rod%v6(4)*Rod%r6(6) ! i.e.  u_dot_y =  omega_z*u_x - omega_x*u_z
-         Xd(6) = -Rod%v6(5)*Rod%r6(4) + Rod%v6(4)*Rod%r6(5)                 ! i.e.  u_dot_z = -omega_y*u_x - omega_x*u_y
-      
-         ! store angular accelerations in case they're useful as output
-         Rod%a6(4:6) = acc(4:6)
-      
-      END IF
-      
-      ! Note: accelerations that are dependent on parent objects) will not be known to this object 
-      !       (only those of free DOFs are coupled DOFs are known in this approach).
-   
-      ! check for NaNs (should check all state derivatives, not just first 6)
-      DO J = 1, 6
-         IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Rod%time, " in Rod ",Rod%IdNum
-            IF (wordy > 1) THEN
-               print *, " state derivatives:"
-               print *, Xd
-               
-               print *, "r0"
-               print *, Rod%r(:,0)
-               print *, "F"
-               print *, Fnet
-               print *, "M"
-               print *, M_out
-               print *, "acc"
-               print *, acc            
-            END IF
-            
-            EXIT
-         END IF
-      END DO
-
-   END SUBROUTINE Rod_GetStateDeriv
-   !--------------------------------------------------------------
-
-
-   ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_GetCoupledForce(Rod, Fnet_out, m, p)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
-      Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-      
-      Real(DbKi)                            :: F6_iner(6)   ! inertial reaction force
-      
-      ! do calculations of forces and masses on each rod node
-      CALL Rod_DoRHS(Rod, m, p)
-
-      ! add inertial loads as appropriate (written out in a redundant way just for clarity, and to support load separation in future)
-      ! fixed coupled rod
-      if (Rod%typeNum == -2) then                          
-      
-         F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
-         Fnet_out = Rod%F6net + F6_iner           ! add inertial loads
-      
-      ! pinned coupled rod      
-      else if (Rod%typeNum == -1) then                     
-         ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(4:6)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(4:6)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
-      else
-         print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
-      end if
-   
-   END SUBROUTINE Rod_GetCoupledForce
-   !--------------------------------------------------------------
-   
-
-
-   ! calculate the aggregate 6DOF rigid-body force and mass data of the rod 
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_GetNetForceAndMass(Rod, rRef, Fnet_out, M_out, m, p)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod         ! the Rod object
-      Real(DbKi),            INTENT(IN   )  :: rRef(3)     ! global coordinates of reference point (end A for free Rods)
-      Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector about rRef
-      Real(DbKi),            INTENT(  OUT)  :: M_out(6,6)  ! mass and inertia matrix about rRef
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-      
-      Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
-      
-      ! do calculations of forces and masses on each rod node
-      CALL Rod_DoRHS(Rod, m, p)
-
-      ! note: Some difference from MoorDyn C here. If this function is called by the Rod itself, the reference point must be end A
-
-      ! shift everything from end A reference to rRef reference point
-      
-      rRel = Rod%r(:,0) - rRef   ! vector from reference point to end A            
-         
-      CALL translateForce3to6DOF(rRel, Rod%F6net(1:3), Fnet_out)      ! shift net forces
-      Fnet_out(4:6) = Fnet_out(4:6) + Rod%F6net(4:6)               ! add in the existing moments
-         
-      CALL translateMass6to6DOF(rRel, Rod%M6net, M_out)          ! shift mass matrix to be about ref point
-         
-      ! >>> do we need to ensure zero moment is passed if it's pinned? <<<
-      !if (abs(Rod%typeNum)==1) then
-      !   Fnet_out(4:6) = 0.0_DbKi
-      !end if
-
-   
-   END SUBROUTINE Rod_GetNetForceAndMass
-   !--------------------------------------------------------------
-   
-
-   ! calculate the forces on the rod, including from attached lines
-   !--------------------------------------------------------------
-   SUBROUTINE Rod_DoRHS(Rod, m, p)
-
-      Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rodion object
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p              ! Parameters
-      
-      !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
-
-      INTEGER(IntKi)             :: l            ! index of attached lines
-      INTEGER(IntKi)             :: I,J,K        ! index
-      
-      
-      INTEGER(IntKi)             :: N            ! number of rod elements for convenience
-
-      Real(DbKi)                 :: phi, beta, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta   ! various orientation things
-      Real(DbKi)                 :: k_hat(3)     ! unit vector (redundant, not used) <<<<
-      Real(DbKi)                 :: Ftemp        ! temporary force component
-      Real(DbKi)                 :: Mtemp        ! temporary moment component
-
-      Real(DbKi)                 :: m_i, v_i     ! 
-      Real(DbKi)                 :: zeta         ! wave elevation above/below a given node
-      !Real(DbKi)                 :: h0           ! distance along rod centerline from end A to the waterplane     
-      Real(DbKi)                 :: deltaL       ! submerged length of a given segment
-      Real(DbKi)                 :: Lsum         ! cumulative length along rod axis from bottom
-      Real(DbKi)                 :: dL           ! length attributed to node
-      Real(DbKi)                 :: VOF          ! fraction of volume associated with node that is submerged
-      
-      Real(DbKi)                 :: Vi(3)        ! relative flow velocity over a node
-      Real(DbKi)                 :: SumSqVp, SumSqVq, MagVp, MagVq
-      Real(DbKi)                 :: Vp(3), Vq(3) ! transverse and axial components of water velocity at a given node     
-      Real(DbKi)                 :: ap(3), aq(3) ! transverse and axial components of water acceleration at a given node
-      Real(DbKi)                 :: Fnet_i(3)    ! force from an attached line
-      Real(DbKi)                 :: Mnet_i(3)    ! moment from an attached line
-      Real(DbKi)                 :: Mass_i(3,3)  ! mass from an attached line
-
-      ! used in lumped 6DOF calculations:
-      Real(DbKi)                 :: rRel(  3)              ! relative position of each node i from rRef      
-      Real(DbKi)                 :: OrMat(3,3)             ! rotation matrix to rotate global z to rod's axis
-      Real(DbKi)                 :: F6_i(6)                ! a node's contribution to the total force vector
-      Real(DbKi)                 :: M6_i(6,6)              ! a node's contribution to the total mass matrix
-      Real(DbKi)                 :: I_l                    ! axial inertia of rod
-      Real(DbKi)                 :: I_r                    ! radial inertia of rod about CG
-      Real(DbKi)                 :: Imat_l(3,3)            ! inertia about CG aligned with Rod axis
-      Real(DbKi)                 :: Imat(3,3)              ! inertia about CG in global frame     
-      Real(DbKi)                 :: h_c                    ! location of CG along axis
-      Real(DbKi)                 :: r_c(3)                 ! 3d location of CG relative to node A      
-      Real(DbKi)                 :: Fcentripetal(3)        ! centripetal force
-      Real(DbKi)                 :: Mcentripetal(3)        ! centripetal moment
-
-
-      N = Rod%N
-
-      ! ------------------------------ zero some things --------------------------
-      
-      Rod%Mext = 0.0_DbKi  ! zero the external moment sum
-
-      Lsum = 0.0_DbKi
-
-      
-      ! ---------------------------- initial rod and node calculations ------------------------
-
-      ! calculate some orientation information for the Rod as a whole
-      call GetOrientationAngles(Rod%r( :,0), Rod%r( :,N), phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
- 
-      ! save to internal roll and pitch variables for use in output <<< should check these, make Euler angles isntead of independent <<<
-      Rod%roll  = -180.0/Pi * phi*sinBeta
-      Rod%pitch =  180.0/Pi * phi*cosBeta
-
-      ! set interior node positions and velocities (stretch the nodes between the endpoints linearly) (skipped for zero-length Rods)
-      DO i=1,N-1
-         Rod%r( :,i) =  Rod%r( :,0) + (Rod%r( :,N) - Rod%r( :,0)) * (REAL(i)/REAL(N))
-         Rod%rd(:,i) =  Rod%rd(:,0) + (Rod%rd(:,N) - Rod%rd(:,0)) * (REAL(i)/REAL(N))
-         
-      
-         Rod%V(i) = 0.25*pi * Rod%d*Rod%d * Rod%l(i) ! volume attributed to segment
-      END DO
-
-
-   ! --------------------------------- apply wave kinematics ------------------------------------
-
-      IF (p%WaterKin == 1)  THEN ! wave kinematics interpolated from global grid in Waves object
-         DO i=0,N
-            CALL getWaveKin(p, Rod%r(1,i), Rod%r(2,i), Rod%r(3,i), Rod%time, m%WaveTi, Rod%U(:,i), Rod%Ud(:,i), Rod%zeta(i), Rod%PDyn(i))
-            !F(i) = 1.0 ! set VOF value to one for now (everything submerged - eventually this should be element-based!!!) <<<<
-            ! <<<< currently F is not being used and instead a VOF variable is used within the node loop
-         END DO
-      END IF
-
-
-    !  ! wave kinematics not implemented yet <<<
-    !  ap = 0.0_DbKi
-    !  aq = 0.0_DbKi
-    !  ! set U and Ud herem as well as pDyn and zeta...
-    !  Rod%U    = 0.0_DbKi
-    !  Rod%Ud   = 0.0_DbKi
-    !  pDyn = 0.0_DbKi
-    !  zeta = 0.0_DbKi
-      
-      ! >>> remember to check for violated conditions, if there are any... <<<
-           
-      zeta = Rod%zeta(N)! just use the wave elevation computed at the location of the top node for now
-      
-      if ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane (should also add some limits to avoid near-horizontals at some point)
-         Rod%h0 = (zeta - Rod%r(3,0))/Rod%q(3)                       ! distance along rod centerline from end A to the waterplane
-      else if (Rod%r(3,0) < zeta) then
-         Rod%h0 = Rod%UnstrLen                                   ! fully submerged case   <<<<<< remove the 2.0 and double check there are no if statements that get changed <<<<
-      else
-         Rod%h0 = 0.0_DbKi                                           ! fully unsubmerged case (ever applicable?)
-      end if
-
-   
-      ! -------------------------- loop through all the nodes -----------------------------------
-      DO I = 0, N
-      
-      
-         ! ------------------ calculate added mass matrix for each node -------------------------
-      
-         ! get mass and volume considering adjacent segment lengths
-         IF (I==0) THEN
-            dL  = 0.5*Rod%l(1)
-            m_i = 0.25*Pi * Rod%d*Rod%d * dL *Rod%rho     ! (will be zero for zero-length Rods)
-            v_i = 0.5 *Rod%V(1)
-         ELSE IF (I==N) THEN
-            dL  = 0.5*Rod%l(N)
-            m_i = 0.25*pi * Rod%d*Rod%d * dL *Rod%rho
-            v_i = 0.5*Rod%V(N)
-         ELSE
-            dL  = 0.5*(Rod%l(I) + Rod%l(I+1))
-            m_i = 0.25*pi * Rod%d*Rod%d * dL *Rod%rho
-            v_i = 0.5 *(Rod%V(I) + Rod%V(I+1))
-         END IF
-
-         ! get scalar for submerged portion                  
-         IF (Lsum + dL <= Rod%h0) THEN    ! if fully submerged 
-            VOF = 1.0_DbKi
-         ELSE IF (Lsum < Rod%h0) THEN    ! if partially below waterline 
-            VOF = (Rod%h0 - Lsum)/dL
-         ELSE                        ! must be out of water
-            VOF = 0.0_DbKi
-         END IF
-         
-         Lsum = Lsum + dL            ! add length attributed to this node to the total
-
-         ! build mass and added mass matrix
-         DO J=1,3
-            DO K=1,3
-               IF (J==K) THEN
-                  Rod%M(K,J,I) = m_i + VOF*p%rhoW*v_i*( Rod%Can*(1 - Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
-               ELSE
-                  Rod%M(K,J,I) = VOF*p%rhoW*v_i*( Rod%Can*(-Rod%q(J)*Rod%q(K)) + Rod%Cat*Rod%q(J)*Rod%q(K) )
-               END IF
-            END DO
-         END DO
-         
-         ! <<<< what about accounting for offset of half segment from node location for end nodes? <<<<
-         
-         
-!         CALL Inverse3by3(Rod%S(:,:,I), Rod%M(:,:,I))             ! invert mass matrix
-
-
-         ! ------------------  CALCULATE FORCES ON EACH NODE ----------------------------
-
-         if (N > 0) then ! the following force calculations are only nonzero for finite-length rods (skipping for zero-length Rods)
-         
-            ! >>> no nodal axial elasticity loads calculated since it's assumed rigid, but should I calculate tension/compression due to other loads? <<<
-
-            ! weight (now only the dry weight)
-            Rod%W(:,I) = (/ 0.0_DbKi, 0.0_DbKi, -m_i * p%g /)   ! assuming g is positive
-            
-            ! buoyance (now calculated based on outside pressure, for submerged portion only)
-            ! radial buoyancy force from sides
-            Ftemp = -VOF * 0.25*Pi*dL*Rod%d*Rod%d * p%rhoW*p%g * sinPhi
-            Rod%Bo(:,I) = (/ Ftemp*cosBeta*cosPhi, Ftemp*sinBeta*cosPhi, -Ftemp*sinPhi /)            
-
-            !relative flow velocities
-            DO J = 1, 3
-               Vi(J) = Rod%U(J,I) - Rod%rd(J,I)                               ! relative flow velocity over node -- this is where wave velicites would be added
-            END DO
-
-            ! decomponse relative flow into components
-            SumSqVp = 0.0_DbKi                                         ! start sums of squares at zero
-            SumSqVq = 0.0_DbKi
-            DO J = 1, 3
-               Vq(J) = DOT_PRODUCT( Vi , Rod%q ) * Rod%q(J);            ! tangential relative flow component
-               Vp(J) = Vi(J) - Vq(J)                                    ! transverse relative flow component
-               SumSqVq = SumSqVq + Vq(J)*Vq(J)
-               SumSqVp = SumSqVp + Vp(J)*Vp(J)
-            END DO
-            MagVp = sqrt(SumSqVp)                                       ! get magnitudes of flow components
-            MagVq = sqrt(SumSqVq)
-
-            ! transverse and tangenential drag
-            Rod%Dp(:,I) = VOF * 0.5*p%rhoW*Rod%Cdn*    Rod%d* dL * MagVp * Vp
-            Rod%Dq(:,I) = 0.0_DbKi ! 0.25*p%rhoW*Rod%Cdt* Pi*Rod%d* dL * MagVq * Vq <<< should these axial side loads be included?
-
-            ! fluid acceleration components for current node
-            aq = DOT_PRODUCT(Rod%Ud(:,I), Rod%q) * Rod%q  ! tangential component of fluid acceleration
-            ap = Rod%Ud(:,I) - aq                         ! normal component of fluid acceleration
-            ! transverse Froude-Krylov force
-            Rod%Ap(:,I) = VOF * p%rhoW*(1.0+Rod%Can)* v_i * ap  ! 
-            ! axial Froude-Krylov force
-            Rod%Aq(:,I) = 0.0_DbKi  ! p%rhoW*(1.0+Rod%Cat)* v_i * aq  ! <<< just put a taper-based term here eventually?
-
-            ! dynamic pressure
-            Rod%Pd(:,I) = 0.0_DbKi  ! assuming zero for sides for now, until taper comes into play
-            
-            ! bottom contact (stiffness and damping, vertical-only for now)  - updated Nov 24 for general case where anchor and fairlead ends may deal with bottom contact forces
-            IF (Rod%r(3,I) < -p%WtrDpth) THEN
-               IF (I==0) THEN
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(            Rod%l(I+1) ) 
-               ELSE IF (I==N) THEN
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I)               ) 
-               ELSE
-                  Rod%B(3,I) = ( (-p%WtrDpth - Rod%r(3,I))*p%kBot - Rod%rd(3,I)*p%cBot) * 0.5*Rod%d*(Rod%l(I) + Rod%l(I+1) ) 
-               END IF
-            ELSE
-               Rod%B(3,I) = 0.0_DbKi
-            END IF
-            
-         ELSE    ! zero-length (N=0) Rod case
-         
-            ! >>>>>>>>>>>>>> still need to check handling of zero length rods <<<<<<<<<<<<<<<<<<<
-         
-            ! for zero-length rods, make sure various forces are zero
-            Rod%W  = 0.0_DbKi
-            Rod%Bo = 0.0_DbKi
-            Rod%Dp = 0.0_DbKi
-            Rod%Dq= 0.0_DbKi
-            Rod%B = 0.0_DbKi
-            Rod%Pd = 0.0_DbKi
-            
-         END IF
-         
-         
-         ! ------ now add forces, moments, and added mass from Rod end effects (these can exist even if N==0) -------
-         
-         ! end A
-         IF ((I==0) .and. (Rod%h0 > 0.0_ReKi)) THEN    ! if this is end A and it is submerged 
-         
-         ! >>> eventually should consider a VOF approach for the ends    hTilt = 0.5*Rod%d/cosPhi <<<
-         
-            ! buoyancy force
-            Ftemp = -VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g*Rod%r(3,I)
-            Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
-         
-            ! buoyancy moment
-            Mtemp = -VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
-            Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
-         
-            ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
-         
-         
-            ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
-
-            ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
-            
-            ! dynamic pressure force
-            Rod%Pd(:,I) = Rod%Pd(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
-            
-            ! added mass
-            DO J=1,3
-               DO K=1,3
-                  IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
-                  ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
-                  END IF
-               END DO
-            END DO
-         
-         END IF
-            
-         IF ((I==N) .and. (Rod%h0 >= Rod%UnstrLen)) THEN    ! if this end B and it is submerged (note, if N=0, both this and previous if statement are true)
-         
-            ! buoyancy force
-            Ftemp = VOF * 0.25*Pi*Rod%d*Rod%d * p%rhoW*p%g*Rod%r(3,I)
-            Rod%Bo(:,I) = Rod%Bo(:,I) + (/ Ftemp*cosBeta*sinPhi, Ftemp*sinBeta*sinPhi, Ftemp*cosPhi /) 
-         
-            ! buoyancy moment
-            Mtemp = VOF * 1.0/64.0*Pi*Rod%d**4 * p%rhoW*p%g * sinPhi 
-            Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
-            
-            ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
-            
-            ! Froud-Krylov force
-            Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW*(1.0+Rod%CaEnd)*0.5* (2.0/3.0*Pi*Rod%d**3 /8) * aq
-            
-            ! dynamic pressure force
-            Rod%Pd(:,I) = Rod%Pd(:,I) - VOF * 0.25* Pi*Rod%d*Rod%d * Rod%PDyn(I) * Rod%q
-            
-            ! added mass
-            DO J=1,3
-               DO K=1,3
-                  IF (J==K) THEN
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
-                  ELSE
-                     Rod%M(K,J,I) = Rod%M(K,J,I) + VOF*p%rhoW* (Pi*Rod%d**3/6.0) * Rod%CaEnd*Rod%q(J)*Rod%q(K) 
-                  END IF
-               END DO
-            END DO
-            
-         END IF
-         
-         
-         
-         ! ---------------------------- total forces for this node -----------------------------
-         
-         Rod%Fnet(:,I) = Rod%W(:,I) + Rod%Bo(:,I) + Rod%Dp(:,I) + Rod%Dq(:,I) &
-                         + Rod%Ap(:,I) + Rod%Aq(:,I) + Rod%Pd(:,I) + Rod%B(:,I)
-         
-
-      END DO  ! I  - done looping through nodes
-
-
-      ! ----- add waterplane moment of inertia moment if applicable -----
-      IF ((Rod%r(3,0) < zeta) .and. (Rod%r(3,N) > zeta)) then    ! check if it's crossing the water plane
-         Mtemp = 1.0/16.0 *Pi*Rod%d**4 * p%rhoW*p%g * sinPhi * (1.0 + 0.5* tanPhi**2)
-         Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /)
-      END IF
-   
-      ! ---------------- now add in forces on end nodes from attached lines ------------------
-         
-      ! loop through lines attached to end A
-      DO l=1,Rod%nAttachedA
-         
-         CALL Line_GetEndStuff(m%LineList(Rod%attachedA(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopA(l))
-         
-         ! sum quantitites
-         Rod%Fnet(:,0)= Rod%Fnet(:,0) + Fnet_i    ! total force
-         Rod%Mext     = Rod%Mext      + Mnet_i    ! externally applied moment
-         Rod%M(:,:,0) = Rod%M(:,:,0)  + Mass_i    ! mass at end node
-         
-      END DO
-   
-      ! loop through lines attached to end B
-      DO l=1,Rod%nAttachedB
-         
-         CALL Line_GetEndStuff(m%LineList(Rod%attachedB(l)), Fnet_i, Mnet_i, Mass_i, Rod%TopB(l))
-         
-         ! sum quantitites
-         Rod%Fnet(:,N)= Rod%Fnet(:,N) + Fnet_i    ! total force
-         Rod%Mext     = Rod%Mext      + Mnet_i    ! externally applied moment
-         Rod%M(:,:,N) = Rod%M(:,:,N)  + Mass_i    ! mass at end node
-         
-      END DO
-      
-      ! ---------------- now lump everything in 6DOF about end A -----------------------------
-
-      ! question: do I really want to neglect the rotational inertia/drag/etc across the length of each segment?
-   
-      ! make sure 6DOF quantiaties are zeroed before adding them up
-      Rod%F6net = 0.0_DbKi
-      Rod%M6net = 0.0_DbKi
-
-      ! now go through each node's contributions, put them about end A, and sum them
-      DO i = 0,Rod%N
-      
-         rRel = Rod%r(:,i) - Rod%r(:,0)   ! vector from reference point to node            
-         
-         ! convert segment net force into 6dof force about body ref point (if the Rod itself, end A)
-         CALL translateForce3to6DOF(rRel, Rod%Fnet(:,i), F6_i)
-         
-         ! convert segment mass matrix to 6by6 mass matrix about body ref point  (if the Rod itself, end A)
-         CALL translateMass3to6DOF(rRel, Rod%M(:,:,i), M6_i)
-                  
-         ! sum contributions
-         Rod%F6net = Rod%F6net + F6_i
-         Rod%M6net = Rod%M6net + M6_i
-         
-      END DO
-      
-      ! ------------- Calculate some items for the Rod as a whole here -----------------
-      
-      ! >>> could some of these be precalculated just once? <<<
-            
-      ! add inertia terms for the Rod assuming it is uniform density (radial terms add to existing matrix which contains parallel-axis-theorem components only)
-      I_l = 0.125*Rod%mass * Rod%d*Rod%d     ! axial moment of inertia
-      I_r = Rod%mass/12 * (0.75*Rod%d*Rod%d + (Rod%UnstrLen/Rod%N)**2 ) * Rod%N     ! summed radial moment of inertia for each segment individually
-      
-      !h_c = [value from registry]
-
-      Imat_l(1,1) = I_r   ! inertia about CG in local orientations (as if Rod is vertical)
-      Imat_l(2,2) = I_r
-      Imat_l(3,3) = I_l
-      
-      OrMat = CalcOrientation(phi, beta, 0.0_DbKi)        ! get rotation matrix to put things in global rather than rod-axis orientations
-      
-      Imat = RotateM3(Imat_l, OrMat)  ! rotate to give inertia matrix about CG in global frame
-      
-      ! these supplementary inertias can then be added the matrix (these are the terms ASIDE from the parallel axis terms)
-      Rod%M6net(4:6,4:6) = Rod%M6net(4:6,4:6) + Imat
-      
-
-      ! now add centripetal and gyroscopic forces/moments, and that should be everything
-      h_c = 0.5*Rod%UnstrLen          ! distance to center of mass
-      r_c = h_c*Rod%q                 ! vector to center of mass
-      
-      ! note that Rod%v6(4:6) is the rotational velocity vector, omega   
-      Fcentripetal = 0.0_DbKi !<<<TEMP<<< -cross_product(Rod%v6(4:6), cross_product(Rod%v6(4:6), r_c ))*Rod%mass <<<
-      Mcentripetal = 0.0_DbKi !<<<TEMP<<< cross_product(r_c, Fcentripetal) - cross_product(Rod%v6(4:6), MATMUL(Imat,Rod%v6(4:6)))
-      
-      ! add centripetal force/moment, gyroscopic moment, and any moments applied from lines at either end (might be zero)
-      Rod%F6net(1:3) = Rod%F6net(1:3) + Fcentripetal 
-      Rod%F6net(4:6) = Rod%F6net(4:6) + Mcentripetal + Rod%Mext
-            
-      ! Note: F6net saves the Rod's net forces and moments (excluding inertial ones) for use in later output
-      !       (this is what the rod will apply to whatever it's attached to, so should be zero moments if pinned).
-      !       M6net saves the rod's mass matrix.
-      
-      
-   
-
-   END SUBROUTINE Rod_DoRHS
-   !=====================================================================
-
-
-
-
-   ! this function handles assigning a line to a connection node
-   SUBROUTINE Rod_AddLine(Rod, lineID, TopOfLine, endB)
-
-      Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Connection object
-
-      Integer(IntKi),   INTENT( IN )     :: lineID
-      Integer(IntKi),   INTENT( IN )     :: TopOfLine
-      Integer(IntKi),   INTENT( IN )     :: endB   ! add line to end B if 1, end A if 0
-
-      if (endB==1) then   ! attaching to end B
-
-         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "b"
-         
-         IF (Rod%nAttachedB <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-            Rod%nAttachedB = Rod%nAttachedB + 1  ! add the line to the number connected
-            Rod%AttachedB(Rod%nAttachedB) = lineID
-            Rod%TopB(Rod%nAttachedB) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
-         ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
-         END IF
-
-      else              ! attaching to end A
-      
-         IF (wordy > 0) Print*, "L", lineID, "->R", Rod%IdNum , "a"
-         
-         IF (Rod%nAttachedA <10) THEN ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-            Rod%nAttachedA = Rod%nAttachedA + 1  ! add the line to the number connected
-            Rod%AttachedA(Rod%nAttachedA) = lineID
-            Rod%TopA(Rod%nAttachedA) = TopOfLine  ! attached to line ... 1 = top/fairlead(end B), 0 = bottom/anchor(end A)
-         ELSE
-            Print*, "too many lines connected to Rod ", Rod%IdNum, " in MoorDyn!"
-         END IF
-         
-      end if
-
-   END SUBROUTINE Rod_AddLine
-
-
-   ! this function handles removing a line from a connection node
-   SUBROUTINE Rod_RemoveLine(Rod, lineID, TopOfLine, endB,  rEnd, rdEnd)
-
-      Type(MD_Rod), INTENT (INOUT)  :: Rod        ! the Connection object
-
-      Integer(IntKi),   INTENT( IN )     :: lineID
-      Integer(IntKi),   INTENT(  OUT)    :: TopOfLine
-      Integer(IntKi),   INTENT( IN )     :: endB   ! end B if 1, end A if 0
-      REAL(DbKi),       INTENT(INOUT)    :: rEnd(3)
-      REAL(DbKi),       INTENT(INOUT)    :: rdEnd(3)
-      
-      Integer(IntKi)    :: l,m,J
-      
-      if (endB==1) then   ! attaching to end B
-         
-         DO l = 1,Rod%nAttachedB    ! look through attached lines
-         
-            IF (Rod%AttachedB(l) == lineID) THEN   ! if this is the line's entry in the attachment list
-            
-               TopOfLine = Rod%TopB(l);                ! record which end of the line was attached
-               
-               DO m = l,Rod%nAttachedB-1 
-               
-                  Rod%AttachedB(m) = Rod%AttachedB(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
-                  Rod%TopB(     m) =      Rod%TopB(m+1) 
-               
-                  Rod%nAttachedB = Rod%nAttachedB - 1                      ! reduce attached line counter by 1
-               
-                  ! also pass back the kinematics at the end
-                  DO J = 1,3
-                     rEnd( J) = Rod%r( J,Rod%N)
-                     rdEnd(J) = Rod%rd(J,Rod%N)
-                  END DO
-                  
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end B"
-                  
-                  EXIT
-               END DO
-               
-               IF (l == Rod%nAttachedB) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
-            END IF
-         END DO
-         
-      else              ! attaching to end A
-              
-        DO l = 1,Rod%nAttachedA    ! look through attached lines
-         
-            IF (Rod%AttachedA(l) == lineID) THEN   ! if this is the line's entry in the attachment list
-            
-               TopOfLine = Rod%TopA(l);                ! record which end of the line was attached
-               
-               DO m = l,Rod%nAttachedA-1 
-               
-                  Rod%AttachedA(m) = Rod%AttachedA(m+1)  ! move subsequent line links forward one spot in the list to eliminate this line link
-                  Rod%TopA(     m) =      Rod%TopA(m+1) 
-               
-                  Rod%nAttachedA = Rod%nAttachedA - 1                      ! reduce attached line counter by 1
-               
-                  ! also pass back the kinematics at the end
-                  DO J = 1,3
-                     rEnd( J) = Rod%r( J,0)
-                     rdEnd(J) = Rod%rd(J,0)
-                  END DO
-                  
-                  print*, "Detached line ", lineID, " from Rod ", Rod%IdNum, " end A"
-                  
-                  EXIT
-               END DO
-               
-               IF (l == Rod%nAttachedA) THEN   ! detect if line not found
-                  print *, "Error: failed to find line to remove during RemoveLine call to Rod ", Rod%IdNum, ". Line ", lineID
-               END IF
-            END IF
-         END DO
-      
-      end if
-      
-   END SUBROUTINE Rod_RemoveLine
 
 
 
@@ -5839,1183 +3206,876 @@ p%WaterKin  = 0
 !--------------------------------------------------------------
 
 
-   SUBROUTINE Body_Setup( Body, tempArray, rhoW, ErrStat, ErrMsg)
 
-      TYPE(MD_Body),     INTENT(INOUT)    :: Body          ! the single body object of interest
-      REAL(DbKi),        INTENT(IN)       :: tempArray(6)  ! initial pose of body
-      REAL(DbKi),        INTENT(IN)       :: rhoW
-      INTEGER,           INTENT(INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
-      CHARACTER(*),      INTENT(INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-      INTEGER(4)                          :: J             ! Generic index
-      INTEGER(4)                          :: K             ! Generic index
-      INTEGER(IntKi)                      :: N
-
-      REAL(DbKi)                          :: Mtemp(6,6)   
-
-      ! set initial velocity to zero
-      Body%v6 = 0.0_DbKi
-
-      !also set number of attached rods and points to zero initially
-      Body%nAttachedC = 0
-      Body%nAttachedR = 0
-
-      ! for now take one entry and apply to all three DOFs just using a single entry for all axes <<<<<
-      DO J=2,3
-         Body%BodyI(J)   = Body%BodyI(1)
-         Body%BodyCdA(J) = Body%BodyCdA(1)
-         Body%BodyCa(J)  = Body%BodyCa(1)
-      END DO
-
-      ! set up body initial mass matrix (excluding any rods or attachements)
-      DO J=1,3
-         Mtemp(J,J) = Body%bodyM          ! fill in mass
-         Mtemp(3+J,3+J) = Body%bodyI(J)   ! fill in inertia   
-      END DO
-      
-      CALL TranslateMass6to6DOF(Body%rCG, Mtemp, Body%M0)  ! account for potential CG offset <<< is the direction right? <<<
-        
-      DO J=1,6
-         Body%M0(J,J) = Body%M0(J,J) + Body%bodyV*Body%bodyCa(1) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
-      END DO
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! ###### The following four routines are Jacobian routines for linearization capabilities #######
+! If the module does not implement them, set ErrStat = ErrID_Fatal in SD_Init() when InitInp%Linearize is .true.
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+SUBROUTINE MD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdu.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdu(:,:)          !< Partial derivatives of output functions (Y) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdu(:,:)          !< Partial derivatives of continuous state functions (X) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddu(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the inputs (u) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdu(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the inputs (u) [intent in to avoid deallocation]
    
-      ! --------------- if this is an independent body (not coupled) ----------
-      ! set initial position and orientation of body from input file 
-      Body%r6 = tempArray
-
-      ! calculate orientation matrix based on latest angles
-      !RotMat(r6[3], r6[4], r6[5], OrMat);
-      Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) )  ! full Euler angle approach <<<< need to check order 
-
-      IF (wordy > 0) print *, "Set up Body ",Body%IdNum, ", type ", Body%typeNum
-
-      ! need to add cleanup sub <<<
-
-   END SUBROUTINE Body_Setup
-
-!   ! used to initialize bodies that aren't free i.e. don't have states
-!   !--------------------------------------------------------------
-!   SUBROUTINE Body_InitializeUnfree(Body, r6_in, mesh, mesh_index, m)
-!
-!      Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Body object
-!      Real(DbKi),            INTENT(IN   )  :: r6_in(6)    ! state vector section for this line
-!      TYPE(MeshType),        INTENT(INOUT)  :: mesh        !
-!      Integer(IntKi),        INTENT(IN   )  :: mesh_index  ! index of the node in the mesh for the current object being initialized
-!      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-!
-!      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
-!      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
-!      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
-!      REAL(DbKi)                            :: dummyStates(12) 
-!   
-!   
-!      rRef = 0.0_DbKi   ! <<< maybe this should be the offsets of the local platform origins from the global origins in future? And that's what's specificed by the Body input coordinates?
-!      
-!      CALL MeshPositionNode(mesh, mesh+index, rRef,ErrStat2,ErrMsg2)! "assign the coordinates (u%PtFairleadDisplacement%Position) of each node in the global coordinate space"
-!
-!      CALL CheckError( ErrStat2, ErrMsg2 )
-!      IF (ErrStat >= AbortErrLev) RETURN
-!
-!      ! Apply offsets due to initial platform rotations and translations (fixed Jun 19, 2015)
-!      CALL SmllRotTrans('body rotation matrix', r6_in(4),r6_in(5),r6_in(6), OrMat, '', ErrStat2, ErrMsg2)
-!      mesh%TranslationDisp(1, mesh_index) = r6_in(1) + OrMat(1,1)*rRef(1) + OrMat(2,1)*rRef(2) + OrMat(3,1)*rRef(3) - rRef(1)
-!      mesh%TranslationDisp(2, mesh_index) = r6_in(2) + OrMat(1,2)*rRef(1) + OrMat(2,2)*rRef(2) + OrMat(3,2)*rRef(3) - rRef(2)
-!      mesh%TranslationDisp(3, mesh_index) = r6_in(3) + OrMat(1,3)*rRef(1) + OrMat(2,3)*rRef(2) + OrMat(3,3)*rRef(3) - rRef(3)
-!
-!      ! what about node point orientation ???
-!
-!      ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
-!      DO l=1, Body%nAttachedR
-!         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates, m%LineList)
-!      END DO
-!      
-!      ! Note: Connections don't need any initialization
-!      
-!   END SUBROUTINE Body_InitializeUnfree
-!   !--------------------------------------------------------------
-
-
-   ! used to initialize bodies that are free
-   !--------------------------------------------------------------
-   SUBROUTINE Body_Initialize(Body, states, m)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body            ! the Body object
-      Real(DbKi),            INTENT(INOUT)  :: states(:)       ! state vector section for this Body
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m               ! passing along all mooring objects
-
-      INTEGER(IntKi)                        :: l               ! index of segments or nodes along line
-      REAL(DbKi)                            :: dummyStates(12) ! dummy vector to mimic states when initializing a rigidly attached rod
+   ! local variables
+   TYPE(MD_OutputType)          :: y_m, y_p
+   TYPE(MD_ContinuousStateType) :: x_m, x_p
+   TYPE(MD_InputType)           :: u_perturb
+   REAL(R8Ki)                   :: delta_p, delta_m   ! delta change in input (plus, minus)
+   INTEGER(IntKi)               :: i
+   integer(intKi)               :: ErrStat2
+   character(ErrMsgLen)         :: ErrMsg2
+   character(*), parameter      :: RoutineName = 'MD_JacobianPInput'
    
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
    
-      ! assign initial body kinematics to state vector
-      states(7:12) = Body%r6
-      states(1:6 ) = Body%v6
-      
-
-      ! set positions of any dependent connections and rods now (before they are initialized)
-      CALL Body_SetDependentKin(Body, 0.0_DbKi, m)
-            
-      ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
-      DO l=1, Body%nAttachedR
-         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
-      END DO
-      
-      ! Note: Connections don't need any initialization
-      
-   END SUBROUTINE Body_Initialize
-   !--------------------------------------------------------------
+   ! get OP values here:
+   call MD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if(Failed()) return
    
-   ! used to initialize bodies that are coupled or fixed
-   !--------------------------------------------------------------
-   SUBROUTINE Body_InitializeUnfree(Body, m)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body            ! the Body object
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m               ! passing along all mooring objects
-
-      INTEGER(IntKi)                        :: l               ! index of segments or nodes along line
-      REAL(DbKi)                            :: dummyStates(12) ! dummy vector to mimic states when initializing a rigidly attached rod
+   ! make a copy of the inputs to perturb
+   call MD_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
    
-   
-      ! set positions of any dependent connections and rods now (before they are initialized)
-      CALL Body_SetDependentKin(Body, 0.0_DbKi, m)
-            
-      ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
-      DO l=1, Body%nAttachedR
-         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
-      END DO
-      
-      ! Note: Connections don't need any initialization
-      
-   END SUBROUTINE Body_InitializeUnfree
-   !--------------------------------------------------------------
-
-
-
-   !--------------------------------------------------------------
-   SUBROUTINE Body_SetState(Body, X, t, m)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body           ! the Body object
-      Real(DbKi),            INTENT(IN   )  :: X(:)           ! state vector section for this line
-      Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
-
-      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
-   
-      ! store current time
-      Body%time = t
-      
-      
-      
-      Body%r6 = X(7:12)   ! get positions      
-      Body%v6 = X(1:6)    ! get velocities
-      
-
-      ! set positions of any dependent connections and rods
-      CALL Body_SetDependentKin(Body, t, m)
-      
-   END SUBROUTINE Body_SetState
-   !--------------------------------------------------------------
-
-
-   ! set kinematics for Bodies if they are coupled (or ground)
-   !--------------------------------------------------------------
-   SUBROUTINE Body_SetKinematics(Body, r_in, v_in, a_in, t, m)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body       ! the Body object
-      Real(DbKi),            INTENT(IN   )  :: r_in(6)   ! 6-DOF position
-      Real(DbKi),            INTENT(IN   )  :: v_in(6)   ! 6-DOF velocity
-      Real(DbKi),             INTENT(IN   ) :: a_in(6)       ! 6-DOF acceleration (only used for coupled rods)
-      Real(DbKi),            INTENT(IN   )  :: t         ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
-
-
-      INTEGER(IntKi)                   :: l
-
-      ! store current time
-      Body%time = t
-
-   !   if (abs(Body%typeNum) == 2) then ! body coupled in 6 DOF, or ground
-         Body%r6 = r_in
-         Body%v6 = v_in
-         Body%a6 = a_in
-                  
-         ! since this body has no states and all DOFs have been set, pass its kinematics to dependent attachments
-         CALL Body_SetDependentKin(Body, t, m)
-      
-   !   else if (abs(Body%typeNum) == 1) then ! body pinned at reference point
-   !   
-   !      ! set Body *end A only* kinematics based on BCs (linear model for now) 
-   !      Body%r6(1:3) = r_in(1:3)
-   !      Body%v6(1:3) = v_in(1:3)
-   !      
-   !      ! Body is pinned so only ref point posiiton is specified, rotations are left alone and will be 
-   !      ! handled, along with passing kinematics to attached objects, by separate call to setState
-   !   
-   !   else
-   !      print *, "Error: Body_SetKinematics called for a free Body."  ! <<<
-   !   end if
-
-   END SUBROUTINE Body_SetKinematics
-   !--------------------------------------------------------------
-
-
-   ! set the states (positions and velocities) of any connects or rods that are part of this body
-   ! also computes the orientation matrix (never skip this sub!)
-   !--------------------------------------------------------------
-   SUBROUTINE Body_SetDependentKin(Body, t, m)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Bodyion object
-      REAL(DbKi),            INTENT(IN   )  :: t
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
-
-      INTEGER(IntKi)                        :: l              ! index of attached objects
-   
-      Real(DbKi)                            :: rConnect(3)
-      Real(DbKi)                            :: rdConnect(3)
-      Real(DbKi)                            :: rRod(6)
-      Real(DbKi)                            :: vRod(6)
-      Real(DbKi)                            :: aRod(6)
-
-      
-
-      ! calculate orientation matrix based on latest angles
-      !CALL SmllRotTrans('', Body%r6(4), Body%r6(5), Body%r6(6), Body%TransMat, '', ErrStat2, ErrMsg2)
-      Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) ) ! full Euler angle approach <<<< need to check order 
-  
-      ! set kinematics of any dependent connections
-      do l = 1,Body%nAttachedC
-      
-         CALL transformKinematics(Body%rConnectRel(:,l), Body%r6, Body%OrMat, Body%v6, rConnect, rdConnect) !<<< should double check this function
-                  
-         ! >>> need to add acceleration terms here too? <<<
-                  
-         ! pass above to the connection and get it to calculate the forces
-         CALL Connect_SetKinematics( m%ConnectList(Body%attachedC(l)), rConnect, rdConnect, m%zeros6(1:3), t, m)
+   IF ( PRESENT( dYdu ) ) THEN
+      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+      if (.not. allocated(dYdu) ) then
+         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1),'dYdu', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      do i=1,size(p%Jac_u_indx,1)
+         ! get u_op + delta_p u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
+         ! compute y at u_op + delta_p u
+         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get u_op - delta_m u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
+         ! compute y at u_op - delta_m u
+         call MD_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get central difference:
+         call MD_Compute_dY( p, y_p, y_m, delta_p, dYdu(:,i) )
       end do
-      
-      ! set kinematics of any dependent Rods
-      do l=1,Body%nAttachedR
-      
-         ! calculate displaced coordinates/orientation and velocities of each rod <<<<<<<<<<<<<
-         ! do 3d details of Rod ref point
-         CALL TransformKinematicsA( Body%r6RodRel(1:3,l), Body%r6(1:3), Body%OrMat, Body%v6, Body%a6, rRod(1:3), vRod(1:3), aRod(1:3))  ! set first three entires (end A translation) of rRod and rdRod
-         ! does the above function need to take in all 6 elements of r6RodRel??
-         
-         ! do rotational stuff
-         rRod(4:6) = MATMUL(Body%OrMat, Body%r6RodRel(4:6,l))    !<<<<<< correct? <<<<< rotateVector3(r6RodRel[i]+3, OrMat, rRod+3);   ! rotate rod relative unit vector by OrMat to get unit vec in reference coords
-         vRod(4:6) = Body%v6(4:6)  ! transformed rotational velocity.  <<< is this okay as is? <<<<
-         aRod(4:6) = Body%a6(4:6) 
-         
-         ! pass above to the rod and get it to calculate the forces
-         CALL Rod_SetKinematics(m%RodList(Body%attachedR(l)), rRod, vRod, aRod, t, m)
-      end do
-
-   END SUBROUTINE Body_SetDependentKin
-   !--------------------------------------------------------------
-   
-      ! calculate the aggregate 3/6DOF rigid-body loads of a coupled rod including inertial loads
-   !--------------------------------------------------------------
-   SUBROUTINE Body_GetCoupledForce(Body, Fnet_out, m, p)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Body object
-      Real(DbKi),            INTENT(  OUT)  :: Fnet_out(6) ! force and moment vector
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-      
-      Real(DbKi)                            :: F6_iner(6)  ! inertial reaction force
-      
-      ! do calculations of forces and masses on the body
-      CALL Body_DoRHS(Body, m, p)
-
-      ! add inertial loads as appropriate 
-      if (Body%typeNum == -1) then                          
-      
-         F6_iner = 0.0_DbKi !-MATMUL(Body%M, Body%a6)     <<<<<<<< why does including F6_iner cause instability???
-         Fnet_out = Body%F6net + F6_iner        ! add inertial loads
-         
-      else
-         print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!"
-      end if
-   
-   END SUBROUTINE Body_GetCoupledForce
-   !--------------------------------------------------------------
-   
-
-   !--------------------------------------------------------------
-   SUBROUTINE Body_GetStateDeriv(Body, Xd, m, p)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body          ! the Bodyion object
-      Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
-      
-      INTEGER(IntKi)                        :: J                ! index
-      
-      Real(DbKi)                            :: acc(6)           ! 6DOF acceleration vector
-      
-      Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
-      Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
-      
-
-      ! Initialize temp variables
-      y_temp   = 0.0_DbKi
-! FIXME: should LU_temp be set to M_out before calling LUsolve?????
-      LU_temp  = 0.0_DbKi
-
-      CALL Body_DoRHS(Body, m, p)
-
-      ! solve for accelerations in [M]{a}={f} using LU decomposition
-      CALL LUsolve(6, Body%M, LU_temp, Body%F6net, y_temp, acc)
-
-      ! fill in state derivatives
-      Xd(7:12) = Body%v6       ! dxdt = V   (velocities)
-      Xd(1:6)  = acc           ! dVdt = a   (accelerations) 
-
-      ! store accelerations in case they're useful as output
-      Body%a6 = acc
-   
-      ! check for NaNs (should check all state derivatives, not just first 6)
-      DO J = 1, 6
-         IF (Is_NaN(Xd(J))) THEN
-            print *, "NaN detected at time ", Body%time, " in Body ",Body%IdNum, "in MoorDyn,"
-            IF (wordy > 0) print *, "state derivatives:"
-            IF (wordy > 0) print *, Xd
-            EXIT
-         END IF
-      END DO
-
-
-   END SUBROUTINE Body_GetStateDeriv
-   !--------------------------------------------------------------
-
-   !--------------------------------------------------------------
-   SUBROUTINE Body_DoRHS(Body, m, p)
-
-      Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Bodyion object
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects
-      TYPE(MD_ParameterType),INTENT(IN   )  :: p           ! Parameters
-      
-      !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
-
-      INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
-      INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
-
-      Real(DbKi)                 :: Fgrav(3)           ! body weight force
-      Real(DbKi)                 :: body_rCGrotated(3) ! instantaneous vector from body ref point to CG
-      Real(DbKi)                 :: U(3)               ! water velocity - zero for now
-      Real(DbKi)                 :: Ud(3)              ! water acceleration- zero for now
-      Real(DbKi)                 :: vi(6)              ! relative water velocity (last 3 terms are rotatonal and will be set to zero
-      Real(DbKi)                 :: F6_i(6)            ! net force and moments from an attached object
-      Real(DbKi)                 :: M6_i(6,6)          ! mass and inertia from an attached object
-
-      ! Initialize variables
-      U = 0.0_DbKi      ! Set to zero for now
-
-      ! First, the body's own mass matrix must be adjusted based on its orientation so that 
-      ! we have a mass matrix in the global orientation frame
-      Body%M = RotateM6(Body%M0, Body%OrMat)
-
-      !gravity on core body
-      Fgrav(1) = 0.0_DbKi
-      Fgrav(2) = 0.0_DbKi
-      Fgrav(3) = Body%bodyV * p%rhow * p%g - Body%bodyM * p%g ! weight+buoyancy vector
-
-      body_rCGrotated = MATMUL(Body%OrMat, Body%rCG) ! rotateVector3(body_rCG, OrMat, body_rCGrotated); ! relative vector to body CG in inertial orientation
-      CALL translateForce3to6DOF(body_rCGrotated, Fgrav, Body%F6net)  ! gravity forces and moments about body ref point given CG location
-
-
-      ! --------------------------------- apply wave kinematics ------------------------------------
-      !env->waves->getU(r6, t, U); ! call generic function to get water velocities <<<<<<<<< all needs updating
-
-      !   for (int J=0; J<3; J++)
-      !      Ud[J] = 0.0;                 ! set water accelerations as zero for now
-      ! ------------------------------------------------------------------------------------------
-
-      ! viscous drag calculation (on core body)
-      vi(1:3) = U - Body%v6(1:3)  ! relative flow velocity over body ref point
-      vi(4:6) =   - Body%v6(4:6)  ! for rotation, this is just the negative of the body's rotation for now (not allowing flow rotation)
-
-      Body%F6net = Body%F6net + 0.5*p%rhoW * vi * abs(vi) * Body%bodyCdA
-      ! <<< NOTE, for body this should be fixed to account for orientation!! <<< what about drag in rotational DOFs??? <<<<<<<<<<<<<<
-
-   
-   
-      ! Get contributions from any dependent connections
-      do l = 1,Body%nAttachedC
-      
-         ! get net force and mass from Connection on body ref point (global orientation)
-         CALL Connect_GetNetForceAndMass( m%ConnectList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
-         
-         ! sum quantitites
-         Body%F6net = Body%F6net + F6_i
-         Body%M     = Body%M     + M6_i
-       end do
-      
-      ! Get contributions from any dependent Rods
-      do l=1,Body%nAttachedR
-      
-         ! get net force and mass from Rod on body ref point (global orientation)
-         CALL Rod_GetNetForceAndMass(m%RodList(Body%attachedR(l)), Body%r6(1:3), F6_i, M6_i, m, p)
-         
-         ! sum quantitites
-         Body%F6net = Body%F6net + F6_i
-         Body%M     = Body%M     + M6_i
-      end do
-
-
-   END SUBROUTINE Body_DoRHS
-   !=====================================================================
-
-
-
-
-   ! this function handles assigning a connection to a body
-   !--------------------------------------------------------------
-   SUBROUTINE Body_AddConnect(Body, connectID, coords)
-
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Connection object
-      Integer(IntKi),     INTENT(IN   )  :: connectID
-      REAL(DbKi),         INTENT(IN   )  :: coords(3)
-
-
-      IF (wordy > 0) Print*, "C", connectID, "->B", Body%IdNum
-      
-      IF(Body%nAttachedC < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Body%nAttachedC = Body%nAttachedC + 1     ! increment the number connected
-         Body%AttachedC(Body%nAttachedC) = connectID
-         Body%rConnectRel(:,Body%nAttachedC) = coords  ! store relative position of connect on body
-      ELSE
-         Print*, "too many Points attached to Body ", Body%IdNum, " in MoorDyn!"
-      END IF
-
-   END SUBROUTINE Body_AddConnect
-
-
-   ! this function handles assigning a rod to a body
-   !--------------------------------------------------------------
-   SUBROUTINE Body_AddRod(Body, rodID, coords)
-
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Connection object
-      Integer(IntKi),     INTENT(IN   )  :: rodID
-      REAL(DbKi),         INTENT(IN   )  :: coords(6)  ! positions of rod ends A and B relative to body
-      
-      REAL(DbKi)                         :: tempUnitVec(3)
-      REAL(DbKi)                         :: dummyLength
-
-      IF (wordy > 0) Print*, "R", rodID, "->B", Body%IdNum
-      
-      IF(Body%nAttachedR < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Body%nAttachedR = Body%nAttachedR + 1     ! increment the number connected
-         
-         ! store rod ID
-         Body%AttachedR(Body%nAttachedR) = rodID   
-         
-         ! store Rod end A relative position and unit vector from end A to B
-         CALL UnitVector(coords(1:3), coords(4:6), tempUnitVec, dummyLength)
-         Body%r6RodRel(1:3, Body%nAttachedR) = coords(1:3)
-         Body%r6RodRel(4:6, Body%nAttachedR) = tempUnitVec
-         
-      ELSE
-         Print*, "too many rods attached to Body ", Body%IdNum, " in MoorDyn"
-      END IF
-
-   END SUBROUTINE Body_AddRod
-
-
-   ! :::::::::::::::::::::::::: below are some wave related functions :::::::::::::::::::::::::::::::
-   
-   
-   ! master function to get wave/water kinematics at a given point -- called by each object fro grid-based data
-   SUBROUTINE getWaveKin(p, x, y, z, t, tindex, U, Ud, zeta, PDyn)
-   
-      ! note, this whole approach assuems that px, py, and pz are in increasing order
-   
-      TYPE(MD_ParameterType),INTENT (IN   )       :: p       ! MoorDyn parameters (contains the wave info for now)
-      Real(DbKi),            INTENT (IN   )       :: x
-      Real(DbKi),            INTENT (IN   )       :: y
-      Real(DbKi),            INTENT (IN   )       :: z
-      Real(DbKi),            INTENT (IN   )       :: t
-      INTEGER(IntKi),        INTENT (INOUT)       :: tindex  ! pass time index to try starting from, returns identified time index
-      Real(DbKi),            INTENT (INOUT)       :: U(3)
-      Real(DbKi),            INTENT (INOUT)       :: Ud(3)
-      Real(DbKi),            INTENT (INOUT)       :: zeta
-      Real(DbKi),            INTENT (INOUT)       :: PDyn
-
-
-      INTEGER(IntKi)             :: ix, iy, iz, it        ! indeces for interpolation      
-      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
-      Real(DbKi)                 :: fx, fy, fz, ft        ! interpolation fractions
-      Real(DbKi)                 :: qt                    ! used in time step interpolation
-   
-      
-      CALL getInterpNums(p%px   , x,      1, ix, fx)
-      CALL getInterpNums(p%py   , y,      1, iy, fy)
-      CALL getInterpNums(p%pz   , z,      1, iz, fz)
-      CALL getInterpNums(p%tWave, t, tindex, it, ft)
-      tindex = it
-      
-      CALL calculate3Dinterpolation(p%zeta, ix, iy, it, fx, fy, ft, zeta)
-      
-      CALL calculate4Dinterpolation(p%PDyn, ix, iy, iz, it, fx, fy, fz, ft, PDyn)
-      
-      CALL calculate4Dinterpolation(p%ux, ix, iy, iz, it, fx, fy, fz, ft, U(1)  )
-      CALL calculate4Dinterpolation(p%uy, ix, iy, iz, it, fx, fy, fz, ft, U(2)  )
-      CALL calculate4Dinterpolation(p%uz, ix, iy, iz, it, fx, fy, fz, ft, U(3)  )      
-      CALL calculate4Dinterpolation(p%ax, ix, iy, iz, it, fx, fy, fz, ft, Ud(1) )
-      CALL calculate4Dinterpolation(p%ay, ix, iy, iz, it, fx, fy, fz, ft, Ud(2) )
-      CALL calculate4Dinterpolation(p%az, ix, iy, iz, it, fx, fy, fz, ft, Ud(3) )
-      
-      
-   END SUBROUTINE
-   
-   
-   SUBROUTINE getInterpNums(xlist, xin, istart, i, fout)
-      
-      Real(DbKi),    INTENT (IN   )            :: xlist(:)      ! list of x values
-      Real(DbKi),    INTENT (IN   )            :: xin           ! x value to be interpolated
-      Integer(IntKi),INTENT (IN   )            :: istart        ! first lower index to try
-      Integer(IntKi),INTENT (  OUT)            :: i             ! lower index to interpolate from
-      Real(DbKi),    INTENT (  OUT)            :: fout          ! fraction to return   such that y* = y[i] + fout*(y[i+1]-y[i])
-      
-      Integer(IntKi)                           :: i1
-      Integer(IntKi)                           :: nx
-      
-      i1 = 1   ! Setting in declaration causes an implied save, which would never allow this routine to find anything at the start of the array.
-
-      nx = SIZE(xlist)
-      
-      if (xin <= xlist(1)) THEN                !  below lowest data point
-         i = 1_IntKi
-         fout = 0.0_DbKi
-      
-      else if (xlist(nx) <= xin) THEN          ! above highest data point
-         i = nx
-         fout = 0.0_DbKi
-      
-      else                                     ! within the data range
-     
-         IF (xlist(min(istart,nx)) < xin) i1 = istart  ! if istart is below the actual value, start with it instead of starting at 1 to save time, but make sure it doesn't overstep the array
-      
-         DO i = i1, nx-1
-            IF (xlist(i+1) > xin) THEN
-               fout = (xin - xlist(i) )/( xlist(i+1) - xlist(i) )
-               exit
-            END IF
-         END DO
-      END IF
-      
-   END SUBROUTINE
-   
-  
-   SUBROUTINE calculate4Dinterpolation(f, ix0, iy0, iz0, it0, fx, fy, fz, ft, c)
-
-      Real(DbKi),     INTENT (IN   )        :: f(:,:,:,:)                ! data array
-      INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0, it0        ! indices for interpolation
-      Real(DbKi),     INTENT (IN   )        :: fx, fy, fz, ft            ! interpolation fractions
-      Real(DbKi),     INTENT (  OUT)        :: c                         ! the output value
-                                         
-      INTEGER(IntKi)                        :: ix1, iy1, iz1, it1        ! second indices
-      REAL(DbKi)                            :: c000, c001, c010, c011, c100, c101, c110, c111
-      REAL(DbKi)                            :: c00, c01, c10, c11, c0, c1  
-      
-      ! handle end case conditions
-      if (fx == 0) then 
-         ix1 = ix0
-      else  
-         ix1 = min(ix0+1,size(f,4))    ! don't overstep bounds
-      end if
-      
-      if (fy == 0) then
-         iy1 = iy0
-      else
-         iy1 = min(iy0+1,size(f,3))    ! don't overstep bounds
-      end if
-      
-      if (fz == 0) then
-         iz1 = iz0
-      else         
-         iz1 = min(iz0+1,size(f,2))    ! don't overstep bounds
-      end if
-      
-      if (ft == 0) then
-         it1 = it0
-      else  
-         it1 = min(it0+1,size(f,1))    ! don't overstep bounds
-      end if
-      
-      c000 = f(it0,iz0,iy0,ix0)*(1.0-ft) + f(it1,iz0,iy0,ix0)*ft
-      c001 = f(it0,iz1,iy0,ix0)*(1.0-ft) + f(it1,iz1,iy0,ix0)*ft
-      c010 = f(it0,iz0,iy1,ix0)*(1.0-ft) + f(it1,iz0,iy1,ix0)*ft
-      c011 = f(it0,iz1,iy1,ix0)*(1.0-ft) + f(it1,iz1,iy1,ix0)*ft
-      c100 = f(it0,iz0,iy0,ix1)*(1.0-ft) + f(it1,iz0,iy0,ix1)*ft
-      c101 = f(it0,iz1,iy0,ix1)*(1.0-ft) + f(it1,iz1,iy0,ix1)*ft
-      c110 = f(it0,iz0,iy1,ix1)*(1.0-ft) + f(it1,iz0,iy1,ix1)*ft
-      c111 = f(it0,iz1,iy1,ix1)*(1.0-ft) + f(it1,iz1,iy1,ix1)*ft
-      
-      c00 = c000*(1.0-fx) + c100*fx
-      c01 = c001*(1.0-fx) + c101*fx
-      c10 = c010*(1.0-fx) + c110*fx
-      c11 = c011*(1.0-fx) + c111*fx
-
-      c0  = c00 *(1.0-fy) + c10 *fy
-      c1  = c01 *(1.0-fy) + c11 *fy
-
-      c   = c0  *(1.0-fz) + c1  *fz
-            
-   END SUBROUTINE
-
-
-   SUBROUTINE calculate3Dinterpolation(f, ix0, iy0, iz0, fx, fy, fz, c)
-
-         Real(DbKi),     INTENT (IN   )        :: f(:,:,:)                  ! data array
-         INTEGER(IntKi), INTENT (IN   )        :: ix0, iy0, iz0             ! indices for interpolation
-         Real(DbKi),     INTENT (IN   )        :: fx, fy, fz                ! interpolation fractions
-         Real(DbKi),     INTENT (  OUT)        :: c                         ! the output value
-         
-         INTEGER(IntKi)                        :: ix1, iy1, iz1             ! second indices
-         REAL(DbKi)                            :: c000, c001, c010, c011, c100, c101, c110, c111
-         REAL(DbKi)                            :: c00, c01, c10, c11, c0, c1  
-         
-      ! note that "z" could also be "t" - dimension names are arbitrary
-
-      ! handle end case conditions
-      if (fx == 0) then 
-         ix1 = ix0
-      else  
-         ix1 = min(ix0+1,size(f,3))    ! don't overstep bounds
-      end if
-      
-      if (fy == 0) then
-         iy1 = iy0
-      else
-         iy1 = min(iy0+1,size(f,2))    ! don't overstep bounds
-      end if
-      
-      if (fz == 0) then
-         iz1 = iz0
-      else         
-         iz1 = min(iz0+1,size(f,1))    ! don't overstep bounds
-      end if
-      
-      c000 = f(iz0,iy0,ix0)
-      c001 = f(iz1,iy0,ix0)
-      c010 = f(iz0,iy1,ix0)
-      c011 = f(iz1,iy1,ix0)
-      c100 = f(iz0,iy0,ix1)
-      c101 = f(iz1,iy0,ix1)
-      c110 = f(iz0,iy1,ix1)
-      c111 = f(iz1,iy1,ix1)
-      
-      c00 = c000*(1.0-fx) + c100*fx
-      c01 = c001*(1.0-fx) + c101*fx
-      c10 = c010*(1.0-fx) + c110*fx
-      c11 = c011*(1.0-fx) + c111*fx
-
-      c0  = c00 *(1.0-fy) + c10 *fy
-      c1  = c01 *(1.0-fy) + c11 *fy
-
-      c   = c0  *(1.0-fz) + c1  *fz
-
-   END SUBROUTINE
-
-
-
-   ! ============ below are some math convenience functions ===============
-   ! should add error checking if I keep these, but hopefully there are existing NWTCLib functions to replace them
-
-
-   ! return unit vector (u) and in direction from r1 to r2 and distance between points
-   !-----------------------------------------------------------------------
-   SUBROUTINE UnitVector( r1, r2, u, Length )          ! note: order of parameters chagned in this function
-      
-      REAL(DbKi),       INTENT(IN   )  :: r1(:)
-      REAL(DbKi),       INTENT(IN   )  :: r2(:)
-      REAL(DbKi),       INTENT(  OUT)  :: u(:)
-      REAL(DbKi),       INTENT(  OUT)  :: length
-
-      u = r2 - r1
-      length = TwoNorm(u)
-
-      if ( .NOT. EqualRealNos(length, 0.0_DbKi ) ) THEN
-        u = u / Length
-      END IF
-
-   END SUBROUTINE UnitVector
-   !-----------------------------------------------------------------------
-
-   ! scale vector to desired length 
-   !-----------------------------------------------------------------------
-   SUBROUTINE ScaleVector( u_in, newlength, u_out )
-      REAL(DbKi),       INTENT(IN   )  :: u_in(3)     ! input vector
-      REAL(DbKi),       INTENT(IN   )  :: newlength   ! desired length of output vector
-      REAL(DbKi),       INTENT(INOUT)  :: u_out(3)    ! output vector (hopefully can be the same as u_in without issue)
-
-      REAL(DbKi)                       :: length_squared
-      REAL(DbKi)                       :: scaler
-      INTEGER(IntKi)                   :: J
-      
-      length_squared = 0.0;
-      DO J=1,3
-         length_squared = length_squared + u_in(J)*u_in(J)
-      END DO
-      
-      if (length_squared > 0) then
-         scaler = newlength/sqrt(length_squared)
-      else                   ! if original vector is zero, return zero
-         scaler = 0_DbKi
-      end if
-      
-      DO J=1,3
-         u_out(J) = u_in(J) * scaler 
-      END DO
-
-   END SUBROUTINE ScaleVector
-   !-----------------------------------------------------------------------
-
-
-   ! calculate orientation angles of a cylindrical object
-   !-----------------------------------------------------------------------
-   subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat)
-      real(DbKi),   intent(in   ) :: p1(3),p2(3)
-      real(DbKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, beta, sinBeta, cosBeta, k_hat(3)
-            
-      real(DbKi)                  :: vec(3), vecLen, vecLen2D
-
-      ! calculate isntantaneous incline angle and heading, and related trig values
-      ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-      vec      = p2 - p1   
-      vecLen   = SQRT(Dot_Product(vec,vec))
-      vecLen2D = SQRT(vec(1)**2+vec(2)**2)
-      if ( vecLen < 0.000001 ) then
-         print *, "ERROR in GetOrientationAngles in MoorDyn" !call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
-         print *, p1
-         print *, p2
-         k_hat = NaN ! 1.0/0.0
-      else
-         k_hat = vec / vecLen 
-         phi   = atan2(vecLen2D, vec(3))  ! incline angle   
-      end if
-      if ( phi < 0.000001) then
-         beta = 0.0_ReKi
-      else
-         beta = atan2(vec(2), vec(1))                    ! heading of incline     
+      if(Failed()) return
+   END IF
+   IF ( PRESENT( dXdu ) ) THEN
+      if (.not. allocated(dXdu)) then
+         call AllocAry(dXdu, p%Jac_nx, size(p%Jac_u_indx,1), 'dXdu', ErrStat2, ErrMsg2); if (Failed()) return
       endif
-      sinPhi  = sin(phi)
-      cosPhi  = cos(phi)  
-      tanPhi  = tan(phi)     
-      sinBeta = sin(beta)
-      cosBeta = cos(beta)
-            
-   end subroutine GetOrientationAngles
-   !-----------------------------------------------------------------------
+      do i=1,size(p%Jac_u_indx,1)
+         ! get u_op + delta u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_Perturb_u( p, i, 1, u_perturb, delta_p )
+         ! compute x at u_op + delta u
+         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get u_op - delta u
+         call MD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         call MD_Perturb_u( p, i, -1, u_perturb, delta_m )
+         ! compute x at u_op - delta u
+         call MD_CalcContStateDeriv( t, u_perturb, p, x, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         ! get central difference:
+         ! we may have had an error allocating memory, so we'll check
+         if(Failed()) return
+         ! get central difference (state entries are mapped the the dXdu column in routine):
+         call MD_Compute_dX( p, x_p, x_m, delta_p, dXdu(:,i) )
+      end do
+   END IF ! dXdu
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu)
+   END IF
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu)
+   END IF
+   call CleanUp()
+contains
+
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+
+   subroutine CleanUp()
+      call MD_DestroyContState(  x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      call MD_DestroyContState(  x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      call MD_DestroyOutput(     y_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyOutput(     y_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyInput(u_perturb, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+
+END SUBROUTINE MD_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
+SUBROUTINE MD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx)
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdx(:,:)          !< Partial derivatives of output functions wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdx(:,:)          !< Partial derivatives of continuous state functions (X) wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddx(:,:)         !< Partial derivatives of discrete state functions (Xd) wrt the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdx(:,:)          !< Partial derivatives of constraint state functions (Z) wrt the continuous states (x) [intent in to avoid deallocation]
+   ! local variables
+   TYPE(MD_OutputType)          :: y_p, y_m
+   TYPE(MD_ContinuousStateType) :: x_p, x_m
+   TYPE(MD_ContinuousStateType) :: x_perturb
+   REAL(R8Ki)                   :: delta        ! delta change in input or state
+   INTEGER(IntKi)               :: i, k
+   INTEGER(IntKi)               :: ErrStat2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
+   CHARACTER(*), PARAMETER      :: RoutineName = 'MD_JacobianPContState'
    
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   ! make a copy of the continuous states to perturb NOTE: MESH_NEWCOPY
+   call MD_CopyContState( x, x_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   
+   IF ( PRESENT( dYdx ) ) THEN
+      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+      if (.not. allocated(dYdx)) then
+         call AllocAry(dYdx, p%Jac_ny, p%Jac_nx, 'dYdx', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call MD_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call MD_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      !  Loop over the dx dimension of the dYdx array.  Perturb the corresponding state (note difference in ordering of dYdx and x%states).
+      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
+      do i=1,p%Jac_nx      ! index into dx dimension
+         ! get x_op + delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         ! compute y at x_op + delta x
+         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get x_op - delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         ! compute y at x_op - delta x
+         call MD_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get central difference:
+         call MD_Compute_dY( p, y_p, y_m, delta, dYdx(:,i) )
+      end do
+      if(Failed()) return
+   END IF
+   
+   IF ( PRESENT( dXdx ) ) THEN
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+      if (.not. allocated(dXdx)) then
+         call AllocAry(dXdx, p%Jac_nx, p%Jac_nx, 'dXdx', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      !  Loop over the dx dimension of the array.  Perturb the corresponding state (note difference in ordering of dXdx and x%states).
+      !  The resulting x_p and x_m are used to calculate the column for dXdx (mapping of state entry to dXdx row entry occurs in MD_Compute_dX)
+      !  The p%dxIdx_map2_xStateIdx(i) is the index to the state array for the given dx index
+      do i=1,p%Jac_nx      ! index into dx dimension
+         ! get x_op + delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), 1, x_perturb, delta )
+         ! compute x at x_op + delta x
+         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! get x_op - delta x
+         call MD_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call MD_perturb_x(p, p%dxIdx_map2_xStateIdx(i), -1, x_perturb, delta )
+         ! compute x at x_op - delta x
+         call MD_CalcContStateDeriv( t, u, p, x_perturb, xd, z, OtherState, m, x_m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         if(Failed()) return
+         ! get central difference:
+         call MD_Compute_dX( p, x_p, x_m, delta, dXdx(:,i) )
+      end do
+   END IF
+   IF ( PRESENT( dXddx ) ) THEN
+      if (allocated(dXddx)) deallocate(dXddx)
+   END IF
+   IF ( PRESENT( dZdx ) ) THEN
+      if (allocated(dZdx)) deallocate(dZdx)
+   END IF
+   call CleanUp()
+   
+contains
 
-   ! calculate position and velocity of point based on its position relative to moving 6DOF body
-   !-----------------------------------------------------------------------
-   SUBROUTINE TransformKinematics(rRelBody, r_in, TransMat, rd_in, r_out, rd_out)
-      REAL(DbKi),       INTENT(IN   )  :: rRelBody(:)  ! coordinate of end A
-      REAL(DbKi),       INTENT(IN   )  :: r_in(3)      ! Rod unit vector
-      REAL(DbKi),       INTENT(IN   )  :: TransMat(3,3)! 
-      REAL(DbKi),       INTENT(IN   )  :: rd_in(6)     ! 6DOF velecity vector about Rod end A, in global orientation frame
-      REAL(DbKi),       INTENT(  OUT)  :: r_out(3)     ! coordinates of end B
-      REAL(DbKi),       INTENT(  OUT)  :: rd_out(3)    ! velocity of end B
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_JacobianPContState') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
 
-      REAL(DbKi)                       :: rRel(3)
+   subroutine CleanUp()
+      call MD_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
+      call MD_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
 
-      ! rd_in should be in global orientation frame
-      ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
+END SUBROUTINE MD_JacobianPContState
 
-
-      ! locations (unrotated reference frame) about platform reference point  (2021-01-05: just transposed TransMat, it was incorrect before)
-      rRel(1) = TransMat(1,1)*rRelBody(1) + TransMat(1,2)*rRelBody(2) + TransMat(1,3)*rRelBody(3) ! x
-      rRel(2) = TransMat(2,1)*rRelBody(1) + TransMat(2,2)*rRelBody(2) + TransMat(2,3)*rRelBody(3) ! y
-      rRel(3) = TransMat(3,1)*rRelBody(1) + TransMat(3,2)*rRelBody(2) + TransMat(3,3)*rRelBody(3) ! z
-
-      ! absolute locations
-      r_out = rRel + r_in
-
-      ! absolute velocities
-      rd_out(1) =                   - rd_in(6)*rRel(2) + rd_in(5)*rRel(3) + rd_in(1) ! x   
-      rd_out(2) =  rd_in(6)*rRel(1)                    - rd_in(4)*rRel(3) + rd_in(2) ! y
-      rd_out(3) = -rd_in(5)*rRel(1) + rd_in(4)*rRel(2)                    + rd_in(3) ! z
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+SUBROUTINE MD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdxd(:,:) !< Partial derivatives of output functions (Y) wrt the discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdxd(:,:) !< Partial derivatives of continuous state functions (X) wrt the  discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddxd(:,:)!< Partial derivatives of discrete state functions (Xd) wrt the discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdxd(:,:) !< Partial derivatives of constraint state functions (Z) wrt discrete states (xd) [intent in to avoid deallocation]
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   IF ( PRESENT( dYdxd ) ) THEN
+   END IF
+   IF ( PRESENT( dXdxd ) ) THEN
+   END IF
+   IF ( PRESENT( dXddxd ) ) THEN
+   END IF
+   IF ( PRESENT( dZdxd ) ) THEN
+   END IF
+END SUBROUTINE MD_JacobianPDiscState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+SUBROUTINE MD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+   REAL(DbKi),                        INTENT(IN   ) :: t                  !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u                  !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p                  !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x                  !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd                 !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z                  !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState         !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(INOUT) :: y                  !< Output (change to inout if a mesh copy is required); Output fields are not used by this routine, but type is available here so that mesh parameter information (i.e., connectivity) does not have to be recalculated for dYdx.
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m                  !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dYdz(:,:)  !< Partial derivatives of output functions (Y) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXdz(:,:)  !< Partial derivatives of continuous state functions (X) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dXddz(:,:) !< Partial derivatives of discrete state functions (Xd) with respect to the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect to the constraint states (z) [intent in to avoid deallocation]
+   ! local variables
+   character(*), parameter                                       :: RoutineName = 'MD_JacobianPConstrState'
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   IF ( PRESENT( dYdz ) ) THEN
+   END IF
+   IF ( PRESENT( dXdz ) ) THEN
+      if (allocated(dXdz)) deallocate(dXdz)
+   END IF
+   IF ( PRESENT( dXddz ) ) THEN
+      if (allocated(dXddz)) deallocate(dXddz)
+   END IF
+   IF ( PRESENT(dZdz) ) THEN
+   END IF
+END SUBROUTINE MD_JacobianPConstrState
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE MD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+   REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
+   TYPE(MD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(MD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
+   TYPE(MD_ContinuousStateType),      INTENT(IN   ) :: x          !< Continuous states at operating point
+   TYPE(MD_DiscreteStateType),        INTENT(IN   ) :: xd         !< Discrete states at operating point
+   TYPE(MD_ConstraintStateType),      INTENT(IN   ) :: z          !< Constraint states at operating point
+   TYPE(MD_OtherStateType),           INTENT(IN   ) :: OtherState !< Other states at operating point
+   TYPE(MD_OutputType),               INTENT(IN   ) :: y          !< Output at operating point
+   TYPE(MD_MiscVarType),              INTENT(INOUT) :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
+   ! Local
+   INTEGER(IntKi)                                                :: idx, i
+   INTEGER(IntKi)                                                :: nu
+   INTEGER(IntKi)                                                :: ny
+   INTEGER(IntKi)                                                :: ErrStat2
+   CHARACTER(ErrMsgLen)                                          :: ErrMsg2
+   CHARACTER(*), PARAMETER                                       :: RoutineName = 'MD_GetOP'
+   LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
+   TYPE(MD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! inputs
+   IF ( PRESENT( u_op ) ) THEN
+      nu = size(p%Jac_u_indx,1) + u%CoupledKinematics(1)%NNodes * 6  ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      idx = 1
+      FieldMask = .false.
+      FieldMask(MASKID_TranslationDisp) = .true.
+      FieldMask(MASKID_Orientation)     = .true.
+      FieldMask(MASKID_TranslationVel)  = .true.
+      FieldMask(MASKID_RotationVel)     = .true.
+      FieldMask(MASKID_TranslationAcc)  = .true.
+      FieldMask(MASKID_RotationAcc)     = .true.
+      ! fill in the u_op values from the input mesh
+      call PackMotionMesh(u%CoupledKinematics(1), u_op, idx, FieldMask=FieldMask)
       
-      ! absolute accelerations
-      rd_out(1) =                   - rd_in(6)*rRel(2) + rd_in(5)*rRel(3) + rd_in(1) ! x   
-      rd_out(2) =  rd_in(6)*rRel(1)                    - rd_in(4)*rRel(3) + rd_in(2) ! y
-      rd_out(3) = -rd_in(5)*rRel(1) + rd_in(4)*rRel(2)                    + rd_in(3) ! z
+      ! now do the active tensioning commands if there are any
+      if (allocated(u%DeltaL)) then
+         do i=1,size(u%DeltaL)
+            u_op(idx) = u%DeltaL(i)
+            idx = idx + 1
+            u_op(idx) = u%DeltaLdot(i)
+            idx = idx + 1
+         end do
+      endif
+   END IF
+   ! outputs
+   IF ( PRESENT( y_op ) ) THEN
+      ny = p%Jac_ny + y%CoupledLoads(1)%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+      idx = 1
+      call PackLoadMesh(y%CoupledLoads(1), y_op, idx)
+      do i=1,p%NumOuts
+         y_op(idx) = y%WriteOutput(i)
+         idx = idx + 1
+      end do
+   END IF
+   ! states
+   IF ( PRESENT( x_op ) ) THEN
+      if (.not. allocated(x_op)) then
+         call AllocAry(x_op, p%Jac_nx,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
+      end if
+      do i=1, p%Jac_nx
+         x_op(i) = x%states(p%dxIdx_map2_xStateIdx(i))      ! x for lin is different order, so use mapping
+      end do
+   END IF
+   ! state derivatives?
+   IF ( PRESENT( dx_op ) ) THEN
+      if (.not. allocated(dx_op)) then
+         call AllocAry(dx_op, p%Jac_nx,'dx_op',ErrStat2,ErrMsg2); if(failed()) return
+      end if
+      call MD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) ; if(Failed()) return
+      do i=1, p%Jac_nx
+         dx_op(i) = dx%states(p%dxIdx_map2_xStateIdx(i))    ! x for lin is different order, so use mapping
+      end do
+   END IF
+   IF ( PRESENT( xd_op ) ) THEN
+      ! pass
+   END IF
+   IF ( PRESENT( z_op ) ) THEN
+      ! pass
+   END IF
+   call CleanUp()
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_GetOP') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+
+   subroutine CleanUp()
+      call MD_DestroyContState(dx, ErrStat2, ErrMsg2);
+   end subroutine
+END SUBROUTINE MD_GetOP
 
 
 
-      !rRel = MATMUL(TransMat, rRelBody)        
-      !H = getH(rRel)      
-      !! absolute locations
-      !r_out = rRel + r_in 
-      !! absolute velocities
-      !rd_out = MATMUL( H, rd_in(4:6)) + rd_in(1:3)  
-      
-
-   END SUBROUTINE TransformKinematics
-   !-----------------------------------------------------------------------
+!====================================================================================================
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
+!! Do not change the order of this packing without changing subroutines calculating dXdx etc (MD_Compute_dX)
+SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(MD_InitInputType)            , INTENT(IN   ) :: Init                  !< Init
+   TYPE(MD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(MD_InputType)                , INTENT(IN   ) :: u                     !< inputs
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
+   TYPE(MD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc variables <<<<<<<<
+   TYPE(MD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
+   real(ReKi) :: dx, dy, dz, maxDim
+   
+   INTEGER(IntKi)                                    :: l, I
+   real(ReKi)                                        :: dl_slack     ! how much a given line segment is stretched [m] 
+   real(ReKi)                                        :: dl_slack_min ! minimum change in a node position for the least-strained segment in the simulation to go slack [m]
    
    
-
-   ! calculate position, velocity, and acceleration of point based on its position relative to moving 6DOF body
-   !-----------------------------------------------------------------------
-   SUBROUTINE TransformKinematicsA(rRelBody, r_in, TransMat, v_in, a_in, r_out, v_out, a_out)
-      REAL(DbKi),       INTENT(IN   )  :: rRelBody(:)  ! relative location of point about reference point, in local/reference coordinate system
-      REAL(DbKi),       INTENT(IN   )  :: r_in(3)      ! translation applied to reference point
-      REAL(DbKi),       INTENT(IN   )  :: TransMat(3,3)! rotation matrix describing rotation about reference point
-      REAL(DbKi),       INTENT(IN   )  :: v_in(6)      ! 6DOF velecity vector about ref point in global orientation frame
-      REAL(DbKi),       INTENT(IN   )  :: a_in(6)      ! 6DOF acceleration vector
-      REAL(DbKi),       INTENT(  OUT)  :: r_out(3)     ! coordinates of point of interest
-      REAL(DbKi),       INTENT(  OUT)  :: v_out(3)     ! velocity of point
-      REAL(DbKi),       INTENT(  OUT)  :: a_out(3)     ! acceleration of point
-
-      REAL(DbKi)                       :: rRel(3)
-      REAL(DbKi)                       :: rRel2(3)
-
-      REAL(DbKi)                       :: r_out2(3)
-      REAL(DbKi)                       :: rd_out2(3)
-      REAL(DbKi)                       :: H(3,3)
-
-      ! rd_in should be in global orientation frame
-      ! note: it's okay if r_out and rd_out are 6-size. Only the first 3 will be written, and 4-6 will
-      !       already be correct or can be assigned seperately from r_in and rd_in (assuming orientation frames are identical)
-
-
-      ! locations about ref point in *unrotated* reference frame
-      !rRel2(1) = TransMat(1,1)*rRelBody(1) + TransMat(2,1)*rRelBody(2) + TransMat(3,1)*rRelBody(3)  ! x
-      !rRel2(2) = TransMat(1,2)*rRelBody(1) + TransMat(2,2)*rRelBody(2) + TransMat(3,2)*rRelBody(3)  ! y
-      !rRel2(3) = TransMat(1,3)*rRelBody(1) + TransMat(2,3)*rRelBody(2) + TransMat(3,3)*rRelBody(3)  ! z
-      
-      rRel = MATMUL(TransMat, rRelBody)  
-      
-      H = getH(rRel)
-      
-      ! absolute locations
-      r_out = rRel + r_in 
-
-      ! absolute velocities
-      !rd_out2(1) =                  - v_in(6)*rRel(2) + v_in(5)*rRel(3) + v_in(1) ! x   
-      !rd_out2(2) =  v_in(6)*rRel(1)                   - v_in(4)*rRel(3) + v_in(2) ! y
-      !rd_out2(3) = -v_in(5)*rRel(1) + v_in(4)*rRel(2)                   + v_in(3) ! z
-      
-      v_out = MATMUL( H, v_in(4:6)) + v_in(1:3)  
-      
-      ! absolute accelerations
-      a_out = MATMUL( H, a_in(4:6)) + a_in(1:3)   ! << should add second order terms!
-        
-
-   END SUBROUTINE TransformKinematicsA
-   !-----------------------------------------------------------------------
+   ! local variables:
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
-   ! calculate position and velocity of point along rod (distance L along direction u)
-   !-----------------------------------------------------------------------
-   SUBROUTINE TransformKinematicsAtoB(rA, u, L, rd_in, r_out, rd_out)
-      REAL(DbKi),       INTENT(IN   )  :: rA(3)        ! coordinate of end A
-      REAL(DbKi),       INTENT(IN   )  :: u(3)         ! Rod unit vector
-      REAL(DbKi),       INTENT(IN   )  :: L            ! Rod length from end A to B
-      REAL(DbKi),       INTENT(IN   )  :: rd_in(6)     ! 6DOF velecity vector about Rod end A, in global orientation frame
-      REAL(DbKi),       INTENT(  OUT)  :: r_out(3)     ! coordinates of end B
-      REAL(DbKi),       INTENT(  OUT)  :: rd_out(3)    ! velocity of end B
-
-      REAL(DbKi)                       :: rRel(3)
-      
-      
-      ! locations (unrotated reference frame)
-      rRel = L*u              ! relative location of point B from point A
-      r_out = rRel + rA           ! absolute location of point B
-      
-      ! absolute velocities
-      rd_out(1) =                   - rd_in(6)*rRel(2) + rd_in(5)*rRel(3) + rd_in(1)  ! x   
-      rd_out(2) =  rd_in(6)*rRel(1)                    - rd_in(4)*rRel(3) + rd_in(2)  ! y
-      rd_out(3) = -rd_in(5)*rRel(1) + rd_in(4)*rRel(2)                    + rd_in(3)  ! z
-      
-
-   END SUBROUTINE TransformKinematicsAtoB
-   !-----------------------------------------------------------------------
-   
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE TranslateForce3to6DOF(dx, F, Fout)
-      REAL(DbKi),       INTENT(IN   )  :: dx(3)       ! displacement vector from ref point to point of force (F) application
-      REAL(DbKi),       INTENT(IN   )  :: F(3)        ! applied force
-      REAL(DbKi),       INTENT(  OUT)  :: Fout(6)     ! resultant applied force and moment about ref point
-        
-      Fout(1:3) = F
-      
-      Fout(4:6) = CROSS_PRODUCT(dx, F)
-
-   END SUBROUTINE TranslateForce3to6DOF
-   !-----------------------------------------------------------------------
+   !! --- System dimension
+   !dx = maxval(Init%Nodes(:,2))- minval(Init%Nodes(:,2))
+   !dy = maxval(Init%Nodes(:,3))- minval(Init%Nodes(:,3))
+   !dz = maxval(Init%Nodes(:,4))- minval(Init%Nodes(:,4))
+   !maxDim = max(dx, dy, dz)
    
    
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE TranslateMass3to6DOF(dx, Min, Mout)
-      REAL(DbKi),       INTENT(IN   )  :: dx(3)       ! displacement vector from ref point to point of mass matrix (Min)
-      REAL(DbKi),       INTENT(IN   )  :: Min( 3,3)   ! original mass matrix (assumed at center of mass, or a point mass)
-      REAL(DbKi),       INTENT(  OUT)  :: Mout(6,6)   ! resultant mass and inertia matrix about ref point
-  
-      REAL(DbKi)                       :: H(     3,3) ! "anti-symmetric tensor components" from Sadeghi and Incecik
-      REAL(DbKi)                       :: tempM( 3,3)
-      REAL(DbKi)                       :: tempM2(3,3)
-      REAL(DbKi)                       :: Htrans(3,3)
-      Integer(IntKi)                   :: I,J
+   ! Figure out appropriate transverse perturbation size to avoid slack segments
+   dl_slack_min = 0.1_ReKi  ! start at 0.1 m
    
-      ! sub-matrix definitions are accordint to  | m    J |
-      !                                          | J^T  I |
-   
-      H = getH(dx);
-
-      ! mass matrix  [m'] = [m]
-      Mout(1:3,1:3) = Min
-
-      ! product of inertia matrix  [J'] = [m][H] + [J]
-      Mout(1:3,4:6) = MATMUL(Min, H)
-      Mout(4:6,1:3) = TRANSPOSE(Mout(1:3,4:6)) 
-
-      !moment of inertia matrix  [I'] = [H][m][H]^T + [J]^T [H] + [H]^T [J] + [I]
-      Mout(4:6,4:6) = MATMUL(MATMUL(H, Min), TRANSPOSE(H))
-
-   END SUBROUTINE TranslateMass3to6DOF
-   !-----------------------------------------------------------------------
-   
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE TranslateMass6to6DOF(dx, Min, Mout)
-      REAL(DbKi),       INTENT(IN   )  :: dx(3)       ! displacement vector from ref point to point of mass matrix (Min)
-      REAL(DbKi),       INTENT(IN   )  :: Min( 6,6)   ! original mass matrix 
-      REAL(DbKi),       INTENT(  OUT)  :: Mout(6,6)   ! resultant mass and inertia matrix about ref point
-  
-      REAL(DbKi)                       :: H(     3,3) ! "anti-symmetric tensor components" from Sadeghi and Incecik
-         
-      H = getH(dx);
-
-      ! mass matrix  [m'] = [m]
-      Mout(1:3,1:3) = Min(1:3,1:3)
-
-      ! product of inertia matrix  [J'] = [m][H] + [J]
-      Mout(1:3,4:6) = MATMUL(Min(1:3,1:3), H) + Min(1:3,4:6)
-      Mout(4:6,1:3) = TRANSPOSE(Mout(1:3,4:6))      
-
-      !moment of inertia matrix  [I'] = [H][m][H]^T + [J]^T [H] + [H]^T [J] + [I]
-      Mout(4:6,4:6) = MATMUL(MATMUL(H, Min(1:3,1:3)), TRANSPOSE(H)) + MATMUL(Min(4:6,1:3),H) + MATMUL(TRANSPOSE(H),Min(1:3,4:6)) + Min(4:6,4:6)
-
-   END SUBROUTINE TranslateMass6to6DOF
-   !-----------------------------------------------------------------------
-   
-   ! produce alternator matrix
-   !-----------------------------------------------------------------------
-   FUNCTION GetH(r)
-      Real(DbKi), INTENT(IN)      :: r(3)     ! inputted vector
-      Real(DbKi)                  :: GetH(3,3) ! outputted matrix
+   do l = 1,p%nLines
+      do I = 1, m%LineList(l)%N
+         dl_slack = m%LineList(l)%lstr(I) - m%LineList(l)%l(I)
       
-      GetH(2,1) = -r(3)
-      GetH(1,2) =  r(3)
-      GetH(3,1) =  r(2)
-      GetH(1,3) = -r(2)
-      GetH(3,2) = -r(1)
-      GetH(2,3) =  r(1)
-      
-      GetH(1,1) = 0.0_DbKi
-      GetH(2,2) = 0.0_DbKi
-      GetH(3,3) = 0.0_DbKi
+         ! store the smallest positive length margin to a segment going slack
+         if (( dl_slack > 0.0_ReKi) .and. (dl_slack < dl_slack_min)) then
+            dl_slack_min = dl_slack  
+         end if
+      end do
+   end do
+   
+   dl_slack_min = 0.5*dl_slack_min  ! apply 0.5 safety factor
+   
+   !TODO: consider attachment radii to also produce a rotational perturbation size from the above
+   
+   
+   ! --- System dimension
+   call Init_Jacobian_y(); if (Failed()) return
+   call Init_Jacobian_x(); if (Failed()) return
+   call Init_Jacobian_u(); if (Failed()) return
 
-   END FUNCTION GetH
-   !-----------------------------------------------------------------------
+contains
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init_Jacobian') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
    
-   
-   
-   ! apply a rotation to a 6-by-6 mass/inertia tensor (see Sadeghi and Incecik 2005 for theory)
-   !-----------------------------------------------------------------------
-   FUNCTION RotateM6(Min, rotMat) result(outMat)
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
+   SUBROUTINE Init_Jacobian_y()
+      INTEGER(IntKi) :: index_next, i
       
-      Real(DbKi), INTENT(IN)      :: Min(6,6)     ! inputted matrix to be rotated
-      Real(DbKi), INTENT(IN)      :: rotMat(3,3)  ! rotation matrix (DCM)
-      Real(DbKi)                  :: outMat(6,6)  ! rotated matrix
+      ! Number of outputs
+      p%Jac_ny = y%CoupledLoads(1)%nNodes * 6     & ! 3 forces + 3 moments at each node (moments may be zero)
+               + p%NumOuts                       ! WriteOutput values 
+      ! Storage info for each output (names, rotframe)
+      call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
+      ! Names
+      index_next = 1
+      call PackLoadMesh_Names(  y%CoupledLoads(1), 'LinNames_y', InitOut%LinNames_y, index_next)  ! <<< should a specific name be provided here?
+      do i=1,p%NumOuts
+         InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+      end do
       
-      Real(DbKi)                  :: tempM(3,3)  
-      Real(DbKi)                  :: tempMrot(3,3)  
+      InitOut%RotFrame_y(:) = .false.
+   END SUBROUTINE Init_Jacobian_y
 
-      ! the process for each of the following is to 
-      ! 1. copy out the relevant 3x3 matrix section,
-      ! 2. rotate it, and
-      ! 3. paste it into the output 6x6 matrix
+   !> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
+   SUBROUTINE Init_Jacobian_x()
+      INTEGER(IntKi) :: idx      ! index into the LinNames_x array
+      INTEGER(IntKi) :: i
+      INTEGER(IntKi) :: l
+      INTEGER(IntKi) :: N
 
       
-      ! mass matrix
-      outMat(1:3,1:3) = rotateM3(Min(1:3,1:3), rotMat)
-
-      ! product of inertia matrix
-      outMat(1:3,4:6) = rotateM3(Min(1:3,4:6), rotMat)      
-      outMat(4:6,1:3) = TRANSPOSE(outMat(1:3,4:6))
-
-      ! moment of inertia matrix
-      outMat(4:6,4:6) = rotateM3(Min(4:6,4:6), rotMat)
-   
-   END FUNCTION RotateM6
-
-
-   ! apply a rotation to a 3-by-3 mass matrix or any other second order tensor
-   !-----------------------------------------------------------------------
-   FUNCTION RotateM3(Min, rotMat) result(outMat)
+      p%Jac_nx = m%Nx ! size of (continuous) state vector (includes the first derivatives)
       
-      Real(DbKi), INTENT(IN)      :: Min(3,3)     ! inputted matrix to be rotated
-      Real(DbKi), INTENT(IN)      :: rotMat(3,3)  ! rotation matrix (DCM)
-      Real(DbKi)                  :: outMat(3,3)  ! rotated matrix
-   
-      ! overall operation is [m'] = [a]*[m]*[a]^T
+      ! allocate space for the row/column names and for perturbation sizes
+      CALL AllocAry(InitOut%LinNames_x    , p%Jac_nx, 'LinNames_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%RotFrame_x    , p%Jac_nx, 'RotFrame_x'            , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(InitOut%DerivOrder_x  , p%Jac_nx, 'DerivOrder_x'          , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(p%dx                  , p%Jac_nx, 'p%dx'                  , ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
+      CALL AllocAry(p%dxIdx_map2_xStateIdx, p%Jac_nx, 'p%dxIdx_map2_xStateIdx', ErrStat2, ErrMsg2); if(ErrStat/=ErrID_None) return
 
-      outMat = MATMUL( MATMUL(rotMat, Min), TRANSPOSE(rotMat) )
+      p%dxIdx_map2_xStateIdx = 0_IntKi ! all values should be overwritten by logic below
 
-   END FUNCTION RotateM3
-   
-   
-   
-   
-   
-   ! calculates rotation matrix R to rotate from global axes to a member's local axes
-   !-----------------------------------------------------------------------
-   FUNCTION CalcOrientation(phi, beta, gamma) result(R)
-      
-      REAL(DbKi),      INTENT ( IN    )  :: phi     ! member incline angle
-      REAL(DbKi),      INTENT ( IN    )  :: beta    ! member incline heading
-      REAL(DbKi),      INTENT ( IN    )  :: gamma   ! member twist angle
-      REAL(DbKi)                         :: R(3,3)  ! rotation matrix 
-     
-      INTEGER(IntKi)                     :: errStat  
-      CHARACTER(100)                     :: errMsg   
+      ! set linearization output names and default perturbations, p%dx:
+      !  NOTE: the order is different than the order of the internal states.  This is to
+      !        match what the OpenFAST framework is expecting: all positions first, then all
+      !        derviatives of positions (velocity terms) second.  This adds slight complexity
+      !        here, but considerably simplifies post processing of the full OpenFAST results
+      !        for linearization.
+      !        The p%dxIdx_map2_xStateIdx array holds the index for the x%states array
+      !        corresponding to the current jacobian index.
 
-      REAL(DbKi)                         :: s1, c1, s2, c2, s3, c3
+      !-----------------
+      ! position states
+      !-----------------
+      idx = 0
+      ! Free bodies
+      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
+         p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+         ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
+         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
+         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
+         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
+         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
+         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
+         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
+         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
+         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
+         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
+         idx = idx + 6
+      END DO      
 
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then  ! pinned rod
+            p%dx(idx+1:idx+3) = 0.02         ! rod rotation [rad]
+            ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for rot_z
+            idx = idx + 3
+         else                                ! free rod
+            p%dx(idx+1:idx+3) = dl_slack_min ! rod displacement [m]
+            p%dx(idx+4:idx+6) = 0.02         ! rod rotation [rad]
+            ! corresponds to state indices: (m%RodStateIs1(l)+6:m%RodStateIs1(l)+11)
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Pz, m'
+            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_z, rad'   
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+6          ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+7          ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+8          ! x%state index for Pz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+9          ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+10         ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+11         ! x%state index for rot_z
+            idx = idx + 6
+         end if
+      END DO      
 
-      ! trig terms for Euler angles rotation based on beta, phi, and gamma
-      s1 = sin(beta) 
-      c1 = cos(beta)
-      s2 = sin(phi) 
-      c2 = cos(phi)
-      s3 = sin(gamma) 
-      c3 = cos(gamma)
-      
-      ! calculate rotation matrix based on Z1Y2Z3 Euler rotation sequence from https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
-
-      R(1,1) = c1*c2*c3-s1*s3
-      R(1,2) = -c3*s1-c1*c2*s3
-      R(1,3) = c1*s2
-      R(2,1) = c1*s3+c2*c3*s1
-      R(2,2) = c1*c3-c2*s1*s3
-      R(2,3) = s1*s2
-      R(3,1) = -c3*s2
-      R(3,2) = s2*s3
-      R(3,3) = c2
-
-      ! could also calculate unit normals p1 and p2 for rectangular cross sections   
-      !p1 = matmul( R, [1,0,0] )               ! unit vector that is perpendicular to the 'beta' plane if gamma is zero
-      !p2 = cross( q, p1 )                     ! unit vector orthogonal to both p1 and q
-      
-   END FUNCTION CalcOrientation
-   
-
-   !compute the inverse of a 3-by-3 matrix m
-   !-----------------------------------------------------------------------
-   SUBROUTINE Inverse3by3( Minv, M )
-      Real(DbKi), INTENT(OUT)   :: Minv(3,3)  ! returned inverse matrix
-      Real(DbKi), INTENT(IN)    :: M(3,3)     ! inputted matrix
-
-      Real(DbKi)                :: det        ! the determinant
-      Real(DbKi)                :: invdet     ! inverse of the determinant
-
-      det = M(1, 1) * (M(2, 2) * M(3, 3) - M(3, 2) * M(2, 3)) - &
-            M(1, 2) * (M(2, 1) * M(3, 3) - M(2, 3) * M(3, 1)) + &
-            M(1, 3) * (M(2, 1) * M(3, 2) - M(2, 2) * M(3, 1));
-
-      invdet = 1.0 / det   ! because multiplying is faster than dividing
-
-      Minv(1, 1) = (M(2, 2) * M(3, 3) - M(3, 2) * M(2, 3)) * invdet
-      Minv(1, 2) = (M(1, 3) * M(3, 2) - M(1, 2) * M(3, 3)) * invdet
-      Minv(1, 3) = (M(1, 2) * M(2, 3) - M(1, 3) * M(2, 2)) * invdet
-      Minv(2, 1) = (M(2, 3) * M(3, 1) - M(2, 1) * M(3, 3)) * invdet
-      Minv(2, 2) = (M(1, 1) * M(3, 3) - M(1, 3) * M(3, 1)) * invdet
-      Minv(2, 3) = (M(2, 1) * M(1, 3) - M(1, 1) * M(2, 3)) * invdet
-      Minv(3, 1) = (M(2, 1) * M(3, 2) - M(3, 1) * M(2, 2)) * invdet
-      Minv(3, 2) = (M(3, 1) * M(1, 2) - M(1, 1) * M(3, 2)) * invdet
-      Minv(3, 3) = (M(1, 1) * M(2, 2) - M(2, 1) * M(1, 2)) * invdet
-
-   END SUBROUTINE Inverse3by3
-   !-----------------------------------------------------------------------
-
-
-   ! One-function implementation of Crout LU Decomposition. Solves Ax=b for x
-   SUBROUTINE LUsolve(n, A, LU, b, y, x)
-
-      INTEGER(intKi),   INTENT(IN   )  :: n           ! size of matrices and vectors
-      Real(DbKi),       INTENT(IN   )  :: A( n,n)     ! LHS matrix (e.g. mass matrix)
-      Real(DbKi),       INTENT(INOUT)  :: LU(n,n)     ! stores LU matrix data
-      Real(DbKi),       INTENT(IN   )  :: b(n)        ! RHS vector
-      Real(DbKi),       INTENT(INOUT)  :: y(n)        ! temporary vector
-      Real(DbKi),       INTENT(  OUT)  :: x(n)        ! LHS vector to solve for
-
-      INTEGER(intKi)                   :: i,j,k,p
-      Real(DbKi)                       :: sum
-
-      DO k = 1,n
-         DO i = k,n
-         
-            sum = 0.0_DbKi
-            
-            DO p=1,k-1   !for(int p=0; p<k; ++p)
-               sum = sum + LU(i,p)*LU(p,k)
-            END DO
-            
-            LU(i,k) = A(i,k) - sum
-         END DO !I
-         
-         DO j=k+1,n  !for(int j=k+1;j<n;++j)
-            
-            sum = 0.0_DbKi
-
-            DO p=1,k-1   !for(int p=0;p<k;++p)
-               sum = sum + LU(k,p)*LU(p,j)
-            END DO
-            
-            LU(k,j) = (A(k,j)-sum)/LU(k,k)
-         END DO !j
-         
-      END DO !K
-      
-      DO i=1,n
-      
-         sum = 0.0_DbKi
-         
-         DO k=1,i-1  !for(int k=0; k<i; ++k)
-            sum = sum + LU(i,k)*y(k);
-         END DO
-         
-         y(i) = (b(i)-sum)/LU(i,i)
-         
+      ! Free Connnections
+      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
+         ! corresponds to state indices: (m%ConStateIs1(l)+3:m%ConStateIs1(l)+5)
+         p%dx(idx+1:idx+3) = dl_slack_min    ! point displacement [m]
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Px, m'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Py, m'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Pz, m'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+3          ! x%state index for Px
+         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+4          ! x%state index for Py
+         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+5          ! x%state index for Pz
+         idx = idx + 3
       END DO
-      
-      DO j=1,n       ! this is actually for looping through i in reverse
-         i = n+1-j   ! for(int i=n-1; i>=0; --i)
-      
-         sum = 0.0_DbKi
-         
-         DO k=i+1, n 
-            sum = sum + LU(i,k)*x(k)
-         END DO
-         
-         x(i) = (y(i)-sum) 
-         
-      END DO !j (actually decrementing i)
-      
-   END SUBROUTINE LUsolve
 
+      ! Lines
+      DO l = 1,p%nLines                      ! Line m%LineList(l)         
+         ! corresponds to state indices: (m%LineStateIs1(l)+3*N-3:m%LineStateIs1(l)+6*N-7) -- NOTE: end nodes not included 
+         N = m%LineList(l)%N                 ! number of segments in the line
+         DO i = 0,N-2
+            p%dx(idx+1:idx+3) = dl_slack_min ! line internal node displacement [m]
+            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Pz, m'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*N+3*i-3 ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*N+3*i-2 ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*N+3*i-1 ! x%state index for Pz
+            idx = idx + 3
+         END DO         
+      END DO
+
+      !-----------------
+      ! velocity states
+      !-----------------
+      ! Free bodies
+      DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
+         ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+         p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
+         p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
+         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
+         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
+         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
+         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
+         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
+         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
+         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
+         idx = idx + 6
+      END DO      
+
+      ! Rods
+      DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
+         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then ! pinned rod
+            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+2)
+            p%dx(idx+1:idx+3) = 0.1          ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
+            idx = idx + 3
+         else                                ! free rod
+            ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1          ! body translational velocity [m/s]
+            p%dx(idx+4:idx+6) = 0.02         ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' Vz, m/s'
+            InitOut%LinNames_x(idx+4) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+5) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+6) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%RodStateIs1(l)+0          ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%RodStateIs1(l)+1          ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%RodStateIs1(l)+2          ! x%state index for Vz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%RodStateIs1(l)+3          ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%RodStateIs1(l)+4          ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%RodStateIs1(l)+5          ! x%state index for omega_z
+            idx = idx + 6
+         end if
+      END DO      
+
+      ! Free Connnections
+      DO l = 1,p%nFreeCons                   ! Point m%ConnectList(m%FreeConIs(l))
+         ! corresponds to state indices: (m%ConStateIs1(l):m%ConStateIs1(l)+2)
+         p%dx(idx+1:idx+3) = 0.1             ! point translational velocity [m/s]
+         InitOut%LinNames_x(idx+1) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vx, m/s'
+         InitOut%LinNames_x(idx+2) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vy, m/s'
+         InitOut%LinNames_x(idx+3) = 'Point '//trim(num2lstr(m%FreeConIs(l)))//' Vz, m/s'
+         p%dxIdx_map2_xStateIdx(idx+1) = m%ConStateIs1(l)+0          ! x%state index for Vx
+         p%dxIdx_map2_xStateIdx(idx+2) = m%ConStateIs1(l)+1          ! x%state index for Vy
+         p%dxIdx_map2_xStateIdx(idx+3) = m%ConStateIs1(l)+2          ! x%state index for Vz
+         idx = idx + 3
+      END DO
+
+      ! Lines
+      DO l = 1,p%nLines                      ! Line m%LineList(l)         
+         ! corresponds to state indices: (m%LineStateIs1(l):m%LineStateIs1(l)+3*N-4) -- NOTE: end nodes not included
+         N = m%LineList(l)%N                 ! number of segments in the line
+         DO i = 0,N-2
+            p%dx(idx+1:idx+3) = 0.1          ! line internal node translational velocity [m/s]
+            InitOut%LinNames_x(idx+1) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Line '//trim(num2lstr(l))//' node '//trim(num2lstr(i+1))//' Vz, m/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%LineStateIs1(l)+3*i+0  ! x%state index for Vx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%LineStateIs1(l)+3*i+1  ! x%state index for Vy
+            p%dxIdx_map2_xStateIdx(idx+3) = m%LineStateIs1(l)+3*i+2  ! x%state index for Vz
+            idx = idx + 3
+         END DO
+      END DO
+
+      ! If a summary file is ever made...
+      !  !Formatting may be needed to make it pretty
+      !  if(UnSum > 0) then
+      !     write(UnSum,*) ' Lin_Jac_x       idx        x%state idx'
+      !     do i=1,p%Jac_nx
+      !        write(UnSum,*) InitOut%LinNames_x(i),'  ',i,'   ',p%dxIdx_map2_xStateIdx(i)
+      !     enddo
+      !  endif
+
+      InitOut%RotFrame_x   = .false.
+      InitOut%DerivOrder_x = 2      
+   END SUBROUTINE Init_Jacobian_x
+
+   SUBROUTINE Init_Jacobian_u()
+      INTEGER(IntKi) :: i, j, idx, nu, i_meshField
+      character(10)  :: LinStr      ! for noting which line a DeltaL control is attached to
+      logical        :: LinCtrl     ! Is the current DeltaL channel associated with a line?
+      ! Number of inputs
+      i = 0
+      if (allocated(u%DeltaL))   i=size(u%DeltaL)
+      nu = u%CoupledKinematics(1)%nNodes * 18 &   ! 3 Translation Displacements + 3 orientations + 6 velocities + 6 accelerations at each node <<<<<<<
+         + i*2                                 ! a deltaL and rate of change for each active tension control channel
+      
+      ! --- Info of linearized inputs (Names, RotFrame, IsLoad)
+      call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      call AllocAry(InitOut%IsLoad_u  , nu, 'IsLoad_u'  , ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      
+      InitOut%IsLoad_u   = .false. ! None of MoorDyn's inputs are loads
+      InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
+      
+      idx = 1
+      call PackMotionMesh_Names(u%CoupledKinematics(1), 'CoupledKinematics', InitOut%LinNames_u, idx) ! all 6 motion fields
+      
+      ! --- Jac_u_indx:  matrix to store index to help us figure out what the ith value of the u vector really means
+      ! (see perturb_u ... these MUST match )
+      ! column 1 indicates module's mesh and field
+      ! column 2 indicates the first index (x-y-z component) of the field
+      ! column 3 is the node
+      call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      p%Jac_u_indx = 0  ! initialize to zero
+      idx = 1
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationDisp  = 1;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%Orientation      = 2;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationVel   = 3;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationVel      = 4;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%TranslationAcc   = 5;
+      !Module/Mesh/Field: u%CoupledKinematics(1)%RotationAcc      = 6;
+      do i_meshField = 1,6
+         do i=1,u%CoupledKinematics(1)%nNodes
+            do j=1,3
+               p%Jac_u_indx(idx,1) =  i_meshField     ! mesh field type (indicated by 1-6)
+               p%Jac_u_indx(idx,2) =  j               ! x, y, or z
+               p%Jac_u_indx(idx,3) =  i               ! node
+               idx = idx + 1
+            end do !j
+         end do !i
+      end do
+      ! now do the active tensioning commands if there are any
+      if (allocated(u%DeltaL)) then
+         do i=1,size(u%DeltaL)            ! Signals may be passed in without being requested for control
+            ! Figure out if this DeltaL control channel is associated with a line or multiple or none and label
+            LinCtrl = .FALSE.
+            LinStr = '(lines: '
+            do J=1,p%NLines
+               if (m%LineList(J)%CtrlChan == i) then
+                  LinCtrl = .TRUE.
+                  LinStr = LinStr//trim(num2lstr(i))//' '
+               endif
+            enddo
+            if (      LinCtrl)   LinStr = LinStr//' )'
+            if (.not. LinCtrl)   LinStr = '(lines: none)'
+
+            p%Jac_u_indx(idx,1) =  10              ! 10-11 mean active tension changes (10: deltaL; 11: deltaLdot)
+            p%Jac_u_indx(idx,2) =  0               ! not used
+            p%Jac_u_indx(idx,3) =  i               ! indicates DeltaL entry number 
+            InitOut%LinNames_u(idx) = 'CtrlChan DeltaL '//trim(num2lstr(i))//', m '//trim(LinStr)
+            idx = idx + 1
+         
+            p%Jac_u_indx(idx,1) =  11
+            p%Jac_u_indx(idx,2) =  0
+            p%Jac_u_indx(idx,3) =  i               
+            InitOut%LinNames_u(idx) = 'CtrlChan DeltaLdot '//trim(num2lstr(i))//', m/s'//trim(LinStr)
+            idx = idx + 1
+         end do
+      endif
+
+      ! --- Default perturbations, p%du:
+      call allocAry( p%du, 11, 'p%du', ErrStat2, ErrMsg2); if(ErrStat2/=ErrID_None) return
+      p%du( 1) = dl_slack_min  ! u%CoupledKinematics(1)%TranslationDisp  = 1;
+      p%du( 2) = 0.1_ReKi      ! u%CoupledKinematics(1)%Orientation      = 2;
+      p%du( 3) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationVel   = 3;
+      p%du( 4) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationVel      = 4;
+      p%du( 5) = 0.1_ReKi      ! u%CoupledKinematics(1)%TranslationAcc   = 5;
+      p%du( 6) = 0.1_ReKi      ! u%CoupledKinematics(1)%RotationAcc      = 6;
+      p%du(10) = dl_slack_min  ! deltaL [m]
+      p%du(11) = 0.2_ReKi      ! deltaLdot [m/s] 
+   END SUBROUTINE Init_Jacobian_u
+
+END SUBROUTINE MD_Init_Jacobian
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Perturb_u( p, n, perturb_sign, u, du )
+   TYPE(MD_ParameterType)              , INTENT(IN   ) :: p            !< parameters
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n            !< number of array element to use
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(MD_InputType)                  , INTENT(INOUT) :: u            !< perturbed MD inputs
+   REAL( R8Ki )                        , INTENT(  OUT) :: du           !< amount that specific input was perturbed
+   ! local variables
+   INTEGER :: fieldIndx
+   INTEGER :: node
+   fieldIndx = p%Jac_u_indx(n,2)
+   node      = p%Jac_u_indx(n,3)
+   du = p%du(  p%Jac_u_indx(n,1) )
+   ! determine which mesh we're trying to perturb and perturb the input:
+   SELECT CASE( p%Jac_u_indx(n,1) )
+   CASE ( 1)
+      u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) = u%CoupledKinematics(1)%TranslationDisp( fieldIndx,node) + du * perturb_sign
+   CASE ( 2)
+      CALL PerturbOrientationMatrix( u%CoupledKinematics(1)%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
+   CASE ( 3)
+      u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) = u%CoupledKinematics(1)%TranslationVel( fieldIndx,node) + du * perturb_sign
+   CASE ( 4)
+      u%CoupledKinematics(1)%RotationVel(fieldIndx,node) = u%CoupledKinematics(1)%RotationVel(fieldIndx,node) + du * perturb_sign
+   CASE ( 5)
+      u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) = u%CoupledKinematics(1)%TranslationAcc( fieldIndx,node) + du * perturb_sign
+   CASE ( 6)
+      u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) = u%CoupledKinematics(1)%RotationAcc(fieldIndx,node) + du * perturb_sign
+   CASE (10)
+      u%deltaL(node) = u%deltaL(node) + du * perturb_sign
+   CASE (11)
+      u%deltaLdot(node) = u%deltaLdot(node) + du * perturb_sign
+   END SELECT
+END SUBROUTINE MD_Perturb_u
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Compute_dY(p, y_p, y_m, delta, dY)
+   TYPE(MD_ParameterType)            , INTENT(IN   ) :: p     !< parameters
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_p   !< MD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
+   TYPE(MD_OutputType)               , INTENT(IN   ) :: y_m   !< MD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:) !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   ! local variables:
+   INTEGER(IntKi) :: i              ! loop over outputs
+   INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
+   indx_first = 1
+   call PackLoadMesh_dY(  y_p%CoupledLoads(1), y_m%CoupledLoads(1), dY, indx_first)
+   !call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
+   do i=1,p%NumOuts
+      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
+   end do
+   dY = dY / (2.0_R8Ki*delta)
+END SUBROUTINE MD_Compute_dY
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the x array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Perturb_x( p, i, perturb_sign, x, dx )
+   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
+   INTEGER( IntKi )            , INTENT(IN   ) :: i            !< state array index number 
+   INTEGER( IntKi )            , INTENT(IN   ) :: perturb_sign !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: x            !< perturbed MD states
+   REAL( R8Ki )                , INTENT(  OUT) :: dx           !< amount that specific state was perturbed
+
+   dx=p%dx(i)
+   x%states(i)    = x%states(i)    + dx * perturb_sign
+END SUBROUTINE MD_Perturb_x
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine MD_init_jacobian is consistant with this routine!
+SUBROUTINE MD_Compute_dX(p, x_p, x_m, delta, dX)
+   TYPE(MD_ParameterType)      , INTENT(IN   ) :: p            !< parameters
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_p          !< <D continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(MD_ContinuousStateType), INTENT(IN   ) :: x_m          !< <D continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
+   REAL(R8Ki)                  , INTENT(IN   ) :: delta        !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                  , INTENT(INOUT) :: dX(:)        !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+   INTEGER(IntKi) :: i ! loop over modes
+   do i=1,p%Jac_nx   ! index to dX 
+      ! NOTE: order of entries in dX is different than the x%states, so mapping is required
+      dX(i) = x_p%states(p%dxIdx_map2_xStateIdx(i)) - x_m%states(p%dxIdx_map2_xStateIdx(i))
+   end do
+   dX = dX / (2.0_R8Ki*delta)
+END SUBROUTINE MD_Compute_dX
 
 
 

@@ -319,6 +319,7 @@ typedef   ^                            ParameterType                 DbKi       
 typedef   ^                            ^                             ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
 typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
 typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -

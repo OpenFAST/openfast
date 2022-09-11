@@ -1,7 +1,9 @@
+!> Biot-Savart law functions
+!! NOTE: these functions should be independent of the framework types
 module FVW_BiotSavart 
 
    use NWTC_Library, only: ReKi, IntKi
-   use OMP_LIB ! wrap with #ifdef _OPENMP if this causes an issue
+   use OMP_LIB
 
    implicit none
 

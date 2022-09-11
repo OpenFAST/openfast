@@ -1,9 +1,0 @@
-Compilation instructions
-
-# First, open a linux command terminal and navigate to the folder where you installed openFAST from github (should have .git files here)
-$ Then type
-mkdir build
-cd build
-cmake ..
-in the ccmake gui, turn BUILD_SHARED_LIBS=ON
-make ifw_c_lib

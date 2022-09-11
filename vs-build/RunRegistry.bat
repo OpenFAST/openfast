@@ -43,6 +43,10 @@ SET SrvD_Loc=%Modules_Loc%\servodyn\src
 SET BD_Loc=%Modules_Loc%\beamdyn\src
 SET SC_Loc=%Modules_Loc%\supercontroller\src
 
+SET AWAE_Loc=%Modules_Loc%\awae\src
+SET WD_Loc=%Modules_Loc%\wakedynamics\src
+SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
+
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
  "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
@@ -86,6 +90,13 @@ SET CURR_LOC=%SC_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\SuperController_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode
 GOTO checkError
+
+:SCDataEx:
+SET CURR_LOC=%SC_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\SC_DataEx_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode -noextrap
+GOTO checkError
+
 
 :ElastoDyn
 SET CURR_LOC=%ED_Loc%
@@ -136,7 +147,7 @@ GOTO checkError
 :AeroDyn_Driver
 SET CURR_LOC=%AD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
+%REGISTRY% "%CURR_LOC%\AeroDyn_Driver_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%IfW_Loc%" -I "%CURR_LOC%"  -O "%Output_Loc%" -noextrap
 GOTO checkError
 
 :AFI
@@ -233,6 +244,30 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
+:FarmDriver
+SET CURR_LOC=%Farm_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\FAST_Farm_Registry.txt" -I %WD_Loc% -I %AWAE_Loc% -I %Farm_Loc% %ALL_FAST_INCLUDES% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:FASTWrapper
+SET CURR_LOC=%Farm_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\FASTWrapper_Registry.txt" -I %NWTC_Lib_Loc%  %ALL_FAST_INCLUDES% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:WakeDynamics
+SET CURR_LOC=%WD_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\WakeDynamics_Registry.txt" -I %NWTC_Lib_Loc% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:AWAE
+SET CURR_LOC=%AWAE_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
 :Version
 DEL "%Root_Loc%\VersionInfo.obj" "%Root_Loc%\versioninfo.mod"
 GOTO end
@@ -257,6 +292,7 @@ SET ModuleName=
 SET CURR_LOC=
 
 SET Root_Loc=
+SET Output_Loc=
 
 SET Subs_Loc=
 SET FAST_Loc=

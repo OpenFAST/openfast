@@ -99,7 +99,9 @@ MODULE MoorDyn_IO
 
 
   ! PUBLIC :: MDIO_ReadInput
+   PUBLIC :: setupBathymetry
    PUBLIC :: getCoefficientOrCurve
+   PUBLIC :: SplitByBars
    PUBLIC :: DecomposeString
    PUBLIC :: MDIO_OpenOutput
    PUBLIC :: MDIO_CloseOutput
@@ -110,6 +112,96 @@ MODULE MoorDyn_IO
 CONTAINS
 
 
+   SUBROUTINE setupBathymetry(inputString, defaultDepth, BathGrid, BathGrid_Xs, BathGrid_Ys, ErrStat3, ErrMsg3)
+   ! SUBROUTINE getBathymetry(inputString, BathGrid, BathGrid_Xs, BathGrid_Ys, BathGrid_npoints, ErrStat3, ErrMsg3)
+
+      CHARACTER(40),           INTENT(IN   )  :: inputString         ! string describing water depth or bathymetry filename
+      REAL(ReKi),              INTENT(IN   )  :: defaultDepth        ! depth to use if inputString is empty
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid (:,:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Xs (:)
+      REAL(DbKi), ALLOCATABLE, INTENT(INOUT)  :: BathGrid_Ys (:)
+      INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat3            ! Error status of the operation
+      CHARACTER(*),            INTENT(  OUT)  :: ErrMsg3             ! Error message if ErrStat /= ErrID_None
+
+      INTEGER(IntKi)                   :: I
+      INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
+      
+      INTEGER(IntKi)                   :: ErrStat4
+      CHARACTER(120)                   :: ErrMsg4         
+      CHARACTER(120)                   :: Line2
+
+      CHARACTER(20)                    :: nGridX_string  ! string to temporarily hold the nGridX string from Line2
+      CHARACTER(20)                    :: nGridY_string  ! string to temporarily hold the nGridY string from Line3
+      INTEGER(IntKi)                   :: nGridX         ! integer of the size of BathGrid_Xs
+      INTEGER(IntKi)                   :: nGridY         ! integer of the size of BathGrid_Ys
+
+
+      IF (LEN_TRIM(inputString) == 0) THEN
+         ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
+         ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
+         BathGrid(1,1) = DBLE(defaultDepth)
+         
+         ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
+         BathGrid_Xs(1) = 0.0_DbKi
+         
+         ALLOCATE(BathGrid_Ys(1), STAT=ErrStat4)
+         BathGrid_Ys(1) = 0.0_DbKi     
+         
+      ELSE IF (SCAN(inputString, "abcdfghijklmnopqrstuvwxyzABCDFGHIJKLMNOPQRSTUVWXYZ") == 0) THEN
+         ! If the input does not have any of these string values, let's treat it as a number but store in a matrix
+         ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
+         READ(inputString, *, IOSTAT=ErrStat4) BathGrid(1,1)
+         
+         ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
+         BathGrid_Xs(1) = 0.0_DbKi
+         
+         ALLOCATE(BathGrid_Ys(1), STAT=ErrStat4)
+         BathGrid_Ys(1) = 0.0_DbKi
+
+      ELSE ! otherwise interpret the input as a file name to load the bathymetry lookup data from
+         CALL WrScr("   The depth input contains letters so will load a bathymetry file.")
+         
+         ! load lookup table data from file
+         CALL GetNewUnit( UnCoef ) ! unit number for coefficient input file
+         CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )
+         cALL SetErrStat(ErrStat4, ErrMsg4, ErrStat3, ErrMsg3, 'MDIO_getBathymetry')
+
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first title line
+         READ(UnCoef,*,IOSTAT=ErrStat4) nGridX_string, nGridX  ! read in the second line as the number of x values in the BathGrid
+         READ(UnCoef,*,IOSTAT=ErrStat4) nGridY_string, nGridY  ! read in the third line as the number of y values in the BathGrid
+
+         ! Allocate the bathymetry matrix and associated grid x and y values
+         ALLOCATE(BathGrid(nGridX, nGridY), STAT=ErrStat4)
+         ALLOCATE(BathGrid_Xs(nGridX), STAT=ErrStat4)
+         ALLOCATE(BathGrid_Ys(nGridY), STAT=ErrStat4)
+
+         DO I = 1, nGridY+1  ! loop through each line in the rest of the bathymetry file
+
+            READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! read into a line and call it Line2
+            IF (ErrStat4 > 0) EXIT
+
+            IF (I==1) THEN    ! if it's the first line in the Bathymetry Grid, then it's a list of all the x values
+               READ(Line2, *,IOSTAT=ErrStat4) BathGrid_Xs
+            ELSE              ! if it's not the first line, then the first value is a y value and the rest are the depth values
+               READ(Line2, *,IOSTAT=ErrStat4) BathGrid_Ys(I-1), BathGrid(I-1,:)
+            ENDIF
+         
+         END DO
+
+         IF (I < 2) THEN
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3 = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)
+            CLOSE (UnCoef)
+            RETURN
+         ELSE 
+            ! BathGrid_npoints = nGridX*nGridY       ! save the number of points in the grid
+            CLOSE (UnCoef)
+         END IF
+      
+      END IF
+
+   END SUBROUTINE setupBathymetry
+   
 
    ! read in stiffness/damping coefficient or load nonlinear data file if applicable
    SUBROUTINE getCoefficientOrCurve(inputString, LineProp_c, LineProp_npoints, LineProp_Xs, LineProp_Ys, ErrStat3, ErrMsg3)
@@ -140,7 +232,7 @@ CONTAINS
       
       else ! otherwise interpet the input as a file name to load stress-strain lookup data from
       
-         print *, "found A letter in the line coefficient value so will try to load the filename."
+         CALL WrScr("found A letter in the line coefficient value so will try to load the filename.")
          
          LineProp_c = 0.0
          
@@ -149,7 +241,7 @@ CONTAINS
          CALL GetNewUnit( UnCoef )
          CALL OpenFInpFile( UnCoef, TRIM(inputString), ErrStat4, ErrMsg4 )   ! add error handling?
          
-         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first three lines (title, names, and units) then parse
+         READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2   ! skip the first two lines (title, names, and units) then parse
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
          READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2
             
@@ -157,19 +249,25 @@ CONTAINS
             
             READ(UnCoef,'(A)',IOSTAT=ErrStat4) Line2      !read into a line
 
-            IF (ErrStat4 > 0) EXIT
-            
-            READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
-             
+            IF (ErrStat4 > 0) then
+               CALL WrScr("Error while reading lookup table file")
+               EXIT
+            ELSE IF (ErrStat4 < 0) then
+               CALL WrScr("Read "//trim(Int2LStr(I-1))//" data lines from lookup table file")
+               EXIT
+            ELSE
+               READ(Line2,*,IOSTAT=ErrStat4) LineProp_Xs(I), LineProp_Ys(I)
+            END IF 
          END DO
          
          if (I < 2) then
             ErrStat3 = ErrID_Fatal
             ErrMsg3  = "Less than the minimum of 2 data lines found in file "//TRIM(inputString)//" (first 3 lines are headers)."
+            LineProp_npoints = 0
             Close (UnCoef)
             RETURN
          else
-            LineProp_npoints = I;
+            LineProp_npoints = I-1
             Close (UnCoef)
          end if
       
@@ -178,7 +276,35 @@ CONTAINS
    END SUBROUTINE getCoefficientOrCurve
    
    
+   ! Split a string into separate strings by the bar (|) symbol
+   SUBROUTINE SplitByBars(instring, n, outstrings)
+   
+      CHARACTER(*),          INTENT(INOUT)  :: instring
+      INTEGER(IntKi),        INTENT(  OUT)  :: n
+      CHARACTER(40),         INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
       
+      INTEGER :: pos1, pos2, i
+ 
+      n = 0
+      pos1=1
+ 
+      DO
+         pos2 = INDEX(instring(pos1:), "|")  ! find index of next comma
+         IF (pos2 == 0) THEN                 ! if there isn't another comma, read the last entry and call it done (this could be the only entry if no commas)
+            n = n + 1
+            outstrings(n) = instring(pos1:)
+            EXIT
+         END IF
+         n = n + 1
+         if (n > 6) then
+            CALL WrScr("ERROR - SplitByBars cannot do more than 6 entries")
+         end if
+         outstrings(n) = instring(pos1:pos1+pos2-2)
+         pos1 = pos2+pos1
+      END DO
+      
+   END SUBROUTINE SplitByBars
+
 
    ! Split a string into separate letter strings and integers. Letters are converted to uppercase.
    SUBROUTINE DecomposeString(outWord, let1, num1, let2, num2, let3)
@@ -364,16 +490,17 @@ CONTAINS
 
       ! fairlead tension case (updated) <<<<<<<<<<<<<<<<<<<<<<<<<<< these are not currently working - need new way to find ObjID
       IF (let1 == 'FAIRTEN') THEN
-        p%OutParam(I)%OType = 1                                     ! connection object type
+        p%OutParam(I)%OType = 1                                     ! line object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (num1,*) oID                                           ! this is the line number
         p%OutParam(I)%ObjID  = oID                                  ! record the ID of the line
         p%OutParam(I)%NodeID = m%LineList(oID)%N                    ! specify node N (end B, fairlead)
+        ! >>> should check validity of ObjID and NodeID <<<
         
       ! achor tension case
       ELSE IF (let1 == 'ANCHTEN') THEN
-        p%OutParam(I)%OType = 1                                     ! connectoin object type
+        p%OutParam(I)%OType = 1                                     ! line object type
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (num1,*) oID                                           ! this is the line number
@@ -389,8 +516,14 @@ CONTAINS
         IF (let1(1:1) == 'L') THEN      ! Look for L?N?xxxx
           p%OutParam(I)%OType = 1                ! Line object type
           ! for now we'll just assume the next character(s) are "n" to represent node number or "s" to represent segment number
-          READ (num2,*) nID                      ! node or segment ID
-          p%OutParam%NodeID = nID
+          IF (num2/=" ") THEN
+              READ (num2,*) nID                      ! node or segment ID
+              p%OutParam(I)%NodeID = nID
+          ELSE
+              CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+              CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'. Line ID or Node ID missing.')
+              CYCLE
+          END IF
           qVal = let3                            ! quantity type string
         
         ! Connect case                            
@@ -402,12 +535,16 @@ CONTAINS
         ELSE IF (let1(1:1) == 'R') THEN    ! Look for R?xxx or Rod?xxx
           p%OutParam(I)%OType = 3                ! Rod object type
           IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel
-            p%OutParam%NodeID = 0
+            p%OutParam(I)%NodeID = 0
             qVal = let2                          ! quantity type string
-          ELSE
+          ELSE IF (num2/=" ") THEN
             READ (num2,*) nID                    ! rod node ID
-            p%OutParam%NodeID = nID
+            p%OutParam(I)%NodeID = nID
             qVal = let3                          ! quantity type string
+          ELSE
+            CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+            CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Rod ID or Node ID missing.')
+            CYCLE
           END IF
           
         ! Body case                            
@@ -425,8 +562,14 @@ CONTAINS
         END IF
 
         ! object number
-        READ (num1,*) oID
-        p%OutParam(I)%ObjID = oID                ! line or connect ID number
+        IF (num1/=" ") THEN
+            READ (num1,*) oID
+            p%OutParam(I)%ObjID = oID                ! line or connect ID number
+        ELSE
+          CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Object ID missing.')
+          CYCLE
+        END IF
 
         ! which kind of quantity?
         IF (qVal == 'PX') THEN
@@ -456,7 +599,7 @@ CONTAINS
         ELSE IF (qVal == 'AZ') THEN
           p%OutParam(I)%QType = AccZ
           p%OutParam(I)%Units = UnitList(AccZ)
-        ELSE IF ((qVal == 'T') .or. (qval == 'Ten')) THEN
+        ELSE IF ((qVal == 'T') .or. (qVal == 'TEN')) THEN
           p%OutParam(I)%QType = Ten
           p%OutParam(I)%Units = UnitList(Ten)
         ELSE IF (qVal == 'FX') THEN
@@ -1036,18 +1179,37 @@ CONTAINS
 !FIXME: make sure thes are actually open before trying to close them. Segfault will occur otherwise!!!!
 !  This bug can be triggered by an early failure of the parsing routines, before these files were ever opened
 !  which returns MD to OpenFAST as ErrID_Fatal, then OpenFAST calls MD_End, which calls this.
+
       ! close main MoorDyn output file
-      CLOSE( p%MDUnOut, IOSTAT = ErrStat )
+      if (p%MDUnOut > 0) then
+         CLOSE( p%MDUnOut, IOSTAT = ErrStat )
          IF ( ErrStat /= 0 ) THEN
             ErrMsg = 'Error closing output file'
          END IF
-
+      end if 
+      
+      ! close individual rod output files
+      DO I=1,p%NRods
+         if (allocated(m%RodList)) then
+            if (m%RodList(I)%RodUnOut > 0) then
+               CLOSE( m%RodList(I)%RodUnOut, IOSTAT = ErrStat )
+               IF ( ErrStat /= 0 ) THEN
+                  ErrMsg = 'Error closing rod output file'
+               END IF
+            end if 
+         end if 
+      END DO
+      
       ! close individual line output files
       DO I=1,p%NLines
-         CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
-            IF ( ErrStat /= 0 ) THEN
-               ErrMsg = 'Error closing line output file'
-            END IF
+         if (allocated(m%LineList)) then
+            if (m%LineList(I)%LineUnOut > 0) then
+               CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
+               IF ( ErrStat /= 0 ) THEN
+                  ErrMsg = 'Error closing line output file'
+               END IF
+            end if 
+         end if
       END DO
 
       ! deallocate output arrays
@@ -1123,7 +1285,7 @@ CONTAINS
                   CASE DEFAULT
                     y%WriteOutput(I) = 0.0_ReKi
                     ErrStat = ErrID_Warn
-                    ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                    ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
@@ -1140,6 +1302,12 @@ CONTAINS
                      y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
                   CASE (VelZ)
                      y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
+                  CASE (AccX)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(1) ! x acceleration
+                  CASE (AccY)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(2) ! y acceleration
+                  CASE (AccZ)
+                     y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%a(3) ! z acceleration
                   CASE (Ten)
                      y%WriteOutput(I) = TwoNorm(m%ConnectList(p%OutParam(I)%ObjID)%Fnet)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
                   CASE (FX)
@@ -1151,7 +1319,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 3) THEN  ! if dealing with a Rod output
@@ -1168,7 +1336,13 @@ CONTAINS
                   CASE (VelY)
                      y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
                   CASE (VelZ)
-                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity                     
+                  CASE (AccX)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(1) ! x acceleration <<< should this become distributed for each node?
+                  CASE (AccY)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(2) ! y acceleration
+                  CASE (AccZ)
+                     y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%a6(3) ! z acceleration
                   CASE (FX)
                      y%WriteOutput(I) = m%RodList(p%OutParam(I)%ObjID)%F6net(1)  ! total force in x - added Nov 24
                   CASE (FY)
@@ -1184,7 +1358,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Rod '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
             ELSE IF (p%OutParam(I)%OType == 4) THEN  ! if dealing with a Body output
@@ -1216,7 +1390,7 @@ CONTAINS
                   CASE DEFAULT
                      y%WriteOutput(I) = 0.0_ReKi
                      ErrStat = ErrID_Warn
-                     ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Body '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
+                     ErrMsg = ' Unsupported output quantity '//TRIM(p%OutParam(I)%Name)//' requested from Body '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
                END SELECT
 
 
@@ -1227,13 +1401,30 @@ CONTAINS
 
          END DO ! I, loop through OutParam
 
+      END IF
 
+         ! check if this is a repeated time step, in which case exit instead of writing a duplicate line to the output files
+         if (Time <= m%LastOutTime) then
+            return
+         else
+            m%LastOutTime = Time
+         end if
+
+         ! if using a certain output time step, check whether we should output, and exit the subroutine if not
+         if (p%dtOut > 0)  then
+            !if (Time < (floor((Time-p%dtCoupling)/p%dtOut) + 1.0)*p%dtOut)  then
+            if ( abs(MOD( Time - 0.5*p%dtOut, p%dtOut) - 0.5*p%dtOut) >= 0.5*p%dtCoupling)  then
+                return
+            end if
+         end if
+         ! What the above does is say if ((dtOut==0) || (t >= (floor((t-dtC)/dtOut) + 1.0)*dtOut)), continue to writing files
+
+      if ( p%NumOuts > 0_IntKi ) then  
+      
          ! Write the output parameters to the file
-
          Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
-
+         
          WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
-
       END IF
 
 
@@ -1252,10 +1443,13 @@ CONTAINS
                          + (m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(7:9)) &
                                + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(10:18))
            
+           if (m%LineList(I)%OutFlagList(2) == 1) THEN   ! if node positions are included, make them using a float format for higher precision
+            Frmt = '(F10.4,'//TRIM(Int2LStr(3*(m%LineList(I)%N + 1)))//'(A1,F12.4),'//TRIM(Int2LStr(LineNumOuts - 3*(m%LineList(I)%N - 1)))//'(A1,e12.5))'  
+           else
+            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
+           end if
            
-           Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e12.5))'   ! should evenutally use user specified format?
-
-           L = 1 ! start of index of line output file at first entry
+           L = 1 ! start of index of line output file at first entry   12345.7890
            
            ! Time
       !     m%LineList(I)%LineWrOutput(L) = Time
@@ -1543,9 +1737,9 @@ CONTAINS
       REAL(DbKi)                       :: Tmag_squared   
    
       if (i==0) then
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + Line%Fnet(3,i)**2 )  ! if an end node, use Fnet which already includes weight
       else if (i==Line%N) then                          
-         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + (Line%Fnet(3,i) + Line%M(1,1,i)*(-p%g))**2 )
+         NodeTen = sqrt( Line%Fnet(1,i)**2 + Line%Fnet(2,i)**2 + Line%Fnet(3,i)**2 )
       else 
          Tmag_squared = 0.0_DbKi 
          DO J=1,3

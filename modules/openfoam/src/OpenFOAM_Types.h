@@ -22,8 +22,6 @@
 
   typedef struct OpFM_InitInputType {
     void * object ;
-    int NumSC2Ctrl ;
-    int NumCtrl2SC ;
     int NumActForcePtsBlade ;
     int NumActForcePtsTower ;
     float * StructBldRNodes ;     int StructBldRNodes_Len ;
@@ -83,14 +81,12 @@
     float * momenty ;     int momenty_Len ;
     float * momentz ;     int momentz_Len ;
     float * forceNodesChord ;     int forceNodesChord_Len ;
-    float * SuperController ;     int SuperController_Len ;
   } OpFM_InputType_t ;
   typedef struct OpFM_OutputType {
     void * object ;
     float * u ;     int u_Len ;
     float * v ;     int v_Len ;
     float * w ;     int w_Len ;
-    float * SuperController ;     int SuperController_Len ;
     float * WriteOutput ;     int WriteOutput_Len ;
   } OpFM_OutputType_t ;
   typedef struct OpFM_UserData {

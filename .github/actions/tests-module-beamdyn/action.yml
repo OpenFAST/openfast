@@ -20,5 +20,5 @@ runs:
           ctest -VV -j7 -R bd_
         fi
 
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/openfast/build
       shell: bash

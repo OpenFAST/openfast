@@ -519,29 +519,29 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                              NOutputs, OutParam, NMOutputs, MOutLst,  NJOutputs, JOutLst, uMesh, yMesh, &
                              p, m, errStat, errMsg ) 
                              
-   INTEGER,                  INTENT ( IN    )  :: UnSum
-   REAL(ReKi),               INTENT ( IN    )  :: g                    ! gravity
-   REAL(ReKi),               INTENT ( IN    )  :: MSL2SWL
-   REAL(ReKi),               INTENT ( IN    )  :: WtrDpth
-   INTEGER,                  INTENT ( IN    )  :: numJoints
-   INTEGER,                  INTENT ( IN    )  :: numNodes
-   TYPE(Morison_NodeType),   INTENT ( IN    )  :: nodes(:)  
-   INTEGER,                  INTENT ( IN    )  :: numMembers
-   TYPE(Morison_MemberType), INTENT ( IN    )  :: members(:)
-   INTEGER,                  INTENT ( IN    )  :: NOutputs
-   TYPE(OutParmType),        INTENT ( IN    )  :: OutParam(:)
-   INTEGER,                  INTENT ( IN    )  :: NMOutputs
-   TYPE(Morison_MOutput),    INTENT ( IN    )  :: MOutLst(:)
-   INTEGER,                  INTENT ( IN    )  :: NJOutputs
-   TYPE(Morison_JOutput),    INTENT ( IN    )  :: JOutLst(:)
-   TYPE(MeshType),           INTENT ( INOUT )  :: uMesh
-   TYPE(MeshType),           INTENT ( INOUT )  :: yMesh
-   TYPE(Morison_ParameterType), INTENT ( IN    ) :: p
-   TYPE(Morison_MiscVarType), INTENT ( IN    ) :: m 
-   INTEGER,                  INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
-   CHARACTER(*),             INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
+   INTEGER,                               INTENT ( IN    )  :: UnSum
+   REAL(ReKi),                            INTENT ( IN    )  :: g                    ! gravity
+   REAL(ReKi),                            INTENT ( IN    )  :: MSL2SWL
+   REAL(ReKi),                            INTENT ( IN    )  :: WtrDpth
+   INTEGER,                               INTENT ( IN    )  :: numJoints
+   INTEGER,                               INTENT ( IN    )  :: numNodes
+   TYPE(Morison_NodeType),   ALLOCATABLE, INTENT ( IN    )  :: nodes(:)  
+   INTEGER,                               INTENT ( IN    )  :: numMembers
+   TYPE(Morison_MemberType), ALLOCATABLE, INTENT ( IN    )  :: members(:)
+   INTEGER,                               INTENT ( IN    )  :: NOutputs
+   TYPE(OutParmType),        ALLOCATABLE, INTENT ( IN    )  :: OutParam(:)
+   INTEGER,                               INTENT ( IN    )  :: NMOutputs
+   TYPE(Morison_MOutput),    ALLOCATABLE, INTENT ( IN    )  :: MOutLst(:)
+   INTEGER,                               INTENT ( IN    )  :: NJOutputs
+   TYPE(Morison_JOutput),    ALLOCATABLE, INTENT ( IN    )  :: JOutLst(:)
+   TYPE(MeshType),                        INTENT ( INOUT )  :: uMesh
+   TYPE(MeshType),                        INTENT ( INOUT )  :: yMesh
+   TYPE(Morison_ParameterType),           INTENT ( IN    ) :: p
+   TYPE(Morison_MiscVarType),             INTENT ( IN    ) :: m 
+   INTEGER,                               INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
+   CHARACTER(*),                          INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
 
-   INTEGER                                     :: I, J
+   INTEGER                                     :: I, J, II
    REAL(ReKi)                                  :: l                   ! length of an element
    LOGICAL                                     :: filledFlag          ! flag indicating if element is filled/flooded
    CHARACTER(2)                                :: strFmt
@@ -565,6 +565,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    INTEGER                                     :: m1, m2              ! Indices of the markers which surround the requested output location
    REAL(ReKi)                                  :: s                   ! The linear interpolation factor for the requested location
    REAL(ReKi)                                  :: outloc(3)           ! Position of the requested member output
+   real(ReKi)                                  :: pos(3), pos2(3)     ! Position of a node or joint in the MSL inertial system
    INTEGER                                     :: mbrIndx, nodeIndx, c, N
    CHARACTER(ChanLen)                          :: tmpName
    REAL(ReKi)                                  :: totalFillMass, mass_fill, fillVol, memberVol
@@ -639,7 +640,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                      ,Moment            = .TRUE.            &
                      )
          ! Create the node on the mesh
-            
+ 
       CALL MeshPositionNode (WRP_Mesh                              &
                               , 1                                  &
                               , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
@@ -686,7 +687,8 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       
       
       DO J = 1, yMesh%Nnodes
-         if ( yMesh%Position(3,J) <= 0.0 ) then
+         
+         if ( yMesh%Position(3,J) <= MSL2SWL ) then  ! need to check relative to MSL2SWL offset because the Mesh Positons are relative to MSL
             
             if (J <= numJoints) then
                ptLoad = F_B(:,J) + m%F_B_end(:,J)
@@ -792,7 +794,10 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
       
          ! Write the node data
       do I = 1,numJoints   
-         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),9(2X,A10),3(2X,ES10.3))' ) i,'    -     ', nodes(i)%Position, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
+         ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
+         pos = nodes(i)%Position
+         pos(3) = pos(3) + MSL2SWL
+         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),9(2X,A10),3(2X,ES10.3))' ) i,'    -     ', pos, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
       end do
       c = numJoints
       do j= 1, numMembers
@@ -803,7 +808,15 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             else
                fillFlag = .false.
             end if
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, nodes(c)%Position, members(j)%R(i),  members(j)%R(i)-members(j)%Rin(i),  members(j)%tMG(i),  members(j)%MGdensity(i),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(i)+members(j)%m_fb_l(i),  members(j)%Cd(i),  members(j)%Ca(i),  members(j)%Cp(i),  members(j)%AxCd(i),  members(j)%AxCa(i),  members(j)%AxCp(i), '  -  ',  '  -  ',  '  -  '
+            ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
+            pos = nodes(c)%Position
+            pos(3) = pos(3) + MSL2SWL
+            if (members(j)%flipped) then
+               II=members(j)%NElements+2-I
+            else
+               II=I
+            endif
+            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
          end do
       end do
       
@@ -893,10 +906,13 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             mem   = members(MOutLst(mbrIndx)%MemberIDIndx)
             node1 = nodes(mem%NodeIndx(1))
             node2 = nodes(mem%NodeIndx(mem%NElements+1))
-           
-            outLoc    = node1%Position*(1-s) + node2%Position*s
-            
-            WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10,7(2x,F10.4))' ) OutParam(I)%Name, outLoc,  MOutLst(mbrIndx)%MemberID, node1%Position, node2%Position, s
+            ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
+            pos = node1%Position
+            pos(3) = pos(3) + MSL2SWL
+            pos2 = node2%Position
+            pos2(3) = pos2(3) + MSL2SWL
+            outLoc    = pos*(1-s) + pos2*s
+            WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10,7(2x,F10.4))' ) OutParam(I)%Name, outLoc,  MOutLst(mbrIndx)%MemberID, pos,pos2, s
          END IF
   
       END DO
@@ -918,7 +934,10 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
                !Get Member index and Node index
             read (tmpName(2:2),*) nodeIndx
             m1 = JOutLst(nodeIndx)%JointIDIndx 
-            WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10)' ) OutParam(I)%Name, nodes(m1)%Position, JOutLst(nodeIndx)%JointID
+            ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
+            pos = nodes(m1)%Position
+            pos(3) = pos(3) + MSL2SWL
+            WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10)' ) OutParam(I)%Name, pos, JOutLst(nodeIndx)%JointID
             
          END IF
          
@@ -1030,7 +1049,7 @@ end subroutine Morison_GenerateSimulationNodes
 !====================================================================================================
 SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp )
    
-   REAL(ReKi), INTENT (IN   )             :: z
+   REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
    INTEGER,    INTENT (IN   )             :: NCoefDpth
    TYPE(Morison_CoefDpths), INTENT (IN   ):: CoefDpths(:)
@@ -1044,8 +1063,8 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
    INTEGER                 :: I, indx1, indx2
    REAL(ReKi)              :: dd, s
    LOGICAL                 :: foundLess 
-   
-   
+
+
       ! Find the table entry(ies) which match the node's depth value
       ! The assumption here is that the depth table is stored from largest
       ! to smallest in depth
@@ -1099,32 +1118,33 @@ END SUBROUTINE SetDepthBasedCoefs
 
 !====================================================================================================
 !SUBROUTINE SetExternalHydroCoefs
-SUBROUTINE SetExternalHydroCoefs(  MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
+SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
                                    SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, CoefMembers,    &
                                    NCoefDpth, CoefDpths, numNodes, nodes, member )   
 !     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
-   integer(IntKi),            intent(in   )  :: MCoefMod
-   integer(IntKi),            intent(in   )  :: MmbrCoefIDIndx
-   real(ReKi),                intent(in   )  :: SimplCd 
-   real(ReKi),                intent(in   )  :: SimplCdMG
-   real(ReKi),                intent(in   )  :: SimplCa
-   real(ReKi),                intent(in   )  :: SimplCaMG 
-   real(ReKi),                intent(in   )  :: SimplCp
-   real(ReKi),                intent(in   )  :: SimplCpMG 
-   real(ReKi),                intent(in   )  :: SimplAxCd
-   real(ReKi),                intent(in   )  :: SimplAxCdMG 
-   real(ReKi),                intent(in   )  :: SimplAxCa
-   real(ReKi),                intent(in   )  :: SimplAxCaMG 
-   real(ReKi),                intent(in   )  :: SimplAxCp
-   real(ReKi),                intent(in   )  :: SimplAxCpMG 
-   type(Morison_CoefMembers), intent(in   )  :: CoefMembers(:)
-   integer(IntKi),            intent(in   )  :: NCoefDpth
-   type(Morison_CoefDpths),   intent(in   )  :: CoefDpths(:)
-   integer(IntKi),            intent(in   )  :: numNodes
-   type(Morison_NodeType),    intent(in   )  :: nodes(:)
-   type(Morison_MemberType),  intent(inout)  :: member
+   real(ReKi),                             intent(in   )  :: MSL2SWL
+   integer(IntKi),                         intent(in   )  :: MCoefMod
+   integer(IntKi),                         intent(in   )  :: MmbrCoefIDIndx
+   real(ReKi),                             intent(in   )  :: SimplCd 
+   real(ReKi),                             intent(in   )  :: SimplCdMG
+   real(ReKi),                             intent(in   )  :: SimplCa
+   real(ReKi),                             intent(in   )  :: SimplCaMG 
+   real(ReKi),                             intent(in   )  :: SimplCp
+   real(ReKi),                             intent(in   )  :: SimplCpMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCd
+   real(ReKi),                             intent(in   )  :: SimplAxCdMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCa
+   real(ReKi),                             intent(in   )  :: SimplAxCaMG 
+   real(ReKi),                             intent(in   )  :: SimplAxCp
+   real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
+   integer(IntKi),                         intent(in   )  :: NCoefDpth
+   type(Morison_CoefDpths),   allocatable, intent(in   )  :: CoefDpths(:)
+   integer(IntKi),                         intent(in   )  :: numNodes
+   type(Morison_NodeType),    allocatable, intent(in   )  :: nodes(:)
+   type(Morison_MemberType),               intent(inout)  :: member
    
    type(Morison_NodeType)                      :: node, node1, node2
    integer(IntKi)                              :: i, j
@@ -1153,7 +1173,7 @@ SUBROUTINE SetExternalHydroCoefs(  MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG,
          
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
-         CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3),  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
+         CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
                                     member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i) )
       end do
          
@@ -1182,13 +1202,14 @@ SUBROUTINE SetExternalHydroCoefs(  MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG,
 end subroutine SetExternalHydroCoefs
 
 
-SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, tMG, MGdensity )
+SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, MSL2SWL, tMG, MGdensity )
    ! sets the margine growth thickness of a single node (previously all nodes)
-   INTEGER,                      INTENT( IN    )  :: numMGDepths
-   TYPE(Morison_MGDepthsType),   INTENT( IN    )  :: MGDepths(:)
-   TYPE(Morison_NodeType),       INTENT( IN    )  :: node
-   real(ReKi),                   intent( inout )  :: tMG
-   real(ReKi),                   intent( inout )  :: MGdensity
+   INTEGER,                                  INTENT( IN    )  :: numMGDepths
+   TYPE(Morison_MGDepthsType), ALLOCATABLE,  INTENT( IN    )  :: MGDepths(:)
+   TYPE(Morison_NodeType),                   INTENT( IN    )  :: node
+   real(ReKi),                               intent( in    )  :: MSL2SWL
+   real(ReKi),                               intent( inout )  :: tMG
+   real(ReKi),                               intent( inout )  :: MGdensity
    
    INTEGER                 :: I, J
    REAL(ReKi)              :: z
@@ -1196,11 +1217,11 @@ SUBROUTINE SetNodeMG( numMGDepths, MGDepths, node, tMG, MGdensity )
    REAL(ReKi)              :: dd, s
    LOGICAL                 :: foundLess = .FALSE.
    
-      
+
          !Find the table entry(ies) which match the node's depth value
       ! The assumption here is that the depth table is stored from largest
       ! to smallest in depth
-      z = node%Position(3)
+      z = node%Position(3) + MSL2SWL ! Place in MSL coordinate system
       foundLess = .FALSE.
       indx1 = 0
       indx2 = 0
@@ -1251,7 +1272,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    
    errStat = ErrID_None
    errMSg  = ''
-   call AllocAry(member%NodeIndx     , member%NElements,   'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1391,7 +1412,8 @@ subroutine FlipMemberNodeData( member, nodes, doSwap, errStat, errMsg )
    
 end subroutine FlipMemberNodeData
 
-subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
+   real(ReKi),                   intent (in   )  :: MSL2SWL
    real(ReKi),                   intent (in   )  :: gravity
    type(Morison_MemberType),     intent (inout)  :: member
    integer(IntKi),               intent (in   )  :: MCoefMod
@@ -1448,7 +1470,7 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
    ! These are all per node and not done here, yet
    
    do i = 1, member%NElements+1
-      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), member%tMG(i), member%MGDensity(i) )
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), InitInp%MSL2SWL, member%tMG(i), member%MGDensity(i) )
    end do
 
    member%R(  1)   = propSet1%PropD / 2.0            
@@ -1464,13 +1486,12 @@ subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrF
       member%RMG(i) =  member%R(i) + member%tMG(i)
    end do
 
-   call SetExternalHydroCoefs(  MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
+   call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%CoefMembers,    &
                                    InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%NNodes, InitInp%Nodes, member )       
    
-
    ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
-   Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3)
+   Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
    Zb = InitInp%Nodes(member%NodeIndx(N+1))%Position(3)
 
    ! find fill location of member (previously in SetElementFillProps)
@@ -1795,7 +1816,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
             prop2Indx = InitInp%InpMembers(I)%MPropSetID2Indx
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
-      call SetMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
+      call SetMemberProperties( InitInp%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) ; call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
    end do
       
 end subroutine SetupMembers
@@ -1831,7 +1852,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    type(Morison_MemberInputType) :: inpMember ! current input file-based member
    INTEGER                  :: N, i, j, count
    REAL(ReKi)               :: dl
-   REAL(ReKi)               :: vec(3),v2D(3,1) 
+   REAL(ReKi)               :: vec(3),v2D(3,1), pos(3)
    REAL(ReKi)               :: phi    ! member tilt angle
    REAL(ReKi)               :: beta   ! member tilt heading
    REAL(ReKi)               :: cosPhi
@@ -1870,6 +1891,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NumOuts    = InitInp%NumOuts
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
    p%OutSwtch   = InitInp%OutSwtch
+   p%MSL2SWL    = InitInp%MSL2SWL
    
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
    IF ( errStat /= ErrID_None ) THEN
@@ -1905,7 +1927,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp  
       ! Redundant work (these are already assigned to the member data arrays, 
       ! but is needed on the joint data because we report the tMG, and MGDensity at each Joint node in the Summary File
-      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), InitInp%MSL2SWL, InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
    end do
 
       ! allocate and copy in node-based load and hydrodynamic arrays
@@ -1936,11 +1958,13 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
    
    DO I=1,p%NNodes
-
+   ! This needs to change so that the Position is relative to MSL NOT SWL:
+      pos = InitInp%Nodes(I)%Position
+      pos(3) = pos(3) + InitInp%MSL2SWL
          ! Create the node on the mesh 
-      CALL MeshPositionNode (u%Mesh          &
-                        , i                    &
-                        , InitInp%Nodes(I)%Position      &  ! this info comes from HydroDyn input file and the subroutine: Morison_GenerateSimulationNodes
+      CALL MeshPositionNode (u%Mesh                &
+                        , i                        &      
+                        , pos                      &  ! this info comes from HydroDyn input file and the subroutine: Morison_GenerateSimulationNodes
                         , errStat                  &
                         , errMsg                   &
                         ) !, transpose(p%Nodes(I)%R_LToG)          )
@@ -2086,6 +2110,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             END IF
          
          END DO   !J = 1, InitInp%InpJoints(I)%NConnections
+
+         Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
          
          p%An_End(:,i) = An_drag 
          Amag_drag = Dot_Product(An_drag ,An_drag)
@@ -2103,7 +2129,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Constant part of the external hydrodynamic added mass term
          if ( Vmag > 0.0 ) then
             v2D(:,1) = Vn        
-            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(transpose(v2D), v2D) 
+            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(v2D, transpose(v2D))
          end if
          
          ! Constant part of the external hydrodynamic dynamic pressure force
@@ -2119,7 +2145,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
          ! get rotation matrix for moment of inertia orientations
          call RodrigMat(I_n, R_I, errStat, errMsg)
-         IF ( errStat > AbortErrLev ) RETURN
+         IF ( errStat >= AbortErrLev ) RETURN
 
          ! globally-oreinted moment of inertia matrix for joint
          Irl_mat = 0.0
@@ -2221,9 +2247,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-      
-   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-
+   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
+      GetAlpha = 0.0_ReKi
+   else
+      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+   end if
    
 END FUNCTION GetAlpha
 
@@ -2669,9 +2697,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             ! calculate isntantaneous incline angle and heading, and related trig values
          ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
+
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+         pos1(3) = pos1(3) - p%MSL2SWL
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-        
+         pos2(3) = pos2(3) - p%MSL2SWL
 
          call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
          call Morison_DirCosMtrx( pos1, pos2, CMatrix )
@@ -3000,7 +3030,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! NOTE: All geometry-related calculations are based on the undisplaced configuration of the structure
       
       DO i =1,N+1    ! loop through member nodes
-         z1 = u%Mesh%Position(3, mem%NodeIndx(i))
+         ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
+         z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL
          if ( i > mem%i_floor .and. z1 <= 0.0 ) then  ! node is above (or at? TODO: check) seabed and below or at free-surface)
             ! TODO: Note that for computational efficiency, we could precompute h_c and deltal for each element when we are NOT using wave stretching
             ! We would still need to test at time marching for nodes just below the free surface because that uses the current locations not the reference locations
@@ -3015,11 +3046,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
                h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
             else
+               ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
                pos1 =   u%Mesh%Position(:, mem%NodeIndx(i))
+               pos1(3) = pos1(3) - p%MSL2SWL
                pos2 =   u%Mesh%Position(:, mem%NodeIndx(i+1))
+               pos2(3) = pos2(3) - p%MSL2SWL
                if (pos1(3) <= 0.0 .and. 0.0 < pos2(3) ) then ! This node is just below the free surface !TODO: Needs to be augmented for wave stretching
+                  ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
                   !TODO: Fix this one
                   pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
+                  pos1(3) = pos1(3) - p%MSL2SWL
                   h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
                   deltal = mem%dl/2.0 + h
                   h_c    = 0.5*(h-mem%dl/2.0)
@@ -3077,9 +3113,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! Any end plate loads that are modeled on a per-member basis
       
       ! reassign convenience variables to correspond to member ends
-
+      ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
+      pos1(3) = pos1(3) - p%MSL2SWL
       pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(2)) + u%Mesh%Position(:, mem%NodeIndx(2)) 
+      pos2(3) = pos2(3) - p%MSL2SWL
       z1 = pos1(3)
       
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
@@ -3089,11 +3127,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          sinBeta2  = sinBeta1
          cosBeta2  = cosBeta1
       else
+         !  We need to subtract the MSL2SWL offset to place this  in the SWL reference system
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N))   + u%Mesh%Position(:, mem%NodeIndx(N))
+         pos1(3) = pos1(3) - p%MSL2SWL
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
+         pos2(3) = pos2(3) - p%MSL2SWL
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
       end if
+      ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
       pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
+      pos2(3) = pos2(3) - p%MSL2SWL
       z2 = pos2(3)
       
       ! Check the member does not exhibit any of the following conditions
@@ -3149,8 +3192,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! --- external buoyancy loads: ends ---
 
       if ( .not. mem%PropPot ) then
+         ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1))   + u%Mesh%Position(:, mem%NodeIndx(1))
+         pos1(3) = pos1(3) - p%MSL2SWL
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
+         pos2(3) = pos2(3) - p%MSL2SWL
          z1 = pos1(3)
          z2 = pos2(3)
          if (mem%i_floor == 0) then  ! both ends above or at seabed

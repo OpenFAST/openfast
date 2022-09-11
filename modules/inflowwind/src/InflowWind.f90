@@ -221,7 +221,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          
       ENDIF
 
-      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, TmpErrStat, TmpErrMsg )
+      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
+
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -502,8 +503,18 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Set InitInp information
             BladedFF_InitData%SumFileUnit                =  SumFileUnit
+            BladedFF_InitData%FixedWindFileRootName      = InitInp%FixedWindFileRootName
+            BladedFF_InitData%TurbineID                  = InitInp%TurbineID
             
             if (InputFileData%WindType /= BladedFF_Shr_WindNumber) then  
+               IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+                  IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
+                  ELSE                                   ! FAST.Farm high-resolution domain(s)
+                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
+                  ENDIF
+               ENDIF
+               
                BladedFF_InitData%WindFileName            = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
                BladedFF_InitData%TowerFileExist          =  InputFileData%BladedFF_TowerFile
                BladedFF_InitData%NativeBladedFmt         = .false.
@@ -747,6 +758,9 @@ CONTAINS
       ! add in stuff that we need to dispose of here
       CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+
+      ! Ignore error messages from InFileInfo destruction
+      call NWTC_Library_DestroyFileInfoType( InFileInfo, TmpErrStat, TmpErrMsg )
 
          ! Close the summary file if we were writing one
       IF ( SumFileUnit > 0 ) THEN

@@ -55,14 +55,6 @@ subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
    errMsg  = ""
    
    if ( interval <= sqrt(epsilon(1.0_ReKi)) ) call SetErrStat( ErrID_Fatal, " The timestep size for DBEMT (interval) must be larger than sqrt(epsilon).", ErrStat, ErrMsg, RoutineName)
-   
-   !>>> remove after this feature gets tested better:
-   if (InitInp%DBEMT_Mod == DBEMT_cont_tauConst ) then
-      call SetErrStat( ErrID_Fatal, "DBEMT_Mod cannot be 3 in this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
-      return
-   end if
-   !<<<
-   
    if ( (InitInp%DBEMT_Mod .ne. DBEMT_tauConst) .and. (InitInp%DBEMT_Mod .ne. DBEMT_tauVaries) .and. (InitInp%DBEMT_Mod .ne. DBEMT_cont_tauConst)) then
       call SetErrStat( ErrID_Fatal, " DBEMT_Mod must be set to 1, 2, or 3.", ErrStat, ErrMsg, RoutineName)
    end if

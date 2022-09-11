@@ -13,7 +13,7 @@ Aeroacoustics Noise Model of OpenFAST
    fully open source and publicly available, is based on work performed
    over the past three decades. Frequency-based models for turbulent
    inflow; turbulent boundary layer – trailing edge; laminar boundary layer
-   –vortex shedding; tip vortex; and trailing edge bluntness – vortex
+   – vortex shedding; tip vortex; and trailing edge bluntness – vortex
    shedding noise mechanisms are included. A simple directivity model is
    also included.
 

@@ -54,7 +54,7 @@ MODULE NWTC_Base
    INTEGER(IntKi)                :: AbortErrLev  = ErrID_Fatal                    !< ErrStat that indicates the error level when program should end; ErrID_Fatal by default. Note that this is not a PARAMETER
 
    
-   INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 3                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
+   INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 5                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
    
 
       !> Type definition for dynamically loaded libraries:

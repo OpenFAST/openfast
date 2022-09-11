@@ -809,31 +809,43 @@ subroutine Set_NStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Nacelle
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
    real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
-   integer  :: i,j
-   j=1
+   integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumNStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(NStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
-         AllOuts(NStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
-         AllOuts(NStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
-         AllOuts(NStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
-         AllOuts(NStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
-         AllOuts(NStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
-         AllOuts(NStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per NStC instance
-         AllOuts(NStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per NStC instance
-         AllOuts(NStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(NStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(NStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(NStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(NStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(NStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
+         call Set_NStC_Outs_Instance( i, x(i), m(i), y(i), AllOuts )
       enddo
    endif
 end subroutine Set_NStC_Outs
+!---------------------------
+subroutine Set_NStC_Outs_Instance( i, x, m, y, AllOuts )     ! Nacelle single StC instance
+   integer(IntKi),                  intent(in   )  :: i                    ! This instance
+   type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
+   type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
+   type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   integer  :: j
+   j=1
+   if (i < MaxStC) then
+      AllOuts(NStC_XQ( i)) = x%StC_x(1,1)                ! x
+      AllOuts(NStC_XQD(i)) = x%StC_x(2,1)                ! x-dot
+      AllOuts(NStC_YQ( i)) = x%StC_x(3,1)                ! y
+      AllOuts(NStC_YQD(i)) = x%StC_x(4,1)                ! y-dot
+      AllOuts(NStC_ZQ( i)) = x%StC_x(5,1)                ! z
+      AllOuts(NStC_ZQD(i)) = x%StC_x(6,1)                ! z-dot
+      AllOuts(NStC_Fxi(i)) = 0.001*y%Mesh(j)%Force(1,1)  ! only one mesh per NStC instance
+      AllOuts(NStC_Fyi(i)) = 0.001*y%Mesh(j)%Force(2,1)  ! only one mesh per NStC instance
+      AllOuts(NStC_Fzi(i)) = 0.001*y%Mesh(j)%Force(3,1)  ! only one mesh per NStC instance
+      AllOuts(NStC_Mxi(i)) = 0.001*y%Mesh(j)%Moment(1,1) ! only one mesh per NStC instance
+      AllOuts(NStC_Myi(i)) = 0.001*y%Mesh(j)%Moment(2,1) ! only one mesh per NStC instance
+      AllOuts(NStC_Mzi(i)) = 0.001*y%Mesh(j)%Moment(3,1) ! only one mesh per NStC instance
+      AllOuts(NStC_Fxl(i)) = 0.001*m%F_P(1,j)
+      AllOuts(NStC_Fyl(i)) = 0.001*m%F_P(2,j)
+      AllOuts(NStC_Fzl(i)) = 0.001*m%F_P(3,j)
+      AllOuts(NStC_Mxl(i)) = 0.001*m%M_P(1,j)
+      AllOuts(NStC_Myl(i)) = 0.001*m%M_P(2,j)
+      AllOuts(NStC_Mzl(i)) = 0.001*m%M_P(3,j)
+   endif
+end subroutine Set_NStC_Outs_Instance
 !---------------------------
 subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
    type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
@@ -841,31 +853,43 @@ subroutine Set_TStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Tower
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
    real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
-   integer  :: i,j
-   j=1
+   integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumTStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(TStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
-         AllOuts(TStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
-         AllOuts(TStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
-         AllOuts(TStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
-         AllOuts(TStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
-         AllOuts(TStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
-         AllOuts(TStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per TStC instance
-         AllOuts(TStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per TStC instance
-         AllOuts(TStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(TStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(TStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(TStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(TStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(TStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
+         call Set_TStC_Outs_Instance( i, x(i), m(i), y(i), AllOuts )
       enddo
    endif
 end subroutine Set_TStC_Outs
+!---------------------------
+subroutine Set_TStC_Outs_Instance( i, x, m, y, AllOuts )     ! Tower single StC instance
+   integer(IntKi),                  intent(in   )  :: i                    ! This instance
+   type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
+   type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
+   type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   integer  :: j
+   j=1
+   if (i < MaxStC) then
+      AllOuts(TStC_XQ( i)) = x%StC_x(1,1)                ! x
+      AllOuts(TStC_XQD(i)) = x%StC_x(2,1)                ! x-dot
+      AllOuts(TStC_YQ( i)) = x%StC_x(3,1)                ! y
+      AllOuts(TStC_YQD(i)) = x%StC_x(4,1)                ! y-dot
+      AllOuts(TStC_ZQ( i)) = x%StC_x(5,1)                ! z
+      AllOuts(TStC_ZQD(i)) = x%StC_x(6,1)                ! z-dot
+      AllOuts(TStC_Fxi(i)) = 0.001*y%Mesh(j)%Force(1,1)  ! only one mesh per TStC instance
+      AllOuts(TStC_Fyi(i)) = 0.001*y%Mesh(j)%Force(2,1)  ! only one mesh per TStC instance
+      AllOuts(TStC_Fzi(i)) = 0.001*y%Mesh(j)%Force(3,1)  ! only one mesh per TStC instance
+      AllOuts(TStC_Mxi(i)) = 0.001*y%Mesh(j)%Moment(1,1) ! only one mesh per TStC instance
+      AllOuts(TStC_Myi(i)) = 0.001*y%Mesh(j)%Moment(2,1) ! only one mesh per TStC instance
+      AllOuts(TStC_Mzi(i)) = 0.001*y%Mesh(j)%Moment(3,1) ! only one mesh per TStC instance
+      AllOuts(TStC_Fxl(i)) = 0.001*m%F_P(1,j)
+      AllOuts(TStC_Fyl(i)) = 0.001*m%F_P(2,j)
+      AllOuts(TStC_Fzl(i)) = 0.001*m%F_P(3,j)
+      AllOuts(TStC_Mxl(i)) = 0.001*m%M_P(1,j)
+      AllOuts(TStC_Myl(i)) = 0.001*m%M_P(2,j)
+      AllOuts(TStC_Mzl(i)) = 0.001*m%M_P(3,j)
+   endif
+end subroutine Set_TStC_Outs_Instance
 !---------------------------
 subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
    type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
@@ -873,32 +897,45 @@ subroutine Set_BStC_Outs( p_SrvD, x, m, y, AllOuts )        ! Blades
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
    real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
-   integer  :: i,j
+   integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
-      do j=1,min(p_SrvD%NumBl,MaxBlOuts)
-         do i=1,min(p_SrvD%NumBStC,MaxStC)                         ! in case we have more Nacelle StCs than the outputs are set for
-            AllOuts(BStC_XQ( i,j)) = x(i)%StC_x(1,j)                ! x
-            AllOuts(BStC_XQD(i,j)) = x(i)%StC_x(2,j)                ! x-dot
-            AllOuts(BStC_YQ( i,j)) = x(i)%StC_x(3,j)                ! y
-            AllOuts(BStC_YQD(i,j)) = x(i)%StC_x(4,j)                ! y-dot
-            AllOuts(BStC_ZQ( i,j)) = x(i)%StC_x(5,j)                ! z
-            AllOuts(BStC_ZQD(i,j)) = x(i)%StC_x(6,j)                ! z-dot
-            AllOuts(BStC_Fxi(i,j)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Fyi(i,j)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Fzi(i,j)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per BStC instance
-            AllOuts(BStC_Mxi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Myi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Mzi(i,j)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per BStC instance
-            AllOuts(BStC_Fxl(i,j)) = 0.001*m(i)%F_P(1,j)
-            AllOuts(BStC_Fyl(i,j)) = 0.001*m(i)%F_P(2,j)
-            AllOuts(BStC_Fzl(i,j)) = 0.001*m(i)%F_P(3,j)
-            AllOuts(BStC_Mxl(i,j)) = 0.001*m(i)%M_P(1,j)
-            AllOuts(BStC_Myl(i,j)) = 0.001*m(i)%M_P(2,j)
-            AllOuts(BStC_Mzl(i,j)) = 0.001*m(i)%M_P(3,j)
-         enddo
+      do i=1,min(p_SrvD%NumBStC,MaxStC)                         ! in case we have more Blade StCs than the outputs are set for
+         call Set_BStC_Outs_Instance( i, p_SrvD%numBl, x(i), m(i), y(i), AllOuts )
       enddo
    endif
 end subroutine Set_BStC_Outs
+!---------------------------
+subroutine Set_BStC_Outs_Instance( i, numBl, x, m, y, AllOuts )        ! Single StC on all blades
+   integer(IntKi),                  intent(in   )  :: i                    ! This instance
+   integer(IntKi),                  intent(in   )  :: numBl                ! number of blades 
+   type(StC_ContinuousStateType),   intent(in   )  :: x                    !< Continuous states at t
+   type(StC_MiscVarType),           intent(in   )  :: m                    !< Misc (optimization) variables
+   type(StC_OutputType),            intent(in   )  :: y                    !< Outputs computed at Time
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   integer  :: j
+   if (i < MaxStC) then
+      do j=1,min(NumBl,MaxBlOuts)
+         AllOuts(BStC_XQ( i,j)) = x%StC_x(1,j)                ! x
+         AllOuts(BStC_XQD(i,j)) = x%StC_x(2,j)                ! x-dot
+         AllOuts(BStC_YQ( i,j)) = x%StC_x(3,j)                ! y
+         AllOuts(BStC_YQD(i,j)) = x%StC_x(4,j)                ! y-dot
+         AllOuts(BStC_ZQ( i,j)) = x%StC_x(5,j)                ! z
+         AllOuts(BStC_ZQD(i,j)) = x%StC_x(6,j)                ! z-dot
+         AllOuts(BStC_Fxi(i,j)) = 0.001*y%Mesh(j)%Force(1,1)  ! only one mesh per BStC instance
+         AllOuts(BStC_Fyi(i,j)) = 0.001*y%Mesh(j)%Force(2,1)  ! only one mesh per BStC instance
+         AllOuts(BStC_Fzi(i,j)) = 0.001*y%Mesh(j)%Force(3,1)  ! only one mesh per BStC instance
+         AllOuts(BStC_Mxi(i,j)) = 0.001*y%Mesh(j)%Moment(1,1) ! only one mesh per BStC instance
+         AllOuts(BStC_Myi(i,j)) = 0.001*y%Mesh(j)%Moment(2,1) ! only one mesh per BStC instance
+         AllOuts(BStC_Mzi(i,j)) = 0.001*y%Mesh(j)%Moment(3,1) ! only one mesh per BStC instance
+         AllOuts(BStC_Fxl(i,j)) = 0.001*m%F_P(1,j)
+         AllOuts(BStC_Fyl(i,j)) = 0.001*m%F_P(2,j)
+         AllOuts(BStC_Fzl(i,j)) = 0.001*m%F_P(3,j)
+         AllOuts(BStC_Mxl(i,j)) = 0.001*m%M_P(1,j)
+         AllOuts(BStC_Myl(i,j)) = 0.001*m%M_P(2,j)
+         AllOuts(BStC_Mzl(i,j)) = 0.001*m%M_P(3,j)
+      enddo
+   endif
+end subroutine Set_BStC_Outs_Instance
 !---------------------------
 subroutine Set_SStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform 
    type(SrvD_ParameterType),                    intent(in   )  :: p_SrvD               !< Parameters
@@ -906,31 +943,43 @@ subroutine Set_SStC_Outs( p_SrvD, x, m, y, AllOuts )     ! Platform
    type(StC_MiscVarType),           allocatable,intent(in   )  :: m(:)                 !< Misc (optimization) variables
    type(StC_OutputType),            allocatable,intent(in   )  :: y(:)                 !< Outputs computed at Time
    real(ReKi),                                  intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
-   integer  :: i,j
-   j=1
+   integer  :: i
    if (allocated(x) .and. allocated(m) .and. allocated(y)) then
       do i=1,min(p_SrvD%NumSStC,MaxStC)                       ! in case we have more Nacelle StCs than the outputs are set for
-         AllOuts(SStC_XQ( i)) = x(i)%StC_x(1,1)                ! x
-         AllOuts(SStC_XQD(i)) = x(i)%StC_x(2,1)                ! x-dot
-         AllOuts(SStC_YQ( i)) = x(i)%StC_x(3,1)                ! y
-         AllOuts(SStC_YQD(i)) = x(i)%StC_x(4,1)                ! y-dot
-         AllOuts(SStC_ZQ( i)) = x(i)%StC_x(5,1)                ! z
-         AllOuts(SStC_ZQD(i)) = x(i)%StC_x(6,1)                ! z-dot
-         AllOuts(SStC_Fxi(i)) = 0.001*y(i)%Mesh(j)%Force(1,1)  ! only one mesh per SStC instance
-         AllOuts(SStC_Fyi(i)) = 0.001*y(i)%Mesh(j)%Force(2,1)  ! only one mesh per SStC instance
-         AllOuts(SStC_Fzi(i)) = 0.001*y(i)%Mesh(j)%Force(3,1)  ! only one mesh per SStC instance
-         AllOuts(SStC_Mxi(i)) = 0.001*y(i)%Mesh(j)%Moment(1,1) ! only one mesh per SStC instance
-         AllOuts(SStC_Myi(i)) = 0.001*y(i)%Mesh(j)%Moment(2,1) ! only one mesh per SStC instance
-         AllOuts(SStC_Mzi(i)) = 0.001*y(i)%Mesh(j)%Moment(3,1) ! only one mesh per SStC instance
-         AllOuts(SStC_Fxl(i)) = 0.001*m(i)%F_P(1,j)
-         AllOuts(SStC_Fyl(i)) = 0.001*m(i)%F_P(2,j)
-         AllOuts(SStC_Fzl(i)) = 0.001*m(i)%F_P(3,j)
-         AllOuts(SStC_Mxl(i)) = 0.001*m(i)%M_P(1,j)
-         AllOuts(SStC_Myl(i)) = 0.001*m(i)%M_P(2,j)
-         AllOuts(SStC_Mzl(i)) = 0.001*m(i)%M_P(3,j)
+         call Set_SStC_Outs_Instance( i, x(i), m(i), y(i), AllOuts )
       enddo
    endif
 end subroutine Set_SStC_Outs
+!---------------------------
+subroutine Set_SStC_Outs_Instance( i, x, m, y, AllOuts )     ! Platform 
+   integer(IntKi),                  intent(in   )  :: i                    ! This instance
+   type(StC_ContinuousStateType),   intent(in   )  :: x                 !< Continuous states at t
+   type(StC_MiscVarType),           intent(in   )  :: m                 !< Misc (optimization) variables
+   type(StC_OutputType),            intent(in   )  :: y                 !< Outputs computed at Time
+   real(ReKi),                      intent(inout)  :: AllOuts(0:MaxOutPts) ! All the the available output channels
+   integer  :: j
+   j=1
+   if (i < MaxStC) then
+      AllOuts(SStC_XQ( i)) = x%StC_x(1,1)                ! x
+      AllOuts(SStC_XQD(i)) = x%StC_x(2,1)                ! x-dot
+      AllOuts(SStC_YQ( i)) = x%StC_x(3,1)                ! y
+      AllOuts(SStC_YQD(i)) = x%StC_x(4,1)                ! y-dot
+      AllOuts(SStC_ZQ( i)) = x%StC_x(5,1)                ! z
+      AllOuts(SStC_ZQD(i)) = x%StC_x(6,1)                ! z-dot
+      AllOuts(SStC_Fxi(i)) = 0.001*y%Mesh(j)%Force(1,1)  ! only one mesh per SStC instance
+      AllOuts(SStC_Fyi(i)) = 0.001*y%Mesh(j)%Force(2,1)  ! only one mesh per SStC instance
+      AllOuts(SStC_Fzi(i)) = 0.001*y%Mesh(j)%Force(3,1)  ! only one mesh per SStC instance
+      AllOuts(SStC_Mxi(i)) = 0.001*y%Mesh(j)%Moment(1,1) ! only one mesh per SStC instance
+      AllOuts(SStC_Myi(i)) = 0.001*y%Mesh(j)%Moment(2,1) ! only one mesh per SStC instance
+      AllOuts(SStC_Mzi(i)) = 0.001*y%Mesh(j)%Moment(3,1) ! only one mesh per SStC instance
+      AllOuts(SStC_Fxl(i)) = 0.001*m%F_P(1,j)
+      AllOuts(SStC_Fyl(i)) = 0.001*m%F_P(2,j)
+      AllOuts(SStC_Fzl(i)) = 0.001*m%F_P(3,j)
+      AllOuts(SStC_Mxl(i)) = 0.001*m%M_P(1,j)
+      AllOuts(SStC_Myl(i)) = 0.001*m%M_P(2,j)
+      AllOuts(SStC_Mzl(i)) = 0.001*m%M_P(3,j)
+   endif
+end subroutine Set_SStC_Outs_Instance
 !---------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2319,7 +2368,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
       IF ( Indx > 0 ) THEN ! we found the channel name
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
-            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)  ! don't reset the index -- causes issues in linearization
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE
@@ -2358,7 +2407,7 @@ subroutine InitializeSummaryFile(InputFileData,OutfileRoot,UnSum,ErrStat,ErrMsg)
    ErrMsg   =  ''
    if ( InputFileData%SumPrint ) then
       call GetNewUnit( UnSum )
-      CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.Sum', ErrStat2, ErrMsg2 )
+      CALL OpenEcho ( UnSum, TRIM(OutFileRoot)//'.sum', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
    else

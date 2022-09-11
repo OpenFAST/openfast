@@ -40,6 +40,27 @@
 #endif
 
 
+
+#if defined _WIN32 || defined __CYGWIN__ || defined _WINDOWS
+#  ifdef BUILD_SHARED_LIC_LIBS
+#    ifdef __GNUC__
+#      define DLL_PUBLIC __attribute__ ((dllexport))
+#    else
+#      define DLL_PUBLIC __declspec(dllexport) // Note: actually gcc seems to also supports this syntax.
+#    endif
+#  else
+#    define DLL_PUBLIC
+#  endif
+#else
+#  if __GNUC__ >= 4
+#    define DLL_PUBLIC __attribute__ ((visibility ("default")))
+#  else
+#    define DLL_PUBLIC
+#  endif
+#endif
+
+#define MAP_EXTERNCALL DLL_PUBLIC
+
 #if defined(_MSC_VER)
   typedef int bool;
   #define false 0
@@ -47,17 +68,11 @@
 //#  include "stdbool.h"
 #  define map_snprintf _snprintf
 #  define map_strcat(a,b,c) strcat_s(a,b,c)
-#  define MAP_EXTERNCALL __declspec( dllexport )
 #  define MAP_STRCPY(a,b,c) strcpy_s(a,b,c)
 #else
 #  include <stdbool.h>
 #  define map_snprintf snprintf
 #  define map_strcat(a,b,c) strncat(a,c,b)
-#  if defined(__MINGW32__)
-#    define MAP_EXTERNCALL __declspec( dllexport )
-#  else
-#    define MAP_EXTERNCALL 
-#  endif  
 #  define MAP_STRCPY(a,b,c) strcpy(a,c)
 #endif
 

@@ -23,7 +23,6 @@
 
    
    
-   
 program UnsteadyAero_Driver
 
    use NWTC_Library
@@ -114,6 +113,14 @@ program UnsteadyAero_Driver
          call checkError()
       end if
    
+   allocate( InitInData%UAOff_innerNode(InitInData%numBlades), InitInData%UAOff_outerNode(InitInData%numBlades), STAT = ErrStat)
+      if ( ErrStat /= 0 ) then
+         call SetErrStat( ErrID_Fatal, 'Error trying to allocate UAOff_innerNode and UAOff_outerNode.', ErrStat, ErrMsg, RoutineName)
+         call checkError()
+      end if
+   ! don't turn off UA based on span location:
+   InitInData%UAOff_innerNode = 0
+   InitInData%UAOff_outerNode = InitInData%nNodesPerBlade + 1
       
       ! Parse the driver input file and run the simulation based on that file
       
@@ -149,6 +156,8 @@ program UnsteadyAero_Driver
       
    end if
    InitInData%OutRootName = dvrInitInp%OutRootName
+   
+   InitInData%WrSum = .true. ! write all the AFI data
 
    
    if ( dvrInitInp%SimMod == 1 ) then
@@ -170,7 +179,7 @@ program UnsteadyAero_Driver
       ! Initialize the Airfoil Info Params
    afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
    AFIndx(1,1) = 1
-   call Init_AFI( p, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
+   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
       call checkError()
 
 !   call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName)
@@ -183,7 +192,7 @@ program UnsteadyAero_Driver
 
    if (p%NumOuts <= 0) then
       ErrStat = ErrID_Fatal
-      ErrMsg = "No outputs have been selected. Rebuild the executable with -DUA_OUT"
+      ErrMsg = "No outputs have been selected. Rebuild the executable with -DUA_OUTS"
       call checkError()
    end if
 
@@ -216,7 +225,7 @@ program UnsteadyAero_Driver
       t = uTimes(2)
 
          ! Use existing states to compute the outputs
-      call UA_CalcOutput(i, j, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
+      call UA_CalcOutput(i, j, t, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
          call checkError()
             
          ! Generate file outputs

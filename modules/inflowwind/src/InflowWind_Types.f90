@@ -32,7 +32,6 @@
 MODULE InflowWind_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE IfW_UniformWind_Types
-USE IfW_FFWind_Base_Types
 USE IfW_TSFFWind_Types
 USE IfW_BladedFFWind_Types
 USE IfW_HAWCWind_Types
@@ -120,6 +119,8 @@ IMPLICIT NONE
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: Use4Dext = .FALSE.      !< Flag that tells this module if an external module will pass it 4-D velocity grids. [-]
     INTEGER(IntKi)  :: NumWindPoints      !< Number of wind velocity points expected [-]
+    INTEGER(IntKi)  :: TurbineID = 0      !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm) [-]
+    LOGICAL  :: FixedWindFileRootName = .FALSE.      !< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or do we get it some other way [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
@@ -1152,6 +1153,8 @@ ENDIF
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%Use4Dext = SrcInitInputData%Use4Dext
     DstInitInputData%NumWindPoints = SrcInitInputData%NumWindPoints
+    DstInitInputData%TurbineID = SrcInitInputData%TurbineID
+    DstInitInputData%FixedWindFileRootName = SrcInitInputData%FixedWindFileRootName
     DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
     DstInitInputData%RootName = SrcInitInputData%RootName
       CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
@@ -1223,6 +1226,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1  ! Use4Dext
       Int_BufSz  = Int_BufSz  + 1  ! NumWindPoints
+      Int_BufSz  = Int_BufSz  + 1  ! TurbineID
+      Int_BufSz  = Int_BufSz  + 1  ! FixedWindFileRootName
       Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
@@ -1331,6 +1336,10 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Use4Dext, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumWindPoints
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%TurbineID
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedWindFileRootName, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -1489,6 +1498,10 @@ ENDIF
     OutData%Use4Dext = TRANSFER(IntKiBuf(Int_Xferred), OutData%Use4Dext)
     Int_Xferred = Int_Xferred + 1
     OutData%NumWindPoints = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%TurbineID = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%FixedWindFileRootName = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedWindFileRootName)
     Int_Xferred = Int_Xferred + 1
     OutData%UseInputFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseInputFile)
     Int_Xferred = Int_Xferred + 1

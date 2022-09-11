@@ -309,9 +309,10 @@ markers are the end points of the vortex filaments. The Lagrangian convection of
 the filaments stretches the filaments and thus automatically accounts for strain
 in the vorticity equation.
 
-At present, a first-order forward Euler method is used to numerically solve the
-left-hand side of Eq. :eq:`VortFilCart` for the vortex filament location
-(**IntMethod=[5]**). This is an explicit method solved using
+At present, the Runge-Kutta 4th order (**IntMethod=[1]**) or first order forward Euler
+(**IntMethod=[5]**) methods are implemented to numerically solve the
+left-hand side of Eq. :eq:`VortFilCart` for the vortex filament location.
+In the case of the first order Euler method, the convection is then simply:
 Eq. :eq:`eq:Euler`. 
 
 .. math::
@@ -341,14 +342,6 @@ where :math:`d\psi/dt=\Omega` and
 :math:`\vec{r}(\psi,\zeta)` is the position vector of a Lagrangian
 marker, and :math:`\vec{V}[\vec{r}(\psi,\zeta)]` is the velocity.
 
-..
-   At present, first-order forward Euler method is used to numerically solve the
-   left-hand side of Eq. :eq:`VortFil_expanded` for the vortex-filament location
-   [**IntMethod=5**]. This is an explicit method solved using Eq. :eq:`Euler`.
-
-   .. math::
-      \vec{r}(\psi+\Delta\psi_i,\zeta+\Delta\zeta)  = \vec{r}(\psi,\zeta) + \vec{V}(\psi,\zeta) \Delta t
-      :label: Euler
 
 Induced Velocity and Velocity Field
 -----------------------------------
@@ -577,6 +570,8 @@ Here, :math:`\epsilon` is the vortex-filament strain, :math:`l` is the filament
 length, and :math:`\Delta l` is the change of length between two time steps. The
 integral in Eq. :eq:`stretch` represents strain effects.
 
+This option is not yet implemented.
+
 Wake Age / Core-Spreading
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -599,6 +594,16 @@ vorticity itself or between the wake vorticity and the background flow. It is
 often referred to as the core-spreading method. Setting **DiffusionMethod=[1]**
 is the same as using the wake age method (**WakeRegMethod=[3]**).
 
+The time evolution of the core radius is implemented as:
+
+.. math::
+
+    \frac{d r_c}{dt} = \frac{2\alpha\delta\nu}{r_c(t)}
+
+and :math:`\frac{d r_c}{dt}=0` on the blades.
+
+
+
 Stretching and Wake Age
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -609,6 +614,8 @@ Eq. :eq:`stretchandage`.
 .. math::
    r_c(\zeta,\epsilon) = \sqrt{r_{c0}^2 + 4\alpha\delta\nu \zeta  \big(1+\epsilon\big)^{-1} }
    :label: stretchandage
+
+This option is not yet implemented.
 
 .. _sec:diffusion:
 

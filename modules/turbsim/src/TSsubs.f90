@@ -650,16 +650,9 @@ ENDIF
          DO J=max(1, p%usr%NPoints),p%grid%NPoints
             DO I=J,p%grid%NPoints   
    
-!mlb: THis is where to look for the error.
-
-!mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
-!mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-               
-!dist_x is zero, so we ignore it here (i.e., A_X = 0)
                A_Y = Alpha(2) * (p%grid%Freq(IFreq)**rc(2)) * ((Dist_Y(Indx)/Coef_1)**qc(2)) * (z_g(Indx)**(-pc(2)))
                A_Z = Alpha(3) * (p%grid%Freq(IFreq)**rc(3)) * ((Dist_Z(Indx)/Coef_1)**qc(3)) * (z_g(Indx)**(-pc(3)))
 
-!mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
                TRH(Indx)=EXP(- Coef_1 * SQRT(A_Y**2 + A_Z**2) / p%met%URef)
                
                Indx = Indx  + 1                                    
@@ -1151,8 +1144,8 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
          
          DO iPoint=1+p%usr%NPoints,p%grid%NPoints
-            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )            
-            S(:,iPoint,:) = SSVS*HalfDelF               
+            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )
+            S(:,iPoint,:) = SSVS*HalfDelF
          ENDDO                  
          
       CASE ( SpecModel_USRVKM )
@@ -1815,7 +1808,7 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
          SpecModel_USRVKM, &
          SpecModel_TIDAL,  &
          SpecModel_RIVER,  &
-         SpecModel_USER  ) ! Do reynolds stress for HYDRO also.
+         SpecModel_USER    )
                
    
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
@@ -1875,7 +1868,7 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V)
                
       ELSE  ! Scale each point individually
                
-         DO Indx = 1,p%grid%NPoints             
+         DO Indx = 1,p%grid%NPoints
             CGridSum  = 0.0
             CGridSum2 = 0.0
                                     
@@ -2166,7 +2159,6 @@ IF ( ANY (p%WrFile) )  THEN
    CALL GetNewUnit( UnOut )
 
    WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
-!   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
 
    IF ( p%WrFile(FileExt_BIN) )  THEN   
 
@@ -2176,7 +2168,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
 
    ENDIF
 
@@ -2187,7 +2178,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
-!      CALL WrScr   (  '    '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
 
    ENDIF
 
@@ -2198,7 +2188,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
 
    ENDIF
 
@@ -2209,7 +2198,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
 
@@ -2220,7 +2208,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
    
@@ -2231,7 +2218,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
 
    ENDIF
 
@@ -2242,18 +2228,22 @@ IF ( ANY (p%WrFile) )  THEN
       
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+   ENDIF
+
+   IF ( p%WrFile(FileExt_HAWC) )  THEN
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-u.bin (HAWC binary full-field u-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-v.bin (HAWC binary full-field v-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-w.bin (HAWC binary full-field w-component file)' )")  
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (formatted full-field U-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (formatted full-field V-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
    ENDIF
 
 ELSE
@@ -2262,7 +2252,7 @@ ENDIF
 
    ! WARN if using a large grid and not creating ff output files
 IF ( p%grid%NumGrid_Y*p%grid%NumGrid_Z > 250 ) THEN 
-   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
+   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_HAWC) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
    
       CALL SetErrStat( ErrID_Warn, 'You are using a large number of grid points but are not generating full-field output files.'//&
             ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, RoutineName) 

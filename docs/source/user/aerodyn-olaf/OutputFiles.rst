@@ -11,6 +11,9 @@ parameter is available in the OLAF input file, in which case the VTK files are
 written to the folder ``vtk_fvw``, or the primary ``.fst`` file, in which case
 the VTK files are written to the folder ``vtk``.
 
+Velocity field outputs can be exported as VTK files. The user can control these
+outputs using **nGridOut** and the subsequent table.
+
 
 Results File
 ------------
