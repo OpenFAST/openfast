@@ -371,15 +371,27 @@ IF (ALLOCATED(SrcInputFileData%StC_CChan)) THEN
 ENDIF
  END SUBROUTINE StC_CopyInputFile
 
- SUBROUTINE StC_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyInputFile( InputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInputFile'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInputFile'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputFileData%F_TBL)) THEN
   DEALLOCATE(InputFileData%F_TBL)
 ENDIF
@@ -1042,15 +1054,27 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE StC_CopyInitInput
 
- SUBROUTINE StC_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%InitRefPos)) THEN
   DEALLOCATE(InitInputData%InitRefPos)
 ENDIF
@@ -1063,8 +1087,10 @@ ENDIF
 IF (ALLOCATED(InitInputData%InitRefOrient)) THEN
   DEALLOCATE(InitInputData%InitRefOrient)
 ENDIF
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedPrescribeFrcData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE StC_DestroyInitInput
 
  SUBROUTINE StC_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1703,15 +1729,27 @@ IF (ALLOCATED(SrcCtrlChanInitInfoTypeData%InitMeasVel)) THEN
 ENDIF
  END SUBROUTINE StC_CopyCtrlChanInitInfoType
 
- SUBROUTINE StC_DestroyCtrlChanInitInfoType( CtrlChanInitInfoTypeData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyCtrlChanInitInfoType( CtrlChanInitInfoTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_CtrlChanInitInfoType), INTENT(INOUT) :: CtrlChanInitInfoTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyCtrlChanInitInfoType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyCtrlChanInitInfoType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(CtrlChanInitInfoTypeData%Requestor)) THEN
   DEALLOCATE(CtrlChanInitInfoTypeData%Requestor)
 ENDIF
@@ -2191,15 +2229,27 @@ IF (ALLOCATED(SrcInitOutputData%RelPosition)) THEN
 ENDIF
  END SUBROUTINE StC_CopyInitOutput
 
- SUBROUTINE StC_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%RelPosition)) THEN
   DEALLOCATE(InitOutputData%RelPosition)
 ENDIF
@@ -2379,15 +2429,27 @@ IF (ALLOCATED(SrcContStateData%StC_x)) THEN
 ENDIF
  END SUBROUTINE StC_CopyContState
 
- SUBROUTINE StC_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%StC_x)) THEN
   DEALLOCATE(ContStateData%StC_x)
 ENDIF
@@ -2552,15 +2614,27 @@ ENDIF
     DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
  END SUBROUTINE StC_CopyDiscState
 
- SUBROUTINE StC_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE StC_DestroyDiscState
 
  SUBROUTINE StC_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2677,15 +2751,27 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE StC_CopyConstrState
 
- SUBROUTINE StC_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE StC_DestroyConstrState
 
  SUBROUTINE StC_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2802,15 +2888,27 @@ ENDIF
     DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE StC_CopyOtherState
 
- SUBROUTINE StC_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE StC_DestroyOtherState
 
  SUBROUTINE StC_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3167,15 +3265,27 @@ ENDIF
     DstMiscData%PrescribedInterpIdx = SrcMiscData%PrescribedInterpIdx
  END SUBROUTINE StC_CopyMisc
 
- SUBROUTINE StC_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%F_stop)) THEN
   DEALLOCATE(MiscData%F_stop)
 ENDIF
@@ -4250,15 +4360,27 @@ IF (ALLOCATED(SrcParamData%StC_CChan)) THEN
 ENDIF
  END SUBROUTINE StC_CopyParam
 
- SUBROUTINE StC_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%F_TBL)) THEN
   DEALLOCATE(ParamData%F_TBL)
 ENDIF
@@ -4862,18 +4984,31 @@ IF (ALLOCATED(SrcInputData%CmdForce)) THEN
 ENDIF
  END SUBROUTINE StC_CopyInput
 
- SUBROUTINE StC_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%Mesh)) THEN
 DO i1 = LBOUND(InputData%Mesh,1), UBOUND(InputData%Mesh,1)
-  CALL MeshDestroy( InputData%Mesh(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%Mesh(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%Mesh)
 ENDIF
@@ -5360,18 +5495,31 @@ IF (ALLOCATED(SrcOutputData%MeasVel)) THEN
 ENDIF
  END SUBROUTINE StC_CopyOutput
 
- SUBROUTINE StC_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE StC_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(StC_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'StC_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%Mesh)) THEN
 DO i1 = LBOUND(OutputData%Mesh,1), UBOUND(OutputData%Mesh,1)
-  CALL MeshDestroy( OutputData%Mesh(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%Mesh(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%Mesh)
 ENDIF

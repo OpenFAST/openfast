@@ -491,15 +491,27 @@ ENDIF
     DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
  END SUBROUTINE HydroDyn_CopyInputFile
 
- SUBROUTINE HydroDyn_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyInputFile( InputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInputFile'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInputFile'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputFileData%AddF0)) THEN
   DEALLOCATE(InputFileData%AddF0)
 ENDIF
@@ -512,9 +524,12 @@ ENDIF
 IF (ALLOCATED(InputFileData%AddBQuad)) THEN
   DEALLOCATE(InputFileData%AddBQuad)
 ENDIF
-  CALL Waves_DestroyInitInput( InputFileData%Waves, ErrStat, ErrMsg )
-  CALL Waves2_DestroyInitInput( InputFileData%Waves2, ErrStat, ErrMsg )
-  CALL Current_DestroyInitInput( InputFileData%Current, ErrStat, ErrMsg )
+  CALL Waves_DestroyInitInput( InputFileData%Waves, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Waves2_DestroyInitInput( InputFileData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Current_DestroyInitInput( InputFileData%Current, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputFileData%PotFile)) THEN
   DEALLOCATE(InputFileData%PotFile)
 ENDIF
@@ -542,9 +557,12 @@ ENDIF
 IF (ALLOCATED(InputFileData%PtfmCOByt)) THEN
   DEALLOCATE(InputFileData%PtfmCOByt)
 ENDIF
-  CALL WAMIT_DestroyInitInput( InputFileData%WAMIT, ErrStat, ErrMsg )
-  CALL WAMIT2_DestroyInitInput( InputFileData%WAMIT2, ErrStat, ErrMsg )
-  CALL Morison_DestroyInitInput( InputFileData%Morison, ErrStat, ErrMsg )
+  CALL WAMIT_DestroyInitInput( InputFileData%WAMIT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WAMIT2_DestroyInitInput( InputFileData%WAMIT2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyInitInput( InputFileData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputFileData%UserOutputs)) THEN
   DEALLOCATE(InputFileData%UserOutputs)
 ENDIF
@@ -1947,16 +1965,29 @@ ENDIF
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
  END SUBROUTINE HydroDyn_CopyInitInput
 
- SUBROUTINE HydroDyn_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyfileinfotype( InitInputData%PassedFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%WaveElevXY)) THEN
   DEALLOCATE(InitInputData%WaveElevXY)
 ENDIF
@@ -2496,29 +2527,45 @@ IF (ALLOCATED(SrcInitOutputData%WaveTime)) THEN
 ENDIF
  END SUBROUTINE HydroDyn_CopyInitOutput
 
- SUBROUTINE HydroDyn_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%WAMIT)) THEN
 DO i1 = LBOUND(InitOutputData%WAMIT,1), UBOUND(InitOutputData%WAMIT,1)
-  CALL WAMIT_DestroyInitOutput( InitOutputData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyInitOutput( InitOutputData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitOutputData%WAMIT)
 ENDIF
 IF (ALLOCATED(InitOutputData%WAMIT2)) THEN
 DO i1 = LBOUND(InitOutputData%WAMIT2,1), UBOUND(InitOutputData%WAMIT2,1)
-  CALL WAMIT2_DestroyInitOutput( InitOutputData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyInitOutput( InitOutputData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitOutputData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyInitOutput( InitOutputData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyInitOutput( InitOutputData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyInitOutput( InitOutputData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyInitOutput( InitOutputData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
@@ -2528,7 +2575,8 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WaveElevSeries)) THEN
   DEALLOCATE(InitOutputData%WaveElevSeries)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
 ENDIF
@@ -3776,18 +3824,33 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyHD_ModuleMapType
 
- SUBROUTINE HydroDyn_DestroyHD_ModuleMapType( HD_ModuleMapTypeData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyHD_ModuleMapType( HD_ModuleMapTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HD_ModuleMapType), INTENT(INOUT) :: HD_ModuleMapTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyHD_ModuleMapType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyHD_ModuleMapType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%uW_P_2_PRP_P, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%W_P_2_PRP_P, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%M_P_2_PRP_P, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%uW_P_2_PRP_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%W_P_2_PRP_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( HD_ModuleMapTypeData%M_P_2_PRP_P, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyHD_ModuleMapType
 
  SUBROUTINE HydroDyn_PackHD_ModuleMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4193,29 +4256,45 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyContState
 
- SUBROUTINE HydroDyn_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%WAMIT)) THEN
 DO i1 = LBOUND(ContStateData%WAMIT,1), UBOUND(ContStateData%WAMIT,1)
-  CALL WAMIT_DestroyContState( ContStateData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyContState( ContStateData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%WAMIT)
 ENDIF
 IF (ALLOCATED(ContStateData%WAMIT2)) THEN
 DO i1 = LBOUND(ContStateData%WAMIT2,1), UBOUND(ContStateData%WAMIT2,1)
-  CALL WAMIT2_DestroyContState( ContStateData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyContState( ContStateData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyContState( ContStateData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyContState( ContStateData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyContState( ContStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyContState( ContStateData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyContState
 
  SUBROUTINE HydroDyn_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4777,29 +4856,45 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyDiscState
 
- SUBROUTINE HydroDyn_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DiscStateData%WAMIT)) THEN
 DO i1 = LBOUND(DiscStateData%WAMIT,1), UBOUND(DiscStateData%WAMIT,1)
-  CALL WAMIT_DestroyDiscState( DiscStateData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyDiscState( DiscStateData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%WAMIT)
 ENDIF
 IF (ALLOCATED(DiscStateData%WAMIT2)) THEN
 DO i1 = LBOUND(DiscStateData%WAMIT2,1), UBOUND(DiscStateData%WAMIT2,1)
-  CALL WAMIT2_DestroyDiscState( DiscStateData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyDiscState( DiscStateData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyDiscState( DiscStateData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyDiscState( DiscStateData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyDiscState( DiscStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyDiscState( DiscStateData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyDiscState
 
  SUBROUTINE HydroDyn_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5334,19 +5429,35 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyConstrState
 
- SUBROUTINE HydroDyn_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL WAMIT_DestroyConstrState( ConstrStateData%WAMIT, ErrStat, ErrMsg )
-  CALL WAMIT2_DestroyConstrState( ConstrStateData%WAMIT2, ErrStat, ErrMsg )
-  CALL Waves2_DestroyConstrState( ConstrStateData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyConstrState( ConstrStateData%Morison, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL WAMIT_DestroyConstrState( ConstrStateData%WAMIT, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL WAMIT2_DestroyConstrState( ConstrStateData%WAMIT2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Waves2_DestroyConstrState( ConstrStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyConstrState( ConstrStateData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyConstrState
 
  SUBROUTINE HydroDyn_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5837,29 +5948,45 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyOtherState
 
- SUBROUTINE HydroDyn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OtherStateData%WAMIT)) THEN
 DO i1 = LBOUND(OtherStateData%WAMIT,1), UBOUND(OtherStateData%WAMIT,1)
-  CALL WAMIT_DestroyOtherState( OtherStateData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyOtherState( OtherStateData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%WAMIT)
 ENDIF
 IF (ALLOCATED(OtherStateData%WAMIT2)) THEN
 DO i1 = LBOUND(OtherStateData%WAMIT2,1), UBOUND(OtherStateData%WAMIT2,1)
-  CALL WAMIT2_DestroyOtherState( OtherStateData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyOtherState( OtherStateData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyOtherState( OtherStateData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyOtherState( OtherStateData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyOtherState( OtherStateData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyOtherState( OtherStateData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyOtherState
 
  SUBROUTINE HydroDyn_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6493,18 +6620,33 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyMisc
 
- SUBROUTINE HydroDyn_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( MiscData%AllHdroOrigin, ErrStat, ErrMsg )
-  CALL MeshDestroy( MiscData%MrsnMesh_position, ErrStat, ErrMsg )
-  CALL HydroDyn_Destroyhd_modulemaptype( MiscData%HD_MeshMap, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( MiscData%AllHdroOrigin, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( MiscData%MrsnMesh_position, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL HydroDyn_Destroyhd_modulemaptype( MiscData%HD_MeshMap, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%F_PtfmAdd)) THEN
   DEALLOCATE(MiscData%F_PtfmAdd)
 ENDIF
@@ -6513,31 +6655,38 @@ IF (ALLOCATED(MiscData%F_Waves)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%WAMIT)) THEN
 DO i1 = LBOUND(MiscData%WAMIT,1), UBOUND(MiscData%WAMIT,1)
-  CALL WAMIT_DestroyMisc( MiscData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyMisc( MiscData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%WAMIT)
 ENDIF
 IF (ALLOCATED(MiscData%WAMIT2)) THEN
 DO i1 = LBOUND(MiscData%WAMIT2,1), UBOUND(MiscData%WAMIT2,1)
-  CALL WAMIT2_DestroyMisc( MiscData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyMisc( MiscData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyMisc( MiscData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyMisc( MiscData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyMisc( MiscData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyMisc( MiscData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%u_WAMIT)) THEN
 DO i1 = LBOUND(MiscData%u_WAMIT,1), UBOUND(MiscData%u_WAMIT,1)
-  CALL WAMIT_DestroyInput( MiscData%u_WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyInput( MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%u_WAMIT)
 ENDIF
 IF (ALLOCATED(MiscData%u_WAMIT2)) THEN
 DO i1 = LBOUND(MiscData%u_WAMIT2,1), UBOUND(MiscData%u_WAMIT2,1)
-  CALL WAMIT2_DestroyInput( MiscData%u_WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyInput( MiscData%u_WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%u_WAMIT2)
 ENDIF
-  CALL Waves2_DestroyInput( MiscData%u_Waves2, ErrStat, ErrMsg )
+  CALL Waves2_DestroyInput( MiscData%u_Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyMisc
 
  SUBROUTINE HydroDyn_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -7975,29 +8124,45 @@ ENDIF
     DstParamData%Jac_ny = SrcParamData%Jac_ny
  END SUBROUTINE HydroDyn_CopyParam
 
- SUBROUTINE HydroDyn_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%WAMIT)) THEN
 DO i1 = LBOUND(ParamData%WAMIT,1), UBOUND(ParamData%WAMIT,1)
-  CALL WAMIT_DestroyParam( ParamData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyParam( ParamData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%WAMIT)
 ENDIF
 IF (ALLOCATED(ParamData%WAMIT2)) THEN
 DO i1 = LBOUND(ParamData%WAMIT2,1), UBOUND(ParamData%WAMIT2,1)
-  CALL WAMIT2_DestroyParam( ParamData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyParam( ParamData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyParam( ParamData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyParam( ParamData%Morison, ErrStat, ErrMsg )
+  CALL Waves2_DestroyParam( ParamData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyParam( ParamData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%WaveTime)) THEN
   DEALLOCATE(ParamData%WaveTime)
 ENDIF
@@ -8024,7 +8189,8 @@ IF (ALLOCATED(ParamData%AddBQuad)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
@@ -9340,18 +9506,33 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE HydroDyn_CopyInput
 
- SUBROUTINE HydroDyn_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL Morison_DestroyInput( InputData%Morison, ErrStat, ErrMsg )
-  CALL MeshDestroy( InputData%WAMITMesh, ErrStat, ErrMsg )
-  CALL MeshDestroy( InputData%PRPMesh, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL Morison_DestroyInput( InputData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%WAMITMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%PRPMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE HydroDyn_DestroyInput
 
  SUBROUTINE HydroDyn_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9772,30 +9953,47 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE HydroDyn_CopyOutput
 
- SUBROUTINE HydroDyn_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE HydroDyn_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HydroDyn_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%WAMIT)) THEN
 DO i1 = LBOUND(OutputData%WAMIT,1), UBOUND(OutputData%WAMIT,1)
-  CALL WAMIT_DestroyOutput( OutputData%WAMIT(i1), ErrStat, ErrMsg )
+  CALL WAMIT_DestroyOutput( OutputData%WAMIT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%WAMIT)
 ENDIF
 IF (ALLOCATED(OutputData%WAMIT2)) THEN
 DO i1 = LBOUND(OutputData%WAMIT2,1), UBOUND(OutputData%WAMIT2,1)
-  CALL WAMIT2_DestroyOutput( OutputData%WAMIT2(i1), ErrStat, ErrMsg )
+  CALL WAMIT2_DestroyOutput( OutputData%WAMIT2(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%WAMIT2)
 ENDIF
-  CALL Waves2_DestroyOutput( OutputData%Waves2, ErrStat, ErrMsg )
-  CALL Morison_DestroyOutput( OutputData%Morison, ErrStat, ErrMsg )
-  CALL MeshDestroy( OutputData%WAMITMesh, ErrStat, ErrMsg )
+  CALL Waves2_DestroyOutput( OutputData%Waves2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL Morison_DestroyOutput( OutputData%Morison, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( OutputData%WAMITMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
