@@ -260,9 +260,9 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLen
 
    ! Values passed in
    InitInp%Gravity               = REAL(Gravity_C,    ReKi)
-   InitInp%defWtrDens            = REAL(defWtrDens_C, ReKi)
-   InitInp%defWtrDpth            = REAL(defWtrDpth_C, ReKi)
-   InitInp%defMSL2SWL            = REAL(defMSL2SWL_C, ReKi)
+   InitInp%WtrDens               = REAL(defWtrDens_C, ReKi) ! use values from SeaState
+   InitInp%WtrDpth               = REAL(defWtrDpth_C, ReKi) ! use values from SeaState
+   InitInp% MSL2SWL              = REAL(defMSL2SWL_C, ReKi) ! use values from SeaState
    TimeInterval                  = REAL(DT_C,         DbKi)
    dT_Global                     = TimeInterval                ! Assume this DT is constant for all simulation
    N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start
