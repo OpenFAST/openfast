@@ -67,6 +67,9 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridxi      !< xi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridyi      !< yi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !< zi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level [(meters)]
+    REAL(ReKi)  :: PtfmLocationX      !< Copy of X coordinate of platform location in the wave field, used to offset/phase-shift all wave kinematics to account for location in the farm [m]
+    REAL(ReKi)  :: PtfmLocationY      !< Copy of Y coordinate of platform location in the wave field, used to offset/phase-shift all wave kinematics to account for location in the farm [m]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVxi      !< xi-component of the current velocity at elevation i [(m/s)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !< yi-component of the current velocity at elevation i [(m/s)]
     REAL(SiKi)  :: PCurrVxiPz0      !< xi-component of the partial derivative of the current velocity at elevation near mean sea level [(m/s)]
@@ -195,6 +198,9 @@ IF (ALLOCATED(SrcInitInputData%WaveKinGridzi)) THEN
   END IF
     DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
 ENDIF
+    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
+    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
 IF (ALLOCATED(SrcInitInputData%CurrVxi)) THEN
   i1_l = LBOUND(SrcInitInputData%CurrVxi,1)
   i1_u = UBOUND(SrcInitInputData%CurrVxi,1)
@@ -351,6 +357,9 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! WaveKinGridzi upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveKinGridzi)  ! WaveKinGridzi
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
   Int_BufSz   = Int_BufSz   + 1     ! CurrVxi allocated yes/no
   IF ( ALLOCATED(InData%CurrVxi) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! CurrVxi upper/lower bounds for each dimension
@@ -531,6 +540,12 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationX
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationY
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%CurrVxi) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -768,6 +783,12 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    OutData%PtfmLocationX = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CurrVxi not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

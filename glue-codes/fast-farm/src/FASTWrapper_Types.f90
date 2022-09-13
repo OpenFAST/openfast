@@ -41,6 +41,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [m]
     REAL(DbKi)  :: tmax      !< Simulation length [s]
     REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine      !< Undisplaced global coordinates of this turbine [m]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     INTEGER(IntKi)  :: n_high_low      !< Number of high-resolution time steps per low-resolution time step [-]
     REAL(DbKi)  :: dt_high      !< High-resolution time step [s]
     REAL(ReKi) , DIMENSION(1:3)  :: p_ref_high      !< Position of the origin of the high-resolution spatial domain for this turbine [m]
@@ -62,6 +63,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FWrap_InitOutputType  =======
   TYPE, PUBLIC :: FWrap_InitOutputType
+    REAL(DbKi) , DIMENSION(1:6)  :: PtfmInit      !< Initial platform position/rotation vector - surge,sway,heave,roll,pitch,yaw - needed for mooring module initInp [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
   END TYPE FWrap_InitOutputType
 ! =======================
@@ -145,6 +147,7 @@ CONTAINS
     DstInitInputData%dr = SrcInitInputData%dr
     DstInitInputData%tmax = SrcInitInputData%tmax
     DstInitInputData%p_ref_Turbine = SrcInitInputData%p_ref_Turbine
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
     DstInitInputData%n_high_low = SrcInitInputData%n_high_low
     DstInitInputData%dt_high = SrcInitInputData%dt_high
     DstInitInputData%p_ref_high = SrcInitInputData%p_ref_high
@@ -255,6 +258,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! dr
       Db_BufSz   = Db_BufSz   + 1  ! tmax
       Re_BufSz   = Re_BufSz   + SIZE(InData%p_ref_Turbine)  ! p_ref_Turbine
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Int_BufSz  = Int_BufSz  + 1  ! n_high_low
       Db_BufSz   = Db_BufSz   + 1  ! dt_high
       Re_BufSz   = Re_BufSz   + SIZE(InData%p_ref_high)  ! p_ref_high
@@ -321,6 +325,8 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%p_ref_Turbine(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%n_high_low
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%dt_high
@@ -434,6 +440,8 @@ ENDIF
       OutData%p_ref_Turbine(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%n_high_low = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%dt_high = DbKiBuf(Db_Xferred)
@@ -516,12 +524,14 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_CopyInitOutput'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+    DstInitOutputData%PtfmInit = SrcInitOutputData%PtfmInit
       CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -587,6 +597,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+      Db_BufSz   = Db_BufSz   + SIZE(InData%PtfmInit)  ! PtfmInit
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
       CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
@@ -632,6 +643,10 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
+    DO i1 = LBOUND(InData%PtfmInit,1), UBOUND(InData%PtfmInit,1)
+      DbKiBuf(Db_Xferred) = InData%PtfmInit(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
       CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -675,6 +690,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_UnPackInitOutput'
@@ -688,6 +704,12 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+    i1_l = LBOUND(OutData%PtfmInit,1)
+    i1_u = UBOUND(OutData%PtfmInit,1)
+    DO i1 = LBOUND(OutData%PtfmInit,1), UBOUND(OutData%PtfmInit,1)
+      OutData%PtfmInit(i1) = DbKiBuf(Db_Xferred)
+      Db_Xferred = Db_Xferred + 1
+    END DO
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN

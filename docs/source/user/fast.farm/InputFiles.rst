@@ -34,6 +34,8 @@ sections:
 
 -  Super Controller
 
+-  Shared Moorings
+
 -  Ambient Wind
 
 -  Wind Turbines
@@ -95,6 +97,15 @@ ambient wind data as defined by the FAST.Farm interface to the
 **[Mod_AmbWind=3]**. The distinct Ambient Wind subsections below pertain
 to each option.
 
+**Mod_WaveField** [switch] indicates how the wave field should be treated.  The
+two options are: 1) use individual HydroDyn inputs at each turbine without
+adjustment, 2) adjust wave phases based on turbine offsets from wind farm
+origin.
+
+**Mod_SharedMooring** [switch] indicates if a farm level mooring line system
+interconnects turbines.  There are presently two options: 0) No shared moorings,
+3) MoorDyn.
+
 Super Controller
 ~~~~~~~~~~~~~~~~
 
@@ -107,6 +118,25 @@ path. The super controller is used in conjunction with individual wind
 turbine controllers defined in the style of the DISCON dynamic library
 of the DNV GL’s Bladed wind turbine software package, with minor
 modification. See :numref:`FF:sec:SupCon` for more information.
+
+Shared Moorings
+~~~~~~~~~~~~~~~
+
+Shared mooring lines running between platforms introduce a coupling between the
+platforms that operates on the same time scales as a platform's interaction with
+a regular mooring system (typically resolved at a time step of 10--30 ms in
+OpenFAST simulations).  See :numref:`MoorDyn` for more information.
+
+**SharedMoorFile** [quoted string] sets the name and location of the MoorDyn
+input file for the mooring lines in the wind farm. It is only used if
+**Mod_SharedMooring** = 3.  **The file name must be in quotations** and can
+contain an absolute or a relative path.  The mooring lines then connect to each
+of the wind turbines in the farm.  See `MoorDyn with FAST.Farm
+<https://moordyn.readthedocs.io/en/latest/usage.html#moordyn-with-fast-farm>`_
+documentation for details on the input file at the farm level.
+
+**DT_Mooring** (sec) sets the timestep for the shared mooring connections with
+MoorDyn. 
 
 .. _FF:Input:VTK:
 

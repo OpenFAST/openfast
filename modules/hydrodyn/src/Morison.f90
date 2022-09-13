@@ -2340,9 +2340,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-      
-   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-
+   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
+      GetAlpha = 0.0_ReKi
+   else
+      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+   end if
    
 END FUNCTION GetAlpha
 

@@ -1088,6 +1088,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    INTEGER                                          :: I                    ! Generic loop counter index
    INTEGER                                          :: J                    ! Generic loop counter index
    INTEGER                                          :: K                    ! Generic loop counter index
+   INTEGER                                          :: Itemp                ! @mhall: additional temporary index
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    LOGICAL                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
    REAL(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table

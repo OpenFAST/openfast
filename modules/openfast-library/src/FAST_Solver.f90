@@ -1359,7 +1359,7 @@ SUBROUTINE Transfer_Structure_to_Opt1Inputs( this_time, this_state, p_FAST, y_ED
                                  
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
             ! motions:
-         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
                         
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -1914,6 +1914,7 @@ CONTAINS
    !..................
    ! Set mooring line inputs (which don't have acceleration fields)
    !..................
+   !TODO: MoorDyn input mesh now has acceleration fields, and they are used in some uncommon cases. Is this an issue? <<<
    
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
          
@@ -1927,10 +1928,10 @@ CONTAINS
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
          ! note: MD_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping) 
-         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, ErrStat, ErrMsg )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                  
-         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
+         CALL Transfer_Point_to_Point( y_MD%CoupledLoads(1), MeshMapData%SubstructureLoads_Tmp, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%CoupledKinematics(1), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -1948,7 +1949,14 @@ CONTAINS
          MeshMapData%SubstructureLoads_Tmp%Moment = 0.0_ReKi
          
       END IF
-
+      
+      
+      ! add farm-level mooring loads if applicable  >>> note: not yet set up for SubDyn <<<
+      IF (p_FAST%FarmIntegration) THEN      
+         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
+         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
+      END IF
+      
 
       ! Map motions for ServodDyn Structural control (TMD) if used and forces from the TMD to the platform
       IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD ) THEN
@@ -2864,7 +2872,7 @@ CONTAINS
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
          ! note: MD_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
-         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, u_MD%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -3088,12 +3096,10 @@ CONTAINS
          MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
          
       ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-         CALL Transfer_Point_to_Point( y_MD%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%PtFairleadDisplacement, SubStructureMotion ) !u_MD and y_SD contain the displacements needed for moment calculations
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
+         CALL Transfer_Point_to_Point( y_MD%CoupledLoads(1), MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_MD%CoupledKinematics(1), SubStructureMotion ) !u_MD and y_SD contain the displacements needed for moment calculations
             
          MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_Tmp2%Force
          MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_Tmp2%Moment
-
       ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          CALL Transfer_Point_to_Point( y_FEAM%PtFairleadLoad, MeshMapData%SubstructureLoads_Tmp2, MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2, u_FEAM%PtFairleadDisplacement, SubStructureMotion ) !u_FEAM and y_SD contain the displacements needed for moment calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)               
@@ -3111,8 +3117,27 @@ CONTAINS
          MeshMapData%PlatformLoads_Tmp%Force  = MeshMapData%PlatformLoads_Tmp%Force  + MeshMapData%PlatformLoads_Tmp2%Force
          MeshMapData%PlatformLoads_Tmp%Moment = MeshMapData%PlatformLoads_Tmp%Moment + MeshMapData%PlatformLoads_Tmp2%Moment
       END IF
+      !!!bjj: why is this using u_ED_PlatformPtMesh_MDf ???? Where is that set????
       
+      ! add farm-level mooring loads if applicable
+      IF (p_FAST%FarmIntegration) THEN      
+         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
+         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
+      END IF      
 
+
+!bjj: check this one !!!!
+!         ! Map the forces from the platform mounted TMD (from ServoDyn) to the platform reference point
+!      IF ( p_FAST%CompServo == Module_SrvD .and. p_FAST%CompSub /= Module_SD .and. allocated(y_SrvD%SStCLoadMesh)) THEN
+!         do k=1,size(y_SrvD%SStCLoadMesh)
+!            IF (y_SrvD%SStCLoadMesh(k)%Committed) THEN      ! size 1 only for SStC
+!              CALL Transfer_Point_to_Point( y_SrvD%SStCLoadMesh(k), MeshMapData%u_ED_PlatformPtMesh_2, MeshMapData%SStC_P_P_2_ED_P(k), ErrStat2, ErrMsg2, u_SrvD%SStCMotionMesh(k), PlatformMotions )
+!                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%PlatformPtMesh' )
+!               MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_2%Force
+!               MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_2%Moment
+!            ENDIF
+!         enddo
+!      ENDIF
 
    !..................
    ! Calculate the residual with these new inputs:
@@ -4045,8 +4070,8 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
       MAPp%Input(1)%PtFairDisplacement%RemapFlag      = .FALSE.
              MAPp%y%PtFairleadLoad%RemapFlag          = .FALSE.
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-      MD%Input(1)%PtFairleadDisplacement%RemapFlag    = .FALSE.
-           MD%y%PtFairleadLoad%RemapFlag              = .FALSE.         
+       MD%Input(1)%CoupledKinematics(1)%RemapFlag     = .FALSE.
+              MD%y%CoupledLoads(1)%RemapFlag          = .FALSE.         
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
       FEAM%Input(1)%PtFairleadDisplacement%RemapFlag  = .FALSE.
              FEAM%y%PtFairleadLoad%RemapFlag          = .FALSE.         
@@ -4552,9 +4577,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !  SubDyn/ElastoDyn <-> MoorDyn
 !-------------------------
       ! MoorDyn point mesh to/from SubDyn or ElastoDyn point mesh
-         CALL MeshMapCreate( MD%y%PtFairleadLoad, SubstructureLoads,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
+         CALL MeshMapCreate( MD%y%CoupledLoads(1), SubstructureLoads,  MeshMapData%Mooring_2_Structure, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Mooring_2_Structure' )
-         CALL MeshMapCreate( SubstructureMotion, MD%Input(1)%PtFairleadDisplacement,  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL MeshMapCreate( SubstructureMotion, MD%Input(1)%CoupledKinematics(1),  MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Structure_2_Mooring' )
       
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -4671,6 +4696,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
       CALL MeshCopy ( PlatformLoads, MeshMapData%PlatformLoads_Tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':PlatformLoads_Tmp2' )                 
          
+      ! for now, setting up this additional load mesh for farm-level MD loads if in FAST.Farm (@mhall TODO: add more checks/handling) <<<
+      if (p_FAST%FarmIntegration) then   
+         CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_MDf, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_MDf' )
+         
+         ! need to initialize to zero?
+         MeshMapData%u_ED_PlatformPtMesh_MDf%Force  = 0.0_ReKi
+         MeshMapData%u_ED_PlatformPtMesh_MDf%Moment = 0.0_ReKi
+      end if
+
              
       IF ( p_FAST%CompElast == Module_BD ) THEN
       
@@ -5057,7 +5092,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          
       ! note: MD_InputSolve must be called before setting ED loads inputs (so that motions are known for loads [moment] mapping)
-         CALL Transfer_Point_to_Point( SubstructureMotion, MD%Input(1)%PtFairleadDisplacement, MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
+         CALL Transfer_Point_to_Point( SubstructureMotion, MD%Input(1)%CoupledKinematics(1), MeshMapData%Structure_2_Mooring, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
