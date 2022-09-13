@@ -670,7 +670,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: SubstructureLoads_Tmp2      !< copy of substructure loads input mesh (ED or SD, used only for temporary storage) [-]
     TYPE(MeshType)  :: PlatformLoads_Tmp      !< copy of platform loads input mesh (ED) [-]
     TYPE(MeshType)  :: PlatformLoads_Tmp2      !< copy of platform loads input mesh (ED, used only for temporary storage) [-]
-    TYPE(MeshType)  :: u_ED_PlatformPtMesh_MDf      !< copy of ED input mesh used to store loads from farm-level MD [-]
+    TYPE(MeshType)  :: SubstructureLoads_MDf      !< copy of substructure input mesh used to store loads from farm-level MD [-]
     TYPE(MeshType)  :: u_ED_TowerPtloads      !< copy of ED input mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_ED_BladePtLoads      !< copy of ED input mesh [-]
     TYPE(MeshType)  :: u_SD_TPMesh      !< copy of SD input mesh [-]
@@ -38470,7 +38470,7 @@ ENDIF
       CALL MeshCopy( SrcModuleMapTypeData%PlatformLoads_Tmp2, DstModuleMapTypeData%PlatformLoads_Tmp2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL MeshCopy( SrcModuleMapTypeData%u_ED_PlatformPtMesh_MDf, DstModuleMapTypeData%u_ED_PlatformPtMesh_MDf, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL MeshCopy( SrcModuleMapTypeData%SubstructureLoads_MDf, DstModuleMapTypeData%SubstructureLoads_MDf, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
       CALL MeshCopy( SrcModuleMapTypeData%u_ED_TowerPtloads, DstModuleMapTypeData%u_ED_TowerPtloads, CtrlCode, ErrStat2, ErrMsg2 )
@@ -38778,7 +38778,7 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp2, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MeshDestroy( ModuleMapTypeData%u_ED_PlatformPtMesh_MDf, ErrStat2, ErrMsg2 )
+  CALL MeshDestroy( ModuleMapTypeData%SubstructureLoads_MDf, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( ModuleMapTypeData%u_ED_TowerPtloads, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -39696,20 +39696,20 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! u_ED_PlatformPtMesh_MDf: size of buffers for each call to pack subtype
-      CALL MeshPack( InData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! u_ED_PlatformPtMesh_MDf 
+      Int_BufSz   = Int_BufSz + 3  ! SubstructureLoads_MDf: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%SubstructureLoads_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! SubstructureLoads_MDf 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
+      IF(ALLOCATED(Re_Buf)) THEN ! SubstructureLoads_MDf
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
+      IF(ALLOCATED(Db_Buf)) THEN ! SubstructureLoads_MDf
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! u_ED_PlatformPtMesh_MDf
+      IF(ALLOCATED(Int_Buf)) THEN ! SubstructureLoads_MDf
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -41438,7 +41438,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL MeshPack( InData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! u_ED_PlatformPtMesh_MDf 
+      CALL MeshPack( InData%SubstructureLoads_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! SubstructureLoads_MDf 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -43945,7 +43945,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL MeshUnpack( OutData%u_ED_PlatformPtMesh_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! u_ED_PlatformPtMesh_MDf 
+      CALL MeshUnpack( OutData%SubstructureLoads_MDf, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! SubstructureLoads_MDf 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

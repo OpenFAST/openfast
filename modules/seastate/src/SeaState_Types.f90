@@ -84,6 +84,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrWvKinMod = 0      !< 0,1, or 2 indicating whether we are going to write out kinematics files.  [ignored if WaveMod = 6, if 1 or 2 then files are written using the outrootname] [-]
     LOGICAL  :: HasIce      !< Supplied by Driver:  Whether this simulation has ice loading (flag) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
   END TYPE SeaSt_InitInputType
 ! =======================
 ! =========  SeaSt_InitOutputType  =======
@@ -1106,6 +1107,7 @@ ENDIF
     DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
     DstInitInputData%HasIce = SrcInitInputData%HasIce
     DstInitInputData%Linearize = SrcInitInputData%Linearize
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
  END SUBROUTINE SeaSt_CopyInitInput
 
  SUBROUTINE SeaSt_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1207,6 +1209,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WrWvKinMod
       Int_BufSz  = Int_BufSz  + 1  ! HasIce
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1311,6 +1314,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%HasIce, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_PackInitInput
 
@@ -1434,6 +1439,8 @@ ENDIF
     OutData%HasIce = TRANSFER(IntKiBuf(Int_Xferred), OutData%HasIce)
     Int_Xferred = Int_Xferred + 1
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE SeaSt_UnPackInitInput
 

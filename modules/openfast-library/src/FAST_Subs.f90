@@ -23,7 +23,6 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
-   USE Waves, ONLY : WaveGrid_n
    USE SC_DataEx
    USE VersionInfo
 
@@ -744,6 +743,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_SeaSt%InputFile     = p_FAST%SeaStFile
       Init%InData_SeaSt%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_SeaSt))
       
+         ! these values support wave field handling
+      Init%InData_SeaSt%WaveFieldMod  = p_FAST%WaveFieldMod
+      Init%InData_SeaSt%PtfmLocationX = p_FAST%TurbinePos(1)
+      Init%InData_SeaSt%PtfmLocationY = p_FAST%TurbinePos(2)
+      
       Init%InData_SeaSt%TMax          = p_FAST%TMax
       
       CALL SeaSt_Init( Init%InData_SeaSt, SeaSt%Input(1), SeaSt%p,  SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), &
@@ -827,10 +831,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_HD%TMax          = p_FAST%TMax
       Init%InData_HD%Linearize     = p_FAST%Linearize
 
-         ! these values support wave field handling
-      Init%InData_HD%WaveFieldMod  = p_FAST%WaveFieldMod
-      Init%InData_HD%PtfmLocationX = p_FAST%TurbinePos(1)
-      Init%InData_HD%PtfmLocationY = p_FAST%TurbinePos(2)
 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )

@@ -1951,10 +1951,10 @@ CONTAINS
       END IF
       
       
-      ! add farm-level mooring loads if applicable  >>> note: not yet set up for SubDyn <<<
+      ! add farm-level mooring loads if applicable
       IF (p_FAST%FarmIntegration) THEN      
-         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
-         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_MDf%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_MDf%Moment
       END IF
       
 
@@ -3117,13 +3117,12 @@ CONTAINS
          MeshMapData%PlatformLoads_Tmp%Force  = MeshMapData%PlatformLoads_Tmp%Force  + MeshMapData%PlatformLoads_Tmp2%Force
          MeshMapData%PlatformLoads_Tmp%Moment = MeshMapData%PlatformLoads_Tmp%Moment + MeshMapData%PlatformLoads_Tmp2%Moment
       END IF
-      !!!bjj: why is this using u_ED_PlatformPtMesh_MDf ???? Where is that set????
       
-      ! add farm-level mooring loads if applicable
+      ! add farm-level mooring loads, if applicable (and using FAST.Farm)
       IF (p_FAST%FarmIntegration) THEN      
-         MeshMapData%u_ED_PlatformPtMesh%Force  = MeshMapData%u_ED_PlatformPtMesh%Force  + MeshMapData%u_ED_PlatformPtMesh_MDf%Force
-         MeshMapData%u_ED_PlatformPtMesh%Moment = MeshMapData%u_ED_PlatformPtMesh%Moment + MeshMapData%u_ED_PlatformPtMesh_MDf%Moment      
-      END IF      
+         MeshMapData%SubstructureLoads_Tmp%Force  = MeshMapData%SubstructureLoads_Tmp%Force  + MeshMapData%SubstructureLoads_MDf%Force
+         MeshMapData%SubstructureLoads_Tmp%Moment = MeshMapData%SubstructureLoads_Tmp%Moment + MeshMapData%SubstructureLoads_MDf%Moment
+      END IF
 
 
 !bjj: check this one !!!!
@@ -4698,12 +4697,12 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
          
       ! for now, setting up this additional load mesh for farm-level MD loads if in FAST.Farm (@mhall TODO: add more checks/handling) <<<
       if (p_FAST%FarmIntegration) then   
-         CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_MDf, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_MDf' )
+         CALL MeshCopy ( SubStructureLoads, MeshMapData%SubstructureLoads_MDf, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SubstructureLoads_MDf' )
          
-         ! need to initialize to zero?
-         MeshMapData%u_ED_PlatformPtMesh_MDf%Force  = 0.0_ReKi
-         MeshMapData%u_ED_PlatformPtMesh_MDf%Moment = 0.0_ReKi
+         ! initialize to zero; these are used to add loads from FAST.Farm only
+         MeshMapData%SubstructureLoads_MDf%Force  = 0.0_ReKi
+         MeshMapData%SubstructureLoads_MDf%Moment = 0.0_ReKi
       end if
 
              

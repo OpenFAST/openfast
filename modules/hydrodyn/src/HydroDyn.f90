@@ -260,18 +260,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%AddBQuad     = InputFileData%AddBQuad
       
       
-         ! Set summary unit number in Waves, Radiation, and Morison initialization input data
+         ! Set summary unit number in Morison initialization input data
       InputFileData%Morison%UnSum         = InputFileData%UnSum
     
-         ! distribute wave field and turbine location variables as needed to submodule initInputs
-      InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
-      InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
-      InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
-      
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
-      
-
       
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
       !p%NWaveElev    = InputFileData%Waves%NWaveElev  

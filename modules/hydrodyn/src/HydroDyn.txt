@@ -83,9 +83,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth from the driver; may be overwritten                        "  "m"
 typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -          -         "Mean sea level to still water level from the driver; may be overwritten"  "m"
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
-typedef   ^                            ^                             INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
-typedef   ^                            ^                             ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
-typedef   ^                            ^                             ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
 #
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
