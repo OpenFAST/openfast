@@ -493,7 +493,7 @@ reg_parse( FILE * infile )
                         exit(9);
                     }
                     if (!strcmp(nonick, "miscvartype")) {
-                        fprintf(stderr, "REGISTRY ERROR: Fortr an Pointer Arrays cannot be used in MiscVarType data\n");
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in MiscVarType data\n");
                         exit(9);
                     }
                     if (!strcmp(nonick, "inputtype")) {
