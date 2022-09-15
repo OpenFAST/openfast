@@ -15,10 +15,6 @@ MODULE AeroAcoustics_IO
 
    INTEGER(IntKi), PARAMETER      :: Time      =    0
 
-     ! Parameters related to output length (number of characters allowed in the output data headers):
-
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
-
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
 
    ! model identifiers
@@ -337,7 +333,7 @@ type(AA_InputFile), intent(inout)       :: InputFileData                       !
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
     character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+!    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'readbltable'
     integer(IntKi)                :: nRe, nAoA, nAirfoils  !  Number of Reynolds number, angle of attack, and number of airfoils listed
     integer(IntKi)                :: iAF , iRe, iAoA, iDummy, iBuffer ! loop counters
@@ -449,7 +445,7 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
     character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+!    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'REadTICalcTables'
     integer(IntKi)                :: GridY                                     !
     integer(IntKi)                :: GridZ                                    !
