@@ -1313,6 +1313,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    INTEGER                                          :: I                    ! Generic loop counter index
    INTEGER                                          :: J                    ! Generic loop counter index
    INTEGER                                          :: K                    ! Generic loop counter index
+   INTEGER                                          :: Itemp                ! @mhall: additional temporary index
    CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
    LOGICAL                                          :: FoundID              ! Boolean flag indicating whether an ID from one tables is found in one of the other input table
    REAL(ReKi)                                       :: MinDepth             ! The minimum depth entry in the Depth-based Hydrodynamic coefficents table
@@ -1483,7 +1484,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
 
       ! WaveTMax - Analysis time for incident wave calculations.
 
-   IF ( InputFileData%Waves%WaveMod == 0 )  THEN   ! .TRUE if we have incident waves.
+   IF ( InputFileData%Waves%WaveMod == 0 )  THEN   ! .TRUE if we DO NOT HAVE have incident waves.
       
       ! TODO: Issue warning if WaveTMax was not already 0.0 in this case.
       IF ( .NOT. EqualRealNos(InputFileData%Waves%WaveTMax, 0.0_DbKi) ) THEN
@@ -3222,7 +3223,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          InputFileData%Waves%WaveKinzi(I)      = InputFileData%Morison%Nodes(I)%Position(3)   ! zi-coordinates for points where the incident wave kinematics will be computed; 
          InputFileData%Current%MorisonNodezi(I) = InputFileData%Waves%WaveKinzi(I)
       END DO
-
 
             ! If we are using the Waves module, the node information must be copied over.
       InputFileData%Waves2%NWaveKin   = InputFileData%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)

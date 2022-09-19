@@ -13,15 +13,56 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 OpenFAST v3.2.0 to OpenFAST `dev`
 ----------------------------------
 
-============================================= ==== =============== ========================================================================================================================================================================================================
+============================================= ==== ================= ======================================================================================================================================================================================================
 Added in OpenFAST dev 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ======================================================================================================================================================================================================
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type         - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField      Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring  Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile     Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring         Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+============================================= ==== ================= ======================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
-AeroDyn driver                                54\* WrVTK_Type      1           WrVTK_Type    - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+Modified in OpenFAST dev 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    na                Name     Diam      MassDen       EA    BA/-zeta    EI    Cd      Ca     CdAx   CaAx
+MoorDyn\&                                     6    na                (-)       (m)      (kg/m)        (N)    (N-s/-)    (-)   (-)     (-)    (-)    (-)
+MoorDyn\&                                     7    na                main     0.0766    113.35     7.536E8     -1.0      0    2.0     0.8    0.4   0.25
+MoorDyn\&                                     8\*  na                ---------------------- POINTS --------------------------------
+MoorDyn\&                                     9\*  na                ID     Attachment   X          Y         Z      M      V       CdA   CA
+MoorDyn\&                                     10\* na                (-)    (-)         (m)        (m)       (m)    (kg)   (m^3)   (m^2)  (-)
+MoorDyn\&                                     11\* na                1      Fixed     418.8      725.383   -200.0     0      0       0     0
+MoorDyn\&                                     17\* na                ---------------------- LINES --------------------------------------
+MoorDyn\&                                     18\* na                ID      LineType   AttachA   AttachB  UnstrLen  NumSegs   Outputs
+MoorDyn\&                                     19\* na                (-)       (-)       (-)       (-)         (m)      (-)         (-)
+MoorDyn\&                                     20\* na                1         main       1         4        835.35      20          -
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST dev 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    NTypes            1        NTypes    - number of LineTypes
+MoorDyn\&                                     10\* NConnects         6        NConnects - number of connections including anchors and fairleads
+MoorDyn\&                                     20\* NLines            3        NLines    - number of line objects
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
 
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
