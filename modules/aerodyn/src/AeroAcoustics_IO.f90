@@ -15,10 +15,6 @@ MODULE AeroAcoustics_IO
 
    INTEGER(IntKi), PARAMETER      :: Time      =    0
 
-     ! Parameters related to output length (number of characters allowed in the output data headers):
-
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
-
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
 
    ! model identifiers
@@ -58,22 +54,20 @@ MODULE AeroAcoustics_IO
 
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, AFI, InputFileData, Default_DT, OutFileRoot, UnEcho, ErrStat, ErrMsg )
     ! This subroutine reads the input file and stores all the data in the AA_InputFile structure.
     ! It does not perform data validation.
     !..................................................................................................................................
     ! Passed variables
     REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
     CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the aeroacoustics input file
-    CHARACTER(*), dimension(:),            INTENT(IN)    :: BL_Files         ! Name of the BL input file
+    TYPE(AFI_ParameterType), INTENT(IN)    :: AFI(:)          ! airfoil array: contains names of the BL input file
     CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
     TYPE(AA_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
     INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
-    INTEGER(IntKi),          INTENT(IN)    :: NumBlades       ! Number of blades for this model
     INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
     CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
     ! local variables
-    INTEGER(IntKi)                         :: I
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
@@ -88,15 +82,15 @@ SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, O
     if(Failed()) return
 
     ! get the blade input-file data
-    ALLOCATE( InputFileData%BladeProps( size(BL_Files) ), STAT = ErrStat2 )
+    ALLOCATE( InputFileData%BladeProps( size(AFI) ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
         return
     END IF
 
-    if ((InputFileData%ITURB==2) .or. (InputFileData%X_BLMethod==2) .or. (InputFileData%IBLUNT==1)) then
+    if ((InputFileData%ITURB==2) .or. (InputFileData%X_BLMethod==X_BLMethod_Tables) .or. (InputFileData%IBLUNT==1)) then
         ! We need to read the BL tables
-        CALL ReadBLTables( InputFileName, BL_Files, InputFileData, ErrStat2, ErrMsg2 )
+        CALL ReadBLTables( InputFileName, AFI, InputFileData, ErrStat2, ErrMsg2 )
         if (Failed())return
     endif
 
@@ -123,10 +117,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     character(*),       intent(in)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     ! Local variables:
-    real(ReKi)                    :: TmpAry(3)                                 ! array to help read tower properties table
     integer(IntKi)                :: I                                         ! loop counter
     integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    integer(IntKi)                :: loop1                                     ! loop counter
     character(1024)               :: ObserverFile                              ! name of the files containing obesever location
     integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
@@ -134,7 +126,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     character(1024)               :: PriPath                                   ! Path name of the primary file
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
-    integer(IntKi)                :: n                                         ! dummy integer
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -144,8 +135,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     ! Open the Primary input file.
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ); call check
-    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); call check
+    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ); call check()
+    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); call check()
     IF ( ErrStat >= AbortErrLev ) THEN
         CALL Cleanup()
         RETURN
@@ -157,21 +148,21 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     I = 1 !set the number of times we've read the file
     DO
         !----------- HEADER -------------------------------------------------------------
-        CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); call check
-        CALL ReadStr( UnIn, InputFile, InputFileData%FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); call check()
+        CALL ReadStr( UnIn, InputFile, InputFileData%FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc ); call check()
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
         END IF
 
         !----------- GENERAL OPTIONS ----------------------------------------------------
-        CALL ReadCom( UnIn, InputFile, 'Section Header: General Options', ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadCom( UnIn, InputFile, 'Section Header: General Options', ErrStat2, ErrMsg2, UnEc ); call check()
         ! Echo - Echo input to "<RootName>.AD.ech".
-        CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo flag', ErrStat2, ErrMsg2, UnEc); call check
+        CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo flag', ErrStat2, ErrMsg2, UnEc); call check()
         IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
         I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
-        CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, AA_Ver ); call check
+        CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, AA_Ver ); call check()
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -192,12 +183,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
 
     ! DT_AA - Time interval for aerodynamic calculations {or default} (s):
     Line = ""
-    CALL ReadVar( UnIn, InputFile, Line, "DT_AA", "Time interval for aeroacoustics calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, Line, "DT_AA", "Time interval for aeroacoustics calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc); call check()
     CALL Conv2UC( Line )
 
     IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If DT_AA is not "default", read it and make sure it is a multiple of DTAero from AeroDyn. Else, just use DTAero
         READ( Line, *, IOSTAT=IOS) InputFileData%DT_AA
-        CALL CheckIOS ( IOS, InputFile, 'DT_AA', NumType, ErrStat2, ErrMsg2 ); call check
+        CALL CheckIOS ( IOS, InputFile, 'DT_AA', NumType, ErrStat2, ErrMsg2 ); call check()
 
         IF (abs(InputFileData%DT_AA / Default_DT - NINT(InputFileData%DT_AA / Default_DT)) .gt. 1E-10) THEN
             CALL SetErrStat(ErrID_Fatal,"The Aeroacoustics input DT_AA must be a multiple of DTAero.", ErrStat, ErrMsg, RoutineName)
@@ -207,21 +198,21 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
         InputFileData%DT_AA = Default_DT
     END IF
 
-    CALL ReadVar(UnIn,InputFile,InputFileData%AAStart      ,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%AA_Bl_Prcntge,"BldPrcnt"     ,"-",ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Aeroacoustic Models', ErrStat2, ErrMsg2, UnEc ); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVAr(UnIn,InputFile,InputFileData%TICalcTabFile,"TICalcTabFile","" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%Lturb        ,"Lturb"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check ! ITURB - TBLTE NOISE
-    CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ITRIP        ,"TripMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ILAM         ,"LamMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ITIP         ,"TipMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ROUND        ,"RoundTip"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%ALPRAT       ,"ALPRAT"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%IBLUNT       ,"BluntMod"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%AAStart      ,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%AA_Bl_Prcntge,"BldPrcnt"     ,"-",ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Aeroacoustic Models', ErrStat2, ErrMsg2, UnEc ); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVAr(UnIn,InputFile,InputFileData%TICalcTabFile,"TICalcTabFile","" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%Lturb        ,"Lturb"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check() ! ITURB - TBLTE NOISE
+    CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITRIP        ,"TripMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ILAM         ,"LamMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITIP         ,"TipMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ROUND        ,"RoundTip"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%ALPRAT       ,"ALPRAT"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar(UnIn,InputFile,InputFileData%IBLUNT       ,"BluntMod"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -230,29 +221,29 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     END IF
 
     !----------- OBSERVER INPUT  ------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Observer Input ', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Observer Input ', ErrStat2, ErrMsg2, UnEc ); call check()
     !----- read from observer file
-    CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc ); call check()
     IF ( PathIsRelative( ObserverFile ) ) ObserverFile = TRIM(PriPath)//TRIM(ObserverFile)
 
-    CALL GetNewUnit( UnIn2, ErrStat2, ErrMsg2 ); call check
+    CALL GetNewUnit( UnIn2, ErrStat2, ErrMsg2 ); call check()
 
-    CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 ); call check
+    CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 ); call check()
     IF ( ErrStat >= AbortErrLev ) RETURN
     
     ! NrObsLoc  - Nr of Observers (-):
-    CALL ReadVar( UnIn2, ObserverFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn2, ObserverFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc); call check()
 
     ! Observer location in tower-base coordinate  (m):
-    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2); call check
+    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2); call check()
+    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2); call check()
+    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2); call check()
 
-    CALL ReadCom( UnIn2, InputFile, ' Header', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadCom( UnIn2, InputFile, ' Header', ErrStat2, ErrMsg2, UnEc ); call check()
 
     DO cou=1,InputFileData%NrObsLoc
         READ( UnIn2, *, IOStat=IOS )  InputFileData%ObsX(cou), InputFileData%ObsY(cou), InputFileData%ObsZ(cou)
-        CALL CheckIOS( IOS, ObserverFile, 'Obeserver Locations '//TRIM(Num2LStr(cou)), NumType, ErrStat2, ErrMsg2 ); call check
+        CALL CheckIOS( IOS, ObserverFile, 'Obeserver Locations '//TRIM(Num2LStr(cou)), NumType, ErrStat2, ErrMsg2 ); call check()
         ! Return on error if we couldn't read this line
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -263,11 +254,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, Default_DT, OutFileRoot, U
     !----- end read from observer file
 
     !----------- OUTPUTS  -----------------------------------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn,InputFile,InputFileData%aweightflag  ,"AWeighting"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%NrOutFile, "NrOutFile", "Nr of Output Files (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL AllocAry( InputFileData%AAOutFile,InputFileData%NrOutFile, 'AAOutFile', ErrStat2, ErrMsg2); call check
-    CALL ReadVar ( UnIn, InputFile, InputFileData%AAOutFile(1), 'AAOutFile', 'Name of output file ', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc); call check()
+    CALL ReadVar( UnIn,InputFile,InputFileData%aweightflag  ,"AWeighting"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check()
+    CALL ReadVar( UnIn, InputFile, InputFileData%NrOutFile, "NrOutFile", "Nr of Output Files (-)", ErrStat2, ErrMsg2, UnEc); call check()
+    CALL AllocAry( InputFileData%AAOutFile,InputFileData%NrOutFile, 'AAOutFile', ErrStat2, ErrMsg2); call check()
+    CALL ReadVar ( UnIn, InputFile, InputFileData%AAOutFile(1), 'AAOutFile', 'Name of output file ', ErrStat2, ErrMsg2, UnEc ); call check()
     DO I=InputFileData%NrOutFile,1,-1
         ! one file name is given by the user and the XXFile1.out XXFile2.out XXFile3.out is generated
         IF ( PathIsRelative( InputFileData%AAOutFile(I) ) ) InputFileData%AAOutFile(I) = TRIM(PriPath)//TRIM(InputFileData%AAOutFile(1))//TRIM(Num2Lstr(I))//".out"
@@ -322,38 +313,37 @@ end subroutine
 
 
 
-SUBROUTINE ReadBLTables( InputFile, BL_Files, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE ReadBLTables( InputFile, AFI, InputFileData, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    character(*), dimension(:),       intent(in)      :: BL_Files                           ! Name of the file containing the primary input data
-type(AA_InputFile), intent(inout)       :: InputFileData                       ! All the data in the Noise input file
+    TYPE(AFI_ParameterType), INTENT(IN) :: AFI(:)                              ! airfoil array: contains names of the BL input file
+    type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: ErrMsg                              ! Error message
+    
     ! Local variables:
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    character(1024)               :: FileName                              ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2                                ! Temporary Error status
-    logical                       :: Echo                                      ! Determines if an echo file should be written
+    integer(IntKi)                :: UnIn                                      ! Unit number for reading file
+    character(1024)               :: FileName                                  ! name of the files containing obesever location
+    integer(IntKi)                :: ErrStat2                                  ! Temporary Error status
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-    character(*), parameter       :: RoutineName = 'readbltable'
-    integer(IntKi)                :: nRe, nAoA, nAirfoils  !  Number of Reynolds number, angle of attack, and number of airfoils listed
-    integer(IntKi)                :: iAF , iRe, iAoA, iDummy, iBuffer ! loop counters
-    real(DbKi),dimension(:,:),ALLOCATABLE :: Buffer
-    integer                 :: iLine
+    character(*), parameter       :: RoutineName = 'ReadBLTables'
+    integer(IntKi)                :: nRe, nAoA, nAirfoils                      !  Number of Reynolds number, angle of attack, and number of airfoils listed
+    integer(IntKi)                :: iAF , iRe, iAoA                           ! loop counters
+    real(DbKi),  ALLOCATABLE      :: Buffer(:,:)
+    integer                       :: iLine
+    
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
 
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-    nAirfoils = size(BL_Files)
+    nAirfoils = size(AFI)
     do iAF=1,nAirfoils
 
-        FileName = trim(BL_Files(iAF))
+        FileName = trim(AFI(iAF)%BL_file)
 
-        print*,'AeroAcoustics_IO: reading BL table:'//trim(Filename)
+        call WrScr('AeroAcoustics_IO: reading BL table:'//trim(Filename))
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
@@ -440,16 +430,11 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     ! Local variables:
-    integer(IntKi)                :: I                                         ! loop counter
-    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-    integer(IntKi)                :: loop1                                     ! loop counter
-    character(1024)               :: FileName                              ! name of the files containing obesever location
-    integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
-    logical                       :: Echo                                      ! Determines if an echo file should be written
+    integer(IntKi)                :: UnIn                                      ! Unit number for reading file
+    character(1024)               :: FileName                                  ! name of the files containing obesever location
+    integer(IntKi)                :: ErrStat2                                  ! Temporary Error status
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     character(1024)               :: PriPath                                   ! Path name of the primary file
-    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'REadTICalcTables'
     integer(IntKi)                :: GridY                                     !
     integer(IntKi)                :: GridZ                                    !
@@ -464,16 +449,16 @@ SUBROUTINE ReadTICalcTables(InputFile, InputFileData, ErrStat, ErrMsg)
 
     CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2); call check()
     CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 ); if(Failed()) return
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
-    CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
-    CALL ReadVar(UnIn, FileName, GridY, 'GridY',   'Echo flag', ErrStat2, ErrMsg2); call check
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2);call check
-    CALL ReadVar(UnIn, FileName, GridZ, 'GridZ',   'Echo flag', ErrStat2, ErrMsg2); call check
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
-    CALL ReadVar(UnIn, FileName, InputFileData%dy_turb_in, 'InputFileData%dy_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check
-    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check
-    CALL ReadVar(UnIn, FileName, InputFileData%dz_turb_in, 'InputFileData%dz_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
+    CALL ReadVar(UnIn, FileName, InputFileData%AvgV, 'AvgV',   'Echo flag', ErrStat2, ErrMsg2); call check()
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
+    CALL ReadVar(UnIn, FileName, GridY, 'GridY',   'Echo flag', ErrStat2, ErrMsg2); call check()
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2);call check()
+    CALL ReadVar(UnIn, FileName, GridZ, 'GridZ',   'Echo flag', ErrStat2, ErrMsg2); call check()
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
+    CALL ReadVar(UnIn, FileName, InputFileData%dy_turb_in, 'InputFileData%dy_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check()
+    CALL ReadCom(UnIn, FileName, 'Text Line', ErrStat2, ErrMsg2); call check()
+    CALL ReadVar(UnIn, FileName, InputFileData%dz_turb_in, 'InputFileData%dz_turb_in',   'Echo flag', ErrStat2, ErrMsg2); call check()
     if(Failed()) return
 
     CALL AllocAry( InputFileData%TI_Grid_In,GridZ,GridY,'InputFileData%TI_Grid_In', ErrStat2, ErrMsg2);
@@ -505,8 +490,6 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    integer(IntKi),           intent(out)    :: ErrStat                             !< Error status
    character(*),             intent(out)    :: ErrMsg                              !< Error message
    ! local variables
-   integer(IntKi)                           :: k                                   ! Blade number
-   integer(IntKi)                           :: j                                   ! node number
    character(*), parameter                  :: RoutineName = 'ValidateInputData'
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -553,33 +536,10 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
 END SUBROUTINE ValidateInputData
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AA_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
-    ! This routine generates the summary file, which contains a summary of input file options.
-    ! passed variables
-    TYPE(AA_InputFile),        INTENT(IN)  :: InputFileData                        ! Input-file data
-    TYPE(AA_ParameterType),    INTENT(IN)  :: p                                    ! Parameters
-    TYPE(AA_InputType),        INTENT(IN)  :: u                                    ! inputs
-    TYPE(AA_OutputType),       INTENT(IN)  :: y                                    ! outputs
-    INTEGER(IntKi),            INTENT(OUT) :: ErrStat
-    CHARACTER(*),              INTENT(OUT) :: ErrMsg
-    ! Local variables.
-    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
-    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
-    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
-    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
-    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
-    CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
-    ! Open the summary file and give it a heading.
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-    RETURN
-END SUBROUTINE AA_PrintSum
-!..................................................................................................................................
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
 !! FAST or AeroAcoustics_Driver)
-subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
+subroutine AA_SetInitOut(p, InitOut, errStat, errMsg)
     type(AA_InitOutputType),       intent(  out)  :: InitOut          ! output data
-    type(AA_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
     type(AA_ParameterType),        intent(in   )  :: p                ! Parameters
     integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
     character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
@@ -587,9 +547,7 @@ subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
     integer(intKi)                               :: ErrStat2          ! temporary Error status
     character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
     character(*), parameter                      :: RoutineName = 'AA_SetInitOut'
-    integer(IntKi)                               :: i, j, k,m,oi
-    integer(IntKi)                               :: NumCoords
-    character(500)                               :: chanPrefix
+    integer(IntKi)                               :: i, j, k,oi
     ! Initialize variables for this routine
     errStat = ErrID_None
     errMsg  = ""
@@ -668,8 +626,7 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
    ! locals
    integer(IntKi) :: i
    integer(IntKi) :: numOuts
-   character(200) :: frmt                                      ! A string to hold a format specifier
-   character(15)  :: tmpStr                                    ! temporary string to print the time output as text
+
    ! FIRST FILE
    IF (InputFileData%NrOutFile .gt.0) THEN
       call GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
@@ -880,8 +837,8 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
    ! local variables
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
-   INTEGER(intKi)                            :: ErrStat2
-   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+!   INTEGER(intKi)                            :: ErrStat2
+!   CHARACTER(ErrMsgLen)                      :: ErrMsg2
    INTEGER(IntKi)                            :: j,k,counter,i,oi,III
    ! start routine:
    ErrStat = ErrID_None

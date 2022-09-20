@@ -1396,8 +1396,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseAry(FileInfo_In, CurLine, 'nacOrigin_t'//sWT        , wt%nac%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'hubOrigin_n'//sWT        , wt%hub%origin_n, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'hubOrientation_n'//sWT   , wt%hub%orientation_n, 3  , errStat2, errMsg2, unEc); if(Failed()) return
-         wt%hub%orientation_n   = wt%hub%orientation_n*Pi/180_ReKi
-         wt%orientationInit     = wt%orientationInit*Pi/180_ReKi
+         wt%hub%orientation_n   = wt%hub%orientation_n*D2R
+         wt%orientationInit     = wt%orientationInit*D2R
          ! Blades
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT , wt%numBlades, errStat2, errMsg2, unEc); if(Failed()) return
@@ -1848,7 +1848,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, errStat, errMsg)
 
    dvr%out%WriteOutputHdr(j) = 'ShearExp'
    if (dvr%CompInflow==1) then
-      dvr%out%WriteOutputUnt(j) = '(NVALID)'; j=j+1
+      dvr%out%WriteOutputUnt(j) = '(INVALID)'; j=j+1
    else
       dvr%out%WriteOutputUnt(j) = '(-)'; j=j+1
    endif

@@ -258,11 +258,6 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
-      - name: Upload build
-        uses: actions/upload-artifact@main
-        with:
-          name: fastfarm-build
-          path: build-fastfarm-${{ github.sha }}.tar
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:

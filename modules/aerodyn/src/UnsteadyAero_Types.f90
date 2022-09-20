@@ -133,8 +133,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_DiscreteStateType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1      !< angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_filt_minus1      !< filtered angle of attack, previous time step [rad]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered) [rad/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered) [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered); BV model [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered); BV modeldata [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q_minus1      !< non-dimensional pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kalpha_f_minus1      !< filtered pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kq_f_minus1      !< filtered pitching acceleration, previous time step [-]
