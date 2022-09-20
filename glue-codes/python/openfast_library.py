@@ -32,11 +32,12 @@ class FastLibAPI(CDLL):
         self.n_turbines = c_int(1)
         self.i_turb = c_int(0)
         self.dt = c_double(0.0)
+        self.dt_out = c_double(0.0)
         self.t_max = c_double(0.0)
         self.abort_error_level = c_int(4)  # Initialize to 4 (ErrID_Fatal) and reset to user-given value in FAST_Sizes
         self.end_early = c_bool(False)
         self.num_outs = c_int(0)
-        self.channel_names = create_string_buffer(20 * 4000)
+        self.output_channel_names = []
         self.ended = False
 
         # The inputs are meant to be from Simulink.
@@ -48,9 +49,7 @@ class FastLibAPI(CDLL):
         self.inp_array = (c_double * self.num_inputs.value)(0.0, )
 
         # These arrays hold the outputs from OpenFAST
-        # output_array is a 1D array for the values from a single step
-        # output_values is a 2D array for the values from all steps in the simulation
-        self.output_array = None
+        # output_values is a 2D array for the values from all output steps in the simulation
         self.output_values = None
 
 
@@ -68,6 +67,7 @@ class FastLibAPI(CDLL):
             POINTER(c_int),         # AbortErrLev_c OUT
             POINTER(c_int),         # NumOuts_c OUT
             POINTER(c_double),      # dt_c OUT
+            POINTER(c_double),      # dt_out_c OUT
             POINTER(c_double),      # tmax_c OUT
             POINTER(c_int),         # ErrStat_c OUT
             POINTER(c_char),        # ErrMsg_c OUT
@@ -139,28 +139,38 @@ class FastLibAPI(CDLL):
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
+        # Create channel names argument
+        channel_names = create_string_buffer(20 * 4000)
+
         self.FAST_Sizes(
             byref(self.i_turb),
             self.input_file_name,
             byref(self.abort_error_level),
             byref(self.num_outs),
             byref(self.dt),
+            byref(self.dt_out),
             byref(self.t_max),
             byref(_error_status),
             _error_message,
-            self.channel_names,
+            channel_names,
             None,   # Optional arguments must pass C-Null pointer; with ctypes, use None.
             None    # Optional arguments must pass C-Null pointer; with ctypes, use None.
         )
         if self.fatal_error(_error_status):
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
 
-        # Allocate the data for the outputs
-        # NOTE: The ctypes array allocation (output_array) must be after the output_values
-        # allocation, or otherwise seg fault.
-        self.output_values = np.empty( (self.total_time_steps, self.num_outs.value) )
-        self.output_array = (c_double * self.num_outs.value)(0.0, )
+        # Extract channel name strings from argument
+        if len(channel_names.value.split()) == 0:
+            self.output_channel_names = []
+        else:
+            self.output_channel_names = [n.decode('UTF-8') for n in channel_names.value.split()] 
 
+        # Allocate the data for the outputs
+        self.output_values = np.zeros( (self.total_output_steps, self.num_outs.value), dtype=c_double, order='C' )
+
+        # Delete error message and channel name character buffers
+        del _error_message
+        del channel_names
 
     def fast_sim(self) -> None:
         _error_status = c_int(0)
@@ -171,14 +181,17 @@ class FastLibAPI(CDLL):
             byref(self.num_inputs),
             byref(self.num_outs),
             byref(self.inp_array),
-            byref(self.output_array),
+            self.output_values[0].ctypes.data_as(POINTER(c_double)),
             byref(_error_status),
             _error_message
         )
-        self.output_values[0] = self.output_array[:]
         if self.fatal_error(_error_status):
             self.fast_deinit()
             raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
+
+        # Calculate output frequency and initialize output index
+        output_frequency = round(self.dt_out.value/self.dt.value)
+        i_out = 1
 
         for i in range( 1, self.total_time_steps ):
             self.FAST_Update(
@@ -186,12 +199,13 @@ class FastLibAPI(CDLL):
                 byref(self.num_inputs),
                 byref(self.num_outs),
                 byref(self.inp_array),
-                byref(self.output_array),
+                self.output_values[i_out].ctypes.data_as(POINTER(c_double)),
                 byref(self.end_early),
                 byref(_error_status),
                 _error_message
             )
-            self.output_values[i] = self.output_array[:]
+            if i%output_frequency == 0:
+                i_out += 1
             if self.fatal_error(_error_status):
                 self.fast_deinit()
                 raise RuntimeError(f"Error {_error_status.value}: {_error_message.value}")
@@ -241,16 +255,14 @@ class FastLibAPI(CDLL):
         # and that's why we have the +1 below
         # 
         # We assume here t_initial is always 0
-        return math.ceil( self.t_max.value / self.dt.value) + 1
+        return math.ceil( self.t_max.value / self.dt.value) + 1  
 
 
     @property
-    def output_channel_names(self) -> List:
-        if len(self.channel_names.value.split()) == 0:
-            return []
-        output_channel_names = self.channel_names.value.split()
-        output_channel_names = [n.decode('UTF-8') for n in output_channel_names]        
-        return output_channel_names
+    def total_output_steps(self) -> int:
+        # From FAST_Subs ValidateInputData: DT_out == DT or DT_out is a multiple of DT
+        # So the number of output steps can be calculated the same as the total time steps
+        return math.ceil(self.t_max.value / self.dt_out.value) + 1
 
 
     def get_hub_position(self) -> Tuple:

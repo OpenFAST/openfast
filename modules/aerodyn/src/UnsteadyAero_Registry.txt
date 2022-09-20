@@ -114,8 +114,8 @@ typedef   ^                            ContinuousStateType           UA_ElementC
 #
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
-typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
-typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered)"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot                       {:}{:}        -         -        "Rate of change of angle of attack (filtered); BV model"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     alpha_dot_minus1                {:}{:}        -         -        "Rate of change of angle of attack (filtered); BV modeldata"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -

@@ -1358,7 +1358,7 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    ErrMsg  = ""
 
    if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_BV ) call SetErrStat( ErrID_Fatal, &
-      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex)&
+      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
       &6 (Oye), 7 (Boing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )

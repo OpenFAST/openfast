@@ -57,6 +57,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: zLocal      !< Distance to blade node, measured along the blade [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: zTip      !< Distance to blade tip, measured along the blade [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: rTipFix      !< Nominally the coned rotor diameter (without prebend) [m]
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
     LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
     LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
@@ -297,6 +298,18 @@ IF (ALLOCATED(SrcInitInputData%rLocal)) THEN
   END IF
     DstInitInputData%rLocal = SrcInitInputData%rLocal
 ENDIF
+IF (ALLOCATED(SrcInitInputData%rTipFix)) THEN
+  i1_l = LBOUND(SrcInitInputData%rTipFix,1)
+  i1_u = UBOUND(SrcInitInputData%rTipFix,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%rTipFix)) THEN 
+    ALLOCATE(DstInitInputData%rTipFix(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%rTipFix.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%rTipFix = SrcInitInputData%rTipFix
+ENDIF
     DstInitInputData%UAMod = SrcInitInputData%UAMod
     DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
     DstInitInputData%Flookup = SrcInitInputData%Flookup
@@ -358,6 +371,9 @@ IF (ALLOCATED(InitInputData%zTip)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%rLocal)) THEN
   DEALLOCATE(InitInputData%rLocal)
+ENDIF
+IF (ALLOCATED(InitInputData%rTipFix)) THEN
+  DEALLOCATE(InitInputData%rTipFix)
 ENDIF
 IF (ALLOCATED(InitInputData%UAOff_innerNode)) THEN
   DEALLOCATE(InitInputData%UAOff_innerNode)
@@ -445,6 +461,11 @@ ENDIF
   IF ( ALLOCATED(InData%rLocal) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! rLocal upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%rLocal)  ! rLocal
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! rTipFix allocated yes/no
+  IF ( ALLOCATED(InData%rTipFix) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! rTipFix upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%rTipFix)  ! rTipFix
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! UAMod
       Int_BufSz  = Int_BufSz  + 1  ! UA_Flag
@@ -628,6 +649,21 @@ ENDIF
           ReKiBuf(Re_Xferred) = InData%rLocal(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%rTipFix) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rTipFix,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rTipFix,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%rTipFix,1), UBOUND(InData%rTipFix,1)
+        ReKiBuf(Re_Xferred) = InData%rTipFix(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%UAMod
@@ -865,6 +901,24 @@ ENDIF
           OutData%rLocal(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rTipFix not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%rTipFix)) DEALLOCATE(OutData%rTipFix)
+    ALLOCATE(OutData%rTipFix(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%rTipFix.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%rTipFix,1), UBOUND(OutData%rTipFix,1)
+        OutData%rTipFix(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     OutData%UAMod = IntKiBuf(Int_Xferred)

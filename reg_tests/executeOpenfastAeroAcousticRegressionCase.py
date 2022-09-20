@@ -37,13 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Helper functions
-def ignoreBaselineItems(directory, contents):
-    itemFilter = ['linux-intel', 'linux-gnu', 'macos-gnu', 'windows-intel']
-    caught = []
-    for c in contents:
-        if c in itemFilter:
-            caught.append(c)
-    return tuple(caught)
+excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
 
 ##### Main program
 
@@ -102,7 +96,7 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
-    shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
 ### Run openfast on the test case
 if not noExec:

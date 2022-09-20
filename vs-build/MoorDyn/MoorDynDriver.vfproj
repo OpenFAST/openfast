@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{815C302F-A93D-4C22-9329-717B085113C0}">
+	<Platforms>
+		<Platform Name="Win32"/>
+		<Platform Name="x64"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUnalignedData="false" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\HydroDynDriver_dev_$(ConfigurationName)_$(PlatformName).exe" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin\" TargetName="MD_$(PlatformName)_Debug">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0 /I&quot;C:\Code\OpenFAST_TCF\vs-build\FASTlib\x64\Debug&quot;" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat; RunRegistryMD.bat"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugLineInfoOnly" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" DebugParameter="debugParameterAll" Traceback="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="MoorDyn">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Registry.txt"/></Filter>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Body.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Driver.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_IO.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Line.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Misc.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Point.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Rod.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Types.f90"/></Filter>
+		<Filter Name="NetLib">
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<Filter Name="NWTC_Library">
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
+	<Globals/></VisualStudioProject>

@@ -34,6 +34,21 @@ MODULE Waves
 
    TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', '', '' )
 
+
+      ! ..... @mhall: Public variables for hard-coded wave kinematics grid (temporary solution) ...........................
+
+   INTEGER,    PUBLIC         :: WaveGrid_n  = 0      !150 Number of wave kinematics grid points = nx*ny*nz
+   !
+   !REAL(SiKi), PUBLIC         :: WaveGrid_x0 = -35.0    ! first grid point in x direction   
+   !REAL(SiKi), PUBLIC         :: WaveGrid_dx = 10.0     ! step size in x direction
+   !INTEGER,    PUBLIC         :: WaveGrid_nx = 10       ! Number of wave kinematics grid points in x
+   !
+   !REAL(SiKi), PUBLIC         :: WaveGrid_y0 = -35.0    ! same for y
+   !REAL(SiKi), PUBLIC         :: WaveGrid_dy = 35.0
+   !INTEGER,    PUBLIC         :: WaveGrid_ny = 3        
+   !
+   !INTEGER,    PUBLIC         :: WaveGrid_nz = 5        ! Number of wave kinematics grid points in z (locations decided by 1.0 - 2.0**(WaveGrid_nz-I))
+
    
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: WavePkShpDefault                     ! Return the default value of the peak shape parameter of the incident wave spectrum
@@ -1671,6 +1686,35 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
       !--------------------------------------------------------------------------------
+      !> ## Phase shift the discrete Fourier transform of wave elevations at the WRP
+      !> This changes the phasing of all wave kinematics and loads to reflect the turbine's
+      !! location in the larger farm, in the case of FAST.Farm simulations, based on
+      !! specified PtfmLocationX and PtfmLocationY.
+      
+      IF (InitInp%WaveFieldMod == 2) THEN             ! case 2: adjust wave phases based on turbine offsets from farm origin
+      
+         CALL WrScr ( ' Adjusting incident wave kinematics for turbine offset from array origin.' )
+      
+         DO I = 0,InitOut%NStepWave2  
+
+            tmpComplex  = CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))
+            
+            ! some redundant calculations with later, but insignificant
+            Omega      = I*InitOut%WaveDOmega
+            WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+            
+            ! apply the phase shift
+            tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
+      
+            ! put shifted complex amplitudes back into the array for use in the remainder of this module and other modules (Waves2, WAMIT, WAMIT2)
+            InitOut%WaveElevC0 (1,I) = REAL( tmpComplex)
+            InitOut%WaveElevC0 (2,I) = AIMAG(tmpComplex)
+      
+         END DO
+      END IF
+
+
+      !--------------------------------------------------------------------------------
       !> ## Compute IFFTs
       !> Compute the discrete Fourier transform of the instantaneous elevation of
       !!   incident waves at each desired point on the still water level plane
@@ -1780,6 +1824,28 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             RETURN
          END IF
       END DO                   ! J - All points where the incident wave elevations can be output
+
+      ! ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+      !@mhall: hard-coding some additional wave elevation time series output for now
+
+      !ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
+      !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevMD.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      !
+      !DO J = 1,WaveGrid_ny     !y = -60.0 + 20.0*J
+      !   DO K = 1,WaveGrid_nx  !x = -60.0 + 20.0*K 
+      !
+      !      I = (J-1)*WaveGrid_nx + K    ! index of actual node
+      !      
+      !      CALL WaveElevTimeSeriesAtXY( WaveGrid_x0 + WaveGrid_dx*(K-1), WaveGrid_y0 + WaveGrid_dy*(J-1), InitOut%WaveElevMD(:,I), ErrStatTmp, ErrMsgTmp )
+      !      CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElevMD.',ErrStat,ErrMsg,'VariousWaves_Init')
+      !      IF ( ErrStat >= AbortErrLev ) THEN
+      !         CALL CleanUp()
+      !         RETURN
+      !      END IF
+      !   END DO
+      !END DO
+      
+      ! ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
       ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
@@ -2182,8 +2248,13 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          CALL StillWaterWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+
+         !@mhall:  :::: ensure all arrays needed for the wave grid to MoorDyn are allocated in the WaveMod=0 case too ::::
+         !ALLOCATE ( InitOut%WaveElevMD  (0:InitOut%NStepWave, WaveGrid_nx*WaveGrid_ny), STAT=ErrStatTmp )
+         !InitOut%WaveElevMD = 0.0_DbKi  ! zero it
+         ! ::::: end :::::
+         
          IF ( ErrStat >= AbortErrLev ) RETURN
-            
                
                
       CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.

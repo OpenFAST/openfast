@@ -17,12 +17,13 @@ usefrom WakeDynamics_Registry.txt
 usefrom AWAE_Registry.txt
 usefrom SuperController_Registry.txt
 
-param	FAST_Farm/Farm	-	INTEGER	NumFFModules	-	4	-	"The number of modules available in FAST.Farm"	-
+param	FAST_Farm/Farm	-	INTEGER	NumFFModules	-	5	-	"The number of modules available in FAST.Farm"	-
 param	^	-	INTEGER	ModuleFF_None	  -	0	-	"No module selected"	-
 param	^	-	INTEGER	ModuleFF_SC	  -	1	-	"Super Controller"	-
 param	^	-	INTEGER	ModuleFF_FWrap  -	2	-	"FAST Wrapper"	-
 param	^	-	INTEGER	ModuleFF_WD	  -	3	-	"Wake Dynamics"	-
 param	^	-	INTEGER	ModuleFF_AWAE	  -	4	-	"Ambient Wind and Array Effects"	-
+param	^	-	INTEGER	ModuleFF_MD    - 5  -  "Farm-level MoorDyn"	-
 # ..... Parameters ................................................................................................................
 typedef  FAST_Farm/Farm  ParameterType         DbKi            DT_low          -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
 typedef  ^               ParameterType         DbKi            DT_high         -    - - "High-resolution time step"  seconds
@@ -31,8 +32,13 @@ typedef  ^               ParameterType         IntKi           n_high_low      -
 typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
 typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
 typedef  ^               ParameterType         CHARACTER(1024) SC_FileName    -    - -  "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms" -
-typedef	^	             ParameterType	        LOGICAL	      UseSC 	       -	   - - "Use a super controller?"	-
+typedef  ^               ParameterType         LOGICAL         UseSC           -    - - "Use a super controller?"	-
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
+typedef  ^               ParameterType         IntKi           WaveFieldMod    -    - - "Wave field handling (-) (switch) {0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin}"   -
+typedef  ^               ParameterType         IntKi           MooringMod      -    - - "Mod_SharedMooring is a flag for array-level mooring. (switch) {0: none, 3: yes/MoorDyn}" -
+typedef  ^               ParameterType         CHARACTER(1024) MD_FileName    -    - -  "Name/location of the farm-level MoorDyn input file" -
+typedef  ^               ParameterType         DbKi            DT_mooring      -    - - "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0]"  seconds
+typedef  ^               ParameterType         IntKi           n_mooring       -    - - "Number of FAST and MoorDyn time steps per FAST.Farm timestep when mooring > 0" -
 typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
 typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
 typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file" -
@@ -79,6 +85,10 @@ typedef	^              	^              	  DbKi	         TimeData	{:}	-	-	"Array 
 typedef	^              	^              	  ReKi	         AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
 typedef	^	^	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
 
+typedef    ^              MiscVarType          MeshMapType        FWrap_2_MD   {:}   - -  "Map platform kinematics from each FAST instance to MD"
+typedef    ^              MiscVarType          MeshMapType        MD_2_FWrap   {:}   - -  "Map MD loads at the array level to each FAST instance"
+
+
 # ..... FASTWrapper data .......................................................................................................
 typedef    ^    FASTWrapper_Data  FWrap_ContinuousStateType x             -   -         -   "Continuous states"
 typedef    ^    ^                 FWrap_DiscreteStateType   xd            -   -         -   "Discrete states"
@@ -122,6 +132,18 @@ typedef    ^    ^                 DbKi                      utimes       {1}  - 
 typedef    ^    ^                 SC_OutputType             y             -   -         -   "System outputs"
 typedef    ^    ^                 SC_MiscVarType            m             -   -         -   "Misc/optimization variables"
 typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has SC_Init been called"
+# ..... MD data .......................................................................................................
+typedef    ^    MD_Data           MD_ContinuousStateType    x             -   -         -   "Continuous states"
+typedef    ^    ^                 MD_DiscreteStateType      xd            -   -         -   "Discrete states"
+typedef    ^    ^                 MD_ConstraintStateType    z             -   -         -   "Constraint states"
+typedef    ^    ^                 MD_OtherStateType         OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 MD_ParameterType          p             -   -         -   "Parameters"
+typedef    ^    ^                 MD_InputType              u             -   -         -   "Extrapolated system inputs"
+typedef    ^    ^                 MD_InputType              Input        {:}  -         -   "System inputs"
+typedef    ^    ^                 DbKi                      InputTimes   {:}  -         -   "Current time" s
+typedef    ^    ^                 MD_OutputType             y             -   -         -   "System outputs"
+typedef    ^    ^                 MD_MiscVarType            m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has MD_Init been called"
 # ..... All submodules' variables.................................................................................................
 typedef    ^   All_FastFarm_Data  Farm_ParameterType        p          -   -   -   "FAST.Farm parameter data" -
 typedef    ^   All_FastFarm_Data  Farm_MiscVarType          m          -   -   -   "FAST.Farm misc var data" -
@@ -129,5 +151,6 @@ typedef    ^   All_FastFarm_Data  FASTWrapper_Data          FWrap     {:}  -   -
 typedef    ^   All_FastFarm_Data  WakeDynamics_Data         WD        {:}  -   -   "WakeDynamics (WD) data" -
 typedef    ^   All_FastFarm_Data  AWAE_Data                 AWAE       -   -   -   "Ambient Wind & Array Effects (AWAE) data" -
 typedef    ^   All_FastFarm_Data  SC_Data                   SC         -   -   -   "Super Controller (SC) data" -
+typedef    ^   All_FastFarm_Data  MD_Data                   MD         -   -   -   "Farm-level MoorDyn model data" -
 # ..... FAST.Farm data ................................................................................................................
 #

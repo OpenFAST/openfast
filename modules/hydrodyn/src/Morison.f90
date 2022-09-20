@@ -2110,6 +2110,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             END IF
          
          END DO   !J = 1, InitInp%InpJoints(I)%NConnections
+
+         Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
          
          p%An_End(:,i) = An_drag 
          Amag_drag = Dot_Product(An_drag ,An_drag)
@@ -2127,7 +2129,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Constant part of the external hydrodynamic added mass term
          if ( Vmag > 0.0 ) then
             v2D(:,1) = Vn        
-            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(transpose(v2D), v2D) 
+            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(v2D, transpose(v2D))
          end if
          
          ! Constant part of the external hydrodynamic dynamic pressure force
@@ -2245,9 +2247,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-      
-   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-
+   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
+      GetAlpha = 0.0_ReKi
+   else
+      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+   end if
    
 END FUNCTION GetAlpha
 
