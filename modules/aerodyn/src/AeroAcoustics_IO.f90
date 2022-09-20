@@ -15,10 +15,6 @@ MODULE AeroAcoustics_IO
 
    INTEGER(IntKi), PARAMETER      :: Time      =    0
 
-     ! Parameters related to output length (number of characters allowed in the output data headers):
-
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
-
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
 
    ! model identifiers

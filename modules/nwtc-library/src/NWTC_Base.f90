@@ -36,6 +36,8 @@ MODULE NWTC_Base
    INTEGER, PARAMETER            :: ErrMsgLen = 1024                              !< The maximum number of characters in an error message in the FAST framework
    
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 20                                !< The maximum allowable length of channel names (i.e., width of output columns) in the FAST framework
+   INTEGER(IntKi), PARAMETER     :: OutStrLenM1 = ChanLen - 1                     !< The maximum allowable length of channel names without optional "-" or "M" at the beginning to indicate the negative of the channel
+   
    INTEGER(IntKi), PARAMETER     :: MinChanLen = 10                               !< The min allowable length of channel names (i.e., width of output columns), used because some modules (like Bladed DLL outputs) have excessively long names
    INTEGER(IntKi), PARAMETER     :: LinChanLen = 200                              !< The allowable length of row/column names in linearization files
    INTEGER(IntKi), PARAMETER     :: MaxFileInfoLineLen = 1024                     !< The allowable length of an input line stored in FileInfoType%Lines
