@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine, Key, Val         ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2

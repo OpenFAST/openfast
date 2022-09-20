@@ -1654,11 +1654,12 @@ END FUNCTION Calc_Chi0
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, p_AD, u, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iRot, ErrStat, ErrMsg )
    
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                 ! The rotor parameters
    TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD                              ! The module parameters
    TYPE(RotInputType),           INTENT(IN   )  :: u                                 ! inputs
+   TYPE(RotContinuousStateType), INTENT(IN   )  :: x                                 !< Continuous states at t
    TYPE(RotMiscVarType),         INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_MiscVarType),         INTENT(INOUT)  :: m_AD                              ! misc variables
    TYPE(RotOutputType),          INTENT(IN   )  :: y                                 ! outputs
@@ -2079,7 +2080,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          iBld = iBld+1 ! Increment blade counter
       END DO
    
-   ENDDO ! Loop on rotors
+   end do ! loop on rotors
       
 
    CALL Cleanup ( )
@@ -2617,7 +2618,11 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
 
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
+   CHARACTER(30)                :: OutPFmtS                                        ! Format to print list of selected output channels to summary file
    CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
+
+   CHARACTER(ChanLen),PARAMETER :: TitleStr(2) = (/ 'Parameter', 'Units    ' /)
+   CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
 
    ! Open the summary file and give it a heading.
       
@@ -2803,7 +2808,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
             Msg = 'Stieg Oye dynamic stall model'
          case (UA_BV)
             Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
-         case default      
+         case default
             Msg = 'unknown'      
       end select
       WRITE (UnSu,Ec_IntFrmt) InputFileData%UAMod, 'UAMod', 'Unsteady Aero Model: '//TRIM(Msg)
@@ -2845,11 +2850,12 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    end if
    
    
-   OutPFmt =  '( 15x, I4, 2X, A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   OutPFmt  = '( 15x, I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   OutPFmtS = '( 15x, A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   WRITE (UnSu,'(15x,A)')
    WRITE (UnSu,'(15x,A)')  'Requested Output Channels:'
-   WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
-   WRITE (UnSu,'(15x,A)')  '----  --------------  -----'
-
+   WRITE (UnSu,OutPFmtS )  "Col", TitleStr
+   WRITE (UnSu,OutPFmtS )  "---", TitleStrLines
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             
@@ -2857,11 +2863,12 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,'(15x,A)')
    WRITE (UnSu,'(15x,A)')
    WRITE (UnSu,'(15x,A)')  'Requested Output Channels at each blade station:'
-   WRITE (UnSu,'(15x,A)')  'Col   Parameter       Units'
-   WRITE (UnSu,'(15x,A)')  '----  --------------  -----'
+   WRITE (UnSu,OutPFmtS )  "Col", TitleStr
+   WRITE (UnSu,OutPFmtS )  "---", TitleStrLines
    DO I = 1,p%BldNd_NumOuts
       WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
-   END DO             
+   END DO
+
 
    CLOSE(UnSu)
 
@@ -3403,7 +3410,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       
          ! BNClrnc is set only when we're computing the tower influence
       do i = 1,size(BNClrnc,2)  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
-         InvalidOutput( BNClrnc(:,i) ) = .true.  
+         InvalidOutput( BNClrnc(:,i) ) = .true.
       end do
       
    end if
