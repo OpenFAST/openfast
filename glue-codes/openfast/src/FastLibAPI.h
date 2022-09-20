@@ -14,11 +14,11 @@ class FastLibAPI {
         int n_turbines;
         int i_turb;
         double dt;
+        double dt_out;
         double t_max;
         int abort_error_level;
         bool end_early;
         int num_outs;
-        char channel_names[MAXIMUM_OUTPUTS * CHANNEL_LENGTH + 1];
         bool ended;
 
         // The inputs are meant to be from Simulink.
@@ -29,10 +29,8 @@ class FastLibAPI {
         double inp_array[NumFixedInputs] = {};
 
         // These arrays hold the outputs from OpenFAST
-        // output_array is a 1D vector for the values from a single step
         // output_values is a 2D array for the values from all steps in the simulation
-        std::vector<double> output_array;
-        double **output_values;
+        std::vector<std::vector<double>> output_values;
 
     public:
 
@@ -48,7 +46,8 @@ class FastLibAPI {
         void fast_deinit();
         void fast_run();
         int total_time_steps();
-        std::string output_channel_names();
+        int total_output_steps();
+        std::vector<std::string> output_channel_names;
         void get_hub_position(float *absolute_position, float *rotational_velocity, double *orientation_dcm);
 };
 

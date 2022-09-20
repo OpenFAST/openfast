@@ -52,6 +52,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    ElastoDyn <elastodyn/index.rst>
    HydroDyn <hydrodyn/index.rst>
    InflowWind <inflowwind/index.rst>
+   MoorDyn <moordyn/index.rst>
    ServoDyn <servodyn/index.rst>
    Structural Control <servodyn-stc/StC_index.rst>
    TurbSim <turbsim/index.rst>

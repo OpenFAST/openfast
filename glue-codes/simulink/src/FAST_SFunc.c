@@ -45,6 +45,7 @@
 
 
 static double dt = 0;
+static double dt_out = 0;
 static double TMax = 0;
 static int NumInputs = NumFixedInputs;
 static int NumAddInputs = 0;  // number of additional inputs
@@ -203,7 +204,7 @@ static void mdlInitializeSizes(SimStruct *S)
        FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
        if (checkError(S)) return;
 
-       FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &dt, &TMax, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
+       FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &dt, &dt_out, &TMax, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
        n_t_global = -1;
        if (checkError(S)) return;
 

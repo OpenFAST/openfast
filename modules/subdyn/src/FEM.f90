@@ -84,7 +84,7 @@ SUBROUTINE EigenSolve(K, M, N, bCheckSingularity, EigVect, Omega, ErrStat, ErrMs
    Omega2(:) =0.0_LaKi
    DO I=1,N !Initialize the key and calculate Omega
       KEY(I)=I
-      Omega2(I) = AlphaR(I)/Beta(I)
+      !Omega2(I) = AlphaR(I)/Beta(I)
       if ( EqualRealNos(real(Beta(I),ReKi),0.0_ReKi) ) then
          ! --- Beta =0 
          if (bCheckSingularity) call WrScr('[WARN] Large eigenvalue found, system may be ill-conditioned')
