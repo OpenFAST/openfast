@@ -1139,9 +1139,9 @@ subroutine check_turnOffBEMT(p, u, Weight, axInduction, tanInduction, FirstWarn)
    integer(IntKi)                                 :: i                  !< blade node counter
    integer(IntKi)                                 :: j                  !< blade counter
 
-   if( u%TSR < BEMT_upperBoundTSR ) then
+   if( abs(u%TSR) < BEMT_upperBoundTSR ) then
    
-      Weight = BlendCosine( u%TSR, BEMT_lowerBoundTSR, BEMT_upperBoundTSR )
+      Weight = BlendCosine( abs(u%TSR), BEMT_lowerBoundTSR, BEMT_upperBoundTSR )
       
       if (FirstWarn) then
          if (Weight < 1.0_ReKi) then
