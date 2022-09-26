@@ -1384,6 +1384,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
+   ! Cavitation check
+   call AD_CavtCrit(u, p, m, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
    !-------------------------------------------------------   
    !     get values to output to file:  
@@ -1478,47 +1481,59 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, Er
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    endif
-
-   call AD_CavtCrit(u, p, m, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)    
    
 end subroutine RotCalcOutput
 
 
 subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
-   TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
-   TYPE(RotParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(RotMiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
-                                                               !!   nectivity information does not have to be recalculated)
+   TYPE(AD_InputType),           INTENT(IN   )   :: u           !< Inputs at time t
+   TYPE(AD_ParameterType),       INTENT(IN   )   :: p           !< Parameters
+   TYPE(AD_MiscVarType),         INTENT(INOUT)   :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)   :: errStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)   :: errMsg      !< Error message if ErrStat /= ErrID_None
-   integer    :: i,j
-   real(ReKi) :: SigmaCavitCrit, SigmaCavit
+
+   ! Local variables
+   integer                                       :: i, j
+   integer(intKi)                                :: iR, iW
+   real(ReKi)                                    :: SigmaCavitCrit, SigmaCavit
+   real(ReKi)                                    :: Vreltemp
+   real(ReKi)                                    :: Cpmintemp
 
    errStat = ErrID_None
    errMsg  = ''
 
-   if ( p%CavitCheck ) then      ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
-      do j = 1,p%numBlades ! Loop through all blades
-         do i = 1,p%NumBlNds  ! Loop through all nodes
+   do iR = 1,size(p%rotors)
+      if ( p%rotors(iR)%CavitCheck ) then  ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
+         do j = 1,p%rotors(iR)%numBlades  ! Loop through all blades
+            do i = 1,p%rotors(iR)%NumBlNds  ! Loop through all nodes
                      
-            if ( EqualRealNos( m%BEMT_y%Vrel(i,j), 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Vrel cannot be zero to do a cavitation check', ErrStat, ErrMsg, 'AD_CavtCrit') 
-               if (ErrStat >= AbortErrLev) return
+               if ( p%WakeMod == WakeMod_BEMT .or. p%WakeMod == WakeMod_DBEMT ) then
+                  Vreltemp = m%rotors(iR)%BEMT_y%Vrel(i,j)
+                  Cpmintemp = m%rotors(iR)%BEMT_y%Cpmin(i,j)
+               else if ( p%WakeMod == WakeMod_FVW ) then
+                  iW = p%FVW%Bld2Wings(iR,j)
+                  Vreltemp = m%FVW%W(iW)%BN_Vrel(i)
+                  Cpmintemp = m%FVW%W(iW)%BN_Cpmin(i)
+               end if
+
+               if ( EqualRealNos( Vreltemp, 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Vrel cannot be zero to do a cavitation check', ErrStat, ErrMsg, 'AD_CavtCrit' ) 
+                  if ( ErrStat >= AbortErrLev ) return
       
-            SigmaCavit= -1* m%BEMT_y%Cpmin(i,j) ! Local cavitation number on node j                                               
-            SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%WtrDpth - ( u%HubMotion%Position(3,1)+u%HubMotion%TranslationDisp(3,1) ) - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+               SigmaCavit = -1 * Cpmintemp  ! Local cavitation number on node j                                               
+               SigmaCavitCrit = ( p%rotors(iR)%Patm + ( p%rotors(iR)%Gravity * ( p%rotors(iR)%WtrDpth - ( u%rotors(iR)%BladeMotion(j)%Position(3,i) + u%rotors(iR)%BladeMotion(j)%TranslationDisp(3,i) ) ) * p%rotors(iR)%airDens ) - p%rotors(iR)%Pvap ) / ( 0.5_ReKi * p%rotors(iR)%airDens * Vreltemp**2 )  ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
                                                                         
-               if ( (SigmaCavitCrit < SigmaCavit) .and. (.not. (m%CavitWarnSet(i,j)) ) ) then     
-                    call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
-                    m%CavitWarnSet(i,j) = .true.
+               if ( ( SigmaCavitCrit < SigmaCavit ) .and. ( .not. ( m%rotors(iR)%CavitWarnSet(i,j) ) ) ) then     
+                  call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
+                  m%rotors(iR)%CavitWarnSet(i,j) = .true.
                end if 
                            
-            m%SigmaCavit(i,j)= SigmaCavit                 
-            m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
+               m%rotors(iR)%SigmaCavit(i,j) = SigmaCavit                 
+               m%rotors(iR)%SigmaCavitCrit(i,j) = SigmaCavitCrit  
                            
-         end do   ! p%NumBlNds
-      end do  ! p%numBlades
-   end if   ! Cavitation check
+            end do  ! p%NumBlNds
+         end do  ! p%numBlades
+      end if  ! Cavitation check
+   end do  ! p%numRotors
 end subroutine AD_CavtCrit
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2150,7 +2165,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
    type(AFI_OutputType)                   :: AFI_interp             ! Resulting values from lookup table
    real(ReKi)                             :: UrelWind_s(3)          ! Relative wind (wind+str) in section coords
    real(ReKi)                             :: Cx, Cy
-   real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static
+   real(ReKi)                             :: Cl_Static, Cd_Static, Cm_Static, Cpmin
    real(ReKi)                             :: Cl_dyn, Cd_dyn, Cm_dyn
    type(UA_InputType), pointer            :: u_UA ! Alias to shorten notations
    integer(IntKi), parameter              :: InputIndex=1      ! we will always use values at t in this routine
@@ -2184,6 +2199,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Cl_Static = AFI_interp%Cl
             Cd_Static = AFI_interp%Cd
             Cm_Static = AFI_interp%Cm
+            Cpmin = AFI_interp%Cpmin
 
             ! Set dynamic to the (will be same as static if UA_Flag is false)
             Cl_dyn    = AFI_interp%Cl
@@ -2238,6 +2254,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             m%FVW%W(iW)%BN_Cl_Static(j)       = Cl_Static
             m%FVW%W(iW)%BN_Cd_Static(j)       = Cd_Static
             m%FVW%W(iW)%BN_Cm_Static(j)       = Cm_Static
+            m%FVW%W(iW)%BN_Cpmin(j)           = Cpmin
             m%FVW%W(iW)%BN_Cl(j)              = Cl_dyn
             m%FVW%W(iW)%BN_Cd(j)              = Cd_dyn
             m%FVW%W(iW)%BN_Cm(j)              = Cm_dyn
