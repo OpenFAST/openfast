@@ -276,14 +276,14 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iW, iRoot, iTip, iMax
+   integer(IntKi)            :: iW, iRoot, iTip
    real(ReKi), dimension(p%nWings) :: FWGamma
    real(ReKi), dimension(:),allocatable :: Gamma_t
    real(ReKi), dimension(:),allocatable :: sCoord
 !    real(ReKi), dimension(p%W(iW)%nSpan+1) :: Gamma_t
 !    real(ReKi), dimension(p%W(iW)%nSpan) :: sCoord
    real(ReKi) :: FWEpsTip, FWEpsRoot
-   real(ReKi) :: ltip, rTip, Gamma_max
+
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""

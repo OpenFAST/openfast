@@ -84,6 +84,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
 typedef   ^                            ^                             LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
 typedef   ^                            ^                             SiKi                     WaveElevXY                      {:}{:}     -          -         "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."    "m,-"
+typedef   ^                            ^                             INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef   ^                            ^                             ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
 typedef   ^                            ^                             ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
 #
@@ -106,6 +107,12 @@ typedef   ^                            ^                             CHARACTER(L
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_u                      {:}        -        -         "Names of the inputs used in linearization"	-
 typedef   ^                            InitOutputType                INTEGER                  DerivOrder_x                    {:}        -        -         "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef   ^                            ^                             LOGICAL                  IsLoad_u                        {:}        -        -         "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+
+typedef   ^                            ^                             ReKi                     WaveVel          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveAcc          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveDynP         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveElev         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
+typedef   ^                            ^                             ReKi                     WaveTime         {:}        -        -         "output for now just to pass to MoorDyn"    -
 
 
 # ..... HD_ModuleMapType ....................................................................................................................

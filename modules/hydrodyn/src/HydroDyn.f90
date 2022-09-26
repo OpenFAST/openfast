@@ -442,11 +442,14 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       
          ! Set summary unit number in Waves, Radiation, and Morison initialization input data
-         
       InputFileData%Waves%UnSum           = InputFileData%UnSum
       InputFileData%WAMIT%Conv_Rdtn%UnSum = InputFileData%UnSum
       InputFileData%Morison%UnSum         = InputFileData%UnSum      
     
+         ! distribute wave field and turbine location variables as needed to submodule initInputs
+      InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
+      InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
+      InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
       
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
@@ -1355,10 +1358,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                                         ErrStat, ErrMsg )  
          END IF
 
-
-
-
-
+         
             ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
             
          IF ( InputFileData%OutSwtch > 0 ) THEN

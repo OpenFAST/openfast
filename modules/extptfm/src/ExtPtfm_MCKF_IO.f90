@@ -40,7 +40,6 @@ MODULE ExtPtfm_MCKF_Parameters
    ! Variables for output channels
    INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
                                                         ! Harcoded to outputs of 200 CB modes
-   INTEGER(IntKi), PARAMETER :: OutStrLenM1 = ChanLen - 1
    INTEGER(IntKi), PARAMETER :: ID_Time     = 0
    INTEGER(IntKi), PARAMETER :: ID_PtfFx    = 1
    INTEGER(IntKi), PARAMETER :: ID_PtfFy    = 2
