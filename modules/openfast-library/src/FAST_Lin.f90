@@ -5768,8 +5768,8 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    
             do j=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,2)
                do i=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element,1)
-                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_dot) - 1
-                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_dot, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_1) - 1
+                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%DBEMT%element(i,j)%vind_1, y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
                                                                                                                   y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
                   indx = indx_last + 1
                end do

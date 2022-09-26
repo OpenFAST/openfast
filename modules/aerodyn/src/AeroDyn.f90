@@ -1850,12 +1850,6 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
-         
-         ! inputs for DBEMT (DBEMT_Mod == DBEMT_cont_tauConst)
-         if (allocated(m%BEMT_u(indx)%Vx_elast_dot)) then
-            m%BEMT_u(indx)%Vx_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-            m%BEMT_u(indx)%Vy_elast_dot(j,k)  = dot_product( u%BladeMotion(k)%TranslationAcc(:,j), y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
-         end if
          ! inputs for CUA (and CDBEMT):
          m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
@@ -2635,21 +2629,17 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    !..................
    if (InitInp%Linearize) then
       if (InputFileData%AFAeroMod /= AFAeroMod_Steady) then
-!bjj: REMOVE when linearization has been tested
-         call SetErrStat( ErrID_Fatal, 'Steady blade airfoil aerodynamics must be used for linearization. Set AFAeroMod=1.', ErrStat, ErrMsg, RoutineName )
-         !if (InputFileData%UAMod /= UA_HGM) then
-         !   call SetErrStat( ErrID_Fatal, 'When AFAeroMod=2, UAMod must be 4 for linearization. Set AFAeroMod=1 or UAMod=4.', ErrStat, ErrMsg, RoutineName )
-         !end if
+         if (InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
+            call SetErrStat( ErrID_Fatal, 'When AFAeroMod=2, UAMod must be 4, 5, or 6 for linearization. Set AFAeroMod=1, or, set UAMod=4, 5, or 6.', ErrStat, ErrMsg, RoutineName )
+         end if
       end if
       
       if (InputFileData%WakeMod == WakeMod_FVW) then !bjj: note: among other things, WriteOutput values will not be calculated properly in AD Jacobians if FVW this is allowed
          call SetErrStat( ErrID_Fatal, 'FVW cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
       else if (InputFileData%WakeMod == WakeMod_DBEMT) then
-!bjj: when linearization has been tested
-         call SetErrStat( ErrID_Fatal, 'DBEMT cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
-         !if (InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
-         !   call SetErrStat( ErrID_Fatal, 'DBEMT requires the continuous formulation with constant tau1 for linearization. Set DBEMT_Mod=3 or set WakeMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
-         !end if
+         if (InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
+            call SetErrStat( ErrID_Fatal, 'DBEMT requires the continuous formulation with constant tau1 for linearization. Set DBEMT_Mod=3 or set WakeMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
+         end if
       end if
    end if
    
@@ -4979,8 +4969,8 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    
          do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
             do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
-               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_dot)
-                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_dot(k)
+               do k=1,size(x%BEMT%DBEMT%element(i,j)%vind_1)
+                  x_op(index) = x%BEMT%DBEMT%element(i,j)%vind_1(k)
                   index = index + 1
                end do
             end do
@@ -4989,14 +4979,23 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       end if
    
       if (p%BEMT%UA%lin_nx>0) then
-         do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
-            do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
-               do k=1,4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
-                  x_op(index) = x%BEMT%UA%element(i,j)%x(k)
+         if (p%BEMT%UA%UAMod==UA_OYE) then
+            do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
+               do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
+                  x_op(index) = x%BEMT%UA%element(i,j)%x(4)
                   index = index + 1
                end do
             end do
-         end do
+         else
+            do j=1,p%NumBlades ! size(x%BEMT%UA%element,2)
+               do i=1,p%NumBlNds ! size(x%BEMT%UA%element,1)
+                  do k=1,4 !size(x%BEMT%UA%element(i,j)%x) !linearize only first 4 states (5th is vortex)
+                     x_op(index) = x%BEMT%UA%element(i,j)%x(k)
+                     index = index + 1
+                  end do
+               end do
+            end do
+         endif
       
       end if
       
@@ -5032,8 +5031,8 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    
          do j=1,p%NumBlades ! size(dxdt%BEMT%DBEMT%element,2)
             do i=1,p%NumBlNds ! size(dxdt%BEMT%DBEMT%element,1)
-               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_dot)
-                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_dot(k)
+               do k=1,size(dxdt%BEMT%DBEMT%element(i,j)%vind_1)
+                  dx_op(index) = dxdt%BEMT%DBEMT%element(i,j)%vind_1(k)
                   index = index + 1
                end do
             end do
@@ -5042,14 +5041,23 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       end if
    
       if (p%BEMT%UA%lin_nx>0) then
-         do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
-            do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
-               do k=1,4 !size(dxdt%BEMT%UA%element(i,j)%x) don't linearize 5th state
-                  dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
+         if (p%BEMT%UA%UAMod==UA_OYE) then
+            do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
+               do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
+                  dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(4)
                   index = index + 1
                end do
             end do
-         end do
+         else
+            do j=1,p%NumBlades ! size(dxdt%BEMT%UA%element,2)
+               do i=1,p%NumBlNds ! size(dxdt%BEMT%UA%element,1)
+                  do k=1,4 !size(dxdt%BEMT%UA%element(i,j)%x) don't linearize 5th state
+                     dx_op(index) = dxdt%BEMT%UA%element(i,j)%x(k)
+                     index = index + 1
+                  end do
+               end do
+            end do
+         endif
       end if
       
       call AD_DestroyRotContinuousStateType( dxdt, ErrStat2, ErrMsg2)
@@ -5552,15 +5560,17 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
       do j=1,p%NumBlades ! size(x%BEMT%DBEMT%element,2)
          do i=1,p%NumBlNds ! size(x%BEMT%DBEMT%element,1)
             NodeTxt = 'blade '//trim(num2lstr(j))//', node '//trim(num2lstr(i))
+            if (p%BEMT%UA%UAMod/=UA_OYE) then
             
-            InitOut%LinNames_x(k) = 'x1 '//trim(NodeTxt)//', rad'
-            k = k + 1
+               InitOut%LinNames_x(k) = 'x1 '//trim(NodeTxt)//', rad'
+               k = k + 1
 
-            InitOut%LinNames_x(k) = 'x2 '//trim(NodeTxt)//', rad'
-            k = k + 1
-            
-            InitOut%LinNames_x(k) = 'x3 '//trim(NodeTxt)//', -'
-            k = k + 1
+               InitOut%LinNames_x(k) = 'x2 '//trim(NodeTxt)//', rad'
+               k = k + 1
+               
+               InitOut%LinNames_x(k) = 'x3 '//trim(NodeTxt)//', -'
+               k = k + 1
+            endif
             
             InitOut%LinNames_x(k) = 'x4 '//trim(NodeTxt)//', -'
             p%dx(k) = 0.001 ! x4 is a number between 0 and 1, so we need this to be small
@@ -5729,17 +5739,23 @@ SUBROUTINE Perturb_x( p, n, perturb_sign, x, dx )
    
    if (n <= p%BEMT%DBEMT%lin_nx) then
 
-      if (n <= p%BEMT%DBEMT%lin_nx/2) then ! x_p%BEMT%DBEMT%element(i,j)%vind, else x_p%BEMT%DBEMT%element(i,j)%vind_dot
+      if (n <= p%BEMT%DBEMT%lin_nx/2) then ! x_p%BEMT%DBEMT%element(i,j)%vind, else x_p%BEMT%DBEMT%element(i,j)%vind_1
          call GetStateIndices( n, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind), Blade, BladeNode, StateIndex )
          x%BEMT%DBEMT%element(BladeNode,Blade)%vind(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind(StateIndex) + dx * perturb_sign
       else
-         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx/2, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind_dot), Blade, BladeNode, StateIndex )
-         x%BEMT%DBEMT%element(BladeNode,Blade)%vind_dot(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind_dot(StateIndex) + dx * perturb_sign
+         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx/2, size(x%BEMT%DBEMT%element,2), size(x%BEMT%DBEMT%element,1), size(x%BEMT%DBEMT%element(1,1)%vind_1), Blade, BladeNode, StateIndex )
+         x%BEMT%DBEMT%element(BladeNode,Blade)%vind_1(StateIndex) = x%BEMT%DBEMT%element(BladeNode,Blade)%vind_1(StateIndex) + dx * perturb_sign
       endif
    
    else
       !call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), size(x%BEMT%UA%element(1,1)%x), Blade, BladeNode, StateIndex )
-      call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), 4, Blade, BladeNode, StateIndex )
+
+      if (p%BEMT%UA%UAMod==UA_OYE) then
+         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), 1, Blade, BladeNode, StateIndex )
+         StateIndex=4 ! Always the 4th one
+      else
+         call GetStateIndices( n - p%BEMT%DBEMT%lin_nx, size(x%BEMT%UA%element,2), size(x%BEMT%UA%element,1), 4, Blade, BladeNode, StateIndex )
+      endif
       x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) = x%BEMT%UA%element(BladeNode,Blade)%x(StateIndex) + dx * perturb_sign
    
    end if
@@ -5834,8 +5850,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
       do j=1,size(x_p%BEMT%DBEMT%element,2) ! number of blades
          do i=1,size(x_p%BEMT%DBEMT%element,1) ! number of nodes per blade
-            dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind_dot - x_m%BEMT%DBEMT%element(i,j)%vind_dot
-            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind_dot) !+=2
+            dX(indx_first:indx_first+1) = x_p%BEMT%DBEMT%element(i,j)%vind_1 - x_m%BEMT%DBEMT%element(i,j)%vind_1
+            indx_first = indx_first + size(x_p%BEMT%DBEMT%element(i,j)%vind_1) !+=2
          end do
       end do
       
@@ -5843,12 +5859,21 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    
    if (p%BEMT%UA%lin_nx>0) then
    
-      do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
-         do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
-            dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x(1:4) - x_m%BEMT%UA%element(i,j)%x(1:4)
-            indx_first = indx_first + 4 ! = index_first += 4
+      if (p%BEMT%UA%UAMod==UA_OYE) then
+         do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
+            do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
+               dX(indx_first) = x_p%BEMT%UA%element(i,j)%x(4) - x_m%BEMT%UA%element(i,j)%x(4)
+               indx_first = indx_first + 1 ! = index_first += 4
+            end do
          end do
-      end do
+      else
+         do j=1,size(x_p%BEMT%UA%element,2) ! number of blades
+            do i=1,size(x_p%BEMT%UA%element,1) ! number of nodes per blade
+               dX(indx_first:indx_first+3) = x_p%BEMT%UA%element(i,j)%x(1:4) - x_m%BEMT%UA%element(i,j)%x(1:4)
+               indx_first = indx_first + 4 ! = index_first += 4
+            end do
+         end do
+      endif
 
    end if
 

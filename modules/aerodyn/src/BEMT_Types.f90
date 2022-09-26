@@ -161,8 +161,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: TSR      !< Tip-speed ratio (to check if BEM should be turned off) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx      !< Local axial velocity at node [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vy      !< Local tangential velocity at node [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx_elast_dot      !< Local relative axial acceleration at node (for CDBEMT) [m/s^2]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vy_elast_dot      !< Local relative tangential acceleration at node (for CDBEMT) [m/s^2]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: omega_z      !< rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA) [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance from center-of-rotation to node [m]
     REAL(ReKi)  :: Un_disk      !< disk-averaged velocity normal to the rotor disk (for input to DBEMT) [m/s]
@@ -4368,34 +4366,6 @@ IF (ALLOCATED(SrcInputData%Vy)) THEN
   END IF
     DstInputData%Vy = SrcInputData%Vy
 ENDIF
-IF (ALLOCATED(SrcInputData%Vx_elast_dot)) THEN
-  i1_l = LBOUND(SrcInputData%Vx_elast_dot,1)
-  i1_u = UBOUND(SrcInputData%Vx_elast_dot,1)
-  i2_l = LBOUND(SrcInputData%Vx_elast_dot,2)
-  i2_u = UBOUND(SrcInputData%Vx_elast_dot,2)
-  IF (.NOT. ALLOCATED(DstInputData%Vx_elast_dot)) THEN 
-    ALLOCATE(DstInputData%Vx_elast_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vx_elast_dot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%Vx_elast_dot = SrcInputData%Vx_elast_dot
-ENDIF
-IF (ALLOCATED(SrcInputData%Vy_elast_dot)) THEN
-  i1_l = LBOUND(SrcInputData%Vy_elast_dot,1)
-  i1_u = UBOUND(SrcInputData%Vy_elast_dot,1)
-  i2_l = LBOUND(SrcInputData%Vy_elast_dot,2)
-  i2_u = UBOUND(SrcInputData%Vy_elast_dot,2)
-  IF (.NOT. ALLOCATED(DstInputData%Vy_elast_dot)) THEN 
-    ALLOCATE(DstInputData%Vy_elast_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vy_elast_dot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%Vy_elast_dot = SrcInputData%Vy_elast_dot
-ENDIF
 IF (ALLOCATED(SrcInputData%omega_z)) THEN
   i1_l = LBOUND(SrcInputData%omega_z,1)
   i1_u = UBOUND(SrcInputData%omega_z,1)
@@ -4461,12 +4431,6 @@ IF (ALLOCATED(InputData%Vx)) THEN
 ENDIF
 IF (ALLOCATED(InputData%Vy)) THEN
   DEALLOCATE(InputData%Vy)
-ENDIF
-IF (ALLOCATED(InputData%Vx_elast_dot)) THEN
-  DEALLOCATE(InputData%Vx_elast_dot)
-ENDIF
-IF (ALLOCATED(InputData%Vy_elast_dot)) THEN
-  DEALLOCATE(InputData%Vy_elast_dot)
 ENDIF
 IF (ALLOCATED(InputData%omega_z)) THEN
   DEALLOCATE(InputData%omega_z)
@@ -4536,16 +4500,6 @@ ENDIF
   IF ( ALLOCATED(InData%Vy) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Vy upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vy)  ! Vy
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vx_elast_dot allocated yes/no
-  IF ( ALLOCATED(InData%Vx_elast_dot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vx_elast_dot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_elast_dot)  ! Vx_elast_dot
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vy_elast_dot allocated yes/no
-  IF ( ALLOCATED(InData%Vy_elast_dot) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! Vy_elast_dot upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vy_elast_dot)  ! Vy_elast_dot
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! omega_z allocated yes/no
   IF ( ALLOCATED(InData%omega_z) ) THEN
@@ -4667,46 +4621,6 @@ ENDIF
       DO i2 = LBOUND(InData%Vy,2), UBOUND(InData%Vy,2)
         DO i1 = LBOUND(InData%Vy,1), UBOUND(InData%Vy,1)
           ReKiBuf(Re_Xferred) = InData%Vy(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Vx_elast_dot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_elast_dot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_elast_dot,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_elast_dot,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_elast_dot,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%Vx_elast_dot,2), UBOUND(InData%Vx_elast_dot,2)
-        DO i1 = LBOUND(InData%Vx_elast_dot,1), UBOUND(InData%Vx_elast_dot,1)
-          ReKiBuf(Re_Xferred) = InData%Vx_elast_dot(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Vy_elast_dot) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_elast_dot,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_elast_dot,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_elast_dot,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_elast_dot,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%Vy_elast_dot,2), UBOUND(InData%Vy_elast_dot,2)
-        DO i1 = LBOUND(InData%Vy_elast_dot,1), UBOUND(InData%Vy_elast_dot,1)
-          ReKiBuf(Re_Xferred) = InData%Vy_elast_dot(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -4892,52 +4806,6 @@ ENDIF
       DO i2 = LBOUND(OutData%Vy,2), UBOUND(OutData%Vy,2)
         DO i1 = LBOUND(OutData%Vy,1), UBOUND(OutData%Vy,1)
           OutData%Vy(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vx_elast_dot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vx_elast_dot)) DEALLOCATE(OutData%Vx_elast_dot)
-    ALLOCATE(OutData%Vx_elast_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vx_elast_dot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%Vx_elast_dot,2), UBOUND(OutData%Vx_elast_dot,2)
-        DO i1 = LBOUND(OutData%Vx_elast_dot,1), UBOUND(OutData%Vx_elast_dot,1)
-          OutData%Vx_elast_dot(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vy_elast_dot not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vy_elast_dot)) DEALLOCATE(OutData%Vy_elast_dot)
-    ALLOCATE(OutData%Vy_elast_dot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vy_elast_dot.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%Vy_elast_dot,2), UBOUND(OutData%Vy_elast_dot,2)
-        DO i1 = LBOUND(OutData%Vy_elast_dot,1), UBOUND(OutData%Vy_elast_dot,1)
-          OutData%Vy_elast_dot(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -6116,22 +5984,6 @@ IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
     END DO
   END DO
 END IF ! check if allocated
-IF (ALLOCATED(u_out%Vx_elast_dot) .AND. ALLOCATED(u1%Vx_elast_dot)) THEN
-  DO i2 = LBOUND(u_out%Vx_elast_dot,2),UBOUND(u_out%Vx_elast_dot,2)
-    DO i1 = LBOUND(u_out%Vx_elast_dot,1),UBOUND(u_out%Vx_elast_dot,1)
-      b = -(u1%Vx_elast_dot(i1,i2) - u2%Vx_elast_dot(i1,i2))
-      u_out%Vx_elast_dot(i1,i2) = u1%Vx_elast_dot(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vy_elast_dot) .AND. ALLOCATED(u1%Vy_elast_dot)) THEN
-  DO i2 = LBOUND(u_out%Vy_elast_dot,2),UBOUND(u_out%Vy_elast_dot,2)
-    DO i1 = LBOUND(u_out%Vy_elast_dot,1),UBOUND(u_out%Vy_elast_dot,1)
-      b = -(u1%Vy_elast_dot(i1,i2) - u2%Vy_elast_dot(i1,i2))
-      u_out%Vy_elast_dot(i1,i2) = u1%Vy_elast_dot(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
 IF (ALLOCATED(u_out%omega_z) .AND. ALLOCATED(u1%omega_z)) THEN
   DO i2 = LBOUND(u_out%omega_z,2),UBOUND(u_out%omega_z,2)
     DO i1 = LBOUND(u_out%omega_z,1),UBOUND(u_out%omega_z,1)
@@ -6257,24 +6109,6 @@ IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
       b = (t(3)**2*(u1%Vy(i1,i2) - u2%Vy(i1,i2)) + t(2)**2*(-u1%Vy(i1,i2) + u3%Vy(i1,i2)))* scaleFactor
       c = ( (t(2)-t(3))*u1%Vy(i1,i2) + t(3)*u2%Vy(i1,i2) - t(2)*u3%Vy(i1,i2) ) * scaleFactor
       u_out%Vy(i1,i2) = u1%Vy(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vx_elast_dot) .AND. ALLOCATED(u1%Vx_elast_dot)) THEN
-  DO i2 = LBOUND(u_out%Vx_elast_dot,2),UBOUND(u_out%Vx_elast_dot,2)
-    DO i1 = LBOUND(u_out%Vx_elast_dot,1),UBOUND(u_out%Vx_elast_dot,1)
-      b = (t(3)**2*(u1%Vx_elast_dot(i1,i2) - u2%Vx_elast_dot(i1,i2)) + t(2)**2*(-u1%Vx_elast_dot(i1,i2) + u3%Vx_elast_dot(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vx_elast_dot(i1,i2) + t(3)*u2%Vx_elast_dot(i1,i2) - t(2)*u3%Vx_elast_dot(i1,i2) ) * scaleFactor
-      u_out%Vx_elast_dot(i1,i2) = u1%Vx_elast_dot(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vy_elast_dot) .AND. ALLOCATED(u1%Vy_elast_dot)) THEN
-  DO i2 = LBOUND(u_out%Vy_elast_dot,2),UBOUND(u_out%Vy_elast_dot,2)
-    DO i1 = LBOUND(u_out%Vy_elast_dot,1),UBOUND(u_out%Vy_elast_dot,1)
-      b = (t(3)**2*(u1%Vy_elast_dot(i1,i2) - u2%Vy_elast_dot(i1,i2)) + t(2)**2*(-u1%Vy_elast_dot(i1,i2) + u3%Vy_elast_dot(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vy_elast_dot(i1,i2) + t(3)*u2%Vy_elast_dot(i1,i2) - t(2)*u3%Vy_elast_dot(i1,i2) ) * scaleFactor
-      u_out%Vy_elast_dot(i1,i2) = u1%Vy_elast_dot(i1,i2) + b  + c * t_out
     END DO
   END DO
 END IF ! check if allocated

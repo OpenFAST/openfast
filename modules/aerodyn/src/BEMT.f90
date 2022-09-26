@@ -352,22 +352,6 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%Vy = 0.0_ReKi
  
-   if (p%DBEMT_Mod==DBEMT_cont_tauConst) then
-      allocate ( u%Vx_elast_dot( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-      if ( errStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vx_dot.', errStat, errMsg, RoutineName )
-         return
-      end if 
-      u%Vx_elast_dot = 0.0_ReKi
-   
-      allocate ( u%Vy_elast_dot( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-      if ( errStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vy_dot.', errStat, errMsg, RoutineName )
-         return
-      end if 
-      u%Vy_elast_dot = 0.0_ReKi
-   end if
-   
    allocate ( u%omega_z( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%omega_z.', errStat, errMsg, RoutineName )
@@ -936,15 +920,6 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       end do
    end do
    
-   if( allocated(u%Vx_elast_dot)) then ! only for DBEMT_Mod=DBEMT_cont_tauConst
-      do j = 1,p%numBlades
-         do i = 1,p%numBladeNodes
-            u_DBEMT%element(i,j)%vind_s_dot(1)  =   axInduction( i,j)*u%Vx_elast_dot(i,j) - u%omega_z(i,j)*tanInduction(i,j)*u%Vy(i,j) ! Eq. 41
-            u_DBEMT%element(i,j)%vind_s_dot(2)  =  -tanInduction(i,j)*u%Vy_elast_dot(i,j) - u%omega_z(i,j)*axInduction( i,j)*u%Vx(i,j) ! Eq. 41
-         end do
-      end do
-   end if
-      
 
 end subroutine SetInputs_For_DBEMT
 !..................................................................................................................................
@@ -2286,7 +2261,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
                                              , "omega_z"  &
                                              , "rLocal" , "UserProp"  &
                                              , "AxInd", "TanInd"
-!                                            , "Vx_elast_dot" , "Vy_elast_dot" &
           
    end if
    
@@ -2312,9 +2286,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
                                              , u%UserProp(    DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , m%axInduction( DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , m%tanInduction(DEBUG_BLADENODE,DEBUG_BLADE)
-! these are not always allocated
-!                                             , u%Vx_elast_dot(DEBUG_BLADENODE,DEBUG_BLADE) &
-!                                             , u%Vy_elast_dot(DEBUG_BLADENODE,DEBUG_BLADE) &
          
    ! now write the residual function to a separate file:
    if ((DEBUG_nStep >= 0).AND.(DEBUG_nStep <= 450000).AND.(MOD(DEBUG_nStep,25) == 0)) then
