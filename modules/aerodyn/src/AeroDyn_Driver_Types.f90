@@ -273,15 +273,27 @@ CONTAINS
     DstDvr_CaseData%frequency = SrcDvr_CaseData%frequency
  END SUBROUTINE AD_Dvr_CopyDvr_Case
 
- SUBROUTINE AD_Dvr_DestroyDvr_Case( Dvr_CaseData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyDvr_Case( Dvr_CaseData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Dvr_Case), INTENT(INOUT) :: Dvr_CaseData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Case'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Case'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD_Dvr_DestroyDvr_Case
 
  SUBROUTINE AD_Dvr_PackDvr_Case( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -469,15 +481,27 @@ IF (ALLOCATED(SrcDvrVTK_BLSurfaceTypeData%AirfoilCoords)) THEN
 ENDIF
  END SUBROUTINE AD_Dvr_CopyDvrVTK_BLSurfaceType
 
- SUBROUTINE AD_Dvr_DestroyDvrVTK_BLSurfaceType( DvrVTK_BLSurfaceTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyDvrVTK_BLSurfaceType( DvrVTK_BLSurfaceTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(DvrVTK_BLSurfaceType), INTENT(INOUT) :: DvrVTK_BLSurfaceTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvrVTK_BLSurfaceType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvrVTK_BLSurfaceType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DvrVTK_BLSurfaceTypeData%AirfoilCoords)) THEN
   DEALLOCATE(DvrVTK_BLSurfaceTypeData%AirfoilCoords)
 ENDIF
@@ -685,21 +709,34 @@ IF (ALLOCATED(SrcDvrVTK_SurfaceTypeData%BladeShape)) THEN
 ENDIF
  END SUBROUTINE AD_Dvr_CopyDvrVTK_SurfaceType
 
- SUBROUTINE AD_Dvr_DestroyDvrVTK_SurfaceType( DvrVTK_SurfaceTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyDvrVTK_SurfaceType( DvrVTK_SurfaceTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(DvrVTK_SurfaceType), INTENT(INOUT) :: DvrVTK_SurfaceTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvrVTK_SurfaceType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvrVTK_SurfaceType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DvrVTK_SurfaceTypeData%TowerRad)) THEN
   DEALLOCATE(DvrVTK_SurfaceTypeData%TowerRad)
 ENDIF
 IF (ALLOCATED(DvrVTK_SurfaceTypeData%BladeShape)) THEN
 DO i1 = LBOUND(DvrVTK_SurfaceTypeData%BladeShape,1), UBOUND(DvrVTK_SurfaceTypeData%BladeShape,1)
-  CALL AD_Dvr_Destroydvrvtk_blsurfacetype( DvrVTK_SurfaceTypeData%BladeShape(i1), ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroydvrvtk_blsurfacetype( DvrVTK_SurfaceTypeData%BladeShape(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DvrVTK_SurfaceTypeData%BladeShape)
 ENDIF
@@ -1115,16 +1152,29 @@ ENDIF
     DstDvr_OutputsData%VTKRefPoint = SrcDvr_OutputsData%VTKRefPoint
  END SUBROUTINE AD_Dvr_CopyDvr_Outputs
 
- SUBROUTINE AD_Dvr_DestroyDvr_Outputs( Dvr_OutputsData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyDvr_Outputs( Dvr_OutputsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Dvr_Outputs), INTENT(INOUT) :: Dvr_OutputsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Outputs'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Outputs'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( Dvr_OutputsData%AD_ver, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( Dvr_OutputsData%AD_ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(Dvr_OutputsData%unOutFile)) THEN
   DEALLOCATE(Dvr_OutputsData%unOutFile)
 ENDIF
@@ -1142,7 +1192,8 @@ IF (ALLOCATED(Dvr_OutputsData%outLine)) THEN
 ENDIF
 IF (ALLOCATED(Dvr_OutputsData%VTK_surface)) THEN
 DO i1 = LBOUND(Dvr_OutputsData%VTK_surface,1), UBOUND(Dvr_OutputsData%VTK_surface,1)
-  CALL AD_Dvr_Destroydvrvtk_surfacetype( Dvr_OutputsData%VTK_surface(i1), ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroydvrvtk_surfacetype( Dvr_OutputsData%VTK_surface(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(Dvr_OutputsData%VTK_surface)
 ENDIF
@@ -1827,25 +1878,45 @@ ENDIF
     DstAeroDyn_DataData%InputTime = SrcAeroDyn_DataData%InputTime
  END SUBROUTINE AD_Dvr_CopyAeroDyn_Data
 
- SUBROUTINE AD_Dvr_DestroyAeroDyn_Data( AeroDyn_DataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyAeroDyn_Data( AeroDyn_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AeroDyn_Data), INTENT(INOUT) :: AeroDyn_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyAeroDyn_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyAeroDyn_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AD_DestroyContState( AeroDyn_DataData%x, ErrStat, ErrMsg )
-  CALL AD_DestroyDiscState( AeroDyn_DataData%xd, ErrStat, ErrMsg )
-  CALL AD_DestroyConstrState( AeroDyn_DataData%z, ErrStat, ErrMsg )
-  CALL AD_DestroyOtherState( AeroDyn_DataData%OtherState, ErrStat, ErrMsg )
-  CALL AD_DestroyMisc( AeroDyn_DataData%m, ErrStat, ErrMsg )
-  CALL AD_DestroyParam( AeroDyn_DataData%p, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AD_DestroyContState( AeroDyn_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_DestroyDiscState( AeroDyn_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_DestroyConstrState( AeroDyn_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_DestroyOtherState( AeroDyn_DataData%OtherState, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_DestroyMisc( AeroDyn_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_DestroyParam( AeroDyn_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 DO i1 = LBOUND(AeroDyn_DataData%u,1), UBOUND(AeroDyn_DataData%u,1)
-  CALL AD_DestroyInput( AeroDyn_DataData%u(i1), ErrStat, ErrMsg )
+  CALL AD_DestroyInput( AeroDyn_DataData%u(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
-  CALL AD_DestroyOutput( AeroDyn_DataData%y, ErrStat, ErrMsg )
+  CALL AD_DestroyOutput( AeroDyn_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyAeroDyn_Data
 
  SUBROUTINE AD_Dvr_PackAeroDyn_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2685,25 +2756,45 @@ ENDDO
     DstInflowWind_DataData%InputTimes = SrcInflowWind_DataData%InputTimes
  END SUBROUTINE AD_Dvr_CopyInflowWind_Data
 
- SUBROUTINE AD_Dvr_DestroyInflowWind_Data( InflowWind_DataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyInflowWind_Data( InflowWind_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(InflowWind_Data), INTENT(INOUT) :: InflowWind_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyInflowWind_Data'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyInflowWind_Data'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL InflowWind_DestroyContState( InflowWind_DataData%x, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyDiscState( InflowWind_DataData%xd, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyConstrState( InflowWind_DataData%z, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyOtherState( InflowWind_DataData%OtherSt, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyParam( InflowWind_DataData%p, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyMisc( InflowWind_DataData%m, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL InflowWind_DestroyContState( InflowWind_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyDiscState( InflowWind_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyConstrState( InflowWind_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyOtherState( InflowWind_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyParam( InflowWind_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyMisc( InflowWind_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 DO i1 = LBOUND(InflowWind_DataData%u,1), UBOUND(InflowWind_DataData%u,1)
-  CALL InflowWind_DestroyInput( InflowWind_DataData%u(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyInput( InflowWind_DataData%u(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
-  CALL InflowWind_DestroyOutput( InflowWind_DataData%y, ErrStat, ErrMsg )
+  CALL InflowWind_DestroyOutput( InflowWind_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyInflowWind_Data
 
  SUBROUTINE AD_Dvr_PackInflowWind_Data( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3550,21 +3641,36 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD_Dvr_CopyBladeData
 
- SUBROUTINE AD_Dvr_DestroyBladeData( BladeDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyBladeData( BladeDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BladeData), INTENT(INOUT) :: BladeDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyBladeData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyBladeData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(BladeDataData%motion)) THEN
   DEALLOCATE(BladeDataData%motion)
 ENDIF
-  CALL MeshDestroy( BladeDataData%ptMesh, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( BladeDataData%ED_P_2_AD_P_R, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( BladeDataData%AD_P_2_AD_L_B, ErrStat, ErrMsg )
+  CALL MeshDestroy( BladeDataData%ptMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( BladeDataData%ED_P_2_AD_P_R, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( BladeDataData%AD_P_2_AD_L_B, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyBladeData
 
  SUBROUTINE AD_Dvr_PackBladeData( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4105,23 +4211,38 @@ IF (ALLOCATED(SrcHubDataData%map2BldPt)) THEN
 ENDIF
  END SUBROUTINE AD_Dvr_CopyHubData
 
- SUBROUTINE AD_Dvr_DestroyHubData( HubDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyHubData( HubDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(HubData), INTENT(INOUT) :: HubDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyHubData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyHubData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(HubDataData%motion)) THEN
   DEALLOCATE(HubDataData%motion)
 ENDIF
-  CALL MeshDestroy( HubDataData%ptMesh, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( HubDataData%ED_P_2_AD_P_H, ErrStat, ErrMsg )
+  CALL MeshDestroy( HubDataData%ptMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( HubDataData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(HubDataData%map2BldPt)) THEN
 DO i1 = LBOUND(HubDataData%map2BldPt,1), UBOUND(HubDataData%map2BldPt,1)
-  CALL NWTC_Library_Destroymeshmaptype( HubDataData%map2BldPt(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( HubDataData%map2BldPt(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(HubDataData%map2BldPt)
 ENDIF
@@ -4664,21 +4785,36 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD_Dvr_CopyNacData
 
- SUBROUTINE AD_Dvr_DestroyNacData( NacDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyNacData( NacDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(NacData), INTENT(INOUT) :: NacDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyNacData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyNacData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(NacDataData%motion)) THEN
   DEALLOCATE(NacDataData%motion)
 ENDIF
-  CALL MeshDestroy( NacDataData%ptMesh, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( NacDataData%ED_P_2_AD_P_N, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( NacDataData%map2hubPt, ErrStat, ErrMsg )
+  CALL MeshDestroy( NacDataData%ptMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( NacDataData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( NacDataData%map2hubPt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyNacData
 
  SUBROUTINE AD_Dvr_PackNacData( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5154,19 +5290,35 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD_Dvr_CopyTwrData
 
- SUBROUTINE AD_Dvr_DestroyTwrData( TwrDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyTwrData( TwrDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(TwrData), INTENT(INOUT) :: TwrDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyTwrData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyTwrData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( TwrDataData%ptMesh, ErrStat, ErrMsg )
-  CALL MeshDestroy( TwrDataData%ptMeshAD, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( TwrDataData%ED_P_2_AD_P_T, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( TwrDataData%AD_P_2_AD_L_T, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( TwrDataData%ptMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( TwrDataData%ptMeshAD, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( TwrDataData%ED_P_2_AD_P_T, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( TwrDataData%AD_P_2_AD_L_T, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyTwrData
 
  SUBROUTINE AD_Dvr_PackTwrData( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5704,27 +5856,46 @@ IF (ALLOCATED(SrcWTDataData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE AD_Dvr_CopyWTData
 
- SUBROUTINE AD_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(WTData), INTENT(INOUT) :: WTDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyWTData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyWTData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( WTDataData%ptMesh, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( WTDataData%map2twrPt, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( WTDataData%map2nacPt, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( WTDataData%ptMesh, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( WTDataData%map2twrPt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( WTDataData%map2nacPt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(WTDataData%bld)) THEN
 DO i1 = LBOUND(WTDataData%bld,1), UBOUND(WTDataData%bld,1)
-  CALL AD_Dvr_Destroybladedata( WTDataData%bld(i1), ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroybladedata( WTDataData%bld(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(WTDataData%bld)
 ENDIF
-  CALL AD_Dvr_Destroyhubdata( WTDataData%hub, ErrStat, ErrMsg )
-  CALL AD_Dvr_Destroynacdata( WTDataData%nac, ErrStat, ErrMsg )
-  CALL AD_Dvr_Destroytwrdata( WTDataData%twr, ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroyhubdata( WTDataData%hub, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_Dvr_Destroynacdata( WTDataData%nac, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_Dvr_Destroytwrdata( WTDataData%twr, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(WTDataData%motion)) THEN
   DEALLOCATE(WTDataData%motion)
 ENDIF
@@ -6710,31 +6881,46 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD_Dvr_CopyDvr_SimData
 
- SUBROUTINE AD_Dvr_DestroyDvr_SimData( Dvr_SimDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyDvr_SimData( Dvr_SimDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Dvr_SimData), INTENT(INOUT) :: Dvr_SimDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_SimData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_SimData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Dvr_SimDataData%WT)) THEN
 DO i1 = LBOUND(Dvr_SimDataData%WT,1), UBOUND(Dvr_SimDataData%WT,1)
-  CALL AD_Dvr_Destroywtdata( Dvr_SimDataData%WT(i1), ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroywtdata( Dvr_SimDataData%WT(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(Dvr_SimDataData%WT)
 ENDIF
 IF (ALLOCATED(Dvr_SimDataData%Cases)) THEN
 DO i1 = LBOUND(Dvr_SimDataData%Cases,1), UBOUND(Dvr_SimDataData%Cases,1)
-  CALL AD_Dvr_Destroydvr_case( Dvr_SimDataData%Cases(i1), ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroydvr_case( Dvr_SimDataData%Cases(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(Dvr_SimDataData%Cases)
 ENDIF
 IF (ALLOCATED(Dvr_SimDataData%timeSeries)) THEN
   DEALLOCATE(Dvr_SimDataData%timeSeries)
 ENDIF
-  CALL AD_Dvr_Destroydvr_outputs( Dvr_SimDataData%out, ErrStat, ErrMsg )
+  CALL AD_Dvr_Destroydvr_outputs( Dvr_SimDataData%out, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyDvr_SimData
 
  SUBROUTINE AD_Dvr_PackDvr_SimData( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -7360,18 +7546,33 @@ ENDIF
     DstAllDataData%initialized = SrcAllDataData%initialized
  END SUBROUTINE AD_Dvr_CopyAllData
 
- SUBROUTINE AD_Dvr_DestroyAllData( AllDataData, ErrStat, ErrMsg )
+ SUBROUTINE AD_Dvr_DestroyAllData( AllDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AllData), INTENT(INOUT) :: AllDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyAllData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyAllData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AD_Dvr_Destroydvr_simdata( AllDataData%dvr, ErrStat, ErrMsg )
-  CALL AD_Dvr_Destroyaerodyn_data( AllDataData%AD, ErrStat, ErrMsg )
-  CALL AD_Dvr_Destroyinflowwind_data( AllDataData%IW, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AD_Dvr_Destroydvr_simdata( AllDataData%dvr, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_Dvr_Destroyaerodyn_data( AllDataData%AD, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD_Dvr_Destroyinflowwind_data( AllDataData%IW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD_Dvr_DestroyAllData
 
  SUBROUTINE AD_Dvr_PackAllData( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

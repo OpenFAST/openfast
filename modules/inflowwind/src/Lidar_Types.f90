@@ -130,15 +130,27 @@ CONTAINS
     DstInitInputData%LidRadialVel = SrcInitInputData%LidRadialVel
  END SUBROUTINE Lidar_CopyInitInput
 
- SUBROUTINE Lidar_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyInitInput
 
  SUBROUTINE Lidar_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -293,15 +305,27 @@ CONTAINS
     DstInitOutputData%DummyInitOut = SrcInitOutputData%DummyInitOut
  END SUBROUTINE Lidar_CopyInitOutput
 
- SUBROUTINE Lidar_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyInitOutput
 
  SUBROUTINE Lidar_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -429,15 +453,27 @@ CONTAINS
     DstParamData%LidRadialVel = SrcParamData%LidRadialVel
  END SUBROUTINE Lidar_CopyParam
 
- SUBROUTINE Lidar_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyParam
 
  SUBROUTINE Lidar_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -611,15 +647,27 @@ CONTAINS
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE Lidar_CopyContState
 
- SUBROUTINE Lidar_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyContState
 
  SUBROUTINE Lidar_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -736,15 +784,27 @@ CONTAINS
     DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
  END SUBROUTINE Lidar_CopyDiscState
 
- SUBROUTINE Lidar_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyDiscState
 
  SUBROUTINE Lidar_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -861,15 +921,27 @@ CONTAINS
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE Lidar_CopyConstrState
 
- SUBROUTINE Lidar_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyConstrState
 
  SUBROUTINE Lidar_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -986,15 +1058,27 @@ CONTAINS
     DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE Lidar_CopyOtherState
 
- SUBROUTINE Lidar_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyOtherState
 
  SUBROUTINE Lidar_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1111,15 +1195,27 @@ CONTAINS
     DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
  END SUBROUTINE Lidar_CopyMisc
 
- SUBROUTINE Lidar_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyMisc
 
  SUBROUTINE Lidar_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1240,15 +1336,27 @@ CONTAINS
     DstInputData%PulseLidAz = SrcInputData%PulseLidAz
  END SUBROUTINE Lidar_CopyInput
 
- SUBROUTINE Lidar_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE Lidar_DestroyInput
 
  SUBROUTINE Lidar_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1417,15 +1525,27 @@ IF (ALLOCATED(SrcOutputData%WtTrunc)) THEN
 ENDIF
  END SUBROUTINE Lidar_CopyOutput
 
- SUBROUTINE Lidar_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE Lidar_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Lidar_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%LidSpeed)) THEN
   DEALLOCATE(OutputData%LidSpeed)
 ENDIF

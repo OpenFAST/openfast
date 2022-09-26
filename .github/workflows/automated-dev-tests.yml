@@ -30,6 +30,7 @@ jobs:
 
   build-all-debug:
     # Tests compiling in debug mode.
+    # Also compiles the Registry and generates new types files.
     # TODO: NOT ENABLED Single precision compile checks that the precision types are correctly set.
     # Debug more speeds up the build.
     runs-on: ubuntu-20.04
@@ -59,6 +60,7 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DGENERATE_TYPES=ON \
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \

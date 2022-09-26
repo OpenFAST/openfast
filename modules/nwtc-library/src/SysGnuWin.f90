@@ -517,6 +517,9 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
    END INTERFACE
 
+   ErrStat = ErrID_None
+   ErrMsg = ''
+      
    ! Free the DLL:
    IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
 
