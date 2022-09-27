@@ -432,10 +432,16 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          InitInData%rotors(iWT)%numBlades = wt%numBlades
          call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
          call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
-         if (wt%HAWTprojection) then
-            InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+         if (wt%projMod==-1)then
+            call WrScr('>>> Using HAWTprojection to determine projMod')
+            if (wt%HAWTprojection) then
+               InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+            else
+               InitInData%rotors(iWT)%AeroProjMod = 1
+            endif
          else
-            InitInData%rotors(iWT)%AeroProjMod = 1
+            print*,'>>>> USING PROJECTION METHOD',wt%projMod
+            InitInData%rotors(iWT)%AeroProjMod = wt%projMod
          endif
          InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
          InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
@@ -1344,6 +1350,16 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       wt => dvr%WT(iWT)
       sWT = '('//trim(num2lstr(iWT))//')'
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+      ! Temporary hack, look if ProjMod is present on the line
+      !call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
+      if (errStat2==ErrID_Fatal) then
+         call WrScr('>>> ProjMod is not present in AeroDyn driver input file.')
+         wt%projMod = -1
+      else
+         print*,'>>>> TODO ProjMod harcoded to 0'
+         wt%projMod = 0 ! TODO HACK
+      endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
       ! Basic init

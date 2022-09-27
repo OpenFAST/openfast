@@ -145,6 +145,7 @@ typedef   ^                         ^            TwrData                 twr    
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
 typedef   ^                         ^            logical                 basicHAWTFormat  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
+typedef   ^                         ^            IntKi                   projMod  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            logical                 HAWTprojection   -      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
