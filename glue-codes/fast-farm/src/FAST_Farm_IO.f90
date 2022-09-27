@@ -11202,9 +11202,7 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
 
-   LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:Farm_MaxOutPts)                 ! This array determines if the output channel is valid for this configuration
-   CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry1(1347) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
@@ -16277,49 +16275,21 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
    DO I = 1,farm%p%NumOuts
 
       farm%p%OutParam(I)%Name  = OutList(I)
-      OutListTmp          = OutList(I)
 
-      ! Reverse the sign (+/-) of the output channel if the user prefixed the
-      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
-
-
-
-      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
-         farm%p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a minus sign because no valid channels start with m or M)
-         CheckOutListAgain   = .TRUE.
-         farm%p%OutParam(I)%SignM = -1
-         OutListTmp          = OutListTmp(2:)
-      ELSE
-         farm%p%OutParam(I)%SignM = 1
-      END IF
-
-      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
-
-      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-
-
-         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
-
-      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
-         farm%p%OutParam(I)%SignM = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-
-         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-      END IF
+      Indx = FindValidChannelIndx(OutList(I), ValidParamAry, farm%p%OutParam(I)%SignM)
 
 
       IF ( Indx > 0 ) THEN ! we found the channel name
-         farm%p%OutParam(I)%Indx     = ParamIndxAry(Indx)
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            farm%p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
             farm%p%OutParam(I)%Units = "INVALID"
             farm%p%OutParam(I)%SignM = 0
          ELSE
+            farm%p%OutParam(I)%Indx  = ParamIndxAry(Indx)
             farm%p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
          END IF
       ELSE ! this channel isn't valid
-         farm%p%OutParam(I)%Indx  = Farm_Time_Indx                 ! pick any valid channel (I just picked "Time" here because it's universal)
+         farm%p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          farm%p%OutParam(I)%Units = "INVALID"
          farm%p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
