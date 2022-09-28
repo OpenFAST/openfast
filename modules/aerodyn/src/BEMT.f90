@@ -827,7 +827,6 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
    !...............................................................................................................................
    if (.not. OtherState%nodesInitialized) then
       call UpdatePhi( u(TimeIndex_t), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
-      OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
    end if
    
    !...............................................................................................................................
@@ -947,8 +946,8 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       !.............................
       ! calculate rotor-level inputs
       !.............................
-   u_DBEMT%R_disk     = maxval( Rtip )       ! Locate the maximum rlocal value for all blades.
-   u_DBEMT%Un_disk    = u%Un_disk   
+   u_DBEMT%R_disk     = maxval( Rtip )               ! Locate the maximum rlocal value for all blades.
+   u_DBEMT%Un_disk    = u%Un_disk
    u_DBEMT%AxInd_disk = 0.0_ReKi
    do j = 1,p%numBlades
       do i = 1,p%numBladeNodes
@@ -1216,8 +1215,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                                                                  !   nectivity information does not have to be recalculated)
    integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
    character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-
-
       ! Local variables:
 
    integer(IntKi)                                 :: i                                               ! Generic index
@@ -1324,11 +1321,16 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
          ! Compute Cx, Cy given Cl, Cd and phi
          ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
+         if(p%BEMT_Mod==0) then
             call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
             y%Cz(i,j)  = 0.0_ReKi
             y%Cmx(i,j) = 0.0_ReKi
             y%Cmy(i,j) = 0.0_ReKi
             y%Cmz(i,j) = y%Cm(i,j)
+         else
+            call Transform_ClCdCm_to_CxCyCzCmxCmyCmz( y%phi(i,j), u%theta(i,j), u%cantAngle(i,j),u%toeAngle(i,j), .TRUE., .TRUE., &
+                      y%AOA(i,j), y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), y%Cx(i,j), y%Cy(i,j), y%Cz(i,j), y%Cmx(i,j), y%Cmy(i,j), y%Cmz(i,j) )
+         endif
             
       enddo             ! I - Blade nodes / elements
    enddo          ! J - All blades
