@@ -47,8 +47,12 @@ module BEMTUnCoupled
    public :: BEMTU_InductionWithResidual
    public :: ApplySkewedWakeCorrection
    public :: Transform_ClCd_to_CxCy
+   public :: getAirfoilOrientation
+   public :: computeAirfoilOperatingAOA
+   public :: Transform_ClCdCm_to_CxCyCzCmxCmyCmz
    public :: getHubTipLossCorrection
    public :: limitInductionFactors
+   public :: GetEulerAnglesFromOrientation
    
    public :: VelocityIsZero
 contains
@@ -69,39 +73,141 @@ contains
    end function VelocityIsZero
 !..................................................................................................................................   
    
-   subroutine GetReynoldsNumber( axInduction, tanInduction, Vx, Vy,  chord, nu, Re )
+   subroutine GetReynoldsNumber(BEMT_Mod, axInduction, tanInduction, Vx, Vy, Vz, chord, nu, theta, phi, cantAngle, toeAngle , Re )
 
     ! in
-    real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy
+    integer(IntKi), intent(in   ) :: BEMT_Mod
+    real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy, Vz
     real(ReKi), intent(in)             :: chord, nu
+    real(ReKi), intent(in)             :: cantAngle, theta, phi, toeAngle !note phi is unused
 
     ! out
     real(ReKi), intent(out)            :: Re      ! Reynolds number
     
-    real(ReKi)                         :: W       ! relative velocity
+    real(ReKi)                         :: Wxy       ! relative velocity
+    real(ReKi)                         :: afAxialVec(3), afNormalVec(3), afRadialVec(3), inflowVec(3),inflowVecInAirfoilPlane(3)
+!bjj: this doesn't seem consistent with computeAirfoilOperatingAOA, which uses phiN    
+      inflowVec(1) = Vx*(1-axInduction) 
+      inflowVec(2) = Vy*(1+tanInduction)
+      inflowVec(3) = Vz
 
-    W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
+    ! Project inflow vector onto airfoil plane
+    if(BEMT_Mod==0) then
+      ! TODO TODO TODO EB CHECK THAT THE SAME MIGHT BE OBTAINED IF cant=0, toe=0
+      inflowVecInAirfoilPlane(1) = inflowVec(1)
+      inflowVecInAirfoilPlane(2) = inflowVec(2)
+      inflowVecInAirfoilPlane(3) = 0.0_ReKi
+    else  
+      call getAirfoilOrientation( theta, cantAngle,toeAngle ,afAxialVec, afNormalVec, afRadialVec )
+      inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec 
 
-    Re =  W * chord / nu
-    if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
+    endif
+      ! Wxy: resultant velocity in the xy airfoil plane.
+      Wxy = sqrt(inflowVecInAirfoilPlane(1)**2 + inflowVecInAirfoilPlane(2)**2)
+
+    Re =  Wxy * chord / nu
+      if ( Re <= 0.001 ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
    end subroutine GetReynoldsNumber
 !..................................................................................................................................
-   subroutine GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, Vrel, v_ac )
+! TODO TODO TODO EB ONLY USED BY UA???
+   subroutine GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, Vrel, v_ac )
 
    ! in
-   real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy
+   real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr
 
    ! out
    real(ReKi), intent(out)            :: Vrel    ! relative velocity
    real(ReKi), intent(out)            :: v_ac(2) ! components of relative velocity
 
-      v_ac(1) = Vx*(1-axInduction)
-      v_ac(2) = Vy*(1+tanInduction)
+!bjj: check that the cantAngle modification works for UA!!!!
+   
+      v_ac(1) = (Vx*cos(cantAngle)+xVelCorr)*(1.0_ReKi-axInduction)
+      v_ac(2) = Vy*(1.0_ReKi+tanInduction)
 
       Vrel    = TwoNorm(v_ac)
 
    end subroutine GetRelativeVelocity
+!..................................................................................................................................
+!> getAirfoilOrientation = R_ap = transformation from from polar coordinate system of the section to the airfoil coordinate system
+   subroutine getAirfoilOrientation( theta, cantAngle, toeAngle, afAxialVec, afNormalVec, afRadialVec )
+      ! Routine for creating the airfoil orientation vectors
+      
+      implicit none
+      
+      real(ReKi), intent(in   ) :: theta
+      real(ReKi), intent(in   ) :: cantAngle
+      real(ReKi), intent(in   ) :: toeAngle
+      real(ReKi), intent(  out) :: afAxialVec(3)
+      real(ReKi), intent(  out) :: afNormalVec(3)
+      real(ReKi), intent(  out) :: afRadialVec(3)
+      real(ReKi)                :: orientation(3)
+      real(ReKi)                :: rotMat(3,3)
+      
+      orientation(1) = toeAngle
+      orientation(2) = cantAngle
+      orientation(3) = -theta
+      rotMat = EulerConstruct( orientation )
+      
+      ! unit vector normal to the chord line in the airfoil plane
+      afNormalVec = rotMat(1,:)
+      
+      ! unit vector tangent to the chord line in the airfoil plane
+      !  pointing from leading- to trailing-edge
+      afAxialVec = rotMat(2,:)
+      
+      ! Unit vector normal to airfoil plane
+      afRadialVec = rotMat(3,:)
+      
+   end subroutine getAirfoilOrientation
+!..................................................................................................................................
+   subroutine computeAirfoilOperatingAOA( BEMT_Mod, phi, theta, cantAngle, toeAngle, AoA )
+      ! Routine for computing local angle-of-attack in the airfoil reference frame
+      ! accounting for the current orientation of the airfoil relative to the inflow
+      ! defined by the phi angle.
+
+      implicit none
+
+      integer(IntKi), intent(in   ) :: BEMT_Mod
+      real(ReKi), intent(in   ) :: phi
+      real(ReKi), intent(in   ) :: theta
+      real(ReKi), intent(in   ) :: cantAngle
+      real(ReKi), intent(in   ) :: toeAngle
+      real(ReKi), intent(  out) :: AoA
+      real(ReKi)                :: afAxialVec(3)
+      real(ReKi)                :: afNormalVec(3)
+      real(ReKi)                :: afRadialVec(3)
+      real(ReKi)                :: inflowVec(3)
+      real(ReKi)                :: inflowVecInAirfoilPlane(3)
+      real(ReKi)                :: signOfAngle 
+      real(ReKi)                :: numer, denom, ratio
+      real(ReKi)                :: phiN
+      if (BEMT_Mod==0) then
+         AoA   =  phi - theta  ! angle of attack
+      else
+      ! get airfoil orientation vectors
+      call getAirfoilOrientation( theta, cantAngle, toeAngle ,afAxialVec, afNormalVec, afRadialVec )
+      phiN = getNewPhi(phi,cantAngle)
+      
+      ! Create inflow vector
+      inflowVec(1) = sin( phiN)
+      inflowVec(2) = cos( phiN)
+      inflowVec(3) = 0.0_Reki
+      
+      ! Project inflow vector onto airfoil plane
+      inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec
+      
+      ! Determine angle of attack as angle between airfoil chordline (afAxialVec) and inflow (inflowVecInAirfoilPlane)
+      numer = dot_product( inflowVecInAirfoilPlane, afAxialVec )
+      denom = TwoNorm( inflowVecInAirfoilPlane )
+      ratio = numer / denom
+      AoA = acos( max( min( ratio, 1.0_ReKi ), -1.0_ReKi ) )
+      signOfAngle = dot_product( cross_product( inflowVecInAirfoilPlane, afAxialVec ), afRadialVec )
+      AoA = sign( AoA, signOfAngle )
+      endif
+      
+      
+end subroutine computeAirfoilOperatingAOA
 !..................................................................................................................................
 subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    real(ReKi),             intent(in   ) :: phi
@@ -132,7 +238,56 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    
 end subroutine Transform_ClCd_to_CxCy
 !----------------------------------------------------------------------------------------------------------------------------------
+subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAIDrag, useTIDrag, AOA, Cl, Cd, Cm, Cx, Cy, Cz, Cmx, Cmy, Cmz )
 
+   implicit none
+   
+   real(ReKi), intent(in   ) :: phi ! note that this is unused
+   real(ReKi), intent(in   ) :: theta
+   real(ReKi), intent(in   ) :: cant
+   real(ReKi), intent(in   ) :: toeAngle
+   logical,    intent(in   ) :: useAIDrag
+   logical,    intent(in   ) :: useTIDrag
+   real(ReKi), intent(in   ) :: AOA
+   real(ReKi), intent(in   ) :: Cl
+   real(ReKi), intent(in   ) :: Cd
+   real(ReKi), intent(in   ) :: Cm
+   real(ReKi), intent(  out) :: Cx, Cy, Cz
+   real(ReKi), intent(  out) :: Cmx, Cmy, Cmz
+   real(ReKi)                :: afAxialVec(3)
+   real(ReKi)                :: afNormalVec(3)
+   real(ReKi)                :: afRadialVec(3)
+   real(ReKi)                :: coeffVec(3)
+   real(ReKi)                :: Cn
+   real(ReKi)                :: Ct
+
+   ! get airfoil orientation vectors
+   call getAirfoilOrientation( theta, cant, toeAngle, afAxialVec, afNormalVec, afRadialVec )   
+
+   ! transform force coefficients into airfoil frame
+   if ( useAIDrag ) then
+      Cn = Cl*cos(AOA) + Cd*sin(AOA)
+   else
+      Cn = Cl*cos(AOA)
+   end if
+   if ( useTIDrag ) then
+      Ct = -Cl*sin(AOA) + Cd*cos(AOA)
+   else
+      Ct = -Cl*sin(AOA)
+   end if
+   
+   ! Put force coefficients back into rotor plane reference frame
+   coeffVec = Cn*afNormalVec + Ct*afAxialVec
+   Cx = coeffVec(1)
+   Cy = -coeffVec(2)
+   Cz = coeffVec(3)
+   
+   ! Put moment coefficients into the rotor reference frame
+   coeffVec = Cm * afRadialVec
+   Cmx = coeffVec(1)
+   Cmy = coeffVec(2)
+   Cmz = coeffVec(3)
+end subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz
 !----------------------------------------------------------------------------------------------------------------------------------
 !>This is the residual calculation for the uncoupled BEM solve
 real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValidSolution, ErrStat, ErrMsg, a, ap ) result (ResidualVal)
@@ -183,10 +338,11 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
       tanInduction =  0.0_ReKi
    else !if ( (.NOT. VelocityIsZero(Vx)) .AND. (.NOT. VelocityIsZero(Vy)) ) then 
 
-      AOA = phi - u%theta(i,j)
+      ! Compute operating conditions in the airfoil reference frame
+      call computeAirfoilOperatingAOA(p%BEMT_Mod, phi, u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), AOA )
       
    ! FIX ME: Note that the Re used here is computed assuming axInduction and tanInduction are 0. Is that a problem for 2D Re interpolation on airfoils? or should update solve method to take this into account?
-      call GetReynoldsNumber( 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%kinVisc, Re)
+      call GetReynoldsNumber(p%BEMT_Mod, 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), p%chord(i,j), p%kinVisc, u%theta(i,j), phi, u%cantAngle(i,j), u%toeAngle(i,j),  Re)
 
       call AFI_ComputeAirfoilCoefs( AOA, Re, u%UserProp(i,j),  AFInfo, AFI_interp, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
@@ -477,6 +633,37 @@ real(reKi) function getHubTipLossCorrection(sphi, useHubLoss, useTipLoss, hubLos
    F = Ftip * Fhub
    
 end function getHubTipLossCorrection
+!-----------------------------------------------------------------------------------------
+function getNewPhi(phi,CantAngle) result(phiN)
+      real(ReKi), intent(in   ) :: phi
+      real(ReKi), intent(in   ) :: cantAngle
+      real(ReKi)                :: phiN
+      
+      real(ReKi)                :: y
+      real(ReKi)                :: x
+      
+      y = sin(phi)
+      x = cos(phi)*cos(cantAngle)
+      
+      if (y==0.0_ReKi .and. x==0.0_ReKi) then
+         phiN = 0.0_ReKi !atan2 is undefined when y=0 and x=0
+      else
+         phiN = atan2(y, x)
+      end if
+
+end function getNewPhi
+!----------------------------------------------------------------------------------------------------------------------------------
+FUNCTION GetEulerAnglesFromOrientation(EulerDCM,orientation) RESULT(theta)
+   LOGICAL                           , INTENT(IN   ) :: EulerDCM
+   REAL(R8Ki),                         INTENT(IN   ) :: orientation(3,3)
+   REAL(R8Ki)                                        :: theta(3)
+
+   if (EulerDCM) then
+      theta = EulerExtract( orientation )
+   else
+      theta = -EulerExtract( transpose(orientation) )
+   end if
+end function
 !-----------------------------------------------------------------------------------------
 
 end module BEMTUncoupled

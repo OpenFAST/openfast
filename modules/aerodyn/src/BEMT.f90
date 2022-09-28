@@ -825,7 +825,6 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi at t are:
    !...............................................................................................................................
-
    if (.not. OtherState%nodesInitialized) then
       call UpdatePhi( u(TimeIndex_t), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
       OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
@@ -950,20 +949,25 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       !.............................
    u_DBEMT%R_disk     = maxval( Rtip )       ! Locate the maximum rlocal value for all blades.
    u_DBEMT%Un_disk    = u%Un_disk   
+   u_DBEMT%AxInd_disk = 0.0_ReKi
+   do j = 1,p%numBlades
+      do i = 1,p%numBladeNodes
+         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
+      end do
+   end do
+   u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
+   
+      !.............................
+      ! calculate element-level inputs
+      !.............................
    if (p%DBEMT_Mod == DBEMT_tauVaries ) then
             
-         ! We need to generate a disk-averaged axial induction for this timestep
-      u_DBEMT%AxInd_disk = 0.0_ReKi
+      ! Compute span Ratio
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes
-            u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
-            
             u_DBEMT%element(i,j)%spanRatio  =   u%rlocal(i,j)/u_DBEMT%R_disk
          end do
       end do
-      u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
-         
-
    end if
    
    
@@ -1235,7 +1239,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 !!#endif
 
    y%phi = z%phi ! set this before possibly calling UpdatePhi() because phi is intent(inout) in the solve
-   m%ValidPhi = OtherState%ValidPhi ! set this so that we don't overwrite OtherSTate%ValidPhi
+   m%ValidPhi = OtherState%ValidPhi
    
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi are:
@@ -1246,6 +1250,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    
    !............................................
    ! calculate inductions using BEMT, applying the DBEMT, and/or skewed wake corrections as applicable:
+   ! NOTE that we don't use the DBEMT inputs when calling its CalcOutput routine, so we'll skip calculating them here
    !............................................
    call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg )
    
@@ -2209,28 +2214,39 @@ function NodeText(i,j)
    NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
 end function NodeText
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetInputs_for_UA(phi, theta, axInduction, tanInduction, Vx, Vy, omega, chord, kinVisc, UserProp, u_UA)
+subroutine SetInputs_for_UA(BEMT_Mod, phi, theta, cantAngle, toeAngle, axInduction, tanInduction, chord, Vx, Vy, Vz, omega, kinVisc, UserProp, xVelCorr, u_UA)
+   integer(IntKi),               intent(in   ) :: BEMT_Mod
    real(ReKi),                   intent(in   ) :: UserProp           ! User property (for 2D Airfoil interp)
    real(ReKi),                   intent(in   ) :: phi
    real(ReKi),                   intent(in   ) :: theta
+   real(ReKi),                   intent(in   ) :: cantAngle
+   real(ReKi),                   intent(in   ) :: toeAngle
    real(ReKi),                   intent(in   ) :: axInduction
    real(ReKi),                   intent(in   ) :: tanInduction
    real(ReKi),                   intent(in   ) :: Vx
    real(ReKi),                   intent(in   ) :: Vy
+   real(ReKi),                   intent(in   ) :: Vz
    real(ReKi),                   intent(in   ) :: omega ! aka PitchRate
    real(ReKi),                   intent(in   ) :: chord
    real(ReKi),                   intent(in   ) :: kinVisc
+   real(ReKi),                   intent(in   ) :: xVelCorr
    type(UA_InputType),           intent(  out) :: u_UA
 
 
       ! ....... compute inputs to UA ...........
-   u_UA%alpha   =  phi - theta  ! angle of attack
+   call computeAirfoilOperatingAOA(BEMT_Mod, phi, theta, cantAngle, toeAngle ,u_UA%alpha )
    u_UA%UserProp = UserProp
             
       ! Need to compute relative velocity at the aerodynamic center, including both axial and tangential induction 
       ! COMPUTE: u_UA%U, u_UA%Re, u_UA%v_ac
-   call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, u_UA%U, u_UA%v_ac )
-   call GetReynoldsNumber(   axInduction, tanInduction, Vx, Vy, chord, kinVisc, u_UA%Re)
+   if (BEMT_Mod==0) then
+      ! Setting Cant, Toe and xVelCorr to 0
+      call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, 0.0_ReKi, 0.0_ReKi, u_UA%U, u_UA%v_ac )
+      call GetReynoldsNumber(BEMT_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, 0.0_ReKi, 0.0_ReKi, u_UA%Re)
+   else
+      call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, u_UA%U, u_UA%v_ac )
+      call GetReynoldsNumber(BEMT_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
+   endif
 
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
    u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
@@ -2267,7 +2283,7 @@ subroutine SetInputs_for_UA_AllNodes(u, p, phi, axInduction, tanInduction, u_UA)
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
       
             ! Compute AoA, Re, Vrel (inputs to UA) based on current values of axInduction, tanInduction:
-         call SetInputs_for_UA(phi(i,j), u%theta(i,j), axInduction(i,j), tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), u%omega_z(i,j), p%chord(i,j), p%kinVisc, u%UserProp(i,j), u_UA(i,j))
+         call SetInputs_for_UA(p%BEMT_Mod, phi(i,j), u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), axInduction(i,j), tanInduction(i,j), p%chord(i,j), u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), u%omega_z(i,j), p%kinVisc, u%UserProp(i,j), u%xVelCorr(i,j), u_UA(i,j))
          
       end do
    end do
