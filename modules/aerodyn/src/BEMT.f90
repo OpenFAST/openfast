@@ -352,6 +352,13 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%Vy = 0.0_ReKi
  
+   allocate ( u%Vz( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%Vz = 0.0_ReKi
+
    allocate ( u%omega_z( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%omega_z.', errStat, errMsg, RoutineName )
@@ -359,6 +366,13 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%omega_z = 0.0_ReKi
    
+   allocate ( u%xVelCorr( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%xVelCorr = 0.0_ReKi
+
    allocate ( u%rLocal( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%rLocal.', errStat, errMsg, RoutineName )
@@ -376,6 +390,26 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    
    u%omega  = 0.0_ReKi
    
+   allocate ( u%cantAngle( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%cantAngle.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%cantAngle = 0.0_ReKi
+   
+   allocate ( u%drdz( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%drdz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%drdz = 0.0_ReKi
+   
+   allocate ( u%toeAngle( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%toeAngle.', errStat, errMsg, RoutineName )
+      return
+   end if
+   u%toeAngle = 0.0_ReKi
 end subroutine BEMT_AllocInput
 
 
@@ -411,6 +445,10 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    call allocAry( y%AOA, p%numBladeNodes, p%numBlades, 'y%AOA', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cx, p%numBladeNodes, p%numBlades, 'y%Cx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cy, p%numBladeNodes, p%numBlades, 'y%Cy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cz, p%numBladeNodes, p%numBlades, 'y%Cz', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmx, p%numBladeNodes, p%numBlades, 'y%Cmx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmy, p%numBladeNodes, p%numBlades, 'y%Cmy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmz, p%numBladeNodes, p%numBlades, 'y%Cmz', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cm, p%numBladeNodes, p%numBlades, 'y%Cm', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -424,7 +462,10 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%phi = 0.0_ReKi   
    y%Cx = 0.0_ReKi
    y%Cy = 0.0_ReKi
-   y%Cm = 0.0_ReKi
+   y%Cz = 0.0_ReKi
+   y%Cmx = 0.0_ReKi
+   y%Cmy = 0.0_ReKi
+   y%Cmz = 0.0_ReKi
 
       ! others:
    y%chi = 0.0_ReKi
@@ -434,6 +475,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%AOA = 0.0_ReKi   
    y%Cl = 0.0_ReKi
    y%Cd = 0.0_ReKi
+   y%Cm = 0.0_ReKi
    y%Cpmin = 0.0_ReKi
 end subroutine BEMT_AllocOutput
 
@@ -518,12 +560,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       InitInp_DBEMT%numNodes   = p%numBladeNodes
       InitInp_DBEMT%tau1_const = InitInp%tau1_const
 
-      allocate(misc%u_DBEMT(2),stat=errStat2)
-         if (errStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal,"Error allocating u_DBEMT",errStat,errMsg,RoutineName)
-            return
-         end if
-      
       if (allocated(InitInp%rlocal)) then
          call MOVE_ALLOC( InitInp%rlocal, InitInp_DBEMT%rlocal )
       else   
@@ -1263,8 +1299,13 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    !............................................
    do j = 1,p%numBlades ! Loop through all blades
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-            ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
-         call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
+         ! Compute Cx, Cy given Cl, Cd and phi
+         ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
+            call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
+            y%Cz(i,j)  = 0.0_ReKi
+            y%Cmx(i,j) = 0.0_ReKi
+            y%Cmy(i,j) = 0.0_ReKi
+            y%Cmz(i,j) = y%Cm(i,j)
             
       enddo             ! I - Blade nodes / elements
    enddo          ! J - All blades

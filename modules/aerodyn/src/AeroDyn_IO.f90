@@ -22,7 +22,7 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Orthogonal, SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
+   use BEMTUncoupled, only : VelocityIsZero
    use FVW_Subs,      only : FVW_AeroOuts
 
    USE AeroDyn_AllBldNdOuts_IO

@@ -212,7 +212,7 @@ typedef	^	RotMiscVarType	AA_OutputType	AA_y	-	-	-	"Outputs from the AA module"	-
 typedef	^	RotMiscVarType	AA_InputType	AA_u	-	-	-	"Inputs to the AA module"	-
 
 typedef	^	RotMiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
-typedef	^	RotMiscVarType	ReKi	orientationAnnulus	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
+typedef	^	RotMiscVarType	R8Ki	orientationAnnulus	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	RotMiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
 typedef	^	RotMiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
 typedef	^	RotMiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s

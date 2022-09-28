@@ -30,11 +30,6 @@ module BEMTUnCoupled
 
    implicit none
    
-   integer(IntKi), public, parameter  :: SkewMod_Orthogonal = 0            ! Inflow orthogonal to rotor [-]
-   integer(IntKi), public, parameter  :: SkewMod_Uncoupled  = 1            ! Uncoupled (no correction) [-]
-   integer(IntKi), public, parameter  :: SkewMod_PittPeters = 2            ! Pitt/Peters [-]
-   integer(IntKi), public, parameter  :: SkewMod_Coupled    = 3            ! Coupled [-]
-   
    real(ReKi),     public, parameter  :: BEMT_MaxInduction(2) = (/1.5_ReKi, 1.0_ReKi /)  ! largest magnitude of axial (1) and tangential (2) induction factors
    real(ReKi),     public, parameter  :: BEMT_MinInduction(2) = -1.0_ReKi
 

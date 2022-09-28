@@ -251,7 +251,7 @@ IMPLICIT NONE
     TYPE(AA_OutputType)  :: AA_y      !< Outputs from the AA module [-]
     TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W_Twr      !< relative wind speed normal to the tower at node j [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Twr      !< local x-component of force per unit length of the jth node in the tower [m/s]
@@ -8091,7 +8091,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! orientationAnnulus allocated yes/no
   IF ( ALLOCATED(InData%orientationAnnulus) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! orientationAnnulus upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%orientationAnnulus)  ! orientationAnnulus
+      Db_BufSz   = Db_BufSz   + SIZE(InData%orientationAnnulus)  ! orientationAnnulus
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! AllOuts allocated yes/no
   IF ( ALLOCATED(InData%AllOuts) ) THEN
@@ -8515,8 +8515,8 @@ ENDIF
         DO i3 = LBOUND(InData%orientationAnnulus,3), UBOUND(InData%orientationAnnulus,3)
           DO i2 = LBOUND(InData%orientationAnnulus,2), UBOUND(InData%orientationAnnulus,2)
             DO i1 = LBOUND(InData%orientationAnnulus,1), UBOUND(InData%orientationAnnulus,1)
-              ReKiBuf(Re_Xferred) = InData%orientationAnnulus(i1,i2,i3,i4)
-              Re_Xferred = Re_Xferred + 1
+              DbKiBuf(Db_Xferred) = InData%orientationAnnulus(i1,i2,i3,i4)
+              Db_Xferred = Db_Xferred + 1
             END DO
           END DO
         END DO
@@ -9334,8 +9334,8 @@ ENDIF
         DO i3 = LBOUND(OutData%orientationAnnulus,3), UBOUND(OutData%orientationAnnulus,3)
           DO i2 = LBOUND(OutData%orientationAnnulus,2), UBOUND(OutData%orientationAnnulus,2)
             DO i1 = LBOUND(OutData%orientationAnnulus,1), UBOUND(OutData%orientationAnnulus,1)
-              OutData%orientationAnnulus(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
-              Re_Xferred = Re_Xferred + 1
+              OutData%orientationAnnulus(i1,i2,i3,i4) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+              Db_Xferred = Db_Xferred + 1
             END DO
           END DO
         END DO
