@@ -34,6 +34,10 @@ param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower s
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
 
+# if more than AD_MaxBl_Out blades are used in the simulation, not all channels will have output information for the "extra" blades.
+# Also, the AD input file will require more lines for the additional blades.
+param    ^              -  IntKi    AD_MaxBl_Out            -  3  -  "Maximum number of blades for information output (or linearization)" -
+
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -62,6 +66,7 @@ typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor press
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
 
+typedef	^	InitInputType	LOGICAL	EulerDCM	-	.FALSE.	-	"DCMs are computed as Euler angles? (MBD=false;AD driver=true)"	"-"
 
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
@@ -207,7 +212,7 @@ typedef	^	RotMiscVarType	AA_OutputType	AA_y	-	-	-	"Outputs from the AA module"	-
 typedef	^	RotMiscVarType	AA_InputType	AA_u	-	-	-	"Inputs to the AA module"	-
 
 typedef	^	RotMiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
-typedef	^	RotMiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
+typedef	^	RotMiscVarType	ReKi	orientationAnnulus	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	RotMiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
 typedef	^	RotMiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
 typedef	^	RotMiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
@@ -216,8 +221,14 @@ typedef	^	RotMiscVarType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possi
 typedef	^	RotMiscVarType	ReKi	TwrClrnc	{:}{:}	-	-	"Distance between tower (including tower radius) and blade node (not including blade width), saved for possible output to file"	m
 typedef	^	RotMiscVarType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
 typedef	^	RotMiscVarType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	RotMiscVarType	ReKi	Z	{:}{:}	-	-	"axial force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
 typedef	^	RotMiscVarType	ReKi	M	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade"	Nm/m
+typedef	^	RotMiscVarType	ReKi	Mx	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade (in x direction)"	Nm/m
+typedef	^	RotMiscVarType	ReKi	My	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade  (in y direction)"	Nm/m
+typedef	^	RotMiscVarType	ReKi	Mz	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade  (in z direction)"	Nm/m
 typedef	^	RotMiscVarType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	m/s
+typedef	^	RotMiscVarType	ReKi	yaw			-	-	-	    "Yaw calculated in  SetInputsForBEMT"	rad
+typedef	^	RotMiscVarType	ReKi	tilt		-	-	-	    "tilt calculated in  SetInputsForBEMT"	rad
 typedef	^	RotMiscVarType	ReKi	hub_theta_x_root	{:}	-	-	"angles saved for FAST.Farm"	rad
 typedef	^	RotMiscVarType	ReKi	V_dot_x	-	-	-
 typedef	^	RotMiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
@@ -227,6 +238,8 @@ typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node
 typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
+typedef	^	RotMiscVarType	Logical	FirstWarn_TowerStrike	-	-	-	"flag to avoid printing tower strike multiple times" -
+typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W"	m/s
 
 typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
@@ -242,12 +255,15 @@ typedef	^	RotParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	
 typedef	^	RotParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
+typedef  ^  ^                     ReKi                     BlTwist                         {:}{:}        -         -        "Twist at blade node" radians
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	RotParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	RotParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	RotParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef   ^     RotParameterType Integer         NumBl_Lin      -    -     -   "number of blades in the jacobian"	-
+
 typedef	^	RotParameterType	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
@@ -287,6 +303,8 @@ typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
+typedef	^	ParameterType	LOGICAL	EulerDCM	-	-	-	"DCMs are computed as Euler angles? (MBD=false;AD driver=true)"	"-"
+typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 
 

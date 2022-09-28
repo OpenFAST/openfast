@@ -551,7 +551,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    
    call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( m%WithoutSweepPitchTwist, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%WithoutSweepPitchTwist', ErrStat2, ErrMsg2 )
+   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%orientationAnnulus', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
      
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1843,15 +1843,15 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          
          m%BEMT_u(indx)%theta(j,k) = thetaBladeNds(j,k) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
                            
-         x_hat = m%WithoutSweepPitchTwist(1,:,j,k)
-         y_hat = m%WithoutSweepPitchTwist(2,:,j,k)
+         x_hat = m%orientationAnnulus(1,:,j,k)
+         y_hat = m%orientationAnnulus(2,:,j,k)
          tmp   = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
          
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          ! inputs for CUA (and CDBEMT):
-         m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+         m%BEMT_u(indx)%omega_z(j,k)       = dot_product( u%BladeMotion(k)%RotationVel(   :,j), m%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
          
       end do !j=nodes
    end do !k=blades
@@ -2057,7 +2057,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,Err
 
             theta(1) = 0.0_ReKi
             theta(3) = 0.0_ReKi
-            m%WithoutSweepPitchTwist(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
+            m%orientationAnnulus(:,:,j,k) = matmul( EulerConstruct( theta ), orientation_nopitch ) ! WithoutSweepPitch+Twist_theta(j)_Blade(k)
 
          end do !j=nodes
       end do !k=blades
@@ -2077,16 +2077,16 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,Err
       
             
       do k=1,p%NumBlades
-         call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%WithoutSweepPitchTwist(:,:,:,k))
+         call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%orientationAnnulus(:,:,:,k))
 
          do j=1,p%NumBlNds
-            m%WithoutSweepPitchTwist(:,:,j,k) = u%BladeMotion(k)%Orientation(:,:,j)
+            m%orientationAnnulus(:,:,j,k) = u%BladeMotion(k)%Orientation(:,:,j)
          enddo
       enddo
       
       do k=1,p%NumBlades
          do j=1,p%NumBlNds
-            orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose( m%WithoutSweepPitchTwist(:,:,j,k) ) )
+            orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose( m%orientationAnnulus(:,:,j,k) ) )
             theta = EulerExtract( orientation )
             m%Curve(      j,k) =  theta(2)
             thetaBladeNds(j,k) = -theta(3)
@@ -2147,7 +2147,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
             ! Inputs for dynamic stall (see SetInputsForBEMT)
             do j=1,p%rotors(iR)%NumBlNds         
                ! inputs for CUA, section pitch/torsion rate
-               m%FVW_u(tIndx)%W(iW)%omega_z(j) = dot_product( u(tIndx)%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+               m%FVW_u(tIndx)%W(iW)%omega_z(j) = dot_product( u(tIndx)%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
             end do !j=nodes
          enddo ! k blades
          if (allocated(thetaBladeNds)) deallocate(thetaBladeNds)
@@ -2245,9 +2245,9 @@ subroutine SetOutputsFromBEMT(p, m, y )
          m%M(j,k) = moment(3)
          
             ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
-            !       so that I don't have to take the transpose of WithoutSweepPitchTwist(:,:,j,k)
-         y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
-         y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
+            !       so that I don't have to take the transpose of orientationAnnulus(:,:,j,k)
+         y%BladeLoad(k)%Force(:,j)  = matmul( force,  m%orientationAnnulus(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
+         y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%orientationAnnulus(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
          
       end do !j=nodes
    end do !k=blades
@@ -2311,7 +2311,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             Vstr = u%rotors(iR)%BladeMotion(k)%TranslationVel(1:3,j)
             Vwnd = m%rotors(iR)%DisturbedInflow(1:3,j,k)   ! NOTE: contains tower shadow
             theta = m%FVW%W(iW)%PitchAndTwist(j) ! TODO
-            call FVW_AeroOuts( m%rotors(iR)%WithoutSweepPitchTwist(1:3,1:3,j,k), u%rotors(iR)%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
+            call FVW_AeroOuts( m%rotors(iR)%orientationAnnulus(1:3,1:3,j,k), u%rotors(iR)%BladeMotion(k)%Orientation(1:3,1:3,j), & ! inputs
                         theta, Vstr(1:3), Vind(1:3), VWnd(1:3), p%rotors(iR)%KinVisc, p%FVW%W(iW)%chord_LL(j), &               ! inputs
                         AxInd, TanInd, Vrel, phi, alpha, Re, UrelWind_s(1:3), ErrStat2, ErrMsg2 )        ! outputs
                call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
@@ -2338,7 +2338,7 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
 
                u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
                u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
-               ! calculated in m%FVW%u_UA??? : u_UA%omega = dot_product( u%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%WithoutSweepPitchTwist(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
+               ! calculated in m%FVW%u_UA??? : u_UA%omega = dot_product( u%rotors(iR)%BladeMotion(k)%RotationVel(   :,j), m%rotors(iR)%orientationAnnulus(3,:,j,k) ) ! rotation of no-sweep-pitch coordinate system around z of the jth node in the kth blade
                call UA_CalcOutput(j, 1, t, u_UA, m%FVW%W(iW)%p_UA, x%FVW%UA(iW), xd%FVW%UA(iW), OtherState%FVW%UA(iW), p%AFI(p%FVW%W(iW)%AFindx(j,1)), m%FVW%W(iW)%y_UA, m%FVW%W(iW)%m_UA, errStat2, errMsg2 )
                   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetOutputsFromFVW')
                Cl_dyn = m%FVW%W(iW)%y_UA%Cl
@@ -2361,9 +2361,9 @@ subroutine SetOutputsFromFVW(t, u, p, OtherState, x, xd, m, y, ErrStat, ErrMsg)
             m%rotors(iR)%M(j,k) = moment(3)
 
                ! note: because force and moment are 1-d arrays, I'm calculating the transpose of the force and moment outputs
-               !       so that I don't have to take the transpose of WithoutSweepPitchTwist(:,:,j,k)
-            y%rotors(iR)%BladeLoad(k)%Force(:,j)  = matmul( force,  m%rotors(iR)%WithoutSweepPitchTwist(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
-            y%rotors(iR)%BladeLoad(k)%Moment(:,j) = matmul( moment, m%rotors(iR)%WithoutSweepPitchTwist(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
+               !       so that I don't have to take the transpose of orientationAnnulus(:,:,j,k)
+            y%rotors(iR)%BladeLoad(k)%Force(:,j)  = matmul( force,  m%rotors(iR)%orientationAnnulus(:,:,j,k) )  ! force per unit length of the jth node in the kth blade
+            y%rotors(iR)%BladeLoad(k)%Moment(:,j) = matmul( moment, m%rotors(iR)%orientationAnnulus(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
 
             ! Save results for outputs so we don't have to recalculate them all when we write outputs
             m%FVW%W(iW)%BN_AxInd(j)           = AxInd
