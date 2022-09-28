@@ -766,7 +766,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_Mm )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx )  = m%M(IdxNode,IdxBlade)
+                  y%WriteOutput( OutIdx )  = m%Mz(IdxNode,IdxBlade)
                   OutIdx = OutIdx + 1
                END DO
             END DO 
@@ -1249,7 +1249,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
 
       ! Check if the requested blades exist
-   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) then
+   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) THEN
       p%BldNd_BladesOut = 0_IntKi
    ELSE IF ((InputFileData%BldNd_BladesOut > p%NumBlades) ) THEN
       CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be no more than the total number of blades, "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)

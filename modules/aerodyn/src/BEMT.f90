@@ -66,18 +66,19 @@ module BEMT
 
     
 !----------------------------------------------------------------------------------------------------------------------------------   
-real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime )
+real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, cantAngle, xVelCorr)
 ! This routine is used to compute the inflow angle, phi, from the local velocities and the induction factors.
 !..................................................................................................................................
    real(ReKi),                    intent(in   )  :: Vx          ! Local velocity component along the thrust direction
    real(ReKi),                    intent(in   )  :: Vy          ! Local velocity component along the rotor plane-of-rotation direction
    real(ReKi),                    intent(in   )  :: a           ! Axial induction factor
    real(ReKi),                    intent(in   )  :: aprime      ! Tangential induction factor
-   
+   real(ReKi),                    intent(in   )  :: cantAngle
+   real(ReKi),                    intent(in   )  :: xVelCorr 
    real(ReKi)                                    :: x
    real(ReKi)                                    :: y
       
-   x = Vx*(1.0_ReKi-a)
+   x = (Vx*cos(cantAngle)+xVelCorr)*(1.0_R8Ki-a)
    y = Vy*(1.0_ReKi + aprime)
    
    if ( EqualRealNos(y, 0.0_ReKi) .AND. EqualRealNos(x, 0.0_ReKi) ) then
@@ -155,6 +156,12 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    character(*), parameter                       :: RoutineName = 'BEMT_SetParameters'
    integer(IntKi)                                :: i, j
 
+   real(ReKi), parameter                         :: FractionMax    = 0.7   ! fraction of rotor disk where weighted average should be maximum
+   real(ReKi), parameter                         :: FractionRadius = 0.1   ! radius of smoothing (fraction of rotor disk around FractionMax)
+   ! constants for kernelType_TRIWEIGHT:
+   real(ReKi), parameter                         :: w = 35.0_ReKi/32.0_ReKi
+   real(ReKi), parameter                         :: Exp1 = 2
+   real(ReKi), parameter                         :: Exp2 = 3
    
       ! Initialize variables for this routine
 
@@ -165,6 +172,14 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = InitInp%UA_Flag   
    p%DBEMT_Mod      = InitInp%DBEMT_Mod
+   p%MomentumCorr   = InitInp%MomentumCorr
+   p%BEMT_Mod       = InitInp%BEMT_Mod
+   print*,'>>>> BEMT_Mod',p%BEMT_Mod
+   if ((p%BEMT_Mod/=0 .and. p%BEMT_Mod/=2 )) then
+      call SetErrStat( ErrID_Fatal, 'BEMT_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
+      return
+   endif
+
 
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -210,6 +225,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       do i=1,p%numBladeNodes
          p%chord(i,j)        = InitInp%chord(i,j)
          p%tipLossConst(i,j) = p%numBlades*(InitInp%zTip    (j) - InitInp%zLocal(i,j)) / (2.0*InitInp%zLocal(i,j))
+         ! NOTE different conventions are possible for hub losses
          p%hubLossConst(i,j) = p%numBlades*(InitInp%zLocal(i,j) - InitInp%zHub    (j)) / (2.0*InitInp%zHub    (j))
       end do
    end do
@@ -238,6 +254,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       end do
    end do
    
+   p%rTipFixMax = maxval(InitInp%rTipFix)
 end subroutine BEMT_SetParameters
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -688,6 +705,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,ErrStat,ErrMsg)
    misc%BEM_weight = 0.0_ReKi
    
    OtherState%DBEMT%tau1 = 0.0_ReKi !we're going to output this value, so let's initialize it
+   OtherState%n = -1
    
    if (p%UseInduction) then
       OtherState%ValidPhi = .true.
@@ -912,6 +930,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
    end if ! is UA used?
     
+   OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
+   
 end subroutine BEMT_UpdateStates
 !..................................................................................................................................
 subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
@@ -926,11 +946,11 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
    integer                                            :: i, j
    
    
-      ! Locate the maximum rlocal value for all blades.
-   u_DBEMT%R_disk   = Rtip(1)
-   do j = 2,p%numBlades
-      u_DBEMT%R_disk   = max( u_DBEMT%R_disk  , Rtip(j) )
-   end do
+      !.............................
+      ! calculate rotor-level inputs
+      !.............................
+   u_DBEMT%R_disk     = maxval( Rtip )       ! Locate the maximum rlocal value for all blades.
+
 
    if (p%DBEMT_Mod == DBEMT_tauVaries ) then
             
@@ -1005,7 +1025,7 @@ subroutine UpdatePhi( u, p, phi, AFInfo, m, ValidPhi, errStat, errMsg )
             ! We'll simply compute a geometrical phi based on both induction factors being 0.0
          do j = 1,p%numBlades ! Loop through all blades
             do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-               phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi)
+               phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi, u%cantAngle(i,j), u%xVelCorr(i,j) )
             end do
          end do
          
@@ -1567,7 +1587,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, AFIn
    call UpdatePhi( u, p, m%phi, AFInfo, m, m%ValidPhi, errStat2, errMsg2 )
    
    !...............................................................................................................................
-   !  compute inputs to DBEMT (also setting inductions needed for UA inputs--including DBEMT and skewed wake corrections)
+   !  compute inputs to DBEMT and SkewedWake (also setting inductions needed for UA inputs--including DBEMT and skewed wake corrections)
    !...............................................................................................................................
    call BEMT_CalcOutput_Inductions( InputIndex, t, .true., .true., m%phi, u, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2168,7 +2188,7 @@ subroutine BEMT_UnCoupledSolve(p, u, iBladeNode, jBlade, phi, AFInfo, ValidPhi, 
    
 
    if (.not. ValidPhi) then
-      phi = ComputePhiWithInduction(u%Vx(iBladeNode,jBlade), u%Vy(iBladeNode,jBlade),  0.0_ReKi, 0.0_ReKi)
+      phi = ComputePhiWithInduction(u%Vx(iBladeNode,jBlade), u%Vy(iBladeNode,jBlade),  0.0_ReKi, 0.0_ReKi, u%cantangle(iBladeNode,jBlade), u%xVelCorr(iBladeNode,jBlade))
       
       if (abs(phi)>MsgLimit .and. abs(abs(phi)-PiBy2) > MsgLimit ) then
          if (FirstWarn) then
@@ -2237,7 +2257,7 @@ subroutine SetInputs_for_UA_AllNodes(u, p, phi, axInduction, tanInduction, u_UA)
       !............................................
       do j = 1,p%numBlades ! Loop through all blades
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-            phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j) )
+            phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j), u%cantAngle(i,j), u%xVelCorr(i,j) )
          enddo             ! I - Blade nodes / elements
       enddo          ! J - All blades
    end if

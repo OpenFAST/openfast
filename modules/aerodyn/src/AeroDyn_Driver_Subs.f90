@@ -1356,9 +1356,6 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (errStat2==ErrID_Fatal) then
          call WrScr('>>> ProjMod is not present in AeroDyn driver input file.')
          wt%projMod = -1
-      else
-         print*,'>>>> TODO ProjMod harcoded to 0'
-         wt%projMod = 0 ! TODO HACK
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 

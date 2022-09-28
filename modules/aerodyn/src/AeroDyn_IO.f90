@@ -1838,7 +1838,7 @@ CONTAINS
       do k=1,p%NumBlades
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
       end do
-      do k=1,min(p%NumBlades,size(BAeroFx))
+      do k=1,min(p%NumBlades,AD_MaxBl_Out)
          ! Transform force vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
          m%AllOuts( BAeroFx(k) ) = tmp(1)
@@ -1882,7 +1882,7 @@ CONTAINS
 
    
          ! blade outputs
-      do k=1,min(p%numBlades,size(BAzimuth) )    ! limit this
+      do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
          m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
@@ -1928,7 +1928,7 @@ CONTAINS
 
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
-            m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
+            m%AllOuts( BNMm(   beta,k) ) =  m%Mz(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
