@@ -1738,7 +1738,7 @@ CONTAINS
 
 
          ! blade outputs
-      do k=1,min(p%numBlades,3)   ! limit this
+      do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
@@ -1769,7 +1769,7 @@ CONTAINS
 
       ! blade node tower clearance (requires tower influence calculation):
       if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
-         do k=1,p%numBlades
+         do k=1,min(p%numBlades,AD_MaxBl_Out)
             do beta=1,p%NBlOuts
                j=p%BlOutNd(beta)
                m%AllOuts( BNClrnc( beta,k) ) = m%TwrClrnc(j,k)
@@ -2016,7 +2016,7 @@ CONTAINS
 
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, AeroProjMod, UnEcho, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
@@ -2031,6 +2031,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    INTEGER(IntKi),          INTENT(INOUT) :: UnEcho          ! Unit number for the echo file
 
    INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
+   INTEGER(IntKi),          INTENT(IN)    :: AeroProjMod(:)  ! AeroProjMod per rotor
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
    CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
 
@@ -2065,7 +2066,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          
    !FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
       DO I=1,NumBlades(iR)
-         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
+         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), AeroProjMod(iR), UnEcho, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL Cleanup()
@@ -2455,7 +2456,7 @@ CONTAINS
    !-------------------------------------------------------------------------------------------------
 END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, ErrStat, ErrMsg )
 ! This routine reads a blade input file.
 !..................................................................................................................................
 
@@ -2464,6 +2465,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
 
    TYPE(AD_BladePropsType),  INTENT(INOUT)  :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
    CHARACTER(*),             INTENT(IN)     :: ADBlFile                            ! Name of the blade input file data
+   INTEGER(IntKi),           INTENT(IN)     :: AeroProjMod                         ! AeroProjMod
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
@@ -2567,6 +2569,22 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
                                   BladeKInputFileData%BlAFID(I)
          END IF         
    END DO
+
+
+   if (all(BladeKInputFileData%BlCrvAC.eq.0.0_ReKi)) then
+        BladeKInputFileData%BlCrvAng = 0.0_ReKi
+   else
+      if (AeroProjMod==0 .or. AeroProjMod==1) then
+         call WrScr('>>> ReadBladeInputs: Not computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
+      else if (AeroProjMod==2) then
+         call WrScr('>>> ReadBladeInputs: Computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
+         call calcCantAngle(BladeKInputFileData%BlCrvAC,BladeKInputFileData%BlSpn,3, size(BladeKInputFileData%BlSpn),BladeKInputFileData%BlCrvAng) 
+      else
+         call SetErrStat(ErrID_Fatal, 'Unsupported AeroProjMod='//trim(num2lstr(AeroProjMod)), ErrStat, ErrMsg, RoutineName)
+         call Cleanup()
+         return
+      endif
+   endif
    BladeKInputFileData%BlCrvAng = BladeKInputFileData%BlCrvAng*D2R
    BladeKInputFileData%BlTwist  = BladeKInputFileData%BlTwist*D2R
                   
@@ -3578,4 +3596,413 @@ END SUBROUTINE SetOutParam
 
 
 
+subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
+! This subroutine calculates implicit cant angle based on the blade reference line that includes prebend.
+    implicit none
+    integer(IntKi), intent(in)  :: stencilSize, n 
+    integer(IntKi)              :: i, j
+    integer(IntKi)              :: sortInd(n)
+    integer(IntKi)              :: info
+    real(ReKi),  intent(in)     :: f(n), xi(n)
+    real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
+    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
+    real(ReKi), intent(inout)   :: cantAngle(n)
+     
+    !dimension       :: f(n),xi(n), sortInd(n), cx(stencilSize),cf(stencilSize), xiIn(stencilSize)
+    !dimension       :: cantAngle(n), fIn(stencilSize), cPrime(n), fPrime(n), indexIn(stencilSize), xiAbs(n)
+    
+
+    
+    do i = 1,size(xi)
+        
+        xiAbs = abs(xi-xi(i))
+        call hpsort_eps_epw (n, xiAbs, sortInd, 1e-6)
+     
+        if (i.eq.1) then
+            fIn = f(1:stencilSize)
+            xiIn = xi(1:stencilSize)
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        elseif (i.eq.size(xi)) then
+            fIn = f(size(xi)-stencilSize +1:size(xi))
+            xiIn = xi(size(xi)-stencilSize+1:size(xi))
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        else
+            fIn = f(i-1:i+1)
+            xiIn = xi(i-1:i+1)
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        endif
+    
+        cPrime(i) = 0.0
+        fPrime(i) = 0.0
+
+        do j = 1,size(cx)
+            cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
+            fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
+        end do
+        cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+    end do
+    
+end subroutine calcCantAngle
+
+
+
+subroutine differ_stencil ( x0, o, p, x, c, info )
+
+!*****************************************************************************80
+!
+!! DIFFER_STENCIL computes finite difference coefficients.
+!
+!  Discussion:
+!
+!    We determine coefficients C to approximate the derivative at X0
+!    of order O and precision P, using finite differences, so that 
+!
+!      d^o f(x)/dx^o (x0) = sum ( 0 <= i <= o+p-1 ) c(i) f(x(i)) 
+!        + O(h^(p))
+!
+!    where H is the maximum spacing between X0 and any X(I).
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    10 November 2013
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, real ( kind = 8 ) X0, the point where the derivative is to 
+!    be approximated.
+!
+!    Input, integer ( kind = 4 ) O, the order of the derivative to be 
+!    approximated.  1 <= O.
+!
+!    Input, integer ( kind = 4 ) P, the order of the error, as a power of H.
+!
+!    Input, real ( kind = 8 ) X(O+P), the evaluation points.
+!
+!    Output, real ( kind = 8 ) C(O+P), the coefficients.
+!
+  implicit none
+
+  integer(IntKi), intent(in)   :: o
+  integer(IntKi), intent(in)   :: p
+
+  real(ReKi)                   :: b(o+p)
+  real(ReKi), intent(out)      :: c(o+p)
+  real(ReKi)                   :: dx(o+p)
+  integer(IntKi)               :: i
+  integer(IntKi), intent(out)  :: info
+  integer(IntKi)               :: job
+  integer(IntKi)               :: n
+  real(R8Ki)                   :: r8_factorial
+  real(ReKi), intent(in)       :: x(o+p)
+  real(ReKi), intent(in)       :: x0
+
+  n = o + p
+
+  dx(1:n) = x(1:n) - x0
+
+  b(1:o+p) = 0.0D+00
+  b(o+1) = 1.0D+00
+
+  job = 0
+  call r8vm_sl ( n, dx, b, c, job, info )
+
+  if ( info /= 0 ) then
+    call WrScr('DIFFER_STENCIL: Vandermonde linear system is singular.')
+    return
+  end if
+    r8_factorial = 1.0D+00
+  do i = 1,o
+    r8_factorial = r8_factorial*i
+  end do
+  c(1:n) = c(1:n) * r8_factorial
+
+  return
+  
+end subroutine differ_stencil
+
+subroutine r8vm_sl ( n, a, b, x, job, info )
+
+!*****************************************************************************80
+!
+!! R8VM_SL solves an R8VM linear system.
+!
+!  Discussion:
+!
+!    The R8VM storage format is used for an M by N Vandermonde matrix.
+!    An M by N Vandermonde matrix is defined by the values in its second
+!    row, which will be written here as X(1:N).  The matrix has a first 
+!    row of 1's, a second row equal to X(1:N), a third row whose entries
+!    are the squares of the X values, up to the M-th row whose entries
+!    are the (M-1)th powers of the X values.  The matrix can be stored
+!    compactly by listing just the values X(1:N).
+!
+!    Vandermonde systems are very close to singularity.  The singularity
+!    gets worse as N increases, and as any pair of values defining
+!    the matrix get close.  Even a system as small as N = 10 will
+!    involve the 9th power of the defining values.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license. 
+!
+!  Modified:
+!
+!    29 September 2003
+!
+!  Author:
+!
+!    John Burkardt.
+!
+!  Reference:
+!
+!    Gene Golub, Charles Van Loan,
+!    Matrix Computations,
+!    Third Edition,
+!    Johns Hopkins, 1996.
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) N, the number of rows and columns of 
+!    the matrix.
+!
+!    Input, real ( kind = 8 ) A(N), the R8VM matrix.
+!
+!    Input, real ( kind = 8 ) B(N), the right hand side.
+!
+!    Output, real ( kind = 8 ) X(N), the solution of the linear system.
+!
+!    Input, integer ( kind = 4 ) JOB, specifies the system to solve.
+!    0, solve A * x = b.
+!    nonzero, solve A' * x = b.
+!
+!    Output, integer ( kind = 4 ) INFO.
+!    0, no error.
+!    nonzero, at least two of the values in A are equal.
+!
+  implicit none
+
+  integer (IntKi ), intent(in) :: n
+
+  real(ReKi),     intent(in)   :: a(n)
+  real(ReKi),     intent(in)   :: b(n)
+  integer(IntKi)               :: i
+  integer(IntKi), intent(out)  :: info
+  integer(IntKi)               :: j
+  integer(IntKi), intent(in)   :: job
+  real(ReKi),     intent(out)  :: x(n)
+!
+!  Check for explicit singularity.
+!
+  info = 0
+
+  do j = 1, n - 1
+    do i = j + 1, n
+      if ( a(i) == a(j) ) then
+        info = 1
+        return
+      end if
+    end do
+  end do
+
+  x(1:n) = b(1:n)
+
+  if ( job == 0 ) then
+
+    do j = 1, n - 1
+      do i = n, j + 1, -1
+        x(i) = x(i) - a(j) * x(i-1)
+      end do
+    end do
+
+    do j = n - 1, 1, -1
+
+      do i = j + 1, n
+        x(i) = x(i) / ( a(i) - a(i-j) )
+      end do
+
+      do i = j, n - 1
+        x(i) = x(i) - x(i+1)
+      end do
+
+    end do
+
+  else
+
+    do j = 1, n - 1
+      do i = n, j + 1, -1
+        x(i) = ( x(i) - x(i-1) ) / ( a(i) - a(i-j) )
+      end do
+    end do
+
+    do j = n - 1, 1, -1
+      do i = j, n - 1
+        x(i) = x(i) - x(i+1) * a(j)
+      end do
+    end do
+
+  end if
+
+  return
+end subroutine r8vm_sl
+
+!                                                                            
+  ! Copyright (C) 2010-2016 Samuel Ponce', Roxana Margine, Carla Verdi, Feliciano Giustino 
+  ! Copyright (C) 2007-2009 Jesse Noffsinger, Brad Malone, Feliciano Giustino  
+  !                                                                            
+  ! This file is distributed under the terms of the GNU General Public         
+  ! License. See the file `LICENSE' in the root directory of the               
+  ! present distribution, or http://www.gnu.org/copyleft.gpl.txt .             
+  !                                                                            
+  ! Adapted from flib/hpsort_eps
+  !---------------------------------------------------------------------
+  subroutine hpsort_eps_epw (n, ra, ind, eps)
+  !---------------------------------------------------------------------
+  ! sort an array ra(1:n) into ascending order using heapsort algorithm,
+  ! and considering two elements being equal if their values differ
+  ! for less than "eps".
+  ! n is input, ra is replaced on output by its sorted rearrangement.
+  ! create an index table (ind) by making an exchange in the index array
+  ! whenever an exchange is made on the sorted data array (ra).
+  ! in case of equal values in the data array (ra) the values in the
+  ! index array (ind) are used to order the entries.
+  ! if on input ind(1)  = 0 then indices are initialized in the routine,
+  ! if on input ind(1) != 0 then indices are assumed to have been
+  !                initialized before entering the routine and these
+  !                indices are carried around during the sorting process
+  !
+  ! no work space needed !
+  ! free us from machine-dependent sorting-routines !
+  !
+  ! adapted from Numerical Recipes pg. 329 (new edition)
+  !
+  !use kinds, ONLY : DP
+  implicit none  
+  !-input/output variables
+  integer(IntKi), intent(in)    :: n  
+  real(ReKi), intent(in)        :: eps
+  integer(IntKi)                :: ind (n)  
+  real(ReKi)                    :: ra (n)
+  !-local variables
+  integer(IntKi)                :: i, ir, j, l, iind  
+  real(ReKi)                    :: rra  
+!
+  ! initialize index array
+  IF (ind (1) .eq.0) then  
+     DO i = 1, n  
+        ind (i) = i  
+     ENDDO
+  ENDIF
+  ! nothing to order
+  IF (n.lt.2) return  
+  ! initialize indices for hiring and retirement-promotion phase
+  l = n / 2 + 1  
+
+  ir = n  
+
+  sorting: do 
+  
+    ! still in hiring phase
+    IF ( l .gt. 1 ) then  
+       l    = l - 1  
+       rra  = ra (l)  
+       iind = ind (l)  
+       ! in retirement-promotion phase.
+    ELSE  
+       ! clear a space at the end of the array
+       rra  = ra (ir)  
+       !
+       iind = ind (ir)  
+       ! retire the top of the heap into it
+       ra (ir) = ra (1)  
+       !
+       ind (ir) = ind (1)  
+       ! decrease the size of the corporation
+       ir = ir - 1  
+       ! done with the last promotion
+       IF ( ir .eq. 1 ) then  
+          ! the least competent worker at all !
+          ra (1)  = rra  
+          !
+          ind (1) = iind  
+          exit sorting  
+       ENDIF
+    ENDIF
+    ! wheter in hiring or promotion phase, we
+    i = l  
+    ! set up to place rra in its proper level
+    j = l + l  
+    !
+    DO while ( j .le. ir )  
+       IF ( j .lt. ir ) then  
+          ! compare to better underling
+          IF ( hslt( ra (j),  ra (j + 1) ) ) then  
+             j = j + 1  
+          !else if ( .not. hslt( ra (j+1),  ra (j) ) ) then
+             ! this means ra(j) == ra(j+1) within tolerance
+           !  if (ind (j) .lt.ind (j + 1) ) j = j + 1
+          ENDIF
+       ENDIF
+       ! demote rra
+       IF ( hslt( rra, ra (j) ) ) then  
+          ra (i) = ra (j)  
+          ind (i) = ind (j)  
+          i = j  
+          j = j + j  
+       !else if ( .not. hslt ( ra(j) , rra ) ) then
+          !this means rra == ra(j) within tolerance
+          ! demote rra
+         ! if (iind.lt.ind (j) ) then
+         !    ra (i) = ra (j)
+         !    ind (i) = ind (j)
+         !    i = j
+         !    j = j + j
+         ! else
+             ! set j to terminate do-while loop
+         !    j = ir + 1
+         ! endif
+          ! this is the right place for rra
+       ELSE
+          ! set j to terminate do-while loop
+          j = ir + 1  
+       ENDIF
+    ENDDO
+    ra (i) = rra  
+    ind (i) = iind  
+
+  END DO sorting    
+contains 
+
+  !  internal function 
+  !  compare two real number and return the result
+
+  logical function hslt( a, b )
+    REAL(ReKi) :: a, b
+    IF( abs(a-b) <  eps ) then
+      hslt = .false.
+    ELSE
+      hslt = ( a < b )
+    end if
+  end function hslt
+
+  !
+end subroutine hpsort_eps_epw
+
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn_IO

@@ -233,6 +233,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
    integer(IntKi)                              :: nRotors       ! Number of rotors
    integer(IntKi), allocatable, dimension(:)   :: NumBlades     ! Number of blades per rotor
+   integer(IntKi) , allocatable, dimension(:)  :: AeroProjMod   ! AeroProjMod per rotor
+
 
    character(*), parameter                     :: RoutineName = 'AD_Init'
    
@@ -262,7 +264,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate(p%rotors(nRotors), m%rotors(nRotors), stat=errStat) 
    if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
    allocate(NumBlades(nRotors), stat=errStat ) ! temp array to pass NumBlades
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
+   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating numblades per rotor', errStat, errMsg, RoutineName )
+   allocate(AeroProjMod(nRotors), stat=errStat ) ! temp array to pass AeroProjMod
+   AeroProjMod=-1
+   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating AeroProjMod per rotor', errStat, errMsg, RoutineName )
    if (errStat/=ErrID_None) then
       call Cleanup()
       return
@@ -276,6 +281,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
       NumBlades(iR)          = InitInp%rotors(iR)%NumBlades
       p%rotors(iR)%NumBlades = InitInp%rotors(iR)%NumBlades
+      AeroProjMod(iR)        = InitInp%rotors(iR)%AeroProjMod
       if (nRotors > 1) then
          p%rotors(iR)%RootName  = TRIM(InitInp%RootName)//'.AD.R'//trim(num2lstr(iR))
       else
@@ -308,7 +314,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! -----------------------------------------------------------------
       ! Read the AeroDyn blade files, or copy from passed input
 !FIXME: add handling for passing of blade files and other types of files.
-   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, NumBlades, UnEcho, ErrStat2, ErrMsg2 )
+   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, NumBlades, AeroProjMod, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
 
       ! Validate the inputs
@@ -1847,7 +1853,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
        !pass
        !call GeomWithoutSweepPitchTwist(p,u, x_hat_disk, m, ErrStat=ErrStat,ErrMsg=ErrMsg, thetaBladeNds=m%BEMT_u(indx)%theta, toeBladeNds=m%BEMT_u(indx)%toeAngle) ! sets m%orientationAnnulus, m%Curve, m%hub_theta_x_root, m%AllOuts( BPitch(  k) )
    else
-      call WrScr('Should never happen')
+      call WrScr('AeroProjMod not supported - should never happen')
       STOP
    endif
 
@@ -1972,6 +1978,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%drdz(1,k) = m%BEMT_u(indx)%drdz(2,k)
       end do !k=blades
    else
+      call WrScr('AeroProjMod not supported - should never happen')
       STOP
   endif ! ProjMod
   
@@ -2011,7 +2018,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
             end do !j=nodes
          end do !k=blades
    else
-        STOP
+      call WrScr('AeroProjMod not supported - should never happen')
+      STOP
    endif ! ProjMod
 
    !..........................
