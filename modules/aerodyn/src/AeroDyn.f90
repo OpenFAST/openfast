@@ -586,9 +586,16 @@ end if
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%Y, p%NumBlNds, p%NumBlades, 'm%Y', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( m%M, p%NumBlNds, p%NumBlades, 'm%M', ErrStat2, ErrMsg2 )
+   call AllocAry( m%Z, p%NumBlNds, p%NumBlades, 'm%Z', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%hub_theta_x_root, p%NumBlades, 'm%hub_theta_x_root', ErrStat2, ErrMsg2 )
+   call AllocAry( m%M, p%NumBlNds, p%NumBlades, 'm%M', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%Mx, p%NumBlNds, p%NumBlades, 'm%Mx', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%My, p%NumBlNds, p%NumBlades, 'm%My', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%Mz, p%NumBlNds, p%NumBlades, 'm%Mz', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       ! mesh mapping data for integrating load over entire rotor:
    allocate( m%B_L_2_H_P(p%NumBlades), Stat = ErrStat2)
@@ -657,7 +664,7 @@ end if
       m%Y_Twr = 0.0_ReKi
    end if
    
-   
+   m%FirstWarn_TowerStrike = .true.
    
 end subroutine Init_MiscVars
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -831,6 +838,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
                        ,Orientation     = .true.    &
                        ,TranslationDisp = .true.    &
                        ,TranslationVel  = .true.    &
+                       ,TranslationAcc  = .TRUE.    &  ! tower acceleration used for tower VIV
                       )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -1063,7 +1071,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       ! Local variables
    CHARACTER(ErrMsgLen)                          :: ErrMsg2         ! temporary Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                :: ErrStat2        ! temporary Error status of the operation
-   !INTEGER(IntKi)                                :: i, j
+   INTEGER(IntKi)                                :: j, k
    character(*), parameter                       :: RoutineName = 'SetParameters'
    
       ! Initialize variables for this routine
@@ -1071,6 +1079,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
+   p_AD%EulerDCM      = .FALSE.
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
    
    p_AD%DT            = InputFileData%DTAero
@@ -1115,6 +1124,17 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%WtrDpth          = InitInp%WtrDpth
    p%MSL2SWL          = InitInp%MSL2SWL
 
+   call AllocAry(p%BlTwist, p%NumBlNds, p%numBlades, 'p%BlTwist', ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+   do k=1,p%numBlades
+      do j=1,p%NumBlNds
+         p%BlTwist(j,k) = RotData%BladeProps(k)%BlTwist(j)
+      end do
+   end do
+      
+   
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
       
@@ -1790,6 +1810,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! local variables
    real(R8Ki)                              :: x_hat(3)
    real(R8Ki)                              :: y_hat(3)
+   real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -1798,18 +1819,41 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: rmax
    real(R8Ki)                              :: thetaBladeNds(p%NumBlNds,p%NumBlades)
    real(R8Ki)                              :: Azimuth(p%NumBlades)
-   
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
-!   integer(intKi)                          :: ErrStat2
-!   character(ErrMsgLen)                    :: ErrMsg2
-   character(*), parameter                 :: RoutineName = 'SetInputsForBEMT'
-   
-   ! note ErrStat and ErrMsg are set in GeomWithoutSweepPitchTwist:
+   integer(intKi)                          :: ErrStat2
+   character(ErrMsgLen)                    :: ErrMsg2
+   character(*), parameter                 :: RoutineName = 'SetInputsForBEMT'  
+   ! NEW VAR
+   real(ReKi)                              :: numer, denom, ratio, signOfAngle ! helper variables for calculating u%chi0  
+   real(ReKi)                              :: tilt, yaw
+   real(ReKi)                              :: SkewVec(3), tmp_skewVec(3), x_hat_wind(3), tmpD(3), tmpW(3)
+   real(R8Ki)                              :: windCrossDisk(3)
+   real(R8Ki)                              :: windCrossDiskMag
+   real(R8Ki)                              :: x_vec(3), y_vec(3), z_vec(3)
+   real(R8Ki)                              :: elemPosRelToHub(3,p%NUMBLNDS)
+   real(R8Ki)                              :: elemPosRotorProj(3,p%NUMBLNDS)
+   real(R8Ki)                              :: dr(3), dz(3)
+   real(R8Ki)                              :: theta(3)
+   real(R8Ki)                              :: orientation(3,3)
+   real(R8Ki)                              :: orientationBladeAzimuth(3,3,1)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
       ! Get disk average values and orientations
    call DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) ! also sets m%V_diskAvg, m%V_dot_x
-   call GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,ErrMsg)
+
+   if (p%AeroProjMod==0) then
+      call GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,ErrStat=ErrStat,ErrMsg=ErrMsg,thetaBladeNds=thetaBladeNds)
+   elseif (p%AeroProjMod==1) then   
+      STOP
+   elseif (p%AeroProjMod==2) then      
+       !pass
+       !call GeomWithoutSweepPitchTwist(p,u, x_hat_disk, m, ErrStat=ErrStat,ErrMsg=ErrMsg, thetaBladeNds=m%BEMT_u(indx)%theta, toeBladeNds=m%BEMT_u(indx)%toeAngle) ! sets m%orientationAnnulus, m%Curve, m%hub_theta_x_root, m%AllOuts( BPitch(  k) )
+   else
+      STOP
+   endif 
+
    if (ErrStat >= AbortErrLev) return
 
       ! Velocity in disk normal
@@ -1820,12 +1864,12 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    m%BEMT_u(indx)%omega   = dot_product( u%HubMotion%RotationVel(:,1), x_hat_disk )
    
       ! "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad 
-   tmp_sz = TwoNorm( m%V_diskAvg )
-   if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
+   denom = TwoNorm( m%V_diskAvg )
+   if (EqualRealNos(0.0_ReKi, denom)) then
       m%BEMT_u(indx)%chi0 = 0.0_ReKi
    else
          ! make sure we don't have numerical issues that make the ratio outside +/-1
-      tmp_sz_y = min(  1.0_ReKi, m%V_dot_x / tmp_sz )
+      tmp_sz_y = min(  1.0_ReKi, m%V_dot_x / denom )
       tmp_sz_y = max( -1.0_ReKi, tmp_sz_y )
       
       m%BEMT_u(indx)%chi0 = acos( tmp_sz_y )
@@ -1908,22 +1952,37 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    integer(intKi)                          :: j                      ! loop counter for nodes
    integer(intKi)                          :: k                      ! loop counter for blades
 
+   ! calculate disk-averaged undisturbed wind
+   m%AvgDiskVel = 0.0_ReKi
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds
+         m%AvgDiskVel = m%AvgDiskVel + m%DisturbedInflow(:,j,k)
+      end do
+   end do
+   m%AvgDiskVel = m%AvgDiskVel / real( p%NumBlades * p%NumBlNds, ReKi )
+
       ! calculate disk-averaged relative wind speed, V_DiskAvg
    m%V_diskAvg = 0.0_ReKi
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
-         tmp = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
-         m%V_diskAvg = m%V_diskAvg + tmp
+   !      !tmp = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
+   !      !tmp = u%InflowOnBlade(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
+   !      !m%V_diskAvg = m%V_diskAvg + tmp
+         m%V_diskAvg = m%V_diskAvg + u%BladeMotion(k)%TranslationVel(:,j)
       end do
    end do
    m%V_diskAvg = m%V_diskAvg / real( p%NumBlades * p%NumBlNds, ReKi )
 
+   m%V_diskAvg = m%AvgDiskVel - m%V_diskAvg   
+   
+   
       ! orientation vectors:
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub
 
    m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
    
    
+   ! These values are not used in the Envision code base; stored here only for easier merging from OpenFAST:
    if (present(y_hat_disk)) then
    
       tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
@@ -2000,6 +2059,12 @@ subroutine Calculate_MeshOrientation_Rel2Hub(Mesh1, HubMotion, x_hat_disk, orien
       
 end subroutine Calculate_MeshOrientation_Rel2Hub
 !----------------------------------------------------------------------------------------------------------------------------------
+! GeomWithoutSweepPitchTwist sets these variables:
+!   m%orientationAnnulus
+!   m%Curve
+!   m%hub_theta_x_root
+!   m%AllOuts( BPitch(  k) )
+!   thetaBladeNds (optional)
 subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,ErrMsg)
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
@@ -2036,7 +2101,9 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,Err
             m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
          endif
          theta(3) = 0.0_ReKi
-         m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+         if (k<=size(m%hub_theta_x_root)) then
+             m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+         end if
 
          orientation = EulerConstruct( theta ) ! rotation from hub 2 non-pitched blade
          orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k) ! rotation from global 2 non-pitched blade
@@ -2065,17 +2132,27 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,Err
    else if (p%AeroProjMod==1) then
    
       do k=1,p%NumBlades
+        ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
+        !orientation = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), transpose( u%HubMotion%Orientation(:,:,1) ) ) : equivalent, without taking the transpose:
          call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          theta = EulerExtract( orientation ) !hub_theta_root(k)
-         if (k<=3) then
+       ! theta(1) = Azimuth, theta(2) = cant+precone+rotorTilt, theta(3) = pitch+twist
+         
+         if (k<=size(BPitch)) then
             m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
          endif
-         theta(3) = 0.0_ReKi
-         m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+
+         if (k<=size(m%hub_theta_x_root)) then
+            m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+         end if
       end do
       
             
+      !.........................
+      ! Set orientation Annulus:
+      !.........................
+      
       do k=1,p%NumBlades
          call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%orientationAnnulus(:,:,:,k))
 
@@ -2084,6 +2161,9 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,ErrStat,Err
          enddo
       enddo
       
+      !.........................
+      ! Set Curve and possibly thetaBladeNds:
+      !.........................
       do k=1,p%NumBlades
          do j=1,p%NumBlNds
             orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose( m%orientationAnnulus(:,:,j,k) ) )
