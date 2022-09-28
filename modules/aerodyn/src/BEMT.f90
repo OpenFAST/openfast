@@ -783,7 +783,7 @@ END SUBROUTINE BEMT_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
+subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
 ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Continuous, constraint, discrete, and other states are updated for t + Interval
 !
@@ -792,8 +792,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
    real(DbKi),                          intent(in   ) :: t          ! Current simulation time in seconds
    integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
-   type(BEMT_InputType),                intent(in   ) :: u1,u2      ! Input at t and t+ dt 
-   !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
+   type(BEMT_InputType),                intent(in   ) :: u(2)       ! Input at t and t+ dt 
+   real(DbKi),                          intent(in   ) :: uTimes(2)  ! Times associated with u(:), in seconds
    type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
    type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
                                                                     !   Output: Continuous states at t + Interval
@@ -811,49 +811,48 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
       
    integer(IntKi)                                    :: i,j
+   integer(IntKi), parameter                         :: TimeIndex_t = 1
+   integer(IntKi), parameter                         :: TimeIndex_t_plus_dt = 2
    
    character(ErrMsgLen)                              :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                    :: errStat2    ! temporary Error status of the operation
    character(*), parameter                           :: RoutineName = 'BEMT_UpdateStates'
-   real(DbKi)                                        :: uTimes(2)
+   
    
    ErrStat = ErrID_None
    ErrMsg = ""
-   
-   uTimes(1) = t
-   uTimes(2) = t+p%dt
    
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi at t are:
    !...............................................................................................................................
 
    if (.not. OtherState%nodesInitialized) then
-      call UpdatePhi( u1, p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
+      call UpdatePhi( u(TimeIndex_t), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
       OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
    end if
    
    !...............................................................................................................................
-   !  compute inputs to DBEMT at step n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
+   !  compute inputs to DBEMT and SkewedWake at step n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
    !...............................................................................................................................
-   call BEMT_CalcOutput_Inductions( 1, t, .true., .true., z%phi, u1, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
+   call BEMT_CalcOutput_Inductions( TimeIndex_t, t, .true., .true., z%phi, u(TimeIndex_t), p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
 
 #ifdef DEBUG_BEMT_RESIDUAL
-      if (p%useInduction) call WriteDEBUGValuesToFile(t, u1, p, x, xd, z, OtherState, m, AFInfo)
+      if (p%useInduction) call WriteDEBUGValuesToFile(t, u(TimeIndex_t), p, x, xd, z, OtherState, m, AFInfo)
 #endif   
    !...............................................................................................................................
    !  compute inputs to UA at time n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
    !...............................................................................................................................
    if (p%UA_Flag) then
       m%phi = z%phi
-      call SetInputs_for_UA_AllNodes(u1, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,1))
+      call SetInputs_for_UA_AllNodes(u(TimeIndex_t), p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,TimeIndex_t))
    end if
    
    !...............................................................................................................................
-   !  update BEMT states to step n+1
+   !  update BEMT constraint states to step n+1
    !...............................................................................................................................
-   call UpdatePhi( u2, p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
+   call UpdatePhi( u(TimeIndex_t_plus_dt), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (errStat >= AbortErrLev) return
   
@@ -861,7 +860,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
    !...............................................................................................................................
    !  compute inputs to DBEMT at step n+1 (also setting inductions--WITHOUT DBEMT or skewed wake corrections--at step n+1)
    !...............................................................................................................................
-   call BEMT_CalcOutput_Inductions( 2, t, .true., .false., z%phi, u2, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
+   call BEMT_CalcOutput_Inductions( TimeIndex_t_plus_dt, t, .true., .false., z%phi, u(TimeIndex_t_plus_dt), p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -896,20 +895,20 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             ! apply DBEMT correction to axInduction and tanInduction:
             !............................................
             if (p%DBEMT_Mod /= DBEMT_none) then
-               call calculate_Inductions_from_DBEMT_AllNodes(2, uTimes(2), u2, p, x, OtherState, m, m%axInduction, m%tanInduction)
+               call calculate_Inductions_from_DBEMT_AllNodes(TimeIndex_t_plus_dt, uTimes(TimeIndex_t_plus_dt), u(TimeIndex_t_plus_dt), p, x, OtherState, m, m%axInduction, m%tanInduction)
             end if
          
-            call ApplySkewedWakeCorrection_AllNodes(p, u2, m, m%axInduction, m%chi)
+            call ApplySkewedWakeCorrection_AllNodes(p, u(TimeIndex_t_plus_dt), m, m%axInduction, m%chi)
 
             !............................................
             ! If TSR is too low, (start to) turn off induction
             !............................................
-            call check_turnOffBEMT(p, u2, m%BEM_weight, m%axInduction, m%tanInduction, m%FirstWarn_BEMoff)
+            call check_turnOffBEMT(p, u(TimeIndex_t_plus_dt), m%BEM_weight, m%axInduction, m%tanInduction, m%FirstWarn_BEMoff)
             
       end if
    
       m%phi = z%phi
-      call SetInputs_for_UA_AllNodes(u2, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,2))
+      call SetInputs_for_UA_AllNodes(u(TimeIndex_t_plus_dt), p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,TimeIndex_t_plus_dt))
    
       !...............................................................................................................................
       !  compute UA states at t+dt
@@ -950,8 +949,7 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       ! calculate rotor-level inputs
       !.............................
    u_DBEMT%R_disk     = maxval( Rtip )       ! Locate the maximum rlocal value for all blades.
-
-
+   u_DBEMT%Un_disk    = u%Un_disk   
    if (p%DBEMT_Mod == DBEMT_tauVaries ) then
             
          ! We need to generate a disk-averaged axial induction for this timestep
@@ -965,7 +963,7 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       end do
       u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
          
-      u_DBEMT%Un_disk    = u%Un_disk
+
    end if
    
    

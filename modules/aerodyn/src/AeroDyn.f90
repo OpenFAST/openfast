@@ -1263,6 +1263,8 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
 
    ! local variables
    integer(intKi)                               :: iR          ! Counter on rotors
+   integer                                       :: i
+   real(DbKi)                                    :: BEMT_utimes(2)    !< Times associated with m%BEMT_u(:), in seconds
    type(AD_InputType)                           :: uInterp     ! Interpolated/Extrapolated input
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -1279,25 +1281,19 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          return
       end if
 
-      ! set values of m%BEMT_u(2) from inputs interpolated at t+dt:
-      ! NOTE: this is different than OpenFAST, which has t+dt at u(1)
-   call AD_Input_ExtrapInterp(u,utimes,uInterp,t+p%DT, errStat2, errMsg2)
+      ! set values of m%BEMT_u(2) from inputs interpolated at t+dt;
+      ! set values of m%BEMT_u(1) from inputs (uInterp) interpolated at t 
+      ! NOTE: this is different than glue code, which has t+dt at u(1)
+   BEMT_utimes(2) = t+p%DT
+   BEMT_utimes(1) = t
+   do i=2,1,-1 ! I'm calculating values for t second in case we want the other misc vars at t as before, but I don't think it matters)
+      call AD_Input_ExtrapInterp(u,utimes,uInterp,BEMT_utimes(i), errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    do iR = 1,size(p%rotors)
-      call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), 2, errStat2, errMsg2)      
+         call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), i, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    enddo
-      
-      ! set values of m%BEMT_u(1) from inputs (uInterp) interpolated at t:
-      ! NOTE: this is different than OpenFAST, which has t at u(2)
-      ! I'm doing this second in case we want the other misc vars at t as before, but I don't think it matters      
-   call AD_Input_ExtrapInterp(u,utimes,uInterp, t, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   do iR = 1,size(p%rotors)
-      call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), 1, errStat2, errMsg2)      
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    enddo
          
 
@@ -1305,8 +1301,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
    if (p%WakeMod /= WakeMod_FVW) then
       do iR = 1,size(p%rotors)
             ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-            ! Also note BEMT_u(1) and BEMT_u(2) are not following the OpenFAST convention for t+dt, t
-         call BEMT_UpdateStates(t, n, m%rotors(iR)%BEMT_u(1), m%rotors(iR)%BEMT_u(2),  p%rotors(iR)%BEMT, x%rotors(iR)%BEMT, xd%rotors(iR)%BEMT, z%rotors(iR)%BEMT, OtherState%rotors(iR)%BEMT, p%AFI, m%rotors(iR)%BEMT, errStat2, errMsg2)
+         call BEMT_UpdateStates(t, n, m%rotors(iR)%BEMT_u(:), BEMT_utimes,  p%rotors(iR)%BEMT, x%rotors(iR)%BEMT, xd%rotors(iR)%BEMT, z%rotors(iR)%BEMT, OtherState%rotors(iR)%BEMT, p%AFI, m%rotors(iR)%BEMT, errStat2, errMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
             ! Call AeroAcoustics updates states
@@ -1369,8 +1364,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput     !< Flag to determine if WriteOutput values need to be calculated in this call
 
 
-      ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
-   integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: iR ! Loop on rotors
 
    integer(intKi)                               :: ErrStat2
