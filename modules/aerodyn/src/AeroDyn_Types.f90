@@ -316,7 +316,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: NacCenBy      !< Nacelle center of buoyancy y direction offset [m]
     REAL(ReKi)  :: NacCenBz      !< Nacelle center of buoyancy z direction offset [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length, used in buoyancy calculation [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length based on CB, used in buoyancy calculation [m]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDLAC      !< Matrix of blade element length based on AC, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTaper      !< Matrix of blade element taper, used in buoyancy calculation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlAxCent      !< Matrix of blade element axial centroid, used in buoyancy calculation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrRad      !< Array of equivalent tower radius at each node, used in buoyancy calculation [m]
@@ -10891,6 +10892,20 @@ IF (ALLOCATED(SrcRotParameterTypeData%BlDL)) THEN
   END IF
     DstRotParameterTypeData%BlDL = SrcRotParameterTypeData%BlDL
 ENDIF
+IF (ALLOCATED(SrcRotParameterTypeData%BlDLAC)) THEN
+  i1_l = LBOUND(SrcRotParameterTypeData%BlDLAC,1)
+  i1_u = UBOUND(SrcRotParameterTypeData%BlDLAC,1)
+  i2_l = LBOUND(SrcRotParameterTypeData%BlDLAC,2)
+  i2_u = UBOUND(SrcRotParameterTypeData%BlDLAC,2)
+  IF (.NOT. ALLOCATED(DstRotParameterTypeData%BlDLAC)) THEN 
+    ALLOCATE(DstRotParameterTypeData%BlDLAC(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotParameterTypeData%BlDLAC.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRotParameterTypeData%BlDLAC = SrcRotParameterTypeData%BlDLAC
+ENDIF
 IF (ALLOCATED(SrcRotParameterTypeData%BlTaper)) THEN
   i1_l = LBOUND(SrcRotParameterTypeData%BlTaper,1)
   i1_u = UBOUND(SrcRotParameterTypeData%BlTaper,1)
@@ -11116,6 +11131,9 @@ ENDIF
 IF (ALLOCATED(RotParameterTypeData%BlDL)) THEN
   DEALLOCATE(RotParameterTypeData%BlDL)
 ENDIF
+IF (ALLOCATED(RotParameterTypeData%BlDLAC)) THEN
+  DEALLOCATE(RotParameterTypeData%BlDLAC)
+ENDIF
 IF (ALLOCATED(RotParameterTypeData%BlTaper)) THEN
   DEALLOCATE(RotParameterTypeData%BlTaper)
 ENDIF
@@ -11245,6 +11263,11 @@ ENDIF
   IF ( ALLOCATED(InData%BlDL) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BlDL upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%BlDL)  ! BlDL
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BlDLAC allocated yes/no
+  IF ( ALLOCATED(InData%BlDLAC) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! BlDLAC upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BlDLAC)  ! BlDLAC
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! BlTaper allocated yes/no
   IF ( ALLOCATED(InData%BlTaper) ) THEN
@@ -11584,6 +11607,26 @@ ENDIF
       DO i2 = LBOUND(InData%BlDL,2), UBOUND(InData%BlDL,2)
         DO i1 = LBOUND(InData%BlDL,1), UBOUND(InData%BlDL,1)
           ReKiBuf(Re_Xferred) = InData%BlDL(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BlDLAC) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlDLAC,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlDLAC,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlDLAC,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlDLAC,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%BlDLAC,2), UBOUND(InData%BlDLAC,2)
+        DO i1 = LBOUND(InData%BlDLAC,1), UBOUND(InData%BlDLAC,1)
+          ReKiBuf(Re_Xferred) = InData%BlDLAC(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -12157,6 +12200,29 @@ ENDIF
       DO i2 = LBOUND(OutData%BlDL,2), UBOUND(OutData%BlDL,2)
         DO i1 = LBOUND(OutData%BlDL,1), UBOUND(OutData%BlDL,1)
           OutData%BlDL(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlDLAC not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BlDLAC)) DEALLOCATE(OutData%BlDLAC)
+    ALLOCATE(OutData%BlDLAC(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BlDLAC.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%BlDLAC,2), UBOUND(OutData%BlDLAC,2)
+        DO i1 = LBOUND(OutData%BlDLAC,1), UBOUND(OutData%BlDLAC,1)
+          OutData%BlDLAC(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
