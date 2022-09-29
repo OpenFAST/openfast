@@ -910,7 +910,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
          write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
          write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
-         write(*,'(A,1F8.4)')   'BladeRegParam     : ', p%WingRegParam
+         write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
          write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
       ! Set reg param on wing and first NW
       ! NOTE: setting the same in all three directions for now, TODO!
@@ -944,7 +944,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
 
       if (iW==1) then
       call WrScr(' - OLAF regularization parameters (for wing 1):')
-         write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
+         write(*,'(A,2F8.4)') '    WingReg (min/max) : ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
          if (p%nNWMax>1) then
             write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
          endif
