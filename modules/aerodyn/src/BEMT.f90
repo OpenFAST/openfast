@@ -173,10 +173,10 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%UA_Flag        = InitInp%UA_Flag   
    p%DBEMT_Mod      = InitInp%DBEMT_Mod
    p%MomentumCorr   = InitInp%MomentumCorr
-   p%BEMT_Mod       = InitInp%BEMT_Mod
-   print*,'>>>> BEMT_Mod',p%BEMT_Mod
-   if ((p%BEMT_Mod/=0 .and. p%BEMT_Mod/=2 )) then
-      call SetErrStat( ErrID_Fatal, 'BEMT_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
+   p%BEM_Mod        = InitInp%BEM_Mod
+   call WrScr('>>>> BEM_Mod '//trim(num2lstr(p%BEM_Mod)))
+   if ((p%BEM_Mod/=BEMMod_2D .and. p%BEM_Mod/=BEMMod_3D )) then
+      call SetErrStat( ErrID_Fatal, 'BEM_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
       return
    endif
 
@@ -1321,7 +1321,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
          ! Compute Cx, Cy given Cl, Cd and phi
          ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
-         if(p%BEMT_Mod==0) then
+         if(p%BEM_Mod==BEMMod_2D) then
             call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
             y%Cz(i,j)  = 0.0_ReKi
             y%Cmx(i,j) = 0.0_ReKi
@@ -2285,7 +2285,7 @@ subroutine SetInputs_for_UA_AllNodes(u, p, phi, axInduction, tanInduction, u_UA)
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
       
             ! Compute AoA, Re, Vrel (inputs to UA) based on current values of axInduction, tanInduction:
-         call SetInputs_for_UA(p%BEMT_Mod, phi(i,j), u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), axInduction(i,j), tanInduction(i,j), p%chord(i,j), u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), u%omega_z(i,j), p%kinVisc, u%UserProp(i,j), u%xVelCorr(i,j), u_UA(i,j))
+         call SetInputs_for_UA(p%BEM_Mod, phi(i,j), u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), axInduction(i,j), tanInduction(i,j), p%chord(i,j), u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), u%omega_z(i,j), p%kinVisc, u%UserProp(i,j), u%xVelCorr(i,j), u_UA(i,j))
          
       end do
    end do

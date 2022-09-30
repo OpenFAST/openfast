@@ -435,14 +435,14 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          if (wt%projMod==-1)then
             call WrScr('>>> Using HAWTprojection to determine projMod')
             if (wt%HAWTprojection) then
-               InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+               InitInData%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
             else
-               InitInData%rotors(iWT)%AeroProjMod = 1
+               InitInData%rotors(iWT)%AeroProjMod = APM_LiftingLine
             endif
          else
-            print*,'>>>> USING PROJECTION METHOD',wt%projMod
             InitInData%rotors(iWT)%AeroProjMod = wt%projMod
          endif
+         call WrScr('>>> Using projection method '//trim(num2lstr(InitInData%rotors(iWT)%AeroProjMod)))
          InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
          InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
          InitInData%rotors(iWT)%NacellePosition    = wt%nac%ptMesh%Position(:,1)

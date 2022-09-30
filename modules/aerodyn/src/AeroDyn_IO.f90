@@ -2574,9 +2574,9 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
    if (all(BladeKInputFileData%BlCrvAC.eq.0.0_ReKi)) then
         BladeKInputFileData%BlCrvAng = 0.0_ReKi
    else
-      if (AeroProjMod==0 .or. AeroProjMod==1) then
-         call WrScr('>>> ReadBladeInputs: Not computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
-      else if (AeroProjMod==2) then
+      if (AeroProjMod==APM_BEM_NoSweepPitchTwist .or. AeroProjMod==APM_LiftingLine) then
+         !call WrScr('>>> ReadBladeInputs: Not computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
+      else if (AeroProjMod==APM_BEM_Polar) then
          call WrScr('>>> ReadBladeInputs: Computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
          call calcCantAngle(BladeKInputFileData%BlCrvAC,BladeKInputFileData%BlSpn,3, size(BladeKInputFileData%BlSpn),BladeKInputFileData%BlCrvAng) 
       else

@@ -22,6 +22,8 @@ param     BEMT/BEMT                   -                              INTEGER    
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters_Cont     -      4     -   "Pitt/Peters continuous formulation" -
 
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 
 #
 #
@@ -62,7 +64,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}        -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 typedef   ^                            ^                             CHARACTER(1024)          RootName                         -         -         -        "RootName for writing output files" -
 typedef   ^                            ^                             LOGICAL                  SumPrint                         -         -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             IntKi                    BEMT_Mod                         -         -         -        "BEM Model 0=OpenFAST 2=Envision " -
+typedef   ^                            ^                             IntKi                    BEM_Mod                          -         -         -        "BEM Model 0=OpenFAST 2=Envision " -
 #
 #
 # Define outputs from the initialization routine here:
@@ -162,7 +164,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             ReKi                     rTipFixMax                      -             -         -        "Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations" m
 typedef   ^                            ^                             ReKi                     IntegrateWeight                 {:}{:}        -         -        "A weighting factor for calculating rotor-averaged values (e.g., AxInd)" -
 typedef   ^                         ParameterType                    IntKi                    lin_nx                -   0     -                                "Number of continuous states for linearization"            -
-typedef   ^                            ^                             IntKi                    BEMT_Mod                        -             -         -        "BEM Model 1=OpenFAST 2=Envision " -
+typedef   ^                            ^                             IntKi                    BEM_Mod                         -             -         -        "BEM Model 0=OpenFAST 2=Envision " -
 #
 
 #

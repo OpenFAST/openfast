@@ -1844,12 +1844,12 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       ! Get disk average values and orientations
    call DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth) ! also sets m%V_diskAvg, m%V_dot_x
 
-   if (p%AeroProjMod==0) then ! WithoutSweepPitchTwist system
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
       call GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,ErrStat=ErrStat,ErrMsg=ErrMsg,thetaBladeNds=thetaBladeNds)
-   elseif (p%AeroProjMod==1) then ! Lifting line system (for OLAF)  
+   elseif (p%AeroProjMod==APM_LiftingLine) then
       ! TODO we might want to do something different here
       call GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,ErrStat=ErrStat,ErrMsg=ErrMsg,thetaBladeNds=thetaBladeNds)
-   elseif (p%AeroProjMod==2) then ! Envision  system     
+   elseif (p%AeroProjMod==APM_BEM_Polar) then 
        !pass
        !call GeomWithoutSweepPitchTwist(p,u, x_hat_disk, m, ErrStat=ErrStat,ErrMsg=ErrMsg, thetaBladeNds=m%BEMT_u(indx)%theta, toeBladeNds=m%BEMT_u(indx)%toeAngle) ! sets m%orientationAnnulus, m%Curve, m%hub_theta_x_root, m%AllOuts( BPitch(  k) )
    else
@@ -1862,10 +1862,10 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! Velocity in disk normal
    m%BEMT_u(indx)%V0 = m%AvgDiskVel
    m%BEMT_u(indx)%x_hat_disk = x_hat_disk
-   if (p%AeroProjMod==0 .or. p%AeroProjMod==1) then
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
       ! NOTE: OpenFAST: Contains translational velocity!!!  m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
       m%BEMT_u(indx)%Un_disk  = dot_product( m%V_diskAvg, x_hat_disk )
-   elseif (p%AeroProjMod==2) then     
+   elseif (p%AeroProjMod==APM_BEM_Polar) then     
       m%BEMT_u(indx)%Un_disk  = dot_product( m%AvgDiskVel, x_hat_disk )
    endif
 
@@ -1911,8 +1911,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    ! "Azimuth angle" rad
    m%bemt_u(indx)%psi = Azimuth
 
-   ! Local radius (and orientation for projMod 2)
-   if (p%AeroProjMod==0 .or. p%AeroProjMod==1) then
+   ! Local radius (and orientation)
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
       ! "Radial distance from center-of-rotation to node" m
       do k=1,p%NumBlades
@@ -1927,7 +1927,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          end do !j=nodes      
       end do !k=blades  
       
-  elseif (p%AeroProjMod==2) then
+  elseif (p%AeroProjMod==APM_BEM_Polar) then
       do k=1,p%NumBlades
       
          ! Determine current azimuth angle and pitch axis vector of blade k
@@ -1991,7 +1991,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
   !!! m%BEMT_u(indx)%cantAngle = m%Curve ! cant angle (including aeroelastic deformation)
   !!!!m%BEMT_u(indx)%theta     =  ! twist (including pitch and aeroelastic deformation)
   !!!!m%BEMT_u(indx)%toeAngle  =  ! toe angle
-   if (p%AeroProjMod==0 .or. p%AeroProjMod==1) then
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
      ! Theta
       do k=1,p%NumBlades
          do j=1,p%NumBlNds         
@@ -2002,7 +2002,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
             m%BEMT_u(indx)%cantAngle(j,k) = 0.0_ReKi
          end do !j=nodes
       end do !k=blades
-   elseif (p%AeroProjMod==2) then
+   elseif (p%AeroProjMod==APM_BEM_Polar) then
          do k=1,p%NumBlades
             do j=1,p%NumBlNds
                ! Get local blade cant angle and twist
@@ -2225,7 +2225,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,toeBladeNds
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (p%AeroProjMod==0) then ! WithoutSweepPitchTwist system
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
    
          ! theta, "Twist angle (includes all sources of twist)" rad
          ! Vx, "Local axial velocity at node" m/s
@@ -2269,7 +2269,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,toeBladeNds
          end do !j=nodes
       end do !k=blades
       
-   else if (p%AeroProjMod==1) then ! Liftingline system (for VAWT/OLAF)
+   else if (p%AeroProjMod==APM_LiftingLine) then
    
       do k=1,p%NumBlades
         ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
@@ -2296,7 +2296,7 @@ subroutine GeomWithoutSweepPitchTwist(p,u,x_hat_disk,m,thetaBladeNds,toeBladeNds
       do k=1,p%NumBlades
          call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%orientationAnnulus(:,:,:,k))
 
-         ! NOTE: important for AeroProjMod=1 we use BladeMotion Orientation directly for annulus
+         ! NOTE: important for AeroProjMod=APM_LiftingLine we use BladeMotion Orientation directly for annulus
          ! otherwise ad_EllipticalWingInf_OLAF fails. Might need double checking...
          do j=1,p%NumBlNds
             m%orientationAnnulus(:,:,j,k) = u%BladeMotion(k)%Orientation(:,:,j)
@@ -3231,7 +3231,14 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%MomentumCorr  = .FALSE. ! TODO EB
    InitInp%SumPrint      = InputFileData%SumPrint
    InitInp%RootName      = p%RootName
-   InitInp%BEMT_Mod      = p%AeroProjMod ! TODO EB
+   if (p%AeroProjMod == APM_BEM_NoSweepPitchTwist) then
+      InitInp%BEM_Mod    = BEMMod_2D
+   else if (p%AeroProjMod == APM_BEM_Polar) then
+      InitInp%BEM_Mod    = BEMMod_3D
+   else
+      InitInp%BEM_Mod    = -1
+      call SetErrStat(ErrID_Fatal, "AeroProjMod needs to be 0 or 2 when used with BEM", ErrStat, ErrMsg, RoutineName)   
+   endif
       ! remove the ".AD" from the RootName
    k = len_trim(InitInp%RootName)
    if (k>3) then

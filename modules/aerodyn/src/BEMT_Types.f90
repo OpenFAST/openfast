@@ -40,6 +40,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters = 2      ! Pitt/Peters [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Coupled = 3      ! Coupled [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
 ! =========  BEMT_InitInputType  =======
   TYPE, PUBLIC :: BEMT_InitInputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord      !< Chord length at node [m]
@@ -75,7 +77,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: SumPrint      !< logical flag indicating whether to use UnsteadyAero [-]
-    INTEGER(IntKi)  :: BEMT_Mod      !< BEM Model 0=OpenFAST 2=Envision  [-]
+    INTEGER(IntKi)  :: BEM_Mod      !< BEM Model 0=OpenFAST 2=Envision  [-]
   END TYPE BEMT_InitInputType
 ! =======================
 ! =========  BEMT_InitOutputType  =======
@@ -172,7 +174,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: rTipFixMax      !< Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: IntegrateWeight      !< A weighting factor for calculating rotor-averaged values (e.g., AxInd) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
-    INTEGER(IntKi)  :: BEMT_Mod      !< BEM Model 1=OpenFAST 2=Envision  [-]
+    INTEGER(IntKi)  :: BEM_Mod      !< BEM Model 0=OpenFAST 2=Envision  [-]
   END TYPE BEMT_ParameterType
 ! =======================
 ! =========  BEMT_InputType  =======
@@ -377,7 +379,7 @@ IF (ALLOCATED(SrcInitInputData%UAOff_outerNode)) THEN
 ENDIF
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%SumPrint = SrcInitInputData%SumPrint
-    DstInitInputData%BEMT_Mod = SrcInitInputData%BEMT_Mod
+    DstInitInputData%BEM_Mod = SrcInitInputData%BEM_Mod
  END SUBROUTINE BEMT_CopyInitInput
 
  SUBROUTINE BEMT_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -534,7 +536,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! SumPrint
-      Int_BufSz  = Int_BufSz  + 1  ! BEMT_Mod
+      Int_BufSz  = Int_BufSz  + 1  ! BEM_Mod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -767,7 +769,7 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%SumPrint, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%BEMT_Mod
+    IntKiBuf(Int_Xferred) = InData%BEM_Mod
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_PackInitInput
 
@@ -1032,7 +1034,7 @@ ENDIF
     END DO ! I
     OutData%SumPrint = TRANSFER(IntKiBuf(Int_Xferred), OutData%SumPrint)
     Int_Xferred = Int_Xferred + 1
-    OutData%BEMT_Mod = IntKiBuf(Int_Xferred)
+    OutData%BEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_UnPackInitInput
 
@@ -4126,7 +4128,7 @@ IF (ALLOCATED(SrcParamData%IntegrateWeight)) THEN
     DstParamData%IntegrateWeight = SrcParamData%IntegrateWeight
 ENDIF
     DstParamData%lin_nx = SrcParamData%lin_nx
-    DstParamData%BEMT_Mod = SrcParamData%BEMT_Mod
+    DstParamData%BEM_Mod = SrcParamData%BEM_Mod
  END SUBROUTINE BEMT_CopyParam
 
  SUBROUTINE BEMT_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -4303,7 +4305,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%IntegrateWeight)  ! IntegrateWeight
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! lin_nx
-      Int_BufSz  = Int_BufSz  + 1  ! BEMT_Mod
+      Int_BufSz  = Int_BufSz  + 1  ! BEM_Mod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4564,7 +4566,7 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%lin_nx
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%BEMT_Mod
+    IntKiBuf(Int_Xferred) = InData%BEM_Mod
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_PackParam
 
@@ -4874,7 +4876,7 @@ ENDIF
   END IF
     OutData%lin_nx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%BEMT_Mod = IntKiBuf(Int_Xferred)
+    OutData%BEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BEMT_UnPackParam
 

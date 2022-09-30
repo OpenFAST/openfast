@@ -76,11 +76,11 @@ contains
    end function VelocityIsZero
 !..................................................................................................................................   
    
-   subroutine GetReynoldsNumber(BEMT_Mod, axInduction, tanInduction, Vx, Vy, Vz, chord, nu, theta, phi, cantAngle, toeAngle , Re )
+   subroutine GetReynoldsNumber(BEM_Mod, axInduction, tanInduction, Vx, Vy, Vz, chord, nu, theta, phi, cantAngle, toeAngle , Re )
 
    
     ! in
-    integer(IntKi), intent(in)         :: BEMT_Mod
+    integer(IntKi), intent(in)         :: BEM_Mod
     real(ReKi), intent(in)             :: axInduction, tanInduction, Vx, Vy, Vz
     real(ReKi), intent(in)             :: chord, nu
     real(ReKi), intent(in)             :: cantAngle, theta, phi, toeAngle !note phi is unused
@@ -96,7 +96,7 @@ contains
       inflowVec(3) = Vz
 
     ! Project inflow vector onto airfoil plane
-    if(BEMT_Mod==0) then
+    if(BEM_Mod==BEMMod_2D) then
       ! TODO TODO TODO EB CHECK THAT THE SAME MIGHT BE OBTAINED IF cant=0, toe=0
       inflowVecInAirfoilPlane(1) = inflowVec(1)
       inflowVecInAirfoilPlane(2) = inflowVec(2)
@@ -165,14 +165,14 @@ contains
       
    end subroutine getAirfoilOrientation
 !..................................................................................................................................
-   subroutine computeAirfoilOperatingAOA( BEMT_Mod, phi, theta, cantAngle, toeAngle, AoA )
+   subroutine computeAirfoilOperatingAOA( BEM_Mod, phi, theta, cantAngle, toeAngle, AoA )
       ! Routine for computing local angle-of-attack in the airfoil reference frame
       ! accounting for the current orientation of the airfoil relative to the inflow
       ! defined by the phi angle.
 
       implicit none
 
-      integer(IntKi), intent(in   ) :: BEMT_Mod
+      integer(IntKi), intent(in   ) :: BEM_Mod
       real(ReKi), intent(in   ) :: phi
       real(ReKi), intent(in   ) :: theta
       real(ReKi), intent(in   ) :: cantAngle
@@ -186,7 +186,7 @@ contains
       real(ReKi)                :: signOfAngle 
       real(ReKi)                :: numer, denom, ratio
       real(ReKi)                :: phiN
-      if (BEMT_Mod==0) then
+      if (BEM_Mod==BEMMod_2D) then
          AoA   =  phi - theta  ! angle of attack
       else
       ! get airfoil orientation vectors
@@ -350,10 +350,10 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    else !if ( (.NOT. VelocityIsZero(Vx)) .AND. (.NOT. VelocityIsZero(Vy)) ) then 
        
       ! Compute operating conditions in the airfoil reference frame
-      call computeAirfoilOperatingAOA(p%BEMT_Mod, phi, u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), AOA )
+      call computeAirfoilOperatingAOA(p%BEM_Mod, phi, u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), AOA )
 
    ! FIX ME: Note that the Re used here is computed assuming axInduction and tanInduction are 0. Is that a problem for 2D Re interpolation on airfoils? or should update solve method to take this into account?
-      call GetReynoldsNumber(p%BEMT_Mod, 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), p%chord(i,j), p%kinVisc, u%theta(i,j), phi, u%cantAngle(i,j), u%toeAngle(i,j),  Re)
+      call GetReynoldsNumber(p%BEM_Mod, 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), p%chord(i,j), p%kinVisc, u%theta(i,j), phi, u%cantAngle(i,j), u%toeAngle(i,j),  Re)
 
 
       call AFI_ComputeAirfoilCoefs( AOA, Re, u%UserProp(i,j),  AFInfo, AFI_interp, errStat2, errMsg2 )
@@ -361,7 +361,7 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
          if (ErrStat >= AbortErrLev) return
       
       ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
-      if(p%BEMT_Mod==0) then
+      if(p%BEM_Mod==BEMMod_2D) then
           call Transform_ClCd_to_CxCy( phi, p%useAIDrag, p%useTIDrag, AFI_interp%Cl, AFI_interp%Cd, Cx, Cy )  
       else
           call Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), p%useAIDrag, p%useTIDrag, &
@@ -370,14 +370,14 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
       
       
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
-      if(p%BEMT_Mod==0) then
+      if(p%BEM_Mod==BEMMod_2D) then
           call inductionFactors0( u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, p%numBlades, &
                               u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useHubLoss, p%useTipLoss,  p%hubLossConst(i,j), p%tipLossConst(i,j), &
                               ResidualVal, axInduction, tanInduction, IsValidSolution)
       else
       ! Prandtl's tip and hub loss factor
-      ! TODO TODO TODO EB Unify
-      F = getHubTipLossCorrection(p%BEMT_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi, u%cantAngle(i,j) )
+      ! TODO TODO TODO EB Unify with 2D, compute F for both before induction
+      F = getHubTipLossCorrection(p%BEM_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi, u%cantAngle(i,j) )
       F = max(F,0.0001_ReKi)
           call inductionFactors2( p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), u%drdz(i,j), u%cantAngle(i,j), F, u%CHI0, p%useTanInd, &
                               ResidualVal, axInduction, tanInduction, p%MomentumCorr, u%xVelCorr(i,j), IsValidSolution, k_out, kp_out )
@@ -494,7 +494,7 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    !.....................................................
    ! Prandtl's tip and hub loss factor:
    !.....................................................
-   ! TODO TODO TODO EB Put this up like BEMT_Mod2
+   ! TODO TODO TODO EB Put this up like BEM_Mod3d
    F = getHubTipLossCorrection(0, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle=0.0_ReKi)
    
 
@@ -1011,9 +1011,9 @@ end subroutine SwapInt
 
 !-----------------------------------------------------------------------------------------
 !> This function computes \f$F\f$, the hub/tip loss correction
-real(reKi) function getHubTipLossCorrection(BEMT_Mod, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle) result(F)
+real(reKi) function getHubTipLossCorrection(BEM_Mod, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle) result(F)
 
-   integer(IntKi), intent(in) :: BEMT_Mod   !< BEM Model
+   integer(IntKi), intent(in) :: BEM_Mod   !< BEM Model
    real(ReKi), intent(in) :: hubLossConst   !< hub loss constant [p%hubLossConst]
    real(ReKi), intent(in) :: tipLossConst   !< tip loss constant [p%tipLossConst]
    logical,    intent(in) :: useHubLoss     !< hub-loss flag [p%useHubLoss]
@@ -1031,7 +1031,7 @@ real(reKi) function getHubTipLossCorrection(BEMT_Mod, useHubLoss, useTipLoss, hu
    Ftip = 1.0_ReKi     ! default tip loss value 
    Fhub = 1.0_ReKi     ! default hub loss value
    
-   if (BEMT_Mod==0) then
+   if (BEM_Mod==BEMMod_2D) then
       sphiN = abs(sin(phi))
             
       if (.not. EqualRealNos(sphiN,0.0_ReKi)) then
@@ -1068,7 +1068,7 @@ real(reKi) function getHubTipLossCorrection(BEMT_Mod, useHubLoss, useTipLoss, hu
             ! else Ftip = 1.0_ReKi  ! TwoByPi*Pi/2
          end if
       end if
-   endif ! BEMT_Mod
+   endif ! BEM_Mod
       
    F = Ftip * Fhub
    

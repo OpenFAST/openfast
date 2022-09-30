@@ -50,6 +50,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_none = 0      ! no tower shadow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Powles = 1      ! Powles tower shadow model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrShadow_Eames = 2      ! Eames tower shadow model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_NoSweepPitchTwist = 1      ! Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_BEM_Polar = 2      ! Use staggered polar grid for momentum balance in each annulus [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: APM_LiftingLine = 3      ! Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: AD_MaxBl_Out = 3      ! Maximum number of blades for information output (or linearization) [-]
 ! =========  RotInitInputType  =======
   TYPE, PUBLIC :: RotInitInputType
@@ -60,7 +63,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrientation      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition      !< X-Y-Z reference position of nacelle [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
-    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
+    INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
   END TYPE RotInitInputType
 ! =======================
 ! =========  AD_InitInputType  =======
@@ -319,7 +322,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Pvap      !< Vapour pressure [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
-    INTEGER(IntKi)  :: AeroProjMod = 0      !< Flag to switch between different projection models [-]
+    INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
