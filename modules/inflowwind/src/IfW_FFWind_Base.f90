@@ -102,8 +102,8 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
 
 
       ! Step through all the positions and get the velocities
-   !$OMP PARALLEL default(shared) if(PointNum>1000)
-   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
+   !OMP PARALLEL default(shared) if(NumPoints>1000)
+   !OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
@@ -111,19 +111,19 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
 
          ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          ErrStat = ErrID_None
          ErrMsg  = ""
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
                                                       TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                                                       TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                                                       TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")  in wind-file coordinates]" )
-         !$OMP END CRITICAL
+         !OMP END CRITICAL
       END IF
 
    ENDDO
-   !$OMP END DO 
-   !$OMP END PARALLEL
+   !OMP END DO 
+   !OMP END PARALLEL
    IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 
    IF (p%AddMeanAfterInterp) THEN
