@@ -457,15 +457,23 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(1)%TowerMotion%Position(:,J)
       END DO      
       
+      ! Nacelle
       if (u_AD%rotors(1)%NacelleMotion%Committed) then
          Node = Node + 1
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(1)%NacelleMotion%Position(:,1)
       end if
       
+      ! Hub
 !      if (u_AD%HubMotion%Committed) then
 !         Node = Node + 1
 !         u_IfW%PositionXYZ(:,Node) = u_AD%HubMotion%TranslationDisp(:,1) + u_AD%HubMotion%Position(:,1)
 !      end if
+
+      ! TailFin
+      if (u_AD%rotors(1)%TFinMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TFinMotion%TranslationDisp(:,1) + u_AD%rotors(1)%TFinMotion%Position(:,1)
+      end if
                   
       ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
       if (allocated(OtherSt_AD%WakeLocationPoints)) then
@@ -558,6 +566,7 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          end do      
       end if
 
+      ! Nacelle
       if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
          u_AD%rotors(1)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
          node = node + 1
@@ -571,6 +580,14 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
 !      else
 !         u_AD%InflowOnHub = 0.0_ReKi
 !      end if
+
+      ! TailFin
+      if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
+         u_AD%rotors(1)%InflowOnTailFin(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(1)%InflowOnTailFin = 0.0_ReKi
+      end if
 
       ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
       if ( allocated(u_AD%InflowWakeVel) ) then
@@ -606,6 +623,7 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          end do      
       end if
       
+      ! Nacelle
       if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
 !        for cfd we will lump the hub and nacelle together
          u_AD%rotors(1)%InflowOnNacelle(1) = y_OpFM%u(1)
@@ -624,6 +642,16 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
 !      else
 !         u_AD%InflowOnHub = 0.0_ReKi
 !      end if
+
+      ! TailFin
+      if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
+         u_AD%rotors(1)%InflowOnTailFin(1) = y_OpFM%u(node)
+         u_AD%rotors(1)%InflowOnTailFin(2) = y_OpFM%v(node)
+         u_AD%rotors(1)%InflowOnTailFin(3) = y_OpFM%w(node)
+         node = node + 1
+      else
+         u_AD%rotors(1)%InflowOnTailFin = 0.0_ReKi
+      end if
       
    ELSE
       

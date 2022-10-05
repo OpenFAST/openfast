@@ -573,6 +573,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (AD%Input(1)%rotors(1)%NacelleMotion%Committed) then
             Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%NacelleMotion%NNodes ! 1 point
          endif
+         ! TailFin
+         if (AD%Input(1)%rotors(1)%TFinMotion%Committed) then
+            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%TFinMotion%NNodes ! 1 point
+         endif
          ! Wake
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
             Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + size(AD%OtherSt(STATE_CURR)%WakeLocationPoints,DIM=2)

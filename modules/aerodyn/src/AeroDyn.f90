@@ -758,6 +758,8 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) RETURN         
+   else
+      y%TFinLoad%NNodes = 0
    endif
 
          
@@ -933,6 +935,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       orientationL = EulerConstructZYX( theta ) ! nac2tf
       orientation  = matmul(orientationL, InitInp%NacelleOrientation) ! gl2tf = nac2tf * gl2nac
       call CreatePointMesh(u%TFinMotion, position, orientation, errStat, errMsg, HasMotion=.True., HasLoads=.False.)
+   else
+      u%TFinMotion%NNodes = 0
    endif
    
       !................
@@ -3282,6 +3286,9 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       Cy =  AFI_interp%Cl * cos(alpha) + AFI_interp%Cd * sin(alpha)
       ! Forces in tailfin system
       q = 0.5 * p%airDens * V_rel_orth2 * p%TFin%TFinArea
+      force_tf(:)    = 0.0_ReKi
+      moment_tf(:)    = 0.0_ReKi
+      !force_tf(2)    = 1000.0_ReKi
       force_tf(1)    = Cx * q
       force_tf(2)    = Cy * q * p%TFin%TFinChord
       force_tf(3)    = 0.0_ReKi

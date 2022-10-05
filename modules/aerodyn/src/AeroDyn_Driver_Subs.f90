@@ -522,6 +522,8 @@ subroutine Init_InflowWind(dvr, IW, u_AD, o_AD, dt, errStat, errMsg)
       endif
       ! Hub Motion
       !InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
+      ! TailFin
+      InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%TFinMotion%NNodes ! 1 point
    enddo
    if (allocated(o_AD%WakeLocationPoints)) then
       InitInData%NumWindPoints = InitInData%NumWindPoints + size(o_AD%WakeLocationPoints,DIM=2)
@@ -1129,6 +1131,11 @@ subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
       end if
       ! Hub
+      ! TailFin
+      if (u_AD%rotors(iWT)%TFinMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%TFinMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%TFinMotion%Position(:,1)
+      end if
 
    enddo ! iWT
    ! vortex points from FVW in AD15
@@ -1201,6 +1208,13 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
 !      else
 !         u_AD%InflowOnHub = 0.0_ReKi
 !      end if
+      ! TailFin
+      if (u_AD%rotors(iWT)%TFinMotion%NNodes > 0) then
+         u_AD%rotors(iWT)%InflowOnTailFin(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+      end if
    enddo ! rotors
    ! OLAF points
    if ( allocated(u_AD%InflowWakeVel) ) then
