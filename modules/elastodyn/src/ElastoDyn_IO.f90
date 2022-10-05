@@ -5139,12 +5139,6 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    ELSEIF ( MHK == 2 ) THEN
 
       IF ( InputFileData%TowerBsHt <= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be greater than TowerHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
-   
-      IF ( InputFileData%PtfmCMzt  < InputFileData%TowerBsHt ) &
-         CALL SetErrStat( ErrID_Fatal, 'PtfmCMzt must not be less than TowerBsHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
-
-      IF ( InputFileData%PtfmRefzt  < InputFileData%TowerBsHt ) &
-         CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be less than TowerBsHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
          
    ENDIF
      
