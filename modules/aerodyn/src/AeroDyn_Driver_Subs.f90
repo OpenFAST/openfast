@@ -638,19 +638,19 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       orientation = R_gl2wt
       
       !bjj: Inspector consistently gives "Invalid Memory Access" errors here on the allocation of wt%ptMesh%RotationVel in MeshCreate. I haven't yet figured out why.
-      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+      call CreatePointMesh(wt%ptMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Tower
       if (wt%hasTower) then
          pos         = wt%ptMesh%Position(:,1) + matmul(transpose(R_gl2wt),  wt%twr%origin_t)
          orientation = R_gl2wt
-         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+         call CreatePointMesh(wt%twr%ptMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
       endif
 
       ! Nacelle
       pos           = wt%ptMesh%Position(:,1) +  matmul(transpose(R_gl2wt),  wt%nac%origin_t)
       orientation   = R_gl2wt ! Yaw?
-      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed()) return
+      call CreatePointMesh(wt%nac%ptMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed()) return
 
       ! Hub
       R_nac2gl  = transpose(wt%nac%ptMesh%RefOrientation(:,:,1))
@@ -658,7 +658,7 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
       pos         = wt%nac%ptMesh%Position(:,1) + matmul(R_nac2gl,wt%hub%origin_n)
       orientation = matmul(R_nac2hub, wt%nac%ptMesh%RefOrientation(:,:,1))   ! Global 2 hub at t=0
 
-      call CreatePointMesh(wt%hub%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+      call CreatePointMesh(wt%hub%ptMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
       ! Blades
 !       wt%Rg2b0 = EulerConstruct( wt%orientationInit ) ! global 2 base at t = 0 (constant)
@@ -671,7 +671,7 @@ subroutine Init_Meshes(dvr,  errStat, errMsg)
          R_hub2bl = EulerConstruct( wt%bld(iB)%orientation_h ) ! Rotation matrix hub 2 blade (constant)
          orientation = matmul(R_hub2bl,  wt%hub%ptMesh%RefOrientation(:,:,1) ) ! Global 2 blade =    hub2blade   x global2hub
          pos         = wt%hub%ptMesh%Position(:,1) + matmul(R_hub2gl, wt%bld(iB)%origin_h) +  wt%bld(iB)%hubRad_bl*orientation(3,:) 
-         call CreatePointMesh(wt%bld(iB)%ptMesh, pos, orientation, errStat2, errMsg2); if(Failed())return
+         call CreatePointMesh(wt%bld(iB)%ptMesh, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
       end do
 
       ! --- Mapping
@@ -781,7 +781,7 @@ subroutine Init_ADMeshMap(dvr, uAD, errStat, errMsg)
             pos         = wt%twr%ptMesh%Position(:,1)
             orientation = wt%twr%ptMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(wt%twr%ptMeshAD, pos, orientation, errStat2, errMsg2); if(Failed())return
+            call CreatePointMesh(wt%twr%ptMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(wt%twr%ptMesh, wt%twr%ptMeshAD, wt%twr%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
@@ -803,35 +803,6 @@ contains
       Failed = ErrStat >= AbortErrLev
    end function Failed
 end subroutine Init_ADMeshMap
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!>
-subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
-   type(MeshType), intent(inout) :: mesh
-   real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
-   real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
-   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
-   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
-   integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   errStat = ErrID_None
-   errMsg  = ''
-
-   call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-   if (ErrStat >= AbortErrLev) return
-
-   call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshCommit(mesh, errStat2, errMsg2);
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-end subroutine CreatePointMesh
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set the motion of the different structural meshes
 !! "ED_CalcOutput"

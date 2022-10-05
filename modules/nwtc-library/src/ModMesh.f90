@@ -3577,6 +3577,37 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshExtrapInterp2
 
+!...............................................................................................................................
+!> High level function to easily create a point mesh
+   SUBROUTINE CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads)
+      type(MeshType),               intent(inout) :: mesh             !< Mesh to be created
+      real(ReKi),                   intent(in   ) :: PosInit(3)       !< Xi,Yi,Zi, coordinates of node
+      real(R8Ki),                   intent(in   ) :: orientInit(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
+      logical,                      intent(in   ) :: hasMotion        !< include displacements in mesh
+      logical,                      intent(in   ) :: hasLoads         !< include loads in mesh
+      integer(IntKi)              , intent(out)   :: errStat          ! Status of error message
+      character(*)                , intent(out)   :: errMsg           ! Error message if ErrStat /= ErrID_None
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+      errStat = ErrID_None
+      errMsg  = ''
+
+      call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2,  &
+         Orientation=hasMotion, TranslationDisp=hasMotion, TranslationVel=hasMotion, RotationVel=hasMotion, TranslationAcc=hasMotion, RotationAcc=hasMotion, &
+         Force = hasLoads, Moment = hasLoads)
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      if (ErrStat >= AbortErrLev) return
+
+      call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+      call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+      call MeshCommit(mesh, errStat2, errMsg2);
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+   END SUBROUTINE CreatePointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh
 

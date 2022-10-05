@@ -1708,6 +1708,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
       call Calc_WriteOutput_FVW()
    endif
 
+
+
       ! set these for debugging
 !   m%AllOuts( Debug1 ) = 0.0_ReKi !TwoNorm( m%BEMT%u_SkewWake(1)%v_qsw )
 !   m%AllOuts( Debug2 ) = 0.0_ReKi !TwoNorm( x%BEMT%v_w )
@@ -1867,6 +1869,12 @@ CONTAINS
          m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
       end if
       
+
+      ! TailFin
+      if (p%TFinAero) then
+         print*,'TODO TailFin write outputs' 
+      endif
+
             
    end subroutine Calc_WriteOutput_AD
    !..........................................................................................
@@ -2626,7 +2634,7 @@ END SUBROUTINE ReadBladeInputs
 !> Read Tail Fin inputs
 SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    character(*),                    intent(in   )  :: FileName          !< Name of the file containing the Tail Fin aero data
-   type(TFinParameterType),         intent(inout)  :: TFData            !< All the data in the Tail Fin input file
+   type(TFinInputFileType),         intent(inout)  :: TFData            !< All the data in the Tail Fin input file
    integer(IntKi),                  intent(in   )  :: UnEc              !< Echo unit 
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
    character(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
@@ -2646,6 +2654,7 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
    !======  General inputs =============================================================
    call ParseVar( FileInfo_In, CurLine, 'TFinMod'   , TFData%TFinMod      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar( FileInfo_In, CurLine, 'TFinChord' , TFData%TFinChord    , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar( FileInfo_In, CurLine, 'TFinArea'  , TFData%TFinArea     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry( FileInfo_In, CurLine, 'TFinRefP_n', TFData%TFinRefP_n, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseAry( FileInfo_In, CurLine, 'TFinAngles', TFData%TFinAngles, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
