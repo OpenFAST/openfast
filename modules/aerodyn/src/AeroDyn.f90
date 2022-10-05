@@ -331,6 +331,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    enddo
+   ! TailFin parameters
+   do iR = 1, nRotors
+      call AD_CopyTFinParameterType( InputFileData%rotors(iR)%TFin, p%rotors(iR)%TFin, 0, ErrStat2, ErrMsg2); if (Failed()) return;
+   enddo
   
       !............................................................................................
       ! Define and initialize inputs here 
@@ -2623,6 +2627,20 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       end do ! iR, rotor
       
    end if   
+
+   !..................
+   ! Tail fin checks
+   !..................
+   do iR = 1,size(NumBl)
+      if (InputFileData%rotors(iR)%TFinAero) then
+         ! Check AFID
+         if (InputFileData%rotors(iR)%TFin%TFinMod==TFinAero_polar) then
+            k = InputFileData%rotors(iR)%TFin%TFinAFID
+            j = InputFileData%NumAFfiles
+            if (k<1 .or. k>j) call Fatal('The variable TFinAFID (in AeroDyn TailFin file) needs to be between 1 and NumAFfiles ('//trim(num2lstr(j))//'), currently: '//trim(num2lstr(k)))
+         endif
+      endif
+   enddo ! iR, rotor
    
    !..................
    ! check for linearization
@@ -2642,6 +2660,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end if
       end if
    end if
+
+contains
+
+   SUBROUTINE Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, RoutineName)
+   END SUBROUTINE Fatal
    
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------

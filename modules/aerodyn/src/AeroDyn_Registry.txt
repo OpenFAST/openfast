@@ -34,6 +34,20 @@ param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower s
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
 
+param    ^              -  IntKi    TFinAero_none           -  0  -  "no tail fin aero"                                   -
+param    ^              -  IntKi    TFinAero_polar          -  1  -  "polar-based tail fin aerodynamics"                  -
+param    ^              -  IntKi    TFinAero_USB            -  2  -  "unsteady slender body tail fin aerodynamics model"  -
+
+param    ^              -  IntKi    TFinIndMod_none         -  0  -  "no induction"                                   -
+param    ^              -  IntKi    TFinIndMod_rotavg       -  1  -  "rotor averaged induction"                       -
+
+# Tail Fin parameters 
+typedef  ^  TFinParameterType   IntKi   TFinMod    -    -   - "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
+typedef  ^  TFinParameterType   ReKi    TFinArea   -    -   - "Tail fin planform area [used only when TFinMod=1]" m^2
+typedef  ^  TFinParameterType   ReKi    TFinRefP_n 3    -   - "Undeflected position of the tail fin reference point wrt the tower top" m 
+typedef  ^  TFinParameterType   ReKi    TFinAngles 3    -   - "Tail fin chordline skew, tilt, and bank angles about the reference point" (deg)
+typedef  ^  TFinParameterType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
+typedef  ^  TFinParameterType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -106,6 +120,10 @@ typedef	^	RotInputFile	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	RotInputFile	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotInputFile	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
+# TailFin
+typedef  ^  RotInputFile   LOGICAL          TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
+typedef  ^  RotInputFile   CHARACTER(1024)  TFinFile  -    -    -   "Input file for tail fin aerodynamics [used only when TFinAero=True]" -
+typedef  ^  RotInputFile   TFinParameterType TFin     -    -    -   "Parameters for tail fin" -
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
@@ -164,6 +182,8 @@ typedef  ^  AD_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD
 typedef  ^  AD_InputFile   ReKi             UAStartRad  -  -  - Starting radius for dynamic stall (fraction of rotor radius)
 typedef  ^  AD_InputFile   ReKi             UAEndRad    -  -  - Ending radius for dynamic stall (fraction of rotor radius)
 typedef  ^  AD_InputFile   RotInputFile  rotors {:} - - "Rotor (blades and tower) input file data" -
+
+
 
 
 # ..... States ....................................................................................................................
@@ -235,6 +255,8 @@ typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
+
+
 # Parameters for each rotor
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
@@ -277,6 +299,8 @@ typedef	^	RotParameterType	IntKi	BldNd_TotNumOuts	-	-	-	"Total number of request
 typedef	^	RotParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^  RotParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  RotParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+# Tail fin parameters (per rotor)
+typedef  ^  RotParameterType  TFinParameterType TFin    -       -   -   "Parameters for tail fin of current rotor" -
 
 # parameters for all rotors:
 typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for each rotor" -

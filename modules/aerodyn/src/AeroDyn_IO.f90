@@ -2075,6 +2075,18 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
       END DO
    
    end do ! loop on rotors
+
+   ! Read TailFin
+   do iR = 1, size(InputFileData%rotors)
+      if (InputFileData%rotors(iR)%TFinAero) then 
+         call ReadTailFinInputs(InputFileData%rotors(iR)%TFinFile, InputFileData%rotors(iR)%TFin, UnEcho, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            call Cleanup()
+            return
+         end if
+      endif
+   enddo ! iR, rotors
       
 
    CALL Cleanup ( )
@@ -2334,6 +2346,21 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
+   !======  Tail fin aerodynamics ========================================================================
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+      ! NOTE: being nice with legacy input file. Uncomment in next release
+      call ParseVar(FileInfo_In, CurLine, "TFinAero", InputFileData%rotors(iR)%TFinAero, ErrStat2, ErrMsg2, UnEc); 
+      if (ErrStat2==ErrID_None) then
+         call ParseVar(FileInfo_In, CurLine, "TFinFile", InputFileData%rotors(iR)%TFinFile, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+         InputFileData%rotors(iR)%TFinFile = trim(PriPath) // trim(InputFileData%rotors(iR)%TFinFile)
+      else
+         call LegacyWarning('Tail Fin section (TFinAero, TFinFile) is missing from input file.')
+         CurLine = CurLine - 1
+      endif
+   enddo
+
    !======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
 
    do iR = 1,size(NumBlades) ! Loop on rotors
@@ -2452,6 +2479,14 @@ CONTAINS
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       endif
    end function FailedNodal
+   subroutine LegacyWarning(Message)
+      character(len=*), intent(in) :: Message
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: the AeroDyn input file is not at the latest format!' )
+      call WrScr('         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
+      call WrScr('> Issue: '//trim(Message))
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+   end subroutine LegacyWarning
    !-------------------------------------------------------------------------------------------------
 END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2587,6 +2622,62 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE ReadBladeInputs      
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read Tail Fin inputs
+SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
+   character(*),                    intent(in   )  :: FileName          !< Name of the file containing the Tail Fin aero data
+   type(TFinParameterType),         intent(inout)  :: TFData            !< All the data in the Tail Fin input file
+   integer(IntKi),                  intent(in   )  :: UnEc              !< Echo unit 
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
+   character(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
+   ! Local
+   type(FileInfoType) :: FileInfo_In       !< The derived type for holding the file information.
+   integer(IntKi)                                  :: ErrStat2          !< Temporary Error status
+   character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
+   integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
+
+   ! --- Read Tail fin input file into array of strings
+   call ProcessComFile( FileName, FileInfo_In, ErrStat2, ErrMsg2)
+
+   ! --- Parse the array of strings
+   do CurLine = 1,4 
+      if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   enddo
+   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
+   !======  General inputs =============================================================
+   call ParseVar( FileInfo_In, CurLine, 'TFinMod'   , TFData%TFinMod      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar( FileInfo_In, CurLine, 'TFinArea'  , TFData%TFinArea     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry( FileInfo_In, CurLine, 'TFinRefP_n', TFData%TFinRefP_n, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry( FileInfo_In, CurLine, 'TFinAngles', TFData%TFinAngles, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar( FileInfo_In, CurLine, 'TFinIndMod', TFData%TFinIndMod   , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Polar-based model ================================ [used only when TFinMod=1] 
+   if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   CurLine = CurLine + 1
+   call ParseVar( FileInfo_In, CurLine, 'TFinAFID'  , TFData%TFinAFID     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Unsteady slender body model  ===================== [used only when TFinMod=2] 
+   ! TODO
+
+
+   ! --- Validation on the fly
+   if (all((/TFinAero_none,TFinAero_polar, TFinAero_USB/) /= TFData%TFinMod)) then
+      call Fatal('TFinMod needs to be 0, 1, or 2')
+   endif
+   if (all((/TFinIndMod_none,TFinIndMod_rotavg/) /= TFData%TFinIndMod)) then
+      call Fatal('TFinIndMod needs to be 0, or 1')
+   endif
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadTailFinInputs' )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
+   subroutine Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, 'File:'//trim(FileName)//':'//trim(ErrMsg_in), ErrStat, ErrMsg, 'ReadTailFinInputs')
+   end subroutine Fatal
+   
+END SUBROUTINE ReadTailFinInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
