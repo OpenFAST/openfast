@@ -1322,8 +1322,6 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
       end if
 
       ! get the furling input-file data
-   InputFileData%Furling = .FALSE.              ! Furling is not supported in this version of ElastoDyn
-
    IF ( InputFileData%Furling )  THEN
       CALL ReadFurlFile( FurlFile, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2067,810 +2065,132 @@ END SUBROUTINE ReadBladeMeshFileAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the furling file input and converts units as appropriate.
 SUBROUTINE ReadFurlFile( FurlFile, InputFileData, UnEc, ErrStat, ErrMsg  )
-!..................................................................................................................................
-
-   IMPLICIT                        NONE
-
-      ! Passed variables:
-
    TYPE(ED_InputFile),       INTENT(INOUT)  :: InputFileData                       !< All the data in the ElastoDyn input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
    CHARACTER(*),             INTENT(IN)     :: FurlFile                            !< Name of the furling input file data
+   ! Local variables:
+   type(FileInfoType)   :: FileInfo_In ! < The derived type for holding the file information.
+   integer(IntKi)       :: iLine     !< current entry in FileInfo_In%Lines array
+   character(len=1024 ) :: DummyLine
+   integer(IntKi)       :: ErrStat2    !< Temporary Error status
+   character(ErrMsgLen) :: ErrMsg2     !< Temporary Error message
+
+   ! --- Read TailFurl input file into array of strings
+   call ProcessComFile( FurlFile, FileInfo_In, ErrStat2, ErrMsg2)
+
+   ! --- Parse the array of strings
+
+   ! Skip the first two lines as they are known to be header lines and separators
+   do iLine = 1,2 
+      if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(iLine)    ! Write header to echo
+   enddo
+   iLine = 3  
+   !---------------------- FEATURE FLAGS -------------------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDOF'  , InputFileData%RFrlDOF  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDOF'  , InputFileData%TFrlDOF  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+   ! ---------------------- INITIAL CONDITIONS --------------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RotFurl'  , InputFileData%RotFurl  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TailFurl' , InputFileData%TailFurl , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+   ! ---------------------- TURBINE CONFIGURATION -----------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'Yaw2Shft' , InputFileData%Yaw2Shft , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'ShftSkew' , InputFileData%ShftSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlCMxn' , InputFileData%RFrlCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlCMyn' , InputFileData%RFrlCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlCMzn' , InputFileData%RFrlCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'BoomCMxn' , InputFileData%BoomCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'BoomCMyn' , InputFileData%BoomCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'BoomCMzn' , InputFileData%BoomCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFinCMxn' , InputFileData%TFinCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFinCMyn' , InputFileData%TFinCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFinCMzn' , InputFileData%TFinCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlPntxn', InputFileData%RFrlPntxn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlPntyn', InputFileData%RFrlPntyn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlPntzn', InputFileData%RFrlPntzn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlSkew' , InputFileData%RFrlSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlTilt' , InputFileData%RFrlTilt , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlPntxn', InputFileData%TFrlPntxn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlPntyn', InputFileData%TFrlPntyn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlPntzn', InputFileData%TFrlPntzn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlSkew' , InputFileData%TFrlSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlTilt' , InputFileData%TFrlTilt , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+   ! ---------------------- MASS AND INERTIA ----------------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlMass' , InputFileData%RFrlMass , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'BoomMass' , InputFileData%BoomMass , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFinMass' , InputFileData%TFinMass , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlIner' , InputFileData%RFrlIner , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlIner' , InputFileData%TFrlIner , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+   ! ---------------------- ROTOR-FURL ----------------------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlMod'  , InputFileData%RFrlMod  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlSpr'  , InputFileData%RFrlSpr  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDmp'  , InputFileData%RFrlDmp  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlCDmp' , InputFileData%RFrlCDmp , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlUSSP' , InputFileData%RFrlUSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDSSP' , InputFileData%RFrlDSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlUSSpr', InputFileData%RFrlUSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDSSpr', InputFileData%RFrlDSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlUSDP' , InputFileData%RFrlUSDP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDSDP' , InputFileData%RFrlDSDP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlUSDmp', InputFileData%RFrlUSDmp, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlDSDmp', InputFileData%RFrlDSDmp, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+   ! ---------------------- TAIL-FURL -----------------------------------------------
+   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlMod'  , InputFileData%TFrlMod  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlSpr'  , InputFileData%TFrlSpr  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDmp'  , InputFileData%TFrlDmp  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlCDmp' , InputFileData%TFrlCDmp , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlUSSP' , InputFileData%TFrlUSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDSSP' , InputFileData%TFrlDSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlUSSpr', InputFileData%TFrlUSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDSSpr', InputFileData%TFrlDSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlUSDP' , InputFileData%TFrlUSDP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDSDP' , InputFileData%TFrlDSDP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlUSDmp', InputFileData%TFrlUSDmp, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlDSDmp', InputFileData%TFrlDSDmp, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+
+
+   ! --- Triggers
+   InputFileData%RotFurl   = InputFileData%RotFurl  * D2R
+   InputFileData%TailFurl  = InputFileData%TailFurl * D2R
+   InputFileData%ShftSkew  = InputFileData%ShftSkew * D2R
+   InputFileData%RFrlSkew  = InputFileData%RFrlSkew * D2R
+   InputFileData%RFrlTilt  = InputFileData%RFrlTilt * D2R
+   InputFileData%TFrlSkew  = InputFileData%TFrlSkew * D2R
+   InputFileData%TFrlTilt  = InputFileData%TFrlTilt * D2R
+   InputFileData%RFrlUSSP  = InputFileData%RFrlUSSP * D2R
+   InputFileData%RFrlDSSP  = InputFileData%RFrlDSSP * D2R
+   InputFileData%RFrlUSDP  = InputFileData%RFrlUSDP * D2R
+   InputFileData%RFrlDSDP  = InputFileData%RFrlDSDP * D2R
+   InputFileData%TFrlUSSP  = InputFileData%TFrlUSSP * D2R
+   InputFileData%TFrlDSSP  = InputFileData%TFrlDSSP * D2R
+   InputFileData%TFrlUSDP  = InputFileData%TFrlUSDP * D2R
+   InputFileData%TFrlDSDP  = InputFileData%TFrlDSDP * D2R
 
-      ! Local variables:
 
-   INTEGER(IntKi)               :: UnIn                                            ! Unit number for reading file
-   INTEGER(IntKi)               :: ErrStat2                                        ! Temporary Error status
-   CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
-   CHARACTER(*),PARAMETER       :: RoutineName = 'ReadFurlFile'
 
-      ! Get an available unit number for the file.
 
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadFurlFile' )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
 
+   subroutine Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, 'File:'//trim(FurlFile)//':'//trim(ErrMsg_in), ErrStat, ErrMsg, 'ReadFurlFile')
+   end subroutine Fatal
 
-      ! Open the furling input file.
-
-   CALL OpenFInpFile ( UnIn, FurlFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! Add a separator to the echo file if appropriate.
-
-   IF ( UnEc > 0 )  WRITE (UnEc,'(//,A,/)')  'Furling input data from file "'//TRIM( FurlFile )//'":'
-
-
-   !  -------------- FILE HEADER ---------------------------------------------------
-
-   CALL ReadCom ( UnIn, FurlFile, 'unused tower furling header line 1', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   CALL ReadCom ( UnIn, FurlFile, 'unused tower furling header line 2', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   CALL ReadCom ( UnIn, FurlFile, 'unused tower furling header line 3', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-   !  -------------- Furling FEATURE SWITCHES  --------------------------------------
-
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'degree of freedom switches (cont)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! RFrlDOF - Rotor-furl DOF.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDOF, 'RFrlDOF', 'Rotor-furl DOF (flag)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlDOF - Tail-furl DOF.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDOF, 'TFrlDOF', 'Tail-furl DOF (flag)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-   !  -------------- Furling INITIAL CONDITIONS ------------------------------------
-
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'initial conditions (cont)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RotFurl - Initial or fixed rotor-furl angle (read in degrees, converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RotFurl, 'RotFurl', 'Initial or fixed rotor-furl angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-   InputFileData%RotFurl   = InputFileData%RotFurl*D2R
-
-
-      ! TailFurl - Initial or fixed tail-furl angle (read in degrees, converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TailFurl, 'TailFurl', 'Initial or fixed tail-furl angle (deg)',  &
-                  ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-   InputFileData%TailFurl  = InputFileData%TailFurl*D2R
-
-
-   !  -------------- TURBINE CONFIGURATION (CONT) ---------------------------------
-
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'turbine configuration (cont)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! Yaw2Shft - Lateral distance from yaw axis to rotor shaft.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%Yaw2Shft, 'Yaw2Shft',  &
-                  'Lateral distance from yaw axis to rotor shaft (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! ShftSkew - Rotor shaft skew angle (read in degrees and converted to radians here).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%ShftSkew, 'ShftSkew', 'Rotor shaft skew angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%ShftSkew  = InputFileData%ShftSkew *D2R
-
-
-      ! RFrlCMxn - Downwind distance from tower-top to CM of structure that furls with the rotor (not including rotor).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlCMxn, 'RFrlCMxn',  &
-                  'Downwind distance from tower-top to rotor-furl CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlCMyn - Lateral  distance from tower-top to CM of structure that furls with the rotor (not including rotor).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlCMyn, 'RFrlCMyn',  &
-                  'Lateral  distance from tower-top to rotor-furl CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlCMzn - Vertical distance from tower-top to CM of structure that furls with the rotor (not including rotor).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlCMzn, 'RFrlCMzn',  &
-                  'Vertical distance from tower-top to rotor-furl CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BoomCMxn - Downwind distance from tower-top to tail boom CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%BoomCMxn, 'BoomCMxn',  &
-                  'Downwind distance from tower-top to tail boom CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BoomCMyn - Lateral  distance from tower-top to tail boom CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%BoomCMyn, 'BoomCMyn',  &
-                  'Lateral  distance from tower-top to tail boom CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! BoomCMzn - Vertical distance from tower-top to tail boom CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%BoomCMzn, 'BoomCMzn', &
-                   'Vertical distance from tower-top to tail boom CM (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCMxn - Downwind distance from tower-top to tail fin CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCMxn, 'TFinCMxn', &
-                   'Downwind distance from tower-top to tail fin CM (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCMyn - Lateral  distance from tower-top to tail fin CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCMyn, 'TFinCMyn', &
-                   'Lateral  distance from tower-top to tail fin CM (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCMzn - Vertical distance from tower-top to tail fin CM.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCMzn, 'TFinCMzn', &
-                   'Vertical distance from tower-top to tail fin CM (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCPxn - Downwind distance from tower-top to tail fin CP.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCPxn, 'TFinCPxn', &
-                  'Downwind distance from tower-top to tail fin CP (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCPyn - Lateral  distance from tower-top to tail fin CP.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCPyn, 'TFinCPyn', &
-                  'Lateral  distance from tower-top to tail fin CP (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinCPzn - Vertical distance from tower-top to tail fin CP.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinCPzn, 'TFinCPzn', &
-                  'Vertical distance from tower-top to tail fin CP (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinSkew - Tail fin chordline skew angle (read in degrees, converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinSkew, 'TFinSkew', 'Tail fin chordline skew angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFinSkew  = InputFileData%TFinSkew*D2R
-
-
-      ! TFinTilt - Tail fin chordline tilt angle (read in degrees, converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinTilt, 'TFinTilt', 'Tail fin chordline tilt angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFinTilt  = InputFileData%TFinTilt *D2R
-
-
-      ! TFinBank - Tail fin planform  bank angle (read in degrees, converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinBank, 'TFinBank', 'Tail fin planform  bank angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFinBank  = InputFileData%TFinBank *D2R
-
-
-      ! RFrlPntxn - Downwind distance from tower-top to arbitrary point on rotor-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlPntxn, 'RFrlPntxn', &
-                  'Downwind distance from tower-top to arbitrary point on rotor-furl axis (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlPntyn - Lateral  distance from tower-top to arbitrary point on rotor-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlPntyn, 'RFrlPntyn', &
-                  'Lateral  distance from tower-top to arbitrary point on rotor-furl axis (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlPntzn - Vertical distance from tower-top to arbitrary point on rotor-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlPntzn, 'RFrlPntzn', &
-                  'Vertical distance from tower-top to arbitrary point on rotor-furl axis (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlSkew - Rotor-furl axis skew angle (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlSkew, 'RFrlSkew', 'Rotor-furl axis skew angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlSkew  = InputFileData%RFrlSkew*D2R
-
-
-      ! RFrlTilt - Rotor-furl axis tilt angle (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlTilt, 'RFrlTilt', 'Rotor-furl axis tilt angle (deg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlTilt  = InputFileData%RFrlTilt*D2R
-
-
-      ! TFrlPntxn - Downwind distance from tower-top to arbitrary point on tail-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlPntxn, 'TFrlPntxn', &
-                  'Downwind distance from tower-top to arbitrary point on tail-furl axis (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlPntyn - Lateral  distance from tower-top to arbitrary point on tail-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlPntyn, 'TFrlPntyn', &
-                  'Lateral  distance from tower-top to arbitrary point on tail-furl axis (m)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlPntzn - Vertical distance from tower-top to arbitrary point on tail-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlPntzn, 'TFrlPntzn', &
-                  'Vertical distance from tower-top to arbitrary point on tail-furl axis (m)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlSkew - Tail-furl axis skew angle (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlSkew, 'TFrlSkew', 'Tail-furl axis skew angle (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlSkew  = InputFileData%TFrlSkew *D2R
-
-
-      ! TFrlTilt - Tail-furl axis tilt angle (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlTilt, 'TFrlTilt', 'Tail-furl axis tilt angle (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlTilt  = InputFileData%TFrlTilt *D2R
-
-
-   !  -------------- MASS AND INERTIA (CONT) --------------------------------------
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'mass and inertia (cont)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! RFrlMass - Mass of structure that furls with the rotor (not including rotor).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlMass, 'RFrlMass', 'Rotor-furl mass (kg)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! BoomMass - Tail boom mass.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%BoomMass, 'BoomMass', 'Tail boom mass (kg)',ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFinMass - Tail fin mass.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFinMass, 'TFinMass', 'Tail fin mass (kg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlIner - Inertia of structure that furls with the rotor about the rotor-furl axis (not including rotor).
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlIner, 'RFrlIner', 'Rotor-furl inertia about rotor-furl axis (kg m^2)', &
-                                            ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlIner - Tail boom inertia about tail-furl axis.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlIner, 'TFrlIner', 'Tail boom inertia about tail-furl axis (kg m^2)', &
-                  ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   !  -------------- ROTOR-FURL ---------------------------------------------------
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'Section heading: Rotor-Furl', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlMod - Rotor-furl spring/damper model switch.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlMod, 'RFrlMod', 'Rotor-furl spring/damper model switch', &
-                  ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlSpr - Rotor-furl spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlSpr, 'RFrlSpr', 'Rotor-furl spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlDmp - Rotor-furl damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDmp, 'RFrlDmp', 'Rotor-furl damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlCDmp - Rotor-furl rate-independent Coulomb-damping moment.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlCDmp, 'RFrlCDmp', 'Rotor-furl rate-independent Coulomb-damping moment (N-m)', &
-                                                         ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlUSSP - Rotor-furl up-stop spring position (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlUSSP, 'RFrlUSSP', 'Rotor-furl up-stop spring position (deg)', &
-                  ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlUSSP  = InputFileData%RFrlUSSP*D2R
-
-
-      ! RFrlDSSP - Rotor-furl down-stop spring position (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDSSP, 'RFrlDSSP', 'Rotor-furl down-stop spring position (deg)', &
-                  ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlDSSP  = InputFileData%RFrlDSSP*D2R
-
-
-      ! RFrlUSSpr - Rotor-furl up-stop spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlUSSpr, 'RFrlUSSpr', 'Rotor-furl up-stop spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlDSSpr - Rotor-furl down-stop spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDSSpr, 'RFrlDSSpr', 'Rotor-furl down-stop spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlUSDP - Rotor-furl up-stop damper position (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlUSDP, 'RFrlUSDP', 'Rotor-furl up-stop damper position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlUSDP  = InputFileData%RFrlUSDP*D2R
-
-
-      ! RFrlDSDP - Rotor-furl down-stop damper position (read in degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDSDP, 'RFrlDSDP', 'Rotor-furl down-stop damper position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%RFrlDSDP  = InputFileData%RFrlDSDP*D2R
-
-
-      ! RFrlUSDmp - Rotor-furl up-stop damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlUSDmp, 'RFrlUSDmp', 'Rotor-furl up-stop damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! RFrlDSDmp - Rotor-furl down-stop damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%RFrlDSDmp, 'RFrlDSDmp', 'Rotor-furl down-stop damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-   !  -------------- TAIL-FURL ----------------------------------------------------
-
-      ! Skip the comment line.
-
-   CALL ReadCom ( UnIn, FurlFile, 'tail-furl', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlMod - Tail-furl spring/damper model switch.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlMod, 'TFrlMod', 'Tail-furl spring/damper model switch', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlSpr - Tail-furl spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlSpr, 'TFrlSpr', 'Tail-furl spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlDmp - Tail-furl damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDmp, 'TFrlDmp', 'Tail-furl damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlCDmp - Tail-furl rate-independent Coulomb-damping moment.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlCDmp, 'TFrlCDmp', 'Tail-furl rate-independent Coulomb-damping moment (N-m)', &
-                                                                                ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlUSSP - Tail-furl up-stop spring position (read as degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlUSSP, 'TFrlUSSP', 'Tail-furl up-stop spring position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlUSSP  = InputFileData%TFrlUSSP*D2R
-
-
-      ! TFrlDSSP - Tail-furl down-stop spring position (read as degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDSSP, 'TFrlDSSP', 'Tail-furl down-stop spring position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlDSSP  = InputFileData%TFrlDSSP*D2R
-
-
-      ! TFrlUSSpr - Tail-furl up-stop spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlUSSpr, 'TFrlUSSpr', 'Tail-furl up-stop spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlDSSpr - Tail-furl down-stop spring constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDSSpr, 'TFrlDSSpr', 'Tail-furl down-stop spring constant (N-m/rad)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlUSDP - Tail-furl up-stop damper position.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlUSDP, 'TFrlUSDP', 'Tail-furl up-stop damper position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlUSDP  = InputFileData%TFrlUSDP*D2R
-
-
-      ! TFrlDSDP - Tail-furl down-stop damper position (read as degrees and converted to radians here)
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDSDP, 'TFrlDSDP', 'Tail-furl down-stop damper position (deg)', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      InputFileData%TFrlDSDP  = InputFileData%TFrlDSDP*D2R
-
-
-      ! TFrlUSDmp - Tail-furl up-stop damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlUSDmp, 'TFrlUSDmp', 'Tail-furl up-stop damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! TFrlDSDmp - Tail-furl down-stop damping constant.
-
-   CALL ReadVar ( UnIn, FurlFile, InputFileData%TFrlDSDmp, 'TFrlDSDmp', 'Tail-furl down-stop damping constant (N-m/(rad/s))', ErrStat2, ErrMsg2, UnEc  )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! Close the ElastoDyn furling file:
-
-   call Cleanup()
-
-   RETURN
-CONTAINS
-   SUBROUTINE Cleanup()
-      CLOSE( UnIn )
-   END SUBROUTINE Cleanup
 END SUBROUTINE ReadFurlFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the tower file  input.

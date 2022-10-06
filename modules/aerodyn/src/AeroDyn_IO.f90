@@ -1901,6 +1901,7 @@ CONTAINS
          m%AllOuts( TFVrel )            = m%TFinVrel
          m%AllOuts( TFVundxi:TFVundzi)  = m%TFinVund_i
          m%AllOuts( TFVindxi:TFVindzi ) = m%TFinVind_i
+         m%AllOuts( TFVrelxi:TFVrelzi ) = m%TFinVrel_i
          m%AllOuts( TFSTVxi:TFSTVzi )   = m%TFinSTV_i
          m%AllOuts( TFFxi:TFFzi )       = m%TFinF_i
          m%AllOuts( TFMxi:TFMzi )       = m%TFinM_i
@@ -2670,33 +2671,38 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
    character(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
    ! Local
-   type(FileInfoType) :: FileInfo_In       !< The derived type for holding the file information.
-   integer(IntKi)                                  :: ErrStat2          !< Temporary Error status
-   character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
-   integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
+   type(FileInfoType)   :: FileInfo_In ! < The derived type for holding the file information.
+   integer(IntKi)       :: iLine       !< current entry in FileInfo_In%Lines array
+   integer(IntKi)       :: ErrStat2    !< Temporary Error status
+   character(ErrMsgLen) :: ErrMsg2     !< Temporary Error message
+   character(len=1024 ) :: DummyLine
 
    ! --- Read Tail fin input file into array of strings
    call ProcessComFile( FileName, FileInfo_In, ErrStat2, ErrMsg2)
 
    ! --- Parse the array of strings
-   do CurLine = 1,4 
-      if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+   ! Skip the first two lines as they are known to be header lines and separators
+   do iLine = 1,2 
+      if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(iLine)    ! Write header to echo
    enddo
-   CurLine = 4    ! Skip the first three lines as they are known to be header lines and separators
-   !======  General inputs =============================================================
-   call ParseVar( FileInfo_In, CurLine, 'TFinMod'   , TFData%TFinMod      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar( FileInfo_In, CurLine, 'TFinChord' , TFData%TFinChord    , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar( FileInfo_In, CurLine, 'TFinArea'  , TFData%TFinArea     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseAry( FileInfo_In, CurLine, 'TFinRefP_n', TFData%TFinRefP_n, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseAry( FileInfo_In, CurLine, 'TFinAngles', TFData%TFinAngles, 3, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar( FileInfo_In, CurLine, 'TFinIndMod', TFData%TFinIndMod   , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   !====== Polar-based model ================================ [used only when TFinMod=1] 
-   if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
-   CurLine = CurLine + 1
-   call ParseVar( FileInfo_In, CurLine, 'TFinAFID'  , TFData%TFinAFID     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   !====== Unsteady slender body model  ===================== [used only when TFinMod=2] 
+   iLine = 3 
+   !====== General inputs ============================================================
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinMod'   , TFData%TFinMod       , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinChord' , TFData%TFinChord     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinArea'  , TFData%TFinArea      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_In, iLine, 'TFinRefP_n', TFData%TFinRefP_n, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_In, iLine, 'TFinAngles', TFData%TFinAngles, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinIndMod', TFData%TFinIndMod    , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Polar-based model ================================ [used only when TFinMod=1]
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinAFID'  , TFData%TFinAFID      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Unsteady slender body model ===================== [used only when TFinMod=2]
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    ! TODO
 
+   ! --- Triggers
+   TFData%TFinAngles = TFData%TFinAngles*D2R ! deg2rad
 
    ! --- Validation on the fly
    if (all((/TFinAero_none,TFinAero_polar, TFinAero_USB/) /= TFData%TFinMod)) then

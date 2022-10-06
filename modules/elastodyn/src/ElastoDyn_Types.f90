@@ -395,6 +395,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: rPQ      !< Position vector from teeter pin (point P) to apex of rotation (point Q) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rP      !< Position vector from inertial frame origin to teeter pin (point P) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rV      !< Position vector from inertial frame origin to specified point on rotor-furl axis (point V) [m]
+    REAL(R8Ki) , DIMENSION(1:3)  :: rJ      !< Position vector from inertial frame origin to tail fin center of mass (point J) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rZY      !< Position vector from platform reference (point Z) to platform mass center (point Y) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rOU      !< Position vector from tower-top / base plate (point O) to nacelle center of mass (point U). [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rOV      !< Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V) [m]
@@ -480,6 +481,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: LinVelEIMU      !< Linear velocity of the nacelle IMU (point IMU) in the inertia frame [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LinVelEZ      !< Linear velocity of platform reference (point Z) in the inertia frame [-]
     REAL(ReKi) , DIMENSION(1:3)  :: LinVelEO      !< Linear velocity of the base plate (point O) in the inertia frame (body E for earth) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: LinVelEJ      !< Linear velocity of the tail fin CM (point J) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: FrcONcRtt      !< Portion of the force at yaw bearing (point O) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(1:3)  :: FrcPRott      !< Portion of the force at the teeter pin (point P) due to the rotor associated with everything but the QD2T()'s [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FrcS0Bt      !< Portion of the force at the blade root (point S(0)) due to the blade associated with everything but the QD2T()'s [-]
@@ -828,6 +830,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: TowerPtLoads      !< Tower line2 mesh with forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower node (point T); and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components of the portion of the tower moment acting at the current tower node [N/m]
     TYPE(MeshType)  :: HubPtLoad      !< A mesh at the teeter pin, containing forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components; and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components acting at the hub. Passed from BeamDyn [-]
     TYPE(MeshType)  :: NacelleLoads      !< From ServoDyn/TMD: loads on the nacelle. [-]
+    TYPE(MeshType)  :: TFinCMLoads      !< Aerodynamic forces and moments at the tail-fin center of mass point (point J) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: TwrAddedMass      !< 6-by-6 added mass matrix of the tower elements, per unit length-bjj: place on a mesh [per unit length]
     REAL(ReKi) , DIMENSION(1:6,1:6)  :: PtfmAddedMass      !< Platform added mass matrix [kg, kg-m, kg-m^2]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitchCom      !< Commanded blade pitch angles [radians]
@@ -848,6 +851,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: RotorFurlMotion14      !< For AeroDyn14: motions of the rotor furl point. [-]
     TYPE(MeshType)  :: NacelleMotion      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [-]
     TYPE(MeshType)  :: TowerBaseMotion14      !< For AeroDyn 14: motions of the tower base [-]
+    TYPE(MeshType)  :: TFinCMMotion      !< For AeroDyn: motions of the tail find CM point (point J) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Data to be written to an output file: see WriteOutputHdr for names of each variable [see WriteOutputUnt]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BlPitch      !< Current blade pitch angles [radians]
     REAL(ReKi)  :: Yaw      !< Current nacelle yaw [radians]
@@ -9048,6 +9052,7 @@ ENDIF
     DstRtHndSideData%rPQ = SrcRtHndSideData%rPQ
     DstRtHndSideData%rP = SrcRtHndSideData%rP
     DstRtHndSideData%rV = SrcRtHndSideData%rV
+    DstRtHndSideData%rJ = SrcRtHndSideData%rJ
     DstRtHndSideData%rZY = SrcRtHndSideData%rZY
     DstRtHndSideData%rOU = SrcRtHndSideData%rOU
     DstRtHndSideData%rOV = SrcRtHndSideData%rOV
@@ -9727,6 +9732,7 @@ ENDIF
     DstRtHndSideData%LinVelEIMU = SrcRtHndSideData%LinVelEIMU
     DstRtHndSideData%LinVelEZ = SrcRtHndSideData%LinVelEZ
     DstRtHndSideData%LinVelEO = SrcRtHndSideData%LinVelEO
+    DstRtHndSideData%LinVelEJ = SrcRtHndSideData%LinVelEJ
     DstRtHndSideData%FrcONcRtt = SrcRtHndSideData%FrcONcRtt
     DstRtHndSideData%FrcPRott = SrcRtHndSideData%FrcPRott
 IF (ALLOCATED(SrcRtHndSideData%FrcS0Bt)) THEN
@@ -10405,6 +10411,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%rPQ)  ! rPQ
       Db_BufSz   = Db_BufSz   + SIZE(InData%rP)  ! rP
       Db_BufSz   = Db_BufSz   + SIZE(InData%rV)  ! rV
+      Db_BufSz   = Db_BufSz   + SIZE(InData%rJ)  ! rJ
       Db_BufSz   = Db_BufSz   + SIZE(InData%rZY)  ! rZY
       Db_BufSz   = Db_BufSz   + SIZE(InData%rOU)  ! rOU
       Db_BufSz   = Db_BufSz   + SIZE(InData%rOV)  ! rOV
@@ -10650,6 +10657,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinVelEIMU)  ! LinVelEIMU
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinVelEZ)  ! LinVelEZ
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinVelEO)  ! LinVelEO
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LinVelEJ)  ! LinVelEJ
       Re_BufSz   = Re_BufSz   + SIZE(InData%FrcONcRtt)  ! FrcONcRtt
       Re_BufSz   = Re_BufSz   + SIZE(InData%FrcPRott)  ! FrcPRott
   Int_BufSz   = Int_BufSz   + 1     ! FrcS0Bt allocated yes/no
@@ -10979,6 +10987,10 @@ ENDIF
     END DO
     DO i1 = LBOUND(InData%rV,1), UBOUND(InData%rV,1)
       DbKiBuf(Db_Xferred) = InData%rV(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%rJ,1), UBOUND(InData%rJ,1)
+      DbKiBuf(Db_Xferred) = InData%rJ(i1)
       Db_Xferred = Db_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%rZY,1), UBOUND(InData%rZY,1)
@@ -12144,6 +12156,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%LinVelEO(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    DO i1 = LBOUND(InData%LinVelEJ,1), UBOUND(InData%LinVelEJ,1)
+      ReKiBuf(Re_Xferred) = InData%LinVelEJ(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DO i1 = LBOUND(InData%FrcONcRtt,1), UBOUND(InData%FrcONcRtt,1)
       ReKiBuf(Re_Xferred) = InData%FrcONcRtt(i1)
       Re_Xferred = Re_Xferred + 1
@@ -12963,6 +12979,12 @@ ENDIF
     i1_u = UBOUND(OutData%rV,1)
     DO i1 = LBOUND(OutData%rV,1), UBOUND(OutData%rV,1)
       OutData%rV(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%rJ,1)
+    i1_u = UBOUND(OutData%rJ,1)
+    DO i1 = LBOUND(OutData%rJ,1), UBOUND(OutData%rJ,1)
+      OutData%rJ(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
       Db_Xferred = Db_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%rZY,1)
@@ -14334,6 +14356,12 @@ ENDIF
     i1_u = UBOUND(OutData%LinVelEO,1)
     DO i1 = LBOUND(OutData%LinVelEO,1), UBOUND(OutData%LinVelEO,1)
       OutData%LinVelEO(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%LinVelEJ,1)
+    i1_u = UBOUND(OutData%LinVelEJ,1)
+    DO i1 = LBOUND(OutData%LinVelEJ,1), UBOUND(OutData%LinVelEJ,1)
+      OutData%LinVelEJ(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
     i1_l = LBOUND(OutData%FrcONcRtt,1)
@@ -22836,6 +22864,9 @@ ENDIF
       CALL MeshCopy( SrcInputData%NacelleLoads, DstInputData%NacelleLoads, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+      CALL MeshCopy( SrcInputData%TFinCMLoads, DstInputData%TFinCMLoads, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcInputData%TwrAddedMass)) THEN
   i1_l = LBOUND(SrcInputData%TwrAddedMass,1)
   i1_u = UBOUND(SrcInputData%TwrAddedMass,1)
@@ -22905,6 +22936,8 @@ ENDIF
   CALL MeshDestroy( InputData%HubPtLoad, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( InputData%NacelleLoads, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%TFinCMLoads, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputData%TwrAddedMass)) THEN
   DEALLOCATE(InputData%TwrAddedMass)
@@ -23038,6 +23071,23 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! NacelleLoads
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz   = Int_BufSz + 3  ! TFinCMLoads: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%TFinCMLoads, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! TFinCMLoads 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! TFinCMLoads
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! TFinCMLoads
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! TFinCMLoads
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -23208,6 +23258,34 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
       CALL MeshPack( InData%NacelleLoads, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! NacelleLoads 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      CALL MeshPack( InData%TFinCMLoads, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! TFinCMLoads 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -23534,6 +23612,46 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%TFinCMLoads, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! TFinCMLoads 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TwrAddedMass not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -23669,6 +23787,9 @@ ENDIF
       CALL MeshCopy( SrcOutputData%TowerBaseMotion14, DstOutputData%TowerBaseMotion14, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+      CALL MeshCopy( SrcOutputData%TFinCMMotion, DstOutputData%TFinCMMotion, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
   i1_l = LBOUND(SrcOutputData%WriteOutput,1)
   i1_u = UBOUND(SrcOutputData%WriteOutput,1)
@@ -23771,6 +23892,8 @@ ENDIF
   CALL MeshDestroy( OutputData%NacelleMotion, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL MeshDestroy( OutputData%TowerBaseMotion14, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( OutputData%TFinCMMotion, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
@@ -23995,6 +24118,23 @@ ENDIF
          DEALLOCATE(Db_Buf)
       END IF
       IF(ALLOCATED(Int_Buf)) THEN ! TowerBaseMotion14
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+      Int_BufSz   = Int_BufSz + 3  ! TFinCMMotion: size of buffers for each call to pack subtype
+      CALL MeshPack( InData%TFinCMMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! TFinCMMotion 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! TFinCMMotion
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! TFinCMMotion
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! TFinCMMotion
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -24340,6 +24480,34 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
       CALL MeshPack( InData%TowerBaseMotion14, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! TowerBaseMotion14 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      CALL MeshPack( InData%TFinCMMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! TFinCMMotion 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -24914,6 +25082,46 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MeshUnpack( OutData%TFinCMMotion, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! TFinCMMotion 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -25125,6 +25333,8 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(u1%NacelleLoads, u2%NacelleLoads, tin, u_out%NacelleLoads, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp1(u1%TFinCMLoads, u2%TFinCMLoads, tin, u_out%TFinCMLoads, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(u_out%TwrAddedMass) .AND. ALLOCATED(u1%TwrAddedMass)) THEN
   DO i3 = LBOUND(u_out%TwrAddedMass,3),UBOUND(u_out%TwrAddedMass,3)
     DO i2 = LBOUND(u_out%TwrAddedMass,2),UBOUND(u_out%TwrAddedMass,2)
@@ -25226,6 +25436,8 @@ END IF ! check if allocated
       CALL MeshExtrapInterp2(u1%HubPtLoad, u2%HubPtLoad, u3%HubPtLoad, tin, u_out%HubPtLoad, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(u1%NacelleLoads, u2%NacelleLoads, u3%NacelleLoads, tin, u_out%NacelleLoads, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp2(u1%TFinCMLoads, u2%TFinCMLoads, u3%TFinCMLoads, tin, u_out%TFinCMLoads, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(u_out%TwrAddedMass) .AND. ALLOCATED(u1%TwrAddedMass)) THEN
   DO i3 = LBOUND(u_out%TwrAddedMass,3),UBOUND(u_out%TwrAddedMass,3)
@@ -25384,6 +25596,8 @@ END IF ! check if allocated
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp1(y1%TowerBaseMotion14, y2%TowerBaseMotion14, tin, y_out%TowerBaseMotion14, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp1(y1%TFinCMMotion, y2%TFinCMMotion, tin, y_out%TFinCMMotion, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
     b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
@@ -25532,6 +25746,8 @@ END IF ! check if allocated
       CALL MeshExtrapInterp2(y1%NacelleMotion, y2%NacelleMotion, y3%NacelleMotion, tin, y_out%NacelleMotion, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       CALL MeshExtrapInterp2(y1%TowerBaseMotion14, y2%TowerBaseMotion14, y3%TowerBaseMotion14, tin, y_out%TowerBaseMotion14, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      CALL MeshExtrapInterp2(y1%TFinCMMotion, y2%TFinCMMotion, y3%TFinCMMotion, tin, y_out%TFinCMMotion, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)

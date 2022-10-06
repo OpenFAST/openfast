@@ -1576,6 +1576,35 @@ END IF
    y%RotorFurlMotion14%RotationVel(1,1) =     m%RtHS%AngVelER(1)
    y%RotorFurlMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelER(3)
    y%RotorFurlMotion14%RotationVel(3,1) =     m%RtHS%AngVelER(2)
+
+   !...........
+   ! TailFin :
+   !...........   
+   ! Translation (absolute position - starting position):
+   y%TFinCMMotion%TranslationDisp(1,1) =     m%RtHS%rJ(1)
+   y%TFinCMMotion%TranslationDisp(2,1) = -1.*m%RtHS%rJ(3)
+   y%TFinCMMotion%TranslationDisp(3,1) =     m%RtHS%rJ(2) + p%PtfmRefzt
+   y%TFinCMMotion%TranslationDisp      = y%TFinCMMotion%TranslationDisp - y%TFinCMMotion%Position
+   ! Orientation:        
+   y%TFinCMMotion%Orientation(1,1,1)   =     m%CoordSys%tf1(1) 
+   y%TFinCMMotion%Orientation(2,1,1)   =     m%CoordSys%tf2(1)
+   y%TFinCMMotion%Orientation(3,1,1)   =     m%CoordSys%tf3(1)   
+   y%TFinCMMotion%Orientation(1,2,1)   = -1.*m%CoordSys%tf1(3)
+   y%TFinCMMotion%Orientation(2,2,1)   = -1.*m%CoordSys%tf2(3) 
+   y%TFinCMMotion%Orientation(3,2,1)   = -1.*m%CoordSys%tf3(3) 
+   y%TFinCMMotion%Orientation(1,3,1)   =     m%CoordSys%tf1(2)
+   y%TFinCMMotion%Orientation(2,3,1)   =     m%CoordSys%tf2(2)
+   y%TFinCMMotion%Orientation(3,3,1)   =     m%CoordSys%tf3(2)
+   ! Rotational velocity:
+   y%TFinCMMotion%RotationVel(1,1)     =     m%RtHS%AngVelEA(1)
+   y%TFinCMMotion%RotationVel(2,1)     = -1.*m%RtHS%AngVelEA(3)
+   y%TFinCMMotion%RotationVel(3,1)     =     m%RtHS%AngVelEA(2)   
+   ! Linear velocity:
+   y%TFinCMMotion%TranslationVel(1,1)  =     m%RtHS%LinVelEJ(1)
+   y%TFinCMMotion%TranslationVel(2,1)  = -1.*m%RtHS%LinVelEJ(3)
+   y%TFinCMMotion%TranslationVel(3,1)  =     m%RtHS%LinVelEJ(2)
+
+
       
    !...........
    ! Nacelle :
@@ -6709,6 +6738,7 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    RtHSdat%rP    = RtHSdat%rV  + RtHSdat%rVP                                                                                  ! Position vector from inertial frame origin to teeter pin (point P).
    RtHSdat%rQ    = RtHSdat%rP  + RtHSdat%rPQ                                                                                  ! Position vector from inertial frame origin to apex of rotation (point Q).
            rK    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWK                                                                    ! Position vector from inertial frame origin to tail fin center of pressure (point K).
+   RtHSdat%rJ    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWJ                                                                    ! Position vector from inertial frame origin to tail fin center of mass (point J).
 
 
    DO K = 1,p%NumBl ! Loop through all blades
@@ -7392,6 +7422,7 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    ENDDO          ! I - all DOFs associated with the angular motion of the nacelle (body N)
 
 
+   ! Velocities of point I (tail boom center of mass)
    RtHSdat%PLinVelEI(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
    DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
 
@@ -7407,7 +7438,9 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
 
 
+   ! Velocities of point J (tail fin center of mass)
    RtHSdat%PLinVelEJ(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
+   RtHSdat%LinVelEJ                = RtHSdat%LinVelEZ
    DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:), RtHSdat%rWJ                 )
@@ -7417,10 +7450,12 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
       RtHSdat%PLinVelEJ(PA(I),0,:) = TmpVec0    +               RtHSdat%PLinVelEJ(PA(I)   ,0,:)
       RtHSdat%PLinVelEJ(PA(I),1,:) = TmpVec1    + TmpVec2 +     RtHSdat%PLinVelEJ(PA(I)   ,1,:)
 
+       RtHSdat%LinVelEJ            =  RtHSdat%LinVelEJ  + x%QDT(PA(I) )*RtHSdat%PLinVelEJ(PA(I)   ,0,:)
        RtHSdat%LinAccEJt           =  RtHSdat%LinAccEJt + x%QDT(PA(I) )*RtHSdat%PLinVelEJ(PA(I)   ,1,:)
 
    ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
 
+   ! Velocities of point K (tail fin center of pressure)
    RtHSdat%PLinVelEK(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
     LinVelEK               =  RtHSdat%LinVelEZ
    DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
@@ -7521,12 +7556,8 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
    REAL(ReKi)                   :: TmpVec3   (3)                                   ! A temporary vector used in various computations.
    REAL(ReKi)                   :: TmpVec4   (3)                                   ! A temporary vector used in various computations.
    REAL(ReKi)                   :: TmpVec5   (3)                                   ! A temporary vector used in various computations.
-      
-!REAL(ReKi)                   :: rSAerCen  (3)                                   ! Position vector from a blade analysis node (point S) on the current blade to the aerodynamic center associated with the element.
-   REAL(ReKi), PARAMETER        :: FKAero   (3) = 0.0                              ! The tail fin aerodynamic force acting at point K, the center-of-pressure of the tail fin. (bjj: should be an input)
-   REAL(ReKi), PARAMETER        :: MAAero   (3) = 0.0                              ! The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin. (bjj: should be an input)   
-   
-   
+   REAL(ReKi)                   :: Force(3)  ! External force  (e.g. from AeroDyn)
+   REAL(ReKi)                   :: Moment(3) ! External moment (e.g. from AeroDyn)
    INTEGER(IntKi)               :: I                                               ! Loops through some or all of the DOFs
    INTEGER(IntKi)               :: J                                               ! Counter for elements
    INTEGER(IntKi)               :: K                                               ! Counter for blades
@@ -7806,9 +7837,11 @@ DO K = 1,p%NumBl ! Loop through all blades
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tail boom center of mass (point I)
 
 !.....................................
-! FrcWTailt and MomNTailt
-!  (requires FKAero and MAAero)
+! FrcWTailt and MomNTailt - Forces on the tailfin
 !.....................................
+   ! Aerodynamic loads on TailFin CM (point K), with change of coordinate system
+   Force(1:3)  = (/ u%TFinCMLoads%Force (1,1), u%TFinCMLoads%Force (3,1), -u%TFinCMLoads%Force (2,1) /)
+   Moment(1:3) = (/ u%TFinCMLoads%Moment(1,1), u%TFinCMLoads%Moment(3,1), -u%TFinCMLoads%Moment(2,1) /)
 
    TmpVec1 = -p%BoomMass*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccEIt )                 ! The portion of FrcWTailt associated with the BoomMass
    TmpVec2 = -p%TFinMass*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccEJt )                 ! The portion of FrcWTailt associated with the TFinMass
@@ -7817,9 +7850,9 @@ DO K = 1,p%NumBl ! Loop through all blades
    TmpVec  = p%AtfaIner*CoordSys%tfa*DOT_PRODUCT( CoordSys%tfa, RtHSdat%AngVelEA )   ! = ( A inertia dyadic ) dot ( angular velocity of the tail in the inertia frame )
    TmpVec5 = CROSS_PRODUCT( -RtHSdat%AngVelEA, TmpVec  )                           ! = ( -angular velocity of the tail in the inertia frame ) cross ( TmpVec )
 
-   RtHSdat%FrcWTailt = FKAero + TmpVec1 + TmpVec2
-   RtHSdat%MomNTailt = MAAero + TmpVec3 + TmpVec4 + TmpVec5         &
-                     + CROSS_PRODUCT( RtHSdat%rWK      , FKAero  )  &                         ! The portion of MomNTailt associated with FKAero
+   RtHSdat%FrcWTailt = Force + TmpVec1 + TmpVec2
+   RtHSdat%MomNTailt = Moment + TmpVec3 + TmpVec4 + TmpVec5         &
+                     + CROSS_PRODUCT( RtHSdat%rWJ      , Force  )  &                         ! The portion of MomNTailt associated with Force with lever arm WK
                      - p%AtfaIner*CoordSys%tfa*DOT_PRODUCT( CoordSys%tfa, RtHSdat%AngAccEAt )   
    
 !.....................................
@@ -8974,6 +9007,22 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
       
       
+   ! -------------- Tailfin -----------------------------------
+   call MeshCopy ( SrcMesh  = u%TFinCMLoads    &
+                 , DestMesh = y%TFinCMMotion   &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , TranslationDisp = .TRUE.    &
+                 , Orientation     = .TRUE.    &
+                 , TranslationVel  = .TRUE.    &
+                 , RotationVel     = .TRUE.    &
+                 , TranslationAcc  = .TRUE.    &
+                 , RotationAcc     = .TRUE.    &   
+                 , ErrStat  = ErrStat2         &
+                 , ErrMess  = ErrMsg2          )
+
+   call CheckError( ErrStat2, ErrMsg2 )
+   if (ErrStat >= AbortErrLev) RETURN         
      
    ! -------------- Tower Base-----------------------------------
    CALL MeshCreate( BlankMesh          = y%TowerBaseMotion14    &
@@ -9411,6 +9460,22 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    u%NacelleLoads%Force    = 0.0_ReKi
    u%NacelleLoads%Moment   = 0.0_ReKi
       
+   ! --- Rotor TailFin mesh 
+   Position(1) =     m%RtHS%rJ(1)               ! undeflected position of the tailfin CM in the xi ( z1) direction
+   Position(2) = -1.*m%RtHS%rJ(3)               ! undeflected position of the tailfin CM in the yi (-z3) direction
+   Position(3) =     m%RtHS%rJ(2) + p%PtfmRefzt ! undeflected position of the tailfin CM in the zi ( z2) direction
+   Orientation(1,1) =     m%CoordSys%tf1(1)
+   Orientation(2,1) =     m%CoordSys%tf2(1)
+   Orientation(3,1) =     m%CoordSys%tf3(1)
+   Orientation(1,2) = -1.*m%CoordSys%tf1(3)
+   Orientation(2,2) = -1.*m%CoordSys%tf2(3)
+   Orientation(3,2) = -1.*m%CoordSys%tf3(3)
+   Orientation(1,3) =     m%CoordSys%tf1(2)
+   Orientation(2,3) =     m%CoordSys%tf2(2)
+   Orientation(3,3) =     m%CoordSys%tf3(2) 
+   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat, errMsg, HasMotion=.False., HasLoads=.True.)
+
+
    !.......................................................
    ! Create u%TwrAddedMass for loads input on tower:
    ! SHOULD REMOVE EVENTUALLY

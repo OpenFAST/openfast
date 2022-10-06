@@ -3309,6 +3309,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    m%TFinVrel   = V_rel_orth2
    m%TFinVund_i = V_wnd
    m%TFinVind_i = V_ind
+   m%TFinVrel_i = V_rel
    m%TFinSTV_i  = V_str
    m%TFinF_i    = y%TFinLoad%Force(1:3,1) 
    m%TFinM_i    = y%TFinLoad%Moment(1:3,1)
