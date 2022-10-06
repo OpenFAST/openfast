@@ -784,7 +784,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call CleanUp()
 
    if (DEV_VERSION) then
-      if(have_nan(p, m, x, u, 'End Update ')) then
+      if(have_nan(p, m, x, z, u, 'End Update ')) then
          STOP
       endif
    endif
@@ -909,11 +909,14 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       enddo
 
       if (DEV_VERSION) then
-         !call print_mean_4d( m%W(iW)%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
-         !if (nFWEff>0) then
-         !   call print_mean_4d( m%W(iW)%Vind_FW(:,:, 1:nFWEff ,:), 'Mean induced vel. FW')
-         !endif
-         !print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
+         do iW=1,p%nWings
+            call print_mean_3d( m%W(iW)%Vind_NW(:,:, 1:m%nNW+1), 'Mean induced vel. NW')
+            if (nFWEff>0) then
+               call print_mean_3d( m%W(iW)%Vind_FW(:,:, 1:nFWEff), 'Mean induced vel. FW')
+            endif
+         enddo
+         print'(A25,3F12.4)','MeanNW           ',VmeanNW
+         print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
          !call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
          !call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
          !call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')

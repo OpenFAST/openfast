@@ -452,48 +452,51 @@ subroutine print_x_NW_FW(p, m, x, label)
 endsubroutine
 
 !> Debug function to figure out if data have nan
-logical function have_nan(p, m, x, u, label)
+logical function have_nan(p, m, x, z, u, label)
    type(FVW_ParameterType),         intent(in) :: p !< Parameters
    type(FVW_MiscVarType),           intent(in) :: m !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in) :: x !< Continuous states
+   type(FVW_ConstraintStateType),   intent(in) :: z !< ConstrStates
    type(FVW_InputType),             intent(in) :: u(:) !< Input states
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
-         print*,trim(label),'NaN in W(iW)%r_NW'
+         print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%r_FW))) then
-         print*,trim(label),'NaN in W(iW)%r_FW'
+         print*,trim(label),'NaN in W(iW)%r_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_NW))) then
-         print*,trim(label),'NaN in G_NW'
+         print*,trim(label),'NaN in G_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+      if (any(isnan(z%W(iW)%Gamma_LL))) then
+         print*,trim(label),'NaN in G_LL'//trim(num2lstr(iW))
          have_nan=.True.
       endif
    enddo
-   if (any(isnan(u(1)%V_wind))) then
-      print*,trim(label),'NaN in Vwind1'
-      have_nan=.True.
-   endif
-   if (any(isnan(u(2)%V_wind))) then
-      print*,trim(label),'NaN in Vwind2'
-      have_nan=.True.
-   endif
+   do iW=1,size(u)
+      if (any(isnan(u(iW)%V_wind))) then
+         print*,trim(label),'NaN in Vwind'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+   enddo
 endfunction
 
 
