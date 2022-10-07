@@ -47,25 +47,17 @@ module FVW_VortexTools
       integer,dimension(:),pointer       :: leaves=>null()  ! NOTE: leaves are introduced to save memory
       type(T_Node),dimension(:), pointer :: branches =>null()
       integer                            :: nPart = -1  ! Number of particles in branches and leaves of this node
-      integer(IntKi)                     :: idBranch ! Index of the branch
    end type T_Node
 
    !> The type tree contains some basic data, a chained-list of nodes, and a pointer to the Particle data that were used
    type T_Tree
       type(T_Part)  :: Part            !< Storage for all particles
-      type(T_Seg)    :: Seg            !< Storage for all particles
+      type(T_Seg)   :: Seg             !< Storage for all segments
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
       real(ReKi)    :: DistanceDirect
       type(T_Node)  :: Root            !< Contains the chained-list of nodes
    end type T_Tree
-
-   type T_Tree_Seg
-      type(T_Seg)  :: Seg            !< Storage for all particles
-      integer       :: iStep =-1       !< Time step at which the tree was built
-      logical       :: bGrown =.false. !< Is the tree build
-      type(T_Node)  :: Root            !< Contains the chained-list of nodes
-   end type T_Tree_Seg
 
    interface cut_tree
       module procedure cut_tree_parallel ; ! to switch between parallel and rec easily
@@ -411,8 +403,9 @@ contains
              ! In the future we should skip the creation of the particles all together
              SegDir  = 0
              if (DEV_VERSION_VT) then
-                ! TODO this requires attention and a bug fix
+                ! This is prone to happening with turbulence and single precision
                 print*,'OLAF: encountered a segment of zero length'
+                STOP
              endif
           endif
           PartInt = DP*SegGamma(iSeg)/nPartPerSeg ! alpha = Gamma.L/n = omega.dV [m^3/s]
@@ -459,8 +452,49 @@ contains
          enddo; enddo;
          U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
       endif
-      print'(A24,3F12.4)',trim(Label),U
+      print'(A25,3F12.4)',trim(Label),U
    end subroutine
+
+   subroutine find_equal_points(array, varname)
+      real(ReKi), dimension(:,:,:), intent(in) :: array ! 3*n*m
+      character(len=*), intent(in) :: varname
+      logical :: found
+      integer :: iSpan, jSpan, iDepth, jDepth, tot
+      real(ReKi), dimension(3) :: DP, P1, P2
+      real(ReKi) ::s1
+      ! Check if two points are the same
+      found=.false.
+      tot=0
+      do iDepth = 1, size(array,3)
+         do iSpan = 1, size(array,2)
+            P1 = array(1:3, iSpan  , iDepth)
+            do jDepth = iDepth, size(array,3)
+               do jSpan = iSpan, size(array,2)
+                  if ((iDepth==jDepth) .and. (iSpan == jSpan)) then
+                     ! pass
+                  else
+                     P2 = array(1:3, jSpan, jDepth)
+                     DP = P2-P1; s1  = sqrt(DP(1)**2 + DP(2)**2 + DP(3)**2)
+                     if (s1<=0) then
+                        tot=tot+1; found=.true.
+                        if (tot<5) then
+                           print*,'Two points are the same on the lattice!'
+                           print*,'P1', P1, 'i', iSpan, iDepth
+                           print*,'P2', P2, 'j', jSpan, jDepth
+                        endif
+                     endif
+
+                  endif
+               enddo
+            enddo
+         enddo
+      enddo
+      if (found) then
+         print*,'>>>>>>>>>>>>> Points the same ',trim(varname), tot, size(array,2)*size(array,3)
+         print*,'>>>>>>>>>>>>> Lattice size ', size(array,2), size(array,3)
+         STOP
+      endif
+   end subroutine find_equal_points
 
    !> Perform interpolation from control points to nodes assuming CP are between nodes
    subroutine interpextrap_cp2node(xin, yin, xnew, ynew)
@@ -544,20 +578,24 @@ contains
          ! Init of trunc
          ! Radius taken slightly bigger than domain extent. This radius will be divided by 2 successively
          node%radius = max(abs(max_x-min_x),abs(max_y-min_y),abs(max_z-min_z))*1.001_ReKi
-         if(node%radius>1e6) then
-             print*,'[Error] Domain extent too large, particle points must be invalid';
-             print*, min_x, max_x, min_y, max_y, min_z, max_z
-             STOP
-         endif
          node%center = (/ (max_x+min_x)/2._ReKi, (max_y+min_y)/2._ReKi, (max_z+min_z)/2._ReKi /)
          node%Moments=0.0_ReKi
-         if(associated(node%iPart)) then ; print*,'[Error] Node part allocated'; STOP; endif
+         if (DEV_VERSION_VT) then
+            if(node%radius>1e6) then
+                print*,'[Error] Domain extent too large, particle points must be invalid';
+                print*, min_x, max_x, min_y, max_y, min_z, max_z
+                STOP
+            endif
+            if(associated(node%iPart)) then ; print*,'[Error] Node part allocated'; STOP; endif
+         endif
          allocate(node%iPart(1:Part%n))
          do i=1,Part%n
             node%iPart(i) = i
          end do
-         if(associated(node%branches)) then;  print*,'node branches allocated'; STOP; endif
-         if(associated(node%leaves)) then;  print*,'node leaves allocated'; STOP; endif
+         if (DEV_VERSION_VT) then
+            if(associated(node%branches)) then;  print*,'node branches allocated'; STOP; endif
+            if(associated(node%leaves)) then;  print*,'node leaves allocated'; STOP; endif
+         endif
          node%branches=>null()
          node%leaves=>null()
          ! --- Calling grow function on subbranches
@@ -698,14 +736,16 @@ contains
             octant2branches(iOctant) = nBranches
          endif
       enddo
-      if (associated(node%branches)) then
-         print*,'Tree build: error, branches associated'
-         STOP
+      if (DEV_VERSION_VT) then
+         if (associated(node%branches)) then
+            print*,'Tree build: error, branches associated'
+            STOP
+         endif
+         if (associated(node%leaves)) then
+            print*,'Tree build: error, leaves associated'
+            STOP
+         end if
       endif
-      if (associated(node%leaves)) then
-         print*,'Tree build: error, leaves associated'
-         STOP
-      end if
 
       if(nBranches>0) allocate (node%branches(1:nBranches))
       if(nLeaves>0)   allocate (node%leaves(1:nLeaves))
@@ -862,10 +902,6 @@ contains
          node%leaves(1) = Seg%n !< index
          node%nPart    = 1
       else
-         if (any(Seg%SP(1,:)<-999.99_ReKi)) then
-           print*,'Error in segment transmission to grow tree segment'
-           STOP
-         endif
          ! Domain dimensions
          max_x=max(maxval(Seg%SP(1,Seg%SConnct(1,:))),maxval(Seg%SP(1,Seg%SConnct(2,:))))
          max_y=max(maxval(Seg%SP(2,Seg%SConnct(1,:))),maxval(Seg%SP(2,Seg%SConnct(2,:))))
@@ -877,20 +913,28 @@ contains
          ! Init of trunc
          ! Radius taken slightly bigger than domain extent. This radius will be divided by 2 successively
          node%radius = max(abs(max_x-min_x),abs(max_y-min_y),abs(max_z-min_z))*1.001_ReKi
-         if(node%radius>1e6) then
-             print*,'[Error] Domain extent too large, segment points must be invalid';
-             print*, min_x, max_x, min_y, max_y, min_z, max_z
-             STOP
-         endif
          node%center = (/ (max_x+min_x)/2._ReKi, (max_y+min_y)/2._ReKi, (max_z+min_z)/2._ReKi /)
          node%Moments=0.0_ReKi
-         if(associated(node%iPart)) then ; print*,'[Error] Node part allocated'; STOP; endif
+         if (DEV_VERSION_VT) then
+            if (any(Seg%SP(1,:)<-999.99_ReKi)) then
+              print*,'Error in segment transmission to grow tree segment'
+              STOP
+            endif
+            if(node%radius>1e6) then
+                print*,'[Error] Domain extent too large, segment points must be invalid';
+                print*, min_x, max_x, min_y, max_y, min_z, max_z
+                STOP
+            endif
+            if(associated(node%iPart)) then ; print*,'[Error] Node part allocated'; STOP; endif
+         endif
          allocate(node%iPart(1:Seg%n))
          do i=1,Seg%n
             node%iPart(i) = i
          end do
-         if(associated(node%branches)) then;  print*,'node branches allocated'; STOP; endif
-         if(associated(node%leaves)) then;  print*,'node leaves allocated'; STOP; endif
+         if (DEV_VERSION_VT) then
+            if(associated(node%branches)) then;  print*,'node branches allocated'; STOP; endif
+            if(associated(node%leaves)) then;  print*,'node leaves allocated'; STOP; endif
+         endif
          node%branches=>null()
          node%leaves=>null()
          node%nPart=Seg%n
@@ -936,12 +980,11 @@ contains
       integer(IK1) :: iPartOctant                                     !< Index corresponding to which octant the particle falls into
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
-      integer      :: i1,i2,i3,i4,i5,i6,i7,i8
+      integer      :: nPerBranchAcc(8) !< Accumulated counter on number of particles per branch
       integer      :: i,j,k
       real(ReKi)   :: wTot ! Total vorticity strength
-      real(ReKi)   :: SegLen ! Length of vortex segment
       real(ReKi)   :: halfSize ! TODO remove me
-      real(ReKi),dimension(3) :: locCenter, SegCenter,DP, SegDir, SegGammaVec
+      real(ReKi),dimension(3) :: locCenter, SegCenter,DP, SegGammaVec
       real(ReKi),dimension(3) :: P1,P2 !< Segment extremities
       real(ReKi),dimension(3) :: nodeGeomCenter !< Geometric center from division of the domain in powers of 2
       real(ReKi),dimension(3) :: nodeBaryCenter !< Vorticity weighted center
@@ -978,8 +1021,6 @@ contains
          P1 = Seg%SP(1:3,Seg%SConnct(1,node%iPart(i)))
          P2 = Seg%SP(1:3,Seg%SConnct(2,node%iPart(i)))
          DP = P2-P1
-         SegLen  = sqrt(DP(1)**2 + DP(2)**2 + DP(3)**2)
-         SegDir  = DP/SegLen                     ! Unit vector along segment direction
          SegGammaVec = Seg%SGamma(node%iPart(i))*DP            !Vorticity vector
          ! Order 0
          node%Moments(1:3,M0_000) = node%Moments(1:3,M0_000) + SegGammaVec
@@ -1062,14 +1103,16 @@ contains
             octant2branches(iOctant) = nBranches
          endif
       enddo
-      if (associated(node%branches)) then
-         print*,'Tree build: error, branches associated'
-         STOP
+      if (DEV_VERSION_VT) then
+         if (associated(node%branches)) then
+            print*,'Tree build: error, branches associated'
+            STOP
+         endif
+         if (associated(node%leaves)) then
+            print*,'Tree build: error, leaves associated'
+            STOP
+         end if
       endif
-      if (associated(node%leaves)) then
-         print*,'Tree build: error, leaves associated'
-         STOP
-      end if
 
       if(nBranches>0) allocate (node%branches(1:nBranches))
       if(nLeaves>0)   allocate (node%leaves(1:nLeaves))
@@ -1094,20 +1137,11 @@ contains
       end do
 
       ! Store indices of the particles the sub-branch contains
-      i1=0; i2=0; i3=0; i4=0; i5=0; i6=0; i7=0; i8=0;
+      nPerBranchAcc(:) = 0
       do i = 1,node%nPart
          iBranch = octant2branches(PartOctant(i))
          if(iBranch>0) then
-            select case(iBranch)
-            case(1);i1=i1+1; node%branches(1)%iPart(i1) = node%iPart(i)
-            case(2);i2=i2+1; node%branches(2)%iPart(i2) = node%iPart(i)
-            case(3);i3=i3+1; node%branches(3)%iPart(i3) = node%iPart(i)
-            case(4);i4=i4+1; node%branches(4)%iPart(i4) = node%iPart(i)
-            case(5);i5=i5+1; node%branches(5)%iPart(i5) = node%iPart(i)
-            case(6);i6=i6+1; node%branches(6)%iPart(i6) = node%iPart(i)
-            case(7);i7=i7+1; node%branches(7)%iPart(i7) = node%iPart(i)
-            case(8);i8=i8+1; node%branches(8)%iPart(i8) = node%iPart(i)
-            end select
+            nPerBranchAcc(iBranch)=nPerBranchAcc(iBranch)+1; node%branches(iBranch)%iPart(nPerBranchAcc(iBranch)) = node%iPart(i)
          else
             iLeaf = octant2leaves(PartOctant(i))
             if(iLeaf>0) then
@@ -1201,11 +1235,13 @@ contains
       if (associated(node%leaves)) then
          deallocate(node%leaves)
       end if
-      if (associated(node%iPart)) then
-         print*,'The tree particles were not properly cleaned'
-         STOP
-         deallocate(node%iPart)
-      end if
+      if (DEV_VERSION_VT) then
+         if (associated(node%iPart)) then
+            print*,'The tree particles were not properly cleaned'
+            STOP
+            deallocate(node%iPart)
+         end if
+      endif
    end subroutine cut_substep
    
    !> Cut a tree and all its sub-branches, unrolled to use parallelization for the first 3 levels
@@ -1260,9 +1296,11 @@ contains
          deallocate(Tree%root%branches)
          nullify(Tree%root%branches)
       endif
-      if (associated(Tree%root%branches)) then
-         print*,'Tree cut: branches are still allocated'
-         STOP
+      if (DEV_VERSION_VT) then
+         if (associated(Tree%root%branches)) then
+            print*,'Tree cut: branches are still allocated'
+            STOP
+         endif
       endif
       Tree%iStep=-1
       Tree%root%nPart=-1
@@ -1351,9 +1389,11 @@ contains
          deallocate(Tree_Seg%root%branches)
          nullify(Tree_Seg%root%branches)
       endif
-      if (associated(Tree_Seg%root%branches)) then
-         print*,'Tree cut: branches are still allocated'
-         STOP
+      if (DEV_VERSION_VT) then
+         if (associated(Tree_Seg%root%branches)) then
+            print*,'Tree cut: branches are still allocated'
+            STOP
+         endif
       endif
       Tree_Seg%iStep=-1
       Tree_Seg%root%nPart=-1

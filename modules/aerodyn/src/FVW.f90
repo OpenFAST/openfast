@@ -1069,6 +1069,9 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    if (DEV_VERSION) then
       do iW = 1, p%nWings
          ! Additional checks
+         ! Find points that are the same
+         call find_equal_points(x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1), 'r_NW After conv'//trim(num2lstr(iW)))
+
          if (any(m%dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)<-999)) then
             print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
             STOP
