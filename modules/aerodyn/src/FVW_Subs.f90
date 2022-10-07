@@ -498,6 +498,75 @@ logical function have_nan(p, m, x, z, u, label)
       endif
    enddo
 endfunction
+subroutine find_nan_1D(array, varname)
+   real(ReKi), dimension(:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (isnan(array(i)))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_2D(array, varname)
+   real(ReKi), dimension(:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array,2)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (any(isnan(array(:,i))))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_3D(array, varname)
+   real(ReKi), dimension(:,:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, j, n,m,tot
+   n = size(array,2)
+   m = size(array,3)
+   found=.false.
+   tot=0
+   do i =1, n
+      do j =1, m
+         if (any(isnan(array(:,i,j))))  then
+            if (tot<10) then
+               print*,'Position i,j',i,j
+            endif
+            found=.true.
+            tot=tot+1
+         endif
+      enddo
+   enddo
+   if (found) then
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname), tot,n*m
+      STOP
+   endif
+end subroutine
 
 
 ! --------------------------------------------------------------------------------
@@ -832,6 +901,11 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
          nSeg  = nSeg*2
          nSegP = nSegP*2
       endif
+
+      if (DEV_VERSION) then
+         call find_nan_2D(SegPoints(:,1:nSegP), 'PackPanelsToSegments SegPoints')
+      endif
+
    else
       nSeg  = 0
       nSegP = 0
@@ -1061,6 +1135,9 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
          Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
       endif
       if (DEV_VERSION) then
+         call find_nan_2D(Part%P    , 'InducedVelocitiesAll_Init Part%P')
+         call find_nan_2D(Part%Alpha, 'InducedVelocitiesAll_Init Part%Alpha')
+
          if (any(Part%RegParam(:)<-9999.99_ReKi)) then
             print*,'Error in Segment to part conversion'
             STOP
@@ -1072,9 +1149,11 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    if (p%VelocityMethod==idVelocityTree) then
       Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
       Tree%DistanceDirect = 2*sum(Sgmt%Epsilon)/size(Sgmt%Epsilon) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg),Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
+
    endif
 
 end subroutine InducedVelocitiesAll_Init
@@ -1201,6 +1280,7 @@ contains
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
          endif
+         call find_nan_2D(m%CPs, 'WakeInducedVel CPs')
       endif
    end subroutine
    !> Distribute the induced velocity to the proper location
@@ -1231,6 +1311,7 @@ contains
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
          endif
+         call find_nan_2D(m%Uind, 'WakeInducedVel Uind')
       endif
    end subroutine
 
@@ -1318,6 +1399,7 @@ contains
             print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(CPs, 'LiftingLineInducedVel CPs')
       endif
       nCPs=iHeadP-1
    end subroutine
@@ -1352,6 +1434,7 @@ contains
             print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(Uind, 'LiftingLineInducedVel Uind')
       endif
    end subroutine
 end subroutine
