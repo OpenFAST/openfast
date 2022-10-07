@@ -3306,7 +3306,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    ! --- Store
    m%TFinAlpha  = alpha
    m%TFinRe     = Re
-   m%TFinVrel   = V_rel_orth2
+   m%TFinVrel   = sqrt(V_rel_orth2)
    m%TFinVund_i = V_wnd
    m%TFinVind_i = V_ind
    m%TFinVrel_i = V_rel

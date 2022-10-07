@@ -359,12 +359,18 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    u_ED%PtfmAddedMass = 0.0_ReKi
                
    IF ( p_FAST%CompAero == Module_AD ) THEN ! we have to do this after the nacelle loads from StrucCtrl NStC
+         ! Transfer AeroDyn nacelle loads to ElastoDyn. Store on intermediate mesh from MeshMapData
          IF ( u_AD%rotors(1)%NacelleMotion%Committed ) THEN
             CALL Transfer_Point_to_Point( y_AD%rotors(1)%NacelleLoad, MeshMapData%u_ED_NacelleLoads, MeshMapData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2, u_AD%rotors(1)%NacelleMotion, y_ED%NacelleMotion )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             u_ED%NacelleLoads%Force  = u_ED%NacelleLoads%Force +  MeshMapData%u_ED_NacelleLoads%Force
             u_ED%NacelleLoads%Moment = u_ED%NacelleLoads%Moment + MeshMapData%u_ED_NacelleLoads%Moment
+         END IF
+         ! Transfer AeroDyn TailFin loads to ElastoDyn
+         IF ( u_AD%rotors(1)%TFinMotion%Committed ) THEN
+            CALL Transfer_Point_to_Point( y_AD%rotors(1)%TFinLoad, u_ED%TFinCMLoads, MeshMapData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2, u_AD%rotors(1)%TFinMotion, y_ED%TFinCMMotion )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END IF
    END IF
 
@@ -739,6 +745,12 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, Err
       CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_AD%rotors(1)%NacelleMotion, MeshMapData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
+   END IF
+
+   ! Tailfin - Transfer ElastoDyn CM motion to AeroDyn ref point motion
+   IF (u_AD%rotors(1)%TFinMotion%Committed) THEN
+      CALL Transfer_Point_to_Point( y_ED%TFinCMMotion, u_AD%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    END IF
       
 
@@ -4139,6 +4151,8 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
    
    ED%Input( 1)%NacelleLoads%RemapFlag  = .FALSE.
    ED%y%NacelleMotion%RemapFlag         = .FALSE.
+   ED%Input( 1)%TFinCMLoads%RemapFlag  = .FALSE.
+   ED%y%TFinCMMotion%RemapFlag         = .FALSE.
    ED%Input( 1)%HubPtLoad%RemapFlag     = .FALSE.
    ED%y%HubPtMotion%RemapFlag           = .FALSE.
             
@@ -4182,6 +4196,11 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
       IF (AD%Input(1)%rotors(1)%NacelleMotion%Committed) THEN
          AD%Input(1)%rotors(1)%NacelleMotion%RemapFlag = .FALSE.
          AD%y%rotors(1)%NacelleLoad%RemapFlag = .FALSE.
+      END IF
+
+      IF (AD%Input(1)%rotors(1)%TFinMotion%Committed) THEN
+         AD%Input(1)%rotors(1)%TFinMotion%RemapFlag = .FALSE.
+         AD%y%rotors(1)%TFinLoad%RemapFlag = .FALSE.
       END IF
       
       DO k=1,SIZE(AD%Input(1)%rotors(1)%BladeMotion)
@@ -4621,6 +4640,14 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
             CALL MeshCopy( ED%Input(1)%NacelleLoads, MeshMapData%u_ED_NacelleLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_NacelleLoads' )
          endif
+      endif
+
+      ! Tailfin mesh:
+      if ( AD%Input(1)%rotors(1)%TFinMotion%Committed ) then
+         CALL MeshMapCreate( ED%y%TFinCMMotion, AD%Input(1)%rotors(1)%TFinMotion, MeshMapData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_2_AD_TailFinMotion' )
+         CALL MeshMapCreate( AD%y%rotors(1)%TFinLoad, ED%Input(1)%TFinCMLoads,  MeshMapData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_2_ED_TailFinLoads' )
       endif
       
       IF ( p_FAST%CompElast == Module_ED ) then
