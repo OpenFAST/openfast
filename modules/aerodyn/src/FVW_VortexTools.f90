@@ -17,7 +17,7 @@ module FVW_VortexTools
    integer,parameter :: M1_010 = 3
    integer,parameter :: M1_001 = 4
 
-   logical,parameter :: DEV_VERSION_VT = .FALSE.
+   logical,parameter :: DEV_VERSION_VT = .False.
 
    !> 
    type T_Part
@@ -522,6 +522,7 @@ contains
       ! --- Handle special case for root node
       node => Tree%Root
       Part => Tree%Part
+      node%nPart = Part%n
       if (Part%n==0) then
          ! Do nothing
          node%radius = -9999.99_ReKi
@@ -534,8 +535,7 @@ contains
          nullify(node%iPart)
          nullify(node%branches)
          allocate(node%leaves(1:1))
-         node%leaves(1) = Part%n !< index
-         node%nPart    = 1
+         node%leaves(1) = 1 !< index
       else
          ! Domain dimensions
          max_x=maxval(Part%P(1,1:Part%n)); max_y=maxval(Part%P(2,1:Part%n)); max_z=maxval(Part%P(3,1:Part%n))
@@ -560,7 +560,6 @@ contains
          if(associated(node%leaves)) then;  print*,'node leaves allocated'; STOP; endif
          node%branches=>null()
          node%leaves=>null()
-         node%nPart=Part%n
          ! --- Calling grow function on subbranches
          call grow_tree_parallel(Tree%root, Tree%Part)
 !          call grow_tree_rec(Tree%root, Tree%Part)
@@ -600,7 +599,7 @@ contains
       integer(IK1) :: iPartOctant                                     !< Index corresponding to which octant the particle falls into
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
-      integer      :: i1,i2,i3,i4,i5,i6,i7,i8
+      integer      :: nPerBranchAcc(8) !< Accumulated counter on number of particles per branch
       integer      :: i,j,k
       real(ReKi)   :: wTot, wLoc ! Total and local vorticity strength
       real(ReKi)   :: halfSize ! TODO remove me
@@ -731,20 +730,11 @@ contains
       end do
 
       ! Store indices of the particles the sub-branch contains
-      i1=0; i2=0; i3=0; i4=0; i5=0; i6=0; i7=0; i8=0;
+      nPerBranchAcc(:) = 0
       do i = 1,node%nPart
          iBranch = octant2branches(PartOctant(i))
          if(iBranch>0) then
-            select case(iBranch)
-            case(1);i1=i1+1; node%branches(1)%iPart(i1) = node%iPart(i)
-            case(2);i2=i2+1; node%branches(2)%iPart(i2) = node%iPart(i)
-            case(3);i3=i3+1; node%branches(3)%iPart(i3) = node%iPart(i)
-            case(4);i4=i4+1; node%branches(4)%iPart(i4) = node%iPart(i)
-            case(5);i5=i5+1; node%branches(5)%iPart(i5) = node%iPart(i)
-            case(6);i6=i6+1; node%branches(6)%iPart(i6) = node%iPart(i)
-            case(7);i7=i7+1; node%branches(7)%iPart(i7) = node%iPart(i)
-            case(8);i8=i8+1; node%branches(8)%iPart(i8) = node%iPart(i)
-            end select
+            nPerBranchAcc(iBranch)=nPerBranchAcc(iBranch)+1; node%branches(iBranch)%iPart(nPerBranchAcc(iBranch)) = node%iPart(i)
          else
             iLeaf = octant2leaves(PartOctant(i))
             if(iLeaf>0) then
@@ -755,6 +745,14 @@ contains
             endif
          endif
       end do
+      if (DEV_VERSION_VT) then
+         do iBranch=1,nBranches
+            if (nPerBranchAcc(iBranch)/=node%branches(iBranch)%nPart) then
+               print*,'Grow tree: Problem in repartition of particles per branches'
+               STOP
+            endif
+         enddo
+      endif
       if (associated(node%iPart)) deallocate(node%iPart) ! Freeing memory
       if (allocated(PartOctant)) deallocate(PartOctant)
    end subroutine grow_tree_substep
