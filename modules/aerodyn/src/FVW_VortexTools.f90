@@ -17,6 +17,8 @@ module FVW_VortexTools
    integer,parameter :: M1_010 = 3
    integer,parameter :: M1_001 = 4
 
+   logical,parameter :: DEV_VERSION_VT = .FALSE.
+
    !> 
    type T_Part
       real(ReKi), dimension(:,:), pointer :: P           =>null() 
@@ -402,7 +404,17 @@ contains
           P2 = SegPoints(1:3,SegConnct(2,iSeg))
           DP = P2-P1
           SegLen  = sqrt(DP(1)**2 + DP(2)**2 + DP(3)**2)
-          SegDir  = DP/SegLen                     ! Unit vector along segment direction
+          if (SegLen>0) then
+             SegDir  = DP/SegLen                     ! Unit vector along segment direction
+          else
+             ! For now we set direction to zero. Part. Intensity will be zero. Multiple zero part may be created at P1
+             ! In the future we should skip the creation of the particles all together
+             SegDir  = 0
+             if (DEV_VERSION_VT) then
+                ! TODO this requires attention and a bug fix
+                print*,'OLAF: encountered a segment of zero length'
+             endif
+          endif
           PartInt = DP*SegGamma(iSeg)/nPartPerSeg ! alpha = Gamma.L/n = omega.dV [m^3/s]
           PartEps = SegEpsilon(iSeg)                   ! TODO this might need tuning depending on RegFunction and n_new
           PartLen = SegLen/nPartPerSeg
