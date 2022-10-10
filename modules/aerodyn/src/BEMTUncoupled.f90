@@ -95,21 +95,22 @@ contains
       inflowVec(2) = Vy*(1+tanInduction)
       inflowVec(3) = Vz
 
-    ! Project inflow vector onto airfoil plane
-    if(BEM_Mod==BEMMod_2D) then
-      ! TODO TODO TODO EB CHECK THAT THE SAME MIGHT BE OBTAINED IF cant=0, toe=0
-      inflowVecInAirfoilPlane(1) = inflowVec(1)
-      inflowVecInAirfoilPlane(2) = inflowVec(2)
-      inflowVecInAirfoilPlane(3) = 0.0_ReKi
-    else  
-      call getAirfoilOrientation( theta, cantAngle,toeAngle ,afAxialVec, afNormalVec, afRadialVec )
-      inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec 
+      ! Project inflow vector onto airfoil plane
+      if(BEM_Mod==BEMMod_2D) then
+         ! TODO TODO TODO EB CHECK THAT THE SAME MIGHT BE OBTAINED IF cant=0, toe=0
+         inflowVecInAirfoilPlane(1) = inflowVec(1)
+         inflowVecInAirfoilPlane(2) = inflowVec(2)
+         inflowVecInAirfoilPlane(3) = 0.0_ReKi
+      else  
+         call getAirfoilOrientation( theta, cantAngle,toeAngle ,afAxialVec, afNormalVec, afRadialVec )
+         inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec 
 
-    endif
+      endif
+    
       ! Wxy: resultant velocity in the xy airfoil plane.
       Wxy = sqrt(inflowVecInAirfoilPlane(1)**2 + inflowVecInAirfoilPlane(2)**2)
 
-    Re =  Wxy * chord / nu
+      Re =  Wxy * chord / nu
       if ( Re <= 0.001 ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
    end subroutine GetReynoldsNumber
@@ -186,28 +187,29 @@ contains
       real(ReKi)                :: signOfAngle 
       real(ReKi)                :: numer, denom, ratio
       real(ReKi)                :: phiN
+      
       if (BEM_Mod==BEMMod_2D) then
          AoA   =  phi - theta  ! angle of attack
       else
-      ! get airfoil orientation vectors
-      call getAirfoilOrientation( theta, cantAngle, toeAngle ,afAxialVec, afNormalVec, afRadialVec )
-      phiN = getNewPhi(phi,cantAngle)
+         ! get airfoil orientation vectors
+         call getAirfoilOrientation( theta, cantAngle, toeAngle ,afAxialVec, afNormalVec, afRadialVec )
+         phiN = getNewPhi(phi,cantAngle)
       
-      ! Create inflow vector
-      inflowVec(1) = sin( phiN)
-      inflowVec(2) = cos( phiN)
-      inflowVec(3) = 0.0_Reki
+         ! Create inflow vector
+         inflowVec(1) = sin( phiN)
+         inflowVec(2) = cos( phiN)
+         inflowVec(3) = 0.0_Reki
       
-      ! Project inflow vector onto airfoil plane
-      inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec
+         ! Project inflow vector onto airfoil plane
+         inflowVecInAirfoilPlane = inflowVec - dot_product( inflowVec, afRadialVec ) * afRadialVec
       
-      ! Determine angle of attack as angle between airfoil chordline (afAxialVec) and inflow (inflowVecInAirfoilPlane)
-      numer = dot_product( inflowVecInAirfoilPlane, afAxialVec )
-      denom = TwoNorm( inflowVecInAirfoilPlane )
-      ratio = numer / denom
-      AoA = acos( max( min( ratio, 1.0_ReKi ), -1.0_ReKi ) )
-      signOfAngle = dot_product( cross_product( inflowVecInAirfoilPlane, afAxialVec ), afRadialVec )
-      AoA = sign( AoA, signOfAngle )
+         ! Determine angle of attack as angle between airfoil chordline (afAxialVec) and inflow (inflowVecInAirfoilPlane)
+         numer = dot_product( inflowVecInAirfoilPlane, afAxialVec )
+         denom = TwoNorm( inflowVecInAirfoilPlane )
+         ratio = numer / denom
+         AoA = acos( max( min( ratio, 1.0_ReKi ), -1.0_ReKi ) )
+         signOfAngle = dot_product( cross_product( inflowVecInAirfoilPlane, afAxialVec ), afRadialVec )
+         AoA = sign( AoA, signOfAngle )
       endif
       
       
@@ -495,7 +497,7 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    ! Prandtl's tip and hub loss factor:
    !.....................................................
    ! TODO TODO TODO EB Put this up like BEM_Mod3d
-   F = getHubTipLossCorrection(0, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle=0.0_ReKi)
+   F = getHubTipLossCorrection(BEMMod_2D, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle=0.0_ReKi)
    
 
    !.....................................................
@@ -772,7 +774,7 @@ subroutine inductionFactors2( B, r, chord, phi, cn, ct, Vx, Vy, drdz,cantAngle, 
    k_out     = real(     k, ReKi )
    kp_out    = real(    kp, ReKi )
    
-   end subroutine inductionFactors2
+end subroutine inductionFactors2
 
 real(R8Ki) function a0(chi0)
    implicit none
