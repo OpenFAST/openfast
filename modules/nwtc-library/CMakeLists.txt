@@ -28,6 +28,9 @@ set(NWTCLIBS_SOURCES
 
   # RanLux sources
   src/ranlux/RANLUX.f90
+
+  # Public Domain Aeronautical Software (PDAS) Polynomial Root Finder
+  src/Polynomial/quartic.f90
   
   # NetLib sources
   src/NetLib/fftpack/fftpack4.1.f

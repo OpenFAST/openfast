@@ -36,7 +36,6 @@ set(AEROACOUSTIC_SOURCES
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
-  src/quartic.f90
   src/AeroDyn.f90
   src/AeroDyn_IO.f90
   src/AeroDyn_AllBldNdOuts_IO.f90
