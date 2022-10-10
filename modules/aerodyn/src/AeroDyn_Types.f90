@@ -83,7 +83,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: defPvap      !< Default vapor pressure from the driver; may be overwritten [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
-    LOGICAL  :: EulerDCM = .FALSE.      !< DCMs are computed as Euler angles? (MBD=false;AD driver=true) [-]
   END TYPE AD_InitInputType
 ! =======================
 ! =========  AD_BladePropsType  =======
@@ -346,7 +345,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SkewMod      !< Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
-    LOGICAL  :: EulerDCM      !< DCMs are computed as Euler angles? (MBD=false;AD driver=true) [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
   END TYPE AD_ParameterType
@@ -784,7 +782,6 @@ ENDIF
     DstInitInputData%defPvap = SrcInitInputData%defPvap
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
     DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
-    DstInitInputData%EulerDCM = SrcInitInputData%EulerDCM
  END SUBROUTINE AD_CopyInitInput
 
  SUBROUTINE AD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -908,7 +905,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! defPvap
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
-      Int_BufSz  = Int_BufSz  + 1  ! EulerDCM
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1035,8 +1031,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%EulerDCM, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackInitInput
 
  SUBROUTINE AD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1192,8 +1186,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%EulerDCM = TRANSFER(IntKiBuf(Int_Xferred), OutData%EulerDCM)
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackInitInput
 
  SUBROUTINE AD_CopyBladePropsType( SrcBladePropsTypeData, DstBladePropsTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -11834,7 +11826,6 @@ ENDIF
       CALL FVW_CopyParam( SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%EulerDCM = SrcParamData%EulerDCM
     DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
     DstParamData%UA_Flag = SrcParamData%UA_Flag
  END SUBROUTINE AD_CopyParam
@@ -11981,7 +11972,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz  = Int_BufSz  + 1  ! EulerDCM
       Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
       Int_BufSz  = Int_BufSz  + 1  ! UA_Flag
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -12131,8 +12121,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%EulerDCM, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UA_Flag, IntKiBuf(1))
@@ -12328,8 +12316,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%EulerDCM = TRANSFER(IntKiBuf(Int_Xferred), OutData%EulerDCM)
-    Int_Xferred = Int_Xferred + 1
     OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
     Int_Xferred = Int_Xferred + 1
     OutData%UA_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag)

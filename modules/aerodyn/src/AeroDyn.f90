@@ -1088,7 +1088,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   p_AD%EulerDCM      = .FALSE.
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
    
    p_AD%DT            = InputFileData%DTAero
