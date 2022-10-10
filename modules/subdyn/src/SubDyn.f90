@@ -2187,7 +2187,7 @@ SUBROUTINE SD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE SD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedPackedOrient )
+SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
    REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
@@ -2205,11 +2205,11 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedPackedOrient !< whether a y_op values should contain 3-value representation instead of full orientation matrices
+   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
 
    ! Local
    INTEGER(IntKi)                                                :: idx, i
-   LOGICAL                                                       :: ReturnPackedOrientation
+   LOGICAL                                                       :: ReturnTrimOP
    INTEGER(IntKi)                                                :: nu
    INTEGER(IntKi)                                                :: ny
    INTEGER(IntKi)                                                :: ErrStat2
@@ -2232,7 +2232,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask, UseSmlAngle=.true.)
+      call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask)
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
    
@@ -2242,13 +2242,13 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
       
-      if (present(NeedPackedOrient)) then
-         ReturnPackedOrientation = NeedPackedOrient
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
       else
-         ReturnPackedOrientation = .false.
+         ReturnTrimOP = .false.
       end if
       
-      if (ReturnPackedOrientation) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
       
       idx = 1
       call PackLoadMesh(y%Y1Mesh, y_op, idx)
@@ -2259,8 +2259,8 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=ReturnPackedOrientation)
-      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, UseSmlAngle=ReturnPackedOrientation)
+      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)
@@ -2300,7 +2300,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    call CleanUp()
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
