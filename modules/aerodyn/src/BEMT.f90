@@ -2216,8 +2216,8 @@ function NodeText(i,j)
    NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
 end function NodeText
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetInputs_for_UA(BEMT_Mod, phi, theta, cantAngle, toeAngle, axInduction, tanInduction, chord, Vx, Vy, Vz, omega, kinVisc, UserProp, xVelCorr, u_UA)
-   integer(IntKi),               intent(in   ) :: BEMT_Mod
+subroutine SetInputs_for_UA(BEM_Mod, phi, theta, cantAngle, toeAngle, axInduction, tanInduction, chord, Vx, Vy, Vz, omega, kinVisc, UserProp, xVelCorr, u_UA)
+   integer(IntKi),               intent(in   ) :: BEM_Mod
    real(ReKi),                   intent(in   ) :: UserProp           ! User property (for 2D Airfoil interp)
    real(ReKi),                   intent(in   ) :: phi
    real(ReKi),                   intent(in   ) :: theta
@@ -2236,18 +2236,18 @@ subroutine SetInputs_for_UA(BEMT_Mod, phi, theta, cantAngle, toeAngle, axInducti
 
 
       ! ....... compute inputs to UA ...........
-   call computeAirfoilOperatingAOA(BEMT_Mod, phi, theta, cantAngle, toeAngle ,u_UA%alpha )
+   call computeAirfoilOperatingAOA(BEM_Mod, phi, theta, cantAngle, toeAngle ,u_UA%alpha )
    u_UA%UserProp = UserProp
             
       ! Need to compute relative velocity at the aerodynamic center, including both axial and tangential induction 
       ! COMPUTE: u_UA%U, u_UA%Re, u_UA%v_ac
-   if (BEMT_Mod==0) then
+   if (BEM_Mod==BEMMod_2D) then
       ! Setting Cant, Toe and xVelCorr to 0
       call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, 0.0_ReKi, 0.0_ReKi, u_UA%U, u_UA%v_ac )
-      call GetReynoldsNumber(BEMT_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, 0.0_ReKi, 0.0_ReKi, u_UA%Re)
+      call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, 0.0_ReKi, 0.0_ReKi, u_UA%Re)
    else
       call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, u_UA%U, u_UA%v_ac )
-      call GetReynoldsNumber(BEMT_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
+      call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
    endif
 
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
