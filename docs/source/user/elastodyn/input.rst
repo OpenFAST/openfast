@@ -359,3 +359,417 @@ for a complete list of possible output parameters.
 .. _ED-Nodal-Outputs:
 
 .. include:: EDNodalOutputs.rst
+
+
+
+
+
+
+.. _TF_ed_input-file:
+
+ElastoDyn furl input file
+-------------------------
+
+This section describes the furl input file indicated by the input ``FurlFile`` from the ElastoDyn input file.
+OpenFAST will only read this file if the model is designated as a furling machine (when Furling from the primary input
+file is set to True).
+The input file defines the geometry and stuctural properties of the rotor-furl and tail-furl. 
+
+An example of ElastoDyn furl input file is provided below:
+
+.. code::
+    
+    ---------------------- FAST FURLING FILE ---------------------------------------
+    Comment
+    ---------------------- FEATURE FLAGS (CONT) ------------------------------------
+    False       RFrlDOF     - Rotor-furl DOF (flag)
+    True        TFrlDOF     - Tail-furl DOF (flag)
+    ---------------------- INITIAL CONDITIONS (CONT) -------------------------------
+       0.0      RotFurl     - Initial or fixed rotor-furl angle (degrees)
+       0.0      TailFurl    - Initial or fixed tail-furl angle (degrees)
+    ---------------------- TURBINE CONFIGURATION (CONT) ----------------------------
+       0.106    Yaw2Shft    - Lateral distance from the yaw axis to the rotor shaft (meters)
+       0.0      ShftSkew    - Rotor shaft skew angle (degrees)
+       0.0      RFrlCMxn    - Downwind distance from the tower-top to the CM of the structure that furls with the rotor [not including rotor] (meters)
+       0.0      RFrlCMyn    - Lateral  distance from the tower-top to the CM of the structure that furls with the rotor [not including rotor] (meters)
+       0.0      RFrlCMzn    - Vertical distance from the tower-top to the CM of the structure that furls with the rotor [not including rotor] (meters)
+       1.7667   BoomCMxn    - Downwind distance from the tower-top to the tail boom CM (meters)
+       0.106    BoomCMyn    - Lateral  distance from the tower-top to the tail boom CM (meters)
+       0.2668   BoomCMzn    - Vertical distance from the tower-top to the tail boom CM (meters)
+       0.0      TFinCMxn    - Downwind distance from the tower-top to the tail fin CM (meters)
+       0.0      TFinCMyn    - Lateral  distance from the tower-top to the tail fin CM (meters)
+       0.0      TFinCMzn    - Vertical distance from the tower-top to the tail fin CM (meters)
+       0.0      RFrlPntxn   - Downwind distance from the tower-top to an arbitrary point on the rotor-furl axis (meters)
+       0.0      RFrlPntyn   - Lateral  distance from the tower-top to an arbitrary point on the rotor-furl axis (meters)
+       0.0      RFrlPntzn   - Vertical distance from the tower-top to an arbitrary point on the rotor-furl axis (meters)
+       0.0      RFrlSkew    - Rotor-furl axis skew angle (degrees)
+       0.0      RFrlTilt    - Rotor-furl axis tilt angle (degrees)
+       0.318    TFrlPntxn   - Downwind distance from the tower-top to an arbitrary point on the tail-furl axis (meters)
+       0.106    TFrlPntyn   - Lateral  distance from the tower-top to an arbitrary point on the tail-furl axis (meters)
+       0.470    TFrlPntzn   - Vertical distance from the tower-top to an arbitrary point on the tail-furl axis (meters)
+     -45.2802   TFrlSkew    - Tail-furl axis skew angle (degrees)
+      78.7047   TFrlTilt    - Tail-furl axis tilt angle (degrees)
+    ---------------------- MASS AND INERTIA (CONT) ---------------------------------
+       0.0      RFrlMass    - Mass of structure that furls with the rotor [not including rotor] (kg)
+      86.8      BoomMass    - Tail boom mass (kg)
+       0.0      TFinMass    - Tail fin mass (kg)
+       0.0      RFrlIner    - Inertia of the structure that furls with the rotor about the rotor-furl axis (kg m^2) [not including rotor]
+     264.7      TFrlIner    - Tail boom inertia about tail-furl axis (kg m^2)
+    ---------------------- ROTOR-FURL ----------------------------------------------
+       0        RFrlMod     - Rotor-furl spring/damper model {0: none, 1: standard, 2: user-defined from routine UserRFrl} (switch)
+       0.0      RFrlSpr     - Rotor-furl spring constant (N-m/rad) [used only when RFrlMod=1]
+       0.0      RFrlDmp     - Rotor-furl damping constant (N-m/(rad/s)) [used only when RFrlMod=1]
+       0.0      RFrlCDmp    - Rotor-furl rate-independent Coulomb-damping moment (N-m) [used only when RFrlMod=1]
+       0.0      RFrlUSSP    - Rotor-furl up-stop spring position (degrees) [used only when RFrlMod=1]
+       0.0      RFrlDSSP    - Rotor-furl down-stop spring position (degrees) [used only when RFrlMod=1]
+       0.0      RFrlUSSpr   - Rotor-furl up-stop spring constant (N-m/rad) [used only when RFrlMod=1]
+       0.0      RFrlDSSpr   - Rotor-furl down-stop spring constant (N-m/rad) [used only when RFrlMod=1]
+       0.0      RFrlUSDP    - Rotor-furl up-stop damper position (degrees) [used only when RFrlMod=1]
+       0.0      RFrlDSDP    - Rotor-furl down-stop damper position (degrees) [used only when RFrlMod=1]
+       0.0      RFrlUSDmp   - Rotor-furl up-stop damping constant (N-m/(rad/s)) [used only when RFrlMod=1]
+       0.0      RFrlDSDmp   - Rotor-furl down-stop damping constant (N-m/(rad/s)) [used only when RFrlMod=1]
+    ---------------------- TAIL-FURL -----------------------------------------------
+       1        TFrlMod     - Tail-furl spring/damper model {0: none, 1: standard, 2: user-defined from routine UserTFrl} (switch)
+       0.0      TFrlSpr     - Tail-furl spring constant (N-m/rad) [used only when TFrlMod=1]
+      10.0      TFrlDmp     - Tail-furl damping constant (N-m/(rad/s)) [used only when TFrlMod=1]
+       0.0      TFrlCDmp    - Tail-furl rate-independent Coulomb-damping moment (N-m) [used only when TFrlMod=1]
+      85.0      TFrlUSSP    - Tail-furl up-stop spring position (degrees) [used only when TFrlMod=1]
+       3.0      TFrlDSSP    - Tail-furl down-stop spring position (degrees) [used only when TFrlMod=1]
+       1.0E3    TFrlUSSpr   - Tail-furl up-stop spring constant (N-m/rad) [used only when TFrlMod=1]
+       1.7E4    TFrlDSSpr   - Tail-furl down-stop spring constant (N-m/rad) [used only when TFrlMod=1]
+      85.0      TFrlUSDP    - Tail-furl up-stop damper position (degrees) [used only when TFrlMod=1]
+       0.0      TFrlDSDP    - Tail-furl down-stop damper position (degrees) [used only when TFrlMod=1]
+       1.0E3    TFrlUSDmp   - Tail-furl up-stop damping constant (N-m/(rad/s)) [used only when TFrlMod=1]
+     137.0      TFrlDSDmp   - Tail-furl down-stop damping constant (N-m/(rad/s)) [used only when TFrlMod=1]
+
+
+
+
+*Feature Flags*
+
+**RFrlDOF**
+The rotor-furl DOF will be enabled when this is True. The initial rotor-furl angle is specified with
+RotFurl. If RFrlDOF is disabled, the rotor-furl angle will be fixed at RotFurl. (flag)
+
+**TFrlDOF**
+The tail-furl DOF will be enabled when this is True. The initial tail-furl angle is specified with
+TailFurl. If TFrlDOF is disabled, the tail-furl angle will be fixed at TailFurl. (flag)
+
+
+*Initial Conditions*
+
+**RotFurl**
+This is the fixed or initial rotor-furl angle. It is positive about the rotor-furl axis as shown in
+:numref:`figTFAxes`. The rotor-furl axis is defined through inputs RFrlPntxn, RFrlPntyn, RFrlPntzn,
+RFrlSkew, and RFrlTilt below. This value must be greater than -180 and less than or equal to
+180 degrees. (deg)
+
+**TailFurl**
+This is the fixed or initial tail-furl angle. It is positive about the tail-furl axis as shown in :numref:`figTFAxes`. 
+The tail-furl axis is defined through inputs TFrlPntxn, TFrlPntyn, TFrlPntzn, TFrlSkew,
+and TFrlTilt below. This value must be greater than -180 and less than or equal to 180 degrees.
+(deg)
+
+*Turbine Configuration*
+
+
+**Yaw2Shft**
+This is the lateral offset distance from the yaw axis to the intersection of the rotor shaft axis with
+the yn-/zn-plane. The distance is measured parallel to the yn-axis. It is positive to the left when
+looking downwind as shown in :numref:`figTFFurl`. For turbines with rotor-furl, this distance defines the
+configuration at a furl angle of zero. (m)
+
+**ShftSkew**
+This is the skew angle of the rotor shaft in the nominally horizontal plane. Positive skew acts like
+positive nacelle yaw as shown in :numref:`figTFFurl`; however, ShftSkew should only be used to skew the
+shaft a few degrees away from the zero-yaw position and must not be used as a replacement for
+the yaw angle. This value must be between -15 and 15 degrees (inclusive). For turbines with
+rotor-furl, this angle defines the configuration at a furl angle of zero. (deg)
+
+**RFrlCMxn**
+This is the downwind distance to the center of mass of the structure that furls with the rotor (not
+including the rotor—reference input RFrlMass) from the top of the tower, measured parallel to
+the xn-axis. It is positive downwind. See :numref:`figTFFurl`. For turbines with rotor-furl, this distance
+defines the configuration at a furl angle of zero. (m)
+
+**RFrlCMyn**
+This is the lateral distance to the center of mass of the structure that furls with the rotor (not
+including the rotor—reference input RFrlMass) from the top of the tower, measured parallel to
+the yn-axis. It is positive to the left when looking downwind. See :numref:`figTFFurl`. For turbines with
+rotor-furl, this distance defines the configuration at a furl angle of zero. (m)
+
+**RFrlCMzn**
+This is the vertical distance to the center of mass of the structure that furls with the rotor (not
+including the rotor—reference input RFrlMass) from the top of the tower, measured parallel to
+the zn-axis. It is positive upward when looking downwind. See :numref:`figTFFurl`. For turbines with
+rotor-furl, this distance defines the configuration at a furl angle of zero. (m)
+
+**BoomCMxn**
+This is the downwind distance to the tail boom mass center (reference input BoomMass) from the
+top of the tower, measured parallel to the xn-axis. It is positive downwind. See :numref:`figTFGeom`. For
+turbines with tail-furl, this distance defines the configuration at a furl angle of zero. (m)
+
+**BoomCMyn**
+This is the lateral distance to the tail boom mass center (reference input BoomMass) from the top
+of the tower, measured parallel to the yn-axis. It is positive to the left when looking downwind.
+See :numref:`figTFGeom`. For turbines with tail-furl, this distance defines the configuration at a furl angle of
+zero. (m)
+
+**BoomCMzn**
+This is the vertical distance to the tail boom mass center (reference input BoomMass) from the
+top of the tower, measured parallel to the zn-axis. It is positive upward when looking downwind.
+See :numref:`figTFGeom`. For turbines with tail-furl, this distance defines the configuration at a furl angle of
+zero. (m)
+
+**TFinCMxn**
+This is the downwind distance to the tail fin mass center (reference input TFinMass) from the top
+of the tower, measured parallel to the xn-axis. It is positive downwind. See :numref:`figTFGeom`. For
+turbines with tail-furl, this distance defines the configuration at a furl angle of zero. (m)
+
+**TFinCMyn**
+This is the lateral distance to the tail fin mass center (reference input TFinMass) from the top of
+the tower, measured parallel to the yn-axis. It is positive to the left when looking downwind. See
+:numref:`figTFGeom`. For turbines with tail-furl, this distance defines the configuration at a furl angle of
+zero. (m)
+
+**TFinCMzn**
+This is the vertical distance to the tail fin mass center (reference input TFinMass) from the top of
+the tower, measured parallel to the zn-axis. It is positive upward when looking downwind. See
+:numref:`figTFGeom`. For turbines with tail-furl, this distance defines the configuration at a furl angle of
+zero. (m)
+
+**RFrlPntxn**
+This is the downwind distance to an arbitrary point on the rotor-furl axis from the top of the tower,
+measured parallel to the xn-axis. It is positive downwind. The arbitrary point referred to in this
+input must be the same point identified by inputs RFrlPntyn and RFrlPntzn. Inputs RFrlPntxn,
+RFrlPntyn, RFrlPntzn, RFrlSkew, and RFrlTilt define the orientation of the rotor-furl axis and
+associated DOF, RFrlDOF. See :numref:`figTFAxes`. (m)
+
+**RFrlPntyn**
+This is the lateral distance to an arbitrary point on the rotor-furl axis from the top of the tower,
+measured parallel to the yn-axis. It is positive to the left when looking downwind. The arbitrary
+point referred to in this input must be the same point identified by inputs RFrlPntxn and
+RFrlPntzn. Inputs RFrlPntxn, RFrlPntyn, RFrlPntzn, RFrlSkew, and RFrlTilt define the
+orientation of the rotor-furl axis and associated DOF, RFrlDOF. See :numref:`figTFAxes`. (m)
+
+**RFrlPntzn**
+This is the vertical distance to an arbitrary point on the rotor-furl axis from the top of the tower,
+measured parallel to the zn-axis. It is positive upward when looking downwind. The arbitrary
+point referred to in this input must be the same point identified by inputs RFrlPntxn and
+RFrlPntyn. Inputs RFrlPntxn, RFrlPntyn, RFrlPntzn, RFrlSkew, and RFrlTilt define the
+orientation of the rotor-furl axis and associated DOF, RFrlDOF. See :numref:`figTFAxes`. (m)
+
+**RFrlSkew**
+This is the skew angle of the rotor-furl axis in the nominally horizontal plane. Positive skew
+orients the nominal horizontal projection of the rotor-furl axis about the zn-axis. Inputs
+RFrlPntxn, RFrlPntyn, RFrlPntzn, RFrlSkew, and RFrlTilt define the orientation of the rotor-
+furl axis and associated DOF, RFrlDOF. See :numref:`figTFAxes`. This value must be greater than -180
+and less than or equal to 180 degrees. (deg)
+
+**RFrlTilt**
+This is the tilt angle of the rotor-furl axis from the nominally horizontal plane. This value must be
+between -90 and 90 degrees (inclusive). Inputs RFrlPntxn, RFrlPntyn, RFrlPntzn, RFrlSkew,
+and RFrlTilt define the orientation of the rotor-furl axis and associated DOF, RFrlDOF. See
+:numref:`figTFAxes`. (deg)
+
+**TFrlPntxn**
+This is the downwind distance to an arbitrary point on the tail-furl axis from the top of the tower,
+measured parallel to the xn-axis. It is positive downwind. The arbitrary point referred to in this
+input must be the same point identified by inputs TFrlPntyn and TFrlPntzn. Inputs TFrlPntxn,
+TFrlPntyn, TFrlPntzn, TFrlSkew, and TFrlTilt define the orientation of the tail-furl axis and
+associated DOF, TFrlDOF. See :numref:`figTFAxes`. (m)
+
+**TFrlPntyn**
+This is the lateral distance to an arbitrary point on the tail-furl axis from the top of the tower,
+measured parallel to the yn-axis. It is positive to the left when looking downwind. The arbitrary
+point referred to in this input must be the same point identified by inputs TFrlPntxn and
+TFrlPntzn. Inputs TFrlPntxn, TFrlPntyn, TFrlPntzn, TFrlSkew, and TFrlTilt define the
+orientation of the tail-furl axis and associated DOF, TFrlDOF. See :numref:`figTFAxes`. (m)
+
+**TFrlPntzn**
+This is the vertical distance to an arbitrary point on the tail-furl axis from the top of the tower,
+measured parallel to the zn-axis. It is positive upward when looking downwind. The arbitrary
+point referred to in this input must be the same point identified by inputs TFrlPntxn and
+TFrlPntyn. Inputs TFrlPntxn, TFrlPntyn, TFrlPntzn, TFrlSkew, and TFrlTilt define the
+orientation of the tail-furl axis and associated DOF, RFrlDOF. See :numref:`figTFAxes`. (m)
+
+**TFrlSkew**
+This is the skew angle of the tail-furl axis in the nominally horizontal plane. Positive skew orients
+the nominal horizontal projection of the tail-furl axis about the zn-axis. Inputs TFrlPntxn,
+TFrlPntyn, TFrlPntzn, TFrlSkew, and TFrlTilt define the orientation of the tail-furl axis and
+associated DOF, TFrlDOF. See :numref:`figTFAxes`. This value must be greater than -180 and less than or
+equal to 180 degrees. (deg)
+
+**TFrlTilt**
+This is the tilt angle of the tail-furl axis from the nominally horizontal plane. This value must be
+between -90 and 90 degrees (inclusive). Inputs TFrlPntxn, TFrlPntyn, TFrlPntzn, TFrlSkew,
+and TFrlTilt define the orientation of the tail-furl axis and associated DOF, TFrlDOF. See :numref:`figTFAxes`. (deg)
+
+
+*Mass and Inertia*
+
+**RFrlMass**
+This is the mass of the structure that furls with the rotor (not including the rotor). The center of
+this mass is located at the point specified by inputs RFrlCMxn, RFrlCMyn, and RFrlCMzn
+relative to the tower-top at a rotor-furl angle of zero. It includes everything that furls with the
+rotor excluding the rotor (blades, hub, and tip brakes). This value must not be negative. (kg)
+
+**BoomMass**
+This is the mass of the tail boom. The center of the tail boom mass is located at the point specified
+by inputs BoomCMxn, BoomCMyn, and BoomCMzn relative to the tower-top at a tail-furl angle
+of zero. It includes everything that furls with the tail except the tail fin (see next input). This
+value must not be negative. (kg)
+
+**TFinMass**
+This is the mass of the tail fin. The center of the tail fin mass is located at the point specified by
+inputs TFinCMxn, TFinCMyn, and TFinCMzn relative to the tower-top at a tail-furl angle of
+zero. TFinMass and BoomMass combined should include everything that furls with the tail.
+This value must not be negative. (kg)
+
+**RFrlIner**
+This is the moment of inertia of the structure that furls with the rotor (not including the rotor)
+about the rotor-furl axis. It includes all mass contained in RFrlMass. This value must be greater
+than `RFrlMass*( perpendicular distance between rotor-furl axis and C.M. of the structure
+that furls with the rotor [not including the rotor] )^2`. (kg·m2)
+
+**TFrlIner**
+This is the tail boom moment of inertia about the tail-furl axis. It includes all mass contained in
+BoomMass. This value must be greater than `BoomMass*( perpendicular distance between
+tail-furl axis and tail boom C.M.)^2`. (kg·m2)
+
+*Rotor-Furl*
+
+
+**RFrlMod**
+The rotor-furl springs and dampers can be modeled three ways. For a value of 0 for RFrlMod,
+there will be no rotor-furl spring nor damper and the moment normally produced will be set to
+zero. A RFrlMod of 1 will invoke simple spring and damper models using the inputs provided
+below as appropriate coefficients. If you set RFrlMod to 2, FAST will call the routine UserRFrl()
+to compute the rotor-furl spring and damper moments. You should replace the dummy routine
+supplied with the code with your own, which will need to be linked with the rest of FAST. Using
+values other than 0, 1, or 2 will cause FAST to abort. (switch)
+
+**RFrlSpr**
+The linear rotor-furl spring restoring moment is proportional to the rotor-furl deflection through
+this constant. This value must not be negative and is only used when RFrlMod is set to 1.
+(N·m/rad)
+
+**RFrlDmp**
+The linear rotor-furl damping moment is proportional to the rotor-furl rate through this constant.
+This value must not be negative and is only used when RFrlMod is set to 1. (N·m/(rad/s))
+
+**RFrlCDmp**
+This Coulomb-friction damping moment resists rotor-furl motion, but it is a constant that is not
+proportional to the rotor-furl rate. However, if the rotor-furl rate is zero, the damping is zero.
+This value must not be negative and is only used when RFrlMod is set to 1. (N·m)
+
+**RFrlUSSP**
+The rotor-furl up-stop spring is effective when the rotor-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to 180 degrees and is only used when
+RFrlMod is set to 1. (deg)
+
+**RFrlDSSP**
+The rotor-furl down-stop spring is effective when the rotor-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to RFrlUSSP degrees and is only used
+when RFrlMod is set to 1. (deg)
+
+**RFrlUSSpr**
+The linear rotor-furl up-stop spring restoring moment is proportional to the rotor-furl up-stop
+deflection by this constant and is effective when the rotor-furl deflection exceeds RFrlUSSP.
+This value must not be negative and is only used when RFrlMod is set to 1. (N·m/rad)
+
+**RFrlDSSpr**
+The linear rotor-furl down-stop spring restoring moment is proportional to the rotor-furl down-
+stop deflection by this constant and is effective when the rotor-furl deflection exceeds RFrlDSSP.
+This value must not be negative and is only used when RFrlMod is set to 1. (N·m/rad)
+
+**RFrlUSDP**
+The rotor-furl up-stop damper is effective when the rotor-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to 180 degrees and is only used when
+RFrlMod is set to 1. (deg)
+
+**RFrlDSDP**
+The rotor-furl down-stop damper is effective when the rotor-furl deflection exceeds this value.
+This value must be greater than -180 and less than or equal to RFrlUSDP degrees and is only
+used when RFrlMod is set to 1. (deg)
+
+**RFrlUSDmp**
+The linear rotor-furl up-stop damping moment is proportional to the rotor-furl rate by this constant
+and is effective when the rotor-furl deflection exceeds RFrlUSDP. This value must not be
+negative and is only used when RFrlMod is set to 1. (N·m/(rad/s))
+
+**RFrlDSDmp**
+The linear rotor-furl down-stop damping restoring moment is proportional to the rotor-furl rate by
+this constant and is effective when the rotor-furl deflection exceeds RFrlDSDP. This value must
+not be negative and is only used when RFrlMod is set to 1. (N·m/(rad/s))
+
+
+*Tail-Furl*
+
+
+**TFrlMod**
+The tail-furl springs and dampers can be modeled three ways. For a value of 0 for TFrlMod, there
+will be no tail-furl spring nor damper and the moment normally produced will be set to zero. A
+TFrlMod of 1 will invoke simple spring and damper models using the inputs provided below as
+appropriate coefficients. If you set TFrlMod to 2, FAST will call the routine UserTFrl() to
+compute the tail-furl spring and damper moments. You should replace the dummy routine
+supplied with the code with your own, which will need to be linked with the rest of FAST. Using
+values other than 0, 1, or 2 will cause FAST to abort. (switch)
+
+**TFrlSpr**
+The linear tail-furl spring restoring moment is proportional to the tail-furl deflection through this
+constant. This value must not be negative and is only used when TFrlMod is set to 1. (N·m/rad)
+
+**TFrlDmp**
+The linear tail-furl damping moment is proportional to the tail-furl rate through this constant. This
+value must not be negative and is only used when TFrlMod is set to 1. (N·m/(rad/s))
+
+**TFrlCDmp**
+This Coulomb-friction damping moment resists tail-furl motion, but it is a constant that is not
+proportional to the tail-furl rate. However, if the tail-furl rate is zero, the damping is zero. This
+value must not be negative and is only used when TFrlMod is set to 1. (N·m)
+
+**TFrlUSSP**
+The tail-furl up-stop spring is effective when the tail-furl deflection exceeds this value. This value
+must be greater than -180 and less than or equal to 180 degrees and is only used when TFrlMod is
+set to 1. (deg)
+
+**TFrlDSSP**
+The tail-furl down-stop spring is effective when the tail-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to TFrlUSSP degrees and is only used
+when TFrlMod is set to 1. (deg)
+
+**TFrlUSSpr**
+The linear tail-furl up-stop spring restoring moment is proportional to the tail-furl up-stop
+deflection by this constant and is effective when the tail-furl deflection exceeds TFrlUSSP. This
+value must not be negative and is only used when TFrlMod is set to 1. (N·m/rad)
+
+**TFrlDSSpr**
+The linear tail-furl down-stop spring restoring moment is proportional to the tail-furl down-stop
+deflection by this constant and is effective when the tail-furl deflection exceeds TFrlDSSP. This
+value must not be negative and is only used when TFrlMod is set to 1. (N·m/rad)
+
+**TFrlUSDP**
+The tail-furl up-stop damper is effective when the tail-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to 180 degrees and is only used when
+TFrlMod is set to 1. (deg)
+
+**TFrlDSDP**
+The tail-furl down-stop damper is effective when the tail-furl deflection exceeds this value. This
+value must be greater than -180 and less than or equal to TFrlUSDP degrees and is only used
+when TFrlMod is set to 1. (deg)
+
+**TFrlUSDmp**
+The linear tail-furl up-stop damping moment is proportional to the tail-furl rate by this constant
+and is effective when the tail-furl deflection exceeds TFrlUSDP. This value must not be negative
+and is only used when TFrlMod is set to 1. (N·m/(rad/s))
+
+**TFrlDSDmp**
+The linear tail-furl down-stop damping restoring moment is proportional to the tail-furl rate by this
+constant and is effective when the tail-furl deflection exceeds TFrlDSDP. This value must not be
+negative and is only used when TFrlMod is set to 1. (N·m/(rad/s))
+
+
+
+
+

@@ -35,14 +35,10 @@ For a same value of :math:`\tau_1`, the discrete-time and continuous-time formul
 Oye's dynamic inflow model consists of two first-order differential equations (see :cite:`ad-Branlard:book`):
 
 .. math::
-   \begin{align}
-       \boldsymbol{W}_\text{int}+\tau_1    \boldsymbol{\dot{W}}_\text{int}
-           &=
-       \boldsymbol{W}_\text{qs} + k \tau_1 \boldsymbol{\dot{W}}_\text{qs} \\
-       \boldsymbol{W}+\tau_2 \boldsymbol{\dot{W}}
-           &=
-       \boldsymbol{W}_\text{int}
-   \end{align}
+   \begin{aligned}
+       \boldsymbol{W}_\text{int}+\tau_1    \boldsymbol{\dot{W}}_\text{int} &= \boldsymbol{W}_\text{qs} + k \tau_1 \boldsymbol{\dot{W}}_\text{qs} \\
+       \boldsymbol{W}+\tau_2 \boldsymbol{\dot{W}} &= \boldsymbol{W}_\text{int}
+   \end{aligned}
 
 where 
 :math:`\boldsymbol{W}` is the dynamic induction vector at the rotor (at a given blade position and radial position), 

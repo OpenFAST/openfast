@@ -314,6 +314,27 @@ The file names should be in quotations and can contain an absolute path
 or a relative path. The data in each file need not be identical, which
 permits modeling of aerodynamic imbalances.
 
+Tail fin AeroDynamics
+~~~~~~~~~~~~~~~~~~~~~
+
+The tail fin aerodynamics section contains two lines:
+
+.. code::
+    
+    ======  Tail fin AeroDynamics ======================================================================== 
+        true       TFinAero     - Calculate tail fin aerodynamics model (flag)
+      ""           TFinFile     - Input file for tail fin aerodynamics [used only when TFinAero=True]
+    ======  Tower Influence and Aerodynamics ============================================================= 
+
+**TFinAero** Flag to activate the tail fin aerodynamics calcualtion.
+
+**TFinFile** Path (absolute or relative to the AeroDyn input file) where the 
+tail fin input file is located. 
+
+The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
+
+
 Tower Influence and Aerodynamics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -409,6 +430,38 @@ complete list of possible output parameters.
 .. _AD-Nodal-Outputs:
 
 .. include:: ADNodalOutputs.rst
+
+
+Tail fin outputs
+~~~~~~~~~~~~~~~~
+
+The tail fin outputs are:
+
+ - TFinAlpha (deg):  Angle of attack          at the reference point of the fin
+ - TFinDynP  (Pa):   Dynamic pressure         at the reference point of the fin
+ - TFinRe     (-):   Reynolds number             at the reference point of the fin in the inertial coordinate system
+ - TFinVrel   (m/s): Orthogonal relative velocity norm (:math:`V_{\text{rel},\perp}`)    at the reference point of the fin in the inertial coordinate system
+ - TFinVdisxi (m/s): Disturbed velocity   (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinVdisyi (m/s): Disturbed velocity   (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinVdiszi (m/s): Disturbed velocity   (z)  at the reference point of the fin in the inertial coordinate system
+ - TFinVrelxi (m/s): Relative velocity   (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinVrelyi (m/s): Relative velocity   (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinVrelzi (m/s): Relative velocity   (z)  at the reference point of the fin in the inertial coordinate system
+ - TFinVundxi (m/s): Undisturbed velocity   (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinVundyi (m/s): Undisturbed velocity   (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinVundzi (m/s): Undisturbed velocity   (z)  at the reference point of the fin in the inertial coordinate system
+ - TFinSTVxi  (m/s): Structural velocity (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinSTVyi  (m/s): Structural velocity (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinSTVzi  (m/s): Structural velocity (z)  at the reference point of the fin in the inertial coordinate system
+ - TFinFxi (N) : Aerodynamic force   (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinFyi (N) : Aerodynamic force   (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinFzi (N) : Aerodynamic force   (z)  at the reference point of the fin in the inertial coordinate system
+ - TFinMxi (Nm): Aerodynamic moment  (x)  at the reference point of the fin in the inertial coordinate system
+ - TFinMyi (Nm): Aerodynamic moment  (y)  at the reference point of the fin in the inertial coordinate system
+ - TFinMzi (Nm): Aerodynamic moment  (z)  at the reference point of the fin in the inertial coordinate system
+
+
+
 
 
 .. _airfoil_data_input_file:
@@ -753,4 +806,91 @@ See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :n
    :alt: aerodyn_blade_geom.png
 
    AeroDyn Blade Geometry – Left: Side View; Right: Front View (Looking Downwind)
+
+
+
+.. _TF_tf_input-file:
+
+Tail fin input file
+-------------------
+
+An example of tail fin input file is given below:
+
+.. code::
+    
+    ------- TAIL FIN AERODYNAMICS INPUT FILE--------------------------------------------
+    Comment
+    ======  General inputs =============================================================
+    1         TFinMod     - Tail fin aerodynamics model {0: none, 1: polar-based, 2: USB-based} (switch)
+    1.0       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
+    10.,0.,0. TFinRefP_n  - Undeflected position of the tail fin reference point wrt the tower top (m)
+    0.,0.,0.  TFinAngles  - Tail fin chordline skew, tilt, and bank angles about the reference point (degrees)
+    0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
+    ====== Polar-based model ================================ [used only when TFinMod=1] 
+    1        TFinAFID - Index of Tail fin airfoil number [1 to NumAFfiles]
+    ====== Unsteady slender body model  ===================== [used only when TFinMod=2] 
+    [TODO inputs for model 2]
+
+General inputs
+~~~~~~~~~~~~~~
+
+**TFinMod** Switch to select a model for the tail fin aerodynamics:
+0) none (the aerodynamic forces are zero), 1) polar-based, 2) USB-based (see :numref:`TF-aerotheory`).
+(switch)
+
+**TFinArea** Area of the tail fin. (m^2)
+This is the plan form area of the tail fin plate used to relate the local dynamic pressure and airfoil
+coefficients to aerodynamic loads. This value must not be negative and is only used when
+TFinMod is set to 1. (m^2)
+
+**TFinRefP_n** Undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
+(formerly defined using ``TFinCPxn``,  ``TFinCPyn``, ``TFinCPzn``). 
+The distances defines the configuration for a furl angle of zero, and zero ``TFinAngles``.
+For a typical upwind wind turbine, 
+:math:`x_n`, is positive downwind,
+:math:`y_n`, is positive to the left when looking downwind, and
+:math:`z_n`, is positive upward when looking downwind.
+See :numref:`figTFGeom` and :numref:`figTFcoord1`.
+(m)
+
+**TFinAngles** Angles (:math:`\theta_\text{skew},\theta_\text{tilt}, \theta_\text{bank}`) of the tail fin 
+(formerly defined as ``TFinSkew``, ``TFinTilt``, ``TFinBank``).
+See :numref:`figTFGeom` and :numref:`figTFcoord1`. 
+These angles define the chordline at a furl angle of zero, where the chordline is assumed to be passing through the reference point.
+:math:`\theta_\text{skew}`  is the skew angle of the tail fin chordline in the nominally horizontal plane. 
+Positive skew orients the nominal horizontal projection of the tail fin chordline about the :math:`z_n`-axis.
+The aforementioned chordline is the chordline passing through the tail fin reference point. 
+This value must be greater than -180 and less than or equal to 180 degrees. 
+:math:`\theta_\text{tilt}` is the tilt angle of the tail fin chordline from the nominally horizontal plane. 
+This value must be between -90 and 90 degrees (inclusive). 
+Positive tilt means that the trailing edge of the tail fin is higher than the leading edge. 
+:math:`\theta_\text{bank}` is the bank angle of the tail fin plane about the tail fin chordline. 
+This value must be greater than -180 and less than or equal to 180 degrees. 
+(deg)
+
+
+
+**TFinIndMod**
+Switch to select a model for the calculation of the velocity induced by the rotor and its wake on the tailfin (not the induced velocity from the tailfin wing).
+The options available are: 
+0) none (the induced velocity is zero)
+1) rotor-average (using the average induced velocity across all blades and blade nodes)
+(see :numref:`TF-aerotheory`). (switch)
+
+
+Polar-based model inputs
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+**TFinAFID**
+This integer tells AeroDyn which of the input airfoil files (``AFNames``) is assigned to the tail fin. For
+instance, a value of 2 means that the tail fin will use ``AFNames(2)`` for the local tail fin airfoil. 
+This value must be
+between 1 and ``NumAFfiles`` and is only used when TFinMod is set to 1. (-)
+
+
+Unsteady slender body (USB) model inputs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO
+
 
