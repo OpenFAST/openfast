@@ -72,8 +72,6 @@ typedef ^   InitInputType   ReKi    defPvap     -   -   -   "Default vapor press
 typedef ^   InitInputType   ReKi    WtrDpth -  -   -    "Water depth" m
 typedef ^   InitInputType   ReKi    MSL2SWL -  -   -    "Offset between still-water level and mean sea level" m
 
-typedef	^	InitInputType	LOGICAL	EulerDCM	-	.FALSE.	-	"DCMs are computed as Euler angles? (MBD=false;AD driver=true)"	"-"
-
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Blade Input file data .....................................................................................................
 typedef	^	AD_BladePropsType	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -309,7 +307,6 @@ typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
-typedef	^	ParameterType	LOGICAL	EulerDCM	-	-	-	"DCMs are computed as Euler angles? (MBD=false;AD driver=true)"	"-"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 
