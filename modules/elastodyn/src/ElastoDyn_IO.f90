@@ -1345,12 +1345,6 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
       InputFileData%TFinCMxn  = 0.0
       InputFileData%TFinCMyn  = 0.0
       InputFileData%TFinCMzn  = 0.0
-      InputFileData%TFinCPxn  = 0.0
-      InputFileData%TFinCPyn  = 0.0
-      InputFileData%TFinCPzn  = 0.0
-      InputFileData%TFinSkew  = 0.0
-      InputFileData%TFinTilt  = 0.0
-      InputFileData%TFinBank  = 0.0
       InputFileData%RFrlPntxn = 0.0
       InputFileData%RFrlPntyn = 0.0
       InputFileData%RFrlPntzn = 0.0
@@ -4179,8 +4173,6 @@ SUBROUTINE ValidateFurlData( InputFileData, ErrStat, ErrMsg )
 
    CALL CheckAngle180Range( InputFileData%RotFurl,  'RotFurl'  )
    CALL CheckAngle180Range( InputFileData%TailFurl, 'TailFurl' )
-   CALL CheckAngle180Range( InputFileData%TFinSkew, 'TFinSkew' )
-   CALL CheckAngle180Range( InputFileData%TFinBank, 'TFinBank' )
    CALL CheckAngle180Range( InputFileData%RFrlSkew, 'RFrlSkew' )
    CALL CheckAngle180Range( InputFileData%TFrlSkew, 'TFrlSkew' )
 
@@ -4211,10 +4203,6 @@ SUBROUTINE ValidateFurlData( InputFileData, ErrStat, ErrMsg )
 
 
       ! Check that tilt angles are in the range [-pi/2, pi/2] radians (i.e., [-90, 90] degrees ):
-
-   IF ( ABS( InputFileData%TFinTilt ) > PiBy2 )  THEN
-      CALL SetErrStat(ErrID_Fatal,'TFinTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
-   END IF
    IF ( ABS( InputFileData%RFrlTilt ) > PiBy2 )  THEN
       CALL SetErrStat(ErrID_Fatal,'RFrlTilt must be between -pi/2 and pi/2 radians (i.e., in the range [-90, 90] degrees).',ErrStat,ErrMsg,RoutineName)
    END IF
@@ -4243,11 +4231,6 @@ SUBROUTINE ValidateFurlData( InputFileData, ErrStat, ErrMsg )
    IF ( InputFileData%TFinCMxn < 0.0_ReKi )  THEN   ! Print out warning when tail fin CM defined upwind of the tower.
       CALL SetErrStat( ErrID_Warn,'WARNING: Tail fin CM is defined upwind of the tower (TFinCMxn < 0).',ErrStat,ErrMsg,RoutineName)
    ENDIF
-
-   IF ( InputFileData%TFinCPxn < 0.0_ReKi )  THEN   ! Print out warning when tail fin CP defined upwind of the tower.
-      CALL SetErrStat( ErrID_Warn,'WARNING: Tail fin CP is defined upwind of the tower (TFinCPxn < 0).',ErrStat,ErrMsg,RoutineName)
-   ENDIF
-
 
       ! Check that mass, inertias, damping, etc. values aren't negative:
 

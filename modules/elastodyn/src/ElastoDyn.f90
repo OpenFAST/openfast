@@ -3147,12 +3147,6 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for the PLinVelEJ array.'
       RETURN
    ENDIF
-   ALLOCATE ( RtHS%PLinVelEK(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEK array.'
-      RETURN
-   ENDIF
    ALLOCATE ( RtHS%PLinVelEP(p%NDOF,0:1,3) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
@@ -3421,13 +3415,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%CShftSkew = COS( REAL(InputFileData%ShftSkew,R8Ki) )
    p%SShftSkew = SIN( REAL(InputFileData%ShftSkew,R8Ki) )
 
-   p%CTFinSkew = COS( REAL(InputFileData%TFinSkew, R8Ki) )
-   p%STFinSkew = SIN( REAL(InputFileData%TFinSkew, R8Ki) )
-   p%CTFinTilt = COS( REAL(InputFileData%TFinTilt, R8Ki) )
-   p%STFinTilt = SIN( REAL(InputFileData%TFinTilt, R8Ki) )
-   p%CTFinBank = COS( REAL(InputFileData%TFinBank, R8Ki) )
-   p%STFinBank = SIN( REAL(InputFileData%TFinBank, R8Ki) )
-
    p%CRFrlSkew = COS( REAL(InputFileData%RFrlSkew, R8Ki) )
    p%SRFrlSkew = SIN( REAL(InputFileData%RFrlSkew, R8Ki) )
    p%CRFrlTilt = COS( REAL(InputFileData%RFrlTilt, R8Ki) )
@@ -3465,10 +3452,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%rWJxn     = InputFileData%TFinCMxn - p%TFrlPntxn
    p%rWJyn     = InputFileData%TFinCMyn - p%TFrlPntyn
    p%rWJzn     = InputFileData%TFinCMzn - p%TFrlPntzn
-
-   p%rWKxn     = InputFileData%TFinCPxn - p%TFrlPntxn
-   p%rWKyn     = InputFileData%TFinCPyn - p%TFrlPntyn
-   p%rWKzn     = InputFileData%TFinCPzn - p%TFrlPntzn
 
    p%rVDxn     = InputFileData%RFrlCMxn - p%RFrlPntxn
    p%rVDyn     = InputFileData%RFrlCMyn - p%RFrlPntyn
@@ -6342,18 +6325,6 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
    CoordSys%tfa = p%CTFrlSkew*p%CTFrlTilt*CoordSys%d1 + p%STFrlTilt*CoordSys%d2 - p%STFrlSkew*p%CTFrlTilt*CoordSys%d3
 
 
-      ! Tail fin coordinate system:
-
-   CoordSys%p1 = (                           p%CTFinSkew*p%CTFinTilt             )*CoordSys%tf1 &   ! Vector / direction p1 (= tail fin  x).
-               + (                                       p%STFinTilt             )*CoordSys%tf2 &
-               + (                         - p%STFinSkew*p%CTFinTilt             )*CoordSys%tf3
-   CoordSys%p2 = ( p%STFinSkew*p%STFinBank - p%CTFinSkew*p%STFinTilt*p%CTFinBank )*CoordSys%tf1 &   ! Vector / direction p2 (= tail fin  z).
-               + (                                       p%CTFinTilt*p%CTFinBank )*CoordSys%tf2 &
-               + ( p%CTFinSkew*p%STFinBank + p%STFinSkew*p%STFinTilt*p%CTFinBank )*CoordSys%tf3
-   CoordSys%p3 = ( p%STFinSkew*p%CTFinBank + p%CTFinSkew*p%STFinTilt*p%STFinBank )*CoordSys%tf1 &   ! Vector / direction p3 (= tail fin -y).
-               + (                         -             p%CTFinTilt*p%STFinBank )*CoordSys%tf2 &
-               + ( p%CTFinSkew*p%CTFinBank - p%STFinSkew*p%STFinTilt*p%STFinBank )*CoordSys%tf3
-
    RETURN
 CONTAINS
    !...............................................................................................................................
@@ -6695,7 +6666,6 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
-   REAL(R8Ki)                   :: rK        (3)                                   ! Position vector from inertial frame origin to tail fin center of pressure (point K).
    !REAL(R8Ki)                   :: rQ        (3)                                   ! Position vector from inertial frame origin to apex of rotation (point Q).
 
    INTEGER(IntKi)               :: J                                               ! Counter for elements
@@ -6729,7 +6699,6 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    RtHSdat%rOW   = p%TFrlPntxn*CoordSys%d1  + p%TFrlPntzn *CoordSys%d2 -  p%TFrlPntyn*CoordSys%d3                             ! Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W).
    RtHSdat%rWI   =     p%rWIxn*CoordSys%tf1 +      p%rWIzn*CoordSys%tf2 -     p%rWIyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I).
    RtHSdat%rWJ   =     p%rWJxn*CoordSys%tf1 +      p%rWJzn*CoordSys%tf2 -     p%rWJyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J).
-   RtHSdat%rWK   =     p%rWKxn*CoordSys%tf1 +      p%rWKzn*CoordSys%tf2 -     p%rWKyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail fin  center of pressure (point K).
    RtHSdat%rPC   = RtHSdat%rPQ + RtHSdat%rQC                                                                                  ! Position vector from teeter pin (point P) to hub center of mass (point C).
    RtHSdat%rT0O  = RtHSdat%rZO - RtHSdat%rZT0                                                                                 ! Position vector from the tower base (point T(0)) to tower-top / base plate (point O).
    RtHSdat%rO    = RtHSdat%rZ  + RtHSdat%rZO                                                                                  ! Position vector from inertial frame origin to tower-top / base plate (point O).
@@ -6737,7 +6706,6 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    !RtHSdat%rP    = RtHSdat%rO  + RtHSdat%rOV + RtHSdat%rVP                                                                   ! Position vector from inertial frame origin to teeter pin (point P).
    RtHSdat%rP    = RtHSdat%rV  + RtHSdat%rVP                                                                                  ! Position vector from inertial frame origin to teeter pin (point P).
    RtHSdat%rQ    = RtHSdat%rP  + RtHSdat%rPQ                                                                                  ! Position vector from inertial frame origin to apex of rotation (point Q).
-           rK    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWK                                                                    ! Position vector from inertial frame origin to tail fin center of pressure (point K).
    RtHSdat%rJ    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWJ                                                                    ! Position vector from inertial frame origin to tail fin center of mass (point J).
 
 
@@ -7061,19 +7029,16 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       ! Local variables
-   REAL(ReKi)                   :: LinAccEKt (3)                                   ! "Portion of the linear acceleration of the tail fin  center of pressure (point K) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEPt (3)                                   ! "Portion of the linear acceleration of the teeter pin (point P) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEQt (3)                                   ! "Portion of the linear acceleration of the apex of rotation (point Q) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEVt (3)                                   ! "Portion of the linear acceleration of the selected point on the rotor-furl axis (point V) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEWt (3)                                   ! "Portion of the linear acceleration of the selected point on the  tail-furl axis (point W) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
-   REAL(ReKi)                   :: LinVelEK  (3)                                   ! "Linear velocity of tail fin center-of-pressure (point K) in the inertia frame"
    REAL(ReKi)                   :: LinVelHS  (3)                                   ! "Relative linear velocity of the current point on the current blade (point S) in the hub frame (body H)"
    REAL(ReKi)                   :: LinVelXO  (3)                                   ! "Relative linear velocity of the tower-top / base plate (point O) in the platform (body X)"
    REAL(ReKi)                   :: LinVelXT  (3)                                   ! "Relative linear velocity of the current point on the tower (point T) in the platform (body X)"
 
    REAL(ReKi)                   :: EwAXrWI   (3)                                   ! = AngVelEA X rWI
    REAL(ReKi)                   :: EwAXrWJ   (3)                                   ! = AngVelEA X rWJ
-   REAL(ReKi)                   :: EwAXrWK   (3)                                   ! = AngVelEA X rWK
    REAL(ReKi)                   :: EwHXrPQ   (3)                                   ! = AngVelEH X rPQ
    REAL(ReKi)                   :: EwHXrQC   (3)                                   ! = AngVelEH X rQC
    REAL(ReKi)                   :: EwHXrQS   (3)                                   ! = AngVelEH X rQS of the current blade point S.
@@ -7105,7 +7070,6 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    RtHSdat%LinAccEIMUt = 0.0
    RtHSdat%LinAccEIt   = 0.0
    RtHSdat%LinAccEJt   = 0.0
-           LinAccEKt   = 0.0
    RtHSdat%LinAccEOt   = 0.0
            LinAccEPt   = 0.0
            LinAccEQt   = 0.0
@@ -7142,7 +7106,6 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    EwNXrOW   = CROSS_PRODUCT( RtHSdat%AngVelEN, RtHSdat%rOW   ) !
    EwAXrWI   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWI   ) !
    EwAXrWJ   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWJ   ) !
-   EwAXrWK   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWK   ) !
 
 
    RtHSdat%PLinVelEZ(       :,:,:) = 0.0
@@ -7454,24 +7417,6 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
        RtHSdat%LinAccEJt           =  RtHSdat%LinAccEJt + x%QDT(PA(I) )*RtHSdat%PLinVelEJ(PA(I)   ,1,:)
 
    ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
-
-   ! Velocities of point K (tail fin center of pressure)
-   RtHSdat%PLinVelEK(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
-    LinVelEK               =  RtHSdat%LinVelEZ
-   DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
-
-      TmpVec0  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:), RtHSdat%rWK                 )
-      TmpVec1  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:),         EwAXrWK             )
-      TmpVec2  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,1,:), RtHSdat%rWK                 )
-
-      RtHSdat%PLinVelEK(PA(I),0,:) = TmpVec0    +                RtHSdat%PLinVelEK(PA(I)   ,0,:)
-      RtHSdat%PLinVelEK(PA(I),1,:) = TmpVec1    + TmpVec2 +      RtHSdat%PLinVelEK(PA(I)   ,1,:)
-
-       LinVelEK                    =   LinVelEK  + x%QDT(PA(I) )*RtHSdat%PLinVelEK(PA(I)   ,0,:)
-       LinAccEKt                   =   LinAccEKt + x%QDT(PA(I) )*RtHSdat%PLinVelEK(PA(I)   ,1,:)
-
-   ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
-
 
 
    DO J = 0,p%TwrNodes  ! Loop through the tower nodes / elements

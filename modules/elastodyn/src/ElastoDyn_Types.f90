@@ -244,12 +244,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: TFinCMxn      !< Downwind distance from tower-top to tail fin CM [meters]
     REAL(ReKi)  :: TFinCMyn      !< Lateral distance from tower-top to tail fin CM [meters]
     REAL(ReKi)  :: TFinCMzn      !< Vertical distance from tower-top to tail fin CM [meters]
-    REAL(ReKi)  :: TFinCPxn      !< Downwind distance from tower-top to tail fin CP [meters]
-    REAL(ReKi)  :: TFinCPyn      !< Lateral distance from tower-top to tail fin CP [meters]
-    REAL(ReKi)  :: TFinCPzn      !< Vertical distance from tower-top to tail fin CP [meters]
-    REAL(ReKi)  :: TFinSkew      !< Tail fin chordline skew angle [radians]
-    REAL(ReKi)  :: TFinTilt      !< Tail fin chordline tilt angle [radians]
-    REAL(ReKi)  :: TFinBank      !< Tail fin planform bank angle [radians]
     REAL(ReKi)  :: RFrlPntxn      !< Downwind distance from tower-top to arbitrary point on rotor-furl axis [meters]
     REAL(ReKi)  :: RFrlPntyn      !< Lateral distance from tower-top to arbitrary point on rotor-furl axis [meters]
     REAL(ReKi)  :: RFrlPntzn      !< Vertical distance from tower-top to arbitrary point on rotor-furl axis [meters]
@@ -331,9 +325,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: n1      !< n1(K,J,:) = vector / direction n1 for node J of blade K (= LxbK from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: n2      !< n2(K,J,:) = vector / direction n2 for node J of blade K (= LybK from the IEC coord. system) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: n3      !< n3(K,J,:) = vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: p1      !< Vector / direction p1 (used to calc. and return tail aerodynamic loads from AeroDyn) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: p2      !< Vector / direction p2 (used to calc. and return tail aerodynamic loads from AeroDyn) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: p3      !< Vector / direction p3 (used to calc. and return tail aerodynamic loads from AeroDyn) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: rf1      !< Vector / direction rf1 (rotor-furl coordinate system = d1 when rotor-furl angle = 0) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: rf2      !< Vector / direction rf2 (rotor-furl coordinate system = d2 when rotor-furl angle = 0) [-]
     REAL(R8Ki) , DIMENSION(1:3)  :: rf3      !< Vector / direction rf3 (rotor-furl coordinate system = d3 when rotor-furl angle = 0) [-]
@@ -409,7 +400,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: rVP      !< Position vector from specified point on rotor-furl axis (point V) to teeter pin (point P) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rWI      !< Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rWJ      !< Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J) [m]
-    REAL(R8Ki) , DIMENSION(1:3)  :: rWK      !< Position vector from specified point on  tail-furl axis (point W) to tail fin  center of pressure (point K) [m]
     REAL(R8Ki) , DIMENSION(1:3)  :: rZT0      !< Position vector from platform reference (point Z) to tower base (point T(0)) [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AngPosEF      !< Angular position of the current point on the tower (body F) in the inertial frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AngPosXF      !< Angular position of the current point on the tower (body F) in the platform (body X) [-]
@@ -466,7 +456,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelED      !< Partial linear velocity (and its 1st time derivative) of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEI      !< Partial linear velocity (and its 1st time derivative) of the tail boom center of mass (point I) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEJ      !< Partial linear velocity (and its 1st time derivative) of the tail fin center of mass (point J) in the inertia frame (body E for earth) [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEK      !< Partial linear velocity (and its 1st time derivative) of the tail fin center of pressure(point K) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEP      !< Partial linear velocity (and its 1st time derivative) of the teeter pin (point P) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEQ      !< Partial linear velocity (and its 1st time derivative) of the apex of rotation (point Q) in the inertia frame (body E for earth) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: PLinVelEU      !< Partial linear velocity (and its 1st time derivative) of the nacelle center of mass (point U) in the inertia frame (body E for earth) [-]
@@ -606,9 +595,6 @@ IMPLICIT NONE
     REAL(R8Ki)  :: CSRFrlTlt      !< Cosine*Sine of the rotor-furl axis tilt angle [-]
     REAL(R8Ki)  :: CSTFrlSkw      !< Cosine*Sine of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: CSTFrlTlt      !< Cosine*Sine of the tail-furl axis tilt angle [-]
-    REAL(R8Ki)  :: CTFinBank      !< Cosine of the tail fin planform bank angle [-]
-    REAL(R8Ki)  :: CTFinSkew      !< Cosine of the tail fin chordline skew angle [-]
-    REAL(R8Ki)  :: CTFinTilt      !< Cosine of the tail fin chordline tilt angle [-]
     REAL(R8Ki)  :: CTFrlSkew      !< Cosine of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: CTFrlSkw2      !< Cosine-squared of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: CTFrlTilt      !< Cosine of the tail-furl axis tilt angle [-]
@@ -641,9 +627,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: rWJxn      !< xn-component of position vector rWJ [-]
     REAL(ReKi)  :: rWJyn      !< yn-component of position vector rWJ [-]
     REAL(ReKi)  :: rWJzn      !< zn-component of position vector rWJ [-]
-    REAL(ReKi)  :: rWKxn      !< xn-component of position vector rWK [-]
-    REAL(ReKi)  :: rWKyn      !< yn-component of position vector rWK [-]
-    REAL(ReKi)  :: rWKzn      !< zn-component of position vector rWK [-]
     REAL(ReKi)  :: rZT0zt      !< zt-component of position vector rZT0 [-]
     REAL(ReKi)  :: rZYzt      !< zt-component of position vector rZY [-]
     REAL(R8Ki)  :: SinDel3      !< Sine of the Delta-3 angle for teetering rotors [-]
@@ -654,9 +637,6 @@ IMPLICIT NONE
     REAL(R8Ki)  :: SRFrlTlt2      !< Sine-squared of the rotor-furl axis tilt angle [-]
     REAL(R8Ki)  :: SShftSkew      !< Sine of the shaft skew angle [-]
     REAL(R8Ki)  :: SShftTilt      !< Sine of the shaft tilt angle [-]
-    REAL(R8Ki)  :: STFinBank      !< Sine of the tail fin planform bank angle [-]
-    REAL(R8Ki)  :: STFinSkew      !< Sine of the tail fin chordline skew angle [-]
-    REAL(R8Ki)  :: STFinTilt      !< Sine of the tail fin chordline tilt angle [-]
     REAL(R8Ki)  :: STFrlSkew      !< Sine of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: STFrlSkw2      !< Sine-squared of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: STFrlTilt      !< Sine of the tail-furl axis tilt angle [-]
@@ -4034,12 +4014,6 @@ ENDIF
     DstInputFileData%TFinCMxn = SrcInputFileData%TFinCMxn
     DstInputFileData%TFinCMyn = SrcInputFileData%TFinCMyn
     DstInputFileData%TFinCMzn = SrcInputFileData%TFinCMzn
-    DstInputFileData%TFinCPxn = SrcInputFileData%TFinCPxn
-    DstInputFileData%TFinCPyn = SrcInputFileData%TFinCPyn
-    DstInputFileData%TFinCPzn = SrcInputFileData%TFinCPzn
-    DstInputFileData%TFinSkew = SrcInputFileData%TFinSkew
-    DstInputFileData%TFinTilt = SrcInputFileData%TFinTilt
-    DstInputFileData%TFinBank = SrcInputFileData%TFinBank
     DstInputFileData%RFrlPntxn = SrcInputFileData%RFrlPntxn
     DstInputFileData%RFrlPntyn = SrcInputFileData%RFrlPntyn
     DstInputFileData%RFrlPntzn = SrcInputFileData%RFrlPntzn
@@ -4474,12 +4448,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TFinCMxn
       Re_BufSz   = Re_BufSz   + 1  ! TFinCMyn
       Re_BufSz   = Re_BufSz   + 1  ! TFinCMzn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCPxn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCPyn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCPzn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinSkew
-      Re_BufSz   = Re_BufSz   + 1  ! TFinTilt
-      Re_BufSz   = Re_BufSz   + 1  ! TFinBank
       Re_BufSz   = Re_BufSz   + 1  ! RFrlPntxn
       Re_BufSz   = Re_BufSz   + 1  ! RFrlPntyn
       Re_BufSz   = Re_BufSz   + 1  ! RFrlPntzn
@@ -5144,18 +5112,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%TFinCMyn
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFinCMzn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCPxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCPyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCPzn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinSkew
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinTilt
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinBank
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlPntxn
     Re_Xferred = Re_Xferred + 1
@@ -5977,18 +5933,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%TFinCMzn = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%TFinCPxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCPyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCPzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinSkew = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinTilt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinBank = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%RFrlPntxn = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RFrlPntyn = ReKiBuf(Re_Xferred)
@@ -6317,9 +6261,6 @@ IF (ALLOCATED(SrcCoordSysData%n3)) THEN
   END IF
     DstCoordSysData%n3 = SrcCoordSysData%n3
 ENDIF
-    DstCoordSysData%p1 = SrcCoordSysData%p1
-    DstCoordSysData%p2 = SrcCoordSysData%p2
-    DstCoordSysData%p3 = SrcCoordSysData%p3
     DstCoordSysData%rf1 = SrcCoordSysData%rf1
     DstCoordSysData%rf2 = SrcCoordSysData%rf2
     DstCoordSysData%rf3 = SrcCoordSysData%rf3
@@ -6616,9 +6557,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! n3 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%n3)  ! n3
   END IF
-      Db_BufSz   = Db_BufSz   + SIZE(InData%p1)  ! p1
-      Db_BufSz   = Db_BufSz   + SIZE(InData%p2)  ! p2
-      Db_BufSz   = Db_BufSz   + SIZE(InData%p3)  ! p3
       Db_BufSz   = Db_BufSz   + SIZE(InData%rf1)  ! rf1
       Db_BufSz   = Db_BufSz   + SIZE(InData%rf2)  ! rf2
       Db_BufSz   = Db_BufSz   + SIZE(InData%rf3)  ! rf3
@@ -7041,18 +6979,6 @@ ENDIF
         END DO
       END DO
   END IF
-    DO i1 = LBOUND(InData%p1,1), UBOUND(InData%p1,1)
-      DbKiBuf(Db_Xferred) = InData%p1(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%p2,1), UBOUND(InData%p2,1)
-      DbKiBuf(Db_Xferred) = InData%p2(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%p3,1), UBOUND(InData%p3,1)
-      DbKiBuf(Db_Xferred) = InData%p3(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
     DO i1 = LBOUND(InData%rf1,1), UBOUND(InData%rf1,1)
       DbKiBuf(Db_Xferred) = InData%rf1(i1)
       Db_Xferred = Db_Xferred + 1
@@ -7695,24 +7621,6 @@ ENDIF
         END DO
       END DO
   END IF
-    i1_l = LBOUND(OutData%p1,1)
-    i1_u = UBOUND(OutData%p1,1)
-    DO i1 = LBOUND(OutData%p1,1), UBOUND(OutData%p1,1)
-      OutData%p1(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%p2,1)
-    i1_u = UBOUND(OutData%p2,1)
-    DO i1 = LBOUND(OutData%p2,1), UBOUND(OutData%p2,1)
-      OutData%p2(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%p3,1)
-    i1_u = UBOUND(OutData%p3,1)
-    DO i1 = LBOUND(OutData%p3,1), UBOUND(OutData%p3,1)
-      OutData%p3(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
     i1_l = LBOUND(OutData%rf1,1)
     i1_u = UBOUND(OutData%rf1,1)
     DO i1 = LBOUND(OutData%rf1,1), UBOUND(OutData%rf1,1)
@@ -9079,7 +8987,6 @@ ENDIF
     DstRtHndSideData%rVP = SrcRtHndSideData%rVP
     DstRtHndSideData%rWI = SrcRtHndSideData%rWI
     DstRtHndSideData%rWJ = SrcRtHndSideData%rWJ
-    DstRtHndSideData%rWK = SrcRtHndSideData%rWK
     DstRtHndSideData%rZT0 = SrcRtHndSideData%rZT0
 IF (ALLOCATED(SrcRtHndSideData%AngPosEF)) THEN
   i1_l = LBOUND(SrcRtHndSideData%AngPosEF,1)
@@ -9583,22 +9490,6 @@ IF (ALLOCATED(SrcRtHndSideData%PLinVelEJ)) THEN
     END IF
   END IF
     DstRtHndSideData%PLinVelEJ = SrcRtHndSideData%PLinVelEJ
-ENDIF
-IF (ALLOCATED(SrcRtHndSideData%PLinVelEK)) THEN
-  i1_l = LBOUND(SrcRtHndSideData%PLinVelEK,1)
-  i1_u = UBOUND(SrcRtHndSideData%PLinVelEK,1)
-  i2_l = LBOUND(SrcRtHndSideData%PLinVelEK,2)
-  i2_u = UBOUND(SrcRtHndSideData%PLinVelEK,2)
-  i3_l = LBOUND(SrcRtHndSideData%PLinVelEK,3)
-  i3_u = UBOUND(SrcRtHndSideData%PLinVelEK,3)
-  IF (.NOT. ALLOCATED(DstRtHndSideData%PLinVelEK)) THEN 
-    ALLOCATE(DstRtHndSideData%PLinVelEK(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRtHndSideData%PLinVelEK.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRtHndSideData%PLinVelEK = SrcRtHndSideData%PLinVelEK
 ENDIF
 IF (ALLOCATED(SrcRtHndSideData%PLinVelEP)) THEN
   i1_l = LBOUND(SrcRtHndSideData%PLinVelEP,1)
@@ -10238,9 +10129,6 @@ ENDIF
 IF (ALLOCATED(RtHndSideData%PLinVelEJ)) THEN
   DEALLOCATE(RtHndSideData%PLinVelEJ)
 ENDIF
-IF (ALLOCATED(RtHndSideData%PLinVelEK)) THEN
-  DEALLOCATE(RtHndSideData%PLinVelEK)
-ENDIF
 IF (ALLOCATED(RtHndSideData%PLinVelEP)) THEN
   DEALLOCATE(RtHndSideData%PLinVelEP)
 ENDIF
@@ -10429,7 +10317,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%rVP)  ! rVP
       Db_BufSz   = Db_BufSz   + SIZE(InData%rWI)  ! rWI
       Db_BufSz   = Db_BufSz   + SIZE(InData%rWJ)  ! rWJ
-      Db_BufSz   = Db_BufSz   + SIZE(InData%rWK)  ! rWK
       Db_BufSz   = Db_BufSz   + SIZE(InData%rZT0)  ! rZT0
   Int_BufSz   = Int_BufSz   + 1     ! AngPosEF allocated yes/no
   IF ( ALLOCATED(InData%AngPosEF) ) THEN
@@ -10605,11 +10492,6 @@ ENDIF
   IF ( ALLOCATED(InData%PLinVelEJ) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! PLinVelEJ upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PLinVelEJ)  ! PLinVelEJ
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! PLinVelEK allocated yes/no
-  IF ( ALLOCATED(InData%PLinVelEK) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! PLinVelEK upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PLinVelEK)  ! PLinVelEK
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! PLinVelEP allocated yes/no
   IF ( ALLOCATED(InData%PLinVelEP) ) THEN
@@ -11059,10 +10941,6 @@ ENDIF
     END DO
     DO i1 = LBOUND(InData%rWJ,1), UBOUND(InData%rWJ,1)
       DbKiBuf(Db_Xferred) = InData%rWJ(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%rWK,1), UBOUND(InData%rWK,1)
-      DbKiBuf(Db_Xferred) = InData%rWK(i1)
       Db_Xferred = Db_Xferred + 1
     END DO
     DO i1 = LBOUND(InData%rZT0,1), UBOUND(InData%rZT0,1)
@@ -11907,31 +11785,6 @@ ENDIF
         DO i2 = LBOUND(InData%PLinVelEJ,2), UBOUND(InData%PLinVelEJ,2)
           DO i1 = LBOUND(InData%PLinVelEJ,1), UBOUND(InData%PLinVelEJ,1)
             ReKiBuf(Re_Xferred) = InData%PLinVelEJ(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%PLinVelEK) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PLinVelEK,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PLinVelEK,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PLinVelEK,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PLinVelEK,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PLinVelEK,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PLinVelEK,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%PLinVelEK,3), UBOUND(InData%PLinVelEK,3)
-        DO i2 = LBOUND(InData%PLinVelEK,2), UBOUND(InData%PLinVelEK,2)
-          DO i1 = LBOUND(InData%PLinVelEK,1), UBOUND(InData%PLinVelEK,1)
-            ReKiBuf(Re_Xferred) = InData%PLinVelEK(i1,i2,i3)
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
@@ -13082,12 +12935,6 @@ ENDIF
       OutData%rWJ(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
       Db_Xferred = Db_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%rWK,1)
-    i1_u = UBOUND(OutData%rWK,1)
-    DO i1 = LBOUND(OutData%rWK,1), UBOUND(OutData%rWK,1)
-      OutData%rWK(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
     i1_l = LBOUND(OutData%rZT0,1)
     i1_u = UBOUND(OutData%rZT0,1)
     DO i1 = LBOUND(OutData%rZT0,1), UBOUND(OutData%rZT0,1)
@@ -14070,34 +13917,6 @@ ENDIF
         DO i2 = LBOUND(OutData%PLinVelEJ,2), UBOUND(OutData%PLinVelEJ,2)
           DO i1 = LBOUND(OutData%PLinVelEJ,1), UBOUND(OutData%PLinVelEJ,1)
             OutData%PLinVelEJ(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PLinVelEK not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%PLinVelEK)) DEALLOCATE(OutData%PLinVelEK)
-    ALLOCATE(OutData%PLinVelEK(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PLinVelEK.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%PLinVelEK,3), UBOUND(OutData%PLinVelEK,3)
-        DO i2 = LBOUND(OutData%PLinVelEK,2), UBOUND(OutData%PLinVelEK,2)
-          DO i1 = LBOUND(OutData%PLinVelEK,1), UBOUND(OutData%PLinVelEK,1)
-            OutData%PLinVelEK(i1,i2,i3) = ReKiBuf(Re_Xferred)
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
@@ -16749,9 +16568,6 @@ ENDIF
     DstParamData%CSRFrlTlt = SrcParamData%CSRFrlTlt
     DstParamData%CSTFrlSkw = SrcParamData%CSTFrlSkw
     DstParamData%CSTFrlTlt = SrcParamData%CSTFrlTlt
-    DstParamData%CTFinBank = SrcParamData%CTFinBank
-    DstParamData%CTFinSkew = SrcParamData%CTFinSkew
-    DstParamData%CTFinTilt = SrcParamData%CTFinTilt
     DstParamData%CTFrlSkew = SrcParamData%CTFrlSkew
     DstParamData%CTFrlSkw2 = SrcParamData%CTFrlSkw2
     DstParamData%CTFrlTilt = SrcParamData%CTFrlTilt
@@ -16784,9 +16600,6 @@ ENDIF
     DstParamData%rWJxn = SrcParamData%rWJxn
     DstParamData%rWJyn = SrcParamData%rWJyn
     DstParamData%rWJzn = SrcParamData%rWJzn
-    DstParamData%rWKxn = SrcParamData%rWKxn
-    DstParamData%rWKyn = SrcParamData%rWKyn
-    DstParamData%rWKzn = SrcParamData%rWKzn
     DstParamData%rZT0zt = SrcParamData%rZT0zt
     DstParamData%rZYzt = SrcParamData%rZYzt
     DstParamData%SinDel3 = SrcParamData%SinDel3
@@ -16808,9 +16621,6 @@ ENDIF
     DstParamData%SRFrlTlt2 = SrcParamData%SRFrlTlt2
     DstParamData%SShftSkew = SrcParamData%SShftSkew
     DstParamData%SShftTilt = SrcParamData%SShftTilt
-    DstParamData%STFinBank = SrcParamData%STFinBank
-    DstParamData%STFinSkew = SrcParamData%STFinSkew
-    DstParamData%STFinTilt = SrcParamData%STFinTilt
     DstParamData%STFrlSkew = SrcParamData%STFrlSkew
     DstParamData%STFrlSkw2 = SrcParamData%STFrlSkw2
     DstParamData%STFrlTilt = SrcParamData%STFrlTilt
@@ -18225,9 +18035,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! CSRFrlTlt
       Db_BufSz   = Db_BufSz   + 1  ! CSTFrlSkw
       Db_BufSz   = Db_BufSz   + 1  ! CSTFrlTlt
-      Db_BufSz   = Db_BufSz   + 1  ! CTFinBank
-      Db_BufSz   = Db_BufSz   + 1  ! CTFinSkew
-      Db_BufSz   = Db_BufSz   + 1  ! CTFinTilt
       Db_BufSz   = Db_BufSz   + 1  ! CTFrlSkew
       Db_BufSz   = Db_BufSz   + 1  ! CTFrlSkw2
       Db_BufSz   = Db_BufSz   + 1  ! CTFrlTilt
@@ -18260,9 +18067,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! rWJxn
       Re_BufSz   = Re_BufSz   + 1  ! rWJyn
       Re_BufSz   = Re_BufSz   + 1  ! rWJzn
-      Re_BufSz   = Re_BufSz   + 1  ! rWKxn
-      Re_BufSz   = Re_BufSz   + 1  ! rWKyn
-      Re_BufSz   = Re_BufSz   + 1  ! rWKzn
       Re_BufSz   = Re_BufSz   + 1  ! rZT0zt
       Re_BufSz   = Re_BufSz   + 1  ! rZYzt
       Db_BufSz   = Db_BufSz   + 1  ! SinDel3
@@ -18277,9 +18081,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! SRFrlTlt2
       Db_BufSz   = Db_BufSz   + 1  ! SShftSkew
       Db_BufSz   = Db_BufSz   + 1  ! SShftTilt
-      Db_BufSz   = Db_BufSz   + 1  ! STFinBank
-      Db_BufSz   = Db_BufSz   + 1  ! STFinSkew
-      Db_BufSz   = Db_BufSz   + 1  ! STFinTilt
       Db_BufSz   = Db_BufSz   + 1  ! STFrlSkew
       Db_BufSz   = Db_BufSz   + 1  ! STFrlSkw2
       Db_BufSz   = Db_BufSz   + 1  ! STFrlTilt
@@ -18970,12 +18771,6 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%CSTFrlTlt
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%CTFinBank
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%CTFinSkew
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%CTFinTilt
-    Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%CTFrlSkew
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%CTFrlSkw2
@@ -19040,12 +18835,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%rWJzn
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rWKxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rWKyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%rWKzn
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%rZT0zt
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%rZYzt
@@ -19078,12 +18867,6 @@ ENDIF
     DbKiBuf(Db_Xferred) = InData%SShftSkew
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%SShftTilt
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%STFinBank
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%STFinSkew
-    Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%STFinTilt
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%STFrlSkew
     Db_Xferred = Db_Xferred + 1
@@ -20912,12 +20695,6 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%CSTFrlTlt = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
-    OutData%CTFinBank = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
-    OutData%CTFinSkew = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
-    OutData%CTFinTilt = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
     OutData%CTFrlSkew = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
     OutData%CTFrlSkw2 = REAL(DbKiBuf(Db_Xferred), R8Ki)
@@ -20982,12 +20759,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%rWJzn = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%rWKxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%rWKyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%rWKzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%rZT0zt = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%rZYzt = ReKiBuf(Re_Xferred)
@@ -21023,12 +20794,6 @@ ENDIF
     OutData%SShftSkew = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
     OutData%SShftTilt = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
-    OutData%STFinBank = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
-    OutData%STFinSkew = REAL(DbKiBuf(Db_Xferred), R8Ki)
-    Db_Xferred = Db_Xferred + 1
-    OutData%STFinTilt = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
     OutData%STFrlSkew = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1

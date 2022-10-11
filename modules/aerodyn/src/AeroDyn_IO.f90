@@ -1896,7 +1896,7 @@ CONTAINS
 
       ! TailFin
       if (p%TFinAero) then
-         m%AllOuts( TFAlpha )           = m%TFinAlpha
+         m%AllOuts( TFAlpha )           = m%TFinAlpha*R2D ! [deg]
          m%AllOuts( TFRe )              = m%TFinRe
          m%AllOuts( TFVrel )            = m%TFinVrel
          m%AllOuts( TFVundxi:TFVundzi)  = m%TFinVund_i
