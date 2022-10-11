@@ -9083,11 +9083,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
 
    CALL AllocAry( u%BlPitchCom, p%NumBl, 'BlPitchCom', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
    ! will initialize u%BlPitchCom later, after getting undisplaced positions    
    
    !.......................................................
@@ -9096,11 +9092,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    ! want inputs and states initialized to 0 first.
    !.......................................................
    CALL ED_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       x_tmp%qt  = 0.0_ReKi
       x_tmp%qdt = 0.0_ReKi
       x_tmp%QT (DOF_GeAz) = - p%AzimB1Up - REAL(Piby2_D, R8Ki)
@@ -9146,11 +9138,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                            ,Moment          = .TRUE.                 &
                            ,ErrStat         = ErrStat2               &
                            ,ErrMess         = ErrMsg2                )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+         if (Failed()) return
       
          if (p%UseAD14) then
             ! position the nodes on the blades:
@@ -9228,11 +9216,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
 
             ! that's our entire mesh:
          CALL MeshCommit ( u%BladePtLoads(K), ErrStat2, ErrMsg2 )   
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+         if (Failed()) return
 
    
             ! initialize it
@@ -9261,7 +9245,8 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
+   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
          
                      
    !.......................................................
@@ -9269,16 +9254,20 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
+   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
       
    !.......................................................
    ! Create Point Mesh for loads input at nacelle:
    !.......................................................
    Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
    call Eye(Orientation, ErrStat2, errMsg2)
-   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
+   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
       
-   ! --- Rotor TailFin mesh 
+   !.......................................................
+   ! Create Point Mesh for loads on Rotor tailfin:
+   !.......................................................
    Position(1) =     m%RtHS%rJ(1)               ! undeflected position of the tailfin CM in the xi ( z1) direction
    Position(2) = -1.*m%RtHS%rJ(3)               ! undeflected position of the tailfin CM in the yi (-z3) direction
    Position(3) =     m%RtHS%rJ(2) + p%PtfmRefzt ! undeflected position of the tailfin CM in the zi ( z2) direction
@@ -9291,7 +9280,8 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%tf1(2)
    Orientation(2,3) =     m%CoordSys%tf2(2)
    Orientation(3,3) =     m%CoordSys%tf3(2) 
-   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
+   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
 
 
    !.......................................................
@@ -9300,11 +9290,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
          
    CALL AllocAry( u%TwrAddedMass,  6_IntKi, 6_IntKi, p%TwrNodes,   'TwrAddedMass',    ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       
       ! initialize it
    u%TwrAddedMass          = 0.0_ReKi  
@@ -9321,20 +9307,12 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                      ,Moment       = .TRUE.                 &
                      ,ErrStat      = ErrStat2               &
                      ,ErrMess      = ErrMsg2                )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+   if (Failed()) return
    
       ! position the nodes on the tower:
    DO J = 1,p%TwrNodes      
       CALL MeshPositionNode ( u%TowerPtLoads, J, (/0.0_ReKi, 0.0_ReKi, p%HNodes(J) + p%TowerBsHt /), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed()) return
    END DO
    
       ! create elements:      
@@ -9345,21 +9323,13 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                                  , ErrStat  = ErrStat2           &
                                  , ErrMess  = ErrMsg2            )
          
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed()) return
    END DO
       
    
       ! that's our entire mesh:
    CALL MeshCommit ( u%TowerPtLoads, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       
       ! initialize fields
    u%TowerPtLoads%Moment   = 0.0_ReKi
@@ -9387,6 +9357,11 @@ CONTAINS
          CALL ED_DestroyContState( x_tmp, ErrStat2, ErrMsg2 )
          
    END SUBROUTINE Cleanup   
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call Cleanup()
+   end function Failed
             
 END SUBROUTINE Init_u
 !----------------------------------------------------------------------------------------------------------------------------------

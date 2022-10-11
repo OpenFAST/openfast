@@ -891,38 +891,11 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       
    end if ! we compute tower loads
    
-      !................
-      ! hub
-      !................
-   
-   call MeshCreate ( BlankMesh  = u%HubMotion     &
-                     ,IOS       = COMPONENT_INPUT &
-                     ,Nnodes    = 1               &
-                     ,ErrStat   = ErrStat2        &
-                     ,ErrMess   = ErrMsg2         &
-                     ,Orientation     = .true.    &
-                     ,TranslationDisp = .true.    &
-                     ,RotationVel     = .true.    &
-                     )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-   if (errStat >= AbortErrLev) return
-
-   call MeshPositionNode(u%HubMotion, 1, InitInp%HubPosition, errStat2, errMsg2, InitInp%HubOrientation)
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         
-   call MeshConstructElement( u%HubMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-   call MeshCommit(u%HubMotion, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':HubMotion' )
-            
-   if (errStat >= AbortErrLev) return
-
-         
-   u%HubMotion%Orientation     = u%HubMotion%RefOrientation
-   u%HubMotion%TranslationDisp = 0.0_R8Ki
-   u%HubMotion%RotationVel     = 0.0_ReKi   
+   !................
+   ! hub
+   !................
+   call CreatePointMesh(u%HubMotion, InitInp%HubPosition, InitInp%HubOrientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+   if (Failed()) return
       
    !................
    ! TailFin Motion Mesh
@@ -934,11 +907,12 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       theta(3)     = InputFileData%TFin%TFinAngles(3)
       orientationL = EulerConstructZYX( theta ) ! nac2tf
       orientation  = matmul(orientationL, InitInp%NacelleOrientation) ! gl2tf = nac2tf * gl2nac
-      call CreatePointMesh(u%TFinMotion, position, orientation, errStat, errMsg, HasMotion=.True., HasLoads=.False.)
+      call CreatePointMesh(u%TFinMotion, position, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+      if (Failed()) return
    else
       u%TFinMotion%NNodes = 0
    endif
-   
+
       !................
       ! blade roots
       !................
@@ -950,33 +924,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
    end if      
       
    do k=1,p%NumBlades
-      call MeshCreate ( BlankMesh = u%BladeRootMotion(k)                  &
-                        ,IOS       = COMPONENT_INPUT                       &
-                        ,Nnodes    = 1                                     &
-                        ,ErrStat   = ErrStat2                              &
-                        ,ErrMess   = ErrMsg2                               &
-                        ,Orientation     = .true.                          &
-                        ,TranslationDisp=.true., TranslationVel=.true.     & 
-                        ,RotationVel=.true., TranslationAcc=.true., RotationAcc=.true. &
-                        )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      if (errStat >= AbortErrLev) return
-            
-      call MeshPositionNode(u%BladeRootMotion(k), 1, InitInp%BladeRootPosition(:,k), errStat2, errMsg2, InitInp%BladeRootOrientation(:,:,k))
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-                     
-      call MeshConstructElement( u%BladeRootMotion(k), ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-      call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeRootMotion' )
-            
-      if (errStat >= AbortErrLev) return
-
-      
-      u%BladeRootMotion(k)%Orientation     = u%BladeRootMotion(k)%RefOrientation
-   
+      call CreatePointMesh(u%BladeRootMotion(k), InitInp%BladeRootPosition(:,k), InitInp%BladeRootOrientation(:,:,k), errStat2, errMsg2, hasMotion=.True., hasLoads=.False.)
+      if (Failed()) return
    end do !k=numBlades      
       
       
@@ -1057,38 +1006,18 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
    
    
    
-      !................
-      ! Nacelle
-      !................
-      call MeshCreate ( BlankMesh = u%NacelleMotion &
-                       ,IOS       = COMPONENT_INPUT &
-                       ,Nnodes    = 1               &
-                       ,ErrStat   = ErrStat2        &
-                       ,ErrMess   = ErrMsg2         &
-                       ,Orientation     = .true.    &
-                       ,TranslationDisp = .true.    &
-                       ,TranslationVel  = .true.    &
-                      )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   !................
+   ! Nacelle
+   !................
+   position = real(InitInp%NacellePosition, ReKi)
+   call CreatePointMesh(u%NacelleMotion, position, InitInp%NacelleOrientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+   if (Failed()) return
 
-      if (errStat >= AbortErrLev) return
-            
-         ! set node initial position/orientation
-      position = InitInp%NacellePosition
-
-      call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      call MeshConstructElement( u%NacelleMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      call MeshCommit(u%NacelleMotion, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-      if (errStat >= AbortErrLev) return
-
-   
-   
+contains 
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
 end subroutine Init_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets AeroDyn parameters for use during the simulation; these variables are not changed after AD_Init.

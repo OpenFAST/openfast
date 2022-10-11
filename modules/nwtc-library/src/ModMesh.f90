@@ -3578,22 +3578,27 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    END SUBROUTINE MeshExtrapInterp2
 
 !...............................................................................................................................
-!> High level function to easily create a point mesh
-   SUBROUTINE CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads)
+!> High level function to easily create a point mesh with one node and one element
+   SUBROUTINE CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads, hasAcc)
       type(MeshType),               intent(inout) :: mesh             !< Mesh to be created
       real(ReKi),                   intent(in   ) :: PosInit(3)       !< Xi,Yi,Zi, coordinates of node
       real(R8Ki),                   intent(in   ) :: orientInit(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
       logical,                      intent(in   ) :: hasMotion        !< include displacements in mesh
       logical,                      intent(in   ) :: hasLoads         !< include loads in mesh
+      logical, optional,            intent(in   ) :: hasAcc           !< include acceleration (default is true)
       integer(IntKi)              , intent(out)   :: errStat          ! Status of error message
       character(*)                , intent(out)   :: errMsg           ! Error message if ErrStat /= ErrID_None
+      logical              :: hasAcc_loc    !< include acceleration
       integer(IntKi)       :: errStat2      ! local status of error message
       character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
       errStat = ErrID_None
       errMsg  = ''
+      hasAcc_loc = .true.
+      if (present(hasAcc)) hasAcc_loc=hasAcc
 
       call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2,  &
-         Orientation=hasMotion, TranslationDisp=hasMotion, TranslationVel=hasMotion, RotationVel=hasMotion, TranslationAcc=hasMotion, RotationAcc=hasMotion, &
+         Orientation=hasMotion, TranslationDisp=hasMotion, TranslationVel=hasMotion, RotationVel=hasMotion, &
+         TranslationAcc=hasAcc_loc, RotationAcc=hasAcc_loc, &
          Force = hasLoads, Moment = hasLoads)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
       if (ErrStat >= AbortErrLev) return
@@ -3607,10 +3612,20 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       call MeshCommit(mesh, errStat2, errMsg2);
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
 
+      ! Initialize fields
       if (hasLoads) then
-         ! Initialize fields
          mesh%Force    = 0.0_ReKi
          mesh%Moment   = 0.0_ReKi
+      endif
+      if (hasMotion) then
+         mesh%Orientation      = mesh%RefOrientation
+         mesh%TranslationDisp  = 0.0_ReKi
+         mesh%TranslationVel   = 0.0_ReKi
+         mesh%RotationVel      = 0.0_ReKi
+      endif
+      if (hasAcc_loc) then
+         mesh%TranslationAcc   = 0.0_ReKi
+         mesh%RotationAcc      = 0.0_ReKi
       endif
 
    END SUBROUTINE CreatePointMesh
