@@ -3607,6 +3607,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       call MeshCommit(mesh, errStat2, errMsg2);
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
 
+      if (hasLoads) then
+         ! Initialize fields
+         mesh%Force    = 0.0_ReKi
+         mesh%Moment   = 0.0_ReKi
+      endif
+
    END SUBROUTINE CreatePointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh

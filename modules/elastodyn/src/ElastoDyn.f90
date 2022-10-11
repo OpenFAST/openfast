@@ -9244,23 +9244,9 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    END IF ! p%BD4Blades
    
                      
-      !.......................................................
-      ! Create Point Mesh for loads input at hub point (from BeamDyn):
-      !....................................................... 
-    
-   CALL MeshCreate( BlankMesh      = u%HubPtLoad            &
-                  ,IOS             = COMPONENT_INPUT        &
-                  ,NNodes          = 1                      &
-                  ,Force           = .TRUE.                 &
-                  ,Moment          = .TRUE.                 &
-                  ,ErrStat         = ErrStat2               &
-                  ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
+   !.......................................................
+   ! Create Point Mesh for loads input at hub point (from BeamDyn):
+   !....................................................... 
    ! place single node at hub; position affects mapping/coupling with other modules      
    Position(1)  =     m%RtHS%rQ(1)
    Position(2)  = -1.*m%RtHS%rQ(3)
@@ -9275,135 +9261,22 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-      
-   CALL MeshPositionNode ( u%HubPtLoad, 1, Position, ErrStat2, ErrMsg2, orient=Orientation )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-      CALL MeshConstructElement ( Mesh = u%HubPtLoad       &
-                           , Xelement = ELEMENT_POINT      &
-                           , P1       = 1                  &   ! node number
-                           , ErrStat  = ErrStat2           &
-                           , ErrMess  = ErrMsg2            )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         ! that's our entire mesh:
-      CALL MeshCommit ( u%HubPtLoad, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         ! initailize it
-      u%HubPtLoad%Moment      = 0.0_ReKi
-      u%HubPtLoad%Force       = 0.0_ReKi
+   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
          
                      
    !.......................................................
    ! Create Point Mesh for loads input at Platform Reference Point:
    !.......................................................
-      
-   CALL MeshCreate( BlankMesh         = u%PlatformPtMesh       &
-                     ,IOS             = COMPONENT_INPUT        &
-                     ,NNodes          = 1                      &
-                     ,Force           = .TRUE.                 &
-                     ,Moment          = .TRUE.                 &
-                     ,ErrStat         = ErrStat2               &
-                     ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! place single node at platform reference point; position affects mapping/coupling with other modules
-   CALL MeshPositionNode ( u%PlatformPtMesh, 1, (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-   CALL MeshConstructElement ( Mesh = u%PlatformPtMesh        &
-                              , Xelement = ELEMENT_POINT      &
-                              , P1       = 1                  &   ! node number
-                              , ErrStat  = ErrStat2           &
-                              , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! that's our entire mesh:
-   CALL MeshCommit ( u%PlatformPtMesh, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-   
-      ! initialize fields
-   u%PlatformPtMesh%Moment = 0.0_ReKi
-   u%PlatformPtMesh%Force  = 0.0_ReKi
+   Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
+   call Eye(Orientation, ErrStat2, errMsg2)
+   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
       
    !.......................................................
    ! Create Point Mesh for loads input at nacelle:
    !.......................................................
-         
-   CALL MeshCreate( BlankMesh          = u%NacelleLoads      &
-                     ,IOS              = COMPONENT_OUTPUT    &
-                     ,NNodes           = 1                   &
-                     ,Force            = .TRUE.              &
-                     ,Moment           = .TRUE.              &   
-                     ,ErrStat          = ErrStat2            &
-                     ,ErrMess          = ErrMsg2             )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   CALL MeshPositionNode ( u%NacelleLoads,  1, (/0.0_ReKi, 0.0_ReKi, p%TowerHt /), ErrStat2, ErrMsg2 ) ! orientation is identity by default
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-   CALL MeshConstructElement ( Mesh = u%NacelleLoads          &
-                              , Xelement = ELEMENT_POINT      &
-                              , P1       = 1                  &   ! node number
-                              , ErrStat  = ErrStat2           &
-                              , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      
-   CALL MeshCommit ( u%NacelleLoads, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-            
-      ! initialize fields
-   u%NacelleLoads%Force    = 0.0_ReKi
-   u%NacelleLoads%Moment   = 0.0_ReKi
+   Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
+   call Eye(Orientation, ErrStat2, errMsg2)
+   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
       
    ! --- Rotor TailFin mesh 
    Position(1) =     m%RtHS%rJ(1)               ! undeflected position of the tailfin CM in the xi ( z1) direction
@@ -9418,7 +9291,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%tf1(2)
    Orientation(2,3) =     m%CoordSys%tf2(2)
    Orientation(3,3) =     m%CoordSys%tf3(2) 
-   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat, errMsg, HasMotion=.False., HasLoads=.True.)
+   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat, errMsg, hasMotion=.False., hasLoads=.True.)
 
 
    !.......................................................
