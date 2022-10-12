@@ -765,7 +765,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_Mm )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx )  = m%Mz(IdxNode,IdxBlade)
+                  y%WriteOutput( OutIdx )  = m%M(IdxNode,IdxBlade)
                   OutIdx = OutIdx + 1
                END DO
             END DO 

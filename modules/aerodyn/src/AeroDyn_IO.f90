@@ -1928,7 +1928,7 @@ CONTAINS
 
             m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
             m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
-            m%AllOuts( BNMm(   beta,k) ) =  m%Mz(j,k)
+            m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
             m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
             m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
             m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
