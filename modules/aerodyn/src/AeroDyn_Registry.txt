@@ -248,6 +248,9 @@ typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle 
 typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoad	{:}	-	-	"line mesh for per unit length buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant point loads (m%BladeBuoyLoadPoint) to buoyant line loads (m%BladeBuoyLoad)"
 
 typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-

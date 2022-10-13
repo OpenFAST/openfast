@@ -2078,12 +2078,12 @@ CONTAINS
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
             if ( p%Buoyancy ) then
-               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BlFB(j,k,:) )
+               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Force(:,j) )
                m%AllOuts( BNFbn(beta,k) ) = tmp(1)
                m%AllOuts( BNFbt(beta,k) ) = tmp(2)
                m%AllOuts( BNFbs(beta,k) ) = tmp(3)
 
-               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BlMB(j,k,:) )
+               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Moment(:,j) )
                m%AllOuts( BNMbn(beta,k) ) = tmp(1)
                m%AllOuts( BNMbt(beta,k) ) = tmp(2)
                m%AllOuts( BNMbs(beta,k) ) = tmp(3)
