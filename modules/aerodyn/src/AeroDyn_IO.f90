@@ -2013,12 +2013,12 @@ CONTAINS
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       
          if ( p%Buoyancy ) then
-            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrFB(j,:) )
+            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Force(:,j) )
             m%AllOuts( TwNFbx(beta) ) = tmp(1)
             m%AllOuts( TwNFby(beta) ) = tmp(2)
             m%AllOuts( TwNFbz(beta) ) = tmp(3)
    
-            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrMB(j,:) )
+            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Moment(:,j) )
             m%AllOuts( TwNMbx(beta) ) = tmp(1)
             m%AllOuts( TwNMby(beta) ) = tmp(2)
             m%AllOuts( TwNMbz(beta) ) = tmp(3)

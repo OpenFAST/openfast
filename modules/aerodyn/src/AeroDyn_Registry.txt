@@ -250,7 +250,10 @@ typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; u
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
 typedef	^	RotMiscVarType	MeshType	BladeBuoyLoad	{:}	-	-	"line mesh for per unit length buoyant blade loads"	-
-typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant point loads (m%BladeBuoyLoadPoint) to buoyant line loads (m%BladeBuoyLoad)"
+typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad)"
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoadPoint	-	-	-	"point mesh for lumped buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit length buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
 
 typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-

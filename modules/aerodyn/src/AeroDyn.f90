@@ -665,7 +665,7 @@ end if
          call SetErrStat(ErrID_Fatal, "Error allocating BladeBuoyLoad mesh array.", errStat, errMsg, RoutineName)
          return
       end if   
-         ! Mesh mapping for buoyant loads from point to line
+         ! Mesh mapping for blade buoyant loads from point to line
       allocate(m%B_P_2_B_L(p%NumBlades), Stat = ErrStat2)
       if (ErrStat2 /= 0) then
          call SetErrStat(ErrID_Fatal, "Error allocating B_P_2_B_L mapping structure.", errStat, errMsg, RoutineName)
@@ -738,6 +738,71 @@ end if
       end do  !k=blades
       
       if (ErrStat >= AbortErrLev) RETURN
+
+      if ( p%NumTwrNds > 0 ) then
+
+         call MeshCreate ( BlankMesh = m%TwrBuoyLoadPoint &
+                         , IOS       = COMPONENT_OUTPUT   &
+                         , Nnodes    = p%NumTwrNds        &
+                         , force     = .TRUE.             &
+                         , moment    = .TRUE.             &
+                         , ErrStat   = ErrStat2           &
+                         , ErrMess   = ErrMsg2            )
+   
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)          
+      
+         if (ErrStat >= AbortErrLev) return
+   
+         do j = 1,p%NumTwrNds
+            call MeshPositionNode(m%TwrBuoyLoadPoint, j, u%TowerMotion%Position(:,j), errStat2, errMsg2, u%TowerMotion%RefOrientation(:,:,j))
+               call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+            call MeshConstructElement(m%TwrBuoyLoadPoint, ELEMENT_POINT, errStat2, errMsg2, p1=j)
+               call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         end do  !j=nodes
+            
+         call MeshCommit(m%TwrBuoyLoadPoint, errStat2, errMsg2)
+            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName//':TwrBuoyLoadPoint')
+            
+         if (errStat >= AbortErrLev) return
+   
+         m%TwrBuoyLoadPoint%Force  = 0.0_ReKi
+         m%TwrBuoyLoadPoint%Moment = 0.0_ReKi
+   
+         call MeshCreate ( BlankMesh = m%TwrBuoyLoad    &
+                         , IOS       = COMPONENT_OUTPUT &
+                         , Nnodes    = p%NumTwrNds      &
+                         , force     = .TRUE.           &
+                         , moment    = .TRUE.           &
+                         , ErrStat   = ErrStat2         &
+                         , ErrMess   = ErrMsg2          )
+   
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)          
+      
+         if (ErrStat >= AbortErrLev) return
+
+         do j = 1,p%NumTwrNds
+            call MeshPositionNode(m%TwrBuoyLoad, j, u%TowerMotion%Position(:,j), errStat2, errMsg2, u%TowerMotion%RefOrientation(:,:,j))
+               call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         end do  !j=nodes
+         do j = 1,p%NumTwrNds-1
+            call MeshConstructElement(m%TwrBuoyLoad, ELEMENT_LINE2, errStat2, errMsg2, p1=j, p2=j+1)
+               call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         end do  !j=nodes
+            
+         call MeshCommit(m%TwrBuoyLoad, errStat2, errMsg2)
+            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName//':TwrBuoyLoad')
+            
+         if (errStat >= AbortErrLev) return
+   
+         m%TwrBuoyLoad%Force  = 0.0_ReKi
+         m%TwrBuoyLoad%Moment = 0.0_ReKi
+   
+         call MeshMapCreate(m%TwrBuoyLoadPoint, m%TwrBuoyLoad, m%T_P_2_T_L, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':T_P_2_T_L')
+         
+         if (ErrStat >= AbortErrLev) RETURN
+
+      end if
 
    end if
 
@@ -1823,8 +1888,8 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: TwrmomentBtop    !< Buoyant moment on tower top in global coordinates
    REAL(ReKi), DIMENSION(p%NumBlNds,p%NumBlades,3)  :: BlFBtmp          !< Buoyant force at blade nodes in global coordinates
    REAL(ReKi), DIMENSION(p%NumBlNds,p%NumBlades,3)  :: BlMBtmp          !< Buoyant moment at blade nodes in global coordinates
-   REAL(ReKi), DIMENSION(p%NumTwrNds,3)             :: TwrFBtmp         !< Buoyant force at tower nodes in global coordinates, passed to m%TwrFB
-   REAL(ReKi), DIMENSION(p%NumTwrNds,3)             :: TwrMBtmp         !< Buoyant moment at tower nodes in global coordinates, passed to m%TwrMB
+   REAL(ReKi), DIMENSION(p%NumTwrNds,3)             :: TwrFBtmp         !< Buoyant force at tower nodes in global coordinates
+   REAL(ReKi), DIMENSION(p%NumTwrNds,3)             :: TwrMBtmp         !< Buoyant moment at tower nodes in global coordinates
    REAL(ReKi), DIMENSION(3)                         :: HubFBtmp         !< Buoyant force at hub node in global coordinates, passed to m%HubFB
    REAL(ReKi), DIMENSION(3)                         :: HubMBtmp         !< Buoyant moment at hub node in global coordinates, passed to m%HubMB
    REAL(ReKi), DIMENSION(3)                         :: NacFBtmp         !< Buoyant force at nacelle node in global coordinates, passed to m%NacFB
@@ -2020,43 +2085,35 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             Twrpostop = TwrtmpPosplus
          end if
 
-            ! Buoyant force and moment in global coordinates, expressed per unit length
-         TwrforceB = TwrforceB / (p%TwrDL(j)/2)
-         TwrmomentB = TwrmomentB / (p%TwrDL(j)/2)
-         TwrforceBplus = TwrforceBplus / (p%TwrDL(j)/2)
-         TwrmomentBplus = TwrmomentBplus / (p%TwrDL(j)/2)
-
-            ! Buoyant force and moment in global coordinates, with internal nodes expressed as the weighted average of contributions from each neighboring element
-         if ( j==1 ) then
-            TwrFBtmp(j,:) = TwrFBtmp(j,:) + TwrforceB
-            TwrFBtmp(j+1,:) = TwrFBtmp(j+1,:) + TwrforceBplus
-            TwrMBtmp(j,:) = TwrMBtmp(j,:) + TwrmomentB
-            TwrMBtmp(j+1,:) = TwrMBtmp(j+1,:) + TwrmomentBplus
-         else
-            TwrFBtmp(j,:) = ( TwrFBtmp(j,:) * p%TwrDL(j-1) + TwrforceB * p%TwrDL(j) ) / ( p%TwrDL(j-1) + p%TwrDL(j) )
-            TwrFBtmp(j+1,:) = TwrFBtmp(j+1,:) + TwrforceBplus
-            TwrMBtmp(j,:) = ( TwrMBtmp(j,:) * p%TwrDL(j-1) + TwrmomentB * p%TwrDL(j) ) / ( p%TwrDL(j-1) + p%TwrDL(j) )
-            TwrMBtmp(j+1,:) = TwrMBtmp(j+1,:) + TwrmomentBplus
-         end if
+            ! Sum loads at each node
+         TwrFBtmp(j,:) = TwrFBtmp(j,:) + TwrforceB
+         TwrFBtmp(j+1,:) = TwrFBtmp(j+1,:) + TwrforceBplus
+         TwrMBtmp(j,:) = TwrMBtmp(j,:) + TwrmomentB
+         TwrMBtmp(j+1,:) = TwrMBtmp(j+1,:) + TwrmomentBplus
 
       end do ! j = nodes
 
-   end if
+         ! Assign loads to point mesh
+      do j = 1,p%NumTwrNds
+         m%TwrBuoyLoadPoint%Force(:,j) = TwrFBtmp(j,:)
+         m%TwrBuoyLoadPoint%Moment(:,j) = TwrMBtmp(j,:)
+      end do ! j = nodes
 
-      ! Pass to m variable
-   m%TwrFB = TwrFBtmp
-   m%TwrMB = TwrMBtmp
+         ! Map point loads to line mesh
+      call Transfer_Point_to_Line2( m%TwrBuoyLoadPoint, m%TwrBuoyLoad, m%T_P_2_T_L, ErrStat, ErrMsg, u%TowerMotion, u%TowerMotion )
+
+   end if
 
       ! Add buoyant loads to aerodynamic loads
    if ( p%TwrAero ) then
       do j = 1,p%NumTwrNds ! loop through all nodes
-         y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + TwrFBtmp(j,:)
-         y%TowerLoad%Moment(:,j) = y%TowerLoad%Moment(:,j) + TwrMBtmp(j,:)
+         y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + m%TwrBuoyLoad%Force(:,j)
+         y%TowerLoad%Moment(:,j) = y%TowerLoad%Moment(:,j) + m%TwrBuoyLoad%Moment(:,j)
       end do ! j = nodes
    else
       do j = 1,p%NumTwrNds ! loop through all nodes
-         y%TowerLoad%Force(:,j) = TwrFBtmp(j,:)
-         y%TowerLoad%Moment(:,j) = TwrMBtmp(j,:)
+         y%TowerLoad%Force(:,j) = m%TwrBuoyLoad%Force(:,j)
+         y%TowerLoad%Moment(:,j) = m%TwrBuoyLoad%Moment(:,j)
       end do ! j = nodes
    end if
 
