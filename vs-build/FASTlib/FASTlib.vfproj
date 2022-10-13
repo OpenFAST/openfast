@@ -1575,7 +1575,12 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\moordyn\src\MoorDyn.f90"/>
-		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_IO.f90"/></Filter>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Body.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_IO.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Line.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Misc.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Point.f90"/>
+		<File RelativePath="..\..\modules\moordyn\src\MoorDyn_Rod.f90"/></Filter>
 		<Filter Name="OrcaFlex">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\orcaflex-interface\src\OrcaFlexInterface.txt">
