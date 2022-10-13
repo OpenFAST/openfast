@@ -2406,6 +2406,51 @@ CONTAINS
    END DO
 
    END SUBROUTINE Eye3D
+!====================================================================================================
+INTEGER FUNCTION FindValidChannelIndx(OutListVal, ValidParamAry, SignM_out) RESULT( Indx )
+
+   CHARACTER(*),                INTENT(IN)  :: OutListVal
+   CHARACTER(OutStrLenM1),      INTENT(IN)  :: ValidParamAry(:)
+   INTEGER,           OPTIONAL, INTENT(OUT) :: SignM_out
+   
+   CHARACTER(ChanLen)             :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   INTEGER                        :: SignM
+   LOGICAL                        :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
+   
+      OutListTmp          = OutListVal
+
+      ! Reverse the sign (+/-) of the output channel if the user prefixed the
+      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
+      CheckOutListAgain = .FALSE.
+
+      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
+         SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp          = OutListTmp(2:)
+      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
+         CheckOutListAgain   = .TRUE.
+         SignM = 1
+      ELSE
+         SignM = 1
+      END IF
+
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+
+      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+
+
+         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
+
+      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
+         SignM         = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp    = OutListTmp(2:)
+
+         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+      END IF
+      
+      IF (PRESENT(SignM_out))  SignM_out = SignM
+      
+END FUNCTION FindValidChannelIndx
 !=======================================================================
 !> This routine uses the Gauss-Jordan elimination method for the
 !!   solution of a given set of simultaneous linear equations.
@@ -4578,29 +4623,60 @@ end function Rad2M180to180Deg
 
    END FUNCTION OuterProductR16 
 !=======================================================================
-!> This subroutine perturbs an orientation matrix by a small angle, using 
-!! a logarithmic map. For small angles, the change in angle is equivalent to 
-!! a change in log map parameters.
-   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations )
+!> This subroutine perturbs an orientation matrix by a small angle.  Two methods
+!! are used:
+!!    small angle DCM:  perturb small angles extracted from DCM
+!!    large angle DCM:  multiply input DCM with DCM created with small angle
+!!                      perturbations
+!! NOTE1: this routine originally used logarithmic mapping for small angle
+!!          perturbations
+!! NOTE2: all warnings from SmllRotTrans are ignored.
+!! NOTE3: notice no checks are made to verify correct set of inputs given
+!!          one of the follwing combinations must be provided (others truly
+!!          optional):
+!!             Perturbations
+!!             Perturbation + AngleDim
+   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations, UseSmlAngle )
       REAL(R8Ki),           INTENT(INOUT)  :: Orientation(3,3)
       REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
       INTEGER,    OPTIONAL, INTENT(IN)     :: AngleDim
       REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbations(3) ! angles (radians) of the perturbations
+      LOGICAL,    OPTIONAL, INTENT(IN)     :: UseSmlAngle
    
            ! Local variables
       REAL(R8Ki)                 :: angles(3)
+      REAL(R8Ki)                 :: OrientationTmp(3,3)
+      LOGICAL                    :: OutputSmlAngle
       integer(intKi)             :: ErrStat2
       character(ErrMsgLen)       :: ErrMsg2
       
-      CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+      if (present(UseSmlAngle)) then
+         OutputSmlAngle = UseSmlAngle
+      else
+         OutputSmlAngle = .false.
+      end if
+
+      if (OutputSmlAngle) then
+!         CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+         angles =  GetSmllRotAngs ( Orientation, ErrStat2, ErrMsg2 )
+         IF (PRESENT(Perturbations)) THEN
+            angles = angles + Perturbations
+         ELSE
+            angles(AngleDim) = angles(AngleDim) + Perturbation
+         END IF
+!         Orientation = DCM_exp( angles )
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), Orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      else !Only works if AngleDim is specified
+         IF (PRESENT(Perturbations)) THEN
+            angles = Perturbations
+         ELSE
+            angles = 0.0_R8Ki
+            angles(AngleDim) = Perturbation
+         END IF
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), OrientationTmp, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         Orientation = matmul(Orientation, OrientationTmp)
+      endif
       
-      IF (PRESENT(Perturbations)) THEN
-         angles = angles + Perturbations
-      ELSE
-         angles(AngleDim) = angles(AngleDim) + Perturbation
-      END IF
-      
-      Orientation = DCM_exp( angles )
 
    END SUBROUTINE PerturbOrientationMatrix
 !=======================================================================

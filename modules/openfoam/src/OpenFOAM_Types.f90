@@ -233,7 +233,7 @@ IF (ASSOCIATED(SrcInitInputData%StructBldRNodes)) THEN
     END IF
     DstInitInputData%c_obj%StructBldRNodes_Len = SIZE(DstInitInputData%StructBldRNodes)
     IF (DstInitInputData%c_obj%StructBldRNodes_Len > 0) &
-      DstInitInputData%c_obj%StructBldRNodes = C_LOC( DstInitInputData%StructBldRNodes(i1_l) ) 
+          DstInitInputData%c_obj%StructBldRNodes = C_LOC( DstInitInputData%StructBldRNodes( i1_l ) )
   END IF
     DstInitInputData%StructBldRNodes = SrcInitInputData%StructBldRNodes
 ENDIF
@@ -248,7 +248,7 @@ IF (ASSOCIATED(SrcInitInputData%StructTwrHNodes)) THEN
     END IF
     DstInitInputData%c_obj%StructTwrHNodes_Len = SIZE(DstInitInputData%StructTwrHNodes)
     IF (DstInitInputData%c_obj%StructTwrHNodes_Len > 0) &
-      DstInitInputData%c_obj%StructTwrHNodes = C_LOC( DstInitInputData%StructTwrHNodes(i1_l) ) 
+          DstInitInputData%c_obj%StructTwrHNodes = C_LOC( DstInitInputData%StructTwrHNodes( i1_l ) )
   END IF
     DstInitInputData%StructTwrHNodes = SrcInitInputData%StructTwrHNodes
 ENDIF
@@ -260,22 +260,36 @@ ENDIF
     DstInitInputData%C_obj%TowerBaseHeight = SrcInitInputData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_CopyInitInput
 
- SUBROUTINE OpFM_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InitInputData%StructBldRNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitInputData%StructBldRNodes)
   InitInputData%StructBldRNodes => NULL()
   InitInputData%C_obj%StructBldRNodes = C_NULL_PTR
   InitInputData%C_obj%StructBldRNodes_Len = 0
 ENDIF
 IF (ASSOCIATED(InitInputData%StructTwrHNodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitInputData%StructTwrHNodes)
   InitInputData%StructTwrHNodes => NULL()
   InitInputData%C_obj%StructTwrHNodes = C_NULL_PTR
@@ -452,7 +466,7 @@ ENDIF
     END IF
     OutData%c_obj%StructBldRNodes_Len = SIZE(OutData%StructBldRNodes)
     IF (OutData%c_obj%StructBldRNodes_Len > 0) &
-       OutData%c_obj%StructBldRNodes = C_LOC( OutData%StructBldRNodes(i1_l) ) 
+       OutData%c_obj%StructBldRNodes = C_LOC( OutData%StructBldRNodes( i1_l ) )
       DO i1 = LBOUND(OutData%StructBldRNodes,1), UBOUND(OutData%StructBldRNodes,1)
         OutData%StructBldRNodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -473,7 +487,7 @@ ENDIF
     END IF
     OutData%c_obj%StructTwrHNodes_Len = SIZE(OutData%StructTwrHNodes)
     IF (OutData%c_obj%StructTwrHNodes_Len > 0) &
-       OutData%c_obj%StructTwrHNodes = C_LOC( OutData%StructTwrHNodes(i1_l) ) 
+       OutData%c_obj%StructTwrHNodes = C_LOC( OutData%StructTwrHNodes( i1_l ) )
       DO i1 = LBOUND(OutData%StructTwrHNodes,1), UBOUND(OutData%StructTwrHNodes,1)
         OutData%StructTwrHNodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -556,7 +570,7 @@ ENDIF
        ELSE
           InitInputData%c_obj%StructBldRNodes_Len = SIZE(InitInputData%StructBldRNodes)
           IF (InitInputData%c_obj%StructBldRNodes_Len > 0) &
-             InitInputData%c_obj%StructBldRNodes = C_LOC( InitInputData%StructBldRNodes( LBOUND(InitInputData%StructBldRNodes,1) ) ) 
+             InitInputData%c_obj%StructBldRNodes = C_LOC( InitInputData%StructBldRNodes( LBOUND(InitInputData%StructBldRNodes,1) ) )
        END IF
     END IF
 
@@ -568,7 +582,7 @@ ENDIF
        ELSE
           InitInputData%c_obj%StructTwrHNodes_Len = SIZE(InitInputData%StructTwrHNodes)
           IF (InitInputData%c_obj%StructTwrHNodes_Len > 0) &
-             InitInputData%c_obj%StructTwrHNodes = C_LOC( InitInputData%StructTwrHNodes( LBOUND(InitInputData%StructTwrHNodes,1) ) ) 
+             InitInputData%c_obj%StructTwrHNodes = C_LOC( InitInputData%StructTwrHNodes( LBOUND(InitInputData%StructTwrHNodes,1) ) )
        END IF
     END IF
     InitInputData%C_obj%BladeLength = InitInputData%BladeLength
@@ -620,22 +634,35 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE OpFM_CopyInitOutput
 
- SUBROUTINE OpFM_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE OpFM_DestroyInitOutput
 
  SUBROUTINE OpFM_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1082,60 +1109,80 @@ IF (ALLOCATED(SrcMiscData%Line2_to_Point_Motions)) THEN
 ENDIF
  END SUBROUTINE OpFM_CopyMisc
 
- SUBROUTINE OpFM_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%ActForceLoads)) THEN
 DO i1 = LBOUND(MiscData%ActForceLoads,1), UBOUND(MiscData%ActForceLoads,1)
-  CALL MeshDestroy( MiscData%ActForceLoads(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceLoads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceLoads)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceMotions)) THEN
 DO i1 = LBOUND(MiscData%ActForceMotions,1), UBOUND(MiscData%ActForceMotions,1)
-  CALL MeshDestroy( MiscData%ActForceMotions(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceMotions(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceMotions)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceMotionsPoints)) THEN
 DO i1 = LBOUND(MiscData%ActForceMotionsPoints,1), UBOUND(MiscData%ActForceMotionsPoints,1)
-  CALL MeshDestroy( MiscData%ActForceMotionsPoints(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceMotionsPoints(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceMotionsPoints)
 ENDIF
 IF (ALLOCATED(MiscData%ActForceLoadsPoints)) THEN
 DO i1 = LBOUND(MiscData%ActForceLoadsPoints,1), UBOUND(MiscData%ActForceLoadsPoints,1)
-  CALL MeshDestroy( MiscData%ActForceLoadsPoints(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ActForceLoadsPoints(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ActForceLoadsPoints)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Loads,1), UBOUND(MiscData%Line2_to_Line2_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Loads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Line2_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Line2_Motions,1), UBOUND(MiscData%Line2_to_Line2_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Line2_Motions(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Line2_Motions)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Loads)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Loads,1), UBOUND(MiscData%Line2_to_Point_Loads,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Loads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Loads)
 ENDIF
 IF (ALLOCATED(MiscData%Line2_to_Point_Motions)) THEN
 DO i1 = LBOUND(MiscData%Line2_to_Point_Motions,1), UBOUND(MiscData%Line2_to_Point_Motions,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Line2_to_Point_Motions(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Line2_to_Point_Motions)
 ENDIF
@@ -2271,7 +2318,7 @@ IF (ASSOCIATED(SrcParamData%forceBldRnodes)) THEN
     END IF
     DstParamData%c_obj%forceBldRnodes_Len = SIZE(DstParamData%forceBldRnodes)
     IF (DstParamData%c_obj%forceBldRnodes_Len > 0) &
-      DstParamData%c_obj%forceBldRnodes = C_LOC( DstParamData%forceBldRnodes(i1_l) ) 
+          DstParamData%c_obj%forceBldRnodes = C_LOC( DstParamData%forceBldRnodes( i1_l ) )
   END IF
     DstParamData%forceBldRnodes = SrcParamData%forceBldRnodes
 ENDIF
@@ -2286,7 +2333,7 @@ IF (ASSOCIATED(SrcParamData%forceTwrHnodes)) THEN
     END IF
     DstParamData%c_obj%forceTwrHnodes_Len = SIZE(DstParamData%forceTwrHnodes)
     IF (DstParamData%c_obj%forceTwrHnodes_Len > 0) &
-      DstParamData%c_obj%forceTwrHnodes = C_LOC( DstParamData%forceTwrHnodes(i1_l) ) 
+          DstParamData%c_obj%forceTwrHnodes = C_LOC( DstParamData%forceTwrHnodes( i1_l ) )
   END IF
     DstParamData%forceTwrHnodes = SrcParamData%forceTwrHnodes
 ENDIF
@@ -2298,22 +2345,36 @@ ENDIF
     DstParamData%C_obj%TowerBaseHeight = SrcParamData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_CopyParam
 
- SUBROUTINE OpFM_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(ParamData%forceBldRnodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ParamData%forceBldRnodes)
   ParamData%forceBldRnodes => NULL()
   ParamData%C_obj%forceBldRnodes = C_NULL_PTR
   ParamData%C_obj%forceBldRnodes_Len = 0
 ENDIF
 IF (ASSOCIATED(ParamData%forceTwrHnodes)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ParamData%forceTwrHnodes)
   ParamData%forceTwrHnodes => NULL()
   ParamData%C_obj%forceTwrHnodes = C_NULL_PTR
@@ -2520,7 +2581,7 @@ ENDIF
     END IF
     OutData%c_obj%forceBldRnodes_Len = SIZE(OutData%forceBldRnodes)
     IF (OutData%c_obj%forceBldRnodes_Len > 0) &
-       OutData%c_obj%forceBldRnodes = C_LOC( OutData%forceBldRnodes(i1_l) ) 
+       OutData%c_obj%forceBldRnodes = C_LOC( OutData%forceBldRnodes( i1_l ) )
       DO i1 = LBOUND(OutData%forceBldRnodes,1), UBOUND(OutData%forceBldRnodes,1)
         OutData%forceBldRnodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -2541,7 +2602,7 @@ ENDIF
     END IF
     OutData%c_obj%forceTwrHnodes_Len = SIZE(OutData%forceTwrHnodes)
     IF (OutData%c_obj%forceTwrHnodes_Len > 0) &
-       OutData%c_obj%forceTwrHnodes = C_LOC( OutData%forceTwrHnodes(i1_l) ) 
+       OutData%c_obj%forceTwrHnodes = C_LOC( OutData%forceTwrHnodes( i1_l ) )
       DO i1 = LBOUND(OutData%forceTwrHnodes,1), UBOUND(OutData%forceTwrHnodes,1)
         OutData%forceTwrHnodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -2634,7 +2695,7 @@ ENDIF
        ELSE
           ParamData%c_obj%forceBldRnodes_Len = SIZE(ParamData%forceBldRnodes)
           IF (ParamData%c_obj%forceBldRnodes_Len > 0) &
-             ParamData%c_obj%forceBldRnodes = C_LOC( ParamData%forceBldRnodes( LBOUND(ParamData%forceBldRnodes,1) ) ) 
+             ParamData%c_obj%forceBldRnodes = C_LOC( ParamData%forceBldRnodes( LBOUND(ParamData%forceBldRnodes,1) ) )
        END IF
     END IF
 
@@ -2646,7 +2707,7 @@ ENDIF
        ELSE
           ParamData%c_obj%forceTwrHnodes_Len = SIZE(ParamData%forceTwrHnodes)
           IF (ParamData%c_obj%forceTwrHnodes_Len > 0) &
-             ParamData%c_obj%forceTwrHnodes = C_LOC( ParamData%forceTwrHnodes( LBOUND(ParamData%forceTwrHnodes,1) ) ) 
+             ParamData%c_obj%forceTwrHnodes = C_LOC( ParamData%forceTwrHnodes( LBOUND(ParamData%forceTwrHnodes,1) ) )
        END IF
     END IF
     ParamData%C_obj%BladeLength = ParamData%BladeLength
@@ -2680,7 +2741,7 @@ IF (ASSOCIATED(SrcInputData%pxVel)) THEN
     END IF
     DstInputData%c_obj%pxVel_Len = SIZE(DstInputData%pxVel)
     IF (DstInputData%c_obj%pxVel_Len > 0) &
-      DstInputData%c_obj%pxVel = C_LOC( DstInputData%pxVel(i1_l) ) 
+          DstInputData%c_obj%pxVel = C_LOC( DstInputData%pxVel( i1_l ) )
   END IF
     DstInputData%pxVel = SrcInputData%pxVel
 ENDIF
@@ -2695,7 +2756,7 @@ IF (ASSOCIATED(SrcInputData%pyVel)) THEN
     END IF
     DstInputData%c_obj%pyVel_Len = SIZE(DstInputData%pyVel)
     IF (DstInputData%c_obj%pyVel_Len > 0) &
-      DstInputData%c_obj%pyVel = C_LOC( DstInputData%pyVel(i1_l) ) 
+          DstInputData%c_obj%pyVel = C_LOC( DstInputData%pyVel( i1_l ) )
   END IF
     DstInputData%pyVel = SrcInputData%pyVel
 ENDIF
@@ -2710,7 +2771,7 @@ IF (ASSOCIATED(SrcInputData%pzVel)) THEN
     END IF
     DstInputData%c_obj%pzVel_Len = SIZE(DstInputData%pzVel)
     IF (DstInputData%c_obj%pzVel_Len > 0) &
-      DstInputData%c_obj%pzVel = C_LOC( DstInputData%pzVel(i1_l) ) 
+          DstInputData%c_obj%pzVel = C_LOC( DstInputData%pzVel( i1_l ) )
   END IF
     DstInputData%pzVel = SrcInputData%pzVel
 ENDIF
@@ -2725,7 +2786,7 @@ IF (ASSOCIATED(SrcInputData%pxForce)) THEN
     END IF
     DstInputData%c_obj%pxForce_Len = SIZE(DstInputData%pxForce)
     IF (DstInputData%c_obj%pxForce_Len > 0) &
-      DstInputData%c_obj%pxForce = C_LOC( DstInputData%pxForce(i1_l) ) 
+          DstInputData%c_obj%pxForce = C_LOC( DstInputData%pxForce( i1_l ) )
   END IF
     DstInputData%pxForce = SrcInputData%pxForce
 ENDIF
@@ -2740,7 +2801,7 @@ IF (ASSOCIATED(SrcInputData%pyForce)) THEN
     END IF
     DstInputData%c_obj%pyForce_Len = SIZE(DstInputData%pyForce)
     IF (DstInputData%c_obj%pyForce_Len > 0) &
-      DstInputData%c_obj%pyForce = C_LOC( DstInputData%pyForce(i1_l) ) 
+          DstInputData%c_obj%pyForce = C_LOC( DstInputData%pyForce( i1_l ) )
   END IF
     DstInputData%pyForce = SrcInputData%pyForce
 ENDIF
@@ -2755,7 +2816,7 @@ IF (ASSOCIATED(SrcInputData%pzForce)) THEN
     END IF
     DstInputData%c_obj%pzForce_Len = SIZE(DstInputData%pzForce)
     IF (DstInputData%c_obj%pzForce_Len > 0) &
-      DstInputData%c_obj%pzForce = C_LOC( DstInputData%pzForce(i1_l) ) 
+          DstInputData%c_obj%pzForce = C_LOC( DstInputData%pzForce( i1_l ) )
   END IF
     DstInputData%pzForce = SrcInputData%pzForce
 ENDIF
@@ -2770,7 +2831,7 @@ IF (ASSOCIATED(SrcInputData%xdotForce)) THEN
     END IF
     DstInputData%c_obj%xdotForce_Len = SIZE(DstInputData%xdotForce)
     IF (DstInputData%c_obj%xdotForce_Len > 0) &
-      DstInputData%c_obj%xdotForce = C_LOC( DstInputData%xdotForce(i1_l) ) 
+          DstInputData%c_obj%xdotForce = C_LOC( DstInputData%xdotForce( i1_l ) )
   END IF
     DstInputData%xdotForce = SrcInputData%xdotForce
 ENDIF
@@ -2785,7 +2846,7 @@ IF (ASSOCIATED(SrcInputData%ydotForce)) THEN
     END IF
     DstInputData%c_obj%ydotForce_Len = SIZE(DstInputData%ydotForce)
     IF (DstInputData%c_obj%ydotForce_Len > 0) &
-      DstInputData%c_obj%ydotForce = C_LOC( DstInputData%ydotForce(i1_l) ) 
+          DstInputData%c_obj%ydotForce = C_LOC( DstInputData%ydotForce( i1_l ) )
   END IF
     DstInputData%ydotForce = SrcInputData%ydotForce
 ENDIF
@@ -2800,7 +2861,7 @@ IF (ASSOCIATED(SrcInputData%zdotForce)) THEN
     END IF
     DstInputData%c_obj%zdotForce_Len = SIZE(DstInputData%zdotForce)
     IF (DstInputData%c_obj%zdotForce_Len > 0) &
-      DstInputData%c_obj%zdotForce = C_LOC( DstInputData%zdotForce(i1_l) ) 
+          DstInputData%c_obj%zdotForce = C_LOC( DstInputData%zdotForce( i1_l ) )
   END IF
     DstInputData%zdotForce = SrcInputData%zdotForce
 ENDIF
@@ -2815,7 +2876,7 @@ IF (ASSOCIATED(SrcInputData%pOrientation)) THEN
     END IF
     DstInputData%c_obj%pOrientation_Len = SIZE(DstInputData%pOrientation)
     IF (DstInputData%c_obj%pOrientation_Len > 0) &
-      DstInputData%c_obj%pOrientation = C_LOC( DstInputData%pOrientation(i1_l) ) 
+          DstInputData%c_obj%pOrientation = C_LOC( DstInputData%pOrientation( i1_l ) )
   END IF
     DstInputData%pOrientation = SrcInputData%pOrientation
 ENDIF
@@ -2830,7 +2891,7 @@ IF (ASSOCIATED(SrcInputData%fx)) THEN
     END IF
     DstInputData%c_obj%fx_Len = SIZE(DstInputData%fx)
     IF (DstInputData%c_obj%fx_Len > 0) &
-      DstInputData%c_obj%fx = C_LOC( DstInputData%fx(i1_l) ) 
+          DstInputData%c_obj%fx = C_LOC( DstInputData%fx( i1_l ) )
   END IF
     DstInputData%fx = SrcInputData%fx
 ENDIF
@@ -2845,7 +2906,7 @@ IF (ASSOCIATED(SrcInputData%fy)) THEN
     END IF
     DstInputData%c_obj%fy_Len = SIZE(DstInputData%fy)
     IF (DstInputData%c_obj%fy_Len > 0) &
-      DstInputData%c_obj%fy = C_LOC( DstInputData%fy(i1_l) ) 
+          DstInputData%c_obj%fy = C_LOC( DstInputData%fy( i1_l ) )
   END IF
     DstInputData%fy = SrcInputData%fy
 ENDIF
@@ -2860,7 +2921,7 @@ IF (ASSOCIATED(SrcInputData%fz)) THEN
     END IF
     DstInputData%c_obj%fz_Len = SIZE(DstInputData%fz)
     IF (DstInputData%c_obj%fz_Len > 0) &
-      DstInputData%c_obj%fz = C_LOC( DstInputData%fz(i1_l) ) 
+          DstInputData%c_obj%fz = C_LOC( DstInputData%fz( i1_l ) )
   END IF
     DstInputData%fz = SrcInputData%fz
 ENDIF
@@ -2875,7 +2936,7 @@ IF (ASSOCIATED(SrcInputData%momentx)) THEN
     END IF
     DstInputData%c_obj%momentx_Len = SIZE(DstInputData%momentx)
     IF (DstInputData%c_obj%momentx_Len > 0) &
-      DstInputData%c_obj%momentx = C_LOC( DstInputData%momentx(i1_l) ) 
+          DstInputData%c_obj%momentx = C_LOC( DstInputData%momentx( i1_l ) )
   END IF
     DstInputData%momentx = SrcInputData%momentx
 ENDIF
@@ -2890,7 +2951,7 @@ IF (ASSOCIATED(SrcInputData%momenty)) THEN
     END IF
     DstInputData%c_obj%momenty_Len = SIZE(DstInputData%momenty)
     IF (DstInputData%c_obj%momenty_Len > 0) &
-      DstInputData%c_obj%momenty = C_LOC( DstInputData%momenty(i1_l) ) 
+          DstInputData%c_obj%momenty = C_LOC( DstInputData%momenty( i1_l ) )
   END IF
     DstInputData%momenty = SrcInputData%momenty
 ENDIF
@@ -2905,7 +2966,7 @@ IF (ASSOCIATED(SrcInputData%momentz)) THEN
     END IF
     DstInputData%c_obj%momentz_Len = SIZE(DstInputData%momentz)
     IF (DstInputData%c_obj%momentz_Len > 0) &
-      DstInputData%c_obj%momentz = C_LOC( DstInputData%momentz(i1_l) ) 
+          DstInputData%c_obj%momentz = C_LOC( DstInputData%momentz( i1_l ) )
   END IF
     DstInputData%momentz = SrcInputData%momentz
 ENDIF
@@ -2920,118 +2981,147 @@ IF (ASSOCIATED(SrcInputData%forceNodesChord)) THEN
     END IF
     DstInputData%c_obj%forceNodesChord_Len = SIZE(DstInputData%forceNodesChord)
     IF (DstInputData%c_obj%forceNodesChord_Len > 0) &
-      DstInputData%c_obj%forceNodesChord = C_LOC( DstInputData%forceNodesChord(i1_l) ) 
+          DstInputData%c_obj%forceNodesChord = C_LOC( DstInputData%forceNodesChord( i1_l ) )
   END IF
     DstInputData%forceNodesChord = SrcInputData%forceNodesChord
 ENDIF
  END SUBROUTINE OpFM_CopyInput
 
- SUBROUTINE OpFM_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(InputData%pxVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pxVel)
   InputData%pxVel => NULL()
   InputData%C_obj%pxVel = C_NULL_PTR
   InputData%C_obj%pxVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pyVel)
   InputData%pyVel => NULL()
   InputData%C_obj%pyVel = C_NULL_PTR
   InputData%C_obj%pyVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzVel)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pzVel)
   InputData%pzVel => NULL()
   InputData%C_obj%pzVel = C_NULL_PTR
   InputData%C_obj%pzVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pxForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pxForce)
   InputData%pxForce => NULL()
   InputData%C_obj%pxForce = C_NULL_PTR
   InputData%C_obj%pxForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pyForce)
   InputData%pyForce => NULL()
   InputData%C_obj%pyForce = C_NULL_PTR
   InputData%C_obj%pyForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pzForce)
   InputData%pzForce => NULL()
   InputData%C_obj%pzForce = C_NULL_PTR
   InputData%C_obj%pzForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%xdotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%xdotForce)
   InputData%xdotForce => NULL()
   InputData%C_obj%xdotForce = C_NULL_PTR
   InputData%C_obj%xdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%ydotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%ydotForce)
   InputData%ydotForce => NULL()
   InputData%C_obj%ydotForce = C_NULL_PTR
   InputData%C_obj%ydotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%zdotForce)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%zdotForce)
   InputData%zdotForce => NULL()
   InputData%C_obj%zdotForce = C_NULL_PTR
   InputData%C_obj%zdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pOrientation)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%pOrientation)
   InputData%pOrientation => NULL()
   InputData%C_obj%pOrientation = C_NULL_PTR
   InputData%C_obj%pOrientation_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fx)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fx)
   InputData%fx => NULL()
   InputData%C_obj%fx = C_NULL_PTR
   InputData%C_obj%fx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fy)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fy)
   InputData%fy => NULL()
   InputData%C_obj%fy = C_NULL_PTR
   InputData%C_obj%fy_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fz)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%fz)
   InputData%fz => NULL()
   InputData%C_obj%fz = C_NULL_PTR
   InputData%C_obj%fz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentx)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momentx)
   InputData%momentx => NULL()
   InputData%C_obj%momentx = C_NULL_PTR
   InputData%C_obj%momentx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momenty)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momenty)
   InputData%momenty => NULL()
   InputData%C_obj%momenty = C_NULL_PTR
   InputData%C_obj%momenty_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentz)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%momentz)
   InputData%momentz => NULL()
   InputData%C_obj%momentz = C_NULL_PTR
   InputData%C_obj%momentz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%forceNodesChord)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InputData%forceNodesChord)
   InputData%forceNodesChord => NULL()
   InputData%C_obj%forceNodesChord = C_NULL_PTR
@@ -3487,7 +3577,7 @@ ENDIF
     END IF
     OutData%c_obj%pxVel_Len = SIZE(OutData%pxVel)
     IF (OutData%c_obj%pxVel_Len > 0) &
-       OutData%c_obj%pxVel = C_LOC( OutData%pxVel(i1_l) ) 
+       OutData%c_obj%pxVel = C_LOC( OutData%pxVel( i1_l ) )
       DO i1 = LBOUND(OutData%pxVel,1), UBOUND(OutData%pxVel,1)
         OutData%pxVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3508,7 +3598,7 @@ ENDIF
     END IF
     OutData%c_obj%pyVel_Len = SIZE(OutData%pyVel)
     IF (OutData%c_obj%pyVel_Len > 0) &
-       OutData%c_obj%pyVel = C_LOC( OutData%pyVel(i1_l) ) 
+       OutData%c_obj%pyVel = C_LOC( OutData%pyVel( i1_l ) )
       DO i1 = LBOUND(OutData%pyVel,1), UBOUND(OutData%pyVel,1)
         OutData%pyVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3529,7 +3619,7 @@ ENDIF
     END IF
     OutData%c_obj%pzVel_Len = SIZE(OutData%pzVel)
     IF (OutData%c_obj%pzVel_Len > 0) &
-       OutData%c_obj%pzVel = C_LOC( OutData%pzVel(i1_l) ) 
+       OutData%c_obj%pzVel = C_LOC( OutData%pzVel( i1_l ) )
       DO i1 = LBOUND(OutData%pzVel,1), UBOUND(OutData%pzVel,1)
         OutData%pzVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3550,7 +3640,7 @@ ENDIF
     END IF
     OutData%c_obj%pxForce_Len = SIZE(OutData%pxForce)
     IF (OutData%c_obj%pxForce_Len > 0) &
-       OutData%c_obj%pxForce = C_LOC( OutData%pxForce(i1_l) ) 
+       OutData%c_obj%pxForce = C_LOC( OutData%pxForce( i1_l ) )
       DO i1 = LBOUND(OutData%pxForce,1), UBOUND(OutData%pxForce,1)
         OutData%pxForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3571,7 +3661,7 @@ ENDIF
     END IF
     OutData%c_obj%pyForce_Len = SIZE(OutData%pyForce)
     IF (OutData%c_obj%pyForce_Len > 0) &
-       OutData%c_obj%pyForce = C_LOC( OutData%pyForce(i1_l) ) 
+       OutData%c_obj%pyForce = C_LOC( OutData%pyForce( i1_l ) )
       DO i1 = LBOUND(OutData%pyForce,1), UBOUND(OutData%pyForce,1)
         OutData%pyForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3592,7 +3682,7 @@ ENDIF
     END IF
     OutData%c_obj%pzForce_Len = SIZE(OutData%pzForce)
     IF (OutData%c_obj%pzForce_Len > 0) &
-       OutData%c_obj%pzForce = C_LOC( OutData%pzForce(i1_l) ) 
+       OutData%c_obj%pzForce = C_LOC( OutData%pzForce( i1_l ) )
       DO i1 = LBOUND(OutData%pzForce,1), UBOUND(OutData%pzForce,1)
         OutData%pzForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3613,7 +3703,7 @@ ENDIF
     END IF
     OutData%c_obj%xdotForce_Len = SIZE(OutData%xdotForce)
     IF (OutData%c_obj%xdotForce_Len > 0) &
-       OutData%c_obj%xdotForce = C_LOC( OutData%xdotForce(i1_l) ) 
+       OutData%c_obj%xdotForce = C_LOC( OutData%xdotForce( i1_l ) )
       DO i1 = LBOUND(OutData%xdotForce,1), UBOUND(OutData%xdotForce,1)
         OutData%xdotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3634,7 +3724,7 @@ ENDIF
     END IF
     OutData%c_obj%ydotForce_Len = SIZE(OutData%ydotForce)
     IF (OutData%c_obj%ydotForce_Len > 0) &
-       OutData%c_obj%ydotForce = C_LOC( OutData%ydotForce(i1_l) ) 
+       OutData%c_obj%ydotForce = C_LOC( OutData%ydotForce( i1_l ) )
       DO i1 = LBOUND(OutData%ydotForce,1), UBOUND(OutData%ydotForce,1)
         OutData%ydotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3655,7 +3745,7 @@ ENDIF
     END IF
     OutData%c_obj%zdotForce_Len = SIZE(OutData%zdotForce)
     IF (OutData%c_obj%zdotForce_Len > 0) &
-       OutData%c_obj%zdotForce = C_LOC( OutData%zdotForce(i1_l) ) 
+       OutData%c_obj%zdotForce = C_LOC( OutData%zdotForce( i1_l ) )
       DO i1 = LBOUND(OutData%zdotForce,1), UBOUND(OutData%zdotForce,1)
         OutData%zdotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3676,7 +3766,7 @@ ENDIF
     END IF
     OutData%c_obj%pOrientation_Len = SIZE(OutData%pOrientation)
     IF (OutData%c_obj%pOrientation_Len > 0) &
-       OutData%c_obj%pOrientation = C_LOC( OutData%pOrientation(i1_l) ) 
+       OutData%c_obj%pOrientation = C_LOC( OutData%pOrientation( i1_l ) )
       DO i1 = LBOUND(OutData%pOrientation,1), UBOUND(OutData%pOrientation,1)
         OutData%pOrientation(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3697,7 +3787,7 @@ ENDIF
     END IF
     OutData%c_obj%fx_Len = SIZE(OutData%fx)
     IF (OutData%c_obj%fx_Len > 0) &
-       OutData%c_obj%fx = C_LOC( OutData%fx(i1_l) ) 
+       OutData%c_obj%fx = C_LOC( OutData%fx( i1_l ) )
       DO i1 = LBOUND(OutData%fx,1), UBOUND(OutData%fx,1)
         OutData%fx(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3718,7 +3808,7 @@ ENDIF
     END IF
     OutData%c_obj%fy_Len = SIZE(OutData%fy)
     IF (OutData%c_obj%fy_Len > 0) &
-       OutData%c_obj%fy = C_LOC( OutData%fy(i1_l) ) 
+       OutData%c_obj%fy = C_LOC( OutData%fy( i1_l ) )
       DO i1 = LBOUND(OutData%fy,1), UBOUND(OutData%fy,1)
         OutData%fy(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3739,7 +3829,7 @@ ENDIF
     END IF
     OutData%c_obj%fz_Len = SIZE(OutData%fz)
     IF (OutData%c_obj%fz_Len > 0) &
-       OutData%c_obj%fz = C_LOC( OutData%fz(i1_l) ) 
+       OutData%c_obj%fz = C_LOC( OutData%fz( i1_l ) )
       DO i1 = LBOUND(OutData%fz,1), UBOUND(OutData%fz,1)
         OutData%fz(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3760,7 +3850,7 @@ ENDIF
     END IF
     OutData%c_obj%momentx_Len = SIZE(OutData%momentx)
     IF (OutData%c_obj%momentx_Len > 0) &
-       OutData%c_obj%momentx = C_LOC( OutData%momentx(i1_l) ) 
+       OutData%c_obj%momentx = C_LOC( OutData%momentx( i1_l ) )
       DO i1 = LBOUND(OutData%momentx,1), UBOUND(OutData%momentx,1)
         OutData%momentx(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3781,7 +3871,7 @@ ENDIF
     END IF
     OutData%c_obj%momenty_Len = SIZE(OutData%momenty)
     IF (OutData%c_obj%momenty_Len > 0) &
-       OutData%c_obj%momenty = C_LOC( OutData%momenty(i1_l) ) 
+       OutData%c_obj%momenty = C_LOC( OutData%momenty( i1_l ) )
       DO i1 = LBOUND(OutData%momenty,1), UBOUND(OutData%momenty,1)
         OutData%momenty(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3802,7 +3892,7 @@ ENDIF
     END IF
     OutData%c_obj%momentz_Len = SIZE(OutData%momentz)
     IF (OutData%c_obj%momentz_Len > 0) &
-       OutData%c_obj%momentz = C_LOC( OutData%momentz(i1_l) ) 
+       OutData%c_obj%momentz = C_LOC( OutData%momentz( i1_l ) )
       DO i1 = LBOUND(OutData%momentz,1), UBOUND(OutData%momentz,1)
         OutData%momentz(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -3823,7 +3913,7 @@ ENDIF
     END IF
     OutData%c_obj%forceNodesChord_Len = SIZE(OutData%forceNodesChord)
     IF (OutData%c_obj%forceNodesChord_Len > 0) &
-       OutData%c_obj%forceNodesChord = C_LOC( OutData%forceNodesChord(i1_l) ) 
+       OutData%c_obj%forceNodesChord = C_LOC( OutData%forceNodesChord( i1_l ) )
       DO i1 = LBOUND(OutData%forceNodesChord,1), UBOUND(OutData%forceNodesChord,1)
         OutData%forceNodesChord(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -4025,7 +4115,7 @@ ENDIF
        ELSE
           InputData%c_obj%pxVel_Len = SIZE(InputData%pxVel)
           IF (InputData%c_obj%pxVel_Len > 0) &
-             InputData%c_obj%pxVel = C_LOC( InputData%pxVel( LBOUND(InputData%pxVel,1) ) ) 
+             InputData%c_obj%pxVel = C_LOC( InputData%pxVel( LBOUND(InputData%pxVel,1) ) )
        END IF
     END IF
 
@@ -4037,7 +4127,7 @@ ENDIF
        ELSE
           InputData%c_obj%pyVel_Len = SIZE(InputData%pyVel)
           IF (InputData%c_obj%pyVel_Len > 0) &
-             InputData%c_obj%pyVel = C_LOC( InputData%pyVel( LBOUND(InputData%pyVel,1) ) ) 
+             InputData%c_obj%pyVel = C_LOC( InputData%pyVel( LBOUND(InputData%pyVel,1) ) )
        END IF
     END IF
 
@@ -4049,7 +4139,7 @@ ENDIF
        ELSE
           InputData%c_obj%pzVel_Len = SIZE(InputData%pzVel)
           IF (InputData%c_obj%pzVel_Len > 0) &
-             InputData%c_obj%pzVel = C_LOC( InputData%pzVel( LBOUND(InputData%pzVel,1) ) ) 
+             InputData%c_obj%pzVel = C_LOC( InputData%pzVel( LBOUND(InputData%pzVel,1) ) )
        END IF
     END IF
 
@@ -4061,7 +4151,7 @@ ENDIF
        ELSE
           InputData%c_obj%pxForce_Len = SIZE(InputData%pxForce)
           IF (InputData%c_obj%pxForce_Len > 0) &
-             InputData%c_obj%pxForce = C_LOC( InputData%pxForce( LBOUND(InputData%pxForce,1) ) ) 
+             InputData%c_obj%pxForce = C_LOC( InputData%pxForce( LBOUND(InputData%pxForce,1) ) )
        END IF
     END IF
 
@@ -4073,7 +4163,7 @@ ENDIF
        ELSE
           InputData%c_obj%pyForce_Len = SIZE(InputData%pyForce)
           IF (InputData%c_obj%pyForce_Len > 0) &
-             InputData%c_obj%pyForce = C_LOC( InputData%pyForce( LBOUND(InputData%pyForce,1) ) ) 
+             InputData%c_obj%pyForce = C_LOC( InputData%pyForce( LBOUND(InputData%pyForce,1) ) )
        END IF
     END IF
 
@@ -4085,7 +4175,7 @@ ENDIF
        ELSE
           InputData%c_obj%pzForce_Len = SIZE(InputData%pzForce)
           IF (InputData%c_obj%pzForce_Len > 0) &
-             InputData%c_obj%pzForce = C_LOC( InputData%pzForce( LBOUND(InputData%pzForce,1) ) ) 
+             InputData%c_obj%pzForce = C_LOC( InputData%pzForce( LBOUND(InputData%pzForce,1) ) )
        END IF
     END IF
 
@@ -4097,7 +4187,7 @@ ENDIF
        ELSE
           InputData%c_obj%xdotForce_Len = SIZE(InputData%xdotForce)
           IF (InputData%c_obj%xdotForce_Len > 0) &
-             InputData%c_obj%xdotForce = C_LOC( InputData%xdotForce( LBOUND(InputData%xdotForce,1) ) ) 
+             InputData%c_obj%xdotForce = C_LOC( InputData%xdotForce( LBOUND(InputData%xdotForce,1) ) )
        END IF
     END IF
 
@@ -4109,7 +4199,7 @@ ENDIF
        ELSE
           InputData%c_obj%ydotForce_Len = SIZE(InputData%ydotForce)
           IF (InputData%c_obj%ydotForce_Len > 0) &
-             InputData%c_obj%ydotForce = C_LOC( InputData%ydotForce( LBOUND(InputData%ydotForce,1) ) ) 
+             InputData%c_obj%ydotForce = C_LOC( InputData%ydotForce( LBOUND(InputData%ydotForce,1) ) )
        END IF
     END IF
 
@@ -4121,7 +4211,7 @@ ENDIF
        ELSE
           InputData%c_obj%zdotForce_Len = SIZE(InputData%zdotForce)
           IF (InputData%c_obj%zdotForce_Len > 0) &
-             InputData%c_obj%zdotForce = C_LOC( InputData%zdotForce( LBOUND(InputData%zdotForce,1) ) ) 
+             InputData%c_obj%zdotForce = C_LOC( InputData%zdotForce( LBOUND(InputData%zdotForce,1) ) )
        END IF
     END IF
 
@@ -4133,7 +4223,7 @@ ENDIF
        ELSE
           InputData%c_obj%pOrientation_Len = SIZE(InputData%pOrientation)
           IF (InputData%c_obj%pOrientation_Len > 0) &
-             InputData%c_obj%pOrientation = C_LOC( InputData%pOrientation( LBOUND(InputData%pOrientation,1) ) ) 
+             InputData%c_obj%pOrientation = C_LOC( InputData%pOrientation( LBOUND(InputData%pOrientation,1) ) )
        END IF
     END IF
 
@@ -4145,7 +4235,7 @@ ENDIF
        ELSE
           InputData%c_obj%fx_Len = SIZE(InputData%fx)
           IF (InputData%c_obj%fx_Len > 0) &
-             InputData%c_obj%fx = C_LOC( InputData%fx( LBOUND(InputData%fx,1) ) ) 
+             InputData%c_obj%fx = C_LOC( InputData%fx( LBOUND(InputData%fx,1) ) )
        END IF
     END IF
 
@@ -4157,7 +4247,7 @@ ENDIF
        ELSE
           InputData%c_obj%fy_Len = SIZE(InputData%fy)
           IF (InputData%c_obj%fy_Len > 0) &
-             InputData%c_obj%fy = C_LOC( InputData%fy( LBOUND(InputData%fy,1) ) ) 
+             InputData%c_obj%fy = C_LOC( InputData%fy( LBOUND(InputData%fy,1) ) )
        END IF
     END IF
 
@@ -4169,7 +4259,7 @@ ENDIF
        ELSE
           InputData%c_obj%fz_Len = SIZE(InputData%fz)
           IF (InputData%c_obj%fz_Len > 0) &
-             InputData%c_obj%fz = C_LOC( InputData%fz( LBOUND(InputData%fz,1) ) ) 
+             InputData%c_obj%fz = C_LOC( InputData%fz( LBOUND(InputData%fz,1) ) )
        END IF
     END IF
 
@@ -4181,7 +4271,7 @@ ENDIF
        ELSE
           InputData%c_obj%momentx_Len = SIZE(InputData%momentx)
           IF (InputData%c_obj%momentx_Len > 0) &
-             InputData%c_obj%momentx = C_LOC( InputData%momentx( LBOUND(InputData%momentx,1) ) ) 
+             InputData%c_obj%momentx = C_LOC( InputData%momentx( LBOUND(InputData%momentx,1) ) )
        END IF
     END IF
 
@@ -4193,7 +4283,7 @@ ENDIF
        ELSE
           InputData%c_obj%momenty_Len = SIZE(InputData%momenty)
           IF (InputData%c_obj%momenty_Len > 0) &
-             InputData%c_obj%momenty = C_LOC( InputData%momenty( LBOUND(InputData%momenty,1) ) ) 
+             InputData%c_obj%momenty = C_LOC( InputData%momenty( LBOUND(InputData%momenty,1) ) )
        END IF
     END IF
 
@@ -4205,7 +4295,7 @@ ENDIF
        ELSE
           InputData%c_obj%momentz_Len = SIZE(InputData%momentz)
           IF (InputData%c_obj%momentz_Len > 0) &
-             InputData%c_obj%momentz = C_LOC( InputData%momentz( LBOUND(InputData%momentz,1) ) ) 
+             InputData%c_obj%momentz = C_LOC( InputData%momentz( LBOUND(InputData%momentz,1) ) )
        END IF
     END IF
 
@@ -4217,7 +4307,7 @@ ENDIF
        ELSE
           InputData%c_obj%forceNodesChord_Len = SIZE(InputData%forceNodesChord)
           IF (InputData%c_obj%forceNodesChord_Len > 0) &
-             InputData%c_obj%forceNodesChord = C_LOC( InputData%forceNodesChord( LBOUND(InputData%forceNodesChord,1) ) ) 
+             InputData%c_obj%forceNodesChord = C_LOC( InputData%forceNodesChord( LBOUND(InputData%forceNodesChord,1) ) )
        END IF
     END IF
  END SUBROUTINE OpFM_F2C_CopyInput
@@ -4248,7 +4338,7 @@ IF (ASSOCIATED(SrcOutputData%u)) THEN
     END IF
     DstOutputData%c_obj%u_Len = SIZE(DstOutputData%u)
     IF (DstOutputData%c_obj%u_Len > 0) &
-      DstOutputData%c_obj%u = C_LOC( DstOutputData%u(i1_l) ) 
+          DstOutputData%c_obj%u = C_LOC( DstOutputData%u( i1_l ) )
   END IF
     DstOutputData%u = SrcOutputData%u
 ENDIF
@@ -4263,7 +4353,7 @@ IF (ASSOCIATED(SrcOutputData%v)) THEN
     END IF
     DstOutputData%c_obj%v_Len = SIZE(DstOutputData%v)
     IF (DstOutputData%c_obj%v_Len > 0) &
-      DstOutputData%c_obj%v = C_LOC( DstOutputData%v(i1_l) ) 
+          DstOutputData%c_obj%v = C_LOC( DstOutputData%v( i1_l ) )
   END IF
     DstOutputData%v = SrcOutputData%v
 ENDIF
@@ -4278,7 +4368,7 @@ IF (ASSOCIATED(SrcOutputData%w)) THEN
     END IF
     DstOutputData%c_obj%w_Len = SIZE(DstOutputData%w)
     IF (DstOutputData%c_obj%w_Len > 0) &
-      DstOutputData%c_obj%w = C_LOC( DstOutputData%w(i1_l) ) 
+          DstOutputData%c_obj%w = C_LOC( DstOutputData%w( i1_l ) )
   END IF
     DstOutputData%w = SrcOutputData%w
 ENDIF
@@ -4296,28 +4386,43 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE OpFM_CopyOutput
 
- SUBROUTINE OpFM_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OpFM_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'OpFM_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ASSOCIATED(OutputData%u)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%u)
   OutputData%u => NULL()
   OutputData%C_obj%u = C_NULL_PTR
   OutputData%C_obj%u_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%v)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%v)
   OutputData%v => NULL()
   OutputData%C_obj%v = C_NULL_PTR
   OutputData%C_obj%v_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%w)) THEN
+ IF (DEALLOCATEpointers_local) &
   DEALLOCATE(OutputData%w)
   OutputData%w => NULL()
   OutputData%C_obj%w = C_NULL_PTR
@@ -4516,7 +4621,7 @@ ENDIF
     END IF
     OutData%c_obj%u_Len = SIZE(OutData%u)
     IF (OutData%c_obj%u_Len > 0) &
-       OutData%c_obj%u = C_LOC( OutData%u(i1_l) ) 
+       OutData%c_obj%u = C_LOC( OutData%u( i1_l ) )
       DO i1 = LBOUND(OutData%u,1), UBOUND(OutData%u,1)
         OutData%u(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -4537,7 +4642,7 @@ ENDIF
     END IF
     OutData%c_obj%v_Len = SIZE(OutData%v)
     IF (OutData%c_obj%v_Len > 0) &
-       OutData%c_obj%v = C_LOC( OutData%v(i1_l) ) 
+       OutData%c_obj%v = C_LOC( OutData%v( i1_l ) )
       DO i1 = LBOUND(OutData%v,1), UBOUND(OutData%v,1)
         OutData%v(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -4558,7 +4663,7 @@ ENDIF
     END IF
     OutData%c_obj%w_Len = SIZE(OutData%w)
     IF (OutData%c_obj%w_Len > 0) &
-       OutData%c_obj%w = C_LOC( OutData%w(i1_l) ) 
+       OutData%c_obj%w = C_LOC( OutData%w( i1_l ) )
       DO i1 = LBOUND(OutData%w,1), UBOUND(OutData%w,1)
         OutData%w(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
         Re_Xferred = Re_Xferred + 1
@@ -4652,7 +4757,7 @@ ENDIF
        ELSE
           OutputData%c_obj%u_Len = SIZE(OutputData%u)
           IF (OutputData%c_obj%u_Len > 0) &
-             OutputData%c_obj%u = C_LOC( OutputData%u( LBOUND(OutputData%u,1) ) ) 
+             OutputData%c_obj%u = C_LOC( OutputData%u( LBOUND(OutputData%u,1) ) )
        END IF
     END IF
 
@@ -4664,7 +4769,7 @@ ENDIF
        ELSE
           OutputData%c_obj%v_Len = SIZE(OutputData%v)
           IF (OutputData%c_obj%v_Len > 0) &
-             OutputData%c_obj%v = C_LOC( OutputData%v( LBOUND(OutputData%v,1) ) ) 
+             OutputData%c_obj%v = C_LOC( OutputData%v( LBOUND(OutputData%v,1) ) )
        END IF
     END IF
 
@@ -4676,7 +4781,7 @@ ENDIF
        ELSE
           OutputData%c_obj%w_Len = SIZE(OutputData%w)
           IF (OutputData%c_obj%w_Len > 0) &
-             OutputData%c_obj%w = C_LOC( OutputData%w( LBOUND(OutputData%w,1) ) ) 
+             OutputData%c_obj%w = C_LOC( OutputData%w( LBOUND(OutputData%w,1) ) )
        END IF
     END IF
  END SUBROUTINE OpFM_F2C_CopyOutput

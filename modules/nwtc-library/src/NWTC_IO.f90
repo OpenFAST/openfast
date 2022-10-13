@@ -23,7 +23,6 @@ MODULE NWTC_IO
    USE SysSubs
    USE NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
    USE IEEE_ARITHMETIC
-   USE VersionInfo
 
    IMPLICIT  NONE
 
@@ -1496,181 +1495,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary5
-!=======================================================================
-!> This subroutine checks for command-line arguments.
-   SUBROUTINE CheckArgs ( Arg1, ErrStat, Arg2, Flag, InputArgArray )
 
-      ! Argument declarations:
-   CHARACTER(*), INTENT(INOUT)           :: Arg1               !< The first non-flag argument; generally, the name of the input file.
-   INTEGER,      INTENT(  OUT), OPTIONAL :: ErrStat            !< An optional argument for catching errors; if present, program does not abort on error.
-   CHARACTER(*), INTENT(  OUT), OPTIONAL :: Arg2               !< An optional 2nd non-flag argument.
-   CHARACTER(*), INTENT(  OUT), OPTIONAL :: Flag               !< An optional flag argument; the first argument starting with a switch character. 
-   CHARACTER(*), INTENT(IN   ), DIMENSION(:), OPTIONAL :: InputArgArray  !< An optional argument containing the arguments to parse; primarily used for unit testing.
-
-      ! Local declarations:
-   INTEGER                                    :: I, J          ! Iterator variables
-   CHARACTER(1024)                            :: Arg, FlagIter
-   CHARACTER(1024), DIMENSION(:), ALLOCATABLE :: ArgArray, TempArray, Flags
-   LOGICAL :: FirstArgumentSet, SecondArgumentSet
-
-   FirstArgumentSet = .FALSE.
-   SecondArgumentSet = .FALSE.
-                                        
-   IF ( PRESENT(Arg2) ) Arg2 = ""
-   IF ( PRESENT(Flag) ) Flag = ""
-   
-      ! Save all arguments in a single argument array; this is primarily used to enable unit testing
-   IF ( PRESENT(InputArgArray) ) THEN
-      ALLOCATE( ArgArray( SIZE(InputArgArray) ) )
-      ArgArray = InputArgArray
-   ELSE
-      ALLOCATE( ArgArray( COMMAND_ARGUMENT_COUNT() ) )
-      DO I = 1, SIZE(ArgArray)
-         CALL GET_COMMAND_LINE_ARG( I, ArgArray(I) )
-      END DO
-   END IF
-
-      ! Early return if no arguments and no default input file given
-   IF ( SIZE(ArgArray) == 0 .AND. LEN( TRIM(Arg1) ) == 0 ) THEN
-      CALL INVALID_SYNTAX( 'no command-line arguments given.' )
-      CALL CLEANUP()
-      RETURN
-   END IF
-
-      ! Split arguments into flags and non-flags
-   ALLOCATE( Flags(0) )
-   DO I = 1, SIZE(ArgArray)
-      Arg = TRIM(ArgArray(I))
-      IF ( IsFlag(Arg) ) THEN
-            ! This is how we can dynamically resize an array in Fortran...
-            ! Dont do this where performance matters.
-         ALLOCATE( TempArray( SIZE(Flags) + 1 ) )
-         DO J = 1, SIZE(Flags)
-            TempArray(J) = Flags(J)
-         END DO
-         TempArray(SIZE(Flags) + 1) = TRIM(Arg)
-         DEALLOCATE(Flags)
-         CALL MOVE_ALLOC(TempArray, Flags)
-      ELSE IF ( .NOT. FirstArgumentSet ) THEN
-         Arg1 = TRIM(Arg)
-         FirstArgumentSet = .TRUE.
-      ELSE IF ( .NOT. SecondArgumentSet ) THEN
-         Arg2 = TRIM(Arg)
-         SecondArgumentSet = .True.
-      ELSE
-         CALL INVALID_SYNTAX( 'too many command-line arguments given.' )
-         CALL CLEANUP()
-         RETURN
-      END IF
-   END DO
-
-   DO I = 1, SIZE(Flags)
-
-      FlagIter = Flags(I)(2:) ! This results in the flag without the switch character
-      CALL Conv2UC( FlagIter )
-      IF ( PRESENT(Flag) ) Flag = FlagIter
-
-      SELECT CASE ( TRIM(FlagIter) )
-
-      CASE ('H')
-         CALL DispCopyrightLicense( ProgName )
-         CALL DispCompileRuntimeInfo
-         CALL NWTC_DisplaySyntax( Arg1, ProgName )
-         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
-         CALL CLEANUP()
-         RETURN
-
-      CASE ('V', 'VERSION')
-         CALL DispCopyrightLicense( ProgName )
-         CALL DispCompileRuntimeInfo
-         IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
-         CALL CLEANUP()
-         RETURN
-
-      CASE ('RESTART')
-         IF ( FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
-            Arg2 = Arg1
-            Arg1 = ""
-         END IF
-         IF ( .NOT. FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
-            CALL INVALID_SYNTAX( 'the restart capability requires at least one argument: <input_file (OPTIONAL)> -restart <checkpoint_file>' )
-            CALL CLEANUP()
-               RETURN
-         END IF
-
-      CASE ('VTKLIN')
-         IF ( FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
-            Arg2 = Arg1
-            Arg1 = ""
-         END IF
-         IF ( .NOT. FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
-            CALL INVALID_SYNTAX( 'the restart capability for vtk mode shapes requires at least one argument: <input_file (OPTIONAL)> -vtklin <visualization_input_file>' )
-            CALL CLEANUP()
-               RETURN
-         END IF
-
-      CASE DEFAULT
-         CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
-         CALL CLEANUP()
-         RETURN
-                                                
-      END SELECT
-
-   END DO
-
-   IF ( PRESENT( ErrStat ) ) ErrStat = ErrID_None
-   CALL CLEANUP()
-
-                  RETURN
-
-   CONTAINS
-      SUBROUTINE CLEANUP()
-         IF ( ALLOCATED(ArgArray) ) DEALLOCATE(ArgArray)
-         IF ( ALLOCATED(Flags) ) DEALLOCATE(Flags)
-         IF ( ALLOCATED(TempArray) ) DEALLOCATE(TempArray)
-      END SUBROUTINE
-
-      SUBROUTINE INVALID_SYNTAX(ErrorMessage)
-
-         CHARACTER(*), INTENT(IN) :: ErrorMessage
-
-         CALL DispCopyrightLicense( ProgName )
-         CALL DispCompileRuntimeInfo
-         CALL NWTC_DisplaySyntax( Arg1, ProgName )
-         CALL ProgAbort( ' Invalid syntax: '//TRIM(ErrorMessage), PRESENT(ErrStat) )
-         IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
-
-      END SUBROUTINE
-
-      SUBROUTINE GET_COMMAND_LINE_ARG(ArgIndex, ArgGiven)
-
-         INTEGER, INTENT(IN) :: ArgIndex           !< Index location of the argument to get.
-         CHARACTER(1024), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
-         INTEGER :: Error                          !< Indicates if there was an error getting an argument.
-
-         CALL GET_COMMAND_ARGUMENT( ArgIndex, ArgGiven, STATUS=Error )
-         ArgGiven = TRIM(ArgGiven)
-         IF ( Error /= 0 )  THEN
-            CALL ProgAbort ( ' Error getting command-line argument #'//TRIM( Int2LStr( ArgIndex ) )//'.', PRESENT(ErrStat) )
-            IF ( PRESENT(ErrStat) ) ErrStat = ErrID_Fatal
-         END IF
-
-      END SUBROUTINE
-
-      FUNCTION IsFlag(ArgString)
-
-         CHARACTER(*), INTENT(IN) :: ArgString
-         LOGICAL :: IsFlag
-
-         IF ( ArgString(1:1) == SwChar .OR. ArgString(1:1) == '-' ) THEN
-            IsFlag = .TRUE.
-         ELSE
-            IsFlag = .FALSE.
-         END IF
-
-      END FUNCTION
-
-   END SUBROUTINE CheckArgs
 !=======================================================================
 !> This subroutine checks the data to be parsed to make sure it finds
 !! the expected variable name and an associated value.
@@ -2259,65 +2084,6 @@ END SUBROUTINE CheckR16Var
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
-!>
-   SUBROUTINE DispCompileRuntimeInfo()
-#ifdef _OPENMP    
-      USE OMP_LIB 
-#endif
-#ifdef HAS_FORTRAN2008_FEATURES
-      USE iso_fortran_env, ONLY: compiler_version
-#endif
-      CHARACTER(200) :: compiler_version_str
-      CHARACTER(200) :: name
-      CHARACTER(200) :: git_commit, architecture, compiled_precision
-      CHARACTER(200) :: execution_date, execution_time, execution_zone
-
-      name = ProgName
-      git_commit = QueryGitVersion()
-      architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
-      IF (ReKi == SiKi) THEN
-         compiled_precision = 'single'
-      ELSE IF (ReKi == R8Ki) THEN
-         compiled_precision = 'double'
-      ELSE
-         compiled_precision = 'unknown'
-      END IF
-
-#if defined(HAS_FORTRAN2008_FEATURES)
-      compiler_version_str = compiler_version()
-#elif defined(__INTEL_COMPILER)
-      compiler_version_str = 'Intel(R) Fortran Compiler '//num2lstr(__INTEL_COMPILER)
-#else
-      compiler_version_str = OS_Desc
-#endif
-
-      CALL WrScr(trim(name)//'-'//trim(git_commit))
-      CALL WrScr('Compile Info:')
-      call wrscr(' - Compiler: '//trim(compiler_version_str))
-      CALL WrScr(' - Architecture: '//trim(architecture))
-      CALL WrScr(' - Precision: '//trim(compiled_precision))
-#ifdef _OPENMP   
-      !$OMP PARALLEL default(shared)
-      if (omp_get_thread_num()==0) then
-         call WrScr(' - OpenMP: Yes, number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
-      endif
-      !$OMP END PARALLEL 
-#else
-   call WrScr(' - OpenMP: No')
-#endif
-      CALL WrScr(' - Date: '//__DATE__)
-      CALL WrScr(' - Time: '//__TIME__)
-      ! call wrscr(' - Options: '//trim(compiler_options()))
-
-      CALL DATE_AND_TIME(execution_date, execution_time, execution_zone)
-
-      CALL WrScr('Execution Info:')
-      CALL WrScr(' - Date: '//TRIM(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
-      CALL WrScr(' - Time: '//TRIM(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//TRIM(execution_zone))
-      CALL WrScr('')
-
-   END SUBROUTINE
-!=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE DispNVD0()
@@ -2519,7 +2285,11 @@ END SUBROUTINE CheckR16Var
 
       ! Store all the version info into a single string:
       if (len_trim(ProgInfo%Ver) > 0) then
-         GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+         if (len_trim(ProgInfo%Date) > 0) then
+            GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+         else
+            GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//')'
+         end if
       else
          GetNVD = TRIM( ProgInfo%Name )
       end if
@@ -2670,21 +2440,21 @@ END SUBROUTINE CheckR16Var
 !! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
 !! as word separators. If there aren't NumWords in the line, the remaining array elements will remain empty.
 !! Use CountWords (nwtc_io::countwords) to count the number of words in a line.
-   SUBROUTINE GetWords ( Line, Words, NumWords )
+   SUBROUTINE GetWords ( Line, Words, NumWords, NumFound )
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: NumWords                                     !< The number of words to look for.
+   INTEGER, INTENT(IN)            :: NumWords                                     !< The maximum number of words to look for (and size of Words)
 
-   CHARACTER(*), INTENT(IN)     :: Line                                         !< The string to search.
-   CHARACTER(*), INTENT(OUT)    :: Words(NumWords)                              !< The array of found words.
-
+   CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
+   CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
+   INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
 
       ! Local declarations.
 
-   INTEGER                      :: Ch                                           ! Character position within the string.
-   INTEGER                      :: IW                                           ! Word index.
-   INTEGER                      :: NextWhite                                    ! The location of the next whitespace in the string.
+   INTEGER                        :: Ch                                           ! Character position within the string.
+   INTEGER                        :: IW                                           ! Word index.
+   INTEGER                        :: NextWhite                                    ! The location of the next whitespace in the string.
 
 
 
@@ -2694,48 +2464,51 @@ END SUBROUTINE CheckR16Var
       Words(IW) = ' '
    END DO ! IW
 
-
-      ! Let's make sure we have text on this line.
-
-   IF ( LEN_TRIM( Line ) == 0 )  RETURN
-
-
-      ! Parse words separated by any combination of spaces, tabs, commas,
-      ! semicolons, single quotes, and double quotes ("whitespace").
-
-   Ch = 0
    IW = 0
 
-   DO
+   
+      ! Let's make sure we have text on this line.
 
-      NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
+   IF ( LEN_TRIM( Line ) > 0 )  THEN
 
-      IF ( NextWhite > 1 )  THEN
+         ! Parse words separated by any combination of spaces, tabs, commas,
+         ! semicolons, single quotes, and double quotes ("whitespace").
 
-         IW        = IW + 1
-         Words(IW) = Line(Ch+1:Ch+NextWhite-1)
-         if (NextWhite > len(words(iw)) ) then 
-            call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
-         end if 
+      Ch = 0
 
-         IF ( IW == NumWords )  EXIT
+      DO
 
-         Ch = Ch + NextWhite
+         NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
 
-      ELSE IF ( NextWhite == 1 )  THEN
+         IF ( NextWhite > 1 )  THEN
 
-         Ch = Ch + 1
+            IW        = IW + 1
+            Words(IW) = Line(Ch+1:Ch+NextWhite-1)
+            if (NextWhite > len(words(iw)) ) then 
+               call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
+            end if 
 
-         CYCLE
+            IF ( IW == NumWords )  EXIT
 
-      ELSE
+            Ch = Ch + NextWhite
 
-         EXIT
+         ELSE IF ( NextWhite == 1 )  THEN
 
-      END IF
+            Ch = Ch + 1
 
-   END DO
+            CYCLE
 
+         ELSE
+
+            EXIT
+
+         END IF
+
+      END DO
+      
+   END IF
+   
+   IF (PRESENT(NumFound)) NumFound = IW
 
    RETURN
    END SUBROUTINE GetWords
@@ -3408,7 +3181,6 @@ END SUBROUTINE CheckR16Var
          ! Local declarations.
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
-      INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
 
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChAry'
 
@@ -3417,7 +3189,8 @@ END SUBROUTINE CheckR16Var
    
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                  ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                  ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                   , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3426,7 +3199,7 @@ END SUBROUTINE CheckR16Var
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
-                  ' >> The "'//TRIM( AryName )//'" array was not assigned valid REAL values on line #' &
+                  ' >> The "'//TRIM( AryName )//'" array was not assigned valid CHARACTER values on line #' &
                   //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                   //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
          RETURN
@@ -3459,7 +3232,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The comment line was not assigned because the file is too short.' &
+                   ' >> The comment line was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3509,7 +3283,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChVar'
 
@@ -3521,7 +3295,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3638,7 +3413,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3703,7 +3479,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3818,7 +3595,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3883,7 +3661,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3907,6 +3686,7 @@ END SUBROUTINE CheckR16Var
       ENDIF
       CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2)
          CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>= AbortErrLev) return
          
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
@@ -3994,7 +3774,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4179,7 +3960,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4300,7 +4082,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4363,7 +4146,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4373,10 +4157,8 @@ END SUBROUTINE CheckR16Var
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
                         , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg2 )
-      IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         RETURN
-      ENDIF
+         IF (ErrStat >= AbortErrLev) RETURN
 
       READ (Words(3-NameIndx),*,IOSTAT=ErrStatLcl)  Var
 
@@ -4477,7 +4259,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4539,7 +4322,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4562,7 +4346,9 @@ END SUBROUTINE CheckR16Var
          RETURN
       ENDIF
 
-      CALL CheckRealVar( Var, ExpVarName, ErrStat, ErrMsg)
+      CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev )  RETURN
       
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words !bjj: not sure this is the best way to echo the number being read (in case of truncation, etc)
@@ -4972,7 +4758,8 @@ END SUBROUTINE CheckR16Var
          ENDIF
 
       IF ( AryInd /= FileInfo%NumLines ) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
-         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read does not match array size.", ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read ("//trim(num2lstr(AryInd))// &
+                  ") does not match array size ("//trim(num2lstr(fileInfo%NumLines))//").", ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN
       END IF
@@ -6473,7 +6260,7 @@ END SUBROUTINE CheckR16Var
 !! These values represent the names of output channels, and they are specified in the format
 !! required for OutList(:) in FAST input files.
 !! The end of this list is specified with the line beginning with the 3 characters "END".
-   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, ErrStat, ErrMsg, UnEc )
 
       ! Argument declarations:
 
@@ -6485,9 +6272,6 @@ END SUBROUTINE CheckR16Var
    CHARACTER(*),        INTENT(OUT)  :: ErrMsg                                     !< Error message
 
    CHARACTER(*),        INTENT(OUT)  :: CharAry(:)                                 !< Character array being read (calling routine dimensions it to max allowable size).
-
-   CHARACTER(*),        INTENT(IN)   :: AryDescr                                   !< Text string describing the variable.
-   CHARACTER(*),        INTENT(IN)   :: AryName                                    !< Text string containing the variable name.
 
 
       ! Local declarations:
@@ -7657,6 +7441,8 @@ END SUBROUTINE CheckR16Var
    REAL(SiKi), PARAMETER         :: IntMin   = -32768.0              ! Smallest integer represented in 2 bytes
    REAL(SiKi), PARAMETER         :: IntRng   = IntMax - IntMin       ! Max Range of 2 byte integer
 
+   REAL(SiKi), PARAMETER         :: SqrtEps = SQRT(EPSILON(1.0_SiKi)) ! small number for tolerance
+
 
          ! Local variables
 
@@ -7862,8 +7648,8 @@ END SUBROUTINE CheckR16Var
       ! Calculate the scaling parameters for each channel
       !...............................................................................................................................
       DO IC=1,NumOutChans                    ! Loop through the output channels
-         IF ( ColMax(IC) == ColMin(IC) ) THEN
-            ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
+         IF ( abs(ColMax(IC) - ColMin(IC)) < SqrtEps ) THEN
+            ColScl(IC) = IntRng/SqrtEps
          ELSE
             ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
          ENDIF

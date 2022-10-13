@@ -538,6 +538,9 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
    END INTERFACE
 
+   ErrStat = ErrID_None
+   ErrMsg = ''
+      
    ! Close the library:
 
    IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN

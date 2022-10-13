@@ -87,18 +87,25 @@ circulation file is given in :numref:`Prescribed-Circulation-Input-File`.
 Wake Extent and Discretization Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**nNWPanel** [-] specifies the number of FVW time steps (**DTfvw**) for which
-the near-wake lattice is computed. In the future, this value will be defined as
-an azimuthal span in degrees or a downstream distance in rotor diameter.
 
-**WakeLength** [D] specifies the length, in rotor diameters, of the far wake.
-The default value is :math:`8`. [1]_
 
-**FreeWakeLength** [D] specifies the length, in rotor diameters, for which the
-turbine wake is convected as “free." If *FreeWakeLength* is greater than
-*WakeLength*, then the entire wake is free. Otherwise, the Lagrangian markers
-located within the buffer zone delimited by *FreeWakeLength* and *WakeLength*
-are convected with the average velocity. The default value is :math:`6`. [2]_
+**nNWPanel** [-] specifies the number of near-wake (NW) panels (i.e. FVW time steps, **DTfvw**) used for the extent of the near-wake lattice.
+See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
+
+**nFWPanel** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
+See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
+ 
+
+**nFWPanelFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
+wake is convected as "free." 
+If *nFWPanelFree* is greater than
+*nFWPanel*, then the entire far-wake is free. Otherwise, the Lagrangian markers
+located within the buffer zone delimited by *nNWPanelFree* and *nNWPanel*
+are convected with the average velocity.  
+By default, this variable is set to **nFWPanel**.
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
+
+
 
 **FWShedVorticity** [flag] specifies whether shed vorticity is included in the
 far wake. The default value is *[False]*, specifying that the far wake consists
@@ -117,14 +124,14 @@ optimized *[1]*, 3) chord *[2]*, and 4) span *[3]*.
 The optimized option determines all the parameters in this section for the user.
 The optimized option is still work in progress and not recommended.
 The constant option requires the user to specify all the parameters present in this section.
-The default option is *[0]*.
-When **RegDetMethod==0**, the regularization parameters is set constant:
+The default and recomment option is *[3]*.
+
 
 .. math::
 
    r_{c,\text{wake}}(r) = \text{WakeRegParam} 
    ,\quad
-   r_{c,\text{blade}}(r) = \text{BladeRegParam} 
+   r_{c,\text{blade}}(r) = \text{WingRegParam} 
 
 When **RegDetMethod==2**, the regularization parameters is set according to the local chord:
 
@@ -132,7 +139,7 @@ When **RegDetMethod==2**, the regularization parameters is set according to the 
 
    r_{c,\text{wake}}(r) = \text{WakeRegParam} \cdot c(r)
    ,\quad
-   r_{c,,\text{blade}}(r) = \text{BladeRegParam} \cdot c(r)
+   r_{c,,\text{blade}}(r) = \text{WingRegParam} \cdot c(r)
 
 When **RegDetMethod==3**, the regularization parameters is set according to the spanwise discretization:
 
@@ -140,10 +147,10 @@ When **RegDetMethod==3**, the regularization parameters is set according to the 
 
    r_{c,\text{wake}}(r) = \text{WakeRegParam} \cdot \Delta  r(r)
    ,\quad
-   r_{c,,\text{blade}}(r) = \text{BladeRegParam} \cdot \Delta r(r)
+   r_{c,,\text{blade}}(r) = \text{WingRegParam} \cdot \Delta r(r)
 
 where :math:`Delta r` is the length of the spanwise station.
-
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 
 
@@ -158,14 +165,17 @@ given in . The default option is *[3]*.
 radius (i.e., the regularization parameter). There are three options: 1)
 constant *[1]*, 2) stretching *[2]*, and 3) age *[3]*. The methods are
 described in :numref:`sec:corerad`. The default option is *[1]*.
+The recommended option is *[3]*.
 
-**WakeRegParam** [m, or -] specifies the wake regularization parameter, which is the
+**WakeRegFactor** [m, or -] specifies the wake regularization parameter, which is the
 regularization value used at the initialization of a vortex element. If the
 regularization method is “constant”, this value is used throughout the wake.
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
-**BladeRegParam** [m, or -] specifies the bound vorticity regularization parameter,
+**WingRegFactor** [m, or -] specifies the bound vorticity regularization parameter,
 which is the regularization value used for the vorticity elements bound to the
 blades.
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 **CoreSpreadEddyVisc** [-] specifies the eddy viscosity parameter
 :math:`\delta`.  The parameter is used for the core-spreading method
@@ -195,11 +205,14 @@ Speedup Options
 ~~~~~~~~~~~~~~~
 
 **VelocityMethod** [switch] specifies the method used to determine the velocity.
-There are two options: 1) Biot-Savart law applied to the vortex segments *[1]*
-,2) tree formulation using a particle representation *[2]*. and 3) tree formulation
-using a segment representation. The default option is *[1]*.
-Option *[2]* requires the specification of *PartPerSegment* (see below). 
-Option *[3]* is expected to give results close to option *[1]* while offering
+There are four options: 
+1) :math:`N^2` Biot-Savart computation on the vortex segments *[1]*,
+2) Particle-Tree formulation *[2]*, 
+3) :math:`N^2` Biot-Savart computation using a particle representation,
+4) Segment-Tree formulation. 
+The default option is *[1]*.
+Option *[2]* and *[3]* requires the specification of *PartPerSegment* (see below). 
+Option *[4]* is expected to give results close to option *[1]* while offering
 significant speedup, and this option does not require the specification of *PartPerSegment*.
 
 
@@ -299,10 +312,3 @@ are used by the vortex code:
   - tower aerodynamics; and
   - outputs.
 
-.. [1]
-   At present, this variable is called nFWPanel and specified as the number of far
-   wake panels. This will be changed soon.
-
-.. [2]
-   At present, this variable is called nFWPanelFree and specified as the number of
-   free far wake panels. This will be changed soon.

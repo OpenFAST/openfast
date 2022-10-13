@@ -276,14 +276,14 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iW, iRoot, iTip, iMax
+   integer(IntKi)            :: iW, iRoot, iTip
    real(ReKi), dimension(p%nWings) :: FWGamma
    real(ReKi), dimension(:),allocatable :: Gamma_t
    real(ReKi), dimension(:),allocatable :: sCoord
 !    real(ReKi), dimension(p%W(iW)%nSpan+1) :: Gamma_t
 !    real(ReKi), dimension(p%W(iW)%nSpan) :: sCoord
    real(ReKi) :: FWEpsTip, FWEpsRoot
-   real(ReKi) :: ltip, rTip, Gamma_max
+
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -452,49 +452,121 @@ subroutine print_x_NW_FW(p, m, x, label)
 endsubroutine
 
 !> Debug function to figure out if data have nan
-logical function have_nan(p, m, x, u, label)
+logical function have_nan(p, m, x, z, u, label)
    type(FVW_ParameterType),         intent(in) :: p !< Parameters
    type(FVW_MiscVarType),           intent(in) :: m !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in) :: x !< Continuous states
+   type(FVW_ConstraintStateType),   intent(in) :: z !< ConstrStates
    type(FVW_InputType),             intent(in) :: u(:) !< Input states
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
-         print*,trim(label),'NaN in W(iW)%r_NW'
+         print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%r_FW))) then
-         print*,trim(label),'NaN in W(iW)%r_FW'
+         print*,trim(label),'NaN in W(iW)%r_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_NW))) then
-         print*,trim(label),'NaN in G_NW'
+         print*,trim(label),'NaN in G_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+      if (any(isnan(z%W(iW)%Gamma_LL))) then
+         print*,trim(label),'NaN in G_LL'//trim(num2lstr(iW))
          have_nan=.True.
       endif
    enddo
-   if (any(isnan(u(1)%V_wind))) then
-      print*,trim(label),'NaN in Vwind1'
-      have_nan=.True.
-   endif
-   if (any(isnan(u(2)%V_wind))) then
-      print*,trim(label),'NaN in Vwind2'
-      have_nan=.True.
-   endif
+   do iW=1,size(u)
+      if (any(isnan(u(iW)%V_wind))) then
+         print*,trim(label),'NaN in Vwind'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+   enddo
 endfunction
+subroutine find_nan_1D(array, varname)
+   real(ReKi), dimension(:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (isnan(array(i)))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_2D(array, varname)
+   real(ReKi), dimension(:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array,2)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (any(isnan(array(:,i))))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_3D(array, varname)
+   real(ReKi), dimension(:,:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, j, n,m,tot
+   n = size(array,2)
+   m = size(array,3)
+   found=.false.
+   tot=0
+   do i =1, n
+      do j =1, m
+         if (any(isnan(array(:,i,j))))  then
+            if (tot<10) then
+               print*,'Position i,j',i,j
+            endif
+            found=.true.
+            tot=tot+1
+         endif
+      enddo
+   enddo
+   if (found) then
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname), tot,n*m
+      STOP
+   endif
+end subroutine
 
 
 ! --------------------------------------------------------------------------------
@@ -829,6 +901,11 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
          nSeg  = nSeg*2
          nSegP = nSegP*2
       endif
+
+      if (DEV_VERSION) then
+         call find_nan_2D(SegPoints(:,1:nSegP), 'PackPanelsToSegments SegPoints')
+      endif
+
    else
       nSeg  = 0
       nSegP = 0
@@ -910,7 +987,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
          write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
          write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
-         write(*,'(A,1F8.4)')   'BladeRegParam     : ', p%WingRegParam
+         write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
          write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
       ! Set reg param on wing and first NW
       ! NOTE: setting the same in all three directions for now, TODO!
@@ -944,7 +1021,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
 
       if (iW==1) then
       call WrScr(' - OLAF regularization parameters (for wing 1):')
-         write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
+         write(*,'(A,2F8.4)') '    WingReg (min/max) : ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
          if (p%nNWMax>1) then
             write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
          endif
@@ -1058,6 +1135,9 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
          Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
       endif
       if (DEV_VERSION) then
+         call find_nan_2D(Part%P    , 'InducedVelocitiesAll_Init Part%P')
+         call find_nan_2D(Part%Alpha, 'InducedVelocitiesAll_Init Part%Alpha')
+
          if (any(Part%RegParam(:)<-9999.99_ReKi)) then
             print*,'Error in Segment to part conversion'
             STOP
@@ -1069,9 +1149,11 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    if (p%VelocityMethod==idVelocityTree) then
       Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
       Tree%DistanceDirect = 2*sum(Sgmt%Epsilon)/size(Sgmt%Epsilon) ! 2*mean(eps), below that distance eps has a strong effect
       call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg),Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
+
    endif
 
 end subroutine InducedVelocitiesAll_Init
@@ -1198,6 +1280,7 @@ contains
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
          endif
+         call find_nan_2D(m%CPs, 'WakeInducedVel CPs')
       endif
    end subroutine
    !> Distribute the induced velocity to the proper location
@@ -1228,6 +1311,7 @@ contains
             STOP ! Keep me. The check will be removed once the code is well established
             ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
          endif
+         call find_nan_2D(m%Uind, 'WakeInducedVel Uind')
       endif
    end subroutine
 
@@ -1315,6 +1399,7 @@ contains
             print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(CPs, 'LiftingLineInducedVel CPs')
       endif
       nCPs=iHeadP-1
    end subroutine
@@ -1349,6 +1434,7 @@ contains
             print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(Uind, 'LiftingLineInducedVel Uind')
       endif
    end subroutine
 end subroutine
@@ -1453,8 +1539,16 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    Vwnd_s = matmul(M_sg, Vwnd_g)
    Urel_s = Vwnd_s - Vstr_s          ! relative wind
    Vtot_s = Vwnd_s - Vstr_s + Vind_s
-   AxInd  = -Vind_s(1)/Urel_s(1)
-   TanInd =  Vind_s(2)/Urel_s(2)
+   if (EqualRealNos(Urel_s(1),0.0_ReKi)) then
+      AxInd = 0.0_ReKi
+   else
+      AxInd  = -Vind_s(1)/Urel_s(1)
+   endif
+   if (EqualRealNos(Urel_s(2),0.0_ReKi)) then
+      TanInd = 0.0_ReKi
+   else
+      TanInd =  Vind_s(2)/Urel_s(2)
+   end if
    phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
    if(.false.) print*,PitchAndTwist ! just to avoid unused var for now

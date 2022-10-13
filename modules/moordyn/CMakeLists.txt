@@ -20,12 +20,17 @@ endif()
 
 set(MOORDYN_LIBS_SOURCES
   src/MoorDyn.f90
+  src/MoorDyn_Body.f90
   src/MoorDyn_IO.f90
+  src/MoorDyn_Line.f90
+  src/MoorDyn_Misc.f90
+  src/MoorDyn_Point.f90
+  src/MoorDyn_Rod.f90
   src/MoorDyn_Types.f90
 )
 
 add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
-target_link_libraries(moordynlib nwtclibs)
+target_link_libraries(moordynlib nwtclibs versioninfolib)
 
 install(TARGETS moordynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
@@ -35,9 +40,10 @@ install(TARGETS moordynlib
 
 set(MD_DRIVER_SOURCES src/MoorDyn_Driver.f90)
 add_executable(moordyn_driver ${MD_DRIVER_SOURCES})
-target_link_libraries(moordyn_driver moordynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(moordyn_driver moordynlib nwtclibs ${CMAKE_DL_LIBS})
 
 install(TARGETS moordyn_driver
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+

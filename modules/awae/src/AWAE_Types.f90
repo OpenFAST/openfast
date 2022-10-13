@@ -287,15 +287,27 @@ IF (ALLOCATED(SrcHighWindGridData%data)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyHighWindGrid
 
- SUBROUTINE AWAE_DestroyHighWindGrid( HighWindGridData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyHighWindGrid( HighWindGridData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_HighWindGrid), INTENT(INOUT) :: HighWindGridData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyHighWindGrid'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyHighWindGrid'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(HighWindGridData%data)) THEN
   DEALLOCATE(HighWindGridData%data)
 ENDIF
@@ -646,15 +658,27 @@ ENDIF
     DstInputFileTypeData%Mod_Projection = SrcInputFileTypeData%Mod_Projection
  END SUBROUTINE AWAE_CopyInputFileType
 
- SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_InputFileType), INTENT(INOUT) :: InputFileTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInputFileType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInputFileType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputFileTypeData%OutDisWindZ)) THEN
   DEALLOCATE(InputFileTypeData%OutDisWindZ)
 ENDIF
@@ -1351,16 +1375,29 @@ ENDIF
     DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
  END SUBROUTINE AWAE_CopyInitInput
 
- SUBROUTINE AWAE_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AWAE_Destroyinputfiletype( InitInputData%InputFileData, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AWAE_Destroyinputfiletype( InitInputData%InputFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyInitInput
 
  SUBROUTINE AWAE_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1664,16 +1701,29 @@ ENDIF
     DstInitOutputData%Z0_low = SrcInitOutputData%Z0_low
  END SUBROUTINE AWAE_CopyInitOutput
 
- SUBROUTINE AWAE_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%X0_high)) THEN
   DEALLOCATE(InitOutputData%X0_high)
 ENDIF
@@ -2194,18 +2244,31 @@ IF (ALLOCATED(SrcContStateData%IfW)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyContState
 
- SUBROUTINE AWAE_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%IfW)) THEN
 DO i1 = LBOUND(ContStateData%IfW,1), UBOUND(ContStateData%IfW,1)
-  CALL InflowWind_DestroyContState( ContStateData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyContState( ContStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%IfW)
 ENDIF
@@ -2458,18 +2521,31 @@ IF (ALLOCATED(SrcDiscStateData%IfW)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyDiscState
 
- SUBROUTINE AWAE_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DiscStateData%IfW)) THEN
 DO i1 = LBOUND(DiscStateData%IfW,1), UBOUND(DiscStateData%IfW,1)
-  CALL InflowWind_DestroyDiscState( DiscStateData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyDiscState( DiscStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%IfW)
 ENDIF
@@ -2722,18 +2798,31 @@ IF (ALLOCATED(SrcConstrStateData%IfW)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyConstrState
 
- SUBROUTINE AWAE_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ConstrStateData%IfW)) THEN
 DO i1 = LBOUND(ConstrStateData%IfW,1), UBOUND(ConstrStateData%IfW,1)
-  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%IfW)
 ENDIF
@@ -2986,18 +3075,31 @@ IF (ALLOCATED(SrcOtherStateData%IfW)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyOtherState
 
- SUBROUTINE AWAE_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OtherStateData%IfW)) THEN
 DO i1 = LBOUND(OtherStateData%IfW,1), UBOUND(OtherStateData%IfW,1)
-  CALL InflowWind_DestroyOtherState( OtherStateData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyOtherState( OtherStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%IfW)
 ENDIF
@@ -3601,15 +3703,27 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AWAE_CopyMisc
 
- SUBROUTINE AWAE_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%Vamb_low)) THEN
   DEALLOCATE(MiscData%Vamb_low)
 ENDIF
@@ -3624,7 +3738,8 @@ IF (ALLOCATED(MiscData%Vdist_low_full)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%Vamb_High)) THEN
 DO i1 = LBOUND(MiscData%Vamb_High,1), UBOUND(MiscData%Vamb_High,1)
-  CALL AWAE_Destroyhighwindgrid( MiscData%Vamb_High(i1), ErrStat, ErrMsg )
+  CALL AWAE_Destroyhighwindgrid( MiscData%Vamb_High(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Vamb_High)
 ENDIF
@@ -3681,14 +3796,19 @@ IF (ALLOCATED(MiscData%outVizXZPlane)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%IfW)) THEN
 DO i1 = LBOUND(MiscData%IfW,1), UBOUND(MiscData%IfW,1)
-  CALL InflowWind_DestroyMisc( MiscData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyMisc( MiscData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%IfW)
 ENDIF
-  CALL InflowWind_DestroyInput( MiscData%u_IfW_Low, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyInput( MiscData%u_IfW_High, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyOutput( MiscData%y_IfW_Low, ErrStat, ErrMsg )
-  CALL InflowWind_DestroyOutput( MiscData%y_IfW_High, ErrStat, ErrMsg )
+  CALL InflowWind_DestroyInput( MiscData%u_IfW_Low, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyInput( MiscData%u_IfW_High, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyOutput( MiscData%y_IfW_Low, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL InflowWind_DestroyOutput( MiscData%y_IfW_High, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyMisc
 
  SUBROUTINE AWAE_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5754,15 +5874,27 @@ ENDIF
     DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
  END SUBROUTINE AWAE_CopyParam
 
- SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%y)) THEN
   DEALLOCATE(ParamData%y)
 ENDIF
@@ -5798,7 +5930,8 @@ IF (ALLOCATED(ParamData%WT_Position)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%IfW)) THEN
 DO i1 = LBOUND(ParamData%IfW,1), UBOUND(ParamData%IfW,1)
-  CALL InflowWind_DestroyParam( ParamData%IfW(i1), ErrStat, ErrMsg )
+  CALL InflowWind_DestroyParam( ParamData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%IfW)
 ENDIF
@@ -6879,18 +7012,31 @@ IF (ALLOCATED(SrcOutputData%Vx_wind_disk)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyOutput
 
- SUBROUTINE AWAE_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%Vdist_High)) THEN
 DO i1 = LBOUND(OutputData%Vdist_High,1), UBOUND(OutputData%Vdist_High,1)
-  CALL AWAE_Destroyhighwindgrid( OutputData%Vdist_High(i1), ErrStat, ErrMsg )
+  CALL AWAE_Destroyhighwindgrid( OutputData%Vdist_High(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%Vdist_High)
 ENDIF
@@ -7375,15 +7521,27 @@ IF (ALLOCATED(SrcInputData%D_wake)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyInput
 
- SUBROUTINE AWAE_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE AWAE_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AWAE_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%xhat_plane)) THEN
   DEALLOCATE(InputData%xhat_plane)
 ENDIF

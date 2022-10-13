@@ -165,12 +165,9 @@ PROGRAM HydroDynDriver
    CALL CheckArgs( drvrFilename, Flag=FlagArg )
    IF ( LEN( TRIM(FlagArg) ) > 0 ) CALL NormStop()
 
-      ! Display the copyright notice
+   ! Display the copyright notice and compile info:
    CALL DispCopyrightLicense( version%Name )
-     ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-     ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL DispCompileRuntimeInfo( version%Name )
    
       ! Parse the driver input file and run the simulation based on that file
    CALL ReadDriverInputFile( drvrFilename, drvrInitInp, ErrStat, ErrMsg )
