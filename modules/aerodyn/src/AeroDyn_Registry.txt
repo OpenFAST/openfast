@@ -248,6 +248,12 @@ typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle 
 typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoad	{:}	-	-	"line mesh for per unit length buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad)"
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoadPoint	-	-	-	"point mesh for lumped buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit length buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
 
 typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
@@ -273,7 +279,7 @@ typedef	^	RotParameterType	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x 
 typedef	^	RotParameterType	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
 typedef	^	RotParameterType	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
-typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
 typedef ^   RotParameterType	ReKi	BlAxCent  {:}{:}	-	-	"Matrix of blade element axial centroid, used in buoyancy calculation" -
 typedef ^   RotParameterType	ReKi	TwrRad    {:}    	-	-	"Array of equivalent tower radius at each node, used in buoyancy calculation" m

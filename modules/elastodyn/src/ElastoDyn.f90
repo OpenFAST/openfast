@@ -11680,7 +11680,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedPackedOrient )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -11699,7 +11699,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedPackedOrient !< whether a y_op values should contain 3-value representation instead of full orientation matrices
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
 
 
 
@@ -11708,7 +11708,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
-   LOGICAL                                           :: ReturnLogMap
+   LOGICAL                                           :: ReturnTrimOP
    TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
@@ -11759,10 +11759,10 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( y_op ) ) THEN
-      if (present(NeedPackedOrient)) then
-         ReturnLogMap = NeedPackedOrient
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
       else
-         ReturnLogMap = .false.
+         ReturnTrimOP = .false.
       end if
       
       if (.not. allocated(y_op)) then 
@@ -11786,7 +11786,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          if (ErrStat>=AbortErrLev) return
       end if
             
-      if (ReturnLogMap) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
 
       
       Mask  = .false.
@@ -11797,16 +11797,17 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
          do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseSmlAngle=ReturnLogMap)
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, TrimOP=ReturnTrimOP)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseSmlAngle=ReturnLogMap)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseSmlAngle=ReturnLogMap)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseSmlAngle=ReturnLogMap)
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+      
       do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseSmlAngle=ReturnLogMap)
-      end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index, UseSmlAngle=ReturnLogMap)
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
+      end do
+      call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
       
       y_op(index) = y%Yaw     ; index = index + 1    
       y_op(index) = y%YawRate ; index = index + 1    
@@ -11814,7 +11815,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
       do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
-      end do   
+      end do
                         
    END IF
 
