@@ -2831,6 +2831,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    INTEGER(IntKi)               :: ErrStat2 , IOS                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
    CHARACTER(*), PARAMETER      :: RoutineName = 'ReadBladeInputs'
+   CHARACTER(len=1024)          :: Line
+   CHARACTER(len=50)            :: HeaderCols(10)                                  ! Header columns in file
+   LOGICAL                      :: hasBuoyancy                                     ! Does file contain Buoyancy columns
+
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2869,8 +2873,18 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
          RETURN
       END IF
 
-   CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc, Comment=Line )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! Check if 10 columns are present
+   READ (Line,*, IOSTAT=ErrStat2) ( HeaderCols(I), I=1,10 )
+   hasBuoyancy = .true.
+   IF ( ErrStat2 < 0 )  THEN ! end of line reached
+      hasBuoyancy = .false.
+      !call WrScr('Blade input file is missing buoyancy columns.')
+   ELSE IF ( ErrStat2 > 0 )  THEN
+      CALL SetErrStat(ErrID_Fatal, 'Unexpected error while trying to infer column headers in blade file.', ErrStat, ErrMsg, RoutineName)
+   endif
+
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2902,6 +2916,12 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlCenBt, BladeKInputFileData%NumBlNds, 'BlCenBt', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   IF (.not. hasBuoyancy) THEN
+      BladeKInputFileData%BlCb    = 0.0_ReKi
+      BladeKInputFileData%BlCenBn = 0.0_ReKi
+      BladeKInputFileData%BlCenBt = 0.0_ReKi
+   ENDIF
       
       ! Return on error if we didn't allocate space for the next inputs
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -2910,9 +2930,15 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    END IF
             
    DO I=1,BladeKInputFileData%NumBlNds
-      READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
-                                  BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I) 
+      IF (hasBuoyancy) THEN
+         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
+                                     BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I) 
+      ELSE
+         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
+                                     BladeKInputFileData%BlAFID(I)
+      ENDIF
          CALL CheckIOS( IOS, ADBlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                ! Return on error if we couldn't read this line
