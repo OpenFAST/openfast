@@ -300,6 +300,7 @@ ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
 
 # BeamDyn regression tests

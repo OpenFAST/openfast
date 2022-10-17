@@ -78,6 +78,9 @@ IMPLICIT NONE
     REAL(SiKi)  :: CrestXi      !< xi-coordinate for the wave crest [m]
     REAL(SiKi)  :: CrestYi      !< yi-coordinate for the wave crest [m]
     REAL(SiKi)  :: MCFD      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
+    REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
+    REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
   END TYPE Waves_InitInputType
 ! =======================
 ! =========  Waves_InitOutputType  =======
@@ -230,6 +233,9 @@ ENDIF
     DstInitInputData%CrestXi = SrcInitInputData%CrestXi
     DstInitInputData%CrestYi = SrcInitInputData%CrestYi
     DstInitInputData%MCFD = SrcInitInputData%MCFD
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
+    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
+    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
  END SUBROUTINE Waves_CopyInitInput
 
  SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -387,6 +393,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! CrestXi
       Re_BufSz   = Re_BufSz   + 1  ! CrestYi
       Re_BufSz   = Re_BufSz   + 1  ! MCFD
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -604,6 +613,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%CrestYi
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MCFD
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationX
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_PackInitInput
 
@@ -859,6 +874,12 @@ ENDIF
     OutData%CrestYi = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
     OutData%MCFD = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PtfmLocationX = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_UnPackInitInput
 

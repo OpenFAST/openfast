@@ -112,11 +112,10 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine populates the headers with the blade node outputs.  The iteration cycle is blade:node:channel (channel iterated
 !! fastest).  If this iteration order is changed, it should be changed in the Calc_WriteAllBldNdOutput routine as well.
-SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, p_AD, InputFileData, ErrStat, ErrMsg )
+SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
    TYPE(RotInitOutputType),      INTENT(INOUT)  :: InitOut                          ! output data
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                ! The rotor parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD                             ! The module parameters
    TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData                    ! All the data in the AeroDyn input file (want Blade Span for channel name)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat                          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg                           ! The error message, if an error occurred
@@ -1253,7 +1252,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
    IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) then
       p%BldNd_BladesOut = 0_IntKi
    ELSE IF ((InputFileData%BldNd_BladesOut > p%NumBlades) ) THEN
-      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be less than "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)
+      CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be no more than the total number of blades, "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)
       p%BldNd_BladesOut = p%NumBlades ! NOTE: we are forgiving and plateau to numBlades
    ELSE
       p%BldNd_BladesOut = InputFileData%BldNd_BladesOut

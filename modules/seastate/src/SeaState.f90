@@ -205,6 +205,13 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PCurrVyiPz0   = Current_InitOut%PCurrVyiPz0
          
 
+      
+         ! distribute wave field and turbine location variables as needed to submodule initInputs
+      InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
+      InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
+      InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
+      
+      
 
          ! Initialize Waves module
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, ErrStat2, ErrMsg2 ) 
@@ -229,6 +236,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL CleanUp()
          RETURN
       END IF
+      
       
       
          ! Copy Waves initialization output into the initialization input type for the WAMIT module

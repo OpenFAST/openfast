@@ -263,10 +263,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Set summary unit number in Waves, Radiation, and Morison initialization input data
       InputFileData%Morison%UnSum         = InputFileData%UnSum
     
-      
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
-      
 
       
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
