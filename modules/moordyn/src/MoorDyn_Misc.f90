@@ -980,114 +980,114 @@ CONTAINS
    END SUBROUTINE getWaterKin
 
 
-   ! unused routine with old code for taking wave kinematic grid inputs from HydroDyn
-   SUBROUTINE CopyWaterKinFromHydroDyn(p, InitInp)
-
-      TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
-      TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
-      
-      INTEGER(IntKi)                               :: I, J, K, Itemp
-
-
-      ! ----------------------------- Arrays for wave kinematics -----------------------------
-      
-      
-  !   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
-  !   ! The rAll array contains all nodes or reference points in the system 
-  !   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
-  !   
-  !   ! count the number of nodes to use for passing wave kinematics
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   J = J + p%nBodies
-  !   ! Rod node coordinates (including ends)
-  !   DO l = 1, p%nRods
-  !      J = J + (m%RodList(l)%N + 1)
-  !   END DO
-  !   ! Point reference point coordinates
-  !   J = J + p%nConnects
-  !   ! Line internal node coordinates
-  !   DO l = 1, p%nLines
-  !      J = J + (m%LineList(l)%N - 1)
-  !   END DO
-  !
-  !   ! allocate all relevant arrays
-  !   ! allocate state vector and temporary state vectors based on size just calculated
-  !   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
-  !   IF ( ErrStat /= ErrID_None ) THEN
-  !     ErrMsg  = ' Error allocating wave kinematics vectors.'
-  !     RETURN
-  !   END IF
-  !
-  !
-  !   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
-  !   J=0 
-  !   ! Body reference point coordinates
-  !   DO I = 1, p%nBodies
-  !      J = J + 1                     
-  !      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
-  !   END DO
-  !   ! Rod node coordinates
-  !   DO I = 1, p%nRods
-  !      DO K = 0,m%RodList(I)%N  
-  !         J = J + 1             
-  !         y%rAll(:,J) = m%RodList(I)%r(:,K)
-  !      END DO
-  !   END DO
-  !   ! Point reference point coordinates
-  !   DO I = 1, p%nConnects
-  !      J = J + 1
-  !      y%rAll(:,J) = m%ConnectList(I)%r
-  !   END DO      
-  !   ! Line internal node coordinates
-  !   DO I = 1, p%nLines
-  !      DO K = 1,m%LineList(I)%N-1
-  !         J = J + 1               
-  !         y%rAll(:,J) = m%LineList(I)%r(:,K)
-  !      END DO
-  !   END DO        
-     ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
-     
-     
-     ! ----- copy wave grid data over from HydroDyn (as was done in USFLOWT branch) -----
-     
-     ! get grid and time info (currently this is hard-coded to match what's in HydroDyn_Input
-     ! DO I=1,p%nzWave
-     !    p%pz(I) =  1.0 - 2.0**(p%nzWave-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
-     ! END DO
-     ! DO J = 1,p%nyWave
-     !    p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
-     ! END DO
-     ! DO K = 1,p%nxWave
-     !    p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
-     ! END DO
-     ! 
-     ! p%tWave = InitInp%WaveTime
-     
-     DO I=1,p%nzWave
-        DO J = 1,p%nyWave
-           DO K = 1,p%nxWave 
-              Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node on 3D grid
-              
-              p%uxWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
-              p%uyWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
-              p%uzWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
-              p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
-              p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
-              p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
-              p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
-           END DO
-        END DO
-     END DO
-        
-     DO J = 1,p%nyWave
-        DO K = 1,p%nxWave
-           Itemp = (J-1)*p%nxWave + K    ! index of actual node on surface 2D grid   
-           p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
-        END DO
-     END DO
-     
-   END SUBROUTINE CopyWaterKinFromHydroDyn
+  !! ! unused routine with old code for taking wave kinematic grid inputs from HydroDyn
+  !! SUBROUTINE CopyWaterKinFromHydroDyn(p, InitInp)
+  !!
+  !!    TYPE(MD_InitInputType),       INTENT(IN   )  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
+  !!    TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
+  !!    
+  !!    INTEGER(IntKi)                               :: I, J, K, Itemp
+  !!
+  !!
+  !!    ! ----------------------------- Arrays for wave kinematics -----------------------------
+  !!    
+  !!    
+  !!!   :::::::::::::: BELOW WILL BE USED EVENTUALLY WHEN WAVE INFO IS AN INPUT ::::::::::::::::::
+  !!!   ! The rAll array contains all nodes or reference points in the system 
+  !!!   ! (x,y,z global coordinates for each) in the order of bodies, rods, points, internal line nodes.      
+  !!!   
+  !!!   ! count the number of nodes to use for passing wave kinematics
+  !!!   J=0 
+  !!!   ! Body reference point coordinates
+  !!!   J = J + p%nBodies
+  !!!   ! Rod node coordinates (including ends)
+  !!!   DO l = 1, p%nRods
+  !!!      J = J + (m%RodList(l)%N + 1)
+  !!!   END DO
+  !!!   ! Point reference point coordinates
+  !!!   J = J + p%nConnects
+  !!!   ! Line internal node coordinates
+  !!!   DO l = 1, p%nLines
+  !!!      J = J + (m%LineList(l)%N - 1)
+  !!!   END DO
+  !!!
+  !!!   ! allocate all relevant arrays
+  !!!   ! allocate state vector and temporary state vectors based on size just calculated
+  !!!   ALLOCATE ( y%rAll(3,J), u%U(3,J), u%Ud(3,J), u%zeta(J), u%PDyn(J), STAT = ErrStat )
+  !!!   IF ( ErrStat /= ErrID_None ) THEN
+  !!!     ErrMsg  = ' Error allocating wave kinematics vectors.'
+  !!!     RETURN
+  !!!   END IF
+  !!!
+  !!!
+  !!!   ! go through the nodes and fill in the data (this should maybe be turned into a global function)
+  !!!   J=0 
+  !!!   ! Body reference point coordinates
+  !!!   DO I = 1, p%nBodies
+  !!!      J = J + 1                     
+  !!!      y%rAll(:,J) = m%BodyList(I)%r6(1:3)         
+  !!!   END DO
+  !!!   ! Rod node coordinates
+  !!!   DO I = 1, p%nRods
+  !!!      DO K = 0,m%RodList(I)%N  
+  !!!         J = J + 1             
+  !!!         y%rAll(:,J) = m%RodList(I)%r(:,K)
+  !!!      END DO
+  !!!   END DO
+  !!!   ! Point reference point coordinates
+  !!!   DO I = 1, p%nConnects
+  !!!      J = J + 1
+  !!!      y%rAll(:,J) = m%ConnectList(I)%r
+  !!!   END DO      
+  !!!   ! Line internal node coordinates
+  !!!   DO I = 1, p%nLines
+  !!!      DO K = 1,m%LineList(I)%N-1
+  !!!         J = J + 1               
+  !!!         y%rAll(:,J) = m%LineList(I)%r(:,K)
+  !!!      END DO
+  !!!   END DO        
+  !!   ! :::::::::::::::: the above might be used eventually. For now, let's store wave info grids within this module :::::::::::::::::
+  !!   
+  !!   
+  !!   ! ----- copy wave grid data over from HydroDyn (as was done in USFLOWT branch) -----
+  !!   
+  !!   ! get grid and time info (currently this is hard-coded to match what's in HydroDyn_Input
+  !!   ! DO I=1,p%nzWave
+  !!   !    p%pz(I) =  1.0 - 2.0**(p%nzWave-I)       !  -127,  -63,  -31,  -15,   -7,   -3,   -1,    0
+  !!   ! END DO
+  !!   ! DO J = 1,p%nyWave
+  !!   !    p%py(J) = WaveGrid_y0 + WaveGrid_dy*(J-1)
+  !!   ! END DO
+  !!   ! DO K = 1,p%nxWave
+  !!   !    p%px(K) = WaveGrid_x0 + WaveGrid_dx*(K-1)
+  !!   ! END DO
+  !!   ! 
+  !!   ! p%tWave = InitInp%WaveTime
+  !!   
+  !!   DO I=1,p%nzWave
+  !!      DO J = 1,p%nyWave
+  !!         DO K = 1,p%nxWave 
+  !!            Itemp = (I-1)*p%nxWave*p%nyWave + (J-1)*p%nxWave + K    ! index of actual node on 3D grid
+  !!            
+  !!            p%uxWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,1)  ! note: indices are t, z, y, x
+  !!            p%uyWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,2)
+  !!            p%uzWave (:,I,J,K) = InitInp%WaveVel( :,Itemp,3)
+  !!            p%axWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,1)
+  !!            p%ayWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,2)
+  !!            p%azWave (:,I,J,K) = InitInp%WaveAcc( :,Itemp,3)
+  !!            p%PDyn(   :,I,J,K) = InitInp%WavePDyn(:,Itemp)
+  !!         END DO
+  !!      END DO
+  !!   END DO
+  !!      
+  !!   DO J = 1,p%nyWave
+  !!      DO K = 1,p%nxWave
+  !!         Itemp = (J-1)*p%nxWave + K    ! index of actual node on surface 2D grid   
+  !!         p%zeta(:,J,K) = InitInp%WaveElev(:,Itemp)
+  !!      END DO
+  !!   END DO
+  !!   
+  !! END SUBROUTINE CopyWaterKinFromHydroDyn
    
      
    ! ----- write wave grid spacing to output file -----
