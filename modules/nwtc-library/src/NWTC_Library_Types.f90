@@ -137,15 +137,27 @@ CONTAINS
     DstProgDescData%Date = SrcProgDescData%Date
  END SUBROUTINE NWTC_Library_CopyProgDesc
 
- SUBROUTINE NWTC_Library_DestroyProgDesc( ProgDescData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyProgDesc( ProgDescData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(ProgDesc), INTENT(INOUT) :: ProgDescData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyProgDesc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyProgDesc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE NWTC_Library_DestroyProgDesc
 
  SUBROUTINE NWTC_Library_PackProgDesc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -330,15 +342,27 @@ IF (ALLOCATED(SrcFASTdataTypeData%Data)) THEN
 ENDIF
  END SUBROUTINE NWTC_Library_CopyFASTdataType
 
- SUBROUTINE NWTC_Library_DestroyFASTdataType( FASTdataTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyFASTdataType( FASTdataTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FASTdataType), INTENT(INOUT) :: FASTdataTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFASTdataType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFASTdataType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(FASTdataTypeData%ChanNames)) THEN
   DEALLOCATE(FASTdataTypeData%ChanNames)
 ENDIF
@@ -629,15 +653,27 @@ ENDIF
     DstOutParmTypeData%SignM = SrcOutParmTypeData%SignM
  END SUBROUTINE NWTC_Library_CopyOutParmType
 
- SUBROUTINE NWTC_Library_DestroyOutParmType( OutParmTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyOutParmType( OutParmTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OutParmType), INTENT(INOUT) :: OutParmTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyOutParmType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyOutParmType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE NWTC_Library_DestroyOutParmType
 
  SUBROUTINE NWTC_Library_PackOutParmType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -827,15 +863,27 @@ IF (ALLOCATED(SrcFileInfoTypeData%Lines)) THEN
 ENDIF
  END SUBROUTINE NWTC_Library_CopyFileInfoType
 
- SUBROUTINE NWTC_Library_DestroyFileInfoType( FileInfoTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyFileInfoType( FileInfoTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FileInfoType), INTENT(INOUT) :: FileInfoTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFileInfoType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFileInfoType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(FileInfoTypeData%FileLine)) THEN
   DEALLOCATE(FileInfoTypeData%FileLine)
 ENDIF
@@ -1132,15 +1180,27 @@ ENDIF
     DstQuaternionData%v = SrcQuaternionData%v
  END SUBROUTINE NWTC_Library_CopyQuaternion
 
- SUBROUTINE NWTC_Library_DestroyQuaternion( QuaternionData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyQuaternion( QuaternionData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Quaternion), INTENT(INOUT) :: QuaternionData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyQuaternion'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyQuaternion'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE NWTC_Library_DestroyQuaternion
 
  SUBROUTINE NWTC_Library_PackQuaternion( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1284,15 +1344,27 @@ ENDIF
     DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
  END SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType
 
- SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType( NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType( NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: NWTC_RandomNumber_ParameterTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
   DEALLOCATE(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)
 ENDIF

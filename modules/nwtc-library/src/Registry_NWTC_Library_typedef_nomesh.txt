@@ -28,8 +28,8 @@ typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
 typedef     ^             ^                 IntKi                    NumFiles
 typedef     ^             ^                 IntKi                    FileLine  {:}
 typedef     ^             ^                 IntKi                    FileIndx  {:}
-typedef     ^             ^                 CHARACTER(1024)          FileList  {:}
-typedef     ^             ^                 CHARACTER(1024)          Lines     {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  FileList  {:}
+typedef     ^             ^                 CHARACTER(MaxFileInfoLineLen)  Lines     {:}
 
 typedef   NWTC_Library  Quaternion          ReKi                     q0
 typedef     ^             ^                 ReKi                     v  {3}

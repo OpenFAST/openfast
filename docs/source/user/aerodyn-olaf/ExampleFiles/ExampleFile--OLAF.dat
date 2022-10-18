@@ -14,9 +14,9 @@ default CircSolvMaxIter    Maximum number of iterations for circulation solving 
 ===============================================================================================
 --------------------------- WAKE OPTIONS ------------------------------------------------------
 ------------------- WAKE EXTENT AND DISCRETIZATION --------------------------------------------
-150      nNWPanel           Number of near-wake panels [integer] (-)
-400     WakeLength         Total wake distance [integer] (number of time steps)
-default FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
+150     nNWPanel           Number of near-wake panels (-)
+400     nFWPanel           Number of far-wake panels (-)
+default nFWPanelFree       Number of free far-wake panels (-) {default: nFWPanel}
 False   FWShedVorticity    Include shed vorticity in the far wake {default: false}
 ------------------- WAKE REGULARIZATIONS AND DIFFUSION -----------------------------------------
 0       DiffusionMethod    Diffusion method to account for viscous effects {0: None, 1: Core Spreading, "default": 0}         
@@ -24,7 +24,7 @@ False   FWShedVorticity    Include shed vorticity in the far wake {default: fals
 2       RegFunction        Viscous diffusion function {0: None, 1: Rankine, 2: LambOseen, 3: Vatistas, 4: Denominator, "default": 3} (switch)
 3       WakeRegMethod      Wake regularization method {1: Constant, 2: Stretching, 3: Age, default: 1} (switch)
 0.25    WakeRegFactor      Wake regularization factor (m or -)
-0.25    BladeRegFactor     Blade regularization factor (m or -)
+0.25    WingRegFactor      Wing regularization factor (m or -)
 1000    CoreSpreadEddyVisc Eddy viscosity in core spreading methods, typical values 1-1000 
 ------------------- WAKE TREATMENT OPTIONS ---------------------------------------------------
 False   TwrShadowOnWake    Include tower flow disturbance effects on wake convection {default:false} [only if TwrPotent or TwrShadow]
@@ -37,9 +37,9 @@ False   TwrShadowOnWake    Include tower flow disturbance effects on wake convec
 --------------------------- OUTPUT OPTIONS  ---------------------------------------------------
 1       WrVTk              Outputs Visualization Toolkit (VTK) (independent of .fst option) {0: NoVTK, 1: Write VTK at each time step} (flag)
 1       nVTKBlades         Number of blades for which VTK files are exported {0: No VTK per blade, n: VTK for blade 1 to n} (-) 
-2       VTKCoord           Coordinate system used for VTK export. {1: Global, 2: Hub, "default": 1} 
-1       VTK_fps            Frame rate for VTK output (frames per second) {"all" for all glue code timesteps, "default" for all OLAF timesteps} [used only if WrVTK=1] 
+2       VTKCoord           Coordinate system used for VTK export. {1: Global, 2: Hub, 3: Both, "default": 1} 
+1       VTK_fps            Frame rate for VTK output (frames per second) {"all" for all glue code timesteps, "default" for all OLAF timesteps} [only if WrVTK=1] 
 0       nGridOut           Number of grid outputs
-GridName  GridType  TStart  TEnd     DTOut     XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
+GridName  GridType  TStart  TEnd     DTGrid    XStart    XEnd   nX    YStart   YEnd    nY    ZStart   ZEnd   nZ
 (-)         (-)      (s)     (s)      (s)        (m)      (m)    (-)    (m)     (m)     (-)    (m)     (m)    (-)
 ------------------------------------------------------------------------------------------------
