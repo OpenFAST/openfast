@@ -138,9 +138,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: VolHub      !< Hub volume [m^3]
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
-    REAL(ReKi)  :: NacCenBx      !< Nacelle center of buoyancy x direction offset [m]
-    REAL(ReKi)  :: NacCenBy      !< Nacelle center of buoyancy y direction offset [m]
-    REAL(ReKi)  :: NacCenBz      !< Nacelle center of buoyancy z direction offset [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
   END TYPE RotInputFile
 ! =======================
 ! =========  AD_InputFile  =======
@@ -318,9 +316,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: VolHub      !< Hub volume [m^3]
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
-    REAL(ReKi)  :: NacCenBx      !< Nacelle center of buoyancy x direction offset [m]
-    REAL(ReKi)  :: NacCenBy      !< Nacelle center of buoyancy y direction offset [m]
-    REAL(ReKi)  :: NacCenBz      !< Nacelle center of buoyancy z direction offset [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length based on CB, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTaper      !< Matrix of blade element taper, used in buoyancy calculation [-]
@@ -3645,9 +3641,7 @@ ENDIF
     DstRotInputFileData%VolHub = SrcRotInputFileData%VolHub
     DstRotInputFileData%HubCenBx = SrcRotInputFileData%HubCenBx
     DstRotInputFileData%VolNac = SrcRotInputFileData%VolNac
-    DstRotInputFileData%NacCenBx = SrcRotInputFileData%NacCenBx
-    DstRotInputFileData%NacCenBy = SrcRotInputFileData%NacCenBy
-    DstRotInputFileData%NacCenBz = SrcRotInputFileData%NacCenBz
+    DstRotInputFileData%NacCenB = SrcRotInputFileData%NacCenB
  END SUBROUTINE AD_CopyRotInputFile
 
  SUBROUTINE AD_DestroyRotInputFile( RotInputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -3783,9 +3777,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! VolHub
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBx
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBy
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBz
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3937,12 +3929,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VolNac
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBx
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBy
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBz
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%NacCenB,1), UBOUND(InData%NacCenB,1)
+      ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE AD_PackRotInputFile
 
  SUBROUTINE AD_UnPackRotInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4126,12 +4116,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%VolNac = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBx = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%NacCenB,1)
+    i1_u = UBOUND(OutData%NacCenB,1)
+    DO i1 = LBOUND(OutData%NacCenB,1), UBOUND(OutData%NacCenB,1)
+      OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE AD_UnPackRotInputFile
 
  SUBROUTINE AD_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
@@ -11819,9 +11809,7 @@ ENDIF
     DstRotParameterTypeData%VolHub = SrcRotParameterTypeData%VolHub
     DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
     DstRotParameterTypeData%VolNac = SrcRotParameterTypeData%VolNac
-    DstRotParameterTypeData%NacCenBx = SrcRotParameterTypeData%NacCenBx
-    DstRotParameterTypeData%NacCenBy = SrcRotParameterTypeData%NacCenBy
-    DstRotParameterTypeData%NacCenBz = SrcRotParameterTypeData%NacCenBz
+    DstRotParameterTypeData%NacCenB = SrcRotParameterTypeData%NacCenB
 IF (ALLOCATED(SrcRotParameterTypeData%BlRad)) THEN
   i1_l = LBOUND(SrcRotParameterTypeData%BlRad,1)
   i1_u = UBOUND(SrcRotParameterTypeData%BlRad,1)
@@ -12208,9 +12196,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! VolHub
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBx
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBy
-      Re_BufSz   = Re_BufSz   + 1  ! NacCenBz
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
   Int_BufSz   = Int_BufSz   + 1     ! BlRad allocated yes/no
   IF ( ALLOCATED(InData%BlRad) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BlRad upper/lower bounds for each dimension
@@ -12517,12 +12503,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VolNac
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBx
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBy
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NacCenBz
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%NacCenB,1), UBOUND(InData%NacCenB,1)
+      ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
   IF ( .NOT. ALLOCATED(InData%BlRad) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -13084,12 +13068,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%VolNac = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBx = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NacCenBz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%NacCenB,1)
+    i1_u = UBOUND(OutData%NacCenB,1)
+    DO i1 = LBOUND(OutData%NacCenB,1), UBOUND(OutData%NacCenB,1)
+      OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlRad not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

@@ -2657,6 +2657,30 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
+   !======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! VolHub - Hub volume (m^3)
+      call ParseVar( FileInfo_In, CurLine, "VolHub", InputFileData%rotors(iR)%VolHub, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return   
+         ! HubCenBx - Hub center of buoyancy x direction offset (m)
+      call ParseVar( FileInfo_In, CurLine, "HubCenBx", InputFileData%rotors(iR)%HubCenBx, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return 		 
+   end do
+
+   !======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! VolNac - Nacelle volume (m^3)
+      call ParseVar( FileInfo_In, CurLine, "VolNac", InputFileData%rotors(iR)%VolNac, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return	 
+         ! NacCenB - Nacelle center of buoyancy x,y,z direction offsets (m)
+      call ParseAry( FileInfo_In, CurLine, 'NacCenB', InputFileData%rotors(iR)%NacCenB, 3 , ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return   
+   end do
+
    !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
@@ -2691,36 +2715,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          InputFileData%rotors(iR)%TwrCb(I)   = TmpRe5( 5)
       end do
    enddo
-
-   !======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-   do iR = 1,size(NumBlades) ! Loop on rotors
-      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
-      CurLine = CurLine + 1
-         ! VolHub - Hub volume (m^3)
-      call ParseVar( FileInfo_In, CurLine, "VolHub", InputFileData%rotors(iR)%VolHub, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return   
-         ! HubCenBx - Hub center of buoyancy x direction offset (m)
-      call ParseVar( FileInfo_In, CurLine, "HubCenBx", InputFileData%rotors(iR)%HubCenBx, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 		 
-   end do
-
-   !======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-   do iR = 1,size(NumBlades) ! Loop on rotors
-      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
-      CurLine = CurLine + 1
-         ! VolNac - Nacelle volume (m^3)
-      call ParseVar( FileInfo_In, CurLine, "VolNac", InputFileData%rotors(iR)%VolNac, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return	 
-         ! NacCenBx - Nacelle center of buoyancy x direction offset (m)
-      call ParseVar( FileInfo_In, CurLine, "NacCenBx", InputFileData%rotors(iR)%NacCenBx, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return  
-         ! NacCenBy - Nacelle center of buoyancy y direction offset (m)
-      call ParseVar( FileInfo_In, CurLine, "NacCenBy", InputFileData%rotors(iR)%NacCenBy, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 
-         ! NacCenBz - Nacelle center of buoyancy z direction offset (m)
-      call ParseVar( FileInfo_In, CurLine, "NacCenBz", InputFileData%rotors(iR)%NacCenBz, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return   
-   end do
 
    !======  Outputs  ====================================================================================
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo

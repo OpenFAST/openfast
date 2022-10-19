@@ -24,15 +24,13 @@ FAST.Farm                                     13   na                ------ SHAR
 FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile     Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
 FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring         Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
 AeroDyn 15                                    13   Buoyancy          True       Buoyancy          - Include buoyancy effects? (flag)
+AeroDyn 15                                    65   HubPropsSection   ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    66   VolHub            7.0        VolHub            - Hub volume (m^3)
+AeroDyn 15                                    67   HubCenBx          0.5        HubCenBx          - Hub center of buoyancy x direction offset (m)
+AeroDyn 15                                    68   NacPropsSection   ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    69   VolNac            32.0       VolNac            - Nacelle volume (m^3)
+AeroDyn 15                                    70   NacCenB           0.4        NacCenB           - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
 AeroDyn 15                                         TwrCb             1.0        [additional column in *Tower Influence and Aerodynamics* table]
-AeroDyn 15                                    74   HubPropsSection   ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-AeroDyn 15                                    75   VolHub            7.0        VolHub            - Hub volume (m^3)
-AeroDyn 15                                    76   HubCenBx          0.5        HubCenBx          - Hub center of buoyancy x direction offset (m)
-AeroDyn 15                                    77   NacPropsSection   ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-AeroDyn 15                                    78   VolNac            32.0       VolNac            - Nacelle volume (m^3)
-AeroDyn 15                                    79   NacCenBx          0.4        NacCenBx          - Nacelle center of buoyancy x direction offset (m)
-AeroDyn 15                                    80   NacCenBy          0.2        NacCenBy          - Nacelle center of buoyancy y direction offset (m)
-AeroDyn 15                                    81   NacCenBz          0.1        NacCenBz          - Nacelle center of buoyancy z direction offset (m)
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]

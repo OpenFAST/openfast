@@ -115,4 +115,5 @@ linearization of the full coupled solution. When induction is enabled
 frozen-wake assumption, by setting ``FrozenWake = TRUE``. The UA
 models are not set up to support linearization, so, UA must be disabled
 during linearization by setting ``AFAeroMod = 1``. Linearization is not 
-currently possible when modeling an MHK turbine.
+currently possible when modeling an MHK turbine, but we will attempt to
+enable it in an upcoming release.

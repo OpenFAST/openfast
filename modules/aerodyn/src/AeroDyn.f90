@@ -1302,9 +1302,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%VolHub = RotData%VolHub
    p%HubCenBx = RotData%HubCenBx
    p%VolNac = RotData%VolNac
-   p%NacCenBx = RotData%NacCenBx
-   p%NacCenBy = RotData%NacCenBy
-   p%NacCenBz = RotData%NacCenBz
+   p%NacCenB = RotData%NacCenB
    
    p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
@@ -2241,7 +2239,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
 
          ! Global offset between nacelle reference position and center of buoyancy of nacelle node
-      NacglobCB = matmul( [p%NacCenBx, p%NacCenBy, p%NacCenBz ], u%NacelleMotion%Orientation(:,:,1) )
+      NacglobCB = matmul( p%NacCenB, u%NacelleMotion%Orientation(:,:,1) )
          
          ! Buoyant force at nacelle node in global coordinates
       NacforceB(1) = 0.0_ReKi

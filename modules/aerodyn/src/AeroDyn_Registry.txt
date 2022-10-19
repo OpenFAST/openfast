@@ -115,9 +115,7 @@ typedef	^	RotInputFile	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
-typedef	^	RotInputFile	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
-typedef	^	RotInputFile	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
-typedef	^	RotInputFile	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
+typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
@@ -275,9 +273,7 @@ typedef	^	RotParameterType	ReKi	BlCenBt	{:}{:}	-	-	"Tangential offset between ae
 typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
-typedef	^	RotParameterType	ReKi	NacCenBx    -	-	-	"Nacelle center of buoyancy x direction offset" m
-typedef	^	RotParameterType	ReKi	NacCenBy    -	-	-	"Nacelle center of buoyancy y direction offset" m
-typedef	^	RotParameterType	ReKi	NacCenBz    -	-	-	"Nacelle center of buoyancy z direction offset" m
+typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -

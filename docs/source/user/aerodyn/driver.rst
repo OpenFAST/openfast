@@ -371,6 +371,29 @@ An example is given below for two turbines, the first one having 3 blades, the s
     "AD_Turbine2_blade2.dat" ADBlFile(5) - Name of file containing distributed aerodynamic properties for Blade #5 (-) 
 
 
+
+**Hub and nacelle inputs**
+
+The sections defining the hub and nacelle buoyancy parameters must also be reproduced for each turbine.
+
+An example is given below for two turbines:
+
+.. code::
+
+    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    7.0   VolHub             - Hub volume (m^3)
+    0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
+    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    5.0   VolHub             - Hub volume (m^3)
+    0.2   HubCenBx           - Hub center of buoyancy x direction offset (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    32.0  VolNac             - Nacelle volume (m^3)
+    0.3, 0.0, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    30.0  VolNac             - Nacelle volume (m^3)
+    0.5, 0.1, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+
+
 **Aerodynamic tower inputs**
 
 The entire tower input section of AeroDyn has to be reproduced for each turbine, including turbines that are set not to have a tower (`hasTower=False`).
@@ -395,33 +418,6 @@ An example is given below for two turbines:
      0.0      4.0     1.0    0.1     0.0
     15.0      3.0     1.0    0.1     0.0
     30.0      2.0     1.0    0.1     0.0
-
-
-**Hub and nacelle inputs**
-
-The sections defining the hub and nacelle buoyancy parameters must also be reproduced for each turbine.
-
-An example is given below for two turbines:
-
-.. code::
-
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-    7.0   VolHub             - Hub volume (m^3)
-    0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
-    5.0   VolHub             - Hub volume (m^3)
-    0.2   HubCenBx           - Hub center of buoyancy x direction offset (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-    32.0  VolNac             - Nacelle volume (m^3)
-    0.5   NacCenBx           - Nacelle center of buoyancy x direction offset (m)
-    0.1   NacCenBy           - Nacelle center of buoyancy y direction offset (m)
-    0.0   NacCenBz           - Nacelle center of buoyancy z direction offset (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
-    30.0  VolNac             - Nacelle volume (m^3)
-    0.3   NacCenBx           - Nacelle center of buoyancy x direction offset (m)
-    0.0   NacCenBy           - Nacelle center of buoyancy y direction offset (m)
-    0.05  NacCenBz           - Nacelle center of buoyancy z direction offset (m)
-
 
 
 .. _ad_inputfiles_examples:

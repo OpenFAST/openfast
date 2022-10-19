@@ -370,8 +370,8 @@ Nacelle Properties
 The input parameters in this section pertain to the calculation of buoyant loads
 on the nacelle and are only used when ``Buoyancy = TRUE``.
 
-``VolNac`` is the volume of the nacelle and ``NacCenBx``, ``NacCenBy``, and 
-``NacCenBz`` are the x, y, and z offsets of the nacelle center of buoyancy from
+``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
+position (x,y,z vector) of the nacelle center of buoyancy from
 the yaw bearing in local nacelle coordinates. To neglect buoyant 
 loads on the nacelle, set ``VolNac`` to 0.
 

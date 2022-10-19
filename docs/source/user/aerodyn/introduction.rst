@@ -74,6 +74,15 @@ influence and loading (with the exception of nacelle and hub buoyant
 loads), aeroacoustics, and wake and array effects between multiple 
 turbines in a wind plant, are not yet available in AeroDyn v15 and newer.
 
+AeroDyn consists of five submodels: (1) rotor wake/induction, (2) blade
+airfoil aerodynamics, (3) tower influence on the fluid local to the
+blade nodes, (4) tower drag, (5) aeroacoustics,
+and (6) buoyancy on the blades, hub, nacelle, and tower (for MHK turbines). 
+Nacelle, hub, and tail-vane fluid influence and loading (with the exception
+of nacelle and hub buoyant loads) and wake and array effects between 
+multiple turbines in a wind plant are not yet available in AeroDyn. 
+Aeroacoustics are not available for MHK turbines.
+
 For operating wind and MHK turbine rotors, AeroDyn calculates the
 influence of the wake via induction factors based on the quasi-steady
 Blade-Element/Momentum (BEM) theory, which requires an iterative
