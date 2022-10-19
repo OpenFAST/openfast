@@ -71,7 +71,7 @@ module AeroDyn_Driver_Subs
 
 
    ! User Swap Array - TODO not clean
-   integer, parameter :: MAX_SWAP_ARRAY_SIZE = 14
+   integer, parameter :: MAX_SWAP_ARRAY_SIZE = 16
    integer(IntKi),  parameter :: iAzi         = 1 !< index in swap array for azimuth
    integer(IntKi),  parameter :: iN_          = 4 !< index in swap array for time step
    integer(IntKi),  parameter :: igenTorque   = 5 !< index in swap array for generator torque
@@ -98,7 +98,9 @@ module AeroDyn_Driver_Subs
        "SwapRotSpeedI",&!11
        "SwapRotSpeedF",&!12
        "SwapAlpha    ",&!13
-       "SwapRegion   " &!14
+       "SwapRegion   ",&!14
+       "Misc         ",&!15
+       "Misc         " &!16
        /)
    character(len=ChanLen), dimension(MAX_SWAP_ARRAY_SIZE), parameter :: userSwapUnt=(/ &
        "(deg)    ",&! 1 
@@ -114,7 +116,9 @@ module AeroDyn_Driver_Subs
        "(rad/s)  ",&!11
        "(rad/s)  ",&!12
        "(-)      ",&!13
-       "(-)      " &!14
+       "(-)      ",&!14
+       "(tbd)    ",&!15
+       "(tbd)    " &!16
        /)
 
    real(ReKi), parameter :: myNaN = -99.9_ReKi
@@ -2120,14 +2124,14 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    real(ReKi),                  intent(  out) :: rotSpeed !<  [rad/s]
    real(ReKi),                  intent(  out) :: rotAcc   !<  [rad/s^2]
    ! Main parameters to be adjusted
-   real(ReKi), parameter      :: cutInSpeed = 0.10     !< Cut in speed [rad/s]
-   real(ReKi), parameter      :: ratedSpeed = 1.00     !< Rated speed [rad/s]
-   real(ReKi), parameter      :: maxSpeed   = 10       !< Maximum rotor speed [rad/s]
-   real(ReKi), parameter      :: minSpeed   = 0.0      !< Minimum rotor speed [rad/s]
-   real(ReKi), parameter      :: genTorque_rated =  10.0e6  !< Generator torque at rated [Nm]
-   real(ReKi), parameter      :: genTorqueRate_max = 8.0e6  !< Maximum torque rate [Nm/s]  
-   real(ReKi), parameter      :: k2 = 1.0e7               !< Proportionality constant for region 2 [Nm/(rad/s)^2]
-   real(ReKi), parameter      :: rotInertia = 5.0e6       !< Rotor inertia [kg m^2]
+   real(ReKi), parameter      :: cutInSpeed = 0.10      !< [rad/s]
+   real(ReKi), parameter      :: ratedSpeed = 1.00     !< [rad/s]
+   real(ReKi), parameter      :: maxSpeed   = 10       !< [rad/s]
+   real(ReKi), parameter      :: minSpeed   = 0.0      !< [rad/s]
+   real(ReKi), parameter      :: genTorque_rated =  10.0e6  !< [rad/s]
+   real(ReKi), parameter      :: genTorqueRate_max = 8.0e6  !< [Nm/s] Maximum torque rate 
+   real(ReKi), parameter      :: k2 = 1.0e7  !< Proportionality constant
+   real(ReKi), parameter      :: rotInertia = 5.0e6  !< [kg m^2]
    real(ReKi), parameter      :: CornerFreqTq    = 3.5    !< Corner frequency (-3dB point) for the low-pass filter, rad/s.
    real(ReKi), parameter      :: CornerFreqSpeed = 1.0    !< Corner frequency (-3dB point) for the low-pass filter, rad/s.
    ! Local
@@ -2152,6 +2156,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
       allocate(arr(MAX_SWAP_ARRAY_SIZE))
       arr    = 0.0_ReKi
       arr(iN_) = real(nt, ReKi)
+      arr(iAzi+1) = rotSpeed ! setting to initial rotor speed (the first time this funciton is called, rotSpeed=rotSpeedInit)
    endif
 
    ! Retrieve previous time step values
@@ -2165,6 +2170,10 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    genTorque_filt_prev   = arr(igenTorqueF)
    deltaTorque_prev      = arr(iDeltaTorque)
    deltaTorque_filt_prev = arr(iDeltaTorqueF)
+   ! Example, accessing even older values
+   !rotSpeed_prev_prev = arr(15)
+   !azimuth_prev_prev = arr(16)
+
    nt_prev        = int(arr(iN_), IntKi)
    time_prev      = dvr%dt * nt_prev
    time           = dvr%dt * nt
@@ -2217,7 +2226,6 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    deltaTorque_filt = ( 1.0 - alphaTq )*deltaTorque + alphaTq*deltaTorque_filt_prev
 
    ! --- Rotor Speed
-   ! Equation written at low speed shaft for now
    rotSpeed_int  = rotSpeed_prev + dvr%dt/rotInertia * (deltaTorque)
    !rotSpeed_int = 6.0*2*PI/60 ! Constant speed hack
 
@@ -2236,7 +2244,31 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    rotAcc = (rotSpeed-rotSpeed_prev) / dvr%dt ! Or set it to zero..
    !rotAcc = 0.0_ReKi
 
+   ! --- Example, access other turbine information
+   ! NOTE: if the turbine index is higher than iWT, then the information is at "new time step"
+   !       if the turbine index is lower  than iWT, then the information is at "old time step"
+   !if (iWT==2) then
+   !   ! OR use:
+   !   azimuth  = dvr%WT(1)%hub%azimuth
+   !   rotSpeed = dvr%WT(1)%hub%rotSpeed
+   !   rotAcc   = dvr%WT(1)%hub%rotAcc
+   !   ! -- If the turbine uses a swap array (user hub motion0, you can also access it here)
+   !   !azimuth  = FED%WT(2)%userSwapArray(iAzi+0)
+   !   !rotSpeed = FED%WT(2)%userSwapArray(iAzi+1)
+   !   !rotAcc   = FED%WT(2)%userSwapArray(iAzi+2)
+   !endif
+
+   ! --- Example enforce initial velocity at few first time steps!
+   ! NOTE: first time step nt=1
+   !if (nt<=30) then
+   !   rotSpeed = rotSpeed_prev
+   !   azimuth  = modulo(REAL(dvr%dT*(nt-1)*rotSpeed, ReKi) * R2D, 360.0_ReKi )
+   !   rotAcc   = 0
+   !endif
+
+
    ! --- Store new values in swap array
+   arr(:) = myNaN
    arr(iAzi+0)        = azimuth
    arr(iAzi+1)        = rotSpeed
    arr(iAzi+2)        = rotAcc
@@ -2251,6 +2283,9 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    arr(irotSpeedF )   = rotSpeed_filt
    arr(iAlpha )       = alphaTq
    arr(iRegion )      = region
+   ! --- Example store even older values
+   !arr(15) = rotSpeed_prev
+   !arr(16) = azimuth_prev
 end subroutine userHubMotion
 
 end module AeroDyn_Driver_Subs
