@@ -1209,6 +1209,7 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
    ErrMsg  = "" 
    
    HDOut_GetChannels = 0
+   newFoundMask = .false.
 
    DO I = 1,NUserOutputs
       IF (.NOT. foundMask(I) ) THEN
