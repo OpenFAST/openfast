@@ -211,19 +211,19 @@ PROGRAM MoorDyn_Driver
    ! -------------------------------- -----------------------------------
    
    ! fill in the hydrodynamics data
-   ALLOCATE( MD_InitInp%WaveVel (2,200,3))
-   ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
-   ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
-   ALLOCATE( MD_InitInp%WaveElev(2,200)  )
-   ALLOCATE( MD_InitInp%WaveTime(2)      )
-   MD_InitInp%WaveVel  = 0.0_ReKi
-   MD_InitInp%WaveAcc  = 0.0_ReKi
-   MD_InitInp%WavePDyn = 0.0_ReKi
-   MD_InitInp%WaveElev = 0.0_ReKi
-   MD_InitInp%WaveTime = 0.0_ReKi
-   DO I = 1,SIZE(MD_InitInp%WaveTime)
-      MD_InitInp%WaveTime(I) = 600.0*I
-   END DO
+   !ALLOCATE( MD_InitInp%WaveVel (2,200,3))
+   !ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
+   !ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveElev(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveTime(2)      )
+   !MD_InitInp%WaveVel  = 0.0_ReKi
+   !MD_InitInp%WaveAcc  = 0.0_ReKi
+   !MD_InitInp%WavePDyn = 0.0_ReKi
+   !MD_InitInp%WaveElev = 0.0_ReKi
+   !MD_InitInp%WaveTime = 0.0_ReKi
+   !DO I = 1,SIZE(MD_InitInp%WaveTime)
+   !   MD_InitInp%WaveTime(I) = 600.0*I
+   !END DO
    
    ! open driver output file >>> not yet used <<<
    CALL GetNewUnit( Un )
@@ -668,16 +668,10 @@ CONTAINS
       CHARACTER(*),                  INTENT( IN    )   :: inputFile
       TYPE(MD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
       ! Local variables  
-      INTEGER                                          :: I                    ! generic integer for counting
       INTEGER                                          :: J                    ! generic integer for counting
-      CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
       CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
-      CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-      CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-      CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       CHARACTER(1024)                                  :: FileName             ! Name of MoorDyn input file  
-      CHARACTER(1024)                                  :: FilePath             ! Path Name of MoorDyn input file  
    
       UnEcho=-1
       UnIn  =-1
