@@ -688,8 +688,8 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
-                   ! check for correct number of columns in current line
-                   IF ( CountWords( Line ) /= 7 ) THEN
+                   ! check for correct number of columns in current line (bjj: I'm not going to throw an error if there are extra columns in this line, e.g. comments)
+                   IF ( CountWords( Line ) < 7 ) THEN
                        CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod Type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
                        CALL CleanUp()
                        RETURN
@@ -1245,8 +1245,8 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! check for correct number of columns in current line
-                  IF ( CountWords( Line ) /= 7 ) THEN
+                  ! check for correct number of columns in current line (bjj: I'm not going to throw an error if there are extra columns in this line, e.g. comments)
+                  IF ( CountWords( Line ) < 7 ) THEN
                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                       RETURN
