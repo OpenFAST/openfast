@@ -313,6 +313,12 @@ function is_numeric(string, x)
    character(len=12) :: fmt
    x = 0.0_reki
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid numbers
+      is_numeric = .false.
+      return
+   end if
+   
    write(fmt,'("(F",I0,".0)")') n
    read(string,fmt,iostat=e) x
    is_numeric = e == 0
@@ -327,6 +333,12 @@ function is_int(string, x)
    character(len=12) :: fmt
    x = 0
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid integers
+      is_int = .false.
+      return
+   end if
+   
    write(fmt,'("(I",I0,")")') n
    read(string,fmt,iostat=e) x
    is_int = e == 0
