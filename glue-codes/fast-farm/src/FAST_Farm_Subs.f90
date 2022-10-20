@@ -1928,7 +1928,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
             SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
          END IF
       
-         ! mapping (SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()
+         ! mapping; Note: SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()
          CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations

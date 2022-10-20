@@ -260,7 +260,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%AddBQuad     = InputFileData%AddBQuad
       
       
-         ! Set summary unit number in Waves, Radiation, and Morison initialization input data
+         ! Set summary unit number in Morison initialization input data
       InputFileData%Morison%UnSum         = InputFileData%UnSum
     
          ! Now call each sub-module's *_Init subroutine

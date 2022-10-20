@@ -236,10 +236,10 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: a_out(3)     ! acceleration of point
 
       REAL(DbKi)                       :: rRel(3)
-      REAL(DbKi)                       :: rRel2(3)
+!      REAL(DbKi)                       :: rRel2(3)
 
-      REAL(DbKi)                       :: r_out2(3)
-      REAL(DbKi)                       :: rd_out2(3)
+!      REAL(DbKi)                       :: r_out2(3)
+!      REAL(DbKi)                       :: rd_out2(3)
       REAL(DbKi)                       :: H(3,3)
 
       ! rd_in should be in global orientation frame
@@ -322,10 +322,10 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: Mout(6,6)   ! resultant mass and inertia matrix about ref point
   
       REAL(DbKi)                       :: H(     3,3) ! "anti-symmetric tensor components" from Sadeghi and Incecik
-      REAL(DbKi)                       :: tempM( 3,3)
-      REAL(DbKi)                       :: tempM2(3,3)
-      REAL(DbKi)                       :: Htrans(3,3)
-      Integer(IntKi)                   :: I,J
+!      REAL(DbKi)                       :: tempM( 3,3)
+!      REAL(DbKi)                       :: tempM2(3,3)
+!      REAL(DbKi)                       :: Htrans(3,3)
+!      Integer(IntKi)                   :: I
    
       ! sub-matrix definitions are accordint to  | m    J |
       !                                          | J^T  I |
@@ -444,8 +444,8 @@ CONTAINS
       REAL(DbKi),      INTENT ( IN    )  :: gamma   ! member twist angle
       REAL(DbKi)                         :: R(3,3)  ! rotation matrix 
      
-      INTEGER(IntKi)                     :: errStat  
-      CHARACTER(100)                     :: errMsg   
+!      INTEGER(IntKi)                     :: errStat  
+!      CHARACTER(100)                     :: errMsg   
 
       REAL(DbKi)                         :: s1, c1, s2, c2, s3, c3
 
@@ -920,7 +920,7 @@ CONTAINS
 
       INTEGER(IntKi)             :: ix, iy, iz, it        ! indices for interpolation      
       INTEGER(IntKi)             :: iz0, iz1              ! special indices for currrent interpolation  
-      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
+!      INTEGER(IntKi)             :: N                     ! number of rod elements for convenience
       Real(SiKi)                 :: fx, fy, fz, ft        ! interpolation fractions
       Real(DbKi)                 :: zp                    ! zprime coordinate used for Wheeler stretching
    
@@ -1099,7 +1099,7 @@ CONTAINS
     CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
 
     INTEGER(IntKi)                   :: ErrStat2
-    CHARACTER(120)                   :: ErrMsg2   
+!    CHARACTER(120)                   :: ErrMsg2   
  
     CHARACTER(120)                   :: Frmt       
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
@@ -1131,8 +1131,9 @@ CONTAINS
      Frmt = '('//TRIM(Int2LStr(8))//'(A1,e10.4))'      
      WRITE(UnOut,*, IOSTAT=ErrStat2)  ( " ", TRIM(Num2LStr(p%pzWave(I))), I=1,p%nzWave )
      
-     CLOSE(UnOut, IOSTAT = ErrStat )
-     IF ( ErrStat /= 0 ) THEN
+     CLOSE(UnOut, IOSTAT = ErrStat2 )
+     IF ( ErrStat2 /= 0 ) THEN
+        ErrStat = ErrID_Severe
         ErrMsg = 'Error closing wave grid file'
      END IF
      
@@ -1148,7 +1149,7 @@ CONTAINS
     CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg             ! Error message if ErrStat /= ErrID_None
 
     INTEGER(IntKi)                   :: ErrStat2
-    CHARACTER(120)                   :: ErrMsg2   
+!    CHARACTER(120)                   :: ErrMsg2   
     
     INTEGER(IntKi)   :: UnOut    ! for outputing wave kinematics data
     INTEGER(IntKi)   :: I,J,K, l, Itemp
@@ -1297,7 +1298,7 @@ CONTAINS
       REAL(SiKi)                       :: t, Frac
       CHARACTER(1024)                  :: FileName             ! Name of MoorDyn input file  
       CHARACTER(120)                   :: Line
-      CHARACTER(120)                   :: Line2  
+!      CHARACTER(120)                   :: Line2  
       CHARACTER(120)                   :: entries2  
       INTEGER(IntKi)                   :: coordtype
    
@@ -1327,7 +1328,7 @@ CONTAINS
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHx(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCHy(:)       ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
       COMPLEX(SiKi), ALLOCATABLE       :: WaveVelCV( :)        ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+!      COMPLEX(SiKi)                    :: WGNC                  ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
       INTEGER(IntKi)                   :: ErrStatTmp
       INTEGER(IntKi)                   :: ErrStat2
