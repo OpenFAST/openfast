@@ -319,6 +319,19 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          CALL Cleanup()
          RETURN
       END IF   
+      
+   !...............................................................................................................................  
+   ! step 4.5: initialize farm-level MoorDyn if applicable
+   !...............................................................................................................................  
+   
+   if (farm%p%MooringMod == 3) then
+      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2)  ! FAST instances must be initialized first so that turbine initial positions are known
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF   
+   end if
 
    !...............................................................................................................................  
    ! step 5: Open output file (or set up output file handling)      
@@ -537,6 +550,22 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
       
+       ! Mod_WaveField - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+   CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+       ! Mod_SharedMooring - flag for array-level mooring. (switch) 0: none, 3: yes/MoorDyn
+   CALL ReadVar( UnIn, InputFile, p%MooringMod, "Mod_SharedMooring", "Array-level mooring handling (-) (switch) {0: none; 3: array-level MoorDyn model}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
    !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -554,6 +583,31 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
    IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
    SC_InitInp%DLL_FileName =  p%SC_FileName
+      
+   !---------------------- SHARED MOORING SYSTEM ------------------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: SHARED MOORING SYSTEM', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! MD_FileName - Name/location of the farm-level MoorDyn input file (quoated string):
+   CALL ReadVar( UnIn, InputFile, p%MD_FileName, "MD_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
+   
+      ! DT_Mooring - time step for farm-level mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
    
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc )
@@ -1367,6 +1421,12 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   
+   ! --- SIMULATION CONTROL ---   
+   IF ((p%WaveFieldMod .ne. 1) .and. (p%WaveFieldMod .ne. 2)) CALL SetErrStat(ErrID_Fatal,'WaveFieldMod must be 1 or 2.',ErrStat,ErrMsg,RoutineName)
+   IF ((p%MooringMod .ne. 0) .and. (p%MooringMod .ne. 3)) CALL SetErrStat(ErrID_Fatal,'MooringMod must be 0 or 3.',ErrStat,ErrMsg,RoutineName)
+   
+   
    IF (p%DT_low <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_low must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1375,7 +1435,10 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ! --- SUPER CONTROLLER ---
    ! TODO : Verify that the DLL file exists
    
-   
+   ! --- SHARED MOORING SYSTEM ---
+   ! TODO : Verify that p%MD_FileName file exists
+   if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
+      
    ! --- WAKE DYNAMICS ---
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
@@ -1544,7 +1607,8 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
 
    ! local variables
    type(FWrap_InitInputType)               :: FWrap_InitInp
-   type(FWrap_InitOutputType)              :: FWrap_InitOut
+   type(FWrap_InitOutputType)              :: FWrap_InitOut   
+   REAL(DbKi)                              :: FWrap_Interval                  !< Coupling interval that FWrap is called at (affected by MooringMod)
 
    INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
@@ -1582,6 +1646,11 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       
       allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl))
       
+      if (farm%p%MooringMod > 0) then
+         FWrap_Interval = farm%p%dt_mooring    ! when there is a farm-level mooring model, FASTWrapper will be called at the mooring coupling time step
+      else
+         FWrap_Interval = farm%p%dt_low        ! otherwise FASTWrapper will be called at the regular FAST.Farm time step
+      end if
       
       DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1590,6 +1659,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          
          FWrap_InitInp%FASTInFile    = farm%p%WT_FASTInFile(nt)
          FWrap_InitInp%p_ref_Turbine = farm%p%WT_Position(:,nt)
+         FWrap_InitInp%WaveFieldMod  = farm%p%WaveFieldMod
          FWrap_InitInp%TurbNum       = nt
          FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          
@@ -1606,7 +1676,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          end if
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
-                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt_low, FWrap_InitOut, ErrStat2, ErrMsg2 )
+                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, FWrap_Interval, FWrap_InitOut, ErrStat2, ErrMsg2 )
          
          farm%FWrap(nt)%IsInitialized = .true.
          
@@ -1628,6 +1698,268 @@ contains
       call FWrap_DestroyInitOutput( FWrap_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
 END SUBROUTINE Farm_InitFAST
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes a farm-level instance of MoorDyn if applicable
+SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
+
+   ! Passed variables
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+
+   ! local variables
+   type(MD_InitInputType)                  :: MD_InitInp
+   type(MD_InitOutputType)                 :: MD_InitOut
+
+   INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
+   INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitMD'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   CALL WrScr(" --------- in FARM_InitMD, to initiailze farm-level MoorDyn ------- ")
+   
+   
+   ! sort out how many times FASt and MoorDyn will be called per FAST.Farm time step based on DT_low and DT_mooring
+   IF ( EqualRealNos( farm%p%dt_mooring, farm%p%DT_low ) ) THEN
+      farm%p%n_mooring = 1
+   ELSE
+      IF ( farm%p%dt_mooring > farm%p%DT_low ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg = "The farm mooring coupling time step ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
+                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(farm%p%DT_low))//" s)."
+      ELSE
+            ! calculate the number of FAST-MoorDyn subcycles:
+         farm%p%n_mooring = NINT( farm%p%DT_low / farm%p%dt_mooring )
+            
+            ! let's make sure the FAST DT is an exact integer divisor of the global (FAST.Farm) time step:
+         IF ( .NOT. EqualRealNos( farm%p%DT_low, farm%p%dt_mooring * farm%p%n_mooring )  ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "The MoorDyn coupling time step, DT_mooring ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
+                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(farm%p%DT_low))//" s)."
+         END IF
+            
+      END IF
+   END IF     
+   
+
+   !.................
+   ! MoorDyn initialization inputs...
+   !................            
+   !FWrap_InitInp%tmax          = farm%p%TMax
+   !FWrap_InitInp%n_high_low    = farm%p%n_high_low + 1   ! Add 1 because the FAST wrapper uses an index that starts at 1
+   !FWrap_InitInp%dt_high       = farm%p%dt_high
+   
+
+   MD_InitInp%FileName  = farm%p%MD_FileName                    ! input file name and path
+   MD_InitInp%RootName  = trim(farm%p%OutFileRoot)//'.FarmMD'   ! root of output files
+   MD_InitInp%FarmSize  = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
+   
+   ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   ! gather spatial initialization inputs for Farm-level MoorDyn
+   DO nt = 1,farm%p%NumTurbines              
+      MD_InitInp%PtfmInit(:,nt) = farm%FWrap(nt)%m%Turbine%MD%m%PtfmInit   ! turbine PRP initial positions and rotations in their respective coordinate systems from each FAST/MD instance
+      MD_InitInp%TurbineRefPos(:,nt) = farm%p%WT_Position(:,nt)            ! reference positions of each turbine in the farm global coordinate system
+   END DO 
+    
+   ! These aren't currently handled at the FAST.Farm level, so just give the farm's MoorDyn default values, which can be overwridden by its input file
+   MD_InitInp%g         =    9.81
+   MD_InitInp%rhoW      = 1025.0
+   MD_InitInp%WtrDepth  =    0.0   !TODO: eventually connect this to a global depth input variable <<<
+
+
+   ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
+   ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   ! initialize MoorDyn
+   CALL MD_Init( MD_InitInp, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
+                 farm%MD%OtherSt, farm%MD%y, farm%MD%m, farm%p%DT_mooring, MD_InitOut, ErrStat2, ErrMsg2 )
+   
+   farm%MD%IsInitialized = .true.
+
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   
+   
+   ! Copy MD inputs over into the 2nd entry of the input array, to allow the first extrapolation in FARM_MD_Increment
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(2) = -0.1_DbKi
+   
+   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   
+   ! Set up mesh maps between MoorDyn and floating platforms.
+   ! (for now assuming ElastoDyn - eventually could differentiate at the turbine level)
+   
+   ! allocate mesh mappings for coupling farm-level MoorDyn with OpenFAST instances
+   ALLOCATE( farm%m%MD_2_FWrap(farm%p%NumTurbines), farm%m%FWrap_2_MD(farm%p%NumTurbines), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MD_2_FWrap and FWrap_2_MD.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
+   do nt = 1,farm%p%NumTurbines      
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
+      
+      ! loads
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
+                          farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+                          
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
+     
+      ! kinematics
+      CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
+                          farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+      
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
+
+      ! Since SubDyn connections are not enabled yet, issue warning
+      if (allocated(farm%FWrap(nt)%m%Turbine%SD%Input)) then
+         call SetErrStat( ErrID_Warn, 'Turbine '//trim(Num2LStr(nt))//': Farm moorings connected to ElastoDyn platform reference instead of SubDyn', Errstat, ErrMsg, RoutineName//':MD_2_FWrap' )
+      endif
+      
+      ! SubDyn alternative:
+      !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
+      !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 )
+      !                    
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
+      !   
+      !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
+      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
+      !                    
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
+      !end if
+   end do   
+   
+
+   farm%p%Module_Ver( ModuleFF_MD) = MD_InitOut%Ver
+   
+   call cleanup()
+      
+contains
+   subroutine cleanup()
+      call MD_DestroyInitInput(  MD_InitInp, ErrStat2, ErrMsg2 )
+      call MD_DestroyInitOutput( MD_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+END SUBROUTINE Farm_InitMD
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine moves a farm-level MoorDyn simulation one step forward, to catch up with FWrap_Increment
+subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
+   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
+   INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation in FARM MoorDyn terms
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+
+   INTEGER(IntKi)                          :: nt                      
+   INTEGER(IntKi)                          :: n_ss                      
+   INTEGER(IntKi)                          :: n_FMD   
+   REAL(DbKi)                              :: t_next        ! time at next step after this one (s)  
+   INTEGER(IntKi)                          :: ErrStat2 
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_MD_Increment'
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   ! ----- extrapolate MD inputs -----
+   t_next = t + farm%p%DT_mooring
+
+   ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
+   CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   
+   ! Shift "window" of MD%Input: move values of Input and InputTimes from index 1 to index 2
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
+
+   ! update index 1 entries with the new extrapolated values
+   CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(1) = t_next  
+
+
+   ! ----- map substructure kinematics to MoorDyn inputs -----      (from mapping called at start of CalcOutputs Solve INputs)
+
+   do nt = 1,farm%p%NumTurbines
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   
+         
+         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%CoupledKinematics(nt), &
+                                       farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+       
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%CoupledKinematics' )
+                             
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+      !end if 
+   end do 
+
+   
+   ! ----- update states and calculate outputs -----
+   
+   CALL MD_UpdateStates( t, n_FMD, farm%MD%Input, farm%MD%InputTimes, farm%MD%p, farm%MD%x,  &
+                         farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
+   
+   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
+                       farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
+   
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
+   do nt = 1,farm%p%NumTurbines
+   
+      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+         
+         ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
+         !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MeshCopy CoupledLoads' )   
+         
+         
+         ! mapping
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf,  &
+                                       farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+                                       farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
+         
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+                  
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
+         !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+         !                              farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
+         !
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
+      end if
+   end do
+   
+         
+end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the initial call to calculate outputs (at t=0).
 !! The Initial Calculate Output algorithm: \n
@@ -1800,22 +2132,32 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStatWD, ErrStat2 
-   INTEGER(IntKi), ALLOCATABLE             :: ErrStatF(:)                     ! Temporary Error status
+   INTEGER(IntKi)                          :: nt                      
+   INTEGER(IntKi)                          :: n_ss                      
+   INTEGER(IntKi)                          :: n_FMD   
+   REAL(DbKi)                              :: t2                              ! time within the FAST-MoorDyn substepping loop for shared moorings
+   INTEGER(IntKi)                          :: ErrStatWD, ErrStatAWAE, ErrStatMD, ErrStat2 
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(ErrMsgLen)                    :: ErrMsgWD
-   CHARACTER(ErrMsgLen), ALLOCATABLE       :: ErrMsgF (:)                     ! Temporary Error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsgAWAE
+   CHARACTER(ErrMsgLen)                    :: ErrMsgMD
+   INTEGER(IntKi), ALLOCATABLE             :: ErrStatF(:)                     ! Temporary Error status for FAST
+   CHARACTER(ErrMsgLen), ALLOCATABLE       :: ErrMsgF (:)                     ! Temporary Error message for FAST
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
-!   REAL(DbKi)                              :: tm1,tm2,tm3
+   REAL(DbKi)                              :: tm1,tm2,tm3, tm01, tm02, tm03, tmSF, tmSM  ! timer variables
    
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   allocate ( ErrStatF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+   allocate ( ErrStatF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrStatF.', errStat, errMsg, RoutineName )
-   allocate ( ErrMsgF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+   allocate ( ErrMsgF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrMsgF.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
+   
+   
+
+   
    
    !.......................................................................................
    ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
@@ -1843,57 +2185,166 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       if (errStat >= AbortErrLev) return
    end if
    
+   
       !--------------------
-      ! 3. CALL F_Increment and 4. CALL AWAE_UpdateStates  
-!#ifdef _OPENMP
-!   tm1 = omp_get_wtime()  
-!#endif     
-   !$OMP PARALLEL DO DEFAULT(Shared) Private(nt) !Private(nt,tm2,tm3)
-   DO nt = 1,farm%p%NumTurbines+1
-      if(nt.ne.farm%p%NumTurbines+1) then  
-!#ifdef _OPENMP
-!         tm3 = omp_get_wtime()  
-!#endif     
-         call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
-                     farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
-         
-!#ifdef _OPENMP
-!         tm2 = omp_get_wtime() 
-!         write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-!#endif
-
-      else
-!#ifdef _OPENMP
-!         tm3 = omp_get_wtime()  
-!#endif    
-         call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )       
-
-!#ifdef _OPENMP
-!         tm2 = omp_get_wtime() 
-!         write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-!#endif
-      endif
+      ! 3. CALL F_Increment (and FARM_MD_Increment) and 4. CALL AWAE_UpdateStates  
       
-   END DO
-   !$OMP END PARALLEL DO  
+      
+   ! set the inputs needed for FAST (these are slow-varying so can just be done once per farm time step)
+   do nt = 1,farm%p%NumTurbines
+      call FWrap_SetInputs(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
+   end do
+   
+   
+   ! Original case: no shared moorings 
+   if (farm%p%MooringMod == 0) then     
+      
+      !#ifdef printthreads
+      !   tm1 = omp_get_wtime()  
+      !#endif     
+      !$OMP PARALLEL DO DEFAULT(Shared) Private(nt) !Private(nt,tm2,tm3)
+      DO nt = 1,farm%p%NumTurbines+1
+         if(nt.ne.farm%p%NumTurbines+1) then  
+            !#ifdef printthreads
+            !   tm3 = omp_get_wtime()  
+            !#endif     
+            call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                        farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
+            
+            !#ifdef printthreads
+            !   tm2 = omp_get_wtime() 
+            !   write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+            !#endif
 
+         else
+            !#ifdef printthreads
+            !   tm3 = omp_get_wtime()  
+            !#endif    
+            call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                        farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
+
+            !#ifdef printthreads
+            !   tm2 = omp_get_wtime() 
+            !   write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+            !#endif
+         endif
+         
+      END DO
+      !$OMP END PARALLEL DO  
+
+      !#ifdef printthreads   
+      !  tm2 = omp_get_wtime()
+      !  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
+      !#endif 
+
+   
+   ! Farm-level moorings case using MoorDyn
+   else if (farm%p%MooringMod == 3) then
+      
+      !#ifdef printthreads
+      !   tm1 = omp_get_wtime()  
+      !#endif     
+      
+      ! Set up two parallel sections - one for FAST-MoorDyn steps (FAST portion in parallel for each step), and the other for AWAE.
+      !$OMP PARALLEL SECTIONS DEFAULT(Shared)
+      
+      
+      ! The first section, for looping through FAST and farm-level MoorDyn time steps
+      !$OMP SECTION
+      
+      !#ifdef printthreads
+      !   tm3 = omp_get_wtime()  
+      !   tmSF = 0.0_DbKi 
+      !   tmSM = 0.0_DbKi 
+      !#endif     
+      
+      ! This is the FAST-MoorDyn farm-level substepping loop        
+      do n_ss = 1, farm%p%n_mooring                   ! do n_mooring substeps (number of FAST/FarmMD steps per Farm time step)
+      
+         n_FMD = n*farm%p%n_mooring  + n_ss - 1       ! number of the current time step of the call to FAST and MoorDyn         
+         t2   = t + farm%p%DT_mooring*(n_ss - 1)      ! current time in the loop
+
+         !#ifdef printthreads
+         !   tm01 = omp_get_wtime()  
+         !#endif
+         
+         ! A nested parallel for loop to call each instance of OpenFAST in parallel
+         !$OMP PARALLEL DO DEFAULT(Shared) Private(nt)
+         DO nt = 1,farm%p%NumTurbines
+            call FWrap_Increment( t2, n_FMD, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                        farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
+         END DO              
+         !$OMP END PARALLEL DO
+         
+         !#ifdef printthreads
+         !   tm02 = omp_get_wtime()  
+         !#endif  
+      
+         ! call farm-level MoorDyn time step here (can't multithread this with FAST since it needs inputs from all FAST instances)
+         call Farm_MD_Increment( t2, n_FMD, farm, ErrStatMD, ErrMsgMD)
+         call SetErrStat(ErrStatMD, ErrMsgMD, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! MD error status <<<<<
+         
+         !#ifdef printthreads
+         !   tm03 = omp_get_wtime()
+         !   tmSF = tmSF + tm02-tm01
+         !   tmSM = tmSM + tm03-tm02
+         !#endif           
+         
+      end do    ! n_ss substepping
+   
+      !#ifdef printthreads
+      !   tm2 = omp_get_wtime() 
+      !   write(*,*)  '    Turbine and support structure simulations with parent thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+      !   write(*,*)  '       Time on FAST sims: '//trim(num2lstr(tmSF))//' s.  Time on Farm MoorDyn: '//trim(num2lstr(tmSM))//' seconds'
+      !#endif
+   
+   
+      ! The second section, for updating AWAE states on a separate thread in parallel with the FAST/MoorDyn time stepping
+      !$OMP SECTION
+      
+      !#ifdef printthreads
+      !   tm3 = omp_get_wtime()  
+      !#endif    
+            
+      call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                        farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
+     
+      !#ifdef printthreads
+      !   tm2 = omp_get_wtime() 
+      !   write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
+      !#endif
+     
+     
+      !$OMP END PARALLEL SECTIONS  
+      
+      !#ifdef printthreads   
+      !  tm2 = omp_get_wtime()
+      !  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
+      !#endif 
+      
+   else
+      CALL SetErrStat( ErrID_Fatal, 'MooringMod must be 0 or 3.', ErrStat, ErrMsg, RoutineName )
+   end if
+   
+   ! update error messages from FAST's and AWAE's time steps
    DO nt = 1,farm%p%NumTurbines 
-      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates') ! FAST error status
    END DO
+   
+   call SetErrStat(ErrStatAWAE, ErrMsgAWAE, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! AWAE error status
+   
+   ! calculate outputs from FAST as needed by FAST.Farm
+   do nt = 1,farm%p%NumTurbines
+      call FWrap_CalcOutput(farm%FWrap(nt)%p, farm%FWrap(nt)%u, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2)  
+         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end do
 
-   call SetErrStat(ErrStatF(farm%p%NumTurbines+1), ErrMsgF(farm%p%NumTurbines+1), ErrStat, ErrMsg, 'FARM_UpdateStates')
-
+   
    if (ErrStat >= AbortErrLev) return
 
    
-!#ifdef _OPENMP   
-!  tm2 = omp_get_wtime()
-!  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
-!#endif 
-   
 end subroutine FARM_UpdateStates
-
+!---------------------------------------------------------------------------------------------------------------------------------- 
 subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Time step increment number
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
@@ -2333,6 +2784,15 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       END DO
       
    end if   
+   
+      !--------------
+      ! 5. End farm-level MoorDyn
+   if (farm%p%MooringMod == 3) then
+      call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      !TODO: any related items need to be cleared?
+   end if
+   
    
    !.......................................................................................
    ! close output file

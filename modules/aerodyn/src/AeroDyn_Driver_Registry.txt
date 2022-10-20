@@ -111,6 +111,7 @@ typedef   ^                         ^            TwrData                 twr    
 typedef   ^                         ^            IntKi                   numBlades        -      -     -   "" -
 typedef   ^                         ^            logical                 basicHAWTFormat  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            logical                 hasTower         -      -     -   "" -
+typedef   ^                         ^            IntKi                   projMod  -      -     -   "If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs" -
 typedef   ^                         ^            logical                 HAWTprojection   -      -     -   "" -
 typedef   ^                         ^            IntKi                   motionType       -      -     -   "" -
 typedef   ^                         ^            ReKi                    motion           ::     -     -   "" "-"
@@ -124,7 +125,7 @@ typedef   ^                         ^            ReKi                    userSwa
 
 
 # ..... Data for driver simulation .......................................................................................................
-typedef   ^                        Dvr_SimData  character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
+typedef   ^                        Dvr_SimData   character(1024)         AD_InputFile     -      -     -   "Name of AeroDyn input file" -
 typedef   ^                         ^            IntKi                   MHK              -      -     -   "MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}" "-"
 typedef   ^                         ^            IntKi                   AnalysisType     -      -     -   "0=Steady Wind, 1=InflowWind" "-"
 typedef   ^                         ^            ReKi                    FldDens          -      -     -   "Density of working fluid" "kg/m^3"
@@ -145,7 +146,7 @@ typedef   ^                         ^            IntKi                   iCase  
 typedef   ^                         ^            ReKi                    timeSeries       ::     -     -   "Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw" "-"
 typedef   ^                         ^            IntKi                   iTimeSeries      -      -     -   "Stored index to optimize time interpolation" -
 typedef   ^                         ^            character(1024)         root             -      -     -   "Output file rootname" "-"
-typedef   ^                         ^            Dvr_Outputs             out              -      -     -   "data for driver output file" "-"
+typedef   ^                         ^            Dvr_Outputs            out              -      -     -   "data for driver output file" "-"
 typedef   ^                         ^            ADI_IW_InputData        IW_InitInp       -      -     -   "" -
 
 # ..... Data to wrap the driver ..........................................................................................................
@@ -155,4 +156,5 @@ typedef   ^                           ^          FED_Data                FED    
 typedef   ^                           ^          IntKi                   errStat          -      -     -   "" -
 typedef   ^                           ^          character(ErrMsgLen)    errMsg           -      -     -   "" -
 typedef   ^                           ^          logical                 initialized      -      -     -   "" -
+
 

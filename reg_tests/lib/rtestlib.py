@@ -41,11 +41,11 @@ def validateInputOrExit(argv, nArgsExpected, usage):
 
 def validateFileOrExit(path):
     if not os.path.isfile(path):
-        exitWithError("Error: file does not exist at {}".format(path))
+        exitWithError("Error: file does not exist at \"{}\"".format(path))
 
 def validateDirOrExit(path):
     if not os.path.isdir(path):
-        exitWithError("Error: directory does not exist at {}".format(path))
+        exitWithError("Error: directory does not exist at \"{}\"".format(path))
 
 def validateDirOrMkdir(path):
     if not os.path.exists(path):
@@ -60,7 +60,7 @@ def validateExeOrExit(path):
     if not int(permissionsMask)%2 == 1:
         exitWithError("Error: executable at {} does not have proper permissions.".format(path))
 
-def copyTree(src, dst, excludeExt=[], renameDict={}, renameExtDict={}, includeExt=None):
+def copyTree(src, dst, excludeExt=None, renameDict=None, renameExtDict=None, includeExt=None):
     """ 
     Copy a directory to another one, overwritting files if necessary.
     copy_tree from distutils and copytree from shutil fail on Windows (in particular on git files)
@@ -72,9 +72,22 @@ def copyTree(src, dst, excludeExt=[], renameDict={}, renameExtDict={}, includeEx
      - renameDict: dictionary used to rename files (the key is replaced by the value)
      - renameExt: dictionary used to rename extensions (the key is replaced by the value)
     """
+    from time import sleep
+    # Default arguments
+    if excludeExt is None:
+        excludeExt=[]
+    if renameDict is None:
+        renameDict ={}
+    if renameExtDict is None:
+        renameExtDict ={}
+    # Local functions
     def forceMergeFlatDir(srcDir, dstDir):
         if not os.path.exists(dstDir):
-            os.makedirs(dstDir)
+            try:
+                os.makedirs(dstDir)
+            except FileExistsError:
+                sleep(0.1)
+                pass
         for item in os.listdir(srcDir):
             srcFile = os.path.join(srcDir, item)
             dstFile = os.path.join(dstDir, item)
@@ -113,7 +126,11 @@ def copyTree(src, dst, excludeExt=[], renameDict={}, renameExtDict={}, includeEx
         d = os.path.join(dst, item)
         if os.path.isfile(s):
             if not os.path.exists(dst):
-                os.makedirs(dst)
+                try:
+                    os.makedirs(dst)
+                except FileExistsError:
+                    sleep(0.1)
+                    pass
             forceCopyFile(s,d)
         if os.path.isdir(s):
             isRecursive = not isAFlatDir(s)

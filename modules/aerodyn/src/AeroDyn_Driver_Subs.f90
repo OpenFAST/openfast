@@ -511,11 +511,17 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          InitInp%AD%rotors(iWT)%numBlades = wt%numBlades
          call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, errMsg2 ); if (Failed()) return
          call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, errMsg2 ); if (Failed()) return
-         if (wt%HAWTprojection) then
-            InitInp%AD%rotors(iWT)%AeroProjMod = 0 ! 0: default, for HAWT, with WithoutSweepPitchTwist
+         if (wt%projMod==-1)then
+            call WrScr('>>> Using HAWTprojection to determine projMod')
+            if (wt%HAWTprojection) then
+               InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+            else
+               InitInp%AD%rotors(iWT)%AeroProjMod = APM_LiftingLine
+            endif
          else
-            InitInp%AD%rotors(iWT)%AeroProjMod = 1 ! 1: for VAWT
+            InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
+         call WrScr('>>> Using projection method '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -559,7 +565,7 @@ subroutine Init_Meshes(dvr, FED, errStat, errMsg)
    type(Dvr_SimData), target,   intent(inout) :: dvr       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(FED_Data), target,      intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
+   character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
    ! locals
    real(reKi)            :: pos(3)
    real(R8Ki)            :: orientation(3,3)
@@ -836,7 +842,8 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
          wt%hub%azimuth = MODULO(hubMotion(1)*R2D, 360.0_ReKi )
       else if (wt%hub%motionType == idHubMotionUserFunction) then
          ! We call a user-defined function to determined the azimuth, speed (and potentially acceleration...)
-         call userHubMotion(nt, iWT, dvr, ADI, FED, wt%userSwapArray, wt%hub%azimuth, wt%hub%rotSpeed, wt%hub%rotAcc)
+         call userHubMotion(nt, iWT, dvr, ADI, FED, wt%userSwapArray, wt%hub%azimuth, wt%hub%rotSpeed, wt%hub%rotAcc, errStat2, errMsg2)
+         if (Failed()) return
 
       else if (wt%hub%motionType == idHubMotionStateTS) then
          ! NOTE: match AeroDyndriver for backward compatibility
@@ -1027,6 +1034,13 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       wt => dvr%WT(iWT)
       sWT = '('//trim(num2lstr(iWT))//')'
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+      ! Temporary hack, look if ProjMod is present on the line
+      !call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
+      if (errStat2==ErrID_Fatal) then
+         call WrScr('>>> ProjMod is not present in AeroDyn driver input file.')
+         wt%projMod = -1
+      endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
       ! Basic init
@@ -1079,8 +1093,8 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          call ParseAry(FileInfo_In, CurLine, 'nacOrigin_t'//sWT        , wt%nac%origin_t, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'hubOrigin_n'//sWT        , wt%hub%origin_n, 3       , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseAry(FileInfo_In, CurLine, 'hubOrientation_n'//sWT   , wt%hub%orientation_n, 3  , errStat2, errMsg2, unEc); if(Failed()) return
-         wt%hub%orientation_n   = wt%hub%orientation_n*Pi/180_ReKi
-         wt%orientationInit     = wt%orientationInit*Pi/180_ReKi
+         wt%hub%orientation_n   = wt%hub%orientation_n*D2R
+         wt%orientationInit     = wt%orientationInit*D2R
          ! Blades
          call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT , wt%numBlades, errStat2, errMsg2, unEc); if(Failed()) return
@@ -1355,7 +1369,6 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 ) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName) ! hkr (4/6/21) Remove after MHK functionality is implemented
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    
@@ -1512,6 +1525,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
    ! --- Allocate driver-level outputs
    dvr%out%nDvrOutputs = 1+ 4 + 6 + 3 + 1*maxNumBlades ! 
    !
+   hasSwapArray=.false.
    do iWT =1,dvr%numTurbines
       if (dvr%WT(iWT)%hub%motionType == idHubMotionUserFunction) then
          hasSwapArray=.true.
@@ -1543,7 +1557,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
 
    dvr%out%WriteOutputHdr(j) = 'ShearExp'
    if (ADI%m%IW%CompInflow==1) then
-      dvr%out%WriteOutputUnt(j) = '(NVALID)'; j=j+1
+      dvr%out%WriteOutputUnt(j) = '(INVALID)'; j=j+1
    else
       dvr%out%WriteOutputUnt(j) = '(-)'; j=j+1
    endif
@@ -1598,7 +1612,6 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
    real(ReKi), pointer  :: arr(:)
    type(WTData), pointer :: wt ! Alias to shorten notation
    type(RotFED), pointer :: y_ED ! Alias to shorten notation
-   logical :: hasSwapArray ! small hack, if a swap array is present NOTE: we don't know the size of it...
 
    errStat = ErrID_None
    errMsg  = ''
@@ -2112,8 +2125,8 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    call WrVTK_footer( Un )       
 end subroutine WrVTK_Ground
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
-   use AeroDyn_IO, only: RtAeroMxh
+subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc, errStat, errMsg)
+   use AeroDyn_IO, only: RtFldMxh
    integer(IntKi)             , intent(in   ) :: nt       !< time step number
    integer(IntKi)             , intent(in   ) :: iWT      !< Wind turbine index
    type(Dvr_SimData),           intent(in   ) :: dvr      !< Driver arr 
@@ -2123,6 +2136,8 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    real(ReKi),                  intent(  out) :: azimuth  !<  [deg]
    real(ReKi),                  intent(  out) :: rotSpeed !<  [rad/s]
    real(ReKi),                  intent(  out) :: rotAcc   !<  [rad/s^2]
+   integer(IntKi),              intent(inout) :: errStat  !< Status of error message
+   character(*),                intent(inout) :: errMsg   !< Error message if errStat /= ErrID_None
    ! Main parameters to be adjusted
    real(ReKi), parameter      :: cutInSpeed = 0.10      !< [rad/s]
    real(ReKi), parameter      :: ratedSpeed = 1.00     !< [rad/s]
@@ -2145,13 +2160,16 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    integer(IntKi) :: region
    real(ReKi) :: alphaTq    ! coefficient for the low-pass filter for the generator torque
    real(ReKi) :: alphaSpeed ! coefficient for the low-pass filter for the rotor speed
+   errStat = ErrID_None
+   errMsg  = ''
 
    ! First call, allocate memory
    if (.not.allocated(arr)) then
       call WrScr('Driver: Using user-defined function for hub motion, turbine'//trim(num2lstr(iWT)))
       if (nt>0) then
-         print*,'>>> swap array should have been allocated by now',nt
-         STOP
+         errStat=ErrID_Fatal
+         errMsg='Swap array should have already been allocated'
+         return
       endif
       allocate(arr(MAX_SWAP_ARRAY_SIZE))
       arr    = 0.0_ReKi
@@ -2190,7 +2208,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc)
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
-   rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
+   rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtFldMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev
 

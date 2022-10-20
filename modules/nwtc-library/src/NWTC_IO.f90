@@ -2441,21 +2441,21 @@ END SUBROUTINE CheckR16Var
 !! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
 !! as word separators. If there aren't NumWords in the line, the remaining array elements will remain empty.
 !! Use CountWords (nwtc_io::countwords) to count the number of words in a line.
-   SUBROUTINE GetWords ( Line, Words, NumWords )
+   SUBROUTINE GetWords ( Line, Words, NumWords, NumFound )
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: NumWords                                     !< The number of words to look for.
+   INTEGER, INTENT(IN)            :: NumWords                                     !< The maximum number of words to look for (and size of Words)
 
-   CHARACTER(*), INTENT(IN)     :: Line                                         !< The string to search.
-   CHARACTER(*), INTENT(OUT)    :: Words(NumWords)                              !< The array of found words.
-
+   CHARACTER(*), INTENT(IN)       :: Line                                         !< The string to search.
+   CHARACTER(*), INTENT(OUT)      :: Words(NumWords)                              !< The array of found words.
+   INTEGER, OPTIONAL, INTENT(OUT) :: NumFound                                     !< The number of words found
 
       ! Local declarations.
 
-   INTEGER                      :: Ch                                           ! Character position within the string.
-   INTEGER                      :: IW                                           ! Word index.
-   INTEGER                      :: NextWhite                                    ! The location of the next whitespace in the string.
+   INTEGER                        :: Ch                                           ! Character position within the string.
+   INTEGER                        :: IW                                           ! Word index.
+   INTEGER                        :: NextWhite                                    ! The location of the next whitespace in the string.
 
 
 
@@ -2465,48 +2465,51 @@ END SUBROUTINE CheckR16Var
       Words(IW) = ' '
    END DO ! IW
 
-
-      ! Let's make sure we have text on this line.
-
-   IF ( LEN_TRIM( Line ) == 0 )  RETURN
-
-
-      ! Parse words separated by any combination of spaces, tabs, commas,
-      ! semicolons, single quotes, and double quotes ("whitespace").
-
-   Ch = 0
    IW = 0
 
-   DO
+   
+      ! Let's make sure we have text on this line.
 
-      NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
+   IF ( LEN_TRIM( Line ) > 0 )  THEN
 
-      IF ( NextWhite > 1 )  THEN
+         ! Parse words separated by any combination of spaces, tabs, commas,
+         ! semicolons, single quotes, and double quotes ("whitespace").
 
-         IW        = IW + 1
-         Words(IW) = Line(Ch+1:Ch+NextWhite-1)
-         if (NextWhite > len(words(iw)) ) then 
-            call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
-         end if 
+      Ch = 0
 
-         IF ( IW == NumWords )  EXIT
+      DO
 
-         Ch = Ch + NextWhite
+         NextWhite = SCAN( Line(Ch+1:) , ' ,;''"'//Tab )
 
-      ELSE IF ( NextWhite == 1 )  THEN
+         IF ( NextWhite > 1 )  THEN
 
-         Ch = Ch + 1
+            IW        = IW + 1
+            Words(IW) = Line(Ch+1:Ch+NextWhite-1)
+            if (NextWhite > len(words(iw)) ) then 
+               call ProgWarn('Error reading field from file. There are too many characters in the input file to store in the field. Value may be truncated.') 
+            end if 
 
-         CYCLE
+            IF ( IW == NumWords )  EXIT
 
-      ELSE
+            Ch = Ch + NextWhite
 
-         EXIT
+         ELSE IF ( NextWhite == 1 )  THEN
 
-      END IF
+            Ch = Ch + 1
 
-   END DO
+            CYCLE
 
+         ELSE
+
+            EXIT
+
+         END IF
+
+      END DO
+      
+   END IF
+   
+   IF (PRESENT(NumFound)) NumFound = IW
 
    RETURN
    END SUBROUTINE GetWords
@@ -3181,7 +3184,6 @@ END SUBROUTINE CheckR16Var
          ! Local declarations.
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
-      INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
 
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChAry'
 
@@ -3190,7 +3192,8 @@ END SUBROUTINE CheckR16Var
    
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                  ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                  ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                   , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3199,7 +3202,7 @@ END SUBROUTINE CheckR16Var
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
                   //TRIM( FileInfo%FileList(FileInfo%FileIndx(LineNum)) )//'".'//NewLine//  &
-                  ' >> The "'//TRIM( AryName )//'" array was not assigned valid REAL values on line #' &
+                  ' >> The "'//TRIM( AryName )//'" array was not assigned valid CHARACTER values on line #' &
                   //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                   //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
          RETURN
@@ -3232,7 +3235,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The comment line was not assigned because the file is too short.' &
+                   ' >> The comment line was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3282,7 +3286,7 @@ END SUBROUTINE CheckR16Var
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(NWTC_SizeOfNumWord)          :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChVar'
 
@@ -3294,7 +3298,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3411,7 +3416,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3476,7 +3482,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3591,7 +3598,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3656,7 +3664,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3680,6 +3689,7 @@ END SUBROUTINE CheckR16Var
       ENDIF
       CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2)
          CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>= AbortErrLev) return
          
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
@@ -3767,7 +3777,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -3952,7 +3963,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4073,7 +4085,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4136,7 +4149,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4146,10 +4160,8 @@ END SUBROUTINE CheckR16Var
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
                         , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg2 )
-      IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         RETURN
-      ENDIF
+         IF (ErrStat >= AbortErrLev) RETURN
 
       READ (Words(3-NameIndx),*,IOSTAT=ErrStatLcl)  Var
 
@@ -4250,7 +4262,8 @@ END SUBROUTINE CheckR16Var
 
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4312,7 +4325,8 @@ END SUBROUTINE CheckR16Var
       
       IF (LineNum > size(FileInfo%Lines) ) THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
-                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short. LineNum='// &
+                   trim(num2lstr(LineNum))//'; NumLines='//trim(num2lstr(size(FileInfo%Lines))) &
                    , ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
@@ -4335,7 +4349,9 @@ END SUBROUTINE CheckR16Var
          RETURN
       ENDIF
 
-      CALL CheckRealVar( Var, ExpVarName, ErrStat, ErrMsg)
+      CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev )  RETURN
       
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words !bjj: not sure this is the best way to echo the number being read (in case of truncation, etc)
@@ -4753,7 +4769,8 @@ END SUBROUTINE CheckR16Var
          ENDIF
 
       IF ( AryInd /= FileInfo%NumLines ) THEN ! This would happen if there is a mis-match between ScanComFile and ReadComFile
-         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read does not match array size.", ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrID_Fatal, "Error processing files: number of lines read ("//trim(num2lstr(AryInd))// &
+                  ") does not match array size ("//trim(num2lstr(fileInfo%NumLines))//").", ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN
       END IF
@@ -6254,7 +6271,7 @@ END SUBROUTINE CheckR16Var
 !! These values represent the names of output channels, and they are specified in the format
 !! required for OutList(:) in FAST input files.
 !! The end of this list is specified with the line beginning with the 3 characters "END".
-   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ReadOutputListFromFileInfo ( FileInfo, LineNum, CharAry, AryLenRead, ErrStat, ErrMsg, UnEc )
 
       ! Argument declarations:
 
@@ -6266,9 +6283,6 @@ END SUBROUTINE CheckR16Var
    CHARACTER(*),        INTENT(OUT)  :: ErrMsg                                     !< Error message
 
    CHARACTER(*),        INTENT(OUT)  :: CharAry(:)                                 !< Character array being read (calling routine dimensions it to max allowable size).
-
-   CHARACTER(*),        INTENT(IN)   :: AryDescr                                   !< Text string describing the variable.
-   CHARACTER(*),        INTENT(IN)   :: AryName                                    !< Text string containing the variable name.
 
 
       ! Local declarations:

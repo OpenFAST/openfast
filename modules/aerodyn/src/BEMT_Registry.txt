@@ -16,10 +16,14 @@ usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
 usefrom   DBEMT_Registry.txt
 
-#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
-#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
-#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Orthogonal          -      0     -   "Inflow orthogonal to rotor [-]" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters_Cont     -      4     -   "Pitt/Peters continuous formulation" -
 
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 
 #
 #
@@ -39,6 +43,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEMT calculations [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useAIDrag                       -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useTIDrag                       -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
+typedef   ^                            ^                             LOGICAL                  MomentumCorr                    -          -         -        "Momentum Correction {0=Axial Theory, 1 = Glauert Momentum Theory}"	-
 typedef   ^                            ^                             INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
 typedef   ^                            ^                             INTEGER                  numReIterations                 -          -         -        "Number of iterations for finding the Reynolds number"        -
 typedef   ^                            ^                             INTEGER                  maxIndIterations                -          -         -        "Maximum number of iterations of induction factor solve"        -
@@ -47,6 +52,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}     -         -        "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
+typedef   ^                            ^                             ReKi                     rTipFix                         {:}        -         -        "Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations" m
 typedef   ^                            ^                             INTEGER                  UAMod                           -          -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
@@ -58,6 +64,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  UAOff_outerNode                 {:}        -         -        "First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on)"    -
 typedef   ^                            ^                             CHARACTER(1024)          RootName                         -         -         -        "RootName for writing output files" -
 typedef   ^                            ^                             LOGICAL                  SumPrint                         -         -         -        "logical flag indicating whether to use UnsteadyAero"        -
+typedef   ^                            ^                             IntKi                    BEM_Mod                          -         -         -        "BEM Model 0=OpenFAST 2=Envision " -
 #
 #
 # Define outputs from the initialization routine here:
@@ -65,11 +72,20 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            InitOutputType                ProgDesc                 Version                          -          -        -         ""    -
 #
 #
+
+# Define inputs to the Skewed-Wake filter here:
+#
+typedef   ^                            BEMT_SkewWake_InputType            ReKi                     v_qsw                           {3}            -         -        "quasi-steady instantaneous wake velocity (value to be filtered in Skewed Wake model)" m/s
+typedef   ^                            BEMT_SkewWake_InputType            ReKi                     V0                               -             -         -        "magnitude of disk-averaged velocity (for input to SkewWake)" m/s
+typedef   ^                            BEMT_SkewWake_InputType            ReKi                     R                                -             -         -        "rotor radius (for input to SkewWake)" m
+
+
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
 typedef   ^                            ContinuousStateType      UA_ContinuousStateType         UA                      -          -        -        "UA module continuous states"        -
 typedef   ^                            ContinuousStateType      DBEMT_ContinuousStateType      DBEMT                   -          -        -        "DBEMT module continuous states"        -
+typedef   ^                            ContinuousStateType      R8Ki                           V_w                    {3}         -        -        "continuous state for filtering  wake velocity"
 #
 #
 # Define discrete (non-differentiable) states here:
@@ -88,6 +104,8 @@ typedef   ^                            OtherStateType                UA_OtherSta
 typedef   ^                            OtherStateType                DBEMT_OtherStateType     DBEMT                             -             -         -        "other states for DBEMT"        -
 typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
 typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
+typedef   ^                            OtherStateType                BEMT_ContinuousStateType xdot                            4               -         -        "history states for continuous state integration"   -
+typedef   ^                            OtherStateType                Integer                  n                               -               -         -        "time step # value used for continuous state integrator"   -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -99,7 +117,8 @@ typedef   ^                            MiscVarType                   UA_MiscVarT
 typedef   ^                            MiscVarType                   DBEMT_MiscVarType        DBEMT                           -             -         -        "misc vars for DBEMT"        -
 typedef   ^                            MiscVarType                   UA_OutputType            y_UA                            -             -         -        "outputs from UnsteadyAero"        -
 typedef   ^                            MiscVarType                   UA_InputType             u_UA                           {:}{:}{:}      -         -        "inputs to UnsteadyAero at t and t+dt"        -
-typedef   ^                            MiscVarType                   DBEMT_InputType          u_DBEMT                        {:}            -         -        "inputs to DBEMT"        -
+typedef   ^                            MiscVarType                   DBEMT_InputType          u_DBEMT                        {2}            -         -        "inputs to DBEMT at t and t+dt"        -
+typedef   ^                            MiscVarType                   BEMT_SkewWake_InputType  u_SkewWake                     {2}            -         -        "inputs to SkewedWake at t and t+dt"        -
 typedef   ^                            MiscVarType                   ReKi                     TnInd_op                       {:}{:}         -         -        "tangential induction at the operating point (for linearization with frozen wake assumption)"
 typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
 typedef   ^                            MiscVarType                   ReKi                     AxInduction                    {:}{:}         -         -        "axial induction used for code run-time optimization" -
@@ -141,6 +160,11 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -             -         -        "DBEMT Model.  0 = constant tau1, 1 = time dependent tau1" -
 typedef   ^                            ^                             ReKi                     yawCorrFactor                   -             -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 typedef   ^                            ^                             LOGICAL                  FixedInductions                 {:}{:}        -         -        "flag to determine if BEM inductions should be fixed and not modified by dbemt or skewed wake" -
+typedef   ^                            ^                             LOGICAL                  MomentumCorr                    -             -         -        "Momentum Correction {0=Axial Theory, 1 = Glauert Momentum Theory}"	-
+typedef   ^                            ^                             ReKi                     rTipFixMax                      -             -         -        "Nominally the coned rotor diameter (without prebend), used to align with Bladed calculations" m
+typedef   ^                            ^                             ReKi                     IntegrateWeight                 {:}{:}        -         -        "A weighting factor for calculating rotor-averaged values (e.g., AxInd)" -
+typedef   ^                         ParameterType                    IntKi                    lin_nx                -   0     -                                "Number of continuous states for linearization"            -
+typedef   ^                            ^                             IntKi                    BEM_Mod                         -             -         -        "BEM Model 0=OpenFAST 2=Envision " -
 #
 
 #
@@ -149,17 +173,23 @@ typedef   ^                            ^                             LOGICAL    
 #
 typedef   ^                            InputType                     ReKi                     theta                           {:}{:}         -         -         "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 typedef   ^                            ^                             ReKi                     chi0                            -              -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
+typedef   ^                            ^                             ReKi                     psiSkewOffset                   -              -         -         "Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero" rad
 typedef   ^                            ^                             ReKi                     psi                             {:}            -         -         "Azimuth angle" rad
 typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
 typedef   ^                            ^                             ReKi                     TSR                             -              -         -         "Tip-speed ratio (to check if BEM should be turned off)" -
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
 typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vx_elast_dot                    {:}{:}         -         -         "Local relative axial acceleration at node (for CDBEMT)" "m/s^2"
-typedef   ^                            ^                             ReKi                     Vy_elast_dot                    {:}{:}         -         -         "Local relative tangential acceleration at node (for CDBEMT)" "m/s^2"
+typedef   ^                            ^                             ReKi                     Vz                              {:}{:}         -         -         "Local radial velocity at node" m/s
 typedef   ^                            ^                             ReKi                     omega_z                         {:}{:}         -         -         "rotation of no-sweep-pitch-twist coordinate system around z (for CDBEMT and CUA)" "rad/s"
+typedef   ^                            ^                             ReKi                     xVelCorr                        {:}{:}         -         -         "projection of velocity when yawed + prebend" m/s
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 typedef   ^                            InputType                     ReKi                     Un_disk                         -              -         -         "disk-averaged velocity normal to the rotor disk (for input to DBEMT)" m/s
+typedef   ^                            InputType                     ReKi                     V0                              {3}            -         -         "disk-averaged velocity (for input to SkewWake)" m/s
+typedef   ^                            InputType                     R8Ki                     x_hat_disk                      {3}            -         -         "Hub Orientation vector: normal to rotor disk" -
 typedef   ^                            ^                             ReKi                     UserProp                        {:}{:}         -         -         "Optional user property for interpolating airfoils (per element per blade)" -
+typedef   ^                            InputType                     ReKi                     CantAngle                       {:}{:}         -         -         "Cant angle [Array of size (NumBlNds,numBlades)]" rad
+typedef   ^                            ^                             ReKi                     drdz                            {:}{:}         -         -         "dr/dz geometric parameter" -
+typedef   ^                            InputType                     ReKi                     toeAngle                        {:}{:}         -         -         "Toe angle [Array of size (NumBlNds,numBlades)]" rad
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
@@ -171,6 +201,10 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     AOA                             {:}{:}         -         -         "angle of attack"   rad
 typedef   ^                            ^                             ReKi                     Cx                              {:}{:}         -         -         "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cy                              {:}{:}         -         -         "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cz                              {:}{:}         -         -         "axial force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cmx                             {:}{:}         -         -         "pitching moment coefficient (x-component) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cmy                             {:}{:}         -         -         "pitching moment coefficient (y-component) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cmz                             {:}{:}         -         -         "pitching moment coefficient (z-component) of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cm                              {:}{:}         -         -         "pitching moment coefficient of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "lift coefficient"   -
 typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "drag coefficient"   -

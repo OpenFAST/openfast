@@ -3077,24 +3077,24 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
 
    END SUBROUTINE PackMotionMesh_Names
+!...............................................................................................................................
 !> This subroutine returns the operating point values of the mesh fields. It assumes all fields marked
 !! by FieldMask are allocated; Some fields may be allocated by the ModMesh module and not used in
 !! the linearization procedure, thus I am not using the check if they are allocated to determine if they should be included.
-   SUBROUTINE PackMotionMesh(M, Ary, indx_first, FieldMask, UseSmlAngle)
+   SUBROUTINE PackMotionMesh(M, Ary, indx_first, FieldMask, TrimOP)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
       REAL(ReKi)                        , INTENT(INOUT) :: Ary(:)                     !< array to pack this mesh into 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Ary; gives location of next array position to fill
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
-      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: UseSmlAngle                !< flag to determine if the orientation should be packed as a DCM or a log map
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: TrimOP                     !< flag to determine if the orientation should be packed as a DCM or a log map
       
       
          ! local variables:
       INTEGER(IntKi)                :: i, j, k
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
-      LOGICAL                       :: OutputSmlAngle
-      !REAL(R8Ki)                    :: logmap(3)                          !< array to pack logmaps into 
-      REAL(R8Ki)                    :: angles(3)                          !< array to pack logmaps into 
+      LOGICAL                       :: PackForTrimSolution
+      REAL(R8Ki)                    :: logmap(3)                          !< array to pack dcm vector representation (logmaps) into 
       INTEGER(IntKi)                :: ErrStat2
       CHARACTER(ErrMsgLen)          :: ErrMsg2
       
@@ -3105,6 +3105,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          Mask = .true.
       end if
             
+      if (present(TrimOP)) then
+         PackForTrimSolution = TrimOP
+      else
+         PackForTrimSolution = .false.
+      end if
+      
    
       if (Mask(MASKID_TRANSLATIONDISP)) then
          do i=1,M%NNodes
@@ -3116,19 +3122,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       end if
       
       if (Mask(MASKID_ORIENTATION)) then
-         if (present(UseSmlAngle)) then
-            OutputSmlAngle = UseSmlAngle
-         else
-            OutputSmlAngle = .false.
-         end if
          
-         if (OutputSmlAngle) then
+         if (PackForTrimSolution) then
             do i=1,M%NNodes
-               !call DCM_logMap(M%Orientation(:,:,i), logmap, ErrStat2, ErrMsg2)
-               angles =  GetSmllRotAngs ( M%Orientation(:,:,i), ErrStat2, ErrMsg2 )
+               call DCM_logMap(M%Orientation(:,:,i), logmap, ErrStat2, ErrMsg2) !NOTE: we cannot use GetSmllRotAngs because we CANNOT assume that all DCMs in the code are small.
                do k=1,3
-                  !Ary(indx_first) = logmap(k)
-                  Ary(indx_first) = angles(k)
+                  Ary(indx_first) = logmap(k)
                   indx_first = indx_first + 1
                end do
             end do
@@ -3154,6 +3153,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       end if
       
       if (Mask(MASKID_ROTATIONVEL)) then
+      
          do i=1,M%NNodes
             do j=1,3
                Ary(indx_first) = M%RotationVel(j,i)
@@ -3167,17 +3167,27 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
             do j=1,3
                Ary(indx_first) = M%TranslationAcc(j,i)
                indx_first = indx_first + 1
-            end do      
+            end do
          end do
       end if
    
       if (Mask(MASKID_ROTATIONACC)) then
-         do i=1,M%NNodes
-            do j=1,3
-               Ary(indx_first) = M%RotationAcc(j,i)
-               indx_first = indx_first + 1
-            end do      
-         end do
+         if (PackForTrimSolution) then ! these are difficult to converge in a trim solution
+            do i=1,M%NNodes
+               do j=1,3
+                  Ary(indx_first) = 0.0_ReKi
+                  indx_first = indx_first + 1
+               end do
+            end do
+         else
+            do i=1,M%NNodes
+               do j=1,3
+                  Ary(indx_first) = M%RotationAcc(j,i)
+                  indx_first = indx_first + 1
+               end do
+            end do
+         end if
+
       end if
 
 

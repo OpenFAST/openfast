@@ -20,7 +20,7 @@ MODULE ElastoDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen-6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N###namesuffix
+!   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen-6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N###namesuffix
 
 
 ! ===================================================================================================

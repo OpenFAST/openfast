@@ -48,7 +48,7 @@ parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str
 parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
-parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
+# parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
 parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
@@ -78,6 +78,7 @@ moduleDirectory = os.path.join(rtest, "modules", "aerodyn")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
+print('TargetOuput',targetOutputDirectory)
     
 # verify all the required directories exist
 if not os.path.isdir(rtest):
@@ -100,6 +101,8 @@ except:
     time.sleep(1)
 
 # create the local output directory and initialize it with input files 
+print('>>>> Input',inputsDirectory)
+print('>>>> Input',testBuildDirectory)
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameDict={'ad_py_driver.out':'ad_py_driver_ref.out'})
        # , excludeExt=['.out','.outb'])
 
