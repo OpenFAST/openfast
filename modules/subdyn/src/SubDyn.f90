@@ -3310,7 +3310,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       FileName = TRIM(Init%RootName)//'.CBmodes.json'
       ! Write Nodes/Connectivity/ElementProperties
       call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
-      write(UnSum, '(A)', advance='no') ','//char(13)//achar(10) 
+      write(UnSum, '(A)', advance='no') ','//NewLine 
       write(UnSum, '(A)') '"Modes": ['
 
       ! --- Guyan Modes
@@ -3331,7 +3331,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       enddo
 
       ! --- CB Modes
-      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//NewLine 
       do i = 1, p%nDOFM
          U_red              = 0.0_ReKi
          U_red(p%ID__L)     = CBparams%PhiL(:,i)
@@ -3358,7 +3358,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       CALL WrScr('   Exporting FEM modes to JSON')
       FileName = TRIM(Init%RootName)//'.FEMmodes.json'
       call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
-      write(UnSum, '(A)', advance='no') ','//char(13)//achar(10) 
+      write(UnSum, '(A)', advance='no') ','//NewLine
       write(UnSum, '(A)') '"Modes": ['
       nModes = min(size(Modes,2), 30) ! TODO potentially a parameter
       do i = 1, nModes
@@ -3403,7 +3403,7 @@ contains
       endif
       call yaml_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2, json=.true.);  
       write(UnSum, '(A)', advance='no')'}'
-      if (iMode<nModes) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (iMode<nModes) write(UnSum, '(A)', advance='no')','//NewLine 
    END SUBROUTINE WriteOneMode
 
    LOGICAL FUNCTION Failed()
@@ -3463,17 +3463,17 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
       Connectivity(i,1) = p%Elems(i,2)-1 ! Node 1
       Connectivity(i,2) = p%Elems(i,3)-1 ! Node 2
    enddo
-   call yaml_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2, json=.true.); write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   call yaml_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2, json=.true.); write(UnSum, '(A)', advance='no')','//NewLine 
    if(allocated(Connectivity)) deallocate(Connectivity)
 
    ! --- Nodes
-   call yaml_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2, json=.true.);  write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   call yaml_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2, json=.true.);  write(UnSum, '(A)', advance='no')','//NewLine 
 
    ! --- Elem props
    write(UnSum, '(A)') '"ElemProps": ['
    do i = 1, size(p%ElemProps)
       write(UnSum, '(A,I0,A,F8.4,A)', advance='no') '  {"shape": "cylinder", "type": ',p%ElemProps(i)%eType, ', "Diam":',p%ElemProps(i)%D(1),'}'
-      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//NewLine 
    enddo
    write(UnSum, '(A)') ']'
 

@@ -266,7 +266,7 @@ contains
             ! Method 1
             Uind_out =0.0_ReKi
             call ui_seg(1, 1, CPs, &
-                  1, 1, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+                  1, 1, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_seg_11(CP-P1, CP-P2, SegGamma1, RegFunction, RegParam1, U1)
@@ -306,7 +306,7 @@ contains
             ! Method 1
             Uind_out =0.0_ReKi
             call ui_seg(1, 1, CPs, &
-                  1, 2, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+                  1, 2, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_seg_11(CP-P1, CP-P2, SegGamma1, RegFunction, RegParam1, U1)
@@ -542,7 +542,7 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
       call test_almost_equal(testname,'Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
       call dealloc()
@@ -558,7 +558,7 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
       call test_almost_equal(testname,'Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
       call dealloc()
@@ -576,7 +576,7 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
       !print'(A,10F7.3)','Uind1',Uind1(1,:)
       !print'(A,10F7.3)','Uind2',Uind2(1,:)
@@ -681,7 +681,7 @@ contains
       SegEpsilon=100.0_ReKi
       SmoothModel=0 ! No smooth
       CALL ui_seg(1, 1, CPs, &
-      1, nC1, nC1, nP1, SegPoints, SegConnct, SegGamma,   &
+      1, nC1, SegPoints, SegConnct, SegGamma,   &
       SmoothModel, SegEpsilon, Uind)
       !print*,'Uind',Uind
 

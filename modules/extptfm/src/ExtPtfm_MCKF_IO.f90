@@ -297,7 +297,7 @@ contains
         ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
         p%OutParam(I)%Units = "INVALID"
         p%OutParam(I)%Indx = 0
-        WarnMsg=trim(WarnMsg)//TRIM(p%OutParam(I)%Name)//" is not an available output channel."//CHAR(10)
+        WarnMsg=trim(WarnMsg)//TRIM(p%OutParam(I)%Name)//" is not an available output channel."//NewLine
 !         call SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
 !         write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
     end subroutine
