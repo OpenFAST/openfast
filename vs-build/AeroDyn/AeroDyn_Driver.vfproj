@@ -683,6 +683,8 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
+		<Filter Name="Polynomial">
+		<File RelativePath="..\..\modules\nwtc-library\src\Polynomial\quartic.f90"/></Filter>
 		<Filter Name="ScaLAPACK">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">

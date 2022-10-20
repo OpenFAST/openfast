@@ -1491,7 +1491,7 @@ end subroutine FakeGroundEffect
 !!      - M_sg : from global to section (this is ill-defined), this coordinate is used to define the "axial" and "tangential" inductions
 subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, &
                          AxInd, TanInd, Vrel_norm, phi, alpha, Re, Urel_s, ErrStat, ErrMsg )
-   real(ReKi),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
+   real(R8Ki),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
    real(R8Ki),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
    real(ReKi),             intent(in   )  :: PitchAndTwist           ! Pitch and twist of section
    real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
