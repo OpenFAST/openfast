@@ -512,7 +512,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, errMsg2 ); if (Failed()) return
          call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, errMsg2 ); if (Failed()) return
          if (wt%projMod==-1)then
-            call WrScr('>>> Using HAWTprojection to determine projMod')
+            !call WrScr('>>> Using HAWTprojection to determine projMod')
             if (wt%HAWTprojection) then
                InitInp%AD%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
             else
@@ -521,7 +521,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          else
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
-         call WrScr('>>> Using projection method '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
+         !call WrScr('>>> Using projection method '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -1038,8 +1038,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       !call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc); if(Failed()) return
       call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
       if (errStat2==ErrID_Fatal) then
-         call WrScr('>>> ProjMod is not present in AeroDyn driver input file.')
          wt%projMod = -1
+      else
+         call WrScr('>>> ProjMod is present in AeroDyn driver input file. ProjMod: '//trim(num2lstr(wt%projMod)))
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
