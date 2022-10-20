@@ -8100,25 +8100,24 @@ FUNCTION   GetMorisonChannels    ( NUserOutputs, UserOutputs, OutList, foundMask
 
    ! Local variables.
    
-   INTEGER                                :: I                                         ! Generic loop-counting index.
+   INTEGER                                :: I, J                                      ! Generic loop-counting index.
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
-   LOGICAL                                :: newFoundMask (NUserOutputs)               ! A mask indicating whether a user requested channel belongs to a module's output channels
+   INTEGER                                :: newFoundMask (NUserOutputs)               ! A mask indicating whether a user requested channel belongs to a module's output channels
    
        ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = "" 
    
    GetMorisonChannels = 0
-   
-   newFoundMask    = .FALSE.
+   newFoundMask    = 0
    
     DO I = 1,NUserOutputs
       IF (.NOT. foundMask(I) ) THEN
          Indx = FindValidChannelIndx(UserOutputs(I), ValidParamAry)
 
          IF ( Indx > 0 ) THEN     
-            newFoundMask(I)    = .TRUE.
+            newFoundMask(I)    = newFoundMask(I) + 1
             foundMask(I)       = .TRUE.
             GetMorisonChannels = GetMorisonChannels + 1
          END IF
@@ -8131,10 +8130,10 @@ FUNCTION   GetMorisonChannels    ( NUserOutputs, UserOutputs, OutList, foundMask
       count = 1
    
       DO I = 1,NUserOutputs
-         IF ( newFoundMask(I) ) THEN
+         DO J = 1, newFoundMask(I) ! in case an output is requested more than one time
             OutList(count) = UserOutputs(I)
             count = count + 1
-         END IF
+         END DO
       END DO
    
    END IF
@@ -8945,7 +8944,6 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    ALLOCATE ( p%OutParam(1:p%NumOuts) , STAT=ErrStat2 )
    IF ( ErrStat2 /= 0_IntKi )  THEN
       CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the Morison OutParam array.", ErrStat, ErrMsg, RoutineName )
-      call WrScr1(NewLine//'Morison NumOuts='//trim(num2lstr(p%NumOuts))//NewLine)
       RETURN
    ENDIF
 

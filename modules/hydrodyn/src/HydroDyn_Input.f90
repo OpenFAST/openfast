@@ -2364,7 +2364,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       IF (ErrStat >= AbortErrLev ) RETURN
 
       DEALLOCATE(foundMask)
-      
+   ELSE
+      InputFileData%NumOuts = 0
+      InputFileData%Morison%NumOuts = 0
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    

@@ -1190,26 +1190,26 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
 !----------------------------------------------------------------------------------------------------    
    INTEGER,                       INTENT( IN    ) :: NUserOutputs         ! Number of user-specified output channels
    CHARACTER(ChanLen),            INTENT( IN    ) :: UserOutputs (:)      ! An array holding the names of the requested output channels.
-   CHARACTER(ChanLen),ALLOCATABLE,INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched WAMIT output channels. 
+   CHARACTER(ChanLen),ALLOCATABLE,INTENT(   OUT ) :: OutList (:)          ! An array holding the names of the matched HD output channels. 
    LOGICAL,                       INTENT( INOUT ) :: foundMask (:)        ! A mask indicating whether a user requested channel belongs to a module's output channels.
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
-   INTEGER                                           HDOut_GetChannels     ! The number of channels found in this module
+   INTEGER                                        :: HDOut_GetChannels    ! The number of channels found in this module
 
    ! Local variables.
    
-   INTEGER                                :: I                                         ! Generic loop-counting index.
+   INTEGER                                :: I, J                                      ! Generic loop-counting index.
    INTEGER                                :: count                                     ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
-   LOGICAL                                :: newFoundMask (NUserOutputs)               ! A mask indicating whether a user requested channel belongs to a module's output channels
+   INTEGER                                :: newFoundMask (NUserOutputs)               ! A mask indicating whether a user requested channel belongs to a module's output channels
    
        ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = "" 
    
    HDOut_GetChannels = 0
-   newFoundMask = .false.
+   newFoundMask = 0
 
    DO I = 1,NUserOutputs
       IF (.NOT. foundMask(I) ) THEN
@@ -1217,8 +1217,8 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
          Indx = FindValidChannelIndx(UserOutputs(I), ValidParamAry)
 
          IF ( Indx > 0 ) THEN     
-            newFoundMask(I)    = .TRUE.
-            foundMask(I)       = .TRUE.
+            foundMask(I)    = .TRUE.
+            newFoundMask(I)    = newFoundMask(I) + 1
             HDOut_GetChannels  = HDOut_GetChannels + 1
          END IF
       END IF
@@ -1230,10 +1230,10 @@ FUNCTION   HDOut_GetChannels    ( NUserOutputs, UserOutputs, OutList, foundMask,
       count = 1
    
       DO I = 1,NUserOutputs
-         IF ( newFoundMask(I) ) THEN
+         DO J = 1,newFoundMask(I) ! in case an output is listed more than once
             OutList(count) = UserOutputs(I)
             count = count + 1
-         END IF
+         END DO
       END DO
    
    END IF
