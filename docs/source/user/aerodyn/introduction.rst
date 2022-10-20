@@ -14,7 +14,8 @@ However, the module equally applies to the hydrodynamics of marine hydrokinetic
 (MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.  in this
 document imply “MHK turbine”, “MHK support structure”, “hydrodynamics” etc. for
 MHK turbines).  Additional physics important for MHK turbines, not applicable to
-wind turbines, computed by AeroDyn include a cavitation check.  This
+wind turbines, computed by AeroDyn include a cavitation check and buoyant forces
+and moments on the blades, tower, hub, and nacelle. This
 documentation pertains version of AeroDyn in the OpenFAST github repository.
 The AeroDyn version released of OpenFAST 1.0.0 is most closely related to
 AeroDyn version 15 in the legacy version numbering.  AeroDyn version 15 was a
@@ -66,12 +67,14 @@ and returns them back to OpenFAST as part of the aero-elastic calculation.
 In standalone mode, the inputs to AeroDyn are prescribed by a simple
 driver code, without aero-elastic coupling.
 
-AeroDyn consists of four submodels: (1) rotor wake/induction, (2) blade
+AeroDyn consists of six submodels: (1) rotor wake/induction, (2) blade
 airfoil aerodynamics, (3) tower influence on the fluid local to the
-blade nodes, and (4) tower drag. Nacelle, hub, and tail-vane fluid
-influence and loading, aeroacoustics, and wake and array effects between
-multiple turbines in a wind plant, are not yet available in AeroDyn v15
-and newer.
+blade nodes, (4) tower drag, (5) aeroacoustics,
+and (6) buoyancy on the blades, hub, nacelle, and tower (for MHK turbines). 
+Nacelle, hub, and tail-vane fluid influence and loading (with the exception
+of nacelle and hub buoyant loads) and wake and array effects between 
+multiple turbines in a wind plant are not yet available in AeroDyn. 
+Aeroacoustics are not available for MHK turbines.
 
 For operating wind and MHK turbine rotors, AeroDyn calculates the
 influence of the wake via induction factors based on the quasi-steady
@@ -178,15 +181,15 @@ flow models.
 
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, as well as output file specifications.
-Airfoil data properties are read from dedicated inputs files (one for
-each airfoil) and include coefficients of lift force, drag force, and
-optional pitching moment and minimum pressure versus AoA, as well as UA
-model parameters. (Minimum pressure coefficients versus AoA are also
-included in the airfoil input files in case that a cavitation check is
-requested.) Blade nodal discretization, geometry, twist, chord, and
-airfoil identifier are likewise read from separate input files (one for
-each blade).
+discretization and properties, tower, hub, and nacelle buoyancy properties,
+as well as output file specifications. Airfoil data properties are read from
+dedicated inputs files (one for each airfoil) and include coefficients of 
+lift force, drag force, and optional pitching moment and minimum pressure 
+versus AoA, as well as UA model parameters. (Minimum pressure coefficients 
+versus AoA are also included in the airfoil input files in case that a 
+cavitation check is requested.) Blade nodal discretization, geometry, twist, 
+chord, airfoil identifier, and buoyancy properties are likewise read from
+separate input files (one for each blade).
 
 :numref:`ad_input` describes the AeroDyn input files. 
 :numref:`ad_output` discusses the
