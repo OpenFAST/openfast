@@ -527,7 +527,9 @@ subroutine Init_InflowWind(dvr, IW, u_AD, o_AD, dt, errStat, errMsg)
          InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
       endif
       ! Hub Motion
-      !InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
+      if (u_AD%rotors(1)%HubMotion%Committed) then
+         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubMotion%NNodes ! 1 point
+      endif
    enddo
    if (allocated(o_AD%WakeLocationPoints)) then
       InitInData%NumWindPoints = InitInData%NumWindPoints + size(o_AD%WakeLocationPoints,DIM=2)
@@ -1164,6 +1166,10 @@ subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
       end if
       ! Hub
+      if (u_AD%rotors(iWT)%HubMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%HubMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%HubMotion%Position(:,1)
+      end if
 
    enddo ! iWT
    ! vortex points from FVW in AD15
@@ -1230,12 +1236,12 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
          u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
       end if
       ! Hub 
-!      if (u_AD%HubMotion%NNodes > 0) then
-!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
-!         node = node + 1
-!      else
-!         u_AD%InflowOnHub = 0.0_ReKi
-!      end if
+      if (u_AD%rotors(iWT)%HubMotion%NNodes > 0) then
+         u_AD%rotors(iWT)%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(iWT)%InflowOnHub = 0.0_ReKi
+      end if
    enddo ! rotors
    ! OLAF points
    if ( allocated(u_AD%InflowWakeVel) ) then
@@ -1685,7 +1691,6 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 ) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName) ! hkr (4/6/21) Remove after MHK functionality is implemented
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    

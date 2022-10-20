@@ -82,6 +82,9 @@ typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	ra
 typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
 typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
 typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
+typedef ^   AD_BladePropsType   ReKi    BlCb    {:} -   -   "Coefficient of buoyancy at blade node"   -
+typedef ^   AD_BladePropsType   ReKi    BlCenBn {:} -   -   "Center of buoyancy normal offset at blade node"   m
+typedef ^   AD_BladePropsType   ReKi    BlCenBt {:} -   -   "Center of buoyancy tangential offset at blade node"   m
 
 # Define outputs from the initialization routine here:
 typedef	^	AD_BladeShape	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x-y coordinates for airfoils, relative to node"	m
@@ -115,6 +118,13 @@ typedef	^	RotInputFile	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
 typedef	^	RotInputFile	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotInputFile	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
+typedef	^	RotInputFile	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
+
+typedef	^	RotInputFile	ReKi	VolHub	    -	-	-	"Hub volume" m^3
+typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
+
+typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
+typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
@@ -125,6 +135,7 @@ typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind ba
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
+typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	CHARACTER(1024)	ADBlFile {:}	-	-	"AD blade file (NumBl filenames)"	"quoted strings"
@@ -240,8 +251,22 @@ typedef	^	RotMiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure t
 typedef	^	RotMiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
 typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
+typedef	^	RotMiscVarType	ReKi	BlFB	{:}{:}{:}	-	-	  "buoyant force per unit length at blade node"   N/m
+typedef	^	RotMiscVarType	ReKi	BlMB	{:}{:}{:}	-	-	  "buoyant moment per unit length at blade node"   Nm/m
+typedef	^	RotMiscVarType	ReKi	TwrFB	{:}{:}	    -	-	  "buoyant force per unit length at tower node"   N/m
+typedef	^	RotMiscVarType	ReKi	TwrMB	{:}{:}	    -	-	  "buoyant moment per unit length at tower node"   Nm/m
+typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node"   N
+typedef	^	RotMiscVarType	ReKi	HubMB	{:}  	    -	-	  "buoyant moment at hub node"   Nm
+typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle (tower top) node"   N
+typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshType	BladeBuoyLoad	{:}	-	-	"line mesh for per unit length buoyant blade loads"	-
+typedef	^	RotMiscVarType	MeshMapType	B_P_2_B_L	{:}	-	-	"mapping data structure to map buoyant blade point loads (m%BladeBuoyLoadPoint) to buoyant blade line loads (m%BladeBuoyLoad)"
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoadPoint	-	-	-	"point mesh for lumped buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit length buoyant tower loads"	-
+typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
 typedef	^	RotMiscVarType	Logical	FirstWarn_TowerStrike	-	-	-	"flag to avoid printing tower strike multiple times" -
 typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W"	m/s
 
@@ -260,6 +285,21 @@ typedef	^	RotParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotParameterType	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
 typedef  ^  ^                     ReKi                     BlTwist                         {:}{:}        -         -        "Twist at blade node" radians
+typedef	^	RotParameterType	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
+typedef	^	RotParameterType	ReKi	BlCenBn	{:}{:}	-	-	"Normal offset between aerodynamic center and center of buoyancy at blade node"	m
+typedef	^	RotParameterType	ReKi	BlCenBt	{:}{:}	-	-	"Tangential offset between aerodynamic center and center of buoyancy at blade node"	m
+typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
+typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
+typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
+typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	BlAxCent  {:}{:}	-	-	"Matrix of blade element axial centroid, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	TwrRad    {:}    	-	-	"Array of equivalent tower radius at each node, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	TwrDL     {:}   	-	-	"Array of tower element length, used in buoyancy calculation" m
+typedef ^   RotParameterType	ReKi	TwrTaper  {:}   	-	-	"Array of tower element taper, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element axial centroid, used in buoyancy calculation" -
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
@@ -273,6 +313,7 @@ typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on win
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
+typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	RotParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
@@ -322,6 +363,7 @@ typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
 typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
@@ -331,6 +373,7 @@ typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on a mesh here:
 typedef	^	RotOutputType	MeshType	NacelleLoad	-	-	-	"loads on the nacelle"	-
+typedef	^	RotOutputType	MeshType	HubLoad  	-	-	-	"loads on the hub"  	-
 typedef	^	RotOutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	RotOutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
 # Define outputs that are not on a mesh here:
