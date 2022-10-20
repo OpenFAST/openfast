@@ -8945,6 +8945,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    ALLOCATE ( p%OutParam(1:p%NumOuts) , STAT=ErrStat2 )
    IF ( ErrStat2 /= 0_IntKi )  THEN
       CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the Morison OutParam array.", ErrStat, ErrMsg, RoutineName )
+      call WrScr1(NewLine//'Morison NumOuts='//trim(num2lstr(p%NumOuts))//NewLine)
       RETURN
    ENDIF
 
