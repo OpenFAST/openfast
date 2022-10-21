@@ -69,9 +69,9 @@ module AeroDyn_Driver_Subs
    integer(IntKi), parameter :: idAnalysisCombi   = 3
    integer(IntKi), parameter, dimension(3) :: idAnalysisVALID  = (/idAnalysisRegular, idAnalysisTimeD, idAnalysisCombi/)
 
+   real(ReKi), parameter :: myNaN = -99.9_ReKi
 
    ! User Swap Array - TODO not clean
-   integer, parameter :: MAX_SWAP_ARRAY_SIZE = 16
    integer(IntKi),  parameter :: iAzi         = 1 !< index in swap array for azimuth
    integer(IntKi),  parameter :: iN_          = 4 !< index in swap array for time step
    integer(IntKi),  parameter :: igenTorque   = 5 !< index in swap array for generator torque
@@ -84,44 +84,7 @@ module AeroDyn_Driver_Subs
    integer(IntKi),  parameter :: irotSpeedF    = 12 !< index in swap array for filtered rotor speed
    integer(IntKi),  parameter :: iAlpha        = 13 !< index in swap array for filter constant alpha
    integer(IntKi),  parameter :: iRegion       = 14 !< Controller region
-   character(len=ChanLen), dimension(MAX_SWAP_ARRAY_SIZE), parameter :: userSwapHdr=(/ &
-       "SwapAzimuth  ",&! 1 
-       "SwapRotSpeed ",&! 2
-       "SwapRotAcc   ",&! 3 
-       "SwapTimeStep ",&! 4
-       "SwapGenTq    ",&! 5
-       "SwapGenTqF   ",&! 6
-       "SwapRotTq    ",&! 7
-       "SwapRotTqF   ",&! 8
-       "SwapDeltaTq  ",&! 9
-       "SwapDeltaTqF ",&!10
-       "SwapRotSpeedI",&!11
-       "SwapRotSpeedF",&!12
-       "SwapAlpha    ",&!13
-       "SwapRegion   ",&!14
-       "Misc         ",&!15
-       "Misc         " &!16
-       /)
-   character(len=ChanLen), dimension(MAX_SWAP_ARRAY_SIZE), parameter :: userSwapUnt=(/ &
-       "(deg)    ",&! 1 
-       "(rad/s)  ",&! 2
-       "(rad/s^2)",&! 3 
-       "(-)      ",&! 4
-       "(Nm)     ",&! 5
-       "(Nm)     ",&! 6
-       "(Nm)     ",&! 7
-       "(Nm)     ",&! 8
-       "(Nm)     ",&! 9
-       "(Nm)     ",&!10
-       "(rad/s)  ",&!11
-       "(rad/s)  ",&!12
-       "(-)      ",&!13
-       "(-)      ",&!14
-       "(tbd)    ",&!15
-       "(tbd)    " &!16
-       /)
 
-   real(ReKi), parameter :: myNaN = -99.9_ReKi
    integer(IntKi), parameter :: NumInp = 2
 
 contains
@@ -1513,8 +1476,12 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
    type(ADI_Data),           intent(inout) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi)         ,  intent(  out) :: errStat              ! Status of error message
    character(*)           ,  intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
-   integer :: maxNumBlades, k, j, iWT
-   logical :: hasSwapArray ! small hack, if a swap array is present NOTE: we don't know the size of it...
+   character(len=ChanLen), dimension(:), allocatable :: userSwapHdr !< Array of headers for user Swap Array
+   character(len=ChanLen), dimension(:), allocatable :: userSwapUnt !< Array of units for user Swap Array
+   integer              :: maxNumBlades, k, j, iWT
+   logical              :: hasSwapArray ! small hack, if a swap array is present NOTE: we don't know the size of it...
+   integer(IntKi)       :: errStat2 ! Status of error message
+   character(ErrMsgLen) :: errMsg2  ! Error message
    errStat = ErrID_None
    errMsg  = ''
 
@@ -1525,78 +1492,71 @@ subroutine Dvr_InitializeDriverOutputs(dvr, ADI, errStat, errMsg)
 
    ! --- Allocate driver-level outputs
    dvr%out%nDvrOutputs = 1+ 4 + 6 + 3 + 1*maxNumBlades ! 
-   !
+
+   ! Initialize swap arrays
    hasSwapArray=.false.
    do iWT =1,dvr%numTurbines
+      ! NOTE: same swap array for all turbines (outputs are expected to the same for all turbines)
       if (dvr%WT(iWT)%hub%motionType == idHubMotionUserFunction) then
          hasSwapArray=.true.
+         if (allocated(userSwapHdr)) deallocate(userSwapHdr)
+         if (allocated(userSwapUnt)) deallocate(userSwapUnt)
+         call userHubMotion_Init(dvr%wt(iWT)%userSwapArray, userSwapHdr, userSwapUnt, errStat2, errMsg2); if(Failed()) return
       endif
    enddo
    if (hasSwapArray) then
-      dvr%out%nDvrOutputs = dvr%out%nDvrOutputs + MAX_SWAP_ARRAY_SIZE ! TODO figure out how many you need
+      dvr%out%nDvrOutputs = dvr%out%nDvrOutputs + size(userSwapHdr)
    endif
 
 
-   allocate(dvr%out%WriteOutputHdr(1+dvr%out%nDvrOutputs))
-   allocate(dvr%out%WriteOutputUnt(1+dvr%out%nDvrOutputs))
+   call AllocAry(dvr%out%WriteOutputHdr, 1+dvr%out%nDvrOutputs, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(dvr%out%WriteOutputUnt, 1+dvr%out%nDvrOutputs, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
    do iWT =1,dvr%numTurbines
-      allocate(dvr%WT(iWT)%WriteOutput(1+dvr%out%nDvrOutputs))
+      call AllocAry(dvr%WT(iWT)%WriteOutput, 1+dvr%out%nDvrOutputs, 'WriteOutputWT', errStat2, errMsg2);if(Failed()) return
    enddo
 
    j=1
-   dvr%out%WriteOutputHdr(j) = 'Time'
-   dvr%out%WriteOutputUnt(j) = '(s)'  ; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'Case'
-   dvr%out%WriteOutputUnt(j) = '(-)'  ; j=j+1
-
-   dvr%out%WriteOutputHdr(j) = 'HWindSpeedX'
-   dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'HWindSpeedY'
-   dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'HWindSpeedZ'
-   dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
-
+   dvr%out%WriteOutputHdr(j) = 'Time'        ; dvr%out%WriteOutputUnt(j) = '(s)'  ; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'Case'        ; dvr%out%WriteOutputUnt(j) = '(-)'  ; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'HWindSpeedX' ; dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'HWindSpeedY' ; dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'HWindSpeedZ' ; dvr%out%WriteOutputUnt(j) = '(m/s)'; j=j+1
    dvr%out%WriteOutputHdr(j) = 'ShearExp'
    if (ADI%m%IW%CompInflow==1) then
       dvr%out%WriteOutputUnt(j) = '(INVALID)'; j=j+1
    else
       dvr%out%WriteOutputUnt(j) = '(-)'; j=j+1
    endif
-
-   dvr%out%WriteOutputHdr(j) = 'PtfmSurge'
-   dvr%out%WriteOutputUnt(j) = '(m)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'PtfmSway'
-   dvr%out%WriteOutputUnt(j) = '(m)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'PtfmHeave'
-   dvr%out%WriteOutputUnt(j) = '(m)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'PtfmRoll'
-   dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'PtfmPitch'
-   dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'PtfmYaw'
-   dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
-
-   dvr%out%WriteOutputHdr(j) = 'Yaw'
-   dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'Azimuth'
-   dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
-   dvr%out%WriteOutputHdr(j) = 'RotSpeed'
-   dvr%out%WriteOutputUnt(j) = '(rpm)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmSurge' ; dvr%out%WriteOutputUnt(j) = '(m)'  ; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmSway'  ; dvr%out%WriteOutputUnt(j) = '(m)'  ; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmHeave' ; dvr%out%WriteOutputUnt(j) = '(m)'  ; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmRoll'  ; dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmPitch' ; dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'PtfmYaw'   ; dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'Yaw'       ; dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'Azimuth'   ; dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
+   dvr%out%WriteOutputHdr(j) = 'RotSpeed'  ; dvr%out%WriteOutputUnt(j) = '(rpm)'; j=j+1
    do k =1,maxNumBlades
       dvr%out%WriteOutputHdr(j) = 'BldPitch'//trim(num2lstr(k))
       dvr%out%WriteOutputUnt(j) = '(deg)'; j=j+1
    enddo
    if (hasSwapArray) then
-      do k =1,MAX_SWAP_ARRAY_SIZE
+      do k =1,size(userSwapHdr)
          dvr%out%WriteOutputHdr(j) = userSwapHdr(k)
          dvr%out%WriteOutputUnt(j) = userSwapUnt(k)
-         !dvr%out%WriteOutputHdr(j) = 'SwapArr'//trim(num2lstr(k))
-         !dvr%out%WriteOutputUnt(j) = '(NA)'; 
          j=j+1
       enddo
    endif
 
-
+contains
+   logical function Failed()
+      CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitializeDriverOutputs' )
+      Failed = errStat >= AbortErrLev
+      if (Failed) then
+         if (allocated(userSwapHdr)) deallocate(userSwapHdr)
+         if (allocated(userSwapUnt)) deallocate(userSwapUnt)
+      endif
+   end function Failed
 end subroutine Dvr_InitializeDriverOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Store driver data
@@ -1660,7 +1620,7 @@ subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
          enddo
          ! Swap array
          if (wt%hub%motionType == idHubMotionUserFunction) then
-            do j=1,min(MAX_SWAP_ARRAY_SIZE, size(wt%userSwapArray))
+            do j=1,size(wt%userSwapArray)
                arr(k) = wt%userSwapArray(j); k=k+1;
             enddo
          endif
@@ -2126,6 +2086,45 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    call WrVTK_footer( Un )       
 end subroutine WrVTK_Ground
 !----------------------------------------------------------------------------------------------------------------------------------
+!> User routine to initialize swap array for hub motion
+subroutine userHubMotion_Init(userSwapAry, userSwapHdr, userSwapUnt, errStat, errMsg)
+   real(ReKi)             , dimension(:), allocatable, intent(inout) :: userSwapAry !< user Swap Array
+   character(len=ChanLen) , dimension(:), allocatable, intent(inout) :: userSwapHdr !< Array of headers for user Swap Array
+   character(len=ChanLen) , dimension(:), allocatable, intent(inout) :: userSwapUnt !< Array of units for user Swap Array
+   integer(IntKi),                                     intent(inout) :: errStat  !< Status of error message
+   character(*),                                       intent(inout) :: errMsg   !< Error message if errStat /= ErrID_None
+   integer(IntKi)       :: i      ! loop index
+   integer(IntKi)       :: errStat2      ! local status of error message
+   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
+   integer, parameter :: SWAP_ARRAY_SIZE = 16
+   errStat = ErrID_None
+   errMsg  = ''
+
+   call AllocAry(userSwapAry, SWAP_ARRAY_SIZE, 'userSwapAry', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'userHubMotion_Init')
+   call AllocAry(userSwapHdr, SWAP_ARRAY_SIZE, 'userSwapHdr', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'userHubMotion_Init')
+   call AllocAry(userSwapUnt, SWAP_ARRAY_SIZE, 'userSwapUnt', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'userHubMotion_Init')
+   if (errStat/=ErrID_None) return
+   !
+   userSwapAry(:) = 0.0_ReKi
+   userSwapUnt(:) = "(-)"
+   do i = 1, size(userSwapAry); userSwapHdr(i) = 'Swap'//trim(num2lstr(i)); enddo;
+   i = iAzi         ; userSwapHdr(i) = "SwapAzimuth  "; userSwapUnt(i) = "(deg)    " ! 1
+   i = iAzi+1       ; userSwapHdr(i) = "SwapRotSpeed "; userSwapUnt(i) = "(rad/s)  " ! 2
+   i = iAzi+2       ; userSwapHdr(i) = "SwapRotAcc   "; userSwapUnt(i) = "(rad/s^2)" ! 3
+   i = iN_          ; userSwapHdr(i) = "SwapTimeStep "; userSwapUnt(i) = "(-)      " ! 4
+   i = igenTorque   ; userSwapHdr(i) = "SwapGenTq    "; userSwapUnt(i) = "(Nm)     " ! 5
+   i = igenTorqueF  ; userSwapHdr(i) = "SwapGenTqF   "; userSwapUnt(i) = "(Nm)     " ! 6
+   i = irotTorque   ; userSwapHdr(i) = "SwapRotTq    "; userSwapUnt(i) = "(Nm)     " ! 7
+   i = irotTorqueF  ; userSwapHdr(i) = "SwapRotTqF   "; userSwapUnt(i) = "(Nm)     " ! 8
+   i = iDeltaTorque ; userSwapHdr(i) = "SwapDeltaTq  "; userSwapUnt(i) = "(Nm)     " ! 9
+   i = iDeltaTorqueF; userSwapHdr(i) = "SwapDeltaTqF "; userSwapUnt(i) = "(Nm)     " ! 10
+   i = irotSpeedI   ; userSwapHdr(i) = "SwapRotSpeedI"; userSwapUnt(i) = "(rad/s)  " ! 11
+   i = irotSpeedF   ; userSwapHdr(i) = "SwapRotSpeedF"; userSwapUnt(i) = "(rad/s)  " ! 12
+   i = iAlpha       ; userSwapHdr(i) = "SwapAlpha    "; userSwapUnt(i) = "(-)      " ! 13
+   i = iRegion      ; userSwapHdr(i) = "SwapRegion   "; userSwapUnt(i) = "(-)      " ! 14
+end subroutine userHubMotion_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+!> User routine to set hub motion
 subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc, errStat, errMsg)
    use AeroDyn_IO, only: RtFldMxh
    integer(IntKi)             , intent(in   ) :: nt       !< time step number
@@ -2166,16 +2165,14 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
 
    ! First call, allocate memory
    if (.not.allocated(arr)) then
-      call WrScr('Driver: Using user-defined function for hub motion, turbine'//trim(num2lstr(iWT)))
-      if (nt>0) then
-         errStat=ErrID_Fatal
-         errMsg='Swap array should have already been allocated'
-         return
-      endif
-      allocate(arr(MAX_SWAP_ARRAY_SIZE))
-      arr    = 0.0_ReKi
-      arr(iN_) = real(nt, ReKi)
-      arr(iAzi+1) = rotSpeed ! setting to initial rotor speed (the first time this funciton is called, rotSpeed=rotSpeedInit)
+      errStat=ErrID_Fatal
+      errMsg='Swap array should have already been allocated'
+      return
+   endif
+   if (nt==0) then ! the first time this function is called 
+      arr         = 0.0_ReKi
+      arr(iN_)    = real(nt, ReKi)
+      arr(iAzi+1) = rotSpeed       ! setting to initial rotor speed, rotSpeed = rotSpeedInit
    endif
 
    ! Retrieve previous time step values
