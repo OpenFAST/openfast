@@ -535,6 +535,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          Init%InData_AD%rotors(1)%HubOrientation     = SED%y%HubPtMotion%RefOrientation(:,:,1)
          Init%InData_AD%rotors(1)%NacellePosition    = SED%y%NacelleMotion%Position(:,1)
          Init%InData_AD%rotors(1)%NacelleOrientation = SED%y%NacelleMotion%RefOrientation(:,:,1)
+         Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
          
          do k=1,NumBl
             Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = SED%y%BladeRootMotion(k)%Position(:,1)
@@ -545,6 +546,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          Init%InData_AD%rotors(1)%HubOrientation     = ED%y%HubPtMotion%RefOrientation(:,:,1)
          Init%InData_AD%rotors(1)%NacellePosition    = ED%y%NacelleMotion%Position(:,1)
          Init%InData_AD%rotors(1)%NacelleOrientation = ED%y%NacelleMotion%RefOrientation(:,:,1)
+         Init%InData_AD%rotors(1)%AeroProjMod        = APM_BEM_NoSweepPitchTwist
          
          do k=1,NumBl
             Init%InData_AD%rotors(1)%BladeRootPosition(:,k)      = ED%y%BladeRootMotion(k)%Position(:,1)
