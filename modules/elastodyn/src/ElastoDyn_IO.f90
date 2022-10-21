@@ -1336,23 +1336,13 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
       InputFileData%TailFurl  = 0.0_ReKi
       InputFileData%Yaw2Shft  = 0.0
       InputFileData%ShftSkew  = 0.0
-      InputFileData%RFrlCMxn  = 0.0
-      InputFileData%RFrlCMyn  = 0.0
-      InputFileData%RFrlCMzn  = 0.0
-      InputFileData%BoomCMxn  = 0.0
-      InputFileData%BoomCMyn  = 0.0
-      InputFileData%BoomCMzn  = 0.0
-      InputFileData%TFinCMxn  = 0.0
-      InputFileData%TFinCMyn  = 0.0
-      InputFileData%TFinCMzn  = 0.0
-      InputFileData%RFrlPntxn = 0.0
-      InputFileData%RFrlPntyn = 0.0
-      InputFileData%RFrlPntzn = 0.0
+      InputFileData%RFrlCM_n  = 0.0
+      InputFileData%BoomCM_n  = 0.0
+      InputFileData%TFinCM_n  = 0.0
+      InputFileData%RFrlPnt_n = 0.0
       InputFileData%RFrlSkew  = 0.0
       InputFileData%RFrlTilt  = 0.0
-      InputFileData%TFrlPntxn = 0.0
-      InputFileData%TFrlPntyn = 0.0
-      InputFileData%TFrlPntzn = 0.0
+      InputFileData%TFrlPnt_n = 0.0
       InputFileData%TFrlSkew  = 0.0
       InputFileData%TFrlTilt  = 0.0
       InputFileData%RFrlMass  = 0.0
@@ -1363,7 +1353,6 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
       InputFileData%RFrlMod   = 0
       InputFileData%RFrlSpr   = 0.0
       InputFileData%RFrlDmp   = 0.0
-      InputFileData%RFrlCDmp  = 0.0
       InputFileData%RFrlUSSP  = 0.0
       InputFileData%RFrlDSSP  = 0.0
       InputFileData%RFrlUSSpr = 0.0
@@ -1375,7 +1364,6 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
       InputFileData%TFrlMod   = 0
       InputFileData%TFrlSpr   = 0.0
       InputFileData%TFrlDmp   = 0.0
-      InputFileData%TFrlCDmp  = 0.0
       InputFileData%TFrlUSSP  = 0.0
       InputFileData%TFrlDSSP  = 0.0
       InputFileData%TFrlUSSpr = 0.0
@@ -2092,28 +2080,18 @@ SUBROUTINE ReadFurlFile( FurlFile, InputFileData, UnEc, ErrStat, ErrMsg  )
    call ParseVar(FileInfo_in, iLine, 'TailFurl' , InputFileData%TailFurl , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
 
    ! ---------------------- TURBINE CONFIGURATION -----------------------------------
-   call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'Yaw2Shft' , InputFileData%Yaw2Shft , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'ShftSkew' , InputFileData%ShftSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlCMxn' , InputFileData%RFrlCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlCMyn' , InputFileData%RFrlCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlCMzn' , InputFileData%RFrlCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'BoomCMxn' , InputFileData%BoomCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'BoomCMyn' , InputFileData%BoomCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'BoomCMzn' , InputFileData%BoomCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFinCMxn' , InputFileData%TFinCMxn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFinCMyn' , InputFileData%TFinCMyn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFinCMzn' , InputFileData%TFinCMzn , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlPntxn', InputFileData%RFrlPntxn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlPntyn', InputFileData%RFrlPntyn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlPntzn', InputFileData%RFrlPntzn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlSkew' , InputFileData%RFrlSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlTilt' , InputFileData%RFrlTilt , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlPntxn', InputFileData%TFrlPntxn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlPntyn', InputFileData%TFrlPntyn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlPntzn', InputFileData%TFrlPntzn, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlSkew' , InputFileData%TFrlSkew , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlTilt' , InputFileData%TFrlTilt , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseCom(FileInfo_in, iLine, DummyLine                           ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'Yaw2Shft' , InputFileData%Yaw2Shft ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'ShftSkew' , InputFileData%ShftSkew ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_in, iLine, 'RFrlCM_n' , InputFileData%RFrlCM_n ,3,ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_in, iLine, 'BoomCM_n' , InputFileData%BoomCM_n ,3,ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_in, iLine, 'TFinCM_n' , InputFileData%TFinCM_n ,3,ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_in, iLine, 'RFrlPnt_n', InputFileData%RFrlPnt_n,3,ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlSkew' , InputFileData%RFrlSkew ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'RFrlTilt' , InputFileData%RFrlTilt ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_in, iLine, 'TFrlPnt_n', InputFileData%TFrlPnt_n,3,ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlSkew' , InputFileData%TFrlSkew ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_in, iLine, 'TFrlTilt' , InputFileData%TFrlTilt ,  ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
 
    ! ---------------------- MASS AND INERTIA ----------------------------------------
    call ParseCom(FileInfo_in, iLine, DummyLine                           , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
@@ -2128,7 +2106,6 @@ SUBROUTINE ReadFurlFile( FurlFile, InputFileData, UnEc, ErrStat, ErrMsg  )
    call ParseVar(FileInfo_in, iLine, 'RFrlMod'  , InputFileData%RFrlMod  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'RFrlSpr'  , InputFileData%RFrlSpr  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'RFrlDmp'  , InputFileData%RFrlDmp  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'RFrlCDmp' , InputFileData%RFrlCDmp , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'RFrlUSSP' , InputFileData%RFrlUSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'RFrlDSSP' , InputFileData%RFrlDSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'RFrlUSSpr', InputFileData%RFrlUSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
@@ -2143,7 +2120,6 @@ SUBROUTINE ReadFurlFile( FurlFile, InputFileData, UnEc, ErrStat, ErrMsg  )
    call ParseVar(FileInfo_in, iLine, 'TFrlMod'  , InputFileData%TFrlMod  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'TFrlSpr'  , InputFileData%TFrlSpr  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'TFrlDmp'  , InputFileData%TFrlDmp  , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
-   call ParseVar(FileInfo_in, iLine, 'TFrlCDmp' , InputFileData%TFrlCDmp , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'TFrlUSSP' , InputFileData%TFrlUSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'TFrlDSSP' , InputFileData%TFrlDSSP , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
    call ParseVar(FileInfo_in, iLine, 'TFrlUSSpr', InputFileData%TFrlUSSpr, ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
@@ -4224,12 +4200,12 @@ SUBROUTINE ValidateFurlData( InputFileData, ErrStat, ErrMsg )
 
       ! Warn if tail is defined upwind of the tower:
 
-   IF ( InputFileData%BoomCMxn < 0.0_ReKi )  THEN   ! Print out warning when tail boom CM defined upwind of the tower.
-      CALL SetErrStat( ErrID_Warn,'WARNING: Tail boom CM is defined upwind of the tower (BoomCMxn < 0).',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%BoomCM_n(1) < 0.0_ReKi )  THEN   ! Print out warning when tail boom CM defined upwind of the tower.
+      CALL SetErrStat( ErrID_Warn,'WARNING: Tail boom CM is defined upwind of the tower (BoomCM_n(1) < 0).',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
-   IF ( InputFileData%TFinCMxn < 0.0_ReKi )  THEN   ! Print out warning when tail fin CM defined upwind of the tower.
-      CALL SetErrStat( ErrID_Warn,'WARNING: Tail fin CM is defined upwind of the tower (TFinCMxn < 0).',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%TFinCM_n(1) < 0.0_ReKi )  THEN   ! Print out warning when tail fin CM defined upwind of the tower.
+      CALL SetErrStat( ErrID_Warn,'WARNING: Tail fin CM is defined upwind of the tower (TFinCM_n(1) < 0).',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
       ! Check that mass, inertias, damping, etc. values aren't negative:
@@ -4241,14 +4217,12 @@ SUBROUTINE ValidateFurlData( InputFileData, ErrStat, ErrMsg )
    IF (InputFileData%TFrlIner   < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'TFrlIner must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (InputFileData%RFrlSpr    < 0.0_ReKi) call SetErrStat(ErrID_Fatal,  'RFrlSpr must not be negative.',ErrStat,ErrMsg,RoutineName)   
    IF ( InputFileData%RFrlDmp   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,  'RFrlDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF ( InputFileData%RFrlCDmp  < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'RFrlCDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RFrlUSSpr < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RFrlUSSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RFrlDSSpr < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RFrlDSSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RFrlUSDmp < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RFrlUSDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RFrlDSDmp < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RFrlDSDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%TFrlSpr   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,  'TFrlSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%TFrlDmp   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,  'TFrlDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF ( InputFileData%TFrlCDmp  < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'TFrlCDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%TFrlUSSpr < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'TFrlUSSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%TFrlDSSpr < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'TFrlDSSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%TFrlUSDmp < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'TFrlUSDmp must not be negative.',ErrStat,ErrMsg,RoutineName)

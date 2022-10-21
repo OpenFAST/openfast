@@ -5,7 +5,7 @@ ElastoDyn Theory
 ================
 
 Note this document is work in progress and is greatly incomplete. 
-This documentation was started to document some cod changes to the the tail furl and rotor furl part of ElastoDyn. 
+This documentation was started to document some code changes to the the tail furl and rotor furl part of ElastoDyn. 
 Please refer to the different ressources provided in :numref:`ed_intro` for additional documents.
 
 
@@ -33,26 +33,6 @@ The following (partial) list of bodies are defined by ElastoDyn:
 - ``A``: the tail-furl body
 
 
-**Coordinate system**
-
-The different coordinate systems of ElastoDyn are stored in the variable ``CoordSys``.
-The coordinate systems used internally by ElastoDyn are using a different convention than the OpenFAST input/output coordinate system. 
-
-For instance, for the coordinate system of the nacelle, with unit axes noted :math:`x_n,y_n,z_n` in OpenFAST, and :math:`d_1,d_2,d_3` in ElastoDyn, the following conversions apply:
-:math:`d_1 = x_n`,  
-:math:`d_2 =z_n` and 
-:math:`d_3 =-y_n`.
-
-The following (partial) list of coordinate systems are defined by ElastoDyn:
-
--  `z` : inertial coordinate system 
--  `a` : tower base coordinate system 
--  `t` : tower-node coordinate system (one per node)
--  `d` : nacelle coordinate system 
--  `c` : shaft-tilted coordinate system 
--  `rf` : rotor furl coordinate system 
--  `tf` : tail furl coordinate system 
--  `g` : hub coordinate system 
 
 
 
@@ -123,3 +103,89 @@ where  :math:`\frac{\partial a_J}{\partial \dot{q}_j}` are stored in ``RtHSdat%P
 Angular accelerations requires similar computations currently not documented.
 
 
+
+.. _ed_rtfrl_theory:
+
+Rotor and tail furl
+-------------------
+
+The user can select linear spring and damper models, together with 
+up- and down-stop springs, and up- and down-stop dampers. 
+
+The torque applied from the linear spring and damper is:
+
+.. math::  :label: TFLinTorque
+
+   Q_\text{lin} = - k \theta  - d \dot{\theta}
+
+where :math:`\theta` is the degree of freedom (rotor or tail furl), 
+:math:`k` is the linear spring constant (``RFrlSpr`` or ``TFrlSpr``)
+:math:`d` is the linear damping constant (``RFrlDmp`` or ``TFrlDmp``).
+
+The up-/down- stop spring torque is defined as:
+
+.. math::  :label: TFStopTorqueSpring
+
+   Q_\text{stop, spr} = \begin{cases} 
+      - k_{US} (\theta-\theta_{k_{US}}),&\text{if } \theta>\theta_{k_{US}}  \\ 
+      - k_{DS} (\theta-\theta_{k_{DS}}),&\text{if } \theta<\theta_{k_{DS}}  \\ 
+        0 ,&\text{otherwise}
+        \end{cases}
+
+where 
+:math:`k_{US}` is the up-stop spring constant (``RFrlUSSpr`` or ``TFrlUSSpr``),
+:math:`\theta_{k_{US}}` is the up-stop spring angle (``RFrlUSSP`` or ``TFrlUSSP``),
+and similar notations are used for the down-stop spring.
+
+The up-/down- stop damping torque is defined as:
+
+.. math::  :label: TFStopTorqueDamp
+
+   Q_\text{stop, dmp} = \begin{cases} 
+      - d_{US} \dot{\theta},&\text{if } \theta>\theta_{d_{US}}  \\ 
+      - d_{DS} \dot{\theta},&\text{if } \theta<\theta_{d_{DS}}  \\ 
+        0 ,&\text{otherwise}
+        \end{cases}
+
+where similar nnotations are used.
+The total moment on the given degree of freedom is:
+
+.. math::  :label: TFTotTorque
+
+   Q = Q_\text{lin} + Q_\text{stop,spr} + Q_\text{stop,dmp}
+   
+     
+
+
+   
+
+
+
+
+.. _ed_dev_notes:
+
+
+Developer notes
+===============
+
+
+**Internal coordinate systems**
+
+The different coordinate systems of ElastoDyn are stored in the variable ``CoordSys``.
+The coordinate systems used internally by ElastoDyn are using a different convention than the OpenFAST input/output coordinate system. 
+
+For instance, for the coordinate system of the nacelle, with unit axes noted :math:`x_n,y_n,z_n` in OpenFAST, and :math:`d_1,d_2,d_3` in ElastoDyn, the following conversions apply:
+:math:`d_1 = x_n`,  
+:math:`d_2 =z_n` and 
+:math:`d_3 =-y_n`.
+
+The following (partial) list of coordinate systems are defined internally by ElastoDyn:
+
+-  `z` : inertial coordinate system 
+-  `a` : tower base coordinate system 
+-  `t` : tower-node coordinate system (one per node)
+-  `d` : nacelle coordinate system 
+-  `c` : shaft-tilted coordinate system 
+-  `rf` : rotor furl coordinate system 
+-  `tf` : tail furl coordinate system 
+-  `g` : hub coordinate system 

@@ -2258,7 +2258,7 @@ CONTAINS
       ! this function creates a rotation matrix, M, from a 3-2-1 rotation
       ! sequence of the 3 Euler angles, theta_z, theta_y, and theta_x, in radians.
       ! M represents a change of basis (from global to local coordinates; 
-      ! not a physical rotation of the body). it is the inverse of EulerExtract
+      ! not a physical rotation of the body). 
       !
       REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
       REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z

@@ -1898,6 +1898,7 @@ CONTAINS
       if (p%TFinAero) then
          m%AllOuts( TFAlpha )           = m%TFinAlpha*R2D ! [deg]
          m%AllOuts( TFRe )              = m%TFinRe
+         !m%AllOuts( TFM )              = m%TFinVrel/p%SpdSound
          m%AllOuts( TFVrel )            = m%TFinVrel
          m%AllOuts( TFVundxi:TFVundzi)  = m%TFinVund_i
          m%AllOuts( TFVindxi:TFVindzi ) = m%TFinVind_i
@@ -2705,11 +2706,13 @@ SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
    TFData%TFinAngles = TFData%TFinAngles*D2R ! deg2rad
 
    ! --- Validation on the fly
-   if (all((/TFinAero_none,TFinAero_polar, TFinAero_USB/) /= TFData%TFinMod)) then
-      call Fatal('TFinMod needs to be 0, 1, or 2')
+   !if (all((/TFinAero_none,TFinAero_polar, TFinAero_USB/) /= TFData%TFinMod)) then
+   if (all((/TFinAero_none,TFinAero_polar/) /= TFData%TFinMod)) then
+      call Fatal('TFinMod needs to be 0, or 1')
    endif
-   if (all((/TFinIndMod_none,TFinIndMod_rotavg/) /= TFData%TFinIndMod)) then
-      call Fatal('TFinIndMod needs to be 0, or 1')
+   !if (all((/TFinIndMod_none,TFinIndMod_rotavg/) /= TFData%TFinIndMod)) then
+   if (all((/TFinIndMod_none/) /= TFData%TFinIndMod)) then
+      call Fatal('TFinIndMod needs to be 0')
    endif
 
 contains

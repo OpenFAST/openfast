@@ -218,23 +218,13 @@ typedef	^	ED_InputFile	ReKi	RotFurl	-	-	-	"Initial or fixed rotor-furl angle"	ra
 typedef	^	ED_InputFile	ReKi	TailFurl	-	-	-	"Initial or fixed tail-furl angle"	radians
 typedef	^	ED_InputFile	ReKi	Yaw2Shft	-	-	-	"Lateral distance from the yaw axis to the rotor shaft"	meters
 typedef	^	ED_InputFile	ReKi	ShftSkew	-	-	-	"Rotor shaft skew angle"	radians
-typedef	^	ED_InputFile	ReKi	RFrlCMxn	-	-	-	"Downwind distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	RFrlCMyn	-	-	-	"Lateral distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	RFrlCMzn	-	-	-	"Vertical distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMxn	-	-	-	"Downwind distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMyn	-	-	-	"Lateral distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMzn	-	-	-	"Vertical distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMxn	-	-	-	"Downwind distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMyn	-	-	-	"Lateral distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMzn	-	-	-	"Vertical distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	RFrlCM_n	3	-	-	"Vector from tower-top to rotor-furl CM"	meters
+typedef	^	ED_InputFile	ReKi	BoomCM_n	3	-	-	"Vector from tower-top to tail boom CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCM_n	3	-	-	"Vector from tower-top to tail fin CM"	meters
+typedef	^	ED_InputFile	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"	meters
 typedef	^	ED_InputFile	ReKi	RFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
 typedef	^	ED_InputFile	ReKi	RFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
-typedef	^	ED_InputFile	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"	meters
 typedef	^	ED_InputFile	ReKi	TFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
 typedef	^	ED_InputFile	ReKi	TFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
 typedef	^	ED_InputFile	ReKi	RFrlMass	-	-	-	"Rotor-furl mass"	kg
@@ -245,7 +235,6 @@ typedef	^	ED_InputFile	ReKi	TFrlIner	-	-	-	"Tail boom inertia about tail-furl ax
 typedef	^	ED_InputFile	IntKi	RFrlMod	-	-	-	"Rotor-furl spring/damper model switch"	-
 typedef	^	ED_InputFile	ReKi	RFrlSpr	-	-	-	"Rotor-furl spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"	N-m/(rad/s)
-typedef	^	ED_InputFile	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"	N-m
 typedef	^	ED_InputFile	ReKi	RFrlUSSP	-	-	-	"Rotor-furl up-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	RFrlDSSP	-	-	-	"Rotor-furl down-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	RFrlUSSpr	-	-	-	"Rotor-furl up-stop spring constant"	N-m/rad
@@ -257,7 +246,6 @@ typedef	^	ED_InputFile	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping consta
 typedef	^	ED_InputFile	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"	-
 typedef	^	ED_InputFile	ReKi	TFrlSpr	-	-	-	"Tail-furl spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"	N-m/(rad/s)
-typedef	^	ED_InputFile	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"	N-m
 typedef	^	ED_InputFile	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	TFrlDSSP	-	-	-	"Tail-furl down-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"	N-m/rad
@@ -601,9 +589,7 @@ typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor ape
 typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
 typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point"
 typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
-typedef	^	ParameterType	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"
-typedef	^	ParameterType	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"
-typedef	^	ParameterType	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"
+typedef	^	ParameterType	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"
 typedef	^	ParameterType	ReKi	rVDxn	-	-	-	"xn-component of position vector Rvd"
 typedef	^	ParameterType	ReKi	rVDyn	-	-	-	"yn-component of position vector rVD"
 typedef	^	ParameterType	ReKi	rVDzn	-	-	-	"zn-component of position vector rVD"
@@ -633,9 +619,7 @@ typedef	^	ParameterType	R8Ki	STFrlSkew	-	-	-	"Sine of the tail-furl axis skew an
 typedef	^	ParameterType	R8Ki	STFrlSkw2	-	-	-	"Sine-squared of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	STFrlTilt	-	-	-	"Sine of the tail-furl axis tilt angle"
 typedef	^	ParameterType	R8Ki	STFrlTlt2	-	-	-	"Sine-squared of the tail-furl axis tilt angle"
-typedef	^	ParameterType	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"
-typedef	^	ParameterType	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"
-typedef	^	ParameterType	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"
+typedef	^	ParameterType	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"
 typedef	^	ParameterType	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
 typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
 typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore] or MSL [offshore]"	meters
@@ -746,7 +730,6 @@ typedef	^	ParameterType	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"
 typedef	^	ParameterType	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"
 typedef	^	ParameterType	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"
 typedef	^	ParameterType	IntKi	TeetMod	-	-	-	"Rotor-teeter spring/damper model switch"
-typedef	^	ParameterType	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"
 typedef	^	ParameterType	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"
 typedef	^	ParameterType	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"
 typedef	^	ParameterType	ReKi	TFrlDSDP	-	-	-	"Tail-furl down-stop damper position"
@@ -758,7 +741,6 @@ typedef	^	ParameterType	ReKi	TFrlUSDP	-	-	-	"Tail-furl up-stop damper position"
 typedef	^	ParameterType	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"
 typedef	^	ParameterType	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"
 typedef	^	ParameterType	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"
-typedef	^	ParameterType	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"
 typedef	^	ParameterType	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"
 typedef	^	ParameterType	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping constant"
 typedef	^	ParameterType	ReKi	RFrlDSDP	-	-	-	"Rotor-furl down-stop damper position"

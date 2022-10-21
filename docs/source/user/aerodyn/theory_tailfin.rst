@@ -165,7 +165,7 @@ Unsteady slender body model
 
 The unsteady slender body (USB) model is documented in :cite:`ad-hammam2022`.
 
+The theory will be implemented and documented in a future release.
 
-:red:`TODO`
 
 

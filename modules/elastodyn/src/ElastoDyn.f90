@@ -3379,7 +3379,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%RFrlSpr  = InputFileData%RFrlSpr
    p%RFrlDmp  = InputFileData%RFrlDmp
-   p%RFrlCDmp = InputFileData%RFrlCDmp
    p%RFrlUSSP = InputFileData%RFrlUSSP
    p%RFrlDSSP = InputFileData%RFrlDSSP
    p%RFrlDSSpr= InputFileData%RFrlDSSpr
@@ -3391,7 +3390,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%TFrlSpr  = InputFileData%TFrlSpr
    p%TFrlDmp  = InputFileData%TFrlDmp
-   p%TFrlCDmp = InputFileData%TFrlCDmp
    p%TFrlUSSP = InputFileData%TFrlUSSP
    p%TFrlDSSP = InputFileData%TFrlDSSP
    p%TFrlUSSpr= InputFileData%TFrlUSSpr
@@ -3401,13 +3399,9 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%TFrlUSDmp= InputFileData%TFrlUSDmp
    p%TFrlDSDmp= InputFileData%TFrlDSDmp
 
-   p%RFrlPntxn = InputFileData%RFrlPntxn
-   p%RFrlPntyn = InputFileData%RFrlPntyn
-   p%RFrlPntzn = InputFileData%RFrlPntzn
+   p%RFrlPnt_n = InputFileData%RFrlPnt_n
 
-   p%TFrlPntxn = InputFileData%TFrlPntxn
-   p%TFrlPntyn = InputFileData%TFrlPntyn
-   p%TFrlPntzn = InputFileData%TFrlPntzn
+   p%TFrlPnt_n = InputFileData%TFrlPnt_n
 
 
       ! Store sine/cosine values instead of some input angles:
@@ -3445,28 +3439,28 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
       ! Calculate some positions:
 
-   p%rWIxn     = InputFileData%BoomCMxn - p%TFrlPntxn
-   p%rWIyn     = InputFileData%BoomCMyn - p%TFrlPntyn
-   p%rWIzn     = InputFileData%BoomCMzn - p%TFrlPntzn
+   p%rWIxn     = InputFileData%BoomCM_n(1) - p%TFrlPnt_n(1)
+   p%rWIyn     = InputFileData%BoomCM_n(2) - p%TFrlPnt_n(2)
+   p%rWIzn     = InputFileData%BoomCM_n(3) - p%TFrlPnt_n(3)
 
-   p%rWJxn     = InputFileData%TFinCMxn - p%TFrlPntxn
-   p%rWJyn     = InputFileData%TFinCMyn - p%TFrlPntyn
-   p%rWJzn     = InputFileData%TFinCMzn - p%TFrlPntzn
+   p%rWJxn     = InputFileData%TFinCM_n(1) - p%TFrlPnt_n(1)
+   p%rWJyn     = InputFileData%TFinCM_n(2) - p%TFrlPnt_n(2)
+   p%rWJzn     = InputFileData%TFinCM_n(3) - p%TFrlPnt_n(3)
 
-   p%rVDxn     = InputFileData%RFrlCMxn - p%RFrlPntxn
-   p%rVDyn     = InputFileData%RFrlCMyn - p%RFrlPntyn
-   p%rVDzn     = InputFileData%RFrlCMzn - p%RFrlPntzn
+   p%rVDxn     = InputFileData%RFrlCM_n(1) - p%RFrlPnt_n(1)
+   p%rVDyn     = InputFileData%RFrlCM_n(2) - p%RFrlPnt_n(2)
+   p%rVDzn     = InputFileData%RFrlCM_n(3) - p%RFrlPnt_n(3)
 
-   p%rVPxn     =        0.0_ReKi        - p%RFrlPntxn
-   p%rVPyn     = InputFileData%Yaw2Shft - p%RFrlPntyn
+   p%rVPxn     =        0.0_ReKi        - p%RFrlPnt_n(1)
+   p%rVPyn     = InputFileData%Yaw2Shft - p%RFrlPnt_n(2)
 
 
       ! Note: These positions are also used for non-furling machines:
 
-   p%rVPzn     = InputFileData%Twr2Shft - p%RFrlPntzn
-   p%rVIMUxn   = InputFileData%NcIMUxn  - p%RFrlPntxn
-   p%rVIMUyn   = InputFileData%NcIMUyn  - p%RFrlPntyn
-   p%rVIMUzn   = InputFileData%NcIMUzn  - p%RFrlPntzn
+   p%rVPzn     = InputFileData%Twr2Shft - p%RFrlPnt_n(3)
+   p%rVIMUxn   = InputFileData%NcIMUxn  - p%RFrlPnt_n(1)
+   p%rVIMUyn   = InputFileData%NcIMUyn  - p%RFrlPnt_n(2)
+   p%rVIMUzn   = InputFileData%NcIMUzn  - p%RFrlPnt_n(3)
 
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -6362,82 +6356,52 @@ END SUBROUTINE SetCoordSy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the rotor-furl moment due to rotor-furl deflection and rate.
 SUBROUTINE RFurling( t, p, RFrlDef, RFrlRate, RFrlMom )
-!..................................................................................................................................
-
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)              :: t                                   !< simulation time
    TYPE(ED_ParameterType), INTENT(IN)  :: p                                   !< parameters from the structural dynamics module
-
    REAL(R8Ki), INTENT(IN )             :: RFrlDef                             !< The rotor-furl deflection, x%QT(DOF_RFrl)
    REAL(ReKi), INTENT(OUT)             :: RFrlMom                             !< The total moment supplied by the springs, and dampers
    REAL(R8Ki), INTENT(IN )             :: RFrlRate                            !< The rotor-furl rate, x%QDT(DOF_RFrl)
-
-
       ! Local variables:
    REAL(ReKi)                   :: RFrlDMom                                   ! The moment supplied by the rotor-furl dampers
    REAL(ReKi)                   :: RFrlSMom                                   ! The moment supplied by the rotor-furl springs
-
 
    SELECT CASE ( p%RFrlMod ) ! Which rotor-furl model are we using?
 
       CASE ( 0_IntKi )       ! None!
 
-
          RFrlMom = 0.0
-
 
       CASE ( 1_IntKi )        ! Standard (using inputs from the FAST furling input file).
 
-
          ! Linear spring:
-
          RFrlSMom = -p%RFrlSpr*RFrlDef
 
-
          ! Add spring-stops:
-
          IF ( RFrlDef > p%RFrlUSSP )  THEN       ! Up-stop
             RFrlSMom = RFrlSMom - p%RFrlUSSpr*( RFrlDef - p%RFrlUSSP )
          ELSEIF ( RFrlDef < p%RFrlDSSP )  THEN   ! Down-stop
             RFrlSMom = RFrlSMom - p%RFrlDSSpr*( RFrlDef - p%RFrlDSSP )
          ENDIF
 
-
          ! Linear damper:
-
          RFrlDMom = -p%RFrlDmp*RFrlRate
 
-
-         ! Add coulomb friction:
-
-         IF ( RFrlRate /= 0.0 )  THEN
-            RFrlDMom = RFrlDMom - SIGN( p%RFrlCDmp, real(RFrlRate,ReKi) )
-         ENDIF
-
-
          ! Add damper-stops:
-
          IF ( RFrlDef > p%RFrlUSDP )  THEN       ! Up-stop
             RFrlDMom = RFrlDMom - p%RFrlUSDmp*RFrlRate
          ELSEIF ( RFrlDef < p%RFrlDSDP )  THEN   ! Down-stop
             RFrlDMom = RFrlDMom - p%RFrlDSDmp*RFrlRate
          ENDIF
 
-
          ! Total up all the moments.
-
          RFrlMom = RFrlSMom + RFrlDMom
-
 
       CASE ( 2_IntKi )              ! User-defined rotor-furl spring/damper model.
 
-
          CALL UserRFrl ( RFrlDef, RFrlRate, t, p%RootName, RFrlMom )
 
-
    END   SELECT
-
-   RETURN
 END SUBROUTINE RFurling
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the teeter moment due to teeter deflection and rate.
@@ -6539,87 +6503,52 @@ END SUBROUTINE Teeter
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the tail-furl moment due to tail-furl deflection and rate.
 SUBROUTINE TFurling( t, p, TFrlDef, TFrlRate, TFrlMom )
-!..................................................................................................................................
-
-   IMPLICIT                        NONE
-
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
    TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
-
    REAL(R8Ki), INTENT(IN )            :: TFrlDef                                 !< The tail-furl deflection, QT(DOF_TFrl).
    REAL(ReKi), INTENT(OUT)            :: TFrlMom                                 !< The total moment supplied by the springs, and dampers.
    REAL(R8Ki), INTENT(IN )            :: TFrlRate                                !< The tail-furl rate, QDT(DOF_TFrl).
-
-
       ! Local variables:
-
    REAL(ReKi)                         :: TFrlDMom                                ! The moment supplied by the tail-furl dampers.
    REAL(ReKi)                         :: TFrlSMom                                ! The moment supplied by the tail-furl springs.
-
-
 
    SELECT CASE ( p%TFrlMod ) ! Which tail-furl model are we using?
 
       CASE ( 0_IntKi )              ! None!
 
-
          TFrlMom = 0.0
-
 
       CASE ( 1_IntKi )              ! Standard (using inputs from the FAST furling input file).
 
-
          ! Linear spring:
-
          TFrlSMom = -p%TFrlSpr*TFrlDef
 
-
          ! Add spring-stops:
-
          IF ( TFrlDef > p%TFrlUSSP )  THEN      ! Up-stop
             TFrlSMom = TFrlSMom - p%TFrlUSSpr*( TFrlDef - p%TFrlUSSP )
          ELSEIF ( TFrlDef < p%TFrlDSSP )  THEN  ! Down-stop
             TFrlSMom = TFrlSMom - p%TFrlDSSpr*( TFrlDef - p%TFrlDSSP )
          ENDIF
 
-
          ! Linear damper:
-
          TFrlDMom = -p%TFrlDmp*TFrlRate
 
-
-         ! Add coulomb friction:
-
-         IF ( .NOT. EqualRealNos( TFrlRate, 0.0_R8Ki) )  THEN
-            TFrlDMom = TFrlDMom - SIGN( p%TFrlCDmp, real(TFrlRate,reKi) )
-         ENDIF
-
-
          ! Add damper-stops:
-
          IF ( TFrlDef > p%TFrlUSDP )  THEN      ! Up-stop
             TFrlDMom = TFrlDMom - p%TFrlUSDmp*TFrlRate
          ELSEIF ( TFrlDef < p%TFrlDSDP )  THEN  ! Down-stop
             TFrlDMom = TFrlDMom - p%TFrlDSDmp*TFrlRate
          ENDIF
 
-
          ! Total up all the moments.
-
          TFrlMom = TFrlSMom + TFrlDMom
-
 
       CASE ( 2 )              ! User-defined tail-furl spring/damper model.
 
-
          CALL UserTFrl ( TFrlDef, TFrlRate, t, p%RootName, TFrlMom )
 
-
    END SELECT
-
-
-   RETURN
 END SUBROUTINE TFurling
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function calculates the sign (+/-1) of the low-speed shaft torque for
@@ -6690,13 +6619,13 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
                                           + 2.0*p%AxRedTSS(1,2,p%TTopNode)*x%QT(DOF_TSS1)*x%QT(DOF_TSS2)   ) )*CoordSys%a2 &
                     + ( x%QT(DOF_TSS1) + x%QT(DOF_TSS2)                                                      )*CoordSys%a3
    RtHSdat%rOU   =   p%NacCMxn*CoordSys%d1  +  p%NacCMzn  *CoordSys%d2  -  p%NacCMyn  *CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to nacelle center of mass (point U).
-   RtHSdat%rOV   = p%RFrlPntxn*CoordSys%d1  +  p%RFrlPntzn*CoordSys%d2  -  p%RFrlPntyn*CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V).
+   RtHSdat%rOV   = p%RFrlPnt_n(1)*CoordSys%d1  +  p%RFrlPnt_n(3)*CoordSys%d2  -  p%RFrlPnt_n(2)*CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V).
    RtHSdat%rVIMU =   p%rVIMUxn*CoordSys%rf1 +  p%rVIMUzn  *CoordSys%rf2 -   p%rVIMUyn *CoordSys%rf3                           ! Position vector from specified point on rotor-furl axis (point V) to nacelle IMU (point IMU).
    RtHSdat%rVD   =     p%rVDxn*CoordSys%rf1 +    p%rVDzn  *CoordSys%rf2 -     p%rVDyn *CoordSys%rf3                           ! Position vector from specified point on rotor-furl axis (point V) to center of mass of structure that furls with the rotor (not including rotor) (point D).
    RtHSdat%rVP   =     p%rVPxn*CoordSys%rf1 +    p%rVPzn  *CoordSys%rf2 -     p%rVPyn *CoordSys%rf3 + p%OverHang*CoordSys%c1  ! Position vector from specified point on rotor-furl axis (point V) to teeter pin (point P).
    RtHSdat%rPQ   = -p%UndSling*CoordSys%g1                                                                                    ! Position vector from teeter pin (point P) to apex of rotation (point Q).
    RtHSdat%rQC   =     p%HubCM*CoordSys%g1                                                                                    ! Position vector from apex of rotation (point Q) to hub center of mass (point C).
-   RtHSdat%rOW   = p%TFrlPntxn*CoordSys%d1  + p%TFrlPntzn *CoordSys%d2 -  p%TFrlPntyn*CoordSys%d3                             ! Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W).
+   RtHSdat%rOW   = p%TFrlPnt_n(1)*CoordSys%d1  + p%TFrlPnt_n(3) *CoordSys%d2 -  p%TFrlPnt_n(2)*CoordSys%d3                             ! Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W).
    RtHSdat%rWI   =     p%rWIxn*CoordSys%tf1 +      p%rWIzn*CoordSys%tf2 -     p%rWIyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I).
    RtHSdat%rWJ   =     p%rWJxn*CoordSys%tf1 +      p%rWJzn*CoordSys%tf2 -     p%rWJyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J).
    RtHSdat%rPC   = RtHSdat%rPQ + RtHSdat%rQC                                                                                  ! Position vector from teeter pin (point P) to hub center of mass (point C).

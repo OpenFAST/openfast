@@ -326,7 +326,7 @@ The tail fin aerodynamics section contains two lines:
       ""           TFinFile     - Input file for tail fin aerodynamics [used only when TFinAero=True]
     ======  Tower Influence and Aerodynamics ============================================================= 
 
-**TFinAero** Flag to activate the tail fin aerodynamics calcualtion.
+**TFinAero** Flag to activate the tail fin aerodynamics calculation.
 
 **TFinFile** Path (absolute or relative to the AeroDyn input file) where the 
 tail fin input file is located. 
@@ -439,8 +439,9 @@ The tail fin outputs are:
 
  - TFinAlpha (deg):  Angle of attack          at the reference point of the fin
  - TFinDynP  (Pa):   Dynamic pressure         at the reference point of the fin
- - TFinRe     (-):   Reynolds number             at the reference point of the fin in the inertial coordinate system
- - TFinVrel   (m/s): Orthogonal relative velocity norm (:math:`V_{\text{rel},\perp}`)    at the reference point of the fin in the inertial coordinate system
+ - TFinM      (-):   Mach number              at the reference point of the fin
+ - TFinRe     (-):   Reynolds number          at the reference point of the fin
+ - TFinVrel   (m/s): Orthogonal relative velocity norm (:math:`V_{\text{rel},\perp}`)    at the reference point of the fin
  - TFinVdisxi (m/s): Disturbed velocity   (x)  at the reference point of the fin in the inertial coordinate system
  - TFinVdisyi (m/s): Disturbed velocity   (y)  at the reference point of the fin in the inertial coordinate system
  - TFinVdiszi (m/s): Disturbed velocity   (z)  at the reference point of the fin in the inertial coordinate system
@@ -822,7 +823,8 @@ An example of tail fin input file is given below:
     Comment
     ======  General inputs =============================================================
     1         TFinMod     - Tail fin aerodynamics model {0: none, 1: polar-based, 2: USB-based} (switch)
-    1.0       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
+    0.5       TFinChord   - Tail fin chord (m) [used only when TFinMod=1]
+    0.3       TFinArea    - Tail fin planform area (m^2) [used only when TFinMod=1]
     10.,0.,0. TFinRefP_n  - Undeflected position of the tail fin reference point wrt the tower top (m)
     0.,0.,0.  TFinAngles  - Tail fin chordline skew, tilt, and bank angles about the reference point (degrees)
     0         TFinIndMod  - Model for induced velocity calculation {0: none, 1:rotor-average} (switch)
@@ -845,7 +847,7 @@ TFinMod is set to 1. (m^2)
 
 **TFinRefP_n** Undeflected position (:math:`x_{\text{ref},x_n},x_{\text{ref},y_n}, x_{\text{ref},z_n}`) of the tail fin from the tower top in nacelle coordinates.
 (formerly defined using ``TFinCPxn``,  ``TFinCPyn``, ``TFinCPzn``). 
-The distances defines the configuration for a furl angle of zero, and zero ``TFinAngles``.
+The distances defines the configuration for a furl angle of zero.
 For a typical upwind wind turbine, 
 :math:`x_n`, is positive downwind,
 :math:`y_n`, is positive to the left when looking downwind, and
@@ -891,6 +893,6 @@ between 1 and ``NumAFfiles`` and is only used when TFinMod is set to 1. (-)
 Unsteady slender body (USB) model inputs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO
+This option is currently not available and will be documented in a future release.
 
 

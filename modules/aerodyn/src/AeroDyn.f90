@@ -3217,7 +3217,6 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       q = 0.5 * p%airDens * V_rel_orth2 * p%TFin%TFinArea
       force_tf(:)    = 0.0_ReKi
       moment_tf(:)    = 0.0_ReKi
-      !force_tf(2)    = 1000.0_ReKi
       force_tf(1)    = Cx * q
       force_tf(2)    = Cy * q * p%TFin%TFinChord
       force_tf(3)    = 0.0_ReKi
@@ -3228,8 +3227,8 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
 
    elseif (p%TFin%TFinMod==TFinAero_USB) then
-      print*,'>>> TODO, TFinAero_USB'
-      STOP
+      call SetErrStat(ErrID_Fatal, 'Tail fin USB model not yet available', ErrStat, ErrMsg, RoutineName )
+      return
    endif
 
    ! --- Store

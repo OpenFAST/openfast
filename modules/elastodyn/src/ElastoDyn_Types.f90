@@ -235,23 +235,13 @@ IMPLICIT NONE
     REAL(ReKi)  :: TailFurl      !< Initial or fixed tail-furl angle [radians]
     REAL(ReKi)  :: Yaw2Shft      !< Lateral distance from the yaw axis to the rotor shaft [meters]
     REAL(ReKi)  :: ShftSkew      !< Rotor shaft skew angle [radians]
-    REAL(ReKi)  :: RFrlCMxn      !< Downwind distance from tower-top to rotor-furl CM [meters]
-    REAL(ReKi)  :: RFrlCMyn      !< Lateral distance from tower-top to rotor-furl CM [meters]
-    REAL(ReKi)  :: RFrlCMzn      !< Vertical distance from tower-top to rotor-furl CM [meters]
-    REAL(ReKi)  :: BoomCMxn      !< Downwind distance from tower-top to tail boom CM [meters]
-    REAL(ReKi)  :: BoomCMyn      !< Lateral distance from tower-top to tail boom CM [meters]
-    REAL(ReKi)  :: BoomCMzn      !< Vertical distance from tower-top to tail boom CM [meters]
-    REAL(ReKi)  :: TFinCMxn      !< Downwind distance from tower-top to tail fin CM [meters]
-    REAL(ReKi)  :: TFinCMyn      !< Lateral distance from tower-top to tail fin CM [meters]
-    REAL(ReKi)  :: TFinCMzn      !< Vertical distance from tower-top to tail fin CM [meters]
-    REAL(ReKi)  :: RFrlPntxn      !< Downwind distance from tower-top to arbitrary point on rotor-furl axis [meters]
-    REAL(ReKi)  :: RFrlPntyn      !< Lateral distance from tower-top to arbitrary point on rotor-furl axis [meters]
-    REAL(ReKi)  :: RFrlPntzn      !< Vertical distance from tower-top to arbitrary point on rotor-furl axis [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: RFrlCM_n      !< Downwind distance from tower-top to rotor-furl CM [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: BoomCM_n      !< Downwind distance from tower-top to tail boom CM [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFinCM_n      !< Downwind distance from tower-top to tail fin CM [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: RFrlPnt_n      !< Downwind distance from tower-top to arbitrary point on rotor-furl axis [meters]
     REAL(ReKi)  :: RFrlSkew      !< Rotor-furl axis skew angle [radians]
     REAL(ReKi)  :: RFrlTilt      !< Rotor-furl axis tilt angle [radians]
-    REAL(ReKi)  :: TFrlPntxn      !< Downwind distance from tower-top to arbitrary point on tail-furl axis [meters]
-    REAL(ReKi)  :: TFrlPntyn      !< Lateral distance from tower-top to arbitrary point on tail-furl axis [meters]
-    REAL(ReKi)  :: TFrlPntzn      !< Vertical distance from tower-top to arbitrary point on tail-furl axis [meters]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFrlPnt_n      !< Downwind distance from tower-top to arbitrary point on tail-furl axis [meters]
     REAL(ReKi)  :: TFrlSkew      !< Rotor-furl axis skew angle [radians]
     REAL(ReKi)  :: TFrlTilt      !< Rotor-furl axis tilt angle [radians]
     REAL(ReKi)  :: RFrlMass      !< Rotor-furl mass [kg]
@@ -262,7 +252,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RFrlMod      !< Rotor-furl spring/damper model switch [-]
     REAL(ReKi)  :: RFrlSpr      !< Rotor-furl spring constant [N-m/rad]
     REAL(ReKi)  :: RFrlDmp      !< Rotor-furl damping constant [N-m/(rad/s)]
-    REAL(ReKi)  :: RFrlCDmp      !< Rotor-furl rate-independent Coulomb-damping moment [N-m]
     REAL(ReKi)  :: RFrlUSSP      !< Rotor-furl up-stop spring position [radians]
     REAL(ReKi)  :: RFrlDSSP      !< Rotor-furl down-stop spring position [radians]
     REAL(ReKi)  :: RFrlUSSpr      !< Rotor-furl up-stop spring constant [N-m/rad]
@@ -274,7 +263,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TFrlMod      !< Tail-furl spring/damper model switch [-]
     REAL(ReKi)  :: TFrlSpr      !< Tail-furl spring constant [N-m/rad]
     REAL(ReKi)  :: TFrlDmp      !< Tail-furl damping constant [N-m/(rad/s)]
-    REAL(ReKi)  :: TFrlCDmp      !< Tail-furl rate-independent Coulomb-damping moment [N-m]
     REAL(ReKi)  :: TFrlUSSP      !< Tail-furl up-stop spring position [radians]
     REAL(ReKi)  :: TFrlDSSP      !< Tail-furl down-stop spring position [radians]
     REAL(ReKi)  :: TFrlUSSpr      !< Tail-furl up-stop spring constant [N-m/rad]
@@ -609,9 +597,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: ProjArea      !< Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft) [-]
     REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point [-]
     REAL(ReKi)  :: RefTwrHt      !< Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt [-]
-    REAL(ReKi)  :: RFrlPntxn      !< Downwind distance from tower-top to arbitrary point on rotor-furl axis [-]
-    REAL(ReKi)  :: RFrlPntyn      !< Lateral distance from tower-top to arbitrary point on rotor-furl axis [-]
-    REAL(ReKi)  :: RFrlPntzn      !< Vertical distance from tower-top to arbitrary point on rotor-furl axis [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: RFrlPnt_n      !< Position from tower-top to arbitrary point on rotor-furl axis [-]
     REAL(ReKi)  :: rVDxn      !< xn-component of position vector Rvd [-]
     REAL(ReKi)  :: rVDyn      !< yn-component of position vector rVD [-]
     REAL(ReKi)  :: rVDzn      !< zn-component of position vector rVD [-]
@@ -641,9 +627,7 @@ IMPLICIT NONE
     REAL(R8Ki)  :: STFrlSkw2      !< Sine-squared of the tail-furl axis skew angle [-]
     REAL(R8Ki)  :: STFrlTilt      !< Sine of the tail-furl axis tilt angle [-]
     REAL(R8Ki)  :: STFrlTlt2      !< Sine-squared of the tail-furl axis tilt angle [-]
-    REAL(ReKi)  :: TFrlPntxn      !< Downwind distance from tower-top to arbitrary point on tail-furl axis [-]
-    REAL(ReKi)  :: TFrlPntyn      !< Lateral distance from tower-top to arbitrary point on tail-furl axis [-]
-    REAL(ReKi)  :: TFrlPntzn      !< Vertical distance from tower-top to arbitrary point on tail-furl axis [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TFrlPnt_n      !< Position from tower-top to arbitrary point on tail-furl axis [-]
     REAL(ReKi)  :: TipRad      !< Preconed blade-tip radius [-]
     REAL(ReKi)  :: TowerHt      !< Height of tower above ground level [-]
     REAL(ReKi)  :: TowerBsHt      !< Height of tower base above ground level [onshore] or MSL [offshore] [meters]
@@ -752,7 +736,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: TeetSSSp      !< Rotor-teeter soft-stop linear-spring constant [-]
     REAL(ReKi)  :: TeetSStP      !< Rotor-teeter soft-stop position [-]
     INTEGER(IntKi)  :: TeetMod      !< Rotor-teeter spring/damper model switch [-]
-    REAL(ReKi)  :: TFrlCDmp      !< Tail-furl rate-independent Coulomb-damping moment [-]
     REAL(ReKi)  :: TFrlDmp      !< Tail-furl damping constant [-]
     REAL(ReKi)  :: TFrlDSDmp      !< Tail-furl down-stop damping constant [-]
     REAL(ReKi)  :: TFrlDSDP      !< Tail-furl down-stop damper position [-]
@@ -764,7 +747,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: TFrlUSSP      !< Tail-furl up-stop spring position [-]
     REAL(ReKi)  :: TFrlUSSpr      !< Tail-furl up-stop spring constant [-]
     INTEGER(IntKi)  :: TFrlMod      !< Tail-furl spring/damper model switch [-]
-    REAL(ReKi)  :: RFrlCDmp      !< Rotor-furl rate-independent Coulomb-damping moment [-]
     REAL(ReKi)  :: RFrlDmp      !< Rotor-furl damping constant [-]
     REAL(ReKi)  :: RFrlDSDmp      !< Rotor-furl down-stop damping constant [-]
     REAL(ReKi)  :: RFrlDSDP      !< Rotor-furl down-stop damper position [-]
@@ -4005,23 +3987,13 @@ ENDIF
     DstInputFileData%TailFurl = SrcInputFileData%TailFurl
     DstInputFileData%Yaw2Shft = SrcInputFileData%Yaw2Shft
     DstInputFileData%ShftSkew = SrcInputFileData%ShftSkew
-    DstInputFileData%RFrlCMxn = SrcInputFileData%RFrlCMxn
-    DstInputFileData%RFrlCMyn = SrcInputFileData%RFrlCMyn
-    DstInputFileData%RFrlCMzn = SrcInputFileData%RFrlCMzn
-    DstInputFileData%BoomCMxn = SrcInputFileData%BoomCMxn
-    DstInputFileData%BoomCMyn = SrcInputFileData%BoomCMyn
-    DstInputFileData%BoomCMzn = SrcInputFileData%BoomCMzn
-    DstInputFileData%TFinCMxn = SrcInputFileData%TFinCMxn
-    DstInputFileData%TFinCMyn = SrcInputFileData%TFinCMyn
-    DstInputFileData%TFinCMzn = SrcInputFileData%TFinCMzn
-    DstInputFileData%RFrlPntxn = SrcInputFileData%RFrlPntxn
-    DstInputFileData%RFrlPntyn = SrcInputFileData%RFrlPntyn
-    DstInputFileData%RFrlPntzn = SrcInputFileData%RFrlPntzn
+    DstInputFileData%RFrlCM_n = SrcInputFileData%RFrlCM_n
+    DstInputFileData%BoomCM_n = SrcInputFileData%BoomCM_n
+    DstInputFileData%TFinCM_n = SrcInputFileData%TFinCM_n
+    DstInputFileData%RFrlPnt_n = SrcInputFileData%RFrlPnt_n
     DstInputFileData%RFrlSkew = SrcInputFileData%RFrlSkew
     DstInputFileData%RFrlTilt = SrcInputFileData%RFrlTilt
-    DstInputFileData%TFrlPntxn = SrcInputFileData%TFrlPntxn
-    DstInputFileData%TFrlPntyn = SrcInputFileData%TFrlPntyn
-    DstInputFileData%TFrlPntzn = SrcInputFileData%TFrlPntzn
+    DstInputFileData%TFrlPnt_n = SrcInputFileData%TFrlPnt_n
     DstInputFileData%TFrlSkew = SrcInputFileData%TFrlSkew
     DstInputFileData%TFrlTilt = SrcInputFileData%TFrlTilt
     DstInputFileData%RFrlMass = SrcInputFileData%RFrlMass
@@ -4032,7 +4004,6 @@ ENDIF
     DstInputFileData%RFrlMod = SrcInputFileData%RFrlMod
     DstInputFileData%RFrlSpr = SrcInputFileData%RFrlSpr
     DstInputFileData%RFrlDmp = SrcInputFileData%RFrlDmp
-    DstInputFileData%RFrlCDmp = SrcInputFileData%RFrlCDmp
     DstInputFileData%RFrlUSSP = SrcInputFileData%RFrlUSSP
     DstInputFileData%RFrlDSSP = SrcInputFileData%RFrlDSSP
     DstInputFileData%RFrlUSSpr = SrcInputFileData%RFrlUSSpr
@@ -4044,7 +4015,6 @@ ENDIF
     DstInputFileData%TFrlMod = SrcInputFileData%TFrlMod
     DstInputFileData%TFrlSpr = SrcInputFileData%TFrlSpr
     DstInputFileData%TFrlDmp = SrcInputFileData%TFrlDmp
-    DstInputFileData%TFrlCDmp = SrcInputFileData%TFrlCDmp
     DstInputFileData%TFrlUSSP = SrcInputFileData%TFrlUSSP
     DstInputFileData%TFrlDSSP = SrcInputFileData%TFrlDSSP
     DstInputFileData%TFrlUSSpr = SrcInputFileData%TFrlUSSpr
@@ -4439,23 +4409,13 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TailFurl
       Re_BufSz   = Re_BufSz   + 1  ! Yaw2Shft
       Re_BufSz   = Re_BufSz   + 1  ! ShftSkew
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlCMxn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlCMyn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlCMzn
-      Re_BufSz   = Re_BufSz   + 1  ! BoomCMxn
-      Re_BufSz   = Re_BufSz   + 1  ! BoomCMyn
-      Re_BufSz   = Re_BufSz   + 1  ! BoomCMzn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCMxn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCMyn
-      Re_BufSz   = Re_BufSz   + 1  ! TFinCMzn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntxn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntyn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntzn
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RFrlCM_n)  ! RFrlCM_n
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BoomCM_n)  ! BoomCM_n
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TFinCM_n)  ! TFinCM_n
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RFrlPnt_n)  ! RFrlPnt_n
       Re_BufSz   = Re_BufSz   + 1  ! RFrlSkew
       Re_BufSz   = Re_BufSz   + 1  ! RFrlTilt
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntxn
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntyn
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntzn
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TFrlPnt_n)  ! TFrlPnt_n
       Re_BufSz   = Re_BufSz   + 1  ! TFrlSkew
       Re_BufSz   = Re_BufSz   + 1  ! TFrlTilt
       Re_BufSz   = Re_BufSz   + 1  ! RFrlMass
@@ -4466,7 +4426,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RFrlMod
       Re_BufSz   = Re_BufSz   + 1  ! RFrlSpr
       Re_BufSz   = Re_BufSz   + 1  ! RFrlDmp
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlCDmp
       Re_BufSz   = Re_BufSz   + 1  ! RFrlUSSP
       Re_BufSz   = Re_BufSz   + 1  ! RFrlDSSP
       Re_BufSz   = Re_BufSz   + 1  ! RFrlUSSpr
@@ -4478,7 +4437,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! TFrlMod
       Re_BufSz   = Re_BufSz   + 1  ! TFrlSpr
       Re_BufSz   = Re_BufSz   + 1  ! TFrlDmp
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlCDmp
       Re_BufSz   = Re_BufSz   + 1  ! TFrlUSSP
       Re_BufSz   = Re_BufSz   + 1  ! TFrlDSSP
       Re_BufSz   = Re_BufSz   + 1  ! TFrlUSSpr
@@ -5095,40 +5053,30 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ShftSkew
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlCMxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlCMyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlCMzn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%BoomCMxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%BoomCMyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%BoomCMzn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCMxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCMyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFinCMzn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntzn
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%RFrlCM_n,1), UBOUND(InData%RFrlCM_n,1)
+      ReKiBuf(Re_Xferred) = InData%RFrlCM_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%BoomCM_n,1), UBOUND(InData%BoomCM_n,1)
+      ReKiBuf(Re_Xferred) = InData%BoomCM_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%TFinCM_n,1), UBOUND(InData%TFinCM_n,1)
+      ReKiBuf(Re_Xferred) = InData%TFinCM_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%RFrlPnt_n,1), UBOUND(InData%RFrlPnt_n,1)
+      ReKiBuf(Re_Xferred) = InData%RFrlPnt_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%RFrlSkew
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlTilt
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntzn
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%TFrlPnt_n,1), UBOUND(InData%TFrlPnt_n,1)
+      ReKiBuf(Re_Xferred) = InData%TFrlPnt_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%TFrlSkew
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFrlTilt
@@ -5148,8 +5096,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%RFrlSpr
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlDmp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlCDmp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlUSSP
     Re_Xferred = Re_Xferred + 1
@@ -5172,8 +5118,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%TFrlSpr
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFrlDmp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlCDmp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFrlUSSP
     Re_Xferred = Re_Xferred + 1
@@ -5915,40 +5859,40 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%ShftSkew = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%RFrlCMxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlCMyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlCMzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%BoomCMxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%BoomCMyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%BoomCMzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCMxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCMyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFinCMzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%RFrlCM_n,1)
+    i1_u = UBOUND(OutData%RFrlCM_n,1)
+    DO i1 = LBOUND(OutData%RFrlCM_n,1), UBOUND(OutData%RFrlCM_n,1)
+      OutData%RFrlCM_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%BoomCM_n,1)
+    i1_u = UBOUND(OutData%BoomCM_n,1)
+    DO i1 = LBOUND(OutData%BoomCM_n,1), UBOUND(OutData%BoomCM_n,1)
+      OutData%BoomCM_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TFinCM_n,1)
+    i1_u = UBOUND(OutData%TFinCM_n,1)
+    DO i1 = LBOUND(OutData%TFinCM_n,1), UBOUND(OutData%TFinCM_n,1)
+      OutData%TFinCM_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%RFrlPnt_n,1)
+    i1_u = UBOUND(OutData%RFrlPnt_n,1)
+    DO i1 = LBOUND(OutData%RFrlPnt_n,1), UBOUND(OutData%RFrlPnt_n,1)
+      OutData%RFrlPnt_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%RFrlSkew = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RFrlTilt = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%TFrlPntxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFrlPntyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFrlPntzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%TFrlPnt_n,1)
+    i1_u = UBOUND(OutData%TFrlPnt_n,1)
+    DO i1 = LBOUND(OutData%TFrlPnt_n,1), UBOUND(OutData%TFrlPnt_n,1)
+      OutData%TFrlPnt_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%TFrlSkew = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TFrlTilt = ReKiBuf(Re_Xferred)
@@ -5968,8 +5912,6 @@ ENDIF
     OutData%RFrlSpr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RFrlDmp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlCDmp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RFrlUSSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -5992,8 +5934,6 @@ ENDIF
     OutData%TFrlSpr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TFrlDmp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFrlCDmp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TFrlUSSP = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -16582,9 +16522,7 @@ ENDIF
     DstParamData%ProjArea = SrcParamData%ProjArea
     DstParamData%PtfmRefzt = SrcParamData%PtfmRefzt
     DstParamData%RefTwrHt = SrcParamData%RefTwrHt
-    DstParamData%RFrlPntxn = SrcParamData%RFrlPntxn
-    DstParamData%RFrlPntyn = SrcParamData%RFrlPntyn
-    DstParamData%RFrlPntzn = SrcParamData%RFrlPntzn
+    DstParamData%RFrlPnt_n = SrcParamData%RFrlPnt_n
     DstParamData%rVDxn = SrcParamData%rVDxn
     DstParamData%rVDyn = SrcParamData%rVDyn
     DstParamData%rVDzn = SrcParamData%rVDzn
@@ -16625,9 +16563,7 @@ ENDIF
     DstParamData%STFrlSkw2 = SrcParamData%STFrlSkw2
     DstParamData%STFrlTilt = SrcParamData%STFrlTilt
     DstParamData%STFrlTlt2 = SrcParamData%STFrlTlt2
-    DstParamData%TFrlPntxn = SrcParamData%TFrlPntxn
-    DstParamData%TFrlPntyn = SrcParamData%TFrlPntyn
-    DstParamData%TFrlPntzn = SrcParamData%TFrlPntzn
+    DstParamData%TFrlPnt_n = SrcParamData%TFrlPnt_n
     DstParamData%TipRad = SrcParamData%TipRad
     DstParamData%TowerHt = SrcParamData%TowerHt
     DstParamData%TowerBsHt = SrcParamData%TowerBsHt
@@ -17524,7 +17460,6 @@ ENDIF
     DstParamData%TeetSSSp = SrcParamData%TeetSSSp
     DstParamData%TeetSStP = SrcParamData%TeetSStP
     DstParamData%TeetMod = SrcParamData%TeetMod
-    DstParamData%TFrlCDmp = SrcParamData%TFrlCDmp
     DstParamData%TFrlDmp = SrcParamData%TFrlDmp
     DstParamData%TFrlDSDmp = SrcParamData%TFrlDSDmp
     DstParamData%TFrlDSDP = SrcParamData%TFrlDSDP
@@ -17536,7 +17471,6 @@ ENDIF
     DstParamData%TFrlUSSP = SrcParamData%TFrlUSSP
     DstParamData%TFrlUSSpr = SrcParamData%TFrlUSSpr
     DstParamData%TFrlMod = SrcParamData%TFrlMod
-    DstParamData%RFrlCDmp = SrcParamData%RFrlCDmp
     DstParamData%RFrlDmp = SrcParamData%RFrlDmp
     DstParamData%RFrlDSDmp = SrcParamData%RFrlDSDmp
     DstParamData%RFrlDSDP = SrcParamData%RFrlDSDP
@@ -18049,9 +17983,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! ProjArea
       Re_BufSz   = Re_BufSz   + 1  ! PtfmRefzt
       Re_BufSz   = Re_BufSz   + 1  ! RefTwrHt
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntxn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntyn
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlPntzn
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RFrlPnt_n)  ! RFrlPnt_n
       Re_BufSz   = Re_BufSz   + 1  ! rVDxn
       Re_BufSz   = Re_BufSz   + 1  ! rVDyn
       Re_BufSz   = Re_BufSz   + 1  ! rVDzn
@@ -18085,9 +18017,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! STFrlSkw2
       Db_BufSz   = Db_BufSz   + 1  ! STFrlTilt
       Db_BufSz   = Db_BufSz   + 1  ! STFrlTlt2
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntxn
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntyn
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlPntzn
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TFrlPnt_n)  ! TFrlPnt_n
       Re_BufSz   = Re_BufSz   + 1  ! TipRad
       Re_BufSz   = Re_BufSz   + 1  ! TowerHt
       Re_BufSz   = Re_BufSz   + 1  ! TowerBsHt
@@ -18444,7 +18374,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TeetSSSp
       Re_BufSz   = Re_BufSz   + 1  ! TeetSStP
       Int_BufSz  = Int_BufSz  + 1  ! TeetMod
-      Re_BufSz   = Re_BufSz   + 1  ! TFrlCDmp
       Re_BufSz   = Re_BufSz   + 1  ! TFrlDmp
       Re_BufSz   = Re_BufSz   + 1  ! TFrlDSDmp
       Re_BufSz   = Re_BufSz   + 1  ! TFrlDSDP
@@ -18456,7 +18385,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! TFrlUSSP
       Re_BufSz   = Re_BufSz   + 1  ! TFrlUSSpr
       Int_BufSz  = Int_BufSz  + 1  ! TFrlMod
-      Re_BufSz   = Re_BufSz   + 1  ! RFrlCDmp
       Re_BufSz   = Re_BufSz   + 1  ! RFrlDmp
       Re_BufSz   = Re_BufSz   + 1  ! RFrlDSDmp
       Re_BufSz   = Re_BufSz   + 1  ! RFrlDSDP
@@ -18799,12 +18727,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RefTwrHt
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlPntzn
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%RFrlPnt_n,1), UBOUND(InData%RFrlPnt_n,1)
+      ReKiBuf(Re_Xferred) = InData%RFrlPnt_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%rVDxn
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%rVDyn
@@ -18876,12 +18802,10 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%STFrlTlt2
     Db_Xferred = Db_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntxn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntyn
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlPntzn
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%TFrlPnt_n,1), UBOUND(InData%TFrlPnt_n,1)
+      ReKiBuf(Re_Xferred) = InData%TFrlPnt_n(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%TipRad
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerHt
@@ -20193,8 +20117,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TeetMod
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TFrlCDmp
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFrlDmp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TFrlDSDmp
@@ -20217,8 +20139,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TFrlMod
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RFrlCDmp
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlDmp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RFrlDSDmp
@@ -20723,12 +20643,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%RefTwrHt = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RFrlPntzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%RFrlPnt_n,1)
+    i1_u = UBOUND(OutData%RFrlPnt_n,1)
+    DO i1 = LBOUND(OutData%RFrlPnt_n,1), UBOUND(OutData%RFrlPnt_n,1)
+      OutData%RFrlPnt_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%rVDxn = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%rVDyn = ReKiBuf(Re_Xferred)
@@ -20803,12 +20723,12 @@ ENDIF
     Db_Xferred = Db_Xferred + 1
     OutData%STFrlTlt2 = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
-    OutData%TFrlPntxn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFrlPntyn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%TFrlPntzn = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%TFrlPnt_n,1)
+    i1_u = UBOUND(OutData%TFrlPnt_n,1)
+    DO i1 = LBOUND(OutData%TFrlPnt_n,1), UBOUND(OutData%TFrlPnt_n,1)
+      OutData%TFrlPnt_n(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%TipRad = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TowerHt = ReKiBuf(Re_Xferred)
@@ -22330,8 +22250,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%TeetMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%TFrlCDmp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%TFrlDmp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TFrlDSDmp = ReKiBuf(Re_Xferred)
@@ -22354,8 +22272,6 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%TFrlMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%RFrlCDmp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%RFrlDmp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RFrlDSDmp = ReKiBuf(Re_Xferred)
