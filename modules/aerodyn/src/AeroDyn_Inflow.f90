@@ -53,9 +53,6 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(AD_InitOutputType) :: InitOut_AD  ! Output data from initialization
    integer(IntKi)          :: errStat2       ! temporary error status of the operation
    character(errMsgLen)    :: errMsg2        ! temporary error message
-   integer(IntKi)          :: UnEcho         ! Unit number for the echo file
-   character(len=1054) :: DirName
-   integer :: iW
 
    ! Initialize variables for this routine
    errStat = ErrID_None
@@ -168,7 +165,6 @@ subroutine ADI_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
    character(*),                    intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
    integer(IntKi) :: i
-   real(DbKi) :: t
    errStat = ErrID_None
    errMsg  = ""
 
@@ -594,7 +590,7 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
    ! locals
-   real(ReKi)            :: pos(3), Pbase(3), Ptop(3), Pmid(3), DeltaP(3)
+   real(ReKi)            :: pos(3), Pbase(3), Ptop(3), DeltaP(3)
    real(R8Ki)            :: orientation(3,3)
    real(ReKi)            :: twrHeightAD , twrHeight
    real(ReKi)            :: zBar ! dimensionsless tower height
