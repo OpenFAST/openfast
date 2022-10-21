@@ -2,7 +2,7 @@
 IEA Wind Task 37 land-based reference wind turbine
 ====== General Options ===================================================
 False          Echo        - Echo the input to "<rootname>.AD.ech"? (flag)
-"default"      DT_AA       - Time interval for aerodynamic calculations {or "default"} (s)
+"default"      DTAero      - Time interval for aerodynamic calculations {or "default"} (s)
 1              WakeMod     - Type of wake/induction model (switch) {0=none, 1=BEMT}
 2              AFAeroMod   - Type of blade airfoil aerodynamics model (switch
 0              TwrPotent   - Type of tower influence on wind around the tower (switch)
@@ -10,9 +10,10 @@ False          Echo        - Echo the input to "<rootname>.AD.ech"? (flag)
 False          TwrAero     - Calculate tower aerodynamic loads? (flag)
 False          FrozenWake  - Assume frozen wake during linearization? (flag
 False          CavitCheck  - Perform cavitation check? (flag)
+False          Buoyancy    - Include buoyancy effects? (flag)
 True           CompAA      - Flag to compute AeroAcoustics calculation
 "AeroAcousticsInput.dat"   AA_InputFile
 ====== Environmental Conditions ==========================================
-1.225.         AirDens     - Air density (kg/m^3)
+"default"      AirDens     - Air density (kg/m^3)
 
 File continues...

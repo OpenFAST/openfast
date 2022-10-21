@@ -44,6 +44,8 @@ MODULE FASTWrapper
 
    PUBLIC :: FWrap_t0                             !  call to compute outputs at t0 [and initialize some more variables]
    PUBLIC :: FWrap_Increment                      !  call to update states to n+1 and compute outputs at n+1
+   PUBLIC :: FWrap_SetInputs  
+   PUBLIC :: FWrap_CalcOutput  
    
 
 CONTAINS
@@ -140,6 +142,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          !.... multi-turbine options ....
       ExternInitData%TurbineID = InitInp%TurbNum
       ExternInitData%TurbinePos = InitInp%p_ref_Turbine
+      ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
       
       ExternInitData%FarmIntegration = .true.
       ExternInitData%RootName = InitInp%RootName
@@ -288,11 +291,11 @@ contains
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
-subroutine FWrap_SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
+subroutine FWrap_SetParameters(InitInp, p, dt_FAST, dt_caller, ErrStat, ErrMsg)
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    REAL(DbKi),                      INTENT(IN   )  :: dt_FAST     !< time step for FAST
-   REAL(DbKi),                      INTENT(IN   )  :: InitInp_dt_low  !< time step for FAST.Farm
+   REAL(DbKi),                      INTENT(IN   )  :: dt_caller  !< time step that FWrap will be called at by FAST.Farm (if MooringMod>0, this will be smaller than DT_low)
    
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -319,22 +322,22 @@ subroutine FWrap_SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, Err
    
    
    ! p%n_FAST_low has to be set AFTER we initialize FAST, because we need to know what the FAST time step is going to be.    
-   IF ( EqualRealNos( dt_FAST, InitInp_dt_low ) ) THEN
+   IF ( EqualRealNos( dt_FAST, dt_caller ) ) THEN
       p%n_FAST_low = 1
    ELSE
-      IF ( dt_FAST > InitInp_dt_low ) THEN
+      IF ( dt_FAST > dt_caller ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg = "The FAST time step ("//TRIM(Num2LStr(dt_FAST))// &
-                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
+                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(dt_caller))//" s)."
       ELSE
             ! calculate the number of subcycles:
-         p%n_FAST_low = NINT( InitInp_dt_low / dt_FAST )
+         p%n_FAST_low = NINT( dt_caller / dt_FAST )
             
             ! let's make sure the FAST DT is an exact integer divisor of the global (FAST.Farm) time step:
-         IF ( .NOT. EqualRealNos( InitInp_dt_low, dt_FAST * p%n_FAST_low )  ) THEN
+         IF ( .NOT. EqualRealNos( dt_caller, dt_FAST * p%n_FAST_low )  ) THEN
             ErrStat = ErrID_Fatal
             ErrMsg  = "The FASTWrapper module time step ("//TRIM(Num2LStr(dt_FAST))// &
-                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
+                      " s) must be an integer divisor of the FAST.Farm or farm-level mooring time step ("//TRIM(Num2LStr(dt_caller))//" s)."
          END IF
             
       END IF
@@ -413,7 +416,7 @@ END SUBROUTINE FWrap_End
 SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds
+   REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds (no longer used, since inputs are set elsewhere)
    INTEGER(IntKi),                   INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
    TYPE(FWrap_InputType),            INTENT(INOUT) :: u               !< Inputs at t (not changed, but possibly copied)
    TYPE(FWrap_ParameterType),        INTENT(IN   ) :: p               !< Parameters
@@ -453,11 +456,11 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    !ELSE
    !   
          ! set the inputs needed for FAST
-      call FWrap_SetInputs(u, m, t)
+      !call FWrap_SetInputs(u, m, t)   <<< moved up into FAST.Farm FARM_UpdateStates
       
-      ! call FAST p%n_FAST_low times:
-      do n_ss = 1, p%n_FAST_low
-         n_FAST = n*p%n_FAST_low + n_ss - 1
+      ! call FAST p%n_FAST_low times   (p%n_FAST_low is simply the number of steps to make per wrapper call. It is affected by MooringMod)
+      do n_ss = 1, p%n_FAST_low 
+         n_FAST = n*p%n_FAST_low + n_ss - 1    
          
          CALL FAST_Solution_T( t_initial, n_FAST, m%Turbine, ErrStat2, ErrMsg2 )                  
             call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -465,8 +468,8 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             
       end do ! n_ss
       
-      call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      !call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)               <<< moved up into FAST.Farm FARM_UpdateStates
+      !   call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    !END IF
 

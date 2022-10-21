@@ -208,7 +208,7 @@ subroutine SED_ParsePrimaryFileData( InitInp, RootName, interval, FileInfo_In, I
    if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
    CurLine = CurLine + 1
    call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, &
-            InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+            InputFileData%NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
 contains
    logical function Failed()
