@@ -432,11 +432,17 @@ subroutine Init_AeroDyn(iCase, dvr, AD, dt, InitOutData, errStat, errMsg)
          InitInData%rotors(iWT)%numBlades = wt%numBlades
          call AllocAry(InitInData%rotors(iWT)%BladeRootPosition, 3, wt%numBlades, 'BladeRootPosition', errStat2, ErrMsg2 ); if (Failed()) return
          call AllocAry(InitInData%rotors(iWT)%BladeRootOrientation, 3, 3, wt%numBlades, 'BladeRootOrientation', errStat2, ErrMsg2 ); if (Failed()) return
-         if (wt%HAWTprojection) then
-            InitInData%rotors(iWT)%AeroProjMod = 0 ! default, with WithoutSweepPitchTwist
+         if (wt%projMod==-1)then
+            call WrScr('>>> Using HAWTprojection to determine projMod')
+            if (wt%HAWTprojection) then
+               InitInData%rotors(iWT)%AeroProjMod = APM_BEM_NoSweepPitchTwist ! default, with WithoutSweepPitchTwist
+            else
+               InitInData%rotors(iWT)%AeroProjMod = APM_LiftingLine
+            endif
          else
-            InitInData%rotors(iWT)%AeroProjMod = 1
+            InitInData%rotors(iWT)%AeroProjMod = wt%projMod
          endif
+         call WrScr('>>> Using projection method '//trim(num2lstr(InitInData%rotors(iWT)%AeroProjMod)))
          InitInData%rotors(iWT)%HubPosition    = wt%hub%ptMesh%Position(:,1)
          InitInData%rotors(iWT)%HubOrientation = wt%hub%ptMesh%RefOrientation(:,:,1)
          InitInData%rotors(iWT)%NacellePosition    = wt%nac%ptMesh%Position(:,1)
@@ -521,7 +527,9 @@ subroutine Init_InflowWind(dvr, IW, u_AD, o_AD, dt, errStat, errMsg)
          InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
       endif
       ! Hub Motion
-      !InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubPtMotion%NNodes ! 1 point
+      if (u_AD%rotors(1)%HubMotion%Committed) then
+         InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%HubMotion%NNodes ! 1 point
+      endif
       ! TailFin
       InitInData%NumWindPoints = InitInData%NumWindPoints + u_AD%rotors(iWT)%TFinMotion%NNodes ! 1 point
    enddo
@@ -1131,6 +1139,10 @@ subroutine Set_IW_Inputs(nt,dvr,u_AD,o_AD,u_IfW,errStat,errMsg)
          u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
       end if
       ! Hub
+      if (u_AD%rotors(iWT)%HubMotion%Committed) then
+         Node = Node + 1
+         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%HubMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%HubMotion%Position(:,1)
+      end if
       ! TailFin
       if (u_AD%rotors(iWT)%TFinMotion%Committed) then
          Node = Node + 1
@@ -1202,12 +1214,12 @@ subroutine AD_InputSolve_IfW(u_AD, y_IfW, errStat, errMsg)
          u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
       end if
       ! Hub 
-!      if (u_AD%HubMotion%NNodes > 0) then
-!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
-!         node = node + 1
-!      else
-!         u_AD%InflowOnHub = 0.0_ReKi
-!      end if
+      if (u_AD%rotors(iWT)%HubMotion%NNodes > 0) then
+         u_AD%rotors(iWT)%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
+         node = node + 1
+      else
+         u_AD%rotors(iWT)%InflowOnHub = 0.0_ReKi
+      end if
       ! TailFin
       if (u_AD%rotors(iWT)%TFinMotion%NNodes > 0) then
          u_AD%rotors(iWT)%InflowOnTailFin(:) = y_IfW%VelocityUVW(:,node)
@@ -1329,6 +1341,13 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       wt => dvr%WT(iWT)
       sWT = '('//trim(num2lstr(iWT))//')'
       call ParseCom(FileInfo_In, CurLine, Line, errStat2, errMsg2, unEc); if(Failed()) return
+      ! Temporary hack, look if ProjMod is present on the line
+      !call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc); if(Failed()) return
+      call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
+      if (errStat2==ErrID_Fatal) then
+         call WrScr('>>> ProjMod is not present in AeroDyn driver input file.')
+         wt%projMod = -1
+      endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
       ! Basic init
@@ -1657,7 +1676,6 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 ) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0. Functionality to model an MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName) ! hkr (4/6/21) Remove after MHK functionality is implemented
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    

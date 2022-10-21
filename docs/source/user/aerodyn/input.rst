@@ -32,7 +32,8 @@ AeroDyn Primary Input File
  
 The primary AeroDyn input file defines modeling options, environmental
 conditions (except freestream flow), airfoils, tower nodal
-discretization and properties, as well as output file specifications.
+discretization and properties, tower, hub, and nacelle buoyancy properties,
+as well as output file specifications.
 
 The file is organized into several functional sections. Each section
 corresponds to an aspect of the aerodynamics model. A sample AeroDyn
@@ -101,11 +102,19 @@ recalculate the induction during linearization using BEM theory.
 Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
 TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
-not function with unsteady airfoil aerodynamics.
+not function with unsteady airfoil aerodynamics. If ``CavitCheck`` is
+TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver input file must be set
+to 1 or 2 to indicate an MHK turbine is being modeled.
+
+Set the ``Buoyancy`` flag to TRUE to calculate buoyant loads on the blades,
+tower, nacelle, and hub of an MHK turbine or FALSE to disable this calculation.
+If ``Buoyancy`` is TRUE, the ``MHK`` flag in the AeroDyn or OpenFAST driver 
+input file must be set to 1 or 2 to indicate an MHK turbine is being modeled.
 
 Set the ``CompAA`` flag to TRUE to run aero-acoustic calculations.  This
-option is only available for ``WakeMod = 1`` or ``2``.  See section
-:numref:`AeroAcoustics` for information on how to use this feature.
+option is only available for ``WakeMod = 1`` or ``2`` and is not available for
+an MHK turbine.  See section :numref:`AeroAcoustics` for information on how to 
+use this feature.
 
 The ``AA_InputFile`` is used to specify the input file for the aeroacoustics
 sub-module. See :numref:`AeroAcoustics` for information on how to use this
@@ -127,7 +136,8 @@ Reynolds number calculation); a typical value is around 1.460E-5
 m\ :sup:`2`/s for air (wind turbines) and 1.004E-6 m\ :sup:`2`/s for
 seawater (MHK turbines). ``SpdSound`` is the speed of sound in the fluid
 (used to calculate the Mach number within the unsteady airfoil
-aerodynamics calculations); a typical value is around 340.3 m/s for air. The
+aerodynamics calculations); a typical value is around 340.3 m/s for air (wind 
+turbines) and 1500 m/s for seawater (MHK turbines). The
 last two parameters in this section are only used when
 ``CavitCheck = TRUE`` for MHK turbines. ``Patm`` is the atmospheric
 pressure above the free surface; typically around 101,325 Pa. ``Pvap``
@@ -304,13 +314,13 @@ airfoil aerodynamics or FALSE to neglect them; if ``UseBlCm = TRUE``,
 pitching-moment coefficient data must be included in the airfoil data
 tables with ``InCol_Cm`` not equal to zero.
 
-The blade nodal discretization, geometry, twist, chord, and airfoil
-identifier are set in separate input files for each blade, described in
-:numref:`blade_data_input_file`. ``ADBlFile(1)`` is the filename for blade 1,
-``ADBlFile(2)`` is the filename for blade 2, and ``ADBlFile(3)`` is
-the filename for blade 3, respectively; the latter is not used for
-two-bladed rotors and the latter two are not used for one-bladed rotors.
-The file names should be in quotations and can contain an absolute path
+The blade nodal discretization, geometry, twist, chord, airfoil
+identifier, and buoyancy properties are set in separate input files for each
+blade, described in :numref:`blade_data_input_file`. ``ADBlFile(1)`` is the 
+filename for blade 1, ``ADBlFile(2)`` is the filename for blade 2, and 
+``ADBlFile(3)`` is the filename for blade 3, respectively; the latter is not 
+used for two-bladed rotors and the latter two are not used for one-bladed
+rotors. The file names should be in quotations and can contain an absolute path
 or a relative path. The data in each file need not be identical, which
 permits modeling of aerodynamic imbalances.
 
@@ -338,9 +348,9 @@ The content of the tail fin input file is described in :numref:`TF_tf_input-file
 Tower Influence and Aerodynamics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section pertain to the tower influence
-and/or tower drag calculations and are only used when ``TwrPotent`` >
-0, ``TwrShadow`` > 0, or ``TwrAero = TRUE``.
+The input parameters in this section pertain to the tower influence, tower drag,
+and/or tower buoyancy calculations and are only used when ``TwrPotent`` >
+0, ``TwrShadow`` > 0, ``TwrAero = TRUE``, or ``Buoyancy = TRUE``.
 
 ``NumTwrNds`` is the user-specified number of tower analysis nodes and
 determines the number of rows in the subsequent table (after two table
@@ -351,17 +361,40 @@ accuracy with computational expense. For each node, ``TwrElev``
 specifies the local elevation of the tower node above ground (or above
 MSL for offshore wind turbines or above the seabed for MHK turbines),
 ``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
-local tower drag-force coefficient, and ``TwrTI`` specifies the
+local tower drag-force coefficient, ``TwrTI`` specifies the
 turbulence intensity used in the Eames tower shadow model
 (``TwrShadow`` = 2) as a fraction (rather than a percentage) of the
-wind fluctuation. ``TwrElev`` must be entered in monotonically
-increasing order—from the lowest (tower-base) to the highest 
-(tower-top) elevation. Values of ``TwrTI`` between 0.05 and 0.4 are
-recommended.  Values larger than 0.4 up to 1 will trigger a warning
-that the results will need to be interpreted carefully, but the code
-will allow such values for scientific investigation purposes.
-See :numref:`ad_tower_geom`.
+wind fluctuation, and ``TwrCb`` specifies the tower buoyancy coefficient.
+``TwrElev`` must be entered in monotonically increasing order—from the lowest
+(tower-base) to the highest (tower-top) elevation. Values of ``TwrTI`` between
+0.05 and 0.4 are recommended.  Values larger than 0.4 up to 1 will trigger a 
+warning that the results will need to be interpreted carefully, but the code
+will allow such values for scientific investigation purposes. ``TwrCb`` is
+defined at each node as the cross-sectional area of the tower divided by the 
+area of a circle with diameter equal to the characteristic length of the tower 
+cross section (i.e., ``TwrDiam``). For towers with circular cross-sections,
+``TwrCb`` will likely be 1.0 at each node. To neglect buoyant loads on the 
+tower, set ``TwrCb`` to 0. See :numref:`ad_tower_geom`.
 
+Hub Properties
+~~~~~~~~~~~~~~
+The input parameters in this section pertain to the calculation of buoyant loads
+on the hub and are only used when ``Buoyancy = TRUE``.
+
+``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
+center of buoyancy from the hub center in local hub coordinates;
+offsets in the y and z directions are assumed to be zero. To neglect buoyant 
+loads on the hub, set ``VolHub`` to 0.
+
+Nacelle Properties
+~~~~~~~~~~~~~~~~~~
+The input parameters in this section pertain to the calculation of buoyant loads
+on the nacelle and are only used when ``Buoyancy = TRUE``.
+
+``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
+position (x,y,z vector) of the nacelle center of buoyancy from
+the yaw bearing in local nacelle coordinates. To neglect buoyant 
+loads on the nacelle, set ``VolNac`` to 0.
 
 .. _AD-Outputs:
 
@@ -742,9 +775,9 @@ Blade Data Input File
 ---------------------
 
 The blade data input file contains the nodal discretization, geometry,
-twist, chord, and airfoil identifier for a blade. Separate files are
-used for each blade, which permits modeling of aerodynamic imbalances. A
-sample blade data input file is given in :numref:`ad_appendix`.
+twist, chord, airfoil identifier, and buoyancy properties for a blade. Separate
+files are used for each blade, which permits modeling of aerodynamic imbalances.
+A sample blade data input file is given in :numref:`ad_appendix`.
 
 The input file begins with two lines of header information which is for
 your use, but is not used by the software.
@@ -789,13 +822,26 @@ nodes. For each node:
    feather, leading edge upwind; the blade-pitch angle will be added to
    the local twist;
 
--  ``BlChord`` specifies the local chord length; and
+-  ``BlChord`` specifies the local chord length;
 
 -  ``BlAFID`` specifies which airfoil data the local blade node is
    associated with; valid values are numbers between 1 and
    ``NumAFfiles`` (corresponding to a row number in the airfoil file
    table in the AeroDyn primary input file); multiple blade nodes can
-   use the same airfoil data.
+   use the same airfoil data;
+
+-  ``BlCb`` specifies the blade buoyancy coefficient, defined as the local
+   cross-sectional area of the blade divided by the area of a circle with 
+   diameter equal to ``BlChord``; to neglect buoyant loads on the blade,
+   set ``BlCb`` to 0;
+
+-  ``BlCenBn`` specifies the offset of the blade center of buoyancy from the
+   aerodynamic center in the direction normal to the chord (positive pointing
+   toward the suction side of the blade); and
+
+-  ``BlCenBt`` specifies the offset of the blade center of buoyancy from the
+   aerodynamic center in the direction tangential to the chord
+   (positive pointing toward the trailing edge of the blade).
 
 See :numref:`ad_blade_geom`. Twist is shown in :numref:`ad_blade_local_cs` of :numref:`ad_appendix`.
 

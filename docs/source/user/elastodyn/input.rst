@@ -156,17 +156,17 @@ Turbine Configuration
 
 **Twr2Shft**    - Vertical distance from the tower-top to the rotor shaft (meters)
 
-**TowerHt**     - Height of tower above ground level [onshore] or MSL [offshore] (meters)
+**TowerHt**     - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)
 
-**TowerBsHt**   - Height of tower base above ground level [onshore] or MSL [offshore] (meters)
+**TowerBsHt**   - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)
 
-**PtfmCMxt**    - Downwind distance from the ground level [onshore] or MSL [offshore] to the platform CM (meters)
+**PtfmCMxt**    - Downwind distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
 
-**PtfmCMyt**    - Lateral distance from the ground level [onshore] or MSL [offshore] to the platform CM (meters)
+**PtfmCMyt**    - Lateral distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
 
-**PtfmCMzt**    - Vertical distance from the ground level [onshore] or MSL [offshore] to the platform CM (meters)
+**PtfmCMzt**    - Vertical distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
 
-**PtfmRefzt**   - Vertical distance from the ground level [onshore] or MSL [offshore] to the platform reference point (meters)
+**PtfmRefzt**   - Vertical distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)
 
 
 
