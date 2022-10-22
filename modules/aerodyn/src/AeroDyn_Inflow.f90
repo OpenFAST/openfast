@@ -1,11 +1,11 @@
-!>
-!!
-!!
+!> Module for the coupling of AeroDyn and InflowWind
+!! Also contains routine to couple with a "Fake ElastoDyn" (minimalistic structural solver) 
 module AeroDyn_Inflow
    use NWTC_Library
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
-   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_NumWindPoints
+   use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates
+   use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_SetExternalWindPositions
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput
 
@@ -429,8 +429,6 @@ contains
 end subroutine ADI_ADIW_Solve
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set inputs for inflow wind
-!! NOTE: order is important and should match AD_NumWindPoints
-!! Similar to FAST_Solver, IfW_InputSolve
 subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
@@ -438,48 +436,22 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer :: K, J, Node, iWT
+   integer :: K, J, node, iWT
    errStat = ErrID_None
    errMsg  = ''
-   Node=0
+   node=0
 
    if (hubHeightFirst) then
       ! Hub Height point for each turbine
       do iWT=1,size(u_AD%rotors)
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%hubMotion%Position(:,1) + u_AD%rotors(iWT)%hubMotion%TranslationDisp(:,1)
+         node = node + 1
+         u_IfW%PositionXYZ(:,node) = u_AD%rotors(iWT)%hubMotion%Position(:,1) + u_AD%rotors(iWT)%hubMotion%TranslationDisp(:,1)
       enddo
    endif
+   call AD_SetExternalWindPositions(u_AD, o_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
 
-   do iWT=1,size(u_AD%rotors)
-      ! Blade
-      do K = 1,size(u_AD%rotors(iWT)%BladeMotion)
-         do J = 1,u_AD%rotors(iWT)%BladeMotion(k)%Nnodes
-            Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
-         end do !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-      end do !K = 1,p%NumBl         
-      ! Tower
-      do J=1,u_AD%rotors(iWT)%TowerMotion%nnodes
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
-      end do      
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
-      end if
-      ! Hub
-
-   enddo ! iWT
-   ! vortex points from FVW in AD15
-   if (allocated(o_AD%WakeLocationPoints)) then
-      do J=1,size(o_AD%WakeLocationPoints,dim=2)
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = o_AD%WakeLocationPoints(:,J)
-      enddo !j, wake points
-   end if
 end subroutine ADI_Set_IW_Inputs
+!----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Calculate Wind at desired points
 !! NOTE: order is important and should match AD_NumWindPoints
@@ -511,6 +483,7 @@ end subroutine ADI_CalcOutput_IW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the wind claculated by InflowWind to the AeroDyn arrays
 !! See similar routine in FAST_Solver
+!! TODO put this in AeroDyn
 subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
    ! Passed variables
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
@@ -534,49 +507,10 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
          node = node + 1 ! Hub velocities for each rotor
       enddo
    endif
+   call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
 
-   do iWT=1,size(u_AD%rotors)
-      NumBl  = size(u_AD%rotors(iWT)%InflowOnBlade,3)
-      Nnodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
-      ! Blades
-      do k=1,NumBl
-         do j=1,Nnodes
-            u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end do
-      ! Tower
-      if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
-         Nnodes = size(u_AD%rotors(iWT)%InflowOnTower,2)
-         do j=1,Nnodes
-            u_AD%rotors(iWT)%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do      
-      end if
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         u_AD%rotors(iWT)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
-      end if
-      ! Hub 
-!      if (u_AD%HubMotion%Committed) then
-!         u_AD%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
-!         node = node + 1
-!      else
-!         u_AD%InflowOnHub = 0.0_ReKi
-!      end if
-   enddo ! rotors
-   ! OLAF points
-   if ( allocated(u_AD%InflowWakeVel) ) then
-      Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-      do j=1,Nnodes
-         u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      end do !j, wake points
-   end if
 end subroutine ADI_AD_InputSolve_IfW
+
 
 
 ! --------------------------------------------------------------------------------}
@@ -584,6 +518,7 @@ end subroutine ADI_AD_InputSolve_IfW
 ! --------------------------------------------------------------------------------{
 !> Initialize the mesh mappings between the structure and aerodyn
 !! Also adjust the tower mesh so that is is aligned with the tower base and tower top
+!! Similar to FAST_Solver.f90, InitModuleMappings
 subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
    type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
    type(AD_InputType),           intent(inout) :: uAD           ! AeroDyn input data 
@@ -609,6 +544,11 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
 
       ! nac 2 nacAD
       call MeshMapCreate(y_ED%NacelleMotion, uAD%rotors(iWT)%nacelleMotion, y_ED%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed())return
+
+      ! nac 2 tfinAD
+      if (uAD%rotors(iWT)%TFinMotion%Committed) then
+         call MeshMapCreate(y_ED%NacelleMotion, uAD%rotors(iWT)%TFinMotion, y_ED%ED_P_2_AD_P_TF, errStat2, errMsg2); if(Failed())return
+      endif
 
       ! bldroot 2 bldroot AD
       allocate(y_ED%ED_P_2_AD_P_R(y_ED%numBlades))
@@ -661,7 +601,7 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
             pos         = y_ED%TwrPtMesh%Position(:,1)
             orientation = y_ED%TwrPtMesh%RefOrientation(:,:,1)
             call Eye(orientation, errStat2, errMsg2)
-            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2); if(Failed())return
+            call CreatePointMesh(y_ED%TwrPtMeshAD, pos, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False.); if(Failed())return
 
             ! TowerBase to AD tower base
             call MeshMapCreate(y_ED%TwrPtMesh, y_ED%TwrPtMeshAD, y_ED%ED_P_2_AD_P_T, errStat2, errMsg2); if(Failed()) return
@@ -682,32 +622,6 @@ contains
       Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Init_MeshMap_For_ADI
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Creation of a point mesh
-subroutine CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg)
-   type(MeshType), intent(inout) :: mesh
-   real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
-   real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
-   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
-   character(*)                , intent(out)   :: errMsg        ! Error message if errStat /= ErrID_None
-   integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if errStat /= ErrID_None
-   errStat = ErrID_None
-   errMsg  = ''
-
-   call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2, Orientation=.true., TranslationDisp=.true., TranslationVel=.true., RotationVel=.true., TranslationAcc=.true., RotationAcc=.true.)
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-   if (errStat >= AbortErrLev) return
-
-   call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshCommit(mesh, errStat2, errMsg2);
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-end subroutine CreatePointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set aerodyn inputs based on FED meshes
 !  - set AD input meshes and inflow
@@ -733,6 +647,11 @@ subroutine Set_Inputs_For_ADI(u_ADI, FED, errStat, errMsg)
 
       ! Nac 2 Nac AD 
       call Transfer_Point_to_Point(y_ED%NacelleMotion, u_ADI%AD%rotors(iWT)%nacelleMotion, y_ED%ED_P_2_AD_P_N, errStat2, errMsg2); if(Failed()) return
+
+      ! Nac 2 TailFin AD (Transfer ElastoDyn CM motion (taken as Nacelle) to AeroDyn tailfin ref point motion
+      if (u_ADI%AD%rotors(iWT)%TFinMotion%Committed) then
+         call Transfer_Point_to_Point( y_ED%NacelleMotion, u_ADI%AD%rotors(IWT)%TFinMotion, y_ED%ED_P_2_AD_P_TF, errStat2, errMsg2 ); if(Failed()) return
+      end if
 
       ! Blade root to blade root AD
       do iB = 1,y_ED%numBlades

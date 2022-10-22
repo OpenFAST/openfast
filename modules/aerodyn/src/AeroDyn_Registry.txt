@@ -34,15 +34,35 @@ param    ^              -  IntKi    TwrShadow_none          -  0  -  "no tower s
 param    ^              -  IntKi    TwrShadow_Powles        -  1  -  "Powles tower shadow model"                  -
 param    ^              -  IntKi    TwrShadow_Eames         -  2  -  "Eames tower shadow model"                   -
 
+param    ^              -  IntKi    TFinAero_none           -  0  -  "no tail fin aero"                                   -
+param    ^              -  IntKi    TFinAero_polar          -  1  -  "polar-based tail fin aerodynamics"                  -
+param    ^              -  IntKi    TFinAero_USB            -  2  -  "unsteady slender body tail fin aerodynamics model"  -
+
+param    ^              -  IntKi    TFinIndMod_none         -  0  -  "no induction"                                   -
+param    ^              -  IntKi    TFinIndMod_rotavg       -  1  -  "rotor averaged induction"                       -
 # AeroProjMod (APM)
 param    ^              -  IntKi    APM_BEM_NoSweepPitchTwist - 1 -  "Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system"  -
 param    ^              -  IntKi    APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"                               -
 param    ^              -  IntKi    APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)" -
-
-
 # if more than AD_MaxBl_Out blades are used in the simulation, not all channels will have output information for the "extra" blades.
 # Also, the AD input file will require more lines for the additional blades.
 param    ^              -  IntKi    AD_MaxBl_Out            -  3  -  "Maximum number of blades for information output (or linearization)" -
+
+# Tail Fin parameters 
+typedef  ^  TFinParameterType   IntKi   TFinMod    -    -   0 "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
+typedef  ^  TFinParameterType   ReKi    TFinChord  -    -   - "Tail fin chord [used only when TFinMod=1]" m
+typedef  ^  TFinParameterType   ReKi    TFinArea   -    -   - "Tail fin planform area [used only when TFinMod=1]" m^2
+typedef  ^  TFinParameterType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
+typedef  ^  TFinParameterType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
+
+# Tail Fin input file 
+typedef  ^  TFinInputFileType   IntKi   TFinMod    -    -   0 "Tail fin aerodynamics model {0=none, 1=polar-based, 2=USB-based}" (switch)
+typedef  ^  TFinInputFileType   ReKi    TFinChord  -    -   - "Tail fin chord [used only when TFinMod=1]" m
+typedef  ^  TFinInputFileType   ReKi    TFinArea   -    -   - "Tail fin planform area [used only when TFinMod=1]" m^2
+typedef  ^  TFinInputFileType   ReKi    TFinRefP_n 3    -   - "Undeflected position of the tail fin reference point wrt the tower top" m 
+typedef  ^  TFinInputFileType   ReKi    TFinAngles 3    -   - "Tail fin chordline skew, tilt, and bank angles about the reference point" (deg)
+typedef  ^  TFinInputFileType   IntKi   TFinIndMod -    -   - "Model for induced velocity calculation {0=none, 1=rotor-average}" (switch)
+typedef  ^  TFinInputFileType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
 
 
 
@@ -127,12 +147,16 @@ typedef	^	RotInputFile	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	RotInputFile	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrTI	{:}	-	-	"Turbulence intensity for tower shadow at tower node"	-
 typedef	^	RotInputFile	ReKi	TwrCb	{:}	-	-	"Coefficient of buoyancy at tower node"	-
-
+# Hub
 typedef	^	RotInputFile	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
-
+# Nacelle
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+# TailFin
+typedef  ^  RotInputFile   LOGICAL          TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
+typedef  ^  RotInputFile   CHARACTER(1024)  TFinFile  -    -    -   "Input file for tail fin aerodynamics [used only when TFinAero=True]" -
+typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file data for tail fin" -
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
@@ -192,6 +216,8 @@ typedef  ^  AD_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (AD
 typedef  ^  AD_InputFile   ReKi             UAStartRad  -  -  - Starting radius for dynamic stall (fraction of rotor radius)
 typedef  ^  AD_InputFile   ReKi             UAEndRad    -  -  - Ending radius for dynamic stall (fraction of rotor radius)
 typedef  ^  AD_InputFile   RotInputFile  rotors {:} - - "Rotor (blades and tower) input file data" -
+
+
 
 
 # ..... States ....................................................................................................................
@@ -277,6 +303,16 @@ typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit leng
 typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
 typedef	^	RotMiscVarType	Logical	FirstWarn_TowerStrike	-	-	-	"flag to avoid printing tower strike multiple times" -
 typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W"	m/s
+# TailFin
+typedef	^	RotMiscVarType	ReKi	TFinAlpha	-	-	-	"Angle of attack for tailfin"
+typedef	^	RotMiscVarType	ReKi	TFinRe   	-	-	-	"Reynolds number for tailfin"
+typedef	^	RotMiscVarType	ReKi	TFinVrel 	-	-	-	"Orthogonal relative velocity nrom at the reference point"
+typedef	^	RotMiscVarType	ReKi	TFinVund_i 	3	-	-	"Undisturbed wind velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinVind_i 	3	-	-	"Induced velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinVrel_i 	3	-	-	"Relative velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinSTV_i 	3	-	-	"Structural velocity at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinF_i 	3	-	-	"Forces at the reference point of the fin in the inertial system"
+typedef	^	RotMiscVarType	ReKi	TFinM_i 	3	-	-	"Moments at the reference point of the fin in the inertial system"
 
 typedef	^	MiscVarType	RotMiscVarType	rotors	{:}-	-	-	"MiscVars for each rotor"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
@@ -285,6 +321,8 @@ typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
+
+
 # Parameters for each rotor
 typedef	^	RotParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	RotParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
@@ -346,6 +384,9 @@ typedef	^	RotParameterType	IntKi	BldNd_TotNumOuts	-	-	-	"Total number of request
 typedef	^	RotParameterType	OutParmType	BldNd_OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^  RotParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
 typedef  ^  RotParameterType  IntKi BldNd_BladesOut - - - "The blades to output (AD_AllBldNdOuts)" -
+# Tail fin parameters (per rotor)
+typedef  ^  RotParameterType  LOGICAL           TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
+typedef  ^  RotParameterType  TFinParameterType TFin    -       -   -   "Parameters for tail fin of current rotor" -
 
 # parameters for all rotors:
 typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for each rotor" -
@@ -367,12 +408,15 @@ typedef	^	RotInputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
 typedef	^	RotInputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	RotInputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
 typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
+typedef	^	RotInputType	MeshType	TFinMotion	- 	-	-	"motion of tail fin (at tail fin ref point)"	-
 # Define inputs that are not on a mesh here:
 typedef	^	RotInputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
+typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}	-	-	"U,V,W at tailfin"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
+
 
 typedef	^	InputType	RotInputType	rotors	{:}	-	-	"Inputs for each rotor"	-
 typedef	^	InputType	ReKi	InflowWakeVel	{:}{:}	-	-	"U,V,W at wake points"	m/s
@@ -384,6 +428,7 @@ typedef	^	RotOutputType	MeshType	NacelleLoad	-	-	-	"loads on the nacelle"	-
 typedef	^	RotOutputType	MeshType	HubLoad  	-	-	-	"loads on the hub"  	-
 typedef	^	RotOutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	RotOutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
+typedef	^	RotOutputType	MeshType	TFinLoad 	-  	-	-	"loads on tail fin (at tail fin ref point)"	-
 # Define outputs that are not on a mesh here:
 typedef	^	RotOutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
 
