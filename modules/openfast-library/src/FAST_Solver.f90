@@ -461,46 +461,8 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          
    ELSEIF (p_FAST%CompAero == MODULE_AD) THEN               
       
-      ! TODO Use a dedicated AeroDyn function to do that
-      DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-         DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
-            
-            Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(1)%BladeMotion(k)%Position(:,j)
-            
-         END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-      END DO !K = 1,p%NumBl         
-
-      DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(1)%TowerMotion%Position(:,J)
-      END DO      
-      
-      ! Nacelle
-      if (u_AD%rotors(1)%NacelleMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(1)%NacelleMotion%Position(:,1)
-      end if
-
-      ! Hub
-      if (u_AD%rotors(1)%HubMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%HubMotion%TranslationDisp(:,1) + u_AD%rotors(1)%HubMotion%Position(:,1)
-      end if
-      
-      ! TailFin
-      if (u_AD%rotors(1)%TFinMotion%Committed) then
-         Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%rotors(1)%TFinMotion%TranslationDisp(:,1) + u_AD%rotors(1)%TFinMotion%Position(:,1)
-      end if
-                  
-      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
-      if (allocated(OtherSt_AD%WakeLocationPoints)) then
-         do J=1,size(OtherSt_AD%WakeLocationPoints,DIM=2)
-            Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
-         enddo
-      end if
+      ! Set u_IfW%PositionXYZ needed by AeroDyn (node counter will be incremented)
+      call AD_SetExternalWindPositions(u_AD, OtherSt_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
       
    END IF
    
@@ -566,56 +528,8 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          node = 1
       end if
 
-      ! EBRA: TODO use an AeroDyn dedicated function to do the transfer from an array UVW to u_AD
-      NumBl  = size(u_AD%rotors(1)%InflowOnBlade,3)
-      Nnodes = size(u_AD%rotors(1)%InflowOnBlade,2)
-      
-      do k=1,NumBl
-         do j=1,Nnodes
-            u_AD%rotors(1)%InflowOnBlade(:,j,k) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end do
-                  
-      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then
-         Nnodes = size(u_AD%rotors(1)%InflowOnTower,2)
-         do j=1,Nnodes
-            u_AD%rotors(1)%InflowOnTower(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do      
-      end if
-
-      ! Nacelle
-      if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnNacelle(:) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(1)%InflowOnNacelle = 0.0_ReKi
-      end if
-         
-      if (u_AD%rotors(1)%HubMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnHub(:) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(1)%InflowOnHub = 0.0_ReKi
-      end if
-
-      ! TailFin
-      if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnTailFin(:) = y_IfW%VelocityUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(1)%InflowOnTailFin = 0.0_ReKi
-      end if
-
-      ! vortex points from FVW in AD15 (should be at then end, since not "rotor dependent"
-      if ( allocated(u_AD%InflowWakeVel) ) then
-         Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-         do j=1,Nnodes
-            u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
-            node = node + 1
-         end do
-      end if
+      ! Set the external wind from inflowwin into the AeroDyn inputs. Node counter is incremented
+      call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
 
    ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
       node = 2 !start of inputs to AD15

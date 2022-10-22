@@ -6972,7 +6972,7 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
 END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Count number of wind points required by AeroDyn.
-!! Respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
+!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
 integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
@@ -7004,7 +7004,7 @@ integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
 end function AD_NumWindPoints
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Sets the wind calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW")
-!! Should respects the order of AD_NumWindPoints and AD_SetExternalWindPositions
+!! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions
 subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
    ! Passed variables
    type(AD_InputType),          intent(inout)   :: u_AD   !< AeroDyn inputs
@@ -7013,28 +7013,25 @@ subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
    integer(IntKi)                               :: errStat!< Error status of the operation
    character(*)                                 :: errMsg !< Error message if errStat /= ErrID_None
    ! Local variables:
-   integer(IntKi)                               :: J      ! Loops through nodes / elements.
-   integer(IntKi)                               :: K      ! Loops through blades.
-   integer(IntKi)                               :: NumBl
-   integer(IntKi)                               :: NNodes
+   integer(IntKi)                               :: j      ! Loops through nodes / elements.
+   integer(IntKi)                               :: k      ! Loops through blades.
+   integer(IntKi)                               :: nNodes
    integer(IntKi)                               :: iWT
    errStat = ErrID_None
    errMsg  = ""
 
    do iWT=1,size(u_AD%rotors)
-      NumBl  = size(u_AD%rotors(iWT)%InflowOnBlade,3)
-      Nnodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
+      nNodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
       ! Blades
-      do k=1,NumBl
-         do j=1,Nnodes
+      do k=1,size(u_AD%rotors(iWT)%InflowOnBlade,3)
+         do j=1,nNodes
             u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = VelUVW(:,node)
             node = node + 1
          end do
       end do
       ! Tower
       if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
-         Nnodes = size(u_AD%rotors(iWT)%InflowOnTower,2)
-         do j=1,Nnodes
+         do j=1,size(u_AD%rotors(iWT)%InflowOnTower,2)
             u_AD%rotors(iWT)%InflowOnTower(:,j) = VelUVW(:,node)
             node = node + 1
          end do      
@@ -7063,8 +7060,7 @@ subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
    enddo ! rotors
    ! OLAF points
    if ( allocated(u_AD%InflowWakeVel) ) then
-      Nnodes = size(u_AD%InflowWakeVel,DIM=2)
-      do j=1,Nnodes
+      do j=1,size(u_AD%InflowWakeVel,DIM=2)
          u_AD%InflowWakeVel(:,j) = VelUVW(:,node)
          node = node + 1
       end do !j, wake points
@@ -7080,20 +7076,20 @@ subroutine AD_SetExternalWindPositions(u_AD, o_AD, PosXYZ, node, errStat, errMsg
    integer(IntKi),               intent(inout) :: node    !< Counter for dimension 2 of PosXYZ. Initialized by caller and returned!
    integer(IntKi)              , intent(out  ) :: errStat !< Status of error message
    character(*)                , intent(out  ) :: errMsg  !< Error message if errStat /= ErrID_None
-   integer :: K, J, iWT
+   integer :: k, j, iWT
    errStat = ErrID_None
    errMsg  = ''
 
    do iWT=1,size(u_AD%rotors)
       ! Blade
-      do K = 1,size(u_AD%rotors(iWT)%BladeMotion)
-         do J = 1,u_AD%rotors(iWT)%BladeMotion(k)%Nnodes
+      do k = 1,size(u_AD%rotors(iWT)%BladeMotion)
+         do j = 1,u_AD%rotors(iWT)%BladeMotion(k)%nNodes
             node = node + 1
             PosXYZ(:,node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
          end do !J = 1,p%Bldnodes ! Loop through the blade nodes / elements
       end do !K = 1,p%NumBl         
       ! Tower
-      do J=1,u_AD%rotors(iWT)%TowerMotion%nnodes
+      do j = 1,u_AD%rotors(iWT)%TowerMotion%nNodes
          node = node + 1
          PosXYZ(:,node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
       end do      
@@ -7115,9 +7111,9 @@ subroutine AD_SetExternalWindPositions(u_AD, o_AD, PosXYZ, node, errStat, errMsg
    enddo ! iWT
    ! vortex points from FVW in AD15
    if (allocated(o_AD%WakeLocationPoints)) then
-      do J=1,size(o_AD%WakeLocationPoints,dim=2)
+      do j = 1,size(o_AD%WakeLocationPoints,dim=2)
          node = node + 1
-         PosXYZ(:,node) = o_AD%WakeLocationPoints(:,J)
+         PosXYZ(:,node) = o_AD%WakeLocationPoints(:,j)
       enddo !j, wake points
    end if
 end subroutine AD_SetExternalWindPositions
