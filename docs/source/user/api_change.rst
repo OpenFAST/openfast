@@ -30,6 +30,9 @@ AeroDyn 15                                    67   HubCenBx          0.5        
 AeroDyn 15                                    68   NacPropsSection   ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
 AeroDyn 15                                    69   VolNac            32.0       VolNac            - Nacelle volume (m^3)
 AeroDyn 15                                    70   NacCenB           0.4,0,0    NacCenB           - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+AeroDyn 15                                    71   TFinPropsSection  ======  Tail fin Aerodynamics ======================================================================== 
+AeroDyn 15                                    72   TFinAero          True      TFinAero            - Calculate tail fin aerodynamics model (flag)
+AeroDyn 15                                    73   TFinFile\$        "AD_Fin.dat"  TFinFile        - Input file for tail fin aerodynamics [used only when TFinAero=True]
 AeroDyn 15                                         TwrCb             1.0        [additional column in *Tower Influence and Aerodynamics* table]
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
@@ -38,6 +41,9 @@ AeroDyn driver                                54\* WrVTK_Type        1          
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
+
+\$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
 
 
 ============================================= ==== =============== ========================================================================================================================================================================================================

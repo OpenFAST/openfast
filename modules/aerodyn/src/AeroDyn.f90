@@ -337,6 +337,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    enddo
+   ! TailFin parameters
+   do iR = 1, nRotors
+      p%rotors(iR)%TFinAero         = InputFileData%rotors(iR)%TFinAero
+      p%rotors(iR)%TFin%TFinMod     = InputFileData%rotors(iR)%TFin%TFinMod
+      p%rotors(iR)%TFin%TFinChord   = InputFileData%rotors(iR)%TFin%TFinChord
+      p%rotors(iR)%TFin%TFinArea    = InputFileData%rotors(iR)%TFin%TFinArea
+      p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
+      p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
+   enddo
   
       !............................................................................................
       ! Define and initialize inputs here 
@@ -905,6 +914,24 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) RETURN         
+
+   ! --- TailFin
+   if (p%TFinAero) then
+      call MeshCopy ( SrcMesh  = u%TFinMotion  &
+                    , DestMesh = y%TFinLoad    &
+                    , CtrlCode = MESH_SIBLING     &
+                    , IOS      = COMPONENT_OUTPUT &
+                    , force    = .TRUE.           &
+                    , moment   = .TRUE.           &
+                    , ErrStat  = ErrStat2         &
+                    , ErrMess  = ErrMsg2          )
+   
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      if (ErrStat >= AbortErrLev) RETURN         
+   else
+      y%TFinLoad%NNodes = 0
+   endif
+
          
       call MeshCopy ( SrcMesh  = u%HubMotion      &
                     , DestMesh = y%HubLoad        &
@@ -995,8 +1022,9 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       
    u%InflowOnBlade = 0.0_ReKi
    u%UserProp      = 0.0_ReKi
-   u%InflowOnNacelle = 0.0_ReKi
    u%InflowOnHub = 0.0_ReKi
+   u%InflowOnNacelle = 0.0_ReKi
+   u%InflowOnTailFin = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................
@@ -1047,40 +1075,28 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
       
    end if ! we compute tower loads
    
-      !................
-      ! hub
-      !................
-   
-   call MeshCreate ( BlankMesh  = u%HubMotion     &
-                     ,IOS       = COMPONENT_INPUT &
-                     ,Nnodes    = 1               &
-                     ,ErrStat   = ErrStat2        &
-                     ,ErrMess   = ErrMsg2         &
-                     ,Orientation     = .true.    &
-                     ,TranslationDisp = .true.    &
-                     ,RotationVel     = .true.    &
-                     )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-   if (errStat >= AbortErrLev) return
-                     
-   call MeshPositionNode(u%HubMotion, 1, InitInp%HubPosition, errStat2, errMsg2, InitInp%HubOrientation)
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         
-   call MeshConstructElement( u%HubMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-   call MeshCommit(u%HubMotion, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':HubMotion' )
-            
-   if (errStat >= AbortErrLev) return
-
-         
-   u%HubMotion%Orientation     = u%HubMotion%RefOrientation
-   u%HubMotion%TranslationDisp = 0.0_R8Ki
-   u%HubMotion%RotationVel     = 0.0_ReKi   
+   !................
+   ! hub
+   !................
+   call CreatePointMesh(u%HubMotion, InitInp%HubPosition, InitInp%HubOrientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+   if (Failed()) return
       
-   
+   !................
+   ! TailFin Motion Mesh
+   !................
+   if (p%TFinAero) then
+      position     = InitInp%NacellePosition + matmul(transpose(InitInp%NacelleOrientation), InputFileData%TFin%TFinRefP_n)
+      theta(1)     = InputFileData%TFin%TFinAngles(1)
+      theta(2)     = InputFileData%TFin%TFinAngles(2)
+      theta(3)     = InputFileData%TFin%TFinAngles(3)
+      orientationL = EulerConstructZYX( theta ) ! nac2tf
+      orientation  = matmul(orientationL, InitInp%NacelleOrientation) ! gl2tf = nac2tf * gl2nac
+      call CreatePointMesh(u%TFinMotion, position, orientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+      if (Failed()) return
+   else
+      u%TFinMotion%NNodes = 0
+   endif
+
       !................
       ! blade roots
       !................
@@ -1092,33 +1108,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
    end if      
       
    do k=1,p%NumBlades
-      call MeshCreate ( BlankMesh = u%BladeRootMotion(k)                  &
-                        ,IOS       = COMPONENT_INPUT                       &
-                        ,Nnodes    = 1                                     &
-                        ,ErrStat   = ErrStat2                              &
-                        ,ErrMess   = ErrMsg2                               &
-                        ,Orientation     = .true.                          &
-                        ,TranslationDisp=.true., TranslationVel=.true.     & 
-                        ,RotationVel=.true., TranslationAcc=.true., RotationAcc=.true. &
-                        )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      if (errStat >= AbortErrLev) return
-            
-      call MeshPositionNode(u%BladeRootMotion(k), 1, InitInp%BladeRootPosition(:,k), errStat2, errMsg2, InitInp%BladeRootOrientation(:,:,k))
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-                     
-      call MeshConstructElement( u%BladeRootMotion(k), ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-      call MeshCommit(u%BladeRootMotion(k), errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName//':BladeRootMotion' )
-            
-      if (errStat >= AbortErrLev) return
-
-      
-      u%BladeRootMotion(k)%Orientation     = u%BladeRootMotion(k)%RefOrientation
-   
+      call CreatePointMesh(u%BladeRootMotion(k), InitInp%BladeRootPosition(:,k), InitInp%BladeRootOrientation(:,:,k), errStat2, errMsg2, hasMotion=.True., hasLoads=.False.)
+      if (Failed()) return
    end do !k=numBlades      
       
       
@@ -1199,38 +1190,18 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
    
    
    
-      !................
-      ! Nacelle
-      !................
-      call MeshCreate ( BlankMesh = u%NacelleMotion &
-                       ,IOS       = COMPONENT_INPUT &
-                       ,Nnodes    = 1               &
-                       ,ErrStat   = ErrStat2        &
-                       ,ErrMess   = ErrMsg2         &
-                       ,Orientation     = .true.    &
-                       ,TranslationDisp = .true.    &
-                       ,TranslationVel  = .true.    &
-                      )
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   !................
+   ! Nacelle
+   !................
+   position = real(InitInp%NacellePosition, ReKi)
+   call CreatePointMesh(u%NacelleMotion, position, InitInp%NacelleOrientation, errStat2, errMsg2, hasMotion=.True., hasLoads=.False., hasAcc=.False.)
+   if (Failed()) return
 
-      if (errStat >= AbortErrLev) return
-            
-         ! set node initial position/orientation
-      position = InitInp%NacellePosition
-
-      call MeshPositionNode(u%NacelleMotion, 1, position, errStat2, errMsg2, orient=InitInp%NacelleOrientation)
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      call MeshConstructElement( u%NacelleMotion, ELEMENT_POINT, errStat2, errMsg2, p1=1 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-
-      call MeshCommit(u%NacelleMotion, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            
-      if (errStat >= AbortErrLev) return
-
-   
-   
+contains 
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
 end subroutine Init_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets AeroDyn parameters for use during the simulation; these variables are not changed after AD_Init.
@@ -1777,6 +1748,11 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    endif
+
+   ! --- Tail Fin
+   if (p%TFinAero) then
+      call TFin_CalcOutput(p, p_AD, u, m, y, ErrStat2, ErrMsg2)
+   endif
    
    
    !-------------------------------------------------------   
@@ -1845,7 +1821,6 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
    end if
-
    
 end subroutine RotWriteOutputs
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3614,6 +3589,20 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       end do ! iR, rotor
       
    end if   
+
+   !..................
+   ! Tail fin checks
+   !..................
+   do iR = 1,size(NumBl)
+      if (InputFileData%rotors(iR)%TFinAero) then
+         ! Check AFID
+         if (InputFileData%rotors(iR)%TFin%TFinMod==TFinAero_polar) then
+            k = InputFileData%rotors(iR)%TFin%TFinAFID
+            j = InputFileData%NumAFfiles
+            if (k<1 .or. k>j) call Fatal('The variable TFinAFID (in AeroDyn TailFin file) needs to be between 1 and NumAFfiles ('//trim(num2lstr(j))//'), currently: '//trim(num2lstr(k)))
+         endif
+      endif
+   enddo ! iR, rotor
    
    !..................
    ! check for linearization
@@ -3633,6 +3622,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end if
       end if
    end if
+
+contains
+
+   SUBROUTINE Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, RoutineName)
+   END SUBROUTINE Fatal
    
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4158,6 +4154,96 @@ contains
         if (Failed) call CleanUp()
    end function Failed
 END SUBROUTINE Init_OLAF
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the tower loads for the AeroDyn TowerLoad output mesh.
+SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
+
+   TYPE(RotInputType),           INTENT(IN   )  :: u           !< Inputs at Time t
+   TYPE(RotParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD        !< Parameters
+   TYPE(RotMiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   TYPE(RotOutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   real(ReKi)              :: PRef(3)           ! ref point
+   real(ReKi)              :: V_rel_tf(3)       ! relative wind speed in tailfin coordinate system
+   real(ReKi)              :: V_rel_orth2       ! square norm of V_rel_tf in orthogonal plane
+   real(ReKi)              :: V_rel(3)          ! relative wind speed
+   real(ReKi)              :: V_wnd(3)          ! wind velocity
+   real(ReKi)              :: V_ind(3)          ! induced velocity
+   real(ReKi)              :: V_str(3)          ! structural velocity
+   real(ReKi)              :: force_tf(3)       ! force in tf system
+   real(ReKi)              :: moment_tf(3)      ! moment in tf system
+   real(ReKi)              :: alpha, Cl, Cd, Cm, Re, Cx, Cy, q
+   type(AFI_OutputType)    :: AFI_interp  ! Resulting values from lookup table
+   integer(intKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'TFin_CalcOutput'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+   ! TODO TailFin: compute tower influence
+   V_wnd = u%InflowOnTailFin
+   V_str = u%TFinMotion%TranslationVel(:,1)
+
+   if (p%TFin%TFinIndMod==TFinIndMod_none) then
+      V_ind = 0.0_ReKi
+   elseif(p%TFin%TFinIndMod==TFinIndMod_rotavg) then
+      ! TODO TODO
+      print*,'TODO TailFin: compute rotor average induced velocity'
+      V_ind = 0.0_ReKi 
+   else
+      STOP ! Will never happen
+   endif
+   V_rel       = V_wnd - V_str + V_ind
+   V_rel_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_rel) ! from inertial to tf system
+   alpha       = atan2( V_rel_tf(2), V_rel_tf(1))               ! angle of attack
+   V_rel_orth2 = V_rel_tf(1)**2 + V_rel_tf(2)**2                ! square norm of Vrel in tf system
+
+   if (p%TFin%TFinMod==TFinAero_none) then
+      y%TFinLoad%Force(1:3,1)  = 0.0_ReKi
+      y%TFinLoad%Moment(1:3,1) = 0.0_ReKi
+
+   elseif (p%TFin%TFinMod==TFinAero_polar) then
+      ! Airfoil coefficients
+      Re  = sqrt(V_rel_orth2) * p%TFin%TFinChord/p%KinVisc
+      call AFI_ComputeAirfoilCoefs( alpha, Re, 0.0_ReKi,  p_AD%AFI(p%TFin%TFinAFID), AFI_interp, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Cx = -AFI_interp%Cl * sin(alpha) + AFI_interp%Cd * cos(alpha)
+      Cy =  AFI_interp%Cl * cos(alpha) + AFI_interp%Cd * sin(alpha)
+      ! Forces in tailfin system
+      q = 0.5 * p%airDens * V_rel_orth2 * p%TFin%TFinArea
+      force_tf(:)    = 0.0_ReKi
+      moment_tf(:)    = 0.0_ReKi
+      force_tf(1)    = Cx * q
+      force_tf(2)    = Cy * q * p%TFin%TFinChord
+      force_tf(3)    = 0.0_ReKi
+      moment_tf(1:2) = 0.0_ReKi
+      moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
+      ! Transfer to global
+      y%TFinLoad%Force(1:3,1)  = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), force_tf)
+      y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
+
+   elseif (p%TFin%TFinMod==TFinAero_USB) then
+      call SetErrStat(ErrID_Fatal, 'Tail fin USB model not yet available', ErrStat, ErrMsg, RoutineName )
+      return
+   endif
+
+   ! --- Store
+   m%TFinAlpha  = alpha
+   m%TFinRe     = Re
+   m%TFinVrel   = sqrt(V_rel_orth2)
+   m%TFinVund_i = V_wnd
+   m%TFinVind_i = V_ind
+   m%TFinVrel_i = V_rel
+   m%TFinSTV_i  = V_str
+   m%TFinF_i    = y%TFinLoad%Force(1:3,1) 
+   m%TFinM_i    = y%TFinLoad%Moment(1:3,1)
+
+END SUBROUTINE TFin_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the tower loads for the AeroDyn TowerLoad output mesh.
 SUBROUTINE ADTwr_CalcOutput(p, u, m, y, ErrStat, ErrMsg )
