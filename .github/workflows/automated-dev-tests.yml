@@ -430,6 +430,7 @@ jobs:
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
