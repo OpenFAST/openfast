@@ -2203,7 +2203,7 @@ CONTAINS
       end do  ! k=blades
    
          ! rotor outputs
-      if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
+      if ( EqualRealNos( real(m%V_dot_x,SiKi), 0.0_SiKi ) ) then
          m%AllOuts( RtTSR )    = 0.0_ReKi
          m%AllOuts( RtFldCp ) = 0.0_ReKi
          m%AllOuts( RtFldCq ) = 0.0_ReKi
