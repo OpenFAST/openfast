@@ -123,6 +123,12 @@ class AeroDynInflowLib(CDLL):
         # number of output channels
         self.numChannels = 0          # Number of channels returned
 
+        # Aero calculation method -- AeroProjMod
+        #     APM_BEM_NoSweepPitchTwist - 1 -  "Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system"
+        #     APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"
+        #     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
+        self.AeroProjMod = 1
+
         # Initial position of hub and blades
         #   used for setup of AD, not used after init.
         self.initHubPos         = np.zeros(shape=(3),dtype=c_float)
@@ -166,6 +172,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # defPvap
             POINTER(c_float),                   # WtrDpth
             POINTER(c_float),                   # MSL2SWL
+            POINTER(c_int),                     # AeroProjMod
             POINTER(c_int),                     # InterpOrder 
             POINTER(c_double),                  # t_initial 
             POINTER(c_double),                  # dt
@@ -318,6 +325,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_float(self.defPvap)),           # IN: defPvap
             byref(c_float(self.WtrDpth)),           # IN: WtrDpth
             byref(c_float(self.MSL2SWL)),           # IN: MSL2SWL
+            byref(c_int(self.AeroProjMod)),         # IN: AeroProjMod
             byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
             byref(c_double(self.t_start)),          # IN: time initial 
             byref(c_double(self.dt)),               # IN: time step (dt)

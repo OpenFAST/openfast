@@ -212,6 +212,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
+               AeroProjMod_C,                                             &
                InterpOrder_C, T_initial_C, DT_C, TMax_C,                  &
                storeHHVel, TransposeDCM_in,                               &
                WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
@@ -243,6 +244,11 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
    real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
    real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
+   ! Aero calculation method -- AeroProjMod
+   !     APM_BEM_NoSweepPitchTwist - 1 -  "Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system"
+   !     APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"
+   !     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
+   integer(c_int),            intent(in   )  :: AeroProjMod_C                          !< Type of aerodynamic projection
    ! Initial hub and blade root positions/orientations
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
    real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
@@ -426,6 +432,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       ErrMsg2  = 'Allocating rotors'
       if (Failed())  return
    end if
+   InitInp%AD%rotors(1)%AeroProjMod = int(AeroProjMod_C, IntKi)
    InitInp%AD%rotors(1)%numBlades = NumBlades
    call AllocAry(InitInp%AD%rotors(1)%BladeRootPosition,       3, NumBlades_c, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
    call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, NumBlades_c, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
