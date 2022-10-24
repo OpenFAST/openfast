@@ -116,12 +116,6 @@ if not noExec:
 ###Build the filesystem navigation variables for running the regression test
 # For multiple turbines, test turbine 2, for combined cases, test case 4 
 localOutFile      = os.path.join(testBuildDirectory, "py_ad_driver.out")
-#localOutFileWT2   = os.path.join(testBuildDirectory, "ad_driver.T2.out")
-#localOutFileCase4 = os.path.join(testBuildDirectory, "ad_driver.4.out")
-if os.path.exists(localOutFileWT2) :
-    localOutFile=localOutFileWT2
-elif os.path.exists(localOutFileCase4) :
-    localOutFile=localOutFileCase4
 baselineOutFile = os.path.join(targetOutputDirectory, os.path.basename(localOutFile))
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
