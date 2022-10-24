@@ -589,15 +589,15 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
       ! NOTE: OMP private variables are listed in order of appearance
-      !OMP PARALLEL DO DEFAULT(NONE) &
-      !OMP PRIVATE (nx_high, ny_high, nz_high)&
-      !OMP PRIVATE (nXYZ_high, n_wake, xhatBar_plane)&
-      !OMP PRIVATE (nt2, x_end_plane, np)&
-      !OMP PRIVATE (ILo, x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane, r_tmp_plane)&
-      !OMP PRIVATE (tmp_rhat_plane, tmp_Vx_wake, tmp_Vr_wake, tmp_xhat_plane)& ! TODO remove rhat and Vr, Vx and combine into Vr_tmp
-      !OMP PRIVATE (tmp_xhatBar_plane, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term, Vx_wake_tmp, Vr_wake_tmp)& 
-      !OMP PRIVATE (n_hl)& 
-      !OMP SHARED(m, u, p, y, nt, maxPln, errStat, errMsg)
+      !$OMP PARALLEL DO DEFAULT(NONE) &
+      !$OMP PRIVATE (nx_high, ny_high, nz_high)&
+      !$OMP PRIVATE (nXYZ_high, n_wake, xhatBar_plane)&
+      !$OMP PRIVATE (nt2, x_end_plane, np)&
+      !$OMP PRIVATE (ILo, x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane, r_tmp_plane)&
+      !$OMP PRIVATE (tmp_rhat_plane, tmp_Vx_wake, tmp_Vr_wake, tmp_xhat_plane)& ! TODO remove rhat and Vr, Vx and combine into Vr_tmp
+      !$OMP PRIVATE (tmp_xhatBar_plane, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term)& 
+      !$OMP PRIVATE (n_hl)& 
+      !$OMP SHARED(m, u, p, y, nt, maxPln, n_high_low, errStat, errMsg)
       do iXYZ=0, NumGrid_high-1
                ! From flat index iXYZ to grid indices nx, ny, nz
                nx_high = mod(     iXYZ                          ,p%nX_high)
@@ -695,14 +695,9 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   end do
 
                end if  ! (n_wake > 0)
-
-!             end do ! nx_high=0, p%nX_high-1
-!          end do    ! ny_high=0, p%nY_high-1
-!       end do       ! nz_high=0, p%nZ_high-1
       end do       ! iXYZ=0,NumGrid_high-1
+      !$OMP END PARALLEL DO
    end do          ! nt = 1,p%NumTurbines
-   ! OMP END DO
-   ! OMP END PARALLEL
 
    if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
    if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
