@@ -274,4 +274,24 @@ def setup(app):
         objname="CMake configuration value",
         indextemplate="pair: %s; CMake configuration"
     )
+# --- Prolog that will be included at the top of every rst file
+# Here: defining the role :red: for html and latex
+rst_prolog = r"""
+
+.. raw:: html
+
+    <style> .red {color:#ff0000} </style>
+
+.. raw:: latex
+
+
+    \makeatletter
+     \@ifundefined{DUrolered}{%
+       \newcommand{\DUrolered}[1]{{\color{red}{#1}}}
+     }{}
+    \makeatother
+
+.. role:: red
+
+"""
 

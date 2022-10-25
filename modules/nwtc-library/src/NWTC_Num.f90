@@ -105,6 +105,10 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerConstructR8
       MODULE PROCEDURE EulerConstructR16
    END INTERFACE
+
+   INTERFACE EulerConstructZYX
+      MODULE PROCEDURE EulerConstructZYXR8
+   END INTERFACE
    
       !> \copydoc nwtc_num::eulerextractr4()
    INTERFACE EulerExtract
@@ -2246,6 +2250,49 @@ CONTAINS
             
       
    END FUNCTION EulerExtractR16
+
+!=======================================================================
+!> 
+   FUNCTION EulerConstructZYXR8(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 3-2-1 rotation
+      ! sequence of the 3 Euler angles, theta_z, theta_y, and theta_x, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). 
+      !
+      REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+      REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz            
+      M(2,1) =  sx*sy*cz - sz*cx
+      M(3,1) =  sx*sz + sy*cx*cz
+      
+      M(1,2) =  sz*cy
+      M(2,2) =  sx*sy*sz + cx*cz
+      M(3,2) =  -sx*cz + sy*sz*cx
+      
+      M(1,3) =  -sy
+      M(2,3) =  sx*cy
+      M(3,3) =  cx*cy
+   
+   END FUNCTION EulerConstructZYXR8
 !=======================================================================
 !> This routine sets the matrices in the first two dimensions of A equal 
 !! to the identity matrix (all zeros, with ones on the diagonal).
