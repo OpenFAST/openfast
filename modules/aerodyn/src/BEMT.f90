@@ -66,18 +66,19 @@ module BEMT
 
     
 !----------------------------------------------------------------------------------------------------------------------------------   
-real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime )
+real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, cantAngle, xVelCorr)
 ! This routine is used to compute the inflow angle, phi, from the local velocities and the induction factors.
 !..................................................................................................................................
    real(ReKi),                    intent(in   )  :: Vx          ! Local velocity component along the thrust direction
    real(ReKi),                    intent(in   )  :: Vy          ! Local velocity component along the rotor plane-of-rotation direction
    real(ReKi),                    intent(in   )  :: a           ! Axial induction factor
    real(ReKi),                    intent(in   )  :: aprime      ! Tangential induction factor
-   
+   real(ReKi),                    intent(in   )  :: cantAngle
+   real(ReKi),                    intent(in   )  :: xVelCorr 
    real(ReKi)                                    :: x
    real(ReKi)                                    :: y
       
-   x = Vx*(1.0_ReKi-a)
+   x = (Vx*cos(cantAngle)+xVelCorr)*(1.0_R8Ki-a)
    y = Vy*(1.0_ReKi + aprime)
    
    if ( EqualRealNos(y, 0.0_ReKi) .AND. EqualRealNos(x, 0.0_ReKi) ) then
@@ -155,6 +156,12 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    character(*), parameter                       :: RoutineName = 'BEMT_SetParameters'
    integer(IntKi)                                :: i, j
 
+   real(ReKi), parameter                         :: FractionMax    = 0.7   ! fraction of rotor disk where weighted average should be maximum
+   real(ReKi), parameter                         :: FractionRadius = 0.1   ! radius of smoothing (fraction of rotor disk around FractionMax)
+   ! constants for kernelType_TRIWEIGHT:
+   real(ReKi), parameter                         :: w = 35.0_ReKi/32.0_ReKi
+   real(ReKi), parameter                         :: Exp1 = 2
+   real(ReKi), parameter                         :: Exp2 = 3
    
       ! Initialize variables for this routine
 
@@ -165,6 +172,14 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = InitInp%UA_Flag   
    p%DBEMT_Mod      = InitInp%DBEMT_Mod
+   p%MomentumCorr   = InitInp%MomentumCorr
+   p%BEM_Mod        = InitInp%BEM_Mod
+   !call WrScr('>>>> BEM_Mod '//trim(num2lstr(p%BEM_Mod)))
+   if ((p%BEM_Mod/=BEMMod_2D .and. p%BEM_Mod/=BEMMod_3D )) then
+      call SetErrStat( ErrID_Fatal, 'BEM_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
+      return
+   endif
+
 
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -210,6 +225,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       do i=1,p%numBladeNodes
          p%chord(i,j)        = InitInp%chord(i,j)
          p%tipLossConst(i,j) = p%numBlades*(InitInp%zTip    (j) - InitInp%zLocal(i,j)) / (2.0*InitInp%zLocal(i,j))
+         ! NOTE different conventions are possible for hub losses
          p%hubLossConst(i,j) = p%numBlades*(InitInp%zLocal(i,j) - InitInp%zHub    (j)) / (2.0*InitInp%zHub    (j))
       end do
    end do
@@ -238,6 +254,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       end do
    end do
    
+   p%rTipFixMax = maxval(InitInp%rTipFix)
 end subroutine BEMT_SetParameters
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -352,22 +369,13 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%Vy = 0.0_ReKi
  
-   if (p%DBEMT_Mod==DBEMT_cont_tauConst) then
-      allocate ( u%Vx_elast_dot( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-      if ( errStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vx_dot.', errStat, errMsg, RoutineName )
-         return
-      end if 
-      u%Vx_elast_dot = 0.0_ReKi
-   
-      allocate ( u%Vy_elast_dot( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-      if ( errStat2 /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vy_dot.', errStat, errMsg, RoutineName )
-         return
-      end if 
-      u%Vy_elast_dot = 0.0_ReKi
-   end if
-   
+   allocate ( u%Vz( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%Vz = 0.0_ReKi
+
    allocate ( u%omega_z( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%omega_z.', errStat, errMsg, RoutineName )
@@ -375,6 +383,13 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%omega_z = 0.0_ReKi
    
+   allocate ( u%xVelCorr( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%Vz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%xVelCorr = 0.0_ReKi
+
    allocate ( u%rLocal( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%rLocal.', errStat, errMsg, RoutineName )
@@ -392,6 +407,26 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    
    u%omega  = 0.0_ReKi
    
+   allocate ( u%cantAngle( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%cantAngle.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%cantAngle = 0.0_ReKi
+   
+   allocate ( u%drdz( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%drdz.', errStat, errMsg, RoutineName )
+      return
+   end if 
+   u%drdz = 0.0_ReKi
+   
+   allocate ( u%toeAngle( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%toeAngle.', errStat, errMsg, RoutineName )
+      return
+   end if
+   u%toeAngle = 0.0_ReKi
 end subroutine BEMT_AllocInput
 
 
@@ -427,6 +462,10 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    call allocAry( y%AOA, p%numBladeNodes, p%numBlades, 'y%AOA', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cx, p%numBladeNodes, p%numBlades, 'y%Cx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cy, p%numBladeNodes, p%numBlades, 'y%Cy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cz, p%numBladeNodes, p%numBlades, 'y%Cz', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmx, p%numBladeNodes, p%numBlades, 'y%Cmx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmy, p%numBladeNodes, p%numBlades, 'y%Cmy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cmz, p%numBladeNodes, p%numBlades, 'y%Cmz', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cm, p%numBladeNodes, p%numBlades, 'y%Cm', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -440,7 +479,10 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%phi = 0.0_ReKi   
    y%Cx = 0.0_ReKi
    y%Cy = 0.0_ReKi
-   y%Cm = 0.0_ReKi
+   y%Cz = 0.0_ReKi
+   y%Cmx = 0.0_ReKi
+   y%Cmy = 0.0_ReKi
+   y%Cmz = 0.0_ReKi
 
       ! others:
    y%chi = 0.0_ReKi
@@ -450,6 +492,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%AOA = 0.0_ReKi   
    y%Cl = 0.0_ReKi
    y%Cd = 0.0_ReKi
+   y%Cm = 0.0_ReKi
    y%Cpmin = 0.0_ReKi
 end subroutine BEMT_AllocOutput
 
@@ -534,12 +577,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       InitInp_DBEMT%numNodes   = p%numBladeNodes
       InitInp_DBEMT%tau1_const = InitInp%tau1_const
 
-      allocate(misc%u_DBEMT(2),stat=errStat2)
-         if (errStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal,"Error allocating u_DBEMT",errStat,errMsg,RoutineName)
-            return
-         end if
-      
       if (allocated(InitInp%rlocal)) then
          call MOVE_ALLOC( InitInp%rlocal, InitInp_DBEMT%rlocal )
       else   
@@ -668,6 +705,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,ErrStat,ErrMsg)
    misc%BEM_weight = 0.0_ReKi
    
    OtherState%DBEMT%tau1 = 0.0_ReKi !we're going to output this value, so let's initialize it
+   OtherState%n = -1
    
    if (p%UseInduction) then
       OtherState%ValidPhi = .true.
@@ -745,7 +783,7 @@ END SUBROUTINE BEMT_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
+subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
 ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Continuous, constraint, discrete, and other states are updated for t + Interval
 !
@@ -754,8 +792,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
    real(DbKi),                          intent(in   ) :: t          ! Current simulation time in seconds
    integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
-   type(BEMT_InputType),                intent(in   ) :: u1,u2      ! Input at t and t+ dt 
-   !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
+   type(BEMT_InputType),                intent(in   ) :: u(2)       ! Input at t and t+ dt 
+   real(DbKi),                          intent(in   ) :: uTimes(2)  ! Times associated with u(:), in seconds
    type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
    type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
                                                                     !   Output: Continuous states at t + Interval
@@ -773,49 +811,46 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
       
    integer(IntKi)                                    :: i,j
+   integer(IntKi), parameter                         :: TimeIndex_t = 1
+   integer(IntKi), parameter                         :: TimeIndex_t_plus_dt = 2
    
    character(ErrMsgLen)                              :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                    :: errStat2    ! temporary Error status of the operation
    character(*), parameter                           :: RoutineName = 'BEMT_UpdateStates'
-   real(DbKi)                                        :: uTimes(2)
+   
    
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   uTimes(1) = t
-   uTimes(2) = t+p%dt
-   
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi at t are:
    !...............................................................................................................................
-
    if (.not. OtherState%nodesInitialized) then
-      call UpdatePhi( u1, p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
-      OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
+      call UpdatePhi( u(TimeIndex_t), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
    end if
    
    !...............................................................................................................................
-   !  compute inputs to DBEMT at step n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
+   !  compute inputs to DBEMT and SkewedWake at step n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
    !...............................................................................................................................
-   call BEMT_CalcOutput_Inductions( 1, t, .true., .true., z%phi, u1, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
+   call BEMT_CalcOutput_Inductions( TimeIndex_t, t, .true., .true., z%phi, u(TimeIndex_t), p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
 
 #ifdef DEBUG_BEMT_RESIDUAL
-      if (p%useInduction) call WriteDEBUGValuesToFile(t, u1, p, x, xd, z, OtherState, m, AFInfo)
+      if (p%useInduction) call WriteDEBUGValuesToFile(t, u(TimeIndex_t), p, x, xd, z, OtherState, m, AFInfo)
 #endif   
    !...............................................................................................................................
    !  compute inputs to UA at time n (also setting inductions--including DBEMT and skewed wake corrections--at time n)
    !...............................................................................................................................
    if (p%UA_Flag) then
       m%phi = z%phi
-      call SetInputs_for_UA_AllNodes(u1, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,1))
+      call SetInputs_for_UA_AllNodes(u(TimeIndex_t), p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,TimeIndex_t))
    end if
    
    !...............................................................................................................................
-   !  update BEMT states to step n+1
+   !  update BEMT constraint states to step n+1
    !...............................................................................................................................
-   call UpdatePhi( u2, p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
+   call UpdatePhi( u(TimeIndex_t_plus_dt), p, z%phi, AFInfo, m, OtherState%ValidPhi, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (errStat >= AbortErrLev) return
   
@@ -823,7 +858,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
    !...............................................................................................................................
    !  compute inputs to DBEMT at step n+1 (also setting inductions--WITHOUT DBEMT or skewed wake corrections--at step n+1)
    !...............................................................................................................................
-   call BEMT_CalcOutput_Inductions( 2, t, .true., .false., z%phi, u2, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
+   call BEMT_CalcOutput_Inductions( TimeIndex_t_plus_dt, t, .true., .false., z%phi, u(TimeIndex_t_plus_dt), p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -858,20 +893,20 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             ! apply DBEMT correction to axInduction and tanInduction:
             !............................................
             if (p%DBEMT_Mod /= DBEMT_none) then
-               call calculate_Inductions_from_DBEMT_AllNodes(2, uTimes(2), u2, p, x, OtherState, m, m%axInduction, m%tanInduction)
+               call calculate_Inductions_from_DBEMT_AllNodes(TimeIndex_t_plus_dt, uTimes(TimeIndex_t_plus_dt), u(TimeIndex_t_plus_dt), p, x, OtherState, m, m%axInduction, m%tanInduction)
             end if
          
-            call ApplySkewedWakeCorrection_AllNodes(p, u2, m, m%axInduction, m%chi)
+            call ApplySkewedWakeCorrection_AllNodes(p, u(TimeIndex_t_plus_dt), m, m%axInduction, m%chi)
 
             !............................................
             ! If TSR is too low, (start to) turn off induction
             !............................................
-            call check_turnOffBEMT(p, u2, m%BEM_weight, m%axInduction, m%tanInduction, m%FirstWarn_BEMoff)
+            call check_turnOffBEMT(p, u(TimeIndex_t_plus_dt), m%BEM_weight, m%axInduction, m%tanInduction, m%FirstWarn_BEMoff)
             
       end if
    
       m%phi = z%phi
-      call SetInputs_for_UA_AllNodes(u2, p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,2))
+      call SetInputs_for_UA_AllNodes(u(TimeIndex_t_plus_dt), p, m%phi, m%axInduction, m%tanInduction, m%u_UA(:,:,TimeIndex_t_plus_dt))
    
       !...............................................................................................................................
       !  compute UA states at t+dt
@@ -892,6 +927,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
 
    end if ! is UA used?
     
+   OtherState%nodesInitialized = .true.         ! otherState updated to t+dt (i.e., n+1)
+   
 end subroutine BEMT_UpdateStates
 !..................................................................................................................................
 subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
@@ -906,26 +943,30 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
    integer                                            :: i, j
    
    
-      ! Locate the maximum rlocal value for all blades.
-   u_DBEMT%R_disk   = Rtip(1)
-   do j = 2,p%numBlades
-      u_DBEMT%R_disk   = max( u_DBEMT%R_disk  , Rtip(j) )
+      !.............................
+      ! calculate rotor-level inputs
+      !.............................
+   u_DBEMT%R_disk     = maxval( Rtip )               ! Locate the maximum rlocal value for all blades.
+   u_DBEMT%Un_disk    = u%Un_disk
+   u_DBEMT%AxInd_disk = 0.0_ReKi
+   do j = 1,p%numBlades
+      do i = 1,p%numBladeNodes
+         u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
+      end do
    end do
-
+   u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
+   
+      !.............................
+      ! calculate element-level inputs
+      !.............................
    if (p%DBEMT_Mod == DBEMT_tauVaries ) then
             
-         ! We need to generate a disk-averaged axial induction for this timestep
-      u_DBEMT%AxInd_disk = 0.0_ReKi
+      ! Compute span Ratio
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes
-            u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk + axInduction(i,j)
-            
             u_DBEMT%element(i,j)%spanRatio  =   u%rlocal(i,j)/u_DBEMT%R_disk
          end do
       end do
-      u_DBEMT%AxInd_disk = u_DBEMT%AxInd_disk / (p%numBladeNodes*p%numBlades)
-         
-      u_DBEMT%Un_disk    = u%Un_disk
    end if
    
    
@@ -936,15 +977,6 @@ subroutine SetInputs_For_DBEMT(u_DBEMT, u, p, axInduction, tanInduction, Rtip)
       end do
    end do
    
-   if( allocated(u%Vx_elast_dot)) then ! only for DBEMT_Mod=DBEMT_cont_tauConst
-      do j = 1,p%numBlades
-         do i = 1,p%numBladeNodes
-            u_DBEMT%element(i,j)%vind_s_dot(1)  =   axInduction( i,j)*u%Vx_elast_dot(i,j) - u%omega_z(i,j)*tanInduction(i,j)*u%Vy(i,j) ! Eq. 41
-            u_DBEMT%element(i,j)%vind_s_dot(2)  =  -tanInduction(i,j)*u%Vy_elast_dot(i,j) - u%omega_z(i,j)*axInduction( i,j)*u%Vx(i,j) ! Eq. 41
-         end do
-      end do
-   end if
-      
 
 end subroutine SetInputs_For_DBEMT
 !..................................................................................................................................
@@ -994,7 +1026,7 @@ subroutine UpdatePhi( u, p, phi, AFInfo, m, ValidPhi, errStat, errMsg )
             ! We'll simply compute a geometrical phi based on both induction factors being 0.0
          do j = 1,p%numBlades ! Loop through all blades
             do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-               phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi)
+               phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi, u%cantAngle(i,j), u%xVelCorr(i,j) )
             end do
          end do
          
@@ -1139,9 +1171,9 @@ subroutine check_turnOffBEMT(p, u, Weight, axInduction, tanInduction, FirstWarn)
    integer(IntKi)                                 :: i                  !< blade node counter
    integer(IntKi)                                 :: j                  !< blade counter
 
-   if( u%TSR < BEMT_upperBoundTSR ) then
+   if( abs(u%TSR) < BEMT_upperBoundTSR ) then
    
-      Weight = BlendCosine( u%TSR, BEMT_lowerBoundTSR, BEMT_upperBoundTSR )
+      Weight = BlendCosine( abs(u%TSR), BEMT_lowerBoundTSR, BEMT_upperBoundTSR )
       
       if (FirstWarn) then
          if (Weight < 1.0_ReKi) then
@@ -1183,8 +1215,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                                                                  !   nectivity information does not have to be recalculated)
    integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
    character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-
-
       ! Local variables:
 
    integer(IntKi)                                 :: i                                               ! Generic index
@@ -1206,7 +1236,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 !!#endif
 
    y%phi = z%phi ! set this before possibly calling UpdatePhi() because phi is intent(inout) in the solve
-   m%ValidPhi = OtherState%ValidPhi ! set this so that we don't overwrite OtherSTate%ValidPhi
+   m%ValidPhi = OtherState%ValidPhi
    
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi are:
@@ -1217,6 +1247,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    
    !............................................
    ! calculate inductions using BEMT, applying the DBEMT, and/or skewed wake corrections as applicable:
+   ! NOTE that we don't use the DBEMT inputs when calling its CalcOutput routine, so we'll skip calculating them here
    !............................................
    call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg )
    
@@ -1288,8 +1319,18 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    !............................................
    do j = 1,p%numBlades ! Loop through all blades
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-            ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
-         call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
+         ! Compute Cx, Cy given Cl, Cd and phi
+         ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
+         if(p%BEM_Mod==BEMMod_2D) then
+            call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
+            y%Cz(i,j)  = 0.0_ReKi
+            y%Cmx(i,j) = 0.0_ReKi
+            y%Cmy(i,j) = 0.0_ReKi
+            y%Cmz(i,j) = y%Cm(i,j)
+         else
+            call Transform_ClCdCm_to_CxCyCzCmxCmyCmz( y%phi(i,j), u%theta(i,j), u%cantAngle(i,j),u%toeAngle(i,j), .TRUE., .TRUE., &
+                      y%AOA(i,j), y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), y%Cx(i,j), y%Cy(i,j), y%Cz(i,j), y%Cmx(i,j), y%Cmy(i,j), y%Cmz(i,j) )
+         endif
             
       enddo             ! I - Blade nodes / elements
    enddo          ! J - All blades
@@ -1551,7 +1592,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, AFIn
    call UpdatePhi( u, p, m%phi, AFInfo, m, m%ValidPhi, errStat2, errMsg2 )
    
    !...............................................................................................................................
-   !  compute inputs to DBEMT (also setting inductions needed for UA inputs--including DBEMT and skewed wake corrections)
+   !  compute inputs to DBEMT and SkewedWake (also setting inductions needed for UA inputs--including DBEMT and skewed wake corrections)
    !...............................................................................................................................
    call BEMT_CalcOutput_Inductions( InputIndex, t, .true., .true., m%phi, u, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat2, errMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2152,7 +2193,7 @@ subroutine BEMT_UnCoupledSolve(p, u, iBladeNode, jBlade, phi, AFInfo, ValidPhi, 
    
 
    if (.not. ValidPhi) then
-      phi = ComputePhiWithInduction(u%Vx(iBladeNode,jBlade), u%Vy(iBladeNode,jBlade),  0.0_ReKi, 0.0_ReKi)
+      phi = ComputePhiWithInduction(u%Vx(iBladeNode,jBlade), u%Vy(iBladeNode,jBlade),  0.0_ReKi, 0.0_ReKi, u%cantangle(iBladeNode,jBlade), u%xVelCorr(iBladeNode,jBlade))
       
       if (abs(phi)>MsgLimit .and. abs(abs(phi)-PiBy2) > MsgLimit ) then
          if (FirstWarn) then
@@ -2175,28 +2216,39 @@ function NodeText(i,j)
    NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
 end function NodeText
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetInputs_for_UA(phi, theta, axInduction, tanInduction, Vx, Vy, omega, chord, kinVisc, UserProp, u_UA)
+subroutine SetInputs_for_UA(BEM_Mod, phi, theta, cantAngle, toeAngle, axInduction, tanInduction, chord, Vx, Vy, Vz, omega, kinVisc, UserProp, xVelCorr, u_UA)
+   integer(IntKi),               intent(in   ) :: BEM_Mod
    real(ReKi),                   intent(in   ) :: UserProp           ! User property (for 2D Airfoil interp)
    real(ReKi),                   intent(in   ) :: phi
    real(ReKi),                   intent(in   ) :: theta
+   real(ReKi),                   intent(in   ) :: cantAngle
+   real(ReKi),                   intent(in   ) :: toeAngle
    real(ReKi),                   intent(in   ) :: axInduction
    real(ReKi),                   intent(in   ) :: tanInduction
    real(ReKi),                   intent(in   ) :: Vx
    real(ReKi),                   intent(in   ) :: Vy
+   real(ReKi),                   intent(in   ) :: Vz
    real(ReKi),                   intent(in   ) :: omega ! aka PitchRate
    real(ReKi),                   intent(in   ) :: chord
    real(ReKi),                   intent(in   ) :: kinVisc
+   real(ReKi),                   intent(in   ) :: xVelCorr
    type(UA_InputType),           intent(  out) :: u_UA
 
 
       ! ....... compute inputs to UA ...........
-   u_UA%alpha   =  phi - theta  ! angle of attack
+   call computeAirfoilOperatingAOA(BEM_Mod, phi, theta, cantAngle, toeAngle ,u_UA%alpha )
    u_UA%UserProp = UserProp
             
       ! Need to compute relative velocity at the aerodynamic center, including both axial and tangential induction 
       ! COMPUTE: u_UA%U, u_UA%Re, u_UA%v_ac
-   call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, u_UA%U, u_UA%v_ac )
-   call GetReynoldsNumber(   axInduction, tanInduction, Vx, Vy, chord, kinVisc, u_UA%Re)
+   if (BEM_Mod==BEMMod_2D) then
+      ! Setting Cant, Toe and xVelCorr to 0
+      call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, 0.0_ReKi, 0.0_ReKi, u_UA%U, u_UA%v_ac )
+      call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, 0.0_ReKi, 0.0_ReKi, u_UA%Re)
+   else
+      call GetRelativeVelocity( axInduction, tanInduction, Vx, Vy, cantAngle, xVelCorr, u_UA%U, u_UA%v_ac )
+      call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
+   endif
 
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
    u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
@@ -2221,7 +2273,7 @@ subroutine SetInputs_for_UA_AllNodes(u, p, phi, axInduction, tanInduction, u_UA)
       !............................................
       do j = 1,p%numBlades ! Loop through all blades
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-            phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j) )
+            phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j), u%cantAngle(i,j), u%xVelCorr(i,j) )
          enddo             ! I - Blade nodes / elements
       enddo          ! J - All blades
    end if
@@ -2233,7 +2285,7 @@ subroutine SetInputs_for_UA_AllNodes(u, p, phi, axInduction, tanInduction, u_UA)
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
       
             ! Compute AoA, Re, Vrel (inputs to UA) based on current values of axInduction, tanInduction:
-         call SetInputs_for_UA(phi(i,j), u%theta(i,j), axInduction(i,j), tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), u%omega_z(i,j), p%chord(i,j), p%kinVisc, u%UserProp(i,j), u_UA(i,j))
+         call SetInputs_for_UA(p%BEM_Mod, phi(i,j), u%theta(i,j), u%cantAngle(i,j), u%toeAngle(i,j), axInduction(i,j), tanInduction(i,j), p%chord(i,j), u%Vx(i,j), u%Vy(i,j), u%Vz(i,j), u%omega_z(i,j), p%kinVisc, u%UserProp(i,j), u%xVelCorr(i,j), u_UA(i,j))
          
       end do
    end do
@@ -2286,7 +2338,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
                                              , "omega_z"  &
                                              , "rLocal" , "UserProp"  &
                                              , "AxInd", "TanInd"
-!                                            , "Vx_elast_dot" , "Vy_elast_dot" &
           
    end if
    
@@ -2312,9 +2363,6 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
                                              , u%UserProp(    DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , m%axInduction( DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , m%tanInduction(DEBUG_BLADENODE,DEBUG_BLADE)
-! these are not always allocated
-!                                             , u%Vx_elast_dot(DEBUG_BLADENODE,DEBUG_BLADE) &
-!                                             , u%Vy_elast_dot(DEBUG_BLADENODE,DEBUG_BLADE) &
          
    ! now write the residual function to a separate file:
    if ((DEBUG_nStep >= 0).AND.(DEBUG_nStep <= 450000).AND.(MOD(DEBUG_nStep,25) == 0)) then

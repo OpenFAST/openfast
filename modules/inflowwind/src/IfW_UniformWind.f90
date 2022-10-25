@@ -482,8 +482,8 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, m, ErrStat
    CALL InterpParams(Time, p, m, op)   
    
       ! Step through all the positions and get the velocities
-   !$OMP PARALLEL default(shared) if(NumPoints>1000)
-   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
+   !OMP PARALLEL default(shared) if(NumPoints>1000)
+   !OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
@@ -496,16 +496,16 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, m, ErrStat
                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in the wind-file coordinates"
-         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          ErrStat = ErrID_None
          ErrMsg  = ""
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         !$OMP END CRITICAL
+         !OMP END CRITICAL
       ENDIF
 
    ENDDO
-   !$OMP END DO 
-   !$OMP END PARALLEL
+   !OMP END DO 
+   !OMP END PARALLEL
 
    IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 

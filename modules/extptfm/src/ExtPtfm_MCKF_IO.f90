@@ -40,7 +40,6 @@ MODULE ExtPtfm_MCKF_Parameters
    ! Variables for output channels
    INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
                                                         ! Harcoded to outputs of 200 CB modes
-   INTEGER(IntKi), PARAMETER :: OutStrLenM1 = ChanLen - 1
    INTEGER(IntKi), PARAMETER :: ID_Time     = 0
    INTEGER(IntKi), PARAMETER :: ID_PtfFx    = 1
    INTEGER(IntKi), PARAMETER :: ID_PtfFy    = 2
@@ -298,7 +297,7 @@ contains
         ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
         p%OutParam(I)%Units = "INVALID"
         p%OutParam(I)%Indx = 0
-        WarnMsg=trim(WarnMsg)//TRIM(p%OutParam(I)%Name)//" is not an available output channel."//CHAR(10)
+        WarnMsg=trim(WarnMsg)//TRIM(p%OutParam(I)%Name)//" is not an available output channel."//NewLine
 !         call SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
 !         write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
     end subroutine

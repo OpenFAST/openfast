@@ -146,6 +146,15 @@ function(ad_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ad_regression)
 
+# aerodyn-Py
+function(py_ad_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodynPyRegressionCase.py")
+  set(AERODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(py_ad_regression)
+
 # beamdyn
 function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
@@ -242,6 +251,7 @@ of_regression("5MW_OC4Jckt_ExtPtfm"                    "openfast;elastodyn;extpt
 of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf")
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
+of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
@@ -254,7 +264,7 @@ of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aero
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn15;servodyn")
-of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;fastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
+#of_regression_py("5MW_ITIBarge_DLL_WTurb_WavesIrr_py"        "openfast;fastlib;python;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
 of_regression_py("5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti_py"  "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression_py("5MW_OC3Spar_DLL_WTurb_WavesIrr_py"         "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;map;offshore")
 of_regression_py("5MW_OC4Semi_WSt_WavesWN_py"                "openfast;fastlib;python;elastodyn;aerodyn15;servodyn;hydrodyn;moordyn;offshore")
@@ -288,10 +298,13 @@ ad_regression("ad_Kite_OLAF"                "aerodyn;bem")
 ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
 ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
+ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem;mhk")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
+ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
+py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
@@ -304,9 +317,9 @@ bd_regression("bd_static_twisted_with_k1"   "beamdyn;static")
 
 # HydroDyn regression tests
 hd_regression("hd_OC3tripod_offshore_fixedbottom_wavesirr"  "hydrodyn;offshore")
-hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
+#hd_regression("hd_5MW_ITIBarge_DLL_WTurb_WavesIrr"          "hydrodyn;offshore")
 hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
-hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"      "hydrodyn;offshore")
+#hd_regression("hd_5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth"      "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")

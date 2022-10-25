@@ -67,7 +67,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    character(*), parameter :: RoutineName = 'FVW_Init'
    type(FVW_InputFile)     :: InputFileData                                            !< Data stored in the module's input file
    character(len=1054) :: DirName
-   integer :: iW
 
    ! Initialize variables for this routine
    ErrStat = ErrID_None
@@ -382,7 +381,7 @@ subroutine FVW_Init_U_Y( p, u, y, m, ErrStat, ErrMsg )
    type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: nMax           ! Total number of wind points possible
+
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_Init_U_Y'
@@ -418,7 +417,7 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)         :: rootDir, baseName  ! Simulation root dir and basename
-   integer(IntKi)          :: iW, nRotors, nBldMax
+   integer(IntKi)          :: iW, nBldMax
    integer(IntKi), allocatable :: nBldPerRot(:)
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
@@ -534,8 +533,8 @@ subroutine FVW_ToString(p,m)
    type(FVW_ParameterType), intent(in)       :: p !< Parameters
    type(FVW_MiscVarType),      intent(inout) :: m !< Misc
    if (DEV_VERSION) then
-      print*,'-----------------------------------------------------------------------------------------'
-      if(.false.) print*,m%nNW ! unused var for now
+      call WrScr('-----------------------------------------------------------------------------------------')
+      if(.false.) call WrScr(num2lstr(m%nNW)) ! unused var for now
    endif
 end subroutine FVW_ToString
 
@@ -663,7 +662,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! Compute UA inputs at t
    if (m%UA_Flag) then
-      call CalculateInputsAndOtherStatesForUA(1, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+      call CalculateInputsAndOtherStatesForUA(1, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    end if
 
    ! --- Integration between t and t+DTfvw
@@ -720,7 +719,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          !call FVW_CalcConstrStateResidual(t+p%DTfvw, uInterp, p, m%x2, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
          !! Compute UA inputs at t+DTfvw and integrate UA states between t and t+dtAero
          !if (m%UA_Flag) then
-         !   call CalculateInputsAndOtherStatesForUA(2, uInterp, p, m%x2, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+         !   call CalculateInputsAndOtherStatesForUA(2, uInterp, p, m%x2, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
          !   call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTfvw/), p, m%x2, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
          !end if
          !! Updating circulation of near wake panel (and position but irrelevant)
@@ -759,7 +758,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
    ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
    if (m%UA_Flag) then
-      call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+      call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTaero/), p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       ! Compute unsteady Gamma based on UA Cl
       if (p%DStallOnWake .and. p%CirculationMethod/=idCircPrescribed) then 
@@ -785,7 +784,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call CleanUp()
 
    if (DEV_VERSION) then
-      if(have_nan(p, m, x, u, 'End Update ')) then
+      if(have_nan(p, m, x, z, u, 'End Update ')) then
          STOP
       endif
    endif
@@ -839,8 +838,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi)       :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
-   integer(IntKi)       :: i,j,k,iW,nP
-   real(ReKi)           :: visc_fact, age  ! Viscosity factor for diffusion of reg param
+   integer(IntKi)       :: j,k,iW,nP
+   real(ReKi)           :: visc_fact  ! Viscosity factor for diffusion of reg param
    real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
 
    ErrStat = ErrID_None
@@ -910,11 +909,14 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       enddo
 
       if (DEV_VERSION) then
-         !call print_mean_4d( m%W(iW)%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
-         !if (nFWEff>0) then
-         !   call print_mean_4d( m%W(iW)%Vind_FW(:,:, 1:nFWEff ,:), 'Mean induced vel. FW')
-         !endif
-         !print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
+         do iW=1,p%nWings
+            call print_mean_3d( m%W(iW)%Vind_NW(:,:, 1:m%nNW+1), 'Mean induced vel. NW')
+            if (nFWEff>0) then
+               call print_mean_3d( m%W(iW)%Vind_FW(:,:, 1:nFWEff), 'Mean induced vel. FW')
+            endif
+         enddo
+         print'(A25,3F12.4)','MeanNW           ',VmeanNW
+         print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
          !call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
          !call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
          !call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')
@@ -988,6 +990,7 @@ contains
 end subroutine FVW_CalcContStateDeriv
 
 
+!------------------------------------------------------------------------------------------------
 !> Interpolate states to the current time
 !! For now: linear interpolation, two states, with t1<t2
 subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
@@ -1067,6 +1070,9 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    if (DEV_VERSION) then
       do iW = 1, p%nWings
          ! Additional checks
+         ! Find points that are the same
+         call find_equal_points(x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1), 'r_NW After conv'//trim(num2lstr(iW)))
+
          if (any(m%dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)<-999)) then
             print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
             STOP
@@ -1353,14 +1359,14 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
 end subroutine FVW_CalcConstrStateResidual
 
 
-subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine CalcOutputForAD(t, u, p, x, y, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
-   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iW
@@ -1401,7 +1407,7 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg)
+subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    use FVW_VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
@@ -1411,7 +1417,6 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    type(FVW_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
    type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
    type(FVW_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
-   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
@@ -1422,7 +1427,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
    logical :: bOverCycling
-   real(ReKi) :: fact
+
    ErrStat = ErrID_None
    ErrMsg  = ""
    if (DEV_VERSION) then
@@ -1433,7 +1438,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    bOverCycling = p%DTfvw > p%DTaero
 
    ! Compute induced velocity at AD nodes
-   call CalcOutputForAD(t,u,p,x,y,m,AFInfo, ErrStat2, ErrMsg2)
+   call CalcOutputForAD(t,u,p,x,y,m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
    ! Export to VTK
@@ -1447,6 +1452,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
 
 end subroutine FVW_CalcOutput
 
+!------------------------------------------------------------------------------------------------
 !> Write to  vtk_fvw folder at fps requested
 subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t       !< Current simulation time in seconds
@@ -1597,10 +1603,11 @@ contains
    end function Failed
 end subroutine  UA_Init_Wrapper
 
+!------------------------------------------------------------------------------------------------
 !> Compute necessary inputs for UA at a given time step, stored in m%u_UA
 !!  Inputs are AoA, U, Re, 
 !!  See equivalent version in BEMT, and SetInputs_for_UA in BEMT
-subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherState, AFInfo, m, ErrStat, ErrMsg)
+subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
    integer(IntKi),                     intent(in   ) :: InputIndex ! InputIndex= 1 or 2, depending on time step we are calculating inputs for
    type(FVW_InputType),                intent(in   ) :: u          ! Input
    type(FVW_ParameterType),            intent(in   ) :: p          ! Parameters   
@@ -1609,9 +1616,8 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    type(FVW_ConstraintStateType),      intent(in   ) :: z          ! Constraint states at given time step
    type(FVW_OtherStateType),           intent(inout) :: OtherState ! Other states at given time step
    type(FVW_MiscVarType), target,      intent(inout) :: m          ! Misc/optimization variables
-   type(AFI_ParameterType),            intent(in   ) :: AFInfo(:)  ! The airfoil parameter data
-   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                     intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local
    type(UA_InputType), pointer     :: u_UA ! Alias to shorten notations
    integer(IntKi)                                    :: i,iW
@@ -1656,7 +1662,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    end do ! iW nWings
 end subroutine CalculateInputsAndOtherStatesForUA
 
-
+!------------------------------------------------------------------------------------------------
 subroutine UA_UpdateState_Wrapper(AFInfo, t, n, uTimes, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    use FVW_VortexTools, only: interpextrap_cp2node
    use UnsteadyAero, only: UA_UpdateStates
@@ -1702,7 +1708,7 @@ contains
       NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
    end function NodeText
 end subroutine UA_UpdateState_Wrapper
-
+!------------------------------------------------------------------------------------------------
 !> Set dynamic gamma based on dynamic stall states
 !! NOTE: We use Vind_LL computed in CalculateInputsAndOtherStatesForUA
 subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
@@ -1718,7 +1724,6 @@ subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, Err
    type(FVW_ConstraintStateType), intent(inout) :: z          !< Constraint states
    integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(ReKi)                  :: Cl_dyn, Cl_dyn_prev, Cl_dyn_avg
    real(ReKi)                  :: Gamma_dyn, Gamma_dyn_prev, Gamma_dyn_avg
    type(UA_InputType), pointer :: u_UA ! Alias to shorten notations
    integer(IntKi), parameter   :: InputIndex=2 ! we will always use values at t+dt in this routine

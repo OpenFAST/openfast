@@ -30,7 +30,7 @@ jobs:
 
   build-all-debug:
     # Tests compiling in debug mode.
-    # TODO: NOT ENABLED Single precision compile checks that the precision types are correctly set.
+    # Also compiles the Registry and generates new types files.
     # Debug more speeds up the build.
     runs-on: ubuntu-20.04
     steps:
@@ -59,6 +59,7 @@ jobs:
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DGENERATE_TYPES=ON \
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
@@ -73,6 +74,38 @@ jobs:
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
+
+  build-all-debug-single:
+    # Tests compiling in debug mode with single precision.
+    # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
+    # Debug speeds up the build.
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DVARIABLE_TRACKING=OFF \
+            -DDOUBLE_PRECISION:BOOL=OFF \
+            ${GITHUB_WORKSPACE}
+            # -DDOUBLE_PRECISION=OFF \
+      - name: Build all
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+
 
 
   build-drivers-release:
@@ -191,6 +224,7 @@ jobs:
           cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target aerodyn_inflow_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
@@ -256,11 +290,6 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
-      - name: Upload build
-        uses: actions/upload-artifact@main
-        with:
-          name: fastfarm-build
-          path: build-fastfarm-${{ github.sha }}.tar
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -387,7 +416,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy "Bokeh>=2.4"
+          pip install numpy "Bokeh>=2.4" vtk
           sudo apt-get update -y
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Run Interface / API tests
@@ -402,6 +431,7 @@ jobs:
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

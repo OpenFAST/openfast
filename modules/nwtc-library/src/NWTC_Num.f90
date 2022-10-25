@@ -105,6 +105,10 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerConstructR8
       MODULE PROCEDURE EulerConstructR16
    END INTERFACE
+
+   INTERFACE EulerConstructZYX
+      MODULE PROCEDURE EulerConstructZYXR8
+   END INTERFACE
    
       !> \copydoc nwtc_num::eulerextractr4()
    INTERFACE EulerExtract
@@ -2246,6 +2250,49 @@ CONTAINS
             
       
    END FUNCTION EulerExtractR16
+
+!=======================================================================
+!> 
+   FUNCTION EulerConstructZYXR8(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 3-2-1 rotation
+      ! sequence of the 3 Euler angles, theta_z, theta_y, and theta_x, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). 
+      !
+      REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+      REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz            
+      M(2,1) =  sx*sy*cz - sz*cx
+      M(3,1) =  sx*sz + sy*cx*cz
+      
+      M(1,2) =  sz*cy
+      M(2,2) =  sx*sy*sz + cx*cz
+      M(3,2) =  -sx*cz + sy*sz*cx
+      
+      M(1,3) =  -sy
+      M(2,3) =  sx*cy
+      M(3,3) =  cx*cy
+   
+   END FUNCTION EulerConstructZYXR8
 !=======================================================================
 !> This routine sets the matrices in the first two dimensions of A equal 
 !! to the identity matrix (all zeros, with ones on the diagonal).
@@ -2406,6 +2453,51 @@ CONTAINS
    END DO
 
    END SUBROUTINE Eye3D
+!====================================================================================================
+INTEGER FUNCTION FindValidChannelIndx(OutListVal, ValidParamAry, SignM_out) RESULT( Indx )
+
+   CHARACTER(*),                INTENT(IN)  :: OutListVal
+   CHARACTER(OutStrLenM1),      INTENT(IN)  :: ValidParamAry(:)
+   INTEGER,           OPTIONAL, INTENT(OUT) :: SignM_out
+   
+   CHARACTER(ChanLen)             :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   INTEGER                        :: SignM
+   LOGICAL                        :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
+   
+      OutListTmp          = OutListVal
+
+      ! Reverse the sign (+/-) of the output channel if the user prefixed the
+      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
+      CheckOutListAgain = .FALSE.
+
+      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
+         SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp          = OutListTmp(2:)
+      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
+         CheckOutListAgain   = .TRUE.
+         SignM = 1
+      ELSE
+         SignM = 1
+      END IF
+
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+
+      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+
+
+         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
+
+      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
+         SignM         = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp    = OutListTmp(2:)
+
+         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+      END IF
+      
+      IF (PRESENT(SignM_out))  SignM_out = SignM
+      
+END FUNCTION FindValidChannelIndx
 !=======================================================================
 !> This routine uses the Gauss-Jordan elimination method for the
 !!   solution of a given set of simultaneous linear equations.

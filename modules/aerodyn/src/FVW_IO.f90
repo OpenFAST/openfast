@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine, Key, Val         ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -58,7 +58,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterConstant, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegConstant   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegAge        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
@@ -249,7 +249,7 @@ CONTAINS
       GridOut%name =StrArray(1) 
       ! Type
       if (.not. is_int    (StrArray(2), GridOut%type  ) ) then
-         ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'GridType needs to be an integer.'
+         ErrMsg2=trim(ErrMsg2)//NewLine//'GridType needs to be an integer.'
          return
       endif
       ! tStart
@@ -258,7 +258,7 @@ CONTAINS
          GridOut%tStart  = 0.0_ReKi
       else
          if (.not. is_numeric(StrArray(3), GridOut%tStart) ) then 
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TStart needs to be numeric or "default".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'TStart needs to be numeric or "default".'
             return
          endif
       endif
@@ -268,7 +268,7 @@ CONTAINS
          GridOut%tEnd  = 99999.0_ReKi ! TODO
       else
          if (.not. is_numeric(StrArray(4), GridOut%tEnd) ) then
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TEnd needs to be numeric or "default".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'TEnd needs to be numeric or "default".'
             return
          endif
       endif
@@ -280,7 +280,7 @@ CONTAINS
          GridOut%DTout  = p%DTaero
       else
          if (.not. is_numeric(StrArray(5), GridOut%DTout) ) then
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'DTout needs to be numeric, "default" or "all".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'DTout needs to be numeric, "default" or "all".'
             return
          endif
       endif
@@ -313,6 +313,12 @@ function is_numeric(string, x)
    character(len=12) :: fmt
    x = 0.0_reki
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid numbers
+      is_numeric = .false.
+      return
+   end if
+   
    write(fmt,'("(F",I0,".0)")') n
    read(string,fmt,iostat=e) x
    is_numeric = e == 0
@@ -327,6 +333,12 @@ function is_int(string, x)
    character(len=12) :: fmt
    x = 0
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid integers
+      is_int = .false.
+      return
+   end if
+   
    write(fmt,'("(I",I0,")")') n
    read(string,fmt,iostat=e) x
    is_int = e == 0

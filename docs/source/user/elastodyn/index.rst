@@ -1,3 +1,6 @@
+
+.. _ed_intro:
+
 ElastoDyn Users Guide and Theory Manual
 =======================================
 
@@ -52,4 +55,6 @@ equations of FAST v7 and the ElastoDyn module of FAST v8 and OpenFAST.
 
 .. toctree::
    
+   coordsys.rst
    input.rst
+   theory.rst
