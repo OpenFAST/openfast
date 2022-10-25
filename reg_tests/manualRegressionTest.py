@@ -61,7 +61,7 @@ if moduleName != "" and moduleName != "openfast":
     buildDirectory = os.path.join(sourceDirectory, "build", "reg_tests", "modules", moduleName.lower())
     caseListFile = os.path.join("r-test", "modules", moduleName.lower(), "CaseList.md")
 else:
-    moduleName = Openfast
+    moduleName = "Openfast"
     buildDirectory = os.path.join(sourceDirectory, "build", "reg_tests", "glue-codes", "openfast")
     caseListFile = os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")
 

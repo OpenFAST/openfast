@@ -1,6 +1,6 @@
 module FVW_VTK
     !use PrecisionMod, only: ReKi
-    use NWTC_Library, only: ReKi, GetNewUnit
+    use NWTC_Library, only: ReKi, GetNewUnit, NewLine
     implicit none
 !     character(8), parameter :: RFMT='F14.5'
     !character(8), parameter :: RFMT='E24.15E3'
@@ -21,8 +21,6 @@ module FVW_VTK
       real(ReKi),dimension(3,3) :: T_g2b
       real(ReKi),dimension(3)   :: PO_g
    END TYPE FVW_VTK_Misc
-
-    character(1), parameter :: NL = char(10) ! New Line character
 
     interface vtk_dataset_structured_grid; module procedure &
             vtk_dataset_structured_grid_flat, &
@@ -104,9 +102,9 @@ contains
             endif
             if (iostatvar == 0) then
                 if (mvtk%bBinary) then
-                    write(mvtk%vtk_unit)'# vtk DataFile Version 3.0'//NL
-                    write(mvtk%vtk_unit)trim(label)//NL
-                    write(mvtk%vtk_unit)'BINARY'//NL
+                    write(mvtk%vtk_unit)'# vtk DataFile Version 3.0'//NewLine
+                    write(mvtk%vtk_unit)trim(label)//NewLine
+                    write(mvtk%vtk_unit)'BINARY'//NewLine
                 else
                     write(mvtk%vtk_unit,'(a)') '# vtk DataFile Version 2.0'
                     write(mvtk%vtk_unit,'(a)') trim(label)
@@ -148,9 +146,9 @@ contains
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=size(Points,2)
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'DATASET POLYDATA'//NL
+                write(mvtk%vtk_unit)'DATASET POLYDATA'//NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'POINTS ', mvtk%nPoints ,' double'
-                write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit)trim(mvtk%buffer)//NewLine
                 if (bladeFrame)  then
                     do i=1,mvtk%nPoints
                         write(mvtk%vtk_unit)matmul(mvtk%T_g2b,Points(1:3,i)-mvtk%PO_g)
@@ -160,7 +158,7 @@ contains
                         write(mvtk%vtk_unit)Points(1:3,i)
                     enddo
                 endif
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET POLYDATA'
                 write(mvtk%vtk_unit,'(A,I0,A)') 'POINTS ', mvtk%nPoints ,' double'
@@ -189,11 +187,11 @@ contains
             mvtk%nData=size(L,2)
             if (mvtk%bBinary) then
                 write(mvtk%buffer,'(A,I0,A,I0)')'LINES ',mvtk%nData,' ',3*mvtk%nData
-                write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit)trim(mvtk%buffer)//NewLine
                 do i=1,mvtk%nData
                     write(mvtk%vtk_unit)2,L(1:2,i)
                 enddo
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,I0,A,I0)')'LINES ',mvtk%nData,' ',3*mvtk%nData
                 do i=1,mvtk%nData
@@ -212,11 +210,11 @@ contains
             mvtk%nData=size(Q,2)
             if (mvtk%bBinary) then
                 write(mvtk%buffer,'(A,I0,A,I0)')'POLYGONS ',mvtk%nData,' ',5*mvtk%nData
-                write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit)trim(mvtk%buffer)//NewLine
                 do i=1,mvtk%nData
                     write(mvtk%vtk_unit)4,Q(1:4,i)
                 enddo
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,I0,A,I0)') 'POLYGONS ', mvtk%nData,' ',5*mvtk%nData
                 do i=1,mvtk%nData
@@ -237,21 +235,21 @@ contains
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=size(v1)*size(v2)*size(v3)
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit) 'DATASET RECTILINEAR_GRID'//NL
+                write(mvtk%vtk_unit) 'DATASET RECTILINEAR_GRID'//NewLine
                 write(mvtk%buffer,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', size(v1),' ',size(v2),' ',size(v3)
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'X_COORDINATES ', size(v1), ' double'
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%vtk_unit)v1
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'Y_COORDINATES ', size(v2), ' double'
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%vtk_unit)v2
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'Z_COORDINATES ', size(v3), ' double'
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%vtk_unit)v3
-                !write(mvtk%vtk_unit)NL
+                !write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET RECTILINEAR_GRID'
                 write(mvtk%vtk_unit,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', size(v1),' ',size(v2),' ',size(v3)
@@ -275,13 +273,13 @@ contains
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=n(1)*n(2)*n(3)
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit) 'DATASET STRUCTURED_POINTS'//NL
+                write(mvtk%vtk_unit) 'DATASET STRUCTURED_POINTS'//NewLine
                 write(mvtk%buffer,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ',n(1),' ',n(2),' ',n(3)
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%buffer,'(A,3F16.8)') 'ORIGIN ', x0
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%buffer,'(A,3F16.8)') 'SPACING ', dx
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET STRUCTURED_POINTS'
                 write(mvtk%vtk_unit,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n(1),' ',n(2),' ',n(3)
@@ -303,13 +301,13 @@ contains
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=n1*n2*n3
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit) 'DATASET STRUCTURED_GRID'//NL
+                write(mvtk%vtk_unit) 'DATASET STRUCTURED_GRID'//NewLine
                 write(mvtk%buffer,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n1,' ',n2,' ',n3
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'POINTS ', mvtk%nPoints, ' double'
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET STRUCTURED_GRID'
                 write(mvtk%vtk_unit,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n1,' ',n2,' ',n3
@@ -329,13 +327,13 @@ contains
         if ( mvtk%bFileOpen ) then
             mvtk%nPoints=n1*n2*n3
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit) 'DATASET STRUCTURED_GRID'//NL
+                write(mvtk%vtk_unit) 'DATASET STRUCTURED_GRID'//NewLine
                 write(mvtk%buffer,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n1,' ',n2,' ',n3
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%buffer,'(A,I0,A)') 'POINTS ', mvtk%nPoints, ' double'
-                write(mvtk%vtk_unit) trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit) trim(mvtk%buffer)//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A)') 'DATASET STRUCTURED_GRID'
                 write(mvtk%vtk_unit,'(A,I0,A,I0,A,I0)') 'DIMENSIONS ', n1,' ',n2,' ',n3
@@ -356,7 +354,7 @@ contains
         if ( mvtk%bFileOpen ) then
             if(mvtk%bBinary) then
                 write(mvtk%buffer,'(A,I0)')'POINT_DATA ',mvtk%nPoints
-                write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit)trim(mvtk%buffer)//NewLine
             else
                 write(mvtk%vtk_unit,'(A,I0)') 'POINT_DATA ', mvtk%nPoints
             endif
@@ -370,10 +368,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
@@ -408,10 +406,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
@@ -427,10 +425,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
@@ -446,9 +444,9 @@ contains
         type(FVW_VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NL
+                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'VECTORS ', sname, ' double'
                 write(mvtk%vtk_unit,'(3'//RFMT//')')D
@@ -462,9 +460,9 @@ contains
         type(FVW_VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NL
+                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'VECTORS ', sname, ' double'
                 write(mvtk%vtk_unit,'(3'//RFMT//')')D
@@ -478,9 +476,9 @@ contains
         type(FVW_VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NL
+                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'VECTORS ', sname, ' double'
                 write(mvtk%vtk_unit,'(3'//RFMT//')')D
@@ -497,7 +495,7 @@ contains
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
                 write(mvtk%buffer,'(A,I0)')'CELL_DATA ',mvtk%nData
-                write(mvtk%vtk_unit)trim(mvtk%buffer)//NL
+                write(mvtk%vtk_unit)trim(mvtk%buffer)//NewLine
             else
                 write(mvtk%vtk_unit,'(A,I0)') 'CELL_DATA ', mvtk%nData
             endif
@@ -511,10 +509,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double 1'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double 1'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,fmt='(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
@@ -530,10 +528,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double 1'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double 1'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,fmt='(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
@@ -549,9 +547,9 @@ contains
         type(FVW_VTK_Misc),intent(inout) :: mvtk
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NL
+                write(mvtk%vtk_unit)'VECTORS '//trim(sname)//' double'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'VECTORS ', sname, ' double'
                 write(mvtk%vtk_unit,'(3'//RFMT//')')D
