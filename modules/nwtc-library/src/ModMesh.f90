@@ -909,18 +909,23 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
 !-------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes mesh information in text form. It is used for debugging.
-   SUBROUTINE MeshPrintInfo ( U, M, N)
+   SUBROUTINE MeshPrintInfo ( U, M, N, MeshName)
          
      INTEGER, INTENT(IN   )                ::      U  !< fortran output unit
      TYPE(MeshType),INTENT(IN   )          ::      M  !< mesh to be reported on
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  !< Number to print, default is all nodes
+     character(*), optional, intent(in   ) :: MeshName !< name of the mesh
     ! Local
      INTEGER isz,i,j,nn,Ielement,Xelement
 
      nn = M%Nnodes !5
      IF (PRESENT(N)) nn = min(nn,N)
 
-     write(U,*)'-----------  MeshPrintInfo:  -------------'
+     if (present(MeshName)) then
+        write(U,*)'-----------  MeshPrintInfo: '//trim(MeshName)//'  -------------'
+     else
+        write(U,*)'-----------  MeshPrintInfo:  -------------'
+     endif
 
      write(U,*)  'Initialized: ', M%initialized
      write(U,*)  'Committed:   ', M%Committed
@@ -3587,6 +3592,58 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshExtrapInterp2
 
+!...............................................................................................................................
+!> High level function to easily create a point mesh with one node and one element
+   SUBROUTINE CreatePointMesh(mesh, posInit, orientInit, errStat, errMsg, hasMotion, hasLoads, hasAcc)
+      type(MeshType),               intent(inout) :: mesh             !< Mesh to be created
+      real(ReKi),                   intent(in   ) :: PosInit(3)       !< Xi,Yi,Zi, coordinates of node
+      real(R8Ki),                   intent(in   ) :: orientInit(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
+      logical,                      intent(in   ) :: hasMotion        !< include displacements in mesh
+      logical,                      intent(in   ) :: hasLoads         !< include loads in mesh
+      logical, optional,            intent(in   ) :: hasAcc           !< include acceleration (default is true)
+      integer(IntKi)              , intent(out)   :: errStat          ! Status of error message
+      character(*)                , intent(out)   :: errMsg           ! Error message if ErrStat /= ErrID_None
+      logical              :: hasAcc_loc    !< include acceleration
+      integer(IntKi)       :: errStat2      ! local status of error message
+      character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+      errStat = ErrID_None
+      errMsg  = ''
+      hasAcc_loc = .true.
+      if (present(hasAcc)) hasAcc_loc=hasAcc
+
+      call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2,  &
+         Orientation=hasMotion, TranslationDisp=hasMotion, TranslationVel=hasMotion, RotationVel=hasMotion, &
+         TranslationAcc=hasAcc_loc, RotationAcc=hasAcc_loc, &
+         Force = hasLoads, Moment = hasLoads)
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      if (ErrStat >= AbortErrLev) return
+
+      call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+      call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+      call MeshCommit(mesh, errStat2, errMsg2);
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+
+      ! Initialize fields
+      if (hasLoads) then
+         mesh%Force    = 0.0_ReKi
+         mesh%Moment   = 0.0_ReKi
+      endif
+      if (hasMotion) then
+         mesh%Orientation      = mesh%RefOrientation
+         mesh%TranslationDisp  = 0.0_ReKi
+         mesh%TranslationVel   = 0.0_ReKi
+         mesh%RotationVel      = 0.0_ReKi
+      endif
+      if (hasAcc_loc) then
+         mesh%TranslationAcc   = 0.0_ReKi
+         mesh%RotationAcc      = 0.0_ReKi
+      endif
+
+   END SUBROUTINE CreatePointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh
 

@@ -661,9 +661,11 @@ typedef	^	FAST_ModuleMapType	MeshMapType	BD_L_2_BD_L	{:}	-	-	"Map BeamDyn BldMot
 typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_L_B	{:}	-	-	"Map Simplified-ElastoDyn BladeRoot point meshes to rigid AeroDyn BladeMotion line2 meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	SED_P_2_AD_P_R	{:}	-	-	"Map Simplified-ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_SED_P	{:}	-	-	"Map AeroDyn blade load output mesh to Simplified-ElastoDyn Hub point mesh"
-# ED <-> AD (nacelle, tower, hub, blade root)
+# ED <-> AD (nacelle, tower, hub, blade root, tailfin)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_N	-	-	-	"Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_N	-	-	-	"Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_TF	-	-	-	"Map ElastoDyn TailFin CM point motion mesh to AeroDyn TailFin ref point motion mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	AD_P_2_ED_P_TF	-	-	-	"Map AeroDyn TailFin ref point load mesh to ElastoDyn TailFin CM point load mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_P_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
