@@ -387,10 +387,10 @@ contains
 
         if ( mvtk%bFileOpen ) then
             if (mvtk%bBinary) then
-                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NL
-                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NL
+                write(mvtk%vtk_unit)'SCALARS '//trim(sname)//' double'//NewLine
+                write(mvtk%vtk_unit)'LOOKUP_TABLE default'//NewLine
                 write(mvtk%vtk_unit)D
-                write(mvtk%vtk_unit)NL
+                write(mvtk%vtk_unit)NewLine
             else
                 write(mvtk%vtk_unit,'(A,A,A)') 'SCALARS ', sname, ' double'
                 write(mvtk%vtk_unit,'(A)') 'LOOKUP_TABLE default'
