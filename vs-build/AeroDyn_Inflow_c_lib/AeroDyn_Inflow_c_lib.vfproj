@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Console Application" Version="11.0" ProjectIdGuid="{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}">
+<VisualStudioProject ProjectCreator="Intel Fortran" Keyword="Class Library" Version="11.0" ProjectIdGuid="{5D991B19-D4F1-4F29-8A9D-FC36DFF07290}">
 	<Platforms>
 		<Platform Name="Win32"/>
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -14,9 +14,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
+		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemWindows" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -24,9 +24,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -34,9 +34,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
+		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -44,9 +44,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Debug_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+		<Configuration Name="Debug_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)_Double" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -54,9 +54,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
+		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -64,9 +64,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
+		<Configuration Name="Release_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
+				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemWindows" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -74,9 +74,9 @@
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
+		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
-				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole"/>
+				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -162,37 +162,7 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_IO.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
-		<Filter Name="AeroDyn_Driver">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Registry.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver.f90"/>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Subs.f90"/></Filter>
-		<Filter Name="ADI">
+	<Filter Name="ADI">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -1052,5 +1022,6 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow_C_Binding.f90"/>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

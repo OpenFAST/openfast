@@ -79,6 +79,17 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TFinAFID      !< Index of Tail fin airfoil number [1 to NumAFfiles] [-]
   END TYPE TFinInputFileType
 ! =======================
+! =========  AD_VTK_BLSurfaceType  =======
+  TYPE, PUBLIC :: AD_VTK_BLSurfaceType
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
+  END TYPE AD_VTK_BLSurfaceType
+! =======================
+! =========  AD_VTK_RotSurfaceType  =======
+  TYPE, PUBLIC :: AD_VTK_RotSurfaceType
+    TYPE(AD_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: TowerRad      !< radius of each ED tower node [m]
+  END TYPE AD_VTK_RotSurfaceType
+! =======================
 ! =========  RotInitInputType  =======
   TYPE, PUBLIC :: RotInitInputType
     INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
@@ -820,6 +831,550 @@ CONTAINS
     OutData%TFinAFID = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackTFinInputFileType
+
+ SUBROUTINE AD_CopyVTK_BLSurfaceType( SrcVTK_BLSurfaceTypeData, DstVTK_BLSurfaceTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(AD_VTK_BLSurfaceType), INTENT(IN) :: SrcVTK_BLSurfaceTypeData
+   TYPE(AD_VTK_BLSurfaceType), INTENT(INOUT) :: DstVTK_BLSurfaceTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_CopyVTK_BLSurfaceType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+IF (ALLOCATED(SrcVTK_BLSurfaceTypeData%AirfoilCoords)) THEN
+  i1_l = LBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,1)
+  i1_u = UBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,1)
+  i2_l = LBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,2)
+  i2_u = UBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,2)
+  i3_l = LBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,3)
+  i3_u = UBOUND(SrcVTK_BLSurfaceTypeData%AirfoilCoords,3)
+  IF (.NOT. ALLOCATED(DstVTK_BLSurfaceTypeData%AirfoilCoords)) THEN 
+    ALLOCATE(DstVTK_BLSurfaceTypeData%AirfoilCoords(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_BLSurfaceTypeData%AirfoilCoords.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstVTK_BLSurfaceTypeData%AirfoilCoords = SrcVTK_BLSurfaceTypeData%AirfoilCoords
+ENDIF
+ END SUBROUTINE AD_CopyVTK_BLSurfaceType
+
+ SUBROUTINE AD_DestroyVTK_BLSurfaceType( VTK_BLSurfaceTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(AD_VTK_BLSurfaceType), INTENT(INOUT) :: VTK_BLSurfaceTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_DestroyVTK_BLSurfaceType'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+IF (ALLOCATED(VTK_BLSurfaceTypeData%AirfoilCoords)) THEN
+  DEALLOCATE(VTK_BLSurfaceTypeData%AirfoilCoords)
+ENDIF
+ END SUBROUTINE AD_DestroyVTK_BLSurfaceType
+
+ SUBROUTINE AD_PackVTK_BLSurfaceType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(AD_VTK_BLSurfaceType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AD_PackVTK_BLSurfaceType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! AirfoilCoords allocated yes/no
+  IF ( ALLOCATED(InData%AirfoilCoords) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AirfoilCoords upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AirfoilCoords)  ! AirfoilCoords
+  END IF
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+  IF ( .NOT. ALLOCATED(InData%AirfoilCoords) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AirfoilCoords,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AirfoilCoords,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AirfoilCoords,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AirfoilCoords,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AirfoilCoords,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AirfoilCoords,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AirfoilCoords,3), UBOUND(InData%AirfoilCoords,3)
+        DO i2 = LBOUND(InData%AirfoilCoords,2), UBOUND(InData%AirfoilCoords,2)
+          DO i1 = LBOUND(InData%AirfoilCoords,1), UBOUND(InData%AirfoilCoords,1)
+            ReKiBuf(Re_Xferred) = InData%AirfoilCoords(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+ END SUBROUTINE AD_PackVTK_BLSurfaceType
+
+ SUBROUTINE AD_UnPackVTK_BLSurfaceType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(AD_VTK_BLSurfaceType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AD_UnPackVTK_BLSurfaceType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AirfoilCoords not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AirfoilCoords)) DEALLOCATE(OutData%AirfoilCoords)
+    ALLOCATE(OutData%AirfoilCoords(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AirfoilCoords.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AirfoilCoords,3), UBOUND(OutData%AirfoilCoords,3)
+        DO i2 = LBOUND(OutData%AirfoilCoords,2), UBOUND(OutData%AirfoilCoords,2)
+          DO i1 = LBOUND(OutData%AirfoilCoords,1), UBOUND(OutData%AirfoilCoords,1)
+            OutData%AirfoilCoords(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+ END SUBROUTINE AD_UnPackVTK_BLSurfaceType
+
+ SUBROUTINE AD_CopyVTK_RotSurfaceType( SrcVTK_RotSurfaceTypeData, DstVTK_RotSurfaceTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(AD_VTK_RotSurfaceType), INTENT(IN) :: SrcVTK_RotSurfaceTypeData
+   TYPE(AD_VTK_RotSurfaceType), INTENT(INOUT) :: DstVTK_RotSurfaceTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_CopyVTK_RotSurfaceType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+IF (ALLOCATED(SrcVTK_RotSurfaceTypeData%BladeShape)) THEN
+  i1_l = LBOUND(SrcVTK_RotSurfaceTypeData%BladeShape,1)
+  i1_u = UBOUND(SrcVTK_RotSurfaceTypeData%BladeShape,1)
+  IF (.NOT. ALLOCATED(DstVTK_RotSurfaceTypeData%BladeShape)) THEN 
+    ALLOCATE(DstVTK_RotSurfaceTypeData%BladeShape(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_RotSurfaceTypeData%BladeShape.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcVTK_RotSurfaceTypeData%BladeShape,1), UBOUND(SrcVTK_RotSurfaceTypeData%BladeShape,1)
+      CALL AD_Copyvtk_blsurfacetype( SrcVTK_RotSurfaceTypeData%BladeShape(i1), DstVTK_RotSurfaceTypeData%BladeShape(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
+IF (ALLOCATED(SrcVTK_RotSurfaceTypeData%TowerRad)) THEN
+  i1_l = LBOUND(SrcVTK_RotSurfaceTypeData%TowerRad,1)
+  i1_u = UBOUND(SrcVTK_RotSurfaceTypeData%TowerRad,1)
+  IF (.NOT. ALLOCATED(DstVTK_RotSurfaceTypeData%TowerRad)) THEN 
+    ALLOCATE(DstVTK_RotSurfaceTypeData%TowerRad(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_RotSurfaceTypeData%TowerRad.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstVTK_RotSurfaceTypeData%TowerRad = SrcVTK_RotSurfaceTypeData%TowerRad
+ENDIF
+ END SUBROUTINE AD_CopyVTK_RotSurfaceType
+
+ SUBROUTINE AD_DestroyVTK_RotSurfaceType( VTK_RotSurfaceTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(AD_VTK_RotSurfaceType), INTENT(INOUT) :: VTK_RotSurfaceTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_DestroyVTK_RotSurfaceType'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+IF (ALLOCATED(VTK_RotSurfaceTypeData%BladeShape)) THEN
+DO i1 = LBOUND(VTK_RotSurfaceTypeData%BladeShape,1), UBOUND(VTK_RotSurfaceTypeData%BladeShape,1)
+  CALL AD_Destroyvtk_blsurfacetype( VTK_RotSurfaceTypeData%BladeShape(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+ENDDO
+  DEALLOCATE(VTK_RotSurfaceTypeData%BladeShape)
+ENDIF
+IF (ALLOCATED(VTK_RotSurfaceTypeData%TowerRad)) THEN
+  DEALLOCATE(VTK_RotSurfaceTypeData%TowerRad)
+ENDIF
+ END SUBROUTINE AD_DestroyVTK_RotSurfaceType
+
+ SUBROUTINE AD_PackVTK_RotSurfaceType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(AD_VTK_RotSurfaceType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AD_PackVTK_RotSurfaceType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! BladeShape allocated yes/no
+  IF ( ALLOCATED(InData%BladeShape) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BladeShape upper/lower bounds for each dimension
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+    DO i1 = LBOUND(InData%BladeShape,1), UBOUND(InData%BladeShape,1)
+      Int_BufSz   = Int_BufSz + 3  ! BladeShape: size of buffers for each call to pack subtype
+      CALL AD_Packvtk_blsurfacetype( Re_Buf, Db_Buf, Int_Buf, InData%BladeShape(i1), ErrStat2, ErrMsg2, .TRUE. ) ! BladeShape 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! BladeShape
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! BladeShape
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! BladeShape
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! TowerRad allocated yes/no
+  IF ( ALLOCATED(InData%TowerRad) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! TowerRad upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TowerRad)  ! TowerRad
+  END IF
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+  IF ( .NOT. ALLOCATED(InData%BladeShape) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BladeShape,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BladeShape,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%BladeShape,1), UBOUND(InData%BladeShape,1)
+      CALL AD_Packvtk_blsurfacetype( Re_Buf, Db_Buf, Int_Buf, InData%BladeShape(i1), ErrStat2, ErrMsg2, OnlySize ) ! BladeShape 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%TowerRad) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%TowerRad,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%TowerRad,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%TowerRad,1), UBOUND(InData%TowerRad,1)
+        ReKiBuf(Re_Xferred) = InData%TowerRad(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE AD_PackVTK_RotSurfaceType
+
+ SUBROUTINE AD_UnPackVTK_RotSurfaceType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(AD_VTK_RotSurfaceType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AD_UnPackVTK_RotSurfaceType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeShape not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BladeShape)) DEALLOCATE(OutData%BladeShape)
+    ALLOCATE(OutData%BladeShape(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BladeShape.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%BladeShape,1), UBOUND(OutData%BladeShape,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL AD_Unpackvtk_blsurfacetype( Re_Buf, Db_Buf, Int_Buf, OutData%BladeShape(i1), ErrStat2, ErrMsg2 ) ! BladeShape 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! TowerRad not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%TowerRad)) DEALLOCATE(OutData%TowerRad)
+    ALLOCATE(OutData%TowerRad(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%TowerRad.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%TowerRad,1), UBOUND(OutData%TowerRad,1)
+        OutData%TowerRad(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE AD_UnPackVTK_RotSurfaceType
 
  SUBROUTINE AD_CopyRotInitInputType( SrcRotInitInputTypeData, DstRotInitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(RotInitInputType), INTENT(IN) :: SrcRotInitInputTypeData

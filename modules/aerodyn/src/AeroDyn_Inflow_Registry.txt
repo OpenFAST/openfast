@@ -1,0 +1,135 @@
+###################################################################################################################################
+# Registry for AeroDyn with InflowWind
+# This Registry file is used to create AeroDyn_Types which contains data used in the AeroDyn module.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>    <ModuleName/ModName>    <TypeName>    <FieldType>    <FieldName>    <Dims>    <IO>    <DNAME>    <DESCRIP>    <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+usefrom   AeroDyn_Registry.txt
+usefrom   InflowWind.txt
+
+param   AeroDyn_Inflow/ADI     -       IntKi             ADI_Version  -  1   -    "" -
+
+
+# ..... InflowWind data .....................................................................................................
+typedef    ^      ADI_InflowWindData   InflowWind_ContinuousStateType   x                -      -     -   "Continuous states"
+typedef    ^        ^                  InflowWind_DiscreteStateType     xd               -      -     -   "Discrete states"
+typedef    ^        ^                  InflowWind_ConstraintStateType   z                -      -     -   "Constraint states"
+typedef    ^        ^                  InflowWind_OtherStateType        OtherSt          -      -     -   "Other states"
+typedef    ^        ^                  InflowWind_ParameterType         p                -      -     -   "Parameters"
+typedef    ^        ^                  InflowWind_MiscVarType           m                -      -     -   "Misc/optimization variables"
+typedef    ^        ^                  InflowWind_InputType             u                -      -     -   "Array of inputs associated with InputTimes"
+typedef    ^        ^                  InflowWind_OutputType            y                -      -     -   "System outputs"
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
+typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+# ..... InflowWind Input data .....................................................................................................
+typedef    ^     ADI_IW_InputData      Character(1024)                  InputFile        -      -     -   "Name of InfloWind input file" -
+typedef    ^        ^                  IntKi                            CompInflow       -      -     -   "0=Steady Wind, 1=InflowWind" "-"
+typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
+typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
+typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
+typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
+
+
+# ..... InitIn ....................................................................................................................
+typedef    ^    InitInputType          AD_InitInputType                 AD               -      -     -   "AD Init input types"
+typedef    ^        ^                  ADI_IW_InputData                 IW_InitInp       -      -     -   "IW Init input types"
+typedef    ^        ^                  Character(1024)                  RootName         -      -     -   "RootName for writing output files"	-
+typedef    ^        ^                  Logical                          storeHHVel       -  .false.   -   "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef    ^        ^                  IntKi                            WrVTK_Type       -     1      -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
+
+# ..... InitOut ...................................................................................................................
+typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
+typedef    ^        ^                  character(ChanLen)               WriteOutputHdr  {:}     -     -   "Channel headers" "-"
+typedef    ^        ^                  character(ChanLen)               WriteOutputUnt  {:}     -     -   "Channel units" "-"
+
+# ..... Continuous States .........................................................................................................
+typedef    ^    ContinuousStateType    AD_ContinuousStateType           AD               -      -     -   "AD Continuous states"
+
+# ..... DiscreteStates ............................................................................................................
+typedef    ^    DiscreteStateType      AD_DiscreteStateType             AD               -      -     -   "Discrete states"
+
+# ..... Constraints ...............................................................................................................
+typedef    ^    ConstraintStateType    AD_ConstraintStateType           AD               -      -     -   "Constraint states"
+
+# ..... OtherStates ...............................................................................................................
+typedef    ^    OtherStateType         AD_OtherStateType                AD               -      -     -   "Other states"
+
+# ..... Misc ......................................................................................................................
+typedef    ^    MiscVarType            AD_MiscVarType                   AD               -      -     -   "misc/optimization variables"
+typedef    ^        ^                  ADI_InflowWindData               IW               -      -     -   "All the necessary inflow wind data"
+typedef    ^        ^                  AD_VTK_RotSurfaceType            VTK_surfaces    {:}     -     -   "VTK outputs surfaces for each rotor"
+# ..... Parameters ................................................................................................................
+typedef    ^    ParameterType          AD_ParameterType                 AD               -      -     -   "Parameters"
+typedef    ^        ^                  DbKi                             dt               -      -     -   "time increment" "s"
+typedef    ^        ^                  Logical                          storeHHVel       -      -     -   "If True, hub height velocity will be computed by infow wind"	-
+typedef    ^        ^                  IntKi                            wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
+typedef    ^        ^                  IntKi                            WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
+typedef    ^        ^                  IntKi                            NumOuts          -      0     -   "Total number of WriteOutput outputs"	-
+
+# ..... Inputs ....................................................................................................................
+typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"
+
+# ..... Outputs ...................................................................................................................
+#typedef    ^    ADI_RotOutputType      ReKi                             WriteOutput     {:}     -     -   "WriteOutputs for a given rotor" -
+typedef    ^    OutputType             AD_OutputType                    AD               -      -     -   "System outputs"
+#typedef    ^        ^                  InflowWind_OutputType            IW               -      -     -   "System outputs"
+typedef    ^        ^                  ReKi                             HHVel            {:}{:} -     -   "Hub Height velocities for each rotors"
+typedef    ^        ^                  ReKi                             PLExp            -      -     -   "Power law exponents (for outputs only)"
+typedef    ^        ^                  ReKi                             IW_WriteOutput  {:}     -     -   "WriteOutputs for inflow wind" -
+#typedef    ^        ^                  ADI_RotOutputType               rotors           :      -     -   "WriteOutputs of the driver only"
+typedef    ^    OutputType             ReKi                             WriteOutput     {:}     -     -   "System outputs"
+
+# ..... AeroDyn_Inflow data ...................................................................................................
+# NOTE: useful for driver/wrapper of this module
+typedef   ^      ADI_Data              ADI_ContinuousStateType          x        -     -    -    "Continuous states"
+typedef   ^          ^                 ADI_DiscreteStateType            xd       -     -    -    "Discrete states"
+typedef   ^          ^                 ADI_ConstraintStateType          z        -     -    -    "Constraint states"
+typedef   ^          ^                 ADI_OtherStateType               OtherState   - -    -    "Other states"
+typedef   ^          ^                 ADI_ParameterType                p        -     -    -    "Parameters"
+typedef   ^          ^                 ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
+typedef   ^          ^                 ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
+typedef   ^          ^                 ADI_OutputType                   y        -     -    -    "System outputs"
+typedef   ^          ^                 DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
+
+# ..... Rotor elastic data ..................................................................................................
+# NOTE: useful for driver/wrapper of this module
+typedef   ^                     RotFED           MeshType                PlatformPtMesh   -      -     -   "Platform reference point positions/orientations/velocities/accelerations"    -
+typedef   ^                         ^            MeshType                TwrPtMesh        -      -     -   "(only if hasTower) Point mesh for tower base motion" "-"
+typedef   ^                         ^            MeshType                TwrPtMeshAD      -      -     -   "(only if hasTower) Point mesh for tower base for AD" "-"
+#typedef   ^                         ^            MeshType                TowerLn2Mesh     -      -     -   "Tower line2 mesh with positions/orientations/velocities/accelerations"    -
+typedef   ^                         ^            MeshType                NacelleMotion    -      -     -   "Point mesh for nacelle point motion" "-"
+typedef   ^                         ^            MeshType                HubPtMotion      -      -     -   "Point mesh for hub point motion" "-"
+typedef   ^                         ^            MeshType                BladeRootMotion  :      -     -   "BladeRootMotion Point mesh for blade root motion" "-"
+typedef   ^                         ^            MeshType                BladeLn2Mesh     :      -     -   "(only if elastic blades) BladeLn2Mesh    Line mesh along blade" "-"
+typedef   ^                         ^            Logical                 hasTower         -   .true.   -   "True if a tower is present" "-"
+typedef   ^                         ^            Logical                 rigidBlades      -   .true.   -   "True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh)" "-"
+typedef   ^                         ^            IntKi                   numBlades        -      -     -   "Number of blades" -
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower base"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_T    -      -     -   "(only if hasTower) Mesh mapping from tower base to AD tower line"
+typedef   ^                         ^            MeshMapType             AD_P_2_AD_L_B    :      -     -   "(only for rigid blades) Mesh mapping from AD blade root to AD line mesh" "-"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_TF   -      -     -   "Map ElastoDyn TailFin CM point (taken as Nacelle) motion mesh to AeroDyn TailFin ref point motion mesh"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_R    :      -     -   "Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_H    -      -     -   "Map ElastoDyn HubPtMotion point mesh to AeroDyn HubMotion point mesh"
+typedef   ^                         ^            MeshMapType             ED_P_2_AD_P_N    -      -     -   "Map ElastoDyn Nacelle point motion mesh to AeroDyn Nacelle point motion mesh"
+#typedef   ^                         ^            MeshMapType             AD_P_2_ED_P_TF   -      -     -   "Map AeroDyn TailFin ref point load mesh to ElastoDyn TailFin CM point load mesh"
+#typedef   ^                         ^            MeshMapType             AD_P_2_ED_P_N    -      -     -   "Map AeroDyn Nacelle point load mesh to ElastoDyn nacelle point load mesh"
+#typedef   ^                         ^            MeshMapType             ED_L_2_AD_L_T    -      -     -   "Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
+#typedef   ^                         ^            MeshMapType             AD_L_2_ED_P_T    -      -     -   "Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerPtLoads point mesh"
+
+# ..... Turbine elastic data ................................................................................................
+typedef   ^                        FED_Data      RotFED                  WT                :      -     -   "Wind turbine/rotors elastic data" "-"
+
+
+
