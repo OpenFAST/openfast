@@ -70,6 +70,7 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: WrHAWC               = .FALSE.      !< Requested file conversion to HAWC2 format?
       LOGICAL                 :: WrBladed             = .FALSE.      !< Requested file conversion to Bladed format?
       LOGICAL                 :: WrVTK                = .FALSE.      !< Requested file output as VTK?
+      LOGICAL                 :: WrUniform            = .FALSE.      !< Requested file output as Uniform wind format?
    END TYPE    IfWDriver_Flags
 
 
