@@ -540,13 +540,10 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    if (errStat /= ErrID_None) return
 
    ! Curl
-   if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-      allocate ( xd%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%Vy_wake.', errStat, errMsg, RoutineName )  
-      allocate ( xd%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%Vz_wake.', errStat, errMsg, RoutineName )  
-      if (errStat /= ErrID_None) return
-      xd%Vy_wake2 = 0.0_ReKi
-      xd%Vz_wake2 = 0.0_ReKi
-   endif
+   allocate ( xd%Vy_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%Vy_wake.', errStat, errMsg, RoutineName )  
+   allocate ( xd%Vz_wake2   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%Vz_wake.', errStat, errMsg, RoutineName )  
+   if (errStat /= ErrID_None) return
+
    xd%YawErr_filt         = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
    xd%psi_skew_filt       = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
    xd%chi_skew_filt       = 0.0_ReKi !NOTE: initialized in InitStatesWithInputs
@@ -557,8 +554,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%Vx_wake             = 0.0_ReKi
    xd%Vr_wake             = 0.0_ReKi
    xd%Vx_wake2            = 0.0_ReKi
-   xd%Vy_wake2            = 0.0_ReKi
-   xd%Vz_wake2            = 0.0_ReKi
    xd%V_plane_filt        = 0.0_ReKi
    xd%Vx_wind_disk_filt   = 0.0_ReKi
    xd%TI_amb_filt         = 0.0_ReKi
