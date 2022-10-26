@@ -10,7 +10,14 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.2.0 to OpenFAST `dev`
+OpenFAST v3.3.0 to OpenFAST `dev`
+----------------------------------
+
+None
+
+
+
+OpenFAST v3.2.0 to OpenFAST v3.3.0
 ----------------------------------
 
 ============================================= ==== ================= ======================================================================================================================================================================================================
@@ -63,6 +70,7 @@ MoorDyn\&                                     20\* NLines            3        NL
 \*Exact line number depends on number of entries in various preceeding tables.
 
 \&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
 
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
