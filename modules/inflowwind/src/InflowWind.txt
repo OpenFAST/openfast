@@ -30,6 +30,7 @@ param    ^                       -                 IntKi             BladedFF_Sh
 param    ^                       -                 IntKi             FDext_WindNumber     -     8     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
 param    ^                       -                 IntKi             Highest_WindNumber   -     8     -     "Highest wind number supported."                                           -
 
+param    ^                       -                 IntKi             IfW_NumPtsAvg        -     144    -     "Number of points averaged for rotor-average wind speed"                                           -
 
 #########################
 # ..... WindFile metadata ........................................................................................................
@@ -106,12 +107,13 @@ typedef  ^                       ^                 IntKi             NumWindPoin
 typedef  ^                       ^                 IntKi             TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
 typedef  ^                       ^                 LOGICAL           FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
-typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
+typedef  ^                       ^                 CHARACTER(1024)   RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
 typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
 typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
-typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for lidar data"                                             -
+typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
+typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
 
 
 # Init Output
@@ -125,19 +127,6 @@ typedef  ^                       InitOutputType    LOGICAL                RotFra
 typedef  ^                       InitOutputType    LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^                       InitOutputType    LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
-
-# ..... Misc/Optimization variables.................................................................................................
-# Define any data that are used only for efficiency purposes (these variables are not associated with time):
-#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef  ^                       MiscVarType       IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-typedef  ^                       ^      IfW_UniformWind_MiscVarType  UniformWind       -     -     -     "MiscVars from UniformWind"                 -
-typedef  ^                       ^         IfW_TSFFWind_MiscVarType  TSFFWind          -     -     -     "MiscVars from TSFFWind"                              -
-typedef  ^                       ^         IfW_HAWCWind_MiscVarType  HAWCWind          -     -     -     "MiscVars from HAWCWind"                              -
-typedef  ^                       ^     IfW_BladedFFWind_MiscVarType  BladedFFWind      -     -     -     "MiscVars from BladedFFWind"                          -
-typedef  ^                       ^         IfW_UserWind_MiscVarType  UserWind          -     -     -     "MiscVars from UserWind"                              -
-typedef  ^                       ^            IfW_4Dext_MiscVarType  FDext             -     -     -     "MiscVars from FDext"                                -
-typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
-typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
 
 
 # ..... Parameters ................................................................................................................
@@ -170,12 +159,15 @@ typedef  ^                       ^                 IntKi             NumOuts    
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
 typedef  ^                       ^          lidar_ParameterType      lidar             -     -     -     "Lidar parameter data"                                       -
+typedef  ^                       ^                 ReKi              PositionAvg       ::    -     -     "(non-rotated) positions of points used for averaging wind speed"  meters
 
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef  ^                    InputType            ReKi              PositionXYZ       ::    -     -     "Array holding the input positions at a given timestep"  meters
 typedef  ^                       ^                 lidar_InputType   lidar             -     -     -     "Lidar data"                                       -
+typedef  ^                       ^                 ReKi              HubPosition      {3}    -     -     "position of the hub (inertial frame)" m
+typedef  ^                       ^                 ReKi              HubOrientation   {3}{3} -     -     "orientation of the hub (direction cosine matrix)" -
 
 
 # ..... Outputs ...................................................................................................................
@@ -183,6 +175,7 @@ typedef  ^                       ^                 lidar_InputType   lidar      
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
+typedef  ^                       ^                 ReKi              HubVel            {3}   -     -     "Vector holding the U,V,W velocity at the hub"  meters/sec
 typedef  ^                       ^              lidar_OutputType     lidar             -     -     -     "Lidar data"                                       -
 #typedef  ^                       ^       IfW_UniformWind_OutputType  UniformWind       -     -     -     "uniform/steady wind operating point"
 
@@ -191,3 +184,21 @@ typedef  ^                    ContinuousStateType  ReKi              DummyContSt
 typedef  ^                    DiscreteStateType    ReKi              DummyDiscState    -     -     -     "Remove this variable if you have discrete states"       -
 typedef  ^                    ConstraintStateType  ReKi              DummyConstrState  -     -     -     "Remove this variable if you have constraint states"     -
 typedef  ^                    OtherStateType       ReKi              DummyOtherState   -     -     -     "Remove this variable if you have other states"     -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^                       MiscVarType       IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
+typedef  ^                       ^      IfW_UniformWind_MiscVarType  UniformWind       -     -     -     "MiscVars from UniformWind"                 -
+typedef  ^                       ^         IfW_TSFFWind_MiscVarType  TSFFWind          -     -     -     "MiscVars from TSFFWind"                              -
+typedef  ^                       ^         IfW_HAWCWind_MiscVarType  HAWCWind          -     -     -     "MiscVars from HAWCWind"                              -
+typedef  ^                       ^     IfW_BladedFFWind_MiscVarType  BladedFFWind      -     -     -     "MiscVars from BladedFFWind"                          -
+typedef  ^                       ^         IfW_UserWind_MiscVarType  UserWind          -     -     -     "MiscVars from UserWind"                              -
+typedef  ^                       ^            IfW_4Dext_MiscVarType  FDext             -     -     -     "MiscVars from FDext"                                -
+typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
+typedef  ^                    MiscVarType          InflowWind_InputType  u_Avg             -     -     -     "inputs for computing rotor-averaged values"  -
+typedef  ^                    MiscVarType          InflowWind_OutputType y_Avg             -     -     -     "outputs for computing rotor-averaged values"  -
+typedef  ^                    MiscVarType          InflowWind_InputType  u_Hub             -     -     -     "inputs for computing hub values"  -
+typedef  ^                    MiscVarType          InflowWind_OutputType y_Hub             -     -     -     "outputs for computing hub values"  -
