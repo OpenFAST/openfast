@@ -565,29 +565,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF ( p_FAST%CompAero  == Module_AD14 ) THEN
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + NumBl * AD14%Input(1)%InputMarkers(1)%NNodes + AD14%Input(1)%Twr_InputMarkers%NNodes
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
-         ! Blade
-         DO k=1,NumBl
-            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%BladeMotion(k)%NNodes
-         END DO
-         ! Tower
-         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%TowerMotion%NNodes
-         ! Nacelle
-         if (AD%Input(1)%rotors(1)%NacelleMotion%Committed) then
-            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%NacelleMotion%NNodes ! 1 point
-         endif
-         ! Hub
-         if (AD%Input(1)%rotors(1)%HubMotion%Committed) then
-            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%HubMotion%NNodes ! 1 point
-         endif
-         ! TailFin
-         if (AD%Input(1)%rotors(1)%TFinMotion%Committed) then
-            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD%Input(1)%rotors(1)%TFinMotion%NNodes ! 1 point
-         end if
-         ! Wake
-         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + size(AD%OtherSt(STATE_CURR)%WakeLocationPoints,DIM=2)
-         end if
-
+         ! Number of Wind points from AeroDyn, see AeroDyn.f90
+         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD_NumWindPoints(AD%Input(1), AD%OtherSt(STATE_CURR))
       END IF
 
       ! lidar

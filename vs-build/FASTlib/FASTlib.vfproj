@@ -225,6 +225,44 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
@@ -417,6 +455,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_AllBldNdOuts_IO.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_IO.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\BEMT.f90"/>

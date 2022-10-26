@@ -65,6 +65,14 @@ typedef  ^  TFinInputFileType   IntKi   TFinIndMod -    -   - "Model for induced
 typedef  ^  TFinInputFileType   IntKi   TFinAFID   -    -   - "Index of Tail fin airfoil number [1 to NumAFfiles]" -
 
 
+
+typedef    ^    AD_VTK_BLSurfaceType     SiKi                    AirfoilCoords    {:}{:}{:} -    -    "x,y coordinates for airfoil around each blade node on a blade (relative to reference)"    -
+
+typedef    ^    AD_VTK_RotSurfaceType    AD_VTK_BLSurfaceType    BladeShape          {:}    -    -    "AirfoilCoords for each blade"    -
+typedef    ^          ^                  SiKi                    TowerRad            {:}    -    -    "radius of each ED tower node"    m
+
+ 
+
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	RotInitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine" -

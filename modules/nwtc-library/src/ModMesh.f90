@@ -909,18 +909,23 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
 !-------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes mesh information in text form. It is used for debugging.
-   SUBROUTINE MeshPrintInfo ( U, M, N)
+   SUBROUTINE MeshPrintInfo ( U, M, N, MeshName)
          
      INTEGER, INTENT(IN   )                ::      U  !< fortran output unit
      TYPE(MeshType),INTENT(IN   )          ::      M  !< mesh to be reported on
      INTEGER, OPTIONAL,INTENT(IN   )       ::      N  !< Number to print, default is all nodes
+     character(*), optional, intent(in   ) :: MeshName !< name of the mesh
     ! Local
      INTEGER isz,i,j,nn,Ielement,Xelement
 
      nn = M%Nnodes !5
      IF (PRESENT(N)) nn = min(nn,N)
 
-     write(U,*)'-----------  MeshPrintInfo:  -------------'
+     if (present(MeshName)) then
+        write(U,*)'-----------  MeshPrintInfo: '//trim(MeshName)//'  -------------'
+     else
+        write(U,*)'-----------  MeshPrintInfo:  -------------'
+     endif
 
      write(U,*)  'Initialized: ', M%initialized
      write(U,*)  'Committed:   ', M%Committed

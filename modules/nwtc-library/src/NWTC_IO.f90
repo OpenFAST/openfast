@@ -218,6 +218,7 @@ MODULE NWTC_IO
       !> \copydoc nwtc_io::int2lstr
    INTERFACE Num2LStr
       MODULE PROCEDURE Int2LStr        ! default integers
+      MODULE PROCEDURE B8Ki2LStr       ! 8 byte integers
       MODULE PROCEDURE R2LStr4         ! 4-byte  reals
       MODULE PROCEDURE R2LStr8         ! 8-byte  reals
       MODULE PROCEDURE R2LStr16        ! 16-byte reals
@@ -2559,23 +2560,25 @@ END SUBROUTINE CheckR16Var
 !! It eliminates trailing zeroes and even the decimal point if it is not a fraction. \n
 !! Use Num2LStr (nwtc_io::num2lstr) instead of directly calling a specific routine in the generic interface.   
    FUNCTION Int2LStr ( Num )
-
-   CHARACTER(11)                :: Int2LStr                                     !< string representing input number.
-
-
+      CHARACTER(11)                :: Int2LStr                                  !< string representing input number.
       ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: Num                                          !< The number to convert to a left-justified string.
-
-
-
-   WRITE (Int2LStr,'(I11)')  Num
-
-   Int2Lstr = ADJUSTL( Int2LStr )
-
-
-   RETURN
+      INTEGER(IntKi), INTENT(IN)   :: Num                                       !< The number to convert to a left-justified string.
+      WRITE (Int2LStr,'(I11)')  Num
+      Int2Lstr = ADJUSTL( Int2LStr )
+      RETURN
    END FUNCTION Int2LStr
+!=======================================================================
+!> This function returns a left-adjusted string representing the passed numeric value. 
+!! It eliminates trailing zeroes and even the decimal point if it is not a fraction. \n
+!! Use Num2LStr (nwtc_io::num2lstr) instead of directly calling a specific routine in the generic interface.   
+   FUNCTION B8Ki2LStr ( Num )
+      CHARACTER(20)                :: B8Ki2LStr                                 !< string representing input number.
+      ! Argument declarations.
+      INTEGER(B8Ki), INTENT(IN)    :: Num                                       !< The number to convert to a left-justified string.
+      WRITE (B8Ki2LStr,'(I20)')  Num
+      B8Ki2Lstr = ADJUSTL( B8Ki2LStr )
+      RETURN
+   END FUNCTION B8Ki2LStr
 !=======================================================================
 !> This function returns true if and only if the first character of the input StringToCheck matches on the of comment characters
 !! nwtc_io::commchars.
@@ -4505,6 +4508,10 @@ END SUBROUTINE CheckR16Var
             NullLoc  = idx
          endif 
       enddo
+         ! If the last line is not NULL terminated, might miss the line containing END
+      if (NullLoc < len_trim(FileString)) then
+         NumLines = NumLines + 1
+      endif
 
       if (NumLines == 0) then
          ErrStat2 = ErrID_Fatal
@@ -4531,9 +4538,13 @@ END SUBROUTINE CheckR16Var
          NullLoc = index(FileString(idx:len(FileString)),C_NULL_CHAR)
          ! started indexing at idx, so add that back in for location in FileString
          NullLoc = NullLoc + idx - 1
-         if (NullLoc > 0) then
+         if (NullLoc > idx) then
             FileStringArray(Line) = trim(FileString(idx:NullLoc-1))
          else
+            ! If not NULL terminated
+            if (len_trim(FileString(NullLoc:len_trim(FileString))) > 0) then
+               FileStringArray(Line) = trim(FileString(NullLoc+1:len_trim(FileString)))
+            endif
             exit  ! exit loop as we didn't find any more
          endif
          idx = min(NullLoc + 1,len(FileString))    ! Start next segment of file, but overstep end
@@ -6347,6 +6358,8 @@ END SUBROUTINE CheckR16Var
 
       END IF
 
+
+      if (LineNum > FileInfo%NumLines) exit  ! Don't overrun end of file in case no END found
 
    END DO
 
