@@ -408,6 +408,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ReadPrimaryFile'
+   Real(ReKi)                    :: DefaultReVal ! Default real value 
    
    
       ! Initialize some variables:
@@ -878,14 +879,17 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
 
       
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
+   ! TODO: if rotor is known (and if wind speed is known) use as default equation (32) of https://doi.org/10.1002/we.2785
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
       "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]", &
-      0.0007_ReKi, ErrStat2, ErrMsg2, UnEc)
+      0.25, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
+      ! Old Default 0.0007_ReKi
+
       
       ! C_HWkDfl_O - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=0.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_O, "C_HWkDfl_O", &
@@ -898,9 +902,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
 
       ! C_HWkDfl_OY - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]:
+   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
+      DefaultReVal = 0.0_ReKi
+   else
+      DefaultReVal = 0.3_ReKi
+   endif
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_OY, "C_HWkDfl_OY", &
       "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]", &
-      0.3_ReKi, ErrStat2, ErrMsg2, UnEc)
+      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -919,9 +928,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if      
          
       ! C_HWkDfl_xY - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]:
+   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
+      DefaultReVal = 0.0_ReKi
+   else
+      DefaultReVal = -0.004_ReKi
+   endif
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_xY, "C_HWkDfl_xY", &
       "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]", &
-      -0.004_ReKi, ErrStat2, ErrMsg2, UnEc)
+      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1084,8 +1098,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
 
    !----------------------- CURL WAKE PARAMETERS ------------------------------------------
    CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.1, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .True., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.01, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    

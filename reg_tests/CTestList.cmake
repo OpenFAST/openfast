@@ -288,6 +288,8 @@ of_regression_linear("StC_test_OC4Semi_Linear_Tow"  "openfast;linear;servodyn;st
 if(BUILD_FASTFARM)
   ff_regression("TSinflow"  "fastfarm")
   ff_regression("LESinflow"  "fastfarm")
+  ff_regression("Uninflow_curl"  "fastfarm")
+  ff_regression("TSinflow_curl"  "fastfarm")
 endif()
 
 # AeroDyn regression tests

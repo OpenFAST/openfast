@@ -112,6 +112,8 @@ else:
 if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
+caseName='FAST.Farm' # for ease of comparison
+
 ### Run openfast on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fstf")
