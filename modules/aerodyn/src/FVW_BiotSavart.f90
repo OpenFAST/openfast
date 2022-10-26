@@ -103,7 +103,7 @@ end subroutine ui_seg_11
 !! The function can compute the velocity on part of the segments and part of the control points.
 !! This feature is useful if some parallelization is used, while common storage vectors are used.
 subroutine ui_seg(iCPStart, iCPEnd, CPs, &
-      iSegStart, iSegEnd, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+      iSegStart, iSegEnd, SegPoints, SegConnct, SegGamma,  &
       RegFunction, RegParam, Uind_out)
    real(ReKi), dimension(:,:),     intent(in)    :: CPs         !< Control points (3 x nCPs++)
    integer(IntKi),                 intent(in)    :: iCPStart    !< Index where we start in Control points array
@@ -113,8 +113,6 @@ subroutine ui_seg(iCPStart, iCPEnd, CPs, &
    real(ReKi), dimension(:),       intent(in)    :: SegGamma    !< Segment circulation (nSegTot)
    integer(IntKi),                 intent(in)    :: iSegStart   !< Index in SegConnct, and SegGamma where we start
    integer(IntKi),                 intent(in)    :: iSegEnd     !< Index in SegConnct, and SegGamma where we end
-   integer(IntKi),                 intent(in)    :: nSegTot     !< Total number of segments
-   integer(IntKi),                 intent(in)    :: nSegPTot    !< Total number of segment points
    integer(IntKi),                 intent(in)    :: RegFunction !< Regularization model
    real(ReKi), dimension(:),       intent(in)    :: RegParam    !< Regularization parameter (nSegTot)
    real(ReKi), dimension(:,:)    , intent(inout) :: Uind_out    !< Induced velocity vector - Side effects!!! (3 x nCPs++)

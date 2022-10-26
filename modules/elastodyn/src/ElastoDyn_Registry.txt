@@ -142,12 +142,12 @@ typedef	^	ED_InputFile	ReKi	NcIMUxn	-	-	-	"Downwind distance from the tower-top 
 typedef	^	ED_InputFile	ReKi	NcIMUyn	-	-	-	"Lateral distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	Twr2Shft	-	-	-	"Vertical distance from the tower-top to the rotor shaft"	meters
-typedef	^	ED_InputFile	ReKi	TowerHt	-	-	-	"Height of tower above ground level [onshore] or MSL [offshore]"	meters
-typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore] or MSL [offshore]"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point"	meters
+typedef	^	ED_InputFile	ReKi	TowerHt	-	-	-	"Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
+typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"	meters
 typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
 typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
 typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"	"kg m^2"
@@ -218,29 +218,13 @@ typedef	^	ED_InputFile	ReKi	RotFurl	-	-	-	"Initial or fixed rotor-furl angle"	ra
 typedef	^	ED_InputFile	ReKi	TailFurl	-	-	-	"Initial or fixed tail-furl angle"	radians
 typedef	^	ED_InputFile	ReKi	Yaw2Shft	-	-	-	"Lateral distance from the yaw axis to the rotor shaft"	meters
 typedef	^	ED_InputFile	ReKi	ShftSkew	-	-	-	"Rotor shaft skew angle"	radians
-typedef	^	ED_InputFile	ReKi	RFrlCMxn	-	-	-	"Downwind distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	RFrlCMyn	-	-	-	"Lateral distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	RFrlCMzn	-	-	-	"Vertical distance from tower-top to rotor-furl CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMxn	-	-	-	"Downwind distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMyn	-	-	-	"Lateral distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	BoomCMzn	-	-	-	"Vertical distance from tower-top to tail boom CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMxn	-	-	-	"Downwind distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMyn	-	-	-	"Lateral distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCMzn	-	-	-	"Vertical distance from tower-top to tail fin CM"	meters
-typedef	^	ED_InputFile	ReKi	TFinCPxn	-	-	-	"Downwind distance from tower-top to tail fin CP"	meters
-typedef	^	ED_InputFile	ReKi	TFinCPyn	-	-	-	"Lateral distance from tower-top to tail fin CP"	meters
-typedef	^	ED_InputFile	ReKi	TFinCPzn	-	-	-	"Vertical distance from tower-top to tail fin CP"	meters
-typedef	^	ED_InputFile	ReKi	TFinSkew	-	-	-	"Tail fin chordline skew angle"	radians
-typedef	^	ED_InputFile	ReKi	TFinTilt	-	-	-	"Tail fin chordline tilt angle"	radians
-typedef	^	ED_InputFile	ReKi	TFinBank	-	-	-	"Tail fin planform bank angle"	radians
-typedef	^	ED_InputFile	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	RFrlCM_n	3	-	-	"Vector from tower-top to rotor-furl CM"	meters
+typedef	^	ED_InputFile	ReKi	BoomCM_n	3	-	-	"Vector from tower-top to tail boom CM"	meters
+typedef	^	ED_InputFile	ReKi	TFinCM_n	3	-	-	"Vector from tower-top to tail fin CM"	meters
+typedef	^	ED_InputFile	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"	meters
 typedef	^	ED_InputFile	ReKi	RFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
 typedef	^	ED_InputFile	ReKi	RFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
-typedef	^	ED_InputFile	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"	meters
-typedef	^	ED_InputFile	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"	meters
+typedef	^	ED_InputFile	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"	meters
 typedef	^	ED_InputFile	ReKi	TFrlSkew	-	-	-	"Rotor-furl axis skew angle"	radians
 typedef	^	ED_InputFile	ReKi	TFrlTilt	-	-	-	"Rotor-furl axis tilt angle"	radians
 typedef	^	ED_InputFile	ReKi	RFrlMass	-	-	-	"Rotor-furl mass"	kg
@@ -251,7 +235,6 @@ typedef	^	ED_InputFile	ReKi	TFrlIner	-	-	-	"Tail boom inertia about tail-furl ax
 typedef	^	ED_InputFile	IntKi	RFrlMod	-	-	-	"Rotor-furl spring/damper model switch"	-
 typedef	^	ED_InputFile	ReKi	RFrlSpr	-	-	-	"Rotor-furl spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"	N-m/(rad/s)
-typedef	^	ED_InputFile	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"	N-m
 typedef	^	ED_InputFile	ReKi	RFrlUSSP	-	-	-	"Rotor-furl up-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	RFrlDSSP	-	-	-	"Rotor-furl down-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	RFrlUSSpr	-	-	-	"Rotor-furl up-stop spring constant"	N-m/rad
@@ -263,7 +246,6 @@ typedef	^	ED_InputFile	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping consta
 typedef	^	ED_InputFile	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"	-
 typedef	^	ED_InputFile	ReKi	TFrlSpr	-	-	-	"Tail-furl spring constant"	N-m/rad
 typedef	^	ED_InputFile	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"	N-m/(rad/s)
-typedef	^	ED_InputFile	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"	N-m
 typedef	^	ED_InputFile	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	TFrlDSSP	-	-	-	"Tail-furl down-stop spring position"	radians
 typedef	^	ED_InputFile	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"	N-m/rad
@@ -319,9 +301,6 @@ typedef	^	ED_CoordSys	R8Ki	m3	{:}{:}{:}	-	-	"m3(K,J,:) = vector / direction m3 f
 typedef	^	ED_CoordSys	R8Ki	n1	{:}{:}{:}	-	-	"n1(K,J,:) = vector / direction n1 for node J of blade K (= LxbK from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	n2	{:}{:}{:}	-	-	"n2(K,J,:) = vector / direction n2 for node J of blade K (= LybK from the IEC coord. system)"	-
 typedef	^	ED_CoordSys	R8Ki	n3	{:}{:}{:}	-	-	"n3(K,J,:) = vector / direction n3 for node J of blade K (= LzbK from the IEC coord. system)"	-
-typedef	^	ED_CoordSys	R8Ki	p1	3	-	-	"Vector / direction p1 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
-typedef	^	ED_CoordSys	R8Ki	p2	3	-	-	"Vector / direction p2 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
-typedef	^	ED_CoordSys	R8Ki	p3	3	-	-	"Vector / direction p3 (used to calc. and return tail aerodynamic loads from AeroDyn)"	-
 typedef	^	ED_CoordSys	R8Ki	rf1	3	-	-	"Vector / direction rf1 (rotor-furl coordinate system = d1 when rotor-furl angle = 0)"	-
 typedef	^	ED_CoordSys	R8Ki	rf2	3	-	-	"Vector / direction rf2 (rotor-furl coordinate system = d2 when rotor-furl angle = 0)"	-
 typedef	^	ED_CoordSys	R8Ki	rf3	3	-	-	"Vector / direction rf3 (rotor-furl coordinate system = d3 when rotor-furl angle = 0)"	-
@@ -382,6 +361,7 @@ typedef	^	ED_RtHndSide	R8Ki	rZT	{:}{:}	-	-	"Position vector from platform refere
 typedef	^	ED_RtHndSide	R8Ki	rPQ	3	-	-	"Position vector from teeter pin (point P) to apex of rotation (point Q)"	m
 typedef	^	ED_RtHndSide	R8Ki	rP	3	-	-	"Position vector from inertial frame origin to teeter pin (point P)"	m
 typedef	^	ED_RtHndSide	R8Ki	rV	3	-	-	"Position vector from inertial frame origin to specified point on rotor-furl axis (point V)"	m
+typedef	^	ED_RtHndSide	R8Ki	rJ	3	-	-	"Position vector from inertial frame origin to tail fin center of mass (point J)"	m
 typedef	^	ED_RtHndSide	R8Ki	rZY	3	-	-	"Position vector from platform reference (point Z) to platform mass center (point Y)"	m
 typedef	^	ED_RtHndSide	R8Ki	rOU	3	-	-	"Position vector from tower-top / base plate (point O) to nacelle center of mass (point U)."	m
 typedef	^	ED_RtHndSide	R8Ki	rOV	3	-	-	"Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V)"	m
@@ -395,7 +375,6 @@ typedef	^	ED_RtHndSide	R8Ki	rVIMU	3	-	-	"Position vector from specified point on
 typedef	^	ED_RtHndSide	R8Ki	rVP	3	-	-	"Position vector from specified point on rotor-furl axis (point V) to teeter pin (point P)"	m
 typedef	^	ED_RtHndSide	R8Ki	rWI	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I)"	m
 typedef	^	ED_RtHndSide	R8Ki	rWJ	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J)"	m
-typedef	^	ED_RtHndSide	R8Ki	rWK	3	-	-	"Position vector from specified point on  tail-furl axis (point W) to tail fin  center of pressure (point K)"	m
 typedef	^	ED_RtHndSide	R8Ki	rZT0	3	-	-	"Position vector from platform reference (point Z) to tower base (point T(0))"	m
 # RtHS Angular positions
 typedef	^	ED_RtHndSide	ReKi	AngPosEF	{:}{:}	-	-	"Angular position of the current point on the tower (body F) in the inertial frame (body E for earth)"
@@ -442,14 +421,12 @@ typedef	^	ED_RtHndSide	ReKi	LinAccECt	3	-	-	"Portion of the linear acceleration 
 typedef	^	ED_RtHndSide	ReKi	LinAccEDt	3	-	-	"Portion of the linear acceleration of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	LinAccEIt	3	-	-	"Portion of the linear acceleration of the tail boom center of mass (point I) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	LinAccEJt	3	-	-	"Portion of the linear acceleration of the tail fin  center of mass (point J) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
-#typedef	^	ED_RtHndSide	ReKi	LinAccEKt	3	-	-	"Portion of the linear acceleration of the tail fin  center of pressure (point K) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 #typedef	^	ED_RtHndSide	ReKi	LinAccEPt	3	-	-	"Portion of the linear acceleration of the teeter pin (point P) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 #typedef	^	ED_RtHndSide	ReKi	LinAccEQt	3	-	-	"Portion of the linear acceleration of the apex of rotation (point Q) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	LinAccEUt	3	-	-	"Portion of the linear acceleration of the nacelle center of mass (point U) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 #typedef	^	ED_RtHndSide	ReKi	LinAccEVt	3	-	-	"Portion of the linear acceleration of the selected point on the rotor-furl axis (point V) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 #typedef	^	ED_RtHndSide	ReKi	LinAccEWt	3	-	-	"Portion of the linear acceleration of the selected point on the  tail-furl axis (point W) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	LinAccEYt	3	-	-	"Portion of the linear acceleration of the platform center of mass (point Y) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
-#typedef	^	ED_RtHndSide	ReKi	LinVelEK	3	-	-	"Linear velocity of tail fin center-of-pressure (point K) in the inertia frame"
 typedef	^	ED_RtHndSide	ReKi	LinVelES	{:}{:}{:}	-	-	"Linear velocity of current point on the current blade (point S) in the inertia frame"
 #typedef	^	ED_RtHndSide	ReKi	LinVelHS	3	-	-	"Relative linear velocity of the current point on the current blade (point S) in the hub frame (body H)"
 #typedef	^	ED_RtHndSide	ReKi	LinVelXO	3	-	-	"Relative linear velocity of the tower-top / base plate (point O) in the platform (body X)"
@@ -466,7 +443,6 @@ typedef	^	ED_RtHndSide	ReKi	PLinVelEC	{:}{:}{:}	-	-	"Partial linear velocity (an
 typedef	^	ED_RtHndSide	ReKi	PLinVelED	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the center of mass of the structure that furls with the rotor (not including rotor) (point D) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PLinVelEI	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail boom center of mass (point I) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PLinVelEJ	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail fin center of mass (point J) in the inertia frame (body E for earth)"
-typedef	^	ED_RtHndSide	ReKi	PLinVelEK	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the tail fin center of pressure(point K) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PLinVelEP	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the teeter pin (point P) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PLinVelEQ	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the apex of rotation (point Q) in the inertia frame (body E for earth)"
 typedef	^	ED_RtHndSide	ReKi	PLinVelEU	{:}{:}{:}	-	-	"Partial linear velocity (and its 1st time derivative) of the nacelle center of mass (point U) in the inertia frame (body E for earth)"
@@ -481,6 +457,7 @@ typedef	^	ED_RtHndSide	ReKi	LinAccEZt	3	-	-	"Portion of the linear acceleration 
 typedef	^	ED_RtHndSide	ReKi	LinVelEIMU	3	-	-	"Linear velocity of the nacelle IMU (point IMU) in the inertia frame"
 typedef	^	ED_RtHndSide	ReKi	LinVelEZ	3	-	-	"Linear velocity of platform reference (point Z) in the inertia frame"
 typedef	^	ED_RtHndSide	ReKi	LinVelEO	3	-	-	"Linear velocity of the base plate (point O) in the inertia frame (body E for earth)"
+typedef	^	ED_RtHndSide	ReKi	LinVelEJ	3	-	-	"Linear velocity of the tail fin CM (point J) in the inertia frame (body E for earth)"
 # RtHS Forces and Moments
 typedef	^	ED_RtHndSide	ReKi	FrcONcRtt	3	-	-	"Portion of the force at yaw bearing (point O) due to the nacelle, generator, and rotor associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	FrcPRott	3	-	-	"Portion of the force at the teeter pin (point P) due to the rotor associated with everything but the QD2T()'s"
@@ -518,8 +495,6 @@ typedef	^	ED_RtHndSide	R8Ki	TeetAng	-	-	-	"Current teeter angle = QT(DOF_Teet) f
 typedef	^	ED_RtHndSide	ReKi	FrcVGnRtt	3	-	-	"Portion of the force at the rotor-furl axis (point V) due to the structure that furls with the rotor, generator, and rotor associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	FrcWTailt	3	-	-	"Portion of the force at the tail-furl axis (point W) due to the tail associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	FrcZAllt	3	-	-	"Portion of the force at platform reference (point Z) due to everything associated with everything but the QD2T()'s"
-#typedef	^	ED_RtHndSide	ReKi	FKAero	3	-	-	"The tail fin aerodynamic force acting at point K, the center-of-pressure of the tail fin"
-#typedef	^	ED_RtHndSide	ReKi	MAAero	3	-	-	"The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin"
 typedef	^	ED_RtHndSide	ReKi	MomXAllt	3	-	-	"Portion of the moment at the platform (body X) / platform reference (point Z) due to everything associated with everything but the QD2T()'s"
 typedef	^	ED_RtHndSide	ReKi	PFrcVGnRt	{:}{:}	-	-	"Partial force at the rotor-furl axis (point V) due to the structure that furls with the rotor, generator, and rotor"
 typedef	^	ED_RtHndSide	ReKi	PFrcWTail	{:}{:}	-	-	"Partial force at the tail-furl axis (point W) due to the tail"
@@ -600,9 +575,6 @@ typedef	^	ParameterType	R8Ki	CSRFrlSkw	-	-	-	"Cosine*Sine of the rotor-furl axis
 typedef	^	ParameterType	R8Ki	CSRFrlTlt	-	-	-	"Cosine*Sine of the rotor-furl axis tilt angle"
 typedef	^	ParameterType	R8Ki	CSTFrlSkw	-	-	-	"Cosine*Sine of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	CSTFrlTlt	-	-	-	"Cosine*Sine of the tail-furl axis tilt angle"
-typedef	^	ParameterType	R8Ki	CTFinBank	-	-	-	"Cosine of the tail fin planform bank angle"
-typedef	^	ParameterType	R8Ki	CTFinSkew	-	-	-	"Cosine of the tail fin chordline skew angle"
-typedef	^	ParameterType	R8Ki	CTFinTilt	-	-	-	"Cosine of the tail fin chordline tilt angle"
 typedef	^	ParameterType	R8Ki	CTFrlSkew	-	-	-	"Cosine of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	CTFrlSkw2	-	-	-	"Cosine-squared of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	CTFrlTilt	-	-	-	"Cosine of the tail-furl axis tilt angle"
@@ -615,11 +587,9 @@ typedef	^	ParameterType	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to n
 typedef	^	ParameterType	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
 typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
 typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
-typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore] or MSL [offshore] to the platform reference point"
+typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"
 typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
-typedef	^	ParameterType	ReKi	RFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on rotor-furl axis"
-typedef	^	ParameterType	ReKi	RFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on rotor-furl axis"
-typedef	^	ParameterType	ReKi	RFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on rotor-furl axis"
+typedef	^	ParameterType	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"
 typedef	^	ParameterType	ReKi	rVDxn	-	-	-	"xn-component of position vector Rvd"
 typedef	^	ParameterType	ReKi	rVDyn	-	-	-	"yn-component of position vector rVD"
 typedef	^	ParameterType	ReKi	rVDzn	-	-	-	"zn-component of position vector rVD"
@@ -635,9 +605,6 @@ typedef	^	ParameterType	ReKi	rWIzn	-	-	-	"zn-component of position vector rWI"
 typedef	^	ParameterType	ReKi	rWJxn	-	-	-	"xn-component of position vector rWJ"
 typedef	^	ParameterType	ReKi	rWJyn	-	-	-	"yn-component of position vector rWJ"
 typedef	^	ParameterType	ReKi	rWJzn	-	-	-	"zn-component of position vector rWJ"
-typedef	^	ParameterType	ReKi	rWKxn	-	-	-	"xn-component of position vector rWK"
-typedef	^	ParameterType	ReKi	rWKyn	-	-	-	"yn-component of position vector rWK"
-typedef	^	ParameterType	ReKi	rWKzn	-	-	-	"zn-component of position vector rWK"
 typedef	^	ParameterType	ReKi	rZT0zt	-	-	-	"zt-component of position vector rZT0"
 typedef	^	ParameterType	ReKi	rZYzt	-	-	-	"zt-component of position vector rZY"
 typedef	^	ParameterType	R8Ki	SinDel3	-	-	-	"Sine of the Delta-3 angle for teetering rotors"
@@ -648,19 +615,14 @@ typedef	^	ParameterType	R8Ki	SRFrlTilt	-	-	-	"Sine of the rotor-furl axis tilt a
 typedef	^	ParameterType	R8Ki	SRFrlTlt2	-	-	-	"Sine-squared of the rotor-furl axis tilt angle"
 typedef	^	ParameterType	R8Ki	SShftSkew	-	-	-	"Sine of the shaft skew angle"
 typedef	^	ParameterType	R8Ki	SShftTilt	-	-	-	"Sine of the shaft tilt angle"
-typedef	^	ParameterType	R8Ki	STFinBank	-	-	-	"Sine of the tail fin planform bank angle"
-typedef	^	ParameterType	R8Ki	STFinSkew	-	-	-	"Sine of the tail fin chordline skew angle"
-typedef	^	ParameterType	R8Ki	STFinTilt	-	-	-	"Sine of the tail fin chordline tilt angle"
 typedef	^	ParameterType	R8Ki	STFrlSkew	-	-	-	"Sine of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	STFrlSkw2	-	-	-	"Sine-squared of the tail-furl axis skew angle"
 typedef	^	ParameterType	R8Ki	STFrlTilt	-	-	-	"Sine of the tail-furl axis tilt angle"
 typedef	^	ParameterType	R8Ki	STFrlTlt2	-	-	-	"Sine-squared of the tail-furl axis tilt angle"
-typedef	^	ParameterType	ReKi	TFrlPntxn	-	-	-	"Downwind distance from tower-top to arbitrary point on tail-furl axis"
-typedef	^	ParameterType	ReKi	TFrlPntyn	-	-	-	"Lateral distance from tower-top to arbitrary point on tail-furl axis"
-typedef	^	ParameterType	ReKi	TFrlPntzn	-	-	-	"Vertical distance from tower-top to arbitrary point on tail-furl axis"
+typedef	^	ParameterType	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"
 typedef	^	ParameterType	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
 typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
-typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore] or MSL [offshore]"	meters
+typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
 typedef	^	ParameterType	ReKi	UndSling	-	-	-	"Undersling length"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of turbine blades"	-
 typedef	^	ParameterType	ReKi	AxRedTFA	{:}{:}{:}	-	-	"The axial-reduction terms for the fore-aft tower mode shapes"
@@ -768,7 +730,6 @@ typedef	^	ParameterType	ReKi	TeetHStP	-	-	-	"Rotor-teeter hard-stop position"
 typedef	^	ParameterType	ReKi	TeetSSSp	-	-	-	"Rotor-teeter soft-stop linear-spring constant"
 typedef	^	ParameterType	ReKi	TeetSStP	-	-	-	"Rotor-teeter soft-stop position"
 typedef	^	ParameterType	IntKi	TeetMod	-	-	-	"Rotor-teeter spring/damper model switch"
-typedef	^	ParameterType	ReKi	TFrlCDmp	-	-	-	"Tail-furl rate-independent Coulomb-damping moment"
 typedef	^	ParameterType	ReKi	TFrlDmp	-	-	-	"Tail-furl damping constant"
 typedef	^	ParameterType	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"
 typedef	^	ParameterType	ReKi	TFrlDSDP	-	-	-	"Tail-furl down-stop damper position"
@@ -780,7 +741,6 @@ typedef	^	ParameterType	ReKi	TFrlUSDP	-	-	-	"Tail-furl up-stop damper position"
 typedef	^	ParameterType	ReKi	TFrlUSSP	-	-	-	"Tail-furl up-stop spring position"
 typedef	^	ParameterType	ReKi	TFrlUSSpr	-	-	-	"Tail-furl up-stop spring constant"
 typedef	^	ParameterType	IntKi	TFrlMod	-	-	-	"Tail-furl spring/damper model switch"
-typedef	^	ParameterType	ReKi	RFrlCDmp	-	-	-	"Rotor-furl rate-independent Coulomb-damping moment"
 typedef	^	ParameterType	ReKi	RFrlDmp	-	-	-	"Rotor-furl damping constant"
 typedef	^	ParameterType	ReKi	RFrlDSDmp	-	-	-	"Rotor-furl down-stop damping constant"
 typedef	^	ParameterType	ReKi	RFrlDSDP	-	-	-	"Rotor-furl down-stop damper position"
@@ -805,8 +765,8 @@ typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	ParameterType	ReKi	BElmntMass	{:}{:}	-	-	"Mass of the blade elements"
 typedef	^	ParameterType	ReKi	TElmntMass	{:}	-	-	"Mass of the tower elements"
 typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
-typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
-typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
 # .... ED_AllBlNds option ........................................................................................................
@@ -828,6 +788,7 @@ typedef	^	InputType	MeshType	PlatformPtMesh	-	-	-	"A mesh at the platform refere
 typedef	^	InputType	MeshType	TowerPtLoads	-	-	-	"Tower line2 mesh with forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components of the portion of the tower force at the current tower node (point T); and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components of the portion of the tower moment acting at the current tower node"	N/m
 typedef	^	InputType	MeshType	HubPtLoad	-	-	-	"A mesh at the teeter pin, containing forces: surge/xi (1), sway/yi (2), and heave/zi (3)-components; and moments: roll/xi (1), pitch/yi (2), and yaw/zi (3)-components acting at the hub. Passed from BeamDyn"
 typedef	^	InputType	MeshType	NacelleLoads	-	-	-	"From ServoDyn/TMD: loads on the nacelle."
+typedef	^	InputType	MeshType	TFinCMLoads 	-	-	-	"Aerodynamic forces and moments at the tail-fin center of mass point (point J)"
 # Define inputs that are not on a mesh here:
 typedef	^	InputType	ReKi	TwrAddedMass	{:}{:}{:}	-	-	"6-by-6 added mass matrix of the tower elements, per unit length-bjj: place on a mesh" 	"per unit length"
 typedef	^	InputType	ReKi	PtfmAddedMass	{6}{6}	-	-	"Platform added mass matrix"	"kg, kg-m, kg-m^2"
@@ -848,6 +809,7 @@ typedef	^	OutputType	MeshType	BladeRootMotion	{:}	-	-	"For AeroDyn/BeamDyn: moti
 typedef	^	OutputType	MeshType	RotorFurlMotion14	-	-	-	"For AeroDyn14: motions of the rotor furl point."
 typedef	^	OutputType	MeshType	NacelleMotion	-	-	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle."
 typedef	^	OutputType	MeshType	TowerBaseMotion14	-	-	-	"For AeroDyn 14: motions of the tower base"
+typedef	^	OutputType	MeshType	TFinCMMotion    	-	-	-	"For AeroDyn: motions of the tail find CM point (point J)"
 
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

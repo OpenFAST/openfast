@@ -533,8 +533,8 @@ subroutine FVW_ToString(p,m)
    type(FVW_ParameterType), intent(in)       :: p !< Parameters
    type(FVW_MiscVarType),      intent(inout) :: m !< Misc
    if (DEV_VERSION) then
-      print*,'-----------------------------------------------------------------------------------------'
-      if(.false.) print*,m%nNW ! unused var for now
+      call WrScr('-----------------------------------------------------------------------------------------')
+      if(.false.) call WrScr(num2lstr(m%nNW)) ! unused var for now
    endif
 end subroutine FVW_ToString
 
@@ -990,6 +990,7 @@ contains
 end subroutine FVW_CalcContStateDeriv
 
 
+!------------------------------------------------------------------------------------------------
 !> Interpolate states to the current time
 !! For now: linear interpolation, two states, with t1<t2
 subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
@@ -1358,6 +1359,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
 end subroutine FVW_CalcConstrStateResidual
 
 
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine CalcOutputForAD(t, u, p, x, y, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
@@ -1450,6 +1452,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
 
 end subroutine FVW_CalcOutput
 
+!------------------------------------------------------------------------------------------------
 !> Write to  vtk_fvw folder at fps requested
 subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t       !< Current simulation time in seconds
@@ -1600,6 +1603,7 @@ contains
    end function Failed
 end subroutine  UA_Init_Wrapper
 
+!------------------------------------------------------------------------------------------------
 !> Compute necessary inputs for UA at a given time step, stored in m%u_UA
 !!  Inputs are AoA, U, Re, 
 !!  See equivalent version in BEMT, and SetInputs_for_UA in BEMT
@@ -1612,8 +1616,8 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    type(FVW_ConstraintStateType),      intent(in   ) :: z          ! Constraint states at given time step
    type(FVW_OtherStateType),           intent(inout) :: OtherState ! Other states at given time step
    type(FVW_MiscVarType), target,      intent(inout) :: m          ! Misc/optimization variables
-   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                     intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local
    type(UA_InputType), pointer     :: u_UA ! Alias to shorten notations
    integer(IntKi)                                    :: i,iW
@@ -1658,7 +1662,7 @@ subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherS
    end do ! iW nWings
 end subroutine CalculateInputsAndOtherStatesForUA
 
-
+!------------------------------------------------------------------------------------------------
 subroutine UA_UpdateState_Wrapper(AFInfo, t, n, uTimes, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    use FVW_VortexTools, only: interpextrap_cp2node
    use UnsteadyAero, only: UA_UpdateStates
@@ -1704,7 +1708,7 @@ contains
       NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
    end function NodeText
 end subroutine UA_UpdateState_Wrapper
-
+!------------------------------------------------------------------------------------------------
 !> Set dynamic gamma based on dynamic stall states
 !! NOTE: We use Vind_LL computed in CalculateInputsAndOtherStatesForUA
 subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)

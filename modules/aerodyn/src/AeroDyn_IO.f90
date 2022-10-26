@@ -22,7 +22,7 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Orthogonal, SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
+   use BEMTUncoupled, only : VelocityIsZero
    use FVW_Subs,      only : FVW_AeroOuts
 
    USE AeroDyn_AllBldNdOuts_IO
@@ -160,1187 +160,1450 @@ MODULE AeroDyn_IO
    INTEGER(IntKi), PARAMETER      :: TwN7Fdy   =  106
    INTEGER(IntKi), PARAMETER      :: TwN8Fdy   =  107
    INTEGER(IntKi), PARAMETER      :: TwN9Fdy   =  108
+   INTEGER(IntKi), PARAMETER      :: TwN1Fbx   =  109
+   INTEGER(IntKi), PARAMETER      :: TwN2Fbx   =  110
+   INTEGER(IntKi), PARAMETER      :: TwN3Fbx   =  111
+   INTEGER(IntKi), PARAMETER      :: TwN4Fbx   =  112
+   INTEGER(IntKi), PARAMETER      :: TwN5Fbx   =  113
+   INTEGER(IntKi), PARAMETER      :: TwN6Fbx   =  114
+   INTEGER(IntKi), PARAMETER      :: TwN7Fbx   =  115
+   INTEGER(IntKi), PARAMETER      :: TwN8Fbx   =  116
+   INTEGER(IntKi), PARAMETER      :: TwN9Fbx   =  117
+   INTEGER(IntKi), PARAMETER      :: TwN1Fby   =  118
+   INTEGER(IntKi), PARAMETER      :: TwN2Fby   =  119
+   INTEGER(IntKi), PARAMETER      :: TwN3Fby   =  120
+   INTEGER(IntKi), PARAMETER      :: TwN4Fby   =  121
+   INTEGER(IntKi), PARAMETER      :: TwN5Fby   =  122
+   INTEGER(IntKi), PARAMETER      :: TwN6Fby   =  123
+   INTEGER(IntKi), PARAMETER      :: TwN7Fby   =  124
+   INTEGER(IntKi), PARAMETER      :: TwN8Fby   =  125
+   INTEGER(IntKi), PARAMETER      :: TwN9Fby   =  126
+   INTEGER(IntKi), PARAMETER      :: TwN1Fbz   =  127
+   INTEGER(IntKi), PARAMETER      :: TwN2Fbz   =  128
+   INTEGER(IntKi), PARAMETER      :: TwN3Fbz   =  129
+   INTEGER(IntKi), PARAMETER      :: TwN4Fbz   =  130
+   INTEGER(IntKi), PARAMETER      :: TwN5Fbz   =  131
+   INTEGER(IntKi), PARAMETER      :: TwN6Fbz   =  132
+   INTEGER(IntKi), PARAMETER      :: TwN7Fbz   =  133
+   INTEGER(IntKi), PARAMETER      :: TwN8Fbz   =  134
+   INTEGER(IntKi), PARAMETER      :: TwN9Fbz   =  135
+   INTEGER(IntKi), PARAMETER      :: TwN1Mbx   =  136
+   INTEGER(IntKi), PARAMETER      :: TwN2Mbx   =  137
+   INTEGER(IntKi), PARAMETER      :: TwN3Mbx   =  138
+   INTEGER(IntKi), PARAMETER      :: TwN4Mbx   =  139
+   INTEGER(IntKi), PARAMETER      :: TwN5Mbx   =  140
+   INTEGER(IntKi), PARAMETER      :: TwN6Mbx   =  141
+   INTEGER(IntKi), PARAMETER      :: TwN7Mbx   =  142
+   INTEGER(IntKi), PARAMETER      :: TwN8Mbx   =  143
+   INTEGER(IntKi), PARAMETER      :: TwN9Mbx   =  144
+   INTEGER(IntKi), PARAMETER      :: TwN1Mby   =  145
+   INTEGER(IntKi), PARAMETER      :: TwN2Mby   =  146
+   INTEGER(IntKi), PARAMETER      :: TwN3Mby   =  147
+   INTEGER(IntKi), PARAMETER      :: TwN4Mby   =  148
+   INTEGER(IntKi), PARAMETER      :: TwN5Mby   =  149
+   INTEGER(IntKi), PARAMETER      :: TwN6Mby   =  150
+   INTEGER(IntKi), PARAMETER      :: TwN7Mby   =  151
+   INTEGER(IntKi), PARAMETER      :: TwN8Mby   =  152
+   INTEGER(IntKi), PARAMETER      :: TwN9Mby   =  153
+   INTEGER(IntKi), PARAMETER      :: TwN1Mbz   =  154
+   INTEGER(IntKi), PARAMETER      :: TwN2Mbz   =  155
+   INTEGER(IntKi), PARAMETER      :: TwN3Mbz   =  156
+   INTEGER(IntKi), PARAMETER      :: TwN4Mbz   =  157
+   INTEGER(IntKi), PARAMETER      :: TwN5Mbz   =  158
+   INTEGER(IntKi), PARAMETER      :: TwN6Mbz   =  159
+   INTEGER(IntKi), PARAMETER      :: TwN7Mbz   =  160
+   INTEGER(IntKi), PARAMETER      :: TwN8Mbz   =  161
+   INTEGER(IntKi), PARAMETER      :: TwN9Mbz   =  162
 
 
      ! Blade:
 
-   INTEGER(IntKi), PARAMETER      :: B1Azimuth =  109
-   INTEGER(IntKi), PARAMETER      :: B2Azimuth =  110
-   INTEGER(IntKi), PARAMETER      :: B3Azimuth =  111
-   INTEGER(IntKi), PARAMETER      :: B1Pitch   =  112
-   INTEGER(IntKi), PARAMETER      :: B2Pitch   =  113
-   INTEGER(IntKi), PARAMETER      :: B3Pitch   =  114
-   INTEGER(IntKi), PARAMETER      :: B1AeroFx  =  115
-   INTEGER(IntKi), PARAMETER      :: B1AeroFy  =  116
-   INTEGER(IntKi), PARAMETER      :: B1AeroFz  =  117
-   INTEGER(IntKi), PARAMETER      :: B1AeroMx  =  118
-   INTEGER(IntKi), PARAMETER      :: B1AeroMy  =  119
-   INTEGER(IntKi), PARAMETER      :: B1AeroMz  =  120
-   INTEGER(IntKi), PARAMETER      :: B1AeroPwr =  121
-   INTEGER(IntKi), PARAMETER      :: B2AeroFx  =  122
-   INTEGER(IntKi), PARAMETER      :: B2AeroFy  =  123
-   INTEGER(IntKi), PARAMETER      :: B2AeroFz  =  124
-   INTEGER(IntKi), PARAMETER      :: B2AeroMx  =  125
-   INTEGER(IntKi), PARAMETER      :: B2AeroMy  =  126
-   INTEGER(IntKi), PARAMETER      :: B2AeroMz  =  127
-   INTEGER(IntKi), PARAMETER      :: B2AeroPwr =  128
-   INTEGER(IntKi), PARAMETER      :: B3AeroFx  =  129
-   INTEGER(IntKi), PARAMETER      :: B3AeroFy  =  130
-   INTEGER(IntKi), PARAMETER      :: B3AeroFz  =  131
-   INTEGER(IntKi), PARAMETER      :: B3AeroMx  =  132
-   INTEGER(IntKi), PARAMETER      :: B3AeroMy  =  133
-   INTEGER(IntKi), PARAMETER      :: B3AeroMz  =  134
-   INTEGER(IntKi), PARAMETER      :: B3AeroPwr =  135
-   INTEGER(IntKi), PARAMETER      :: B4AeroFx  =  136
-   INTEGER(IntKi), PARAMETER      :: B4AeroFy  =  137
-   INTEGER(IntKi), PARAMETER      :: B4AeroFz  =  138
-   INTEGER(IntKi), PARAMETER      :: B4AeroMx  =  139
-   INTEGER(IntKi), PARAMETER      :: B4AeroMy  =  140
-   INTEGER(IntKi), PARAMETER      :: B4AeroMz  =  141
-   INTEGER(IntKi), PARAMETER      :: B4AeroPwr =  142
-   INTEGER(IntKi), PARAMETER      :: B1AeroFxg =  143
-   INTEGER(IntKi), PARAMETER      :: B1AeroFyg =  144
-   INTEGER(IntKi), PARAMETER      :: B1AeroFzg =  145
-   INTEGER(IntKi), PARAMETER      :: B1AeroMxg =  146
-   INTEGER(IntKi), PARAMETER      :: B1AeroMyg =  147
-   INTEGER(IntKi), PARAMETER      :: B1AeroMzg =  148
-   INTEGER(IntKi), PARAMETER      :: B2AeroFxg =  149
-   INTEGER(IntKi), PARAMETER      :: B2AeroFyg =  150
-   INTEGER(IntKi), PARAMETER      :: B2AeroFzg =  151
-   INTEGER(IntKi), PARAMETER      :: B2AeroMxg =  152
-   INTEGER(IntKi), PARAMETER      :: B2AeroMyg =  153
-   INTEGER(IntKi), PARAMETER      :: B2AeroMzg =  154
-   INTEGER(IntKi), PARAMETER      :: B3AeroFxg =  155
-   INTEGER(IntKi), PARAMETER      :: B3AeroFyg =  156
-   INTEGER(IntKi), PARAMETER      :: B3AeroFzg =  157
-   INTEGER(IntKi), PARAMETER      :: B3AeroMxg =  158
-   INTEGER(IntKi), PARAMETER      :: B3AeroMyg =  159
-   INTEGER(IntKi), PARAMETER      :: B3AeroMzg =  160
-   INTEGER(IntKi), PARAMETER      :: B4AeroFxg =  161
-   INTEGER(IntKi), PARAMETER      :: B4AeroFyg =  162
-   INTEGER(IntKi), PARAMETER      :: B4AeroFzg =  163
-   INTEGER(IntKi), PARAMETER      :: B4AeroMxg =  164
-   INTEGER(IntKi), PARAMETER      :: B4AeroMyg =  165
-   INTEGER(IntKi), PARAMETER      :: B4AeroMzg =  166
+   INTEGER(IntKi), PARAMETER      :: B1Azimuth =  163
+   INTEGER(IntKi), PARAMETER      :: B2Azimuth =  164
+   INTEGER(IntKi), PARAMETER      :: B3Azimuth =  165
+   INTEGER(IntKi), PARAMETER      :: B1Pitch   =  166
+   INTEGER(IntKi), PARAMETER      :: B2Pitch   =  167
+   INTEGER(IntKi), PARAMETER      :: B3Pitch   =  168
+   INTEGER(IntKi), PARAMETER      :: B1FldFx   =  169
+   INTEGER(IntKi), PARAMETER      :: B1FldFy   =  170
+   INTEGER(IntKi), PARAMETER      :: B1FldFz   =  171
+   INTEGER(IntKi), PARAMETER      :: B1FldMx   =  172
+   INTEGER(IntKi), PARAMETER      :: B1FldMy   =  173
+   INTEGER(IntKi), PARAMETER      :: B1FldMz   =  174
+   INTEGER(IntKi), PARAMETER      :: B1FldPwr  =  175
+   INTEGER(IntKi), PARAMETER      :: B2FldFx   =  176
+   INTEGER(IntKi), PARAMETER      :: B2FldFy   =  177
+   INTEGER(IntKi), PARAMETER      :: B2FldFz   =  178
+   INTEGER(IntKi), PARAMETER      :: B2FldMx   =  179
+   INTEGER(IntKi), PARAMETER      :: B2FldMy   =  180
+   INTEGER(IntKi), PARAMETER      :: B2FldMz   =  181
+   INTEGER(IntKi), PARAMETER      :: B2FldPwr  =  182
+   INTEGER(IntKi), PARAMETER      :: B3FldFx   =  183
+   INTEGER(IntKi), PARAMETER      :: B3FldFy   =  184
+   INTEGER(IntKi), PARAMETER      :: B3FldFz   =  185
+   INTEGER(IntKi), PARAMETER      :: B3FldMx   =  186
+   INTEGER(IntKi), PARAMETER      :: B3FldMy   =  187
+   INTEGER(IntKi), PARAMETER      :: B3FldMz   =  188
+   INTEGER(IntKi), PARAMETER      :: B3FldPwr  =  189
+   INTEGER(IntKi), PARAMETER      :: B4FldFx   =  190
+   INTEGER(IntKi), PARAMETER      :: B4FldFy   =  191
+   INTEGER(IntKi), PARAMETER      :: B4FldFz   =  192
+   INTEGER(IntKi), PARAMETER      :: B4FldMx   =  193
+   INTEGER(IntKi), PARAMETER      :: B4FldMy   =  194
+   INTEGER(IntKi), PARAMETER      :: B4FldMz   =  195
+   INTEGER(IntKi), PARAMETER      :: B4FldPwr  =  196
+   INTEGER(IntKi), PARAMETER      :: B1FldFxg  =  197
+   INTEGER(IntKi), PARAMETER      :: B1FldFyg  =  198
+   INTEGER(IntKi), PARAMETER      :: B1FldFzg  =  199
+   INTEGER(IntKi), PARAMETER      :: B1FldMxg  =  200
+   INTEGER(IntKi), PARAMETER      :: B1FldMyg  =  201
+   INTEGER(IntKi), PARAMETER      :: B1FldMzg  =  202
+   INTEGER(IntKi), PARAMETER      :: B2FldFxg  =  203
+   INTEGER(IntKi), PARAMETER      :: B2FldFyg  =  204
+   INTEGER(IntKi), PARAMETER      :: B2FldFzg  =  205
+   INTEGER(IntKi), PARAMETER      :: B2FldMxg  =  206
+   INTEGER(IntKi), PARAMETER      :: B2FldMyg  =  207
+   INTEGER(IntKi), PARAMETER      :: B2FldMzg  =  208
+   INTEGER(IntKi), PARAMETER      :: B3FldFxg  =  209
+   INTEGER(IntKi), PARAMETER      :: B3FldFyg  =  210
+   INTEGER(IntKi), PARAMETER      :: B3FldFzg  =  211
+   INTEGER(IntKi), PARAMETER      :: B3FldMxg  =  212
+   INTEGER(IntKi), PARAMETER      :: B3FldMyg  =  213
+   INTEGER(IntKi), PARAMETER      :: B3FldMzg  =  214
+   INTEGER(IntKi), PARAMETER      :: B4FldFxg  =  215
+   INTEGER(IntKi), PARAMETER      :: B4FldFyg  =  216
+   INTEGER(IntKi), PARAMETER      :: B4FldFzg  =  217
+   INTEGER(IntKi), PARAMETER      :: B4FldMxg  =  218
+   INTEGER(IntKi), PARAMETER      :: B4FldMyg  =  219
+   INTEGER(IntKi), PARAMETER      :: B4FldMzg  =  220
 
 
      ! Blade Nodal outputs:
 
-   INTEGER(IntKi), PARAMETER      :: B1N1VUndx =  167
-   INTEGER(IntKi), PARAMETER      :: B1N2VUndx =  168
-   INTEGER(IntKi), PARAMETER      :: B1N3VUndx =  169
-   INTEGER(IntKi), PARAMETER      :: B1N4VUndx =  170
-   INTEGER(IntKi), PARAMETER      :: B1N5VUndx =  171
-   INTEGER(IntKi), PARAMETER      :: B1N6VUndx =  172
-   INTEGER(IntKi), PARAMETER      :: B1N7VUndx =  173
-   INTEGER(IntKi), PARAMETER      :: B1N8VUndx =  174
-   INTEGER(IntKi), PARAMETER      :: B1N9VUndx =  175
-   INTEGER(IntKi), PARAMETER      :: B1N1VUndy =  176
-   INTEGER(IntKi), PARAMETER      :: B1N2VUndy =  177
-   INTEGER(IntKi), PARAMETER      :: B1N3VUndy =  178
-   INTEGER(IntKi), PARAMETER      :: B1N4VUndy =  179
-   INTEGER(IntKi), PARAMETER      :: B1N5VUndy =  180
-   INTEGER(IntKi), PARAMETER      :: B1N6VUndy =  181
-   INTEGER(IntKi), PARAMETER      :: B1N7VUndy =  182
-   INTEGER(IntKi), PARAMETER      :: B1N8VUndy =  183
-   INTEGER(IntKi), PARAMETER      :: B1N9VUndy =  184
-   INTEGER(IntKi), PARAMETER      :: B1N1VUndz =  185
-   INTEGER(IntKi), PARAMETER      :: B1N2VUndz =  186
-   INTEGER(IntKi), PARAMETER      :: B1N3VUndz =  187
-   INTEGER(IntKi), PARAMETER      :: B1N4VUndz =  188
-   INTEGER(IntKi), PARAMETER      :: B1N5VUndz =  189
-   INTEGER(IntKi), PARAMETER      :: B1N6VUndz =  190
-   INTEGER(IntKi), PARAMETER      :: B1N7VUndz =  191
-   INTEGER(IntKi), PARAMETER      :: B1N8VUndz =  192
-   INTEGER(IntKi), PARAMETER      :: B1N9VUndz =  193
-   INTEGER(IntKi), PARAMETER      :: B2N1VUndx =  194
-   INTEGER(IntKi), PARAMETER      :: B2N2VUndx =  195
-   INTEGER(IntKi), PARAMETER      :: B2N3VUndx =  196
-   INTEGER(IntKi), PARAMETER      :: B2N4VUndx =  197
-   INTEGER(IntKi), PARAMETER      :: B2N5VUndx =  198
-   INTEGER(IntKi), PARAMETER      :: B2N6VUndx =  199
-   INTEGER(IntKi), PARAMETER      :: B2N7VUndx =  200
-   INTEGER(IntKi), PARAMETER      :: B2N8VUndx =  201
-   INTEGER(IntKi), PARAMETER      :: B2N9VUndx =  202
-   INTEGER(IntKi), PARAMETER      :: B2N1VUndy =  203
-   INTEGER(IntKi), PARAMETER      :: B2N2VUndy =  204
-   INTEGER(IntKi), PARAMETER      :: B2N3VUndy =  205
-   INTEGER(IntKi), PARAMETER      :: B2N4VUndy =  206
-   INTEGER(IntKi), PARAMETER      :: B2N5VUndy =  207
-   INTEGER(IntKi), PARAMETER      :: B2N6VUndy =  208
-   INTEGER(IntKi), PARAMETER      :: B2N7VUndy =  209
-   INTEGER(IntKi), PARAMETER      :: B2N8VUndy =  210
-   INTEGER(IntKi), PARAMETER      :: B2N9VUndy =  211
-   INTEGER(IntKi), PARAMETER      :: B2N1VUndz =  212
-   INTEGER(IntKi), PARAMETER      :: B2N2VUndz =  213
-   INTEGER(IntKi), PARAMETER      :: B2N3VUndz =  214
-   INTEGER(IntKi), PARAMETER      :: B2N4VUndz =  215
-   INTEGER(IntKi), PARAMETER      :: B2N5VUndz =  216
-   INTEGER(IntKi), PARAMETER      :: B2N6VUndz =  217
-   INTEGER(IntKi), PARAMETER      :: B2N7VUndz =  218
-   INTEGER(IntKi), PARAMETER      :: B2N8VUndz =  219
-   INTEGER(IntKi), PARAMETER      :: B2N9VUndz =  220
-   INTEGER(IntKi), PARAMETER      :: B3N1VUndx =  221
-   INTEGER(IntKi), PARAMETER      :: B3N2VUndx =  222
-   INTEGER(IntKi), PARAMETER      :: B3N3VUndx =  223
-   INTEGER(IntKi), PARAMETER      :: B3N4VUndx =  224
-   INTEGER(IntKi), PARAMETER      :: B3N5VUndx =  225
-   INTEGER(IntKi), PARAMETER      :: B3N6VUndx =  226
-   INTEGER(IntKi), PARAMETER      :: B3N7VUndx =  227
-   INTEGER(IntKi), PARAMETER      :: B3N8VUndx =  228
-   INTEGER(IntKi), PARAMETER      :: B3N9VUndx =  229
-   INTEGER(IntKi), PARAMETER      :: B3N1VUndy =  230
-   INTEGER(IntKi), PARAMETER      :: B3N2VUndy =  231
-   INTEGER(IntKi), PARAMETER      :: B3N3VUndy =  232
-   INTEGER(IntKi), PARAMETER      :: B3N4VUndy =  233
-   INTEGER(IntKi), PARAMETER      :: B3N5VUndy =  234
-   INTEGER(IntKi), PARAMETER      :: B3N6VUndy =  235
-   INTEGER(IntKi), PARAMETER      :: B3N7VUndy =  236
-   INTEGER(IntKi), PARAMETER      :: B3N8VUndy =  237
-   INTEGER(IntKi), PARAMETER      :: B3N9VUndy =  238
-   INTEGER(IntKi), PARAMETER      :: B3N1VUndz =  239
-   INTEGER(IntKi), PARAMETER      :: B3N2VUndz =  240
-   INTEGER(IntKi), PARAMETER      :: B3N3VUndz =  241
-   INTEGER(IntKi), PARAMETER      :: B3N4VUndz =  242
-   INTEGER(IntKi), PARAMETER      :: B3N5VUndz =  243
-   INTEGER(IntKi), PARAMETER      :: B3N6VUndz =  244
-   INTEGER(IntKi), PARAMETER      :: B3N7VUndz =  245
-   INTEGER(IntKi), PARAMETER      :: B3N8VUndz =  246
-   INTEGER(IntKi), PARAMETER      :: B3N9VUndz =  247
-   INTEGER(IntKi), PARAMETER      :: B1N1VDisx =  248
-   INTEGER(IntKi), PARAMETER      :: B1N2VDisx =  249
-   INTEGER(IntKi), PARAMETER      :: B1N3VDisx =  250
-   INTEGER(IntKi), PARAMETER      :: B1N4VDisx =  251
-   INTEGER(IntKi), PARAMETER      :: B1N5VDisx =  252
-   INTEGER(IntKi), PARAMETER      :: B1N6VDisx =  253
-   INTEGER(IntKi), PARAMETER      :: B1N7VDisx =  254
-   INTEGER(IntKi), PARAMETER      :: B1N8VDisx =  255
-   INTEGER(IntKi), PARAMETER      :: B1N9VDisx =  256
-   INTEGER(IntKi), PARAMETER      :: B1N1VDisy =  257
-   INTEGER(IntKi), PARAMETER      :: B1N2VDisy =  258
-   INTEGER(IntKi), PARAMETER      :: B1N3VDisy =  259
-   INTEGER(IntKi), PARAMETER      :: B1N4VDisy =  260
-   INTEGER(IntKi), PARAMETER      :: B1N5VDisy =  261
-   INTEGER(IntKi), PARAMETER      :: B1N6VDisy =  262
-   INTEGER(IntKi), PARAMETER      :: B1N7VDisy =  263
-   INTEGER(IntKi), PARAMETER      :: B1N8VDisy =  264
-   INTEGER(IntKi), PARAMETER      :: B1N9VDisy =  265
-   INTEGER(IntKi), PARAMETER      :: B1N1VDisz =  266
-   INTEGER(IntKi), PARAMETER      :: B1N2VDisz =  267
-   INTEGER(IntKi), PARAMETER      :: B1N3VDisz =  268
-   INTEGER(IntKi), PARAMETER      :: B1N4VDisz =  269
-   INTEGER(IntKi), PARAMETER      :: B1N5VDisz =  270
-   INTEGER(IntKi), PARAMETER      :: B1N6VDisz =  271
-   INTEGER(IntKi), PARAMETER      :: B1N7VDisz =  272
-   INTEGER(IntKi), PARAMETER      :: B1N8VDisz =  273
-   INTEGER(IntKi), PARAMETER      :: B1N9VDisz =  274
-   INTEGER(IntKi), PARAMETER      :: B2N1VDisx =  275
-   INTEGER(IntKi), PARAMETER      :: B2N2VDisx =  276
-   INTEGER(IntKi), PARAMETER      :: B2N3VDisx =  277
-   INTEGER(IntKi), PARAMETER      :: B2N4VDisx =  278
-   INTEGER(IntKi), PARAMETER      :: B2N5VDisx =  279
-   INTEGER(IntKi), PARAMETER      :: B2N6VDisx =  280
-   INTEGER(IntKi), PARAMETER      :: B2N7VDisx =  281
-   INTEGER(IntKi), PARAMETER      :: B2N8VDisx =  282
-   INTEGER(IntKi), PARAMETER      :: B2N9VDisx =  283
-   INTEGER(IntKi), PARAMETER      :: B2N1VDisy =  284
-   INTEGER(IntKi), PARAMETER      :: B2N2VDisy =  285
-   INTEGER(IntKi), PARAMETER      :: B2N3VDisy =  286
-   INTEGER(IntKi), PARAMETER      :: B2N4VDisy =  287
-   INTEGER(IntKi), PARAMETER      :: B2N5VDisy =  288
-   INTEGER(IntKi), PARAMETER      :: B2N6VDisy =  289
-   INTEGER(IntKi), PARAMETER      :: B2N7VDisy =  290
-   INTEGER(IntKi), PARAMETER      :: B2N8VDisy =  291
-   INTEGER(IntKi), PARAMETER      :: B2N9VDisy =  292
-   INTEGER(IntKi), PARAMETER      :: B2N1VDisz =  293
-   INTEGER(IntKi), PARAMETER      :: B2N2VDisz =  294
-   INTEGER(IntKi), PARAMETER      :: B2N3VDisz =  295
-   INTEGER(IntKi), PARAMETER      :: B2N4VDisz =  296
-   INTEGER(IntKi), PARAMETER      :: B2N5VDisz =  297
-   INTEGER(IntKi), PARAMETER      :: B2N6VDisz =  298
-   INTEGER(IntKi), PARAMETER      :: B2N7VDisz =  299
-   INTEGER(IntKi), PARAMETER      :: B2N8VDisz =  300
-   INTEGER(IntKi), PARAMETER      :: B2N9VDisz =  301
-   INTEGER(IntKi), PARAMETER      :: B3N1VDisx =  302
-   INTEGER(IntKi), PARAMETER      :: B3N2VDisx =  303
-   INTEGER(IntKi), PARAMETER      :: B3N3VDisx =  304
-   INTEGER(IntKi), PARAMETER      :: B3N4VDisx =  305
-   INTEGER(IntKi), PARAMETER      :: B3N5VDisx =  306
-   INTEGER(IntKi), PARAMETER      :: B3N6VDisx =  307
-   INTEGER(IntKi), PARAMETER      :: B3N7VDisx =  308
-   INTEGER(IntKi), PARAMETER      :: B3N8VDisx =  309
-   INTEGER(IntKi), PARAMETER      :: B3N9VDisx =  310
-   INTEGER(IntKi), PARAMETER      :: B3N1VDisy =  311
-   INTEGER(IntKi), PARAMETER      :: B3N2VDisy =  312
-   INTEGER(IntKi), PARAMETER      :: B3N3VDisy =  313
-   INTEGER(IntKi), PARAMETER      :: B3N4VDisy =  314
-   INTEGER(IntKi), PARAMETER      :: B3N5VDisy =  315
-   INTEGER(IntKi), PARAMETER      :: B3N6VDisy =  316
-   INTEGER(IntKi), PARAMETER      :: B3N7VDisy =  317
-   INTEGER(IntKi), PARAMETER      :: B3N8VDisy =  318
-   INTEGER(IntKi), PARAMETER      :: B3N9VDisy =  319
-   INTEGER(IntKi), PARAMETER      :: B3N1VDisz =  320
-   INTEGER(IntKi), PARAMETER      :: B3N2VDisz =  321
-   INTEGER(IntKi), PARAMETER      :: B3N3VDisz =  322
-   INTEGER(IntKi), PARAMETER      :: B3N4VDisz =  323
-   INTEGER(IntKi), PARAMETER      :: B3N5VDisz =  324
-   INTEGER(IntKi), PARAMETER      :: B3N6VDisz =  325
-   INTEGER(IntKi), PARAMETER      :: B3N7VDisz =  326
-   INTEGER(IntKi), PARAMETER      :: B3N8VDisz =  327
-   INTEGER(IntKi), PARAMETER      :: B3N9VDisz =  328
-   INTEGER(IntKi), PARAMETER      :: B1N1STVx  =  329
-   INTEGER(IntKi), PARAMETER      :: B1N2STVx  =  330
-   INTEGER(IntKi), PARAMETER      :: B1N3STVx  =  331
-   INTEGER(IntKi), PARAMETER      :: B1N4STVx  =  332
-   INTEGER(IntKi), PARAMETER      :: B1N5STVx  =  333
-   INTEGER(IntKi), PARAMETER      :: B1N6STVx  =  334
-   INTEGER(IntKi), PARAMETER      :: B1N7STVx  =  335
-   INTEGER(IntKi), PARAMETER      :: B1N8STVx  =  336
-   INTEGER(IntKi), PARAMETER      :: B1N9STVx  =  337
-   INTEGER(IntKi), PARAMETER      :: B1N1STVy  =  338
-   INTEGER(IntKi), PARAMETER      :: B1N2STVy  =  339
-   INTEGER(IntKi), PARAMETER      :: B1N3STVy  =  340
-   INTEGER(IntKi), PARAMETER      :: B1N4STVy  =  341
-   INTEGER(IntKi), PARAMETER      :: B1N5STVy  =  342
-   INTEGER(IntKi), PARAMETER      :: B1N6STVy  =  343
-   INTEGER(IntKi), PARAMETER      :: B1N7STVy  =  344
-   INTEGER(IntKi), PARAMETER      :: B1N8STVy  =  345
-   INTEGER(IntKi), PARAMETER      :: B1N9STVy  =  346
-   INTEGER(IntKi), PARAMETER      :: B1N1STVz  =  347
-   INTEGER(IntKi), PARAMETER      :: B1N2STVz  =  348
-   INTEGER(IntKi), PARAMETER      :: B1N3STVz  =  349
-   INTEGER(IntKi), PARAMETER      :: B1N4STVz  =  350
-   INTEGER(IntKi), PARAMETER      :: B1N5STVz  =  351
-   INTEGER(IntKi), PARAMETER      :: B1N6STVz  =  352
-   INTEGER(IntKi), PARAMETER      :: B1N7STVz  =  353
-   INTEGER(IntKi), PARAMETER      :: B1N8STVz  =  354
-   INTEGER(IntKi), PARAMETER      :: B1N9STVz  =  355
-   INTEGER(IntKi), PARAMETER      :: B2N1STVx  =  356
-   INTEGER(IntKi), PARAMETER      :: B2N2STVx  =  357
-   INTEGER(IntKi), PARAMETER      :: B2N3STVx  =  358
-   INTEGER(IntKi), PARAMETER      :: B2N4STVx  =  359
-   INTEGER(IntKi), PARAMETER      :: B2N5STVx  =  360
-   INTEGER(IntKi), PARAMETER      :: B2N6STVx  =  361
-   INTEGER(IntKi), PARAMETER      :: B2N7STVx  =  362
-   INTEGER(IntKi), PARAMETER      :: B2N8STVx  =  363
-   INTEGER(IntKi), PARAMETER      :: B2N9STVx  =  364
-   INTEGER(IntKi), PARAMETER      :: B2N1STVy  =  365
-   INTEGER(IntKi), PARAMETER      :: B2N2STVy  =  366
-   INTEGER(IntKi), PARAMETER      :: B2N3STVy  =  367
-   INTEGER(IntKi), PARAMETER      :: B2N4STVy  =  368
-   INTEGER(IntKi), PARAMETER      :: B2N5STVy  =  369
-   INTEGER(IntKi), PARAMETER      :: B2N6STVy  =  370
-   INTEGER(IntKi), PARAMETER      :: B2N7STVy  =  371
-   INTEGER(IntKi), PARAMETER      :: B2N8STVy  =  372
-   INTEGER(IntKi), PARAMETER      :: B2N9STVy  =  373
-   INTEGER(IntKi), PARAMETER      :: B2N1STVz  =  374
-   INTEGER(IntKi), PARAMETER      :: B2N2STVz  =  375
-   INTEGER(IntKi), PARAMETER      :: B2N3STVz  =  376
-   INTEGER(IntKi), PARAMETER      :: B2N4STVz  =  377
-   INTEGER(IntKi), PARAMETER      :: B2N5STVz  =  378
-   INTEGER(IntKi), PARAMETER      :: B2N6STVz  =  379
-   INTEGER(IntKi), PARAMETER      :: B2N7STVz  =  380
-   INTEGER(IntKi), PARAMETER      :: B2N8STVz  =  381
-   INTEGER(IntKi), PARAMETER      :: B2N9STVz  =  382
-   INTEGER(IntKi), PARAMETER      :: B3N1STVx  =  383
-   INTEGER(IntKi), PARAMETER      :: B3N2STVx  =  384
-   INTEGER(IntKi), PARAMETER      :: B3N3STVx  =  385
-   INTEGER(IntKi), PARAMETER      :: B3N4STVx  =  386
-   INTEGER(IntKi), PARAMETER      :: B3N5STVx  =  387
-   INTEGER(IntKi), PARAMETER      :: B3N6STVx  =  388
-   INTEGER(IntKi), PARAMETER      :: B3N7STVx  =  389
-   INTEGER(IntKi), PARAMETER      :: B3N8STVx  =  390
-   INTEGER(IntKi), PARAMETER      :: B3N9STVx  =  391
-   INTEGER(IntKi), PARAMETER      :: B3N1STVy  =  392
-   INTEGER(IntKi), PARAMETER      :: B3N2STVy  =  393
-   INTEGER(IntKi), PARAMETER      :: B3N3STVy  =  394
-   INTEGER(IntKi), PARAMETER      :: B3N4STVy  =  395
-   INTEGER(IntKi), PARAMETER      :: B3N5STVy  =  396
-   INTEGER(IntKi), PARAMETER      :: B3N6STVy  =  397
-   INTEGER(IntKi), PARAMETER      :: B3N7STVy  =  398
-   INTEGER(IntKi), PARAMETER      :: B3N8STVy  =  399
-   INTEGER(IntKi), PARAMETER      :: B3N9STVy  =  400
-   INTEGER(IntKi), PARAMETER      :: B3N1STVz  =  401
-   INTEGER(IntKi), PARAMETER      :: B3N2STVz  =  402
-   INTEGER(IntKi), PARAMETER      :: B3N3STVz  =  403
-   INTEGER(IntKi), PARAMETER      :: B3N4STVz  =  404
-   INTEGER(IntKi), PARAMETER      :: B3N5STVz  =  405
-   INTEGER(IntKi), PARAMETER      :: B3N6STVz  =  406
-   INTEGER(IntKi), PARAMETER      :: B3N7STVz  =  407
-   INTEGER(IntKi), PARAMETER      :: B3N8STVz  =  408
-   INTEGER(IntKi), PARAMETER      :: B3N9STVz  =  409
-   INTEGER(IntKi), PARAMETER      :: B1N1VRel  =  410
-   INTEGER(IntKi), PARAMETER      :: B1N2VRel  =  411
-   INTEGER(IntKi), PARAMETER      :: B1N3VRel  =  412
-   INTEGER(IntKi), PARAMETER      :: B1N4VRel  =  413
-   INTEGER(IntKi), PARAMETER      :: B1N5VRel  =  414
-   INTEGER(IntKi), PARAMETER      :: B1N6VRel  =  415
-   INTEGER(IntKi), PARAMETER      :: B1N7VRel  =  416
-   INTEGER(IntKi), PARAMETER      :: B1N8VRel  =  417
-   INTEGER(IntKi), PARAMETER      :: B1N9VRel  =  418
-   INTEGER(IntKi), PARAMETER      :: B2N1VRel  =  419
-   INTEGER(IntKi), PARAMETER      :: B2N2VRel  =  420
-   INTEGER(IntKi), PARAMETER      :: B2N3VRel  =  421
-   INTEGER(IntKi), PARAMETER      :: B2N4VRel  =  422
-   INTEGER(IntKi), PARAMETER      :: B2N5VRel  =  423
-   INTEGER(IntKi), PARAMETER      :: B2N6VRel  =  424
-   INTEGER(IntKi), PARAMETER      :: B2N7VRel  =  425
-   INTEGER(IntKi), PARAMETER      :: B2N8VRel  =  426
-   INTEGER(IntKi), PARAMETER      :: B2N9VRel  =  427
-   INTEGER(IntKi), PARAMETER      :: B3N1VRel  =  428
-   INTEGER(IntKi), PARAMETER      :: B3N2VRel  =  429
-   INTEGER(IntKi), PARAMETER      :: B3N3VRel  =  430
-   INTEGER(IntKi), PARAMETER      :: B3N4VRel  =  431
-   INTEGER(IntKi), PARAMETER      :: B3N5VRel  =  432
-   INTEGER(IntKi), PARAMETER      :: B3N6VRel  =  433
-   INTEGER(IntKi), PARAMETER      :: B3N7VRel  =  434
-   INTEGER(IntKi), PARAMETER      :: B3N8VRel  =  435
-   INTEGER(IntKi), PARAMETER      :: B3N9VRel  =  436
-   INTEGER(IntKi), PARAMETER      :: B1N1DynP  =  437
-   INTEGER(IntKi), PARAMETER      :: B1N2DynP  =  438
-   INTEGER(IntKi), PARAMETER      :: B1N3DynP  =  439
-   INTEGER(IntKi), PARAMETER      :: B1N4DynP  =  440
-   INTEGER(IntKi), PARAMETER      :: B1N5DynP  =  441
-   INTEGER(IntKi), PARAMETER      :: B1N6DynP  =  442
-   INTEGER(IntKi), PARAMETER      :: B1N7DynP  =  443
-   INTEGER(IntKi), PARAMETER      :: B1N8DynP  =  444
-   INTEGER(IntKi), PARAMETER      :: B1N9DynP  =  445
-   INTEGER(IntKi), PARAMETER      :: B2N1DynP  =  446
-   INTEGER(IntKi), PARAMETER      :: B2N2DynP  =  447
-   INTEGER(IntKi), PARAMETER      :: B2N3DynP  =  448
-   INTEGER(IntKi), PARAMETER      :: B2N4DynP  =  449
-   INTEGER(IntKi), PARAMETER      :: B2N5DynP  =  450
-   INTEGER(IntKi), PARAMETER      :: B2N6DynP  =  451
-   INTEGER(IntKi), PARAMETER      :: B2N7DynP  =  452
-   INTEGER(IntKi), PARAMETER      :: B2N8DynP  =  453
-   INTEGER(IntKi), PARAMETER      :: B2N9DynP  =  454
-   INTEGER(IntKi), PARAMETER      :: B3N1DynP  =  455
-   INTEGER(IntKi), PARAMETER      :: B3N2DynP  =  456
-   INTEGER(IntKi), PARAMETER      :: B3N3DynP  =  457
-   INTEGER(IntKi), PARAMETER      :: B3N4DynP  =  458
-   INTEGER(IntKi), PARAMETER      :: B3N5DynP  =  459
-   INTEGER(IntKi), PARAMETER      :: B3N6DynP  =  460
-   INTEGER(IntKi), PARAMETER      :: B3N7DynP  =  461
-   INTEGER(IntKi), PARAMETER      :: B3N8DynP  =  462
-   INTEGER(IntKi), PARAMETER      :: B3N9DynP  =  463
-   INTEGER(IntKi), PARAMETER      :: B1N1Re    =  464
-   INTEGER(IntKi), PARAMETER      :: B1N2Re    =  465
-   INTEGER(IntKi), PARAMETER      :: B1N3Re    =  466
-   INTEGER(IntKi), PARAMETER      :: B1N4Re    =  467
-   INTEGER(IntKi), PARAMETER      :: B1N5Re    =  468
-   INTEGER(IntKi), PARAMETER      :: B1N6Re    =  469
-   INTEGER(IntKi), PARAMETER      :: B1N7Re    =  470
-   INTEGER(IntKi), PARAMETER      :: B1N8Re    =  471
-   INTEGER(IntKi), PARAMETER      :: B1N9Re    =  472
-   INTEGER(IntKi), PARAMETER      :: B2N1Re    =  473
-   INTEGER(IntKi), PARAMETER      :: B2N2Re    =  474
-   INTEGER(IntKi), PARAMETER      :: B2N3Re    =  475
-   INTEGER(IntKi), PARAMETER      :: B2N4Re    =  476
-   INTEGER(IntKi), PARAMETER      :: B2N5Re    =  477
-   INTEGER(IntKi), PARAMETER      :: B2N6Re    =  478
-   INTEGER(IntKi), PARAMETER      :: B2N7Re    =  479
-   INTEGER(IntKi), PARAMETER      :: B2N8Re    =  480
-   INTEGER(IntKi), PARAMETER      :: B2N9Re    =  481
-   INTEGER(IntKi), PARAMETER      :: B3N1Re    =  482
-   INTEGER(IntKi), PARAMETER      :: B3N2Re    =  483
-   INTEGER(IntKi), PARAMETER      :: B3N3Re    =  484
-   INTEGER(IntKi), PARAMETER      :: B3N4Re    =  485
-   INTEGER(IntKi), PARAMETER      :: B3N5Re    =  486
-   INTEGER(IntKi), PARAMETER      :: B3N6Re    =  487
-   INTEGER(IntKi), PARAMETER      :: B3N7Re    =  488
-   INTEGER(IntKi), PARAMETER      :: B3N8Re    =  489
-   INTEGER(IntKi), PARAMETER      :: B3N9Re    =  490
-   INTEGER(IntKi), PARAMETER      :: B1N1M     =  491
-   INTEGER(IntKi), PARAMETER      :: B1N2M     =  492
-   INTEGER(IntKi), PARAMETER      :: B1N3M     =  493
-   INTEGER(IntKi), PARAMETER      :: B1N4M     =  494
-   INTEGER(IntKi), PARAMETER      :: B1N5M     =  495
-   INTEGER(IntKi), PARAMETER      :: B1N6M     =  496
-   INTEGER(IntKi), PARAMETER      :: B1N7M     =  497
-   INTEGER(IntKi), PARAMETER      :: B1N8M     =  498
-   INTEGER(IntKi), PARAMETER      :: B1N9M     =  499
-   INTEGER(IntKi), PARAMETER      :: B2N1M     =  500
-   INTEGER(IntKi), PARAMETER      :: B2N2M     =  501
-   INTEGER(IntKi), PARAMETER      :: B2N3M     =  502
-   INTEGER(IntKi), PARAMETER      :: B2N4M     =  503
-   INTEGER(IntKi), PARAMETER      :: B2N5M     =  504
-   INTEGER(IntKi), PARAMETER      :: B2N6M     =  505
-   INTEGER(IntKi), PARAMETER      :: B2N7M     =  506
-   INTEGER(IntKi), PARAMETER      :: B2N8M     =  507
-   INTEGER(IntKi), PARAMETER      :: B2N9M     =  508
-   INTEGER(IntKi), PARAMETER      :: B3N1M     =  509
-   INTEGER(IntKi), PARAMETER      :: B3N2M     =  510
-   INTEGER(IntKi), PARAMETER      :: B3N3M     =  511
-   INTEGER(IntKi), PARAMETER      :: B3N4M     =  512
-   INTEGER(IntKi), PARAMETER      :: B3N5M     =  513
-   INTEGER(IntKi), PARAMETER      :: B3N6M     =  514
-   INTEGER(IntKi), PARAMETER      :: B3N7M     =  515
-   INTEGER(IntKi), PARAMETER      :: B3N8M     =  516
-   INTEGER(IntKi), PARAMETER      :: B3N9M     =  517
-   INTEGER(IntKi), PARAMETER      :: B1N1Vindx =  518
-   INTEGER(IntKi), PARAMETER      :: B1N2Vindx =  519
-   INTEGER(IntKi), PARAMETER      :: B1N3Vindx =  520
-   INTEGER(IntKi), PARAMETER      :: B1N4Vindx =  521
-   INTEGER(IntKi), PARAMETER      :: B1N5Vindx =  522
-   INTEGER(IntKi), PARAMETER      :: B1N6Vindx =  523
-   INTEGER(IntKi), PARAMETER      :: B1N7Vindx =  524
-   INTEGER(IntKi), PARAMETER      :: B1N8Vindx =  525
-   INTEGER(IntKi), PARAMETER      :: B1N9Vindx =  526
-   INTEGER(IntKi), PARAMETER      :: B2N1Vindx =  527
-   INTEGER(IntKi), PARAMETER      :: B2N2Vindx =  528
-   INTEGER(IntKi), PARAMETER      :: B2N3Vindx =  529
-   INTEGER(IntKi), PARAMETER      :: B2N4Vindx =  530
-   INTEGER(IntKi), PARAMETER      :: B2N5Vindx =  531
-   INTEGER(IntKi), PARAMETER      :: B2N6Vindx =  532
-   INTEGER(IntKi), PARAMETER      :: B2N7Vindx =  533
-   INTEGER(IntKi), PARAMETER      :: B2N8Vindx =  534
-   INTEGER(IntKi), PARAMETER      :: B2N9Vindx =  535
-   INTEGER(IntKi), PARAMETER      :: B3N1Vindx =  536
-   INTEGER(IntKi), PARAMETER      :: B3N2Vindx =  537
-   INTEGER(IntKi), PARAMETER      :: B3N3Vindx =  538
-   INTEGER(IntKi), PARAMETER      :: B3N4Vindx =  539
-   INTEGER(IntKi), PARAMETER      :: B3N5Vindx =  540
-   INTEGER(IntKi), PARAMETER      :: B3N6Vindx =  541
-   INTEGER(IntKi), PARAMETER      :: B3N7Vindx =  542
-   INTEGER(IntKi), PARAMETER      :: B3N8Vindx =  543
-   INTEGER(IntKi), PARAMETER      :: B3N9Vindx =  544
-   INTEGER(IntKi), PARAMETER      :: B1N1Vindy =  545
-   INTEGER(IntKi), PARAMETER      :: B1N2Vindy =  546
-   INTEGER(IntKi), PARAMETER      :: B1N3Vindy =  547
-   INTEGER(IntKi), PARAMETER      :: B1N4Vindy =  548
-   INTEGER(IntKi), PARAMETER      :: B1N5Vindy =  549
-   INTEGER(IntKi), PARAMETER      :: B1N6Vindy =  550
-   INTEGER(IntKi), PARAMETER      :: B1N7Vindy =  551
-   INTEGER(IntKi), PARAMETER      :: B1N8Vindy =  552
-   INTEGER(IntKi), PARAMETER      :: B1N9Vindy =  553
-   INTEGER(IntKi), PARAMETER      :: B2N1Vindy =  554
-   INTEGER(IntKi), PARAMETER      :: B2N2Vindy =  555
-   INTEGER(IntKi), PARAMETER      :: B2N3Vindy =  556
-   INTEGER(IntKi), PARAMETER      :: B2N4Vindy =  557
-   INTEGER(IntKi), PARAMETER      :: B2N5Vindy =  558
-   INTEGER(IntKi), PARAMETER      :: B2N6Vindy =  559
-   INTEGER(IntKi), PARAMETER      :: B2N7Vindy =  560
-   INTEGER(IntKi), PARAMETER      :: B2N8Vindy =  561
-   INTEGER(IntKi), PARAMETER      :: B2N9Vindy =  562
-   INTEGER(IntKi), PARAMETER      :: B3N1Vindy =  563
-   INTEGER(IntKi), PARAMETER      :: B3N2Vindy =  564
-   INTEGER(IntKi), PARAMETER      :: B3N3Vindy =  565
-   INTEGER(IntKi), PARAMETER      :: B3N4Vindy =  566
-   INTEGER(IntKi), PARAMETER      :: B3N5Vindy =  567
-   INTEGER(IntKi), PARAMETER      :: B3N6Vindy =  568
-   INTEGER(IntKi), PARAMETER      :: B3N7Vindy =  569
-   INTEGER(IntKi), PARAMETER      :: B3N8Vindy =  570
-   INTEGER(IntKi), PARAMETER      :: B3N9Vindy =  571
-   INTEGER(IntKi), PARAMETER      :: B1N1AxInd =  572
-   INTEGER(IntKi), PARAMETER      :: B1N2AxInd =  573
-   INTEGER(IntKi), PARAMETER      :: B1N3AxInd =  574
-   INTEGER(IntKi), PARAMETER      :: B1N4AxInd =  575
-   INTEGER(IntKi), PARAMETER      :: B1N5AxInd =  576
-   INTEGER(IntKi), PARAMETER      :: B1N6AxInd =  577
-   INTEGER(IntKi), PARAMETER      :: B1N7AxInd =  578
-   INTEGER(IntKi), PARAMETER      :: B1N8AxInd =  579
-   INTEGER(IntKi), PARAMETER      :: B1N9AxInd =  580
-   INTEGER(IntKi), PARAMETER      :: B2N1AxInd =  581
-   INTEGER(IntKi), PARAMETER      :: B2N2AxInd =  582
-   INTEGER(IntKi), PARAMETER      :: B2N3AxInd =  583
-   INTEGER(IntKi), PARAMETER      :: B2N4AxInd =  584
-   INTEGER(IntKi), PARAMETER      :: B2N5AxInd =  585
-   INTEGER(IntKi), PARAMETER      :: B2N6AxInd =  586
-   INTEGER(IntKi), PARAMETER      :: B2N7AxInd =  587
-   INTEGER(IntKi), PARAMETER      :: B2N8AxInd =  588
-   INTEGER(IntKi), PARAMETER      :: B2N9AxInd =  589
-   INTEGER(IntKi), PARAMETER      :: B3N1AxInd =  590
-   INTEGER(IntKi), PARAMETER      :: B3N2AxInd =  591
-   INTEGER(IntKi), PARAMETER      :: B3N3AxInd =  592
-   INTEGER(IntKi), PARAMETER      :: B3N4AxInd =  593
-   INTEGER(IntKi), PARAMETER      :: B3N5AxInd =  594
-   INTEGER(IntKi), PARAMETER      :: B3N6AxInd =  595
-   INTEGER(IntKi), PARAMETER      :: B3N7AxInd =  596
-   INTEGER(IntKi), PARAMETER      :: B3N8AxInd =  597
-   INTEGER(IntKi), PARAMETER      :: B3N9AxInd =  598
-   INTEGER(IntKi), PARAMETER      :: B1N1TnInd =  599
-   INTEGER(IntKi), PARAMETER      :: B1N2TnInd =  600
-   INTEGER(IntKi), PARAMETER      :: B1N3TnInd =  601
-   INTEGER(IntKi), PARAMETER      :: B1N4TnInd =  602
-   INTEGER(IntKi), PARAMETER      :: B1N5TnInd =  603
-   INTEGER(IntKi), PARAMETER      :: B1N6TnInd =  604
-   INTEGER(IntKi), PARAMETER      :: B1N7TnInd =  605
-   INTEGER(IntKi), PARAMETER      :: B1N8TnInd =  606
-   INTEGER(IntKi), PARAMETER      :: B1N9TnInd =  607
-   INTEGER(IntKi), PARAMETER      :: B2N1TnInd =  608
-   INTEGER(IntKi), PARAMETER      :: B2N2TnInd =  609
-   INTEGER(IntKi), PARAMETER      :: B2N3TnInd =  610
-   INTEGER(IntKi), PARAMETER      :: B2N4TnInd =  611
-   INTEGER(IntKi), PARAMETER      :: B2N5TnInd =  612
-   INTEGER(IntKi), PARAMETER      :: B2N6TnInd =  613
-   INTEGER(IntKi), PARAMETER      :: B2N7TnInd =  614
-   INTEGER(IntKi), PARAMETER      :: B2N8TnInd =  615
-   INTEGER(IntKi), PARAMETER      :: B2N9TnInd =  616
-   INTEGER(IntKi), PARAMETER      :: B3N1TnInd =  617
-   INTEGER(IntKi), PARAMETER      :: B3N2TnInd =  618
-   INTEGER(IntKi), PARAMETER      :: B3N3TnInd =  619
-   INTEGER(IntKi), PARAMETER      :: B3N4TnInd =  620
-   INTEGER(IntKi), PARAMETER      :: B3N5TnInd =  621
-   INTEGER(IntKi), PARAMETER      :: B3N6TnInd =  622
-   INTEGER(IntKi), PARAMETER      :: B3N7TnInd =  623
-   INTEGER(IntKi), PARAMETER      :: B3N8TnInd =  624
-   INTEGER(IntKi), PARAMETER      :: B3N9TnInd =  625
-   INTEGER(IntKi), PARAMETER      :: B1N1Alpha =  626
-   INTEGER(IntKi), PARAMETER      :: B1N2Alpha =  627
-   INTEGER(IntKi), PARAMETER      :: B1N3Alpha =  628
-   INTEGER(IntKi), PARAMETER      :: B1N4Alpha =  629
-   INTEGER(IntKi), PARAMETER      :: B1N5Alpha =  630
-   INTEGER(IntKi), PARAMETER      :: B1N6Alpha =  631
-   INTEGER(IntKi), PARAMETER      :: B1N7Alpha =  632
-   INTEGER(IntKi), PARAMETER      :: B1N8Alpha =  633
-   INTEGER(IntKi), PARAMETER      :: B1N9Alpha =  634
-   INTEGER(IntKi), PARAMETER      :: B2N1Alpha =  635
-   INTEGER(IntKi), PARAMETER      :: B2N2Alpha =  636
-   INTEGER(IntKi), PARAMETER      :: B2N3Alpha =  637
-   INTEGER(IntKi), PARAMETER      :: B2N4Alpha =  638
-   INTEGER(IntKi), PARAMETER      :: B2N5Alpha =  639
-   INTEGER(IntKi), PARAMETER      :: B2N6Alpha =  640
-   INTEGER(IntKi), PARAMETER      :: B2N7Alpha =  641
-   INTEGER(IntKi), PARAMETER      :: B2N8Alpha =  642
-   INTEGER(IntKi), PARAMETER      :: B2N9Alpha =  643
-   INTEGER(IntKi), PARAMETER      :: B3N1Alpha =  644
-   INTEGER(IntKi), PARAMETER      :: B3N2Alpha =  645
-   INTEGER(IntKi), PARAMETER      :: B3N3Alpha =  646
-   INTEGER(IntKi), PARAMETER      :: B3N4Alpha =  647
-   INTEGER(IntKi), PARAMETER      :: B3N5Alpha =  648
-   INTEGER(IntKi), PARAMETER      :: B3N6Alpha =  649
-   INTEGER(IntKi), PARAMETER      :: B3N7Alpha =  650
-   INTEGER(IntKi), PARAMETER      :: B3N8Alpha =  651
-   INTEGER(IntKi), PARAMETER      :: B3N9Alpha =  652
-   INTEGER(IntKi), PARAMETER      :: B1N1Theta =  653
-   INTEGER(IntKi), PARAMETER      :: B1N2Theta =  654
-   INTEGER(IntKi), PARAMETER      :: B1N3Theta =  655
-   INTEGER(IntKi), PARAMETER      :: B1N4Theta =  656
-   INTEGER(IntKi), PARAMETER      :: B1N5Theta =  657
-   INTEGER(IntKi), PARAMETER      :: B1N6Theta =  658
-   INTEGER(IntKi), PARAMETER      :: B1N7Theta =  659
-   INTEGER(IntKi), PARAMETER      :: B1N8Theta =  660
-   INTEGER(IntKi), PARAMETER      :: B1N9Theta =  661
-   INTEGER(IntKi), PARAMETER      :: B2N1Theta =  662
-   INTEGER(IntKi), PARAMETER      :: B2N2Theta =  663
-   INTEGER(IntKi), PARAMETER      :: B2N3Theta =  664
-   INTEGER(IntKi), PARAMETER      :: B2N4Theta =  665
-   INTEGER(IntKi), PARAMETER      :: B2N5Theta =  666
-   INTEGER(IntKi), PARAMETER      :: B2N6Theta =  667
-   INTEGER(IntKi), PARAMETER      :: B2N7Theta =  668
-   INTEGER(IntKi), PARAMETER      :: B2N8Theta =  669
-   INTEGER(IntKi), PARAMETER      :: B2N9Theta =  670
-   INTEGER(IntKi), PARAMETER      :: B3N1Theta =  671
-   INTEGER(IntKi), PARAMETER      :: B3N2Theta =  672
-   INTEGER(IntKi), PARAMETER      :: B3N3Theta =  673
-   INTEGER(IntKi), PARAMETER      :: B3N4Theta =  674
-   INTEGER(IntKi), PARAMETER      :: B3N5Theta =  675
-   INTEGER(IntKi), PARAMETER      :: B3N6Theta =  676
-   INTEGER(IntKi), PARAMETER      :: B3N7Theta =  677
-   INTEGER(IntKi), PARAMETER      :: B3N8Theta =  678
-   INTEGER(IntKi), PARAMETER      :: B3N9Theta =  679
-   INTEGER(IntKi), PARAMETER      :: B1N1Phi   =  680
-   INTEGER(IntKi), PARAMETER      :: B1N2Phi   =  681
-   INTEGER(IntKi), PARAMETER      :: B1N3Phi   =  682
-   INTEGER(IntKi), PARAMETER      :: B1N4Phi   =  683
-   INTEGER(IntKi), PARAMETER      :: B1N5Phi   =  684
-   INTEGER(IntKi), PARAMETER      :: B1N6Phi   =  685
-   INTEGER(IntKi), PARAMETER      :: B1N7Phi   =  686
-   INTEGER(IntKi), PARAMETER      :: B1N8Phi   =  687
-   INTEGER(IntKi), PARAMETER      :: B1N9Phi   =  688
-   INTEGER(IntKi), PARAMETER      :: B2N1Phi   =  689
-   INTEGER(IntKi), PARAMETER      :: B2N2Phi   =  690
-   INTEGER(IntKi), PARAMETER      :: B2N3Phi   =  691
-   INTEGER(IntKi), PARAMETER      :: B2N4Phi   =  692
-   INTEGER(IntKi), PARAMETER      :: B2N5Phi   =  693
-   INTEGER(IntKi), PARAMETER      :: B2N6Phi   =  694
-   INTEGER(IntKi), PARAMETER      :: B2N7Phi   =  695
-   INTEGER(IntKi), PARAMETER      :: B2N8Phi   =  696
-   INTEGER(IntKi), PARAMETER      :: B2N9Phi   =  697
-   INTEGER(IntKi), PARAMETER      :: B3N1Phi   =  698
-   INTEGER(IntKi), PARAMETER      :: B3N2Phi   =  699
-   INTEGER(IntKi), PARAMETER      :: B3N3Phi   =  700
-   INTEGER(IntKi), PARAMETER      :: B3N4Phi   =  701
-   INTEGER(IntKi), PARAMETER      :: B3N5Phi   =  702
-   INTEGER(IntKi), PARAMETER      :: B3N6Phi   =  703
-   INTEGER(IntKi), PARAMETER      :: B3N7Phi   =  704
-   INTEGER(IntKi), PARAMETER      :: B3N8Phi   =  705
-   INTEGER(IntKi), PARAMETER      :: B3N9Phi   =  706
-   INTEGER(IntKi), PARAMETER      :: B1N1Curve =  707
-   INTEGER(IntKi), PARAMETER      :: B1N2Curve =  708
-   INTEGER(IntKi), PARAMETER      :: B1N3Curve =  709
-   INTEGER(IntKi), PARAMETER      :: B1N4Curve =  710
-   INTEGER(IntKi), PARAMETER      :: B1N5Curve =  711
-   INTEGER(IntKi), PARAMETER      :: B1N6Curve =  712
-   INTEGER(IntKi), PARAMETER      :: B1N7Curve =  713
-   INTEGER(IntKi), PARAMETER      :: B1N8Curve =  714
-   INTEGER(IntKi), PARAMETER      :: B1N9Curve =  715
-   INTEGER(IntKi), PARAMETER      :: B2N1Curve =  716
-   INTEGER(IntKi), PARAMETER      :: B2N2Curve =  717
-   INTEGER(IntKi), PARAMETER      :: B2N3Curve =  718
-   INTEGER(IntKi), PARAMETER      :: B2N4Curve =  719
-   INTEGER(IntKi), PARAMETER      :: B2N5Curve =  720
-   INTEGER(IntKi), PARAMETER      :: B2N6Curve =  721
-   INTEGER(IntKi), PARAMETER      :: B2N7Curve =  722
-   INTEGER(IntKi), PARAMETER      :: B2N8Curve =  723
-   INTEGER(IntKi), PARAMETER      :: B2N9Curve =  724
-   INTEGER(IntKi), PARAMETER      :: B3N1Curve =  725
-   INTEGER(IntKi), PARAMETER      :: B3N2Curve =  726
-   INTEGER(IntKi), PARAMETER      :: B3N3Curve =  727
-   INTEGER(IntKi), PARAMETER      :: B3N4Curve =  728
-   INTEGER(IntKi), PARAMETER      :: B3N5Curve =  729
-   INTEGER(IntKi), PARAMETER      :: B3N6Curve =  730
-   INTEGER(IntKi), PARAMETER      :: B3N7Curve =  731
-   INTEGER(IntKi), PARAMETER      :: B3N8Curve =  732
-   INTEGER(IntKi), PARAMETER      :: B3N9Curve =  733
-   INTEGER(IntKi), PARAMETER      :: B1N1Cl    =  734
-   INTEGER(IntKi), PARAMETER      :: B1N2Cl    =  735
-   INTEGER(IntKi), PARAMETER      :: B1N3Cl    =  736
-   INTEGER(IntKi), PARAMETER      :: B1N4Cl    =  737
-   INTEGER(IntKi), PARAMETER      :: B1N5Cl    =  738
-   INTEGER(IntKi), PARAMETER      :: B1N6Cl    =  739
-   INTEGER(IntKi), PARAMETER      :: B1N7Cl    =  740
-   INTEGER(IntKi), PARAMETER      :: B1N8Cl    =  741
-   INTEGER(IntKi), PARAMETER      :: B1N9Cl    =  742
-   INTEGER(IntKi), PARAMETER      :: B2N1Cl    =  743
-   INTEGER(IntKi), PARAMETER      :: B2N2Cl    =  744
-   INTEGER(IntKi), PARAMETER      :: B2N3Cl    =  745
-   INTEGER(IntKi), PARAMETER      :: B2N4Cl    =  746
-   INTEGER(IntKi), PARAMETER      :: B2N5Cl    =  747
-   INTEGER(IntKi), PARAMETER      :: B2N6Cl    =  748
-   INTEGER(IntKi), PARAMETER      :: B2N7Cl    =  749
-   INTEGER(IntKi), PARAMETER      :: B2N8Cl    =  750
-   INTEGER(IntKi), PARAMETER      :: B2N9Cl    =  751
-   INTEGER(IntKi), PARAMETER      :: B3N1Cl    =  752
-   INTEGER(IntKi), PARAMETER      :: B3N2Cl    =  753
-   INTEGER(IntKi), PARAMETER      :: B3N3Cl    =  754
-   INTEGER(IntKi), PARAMETER      :: B3N4Cl    =  755
-   INTEGER(IntKi), PARAMETER      :: B3N5Cl    =  756
-   INTEGER(IntKi), PARAMETER      :: B3N6Cl    =  757
-   INTEGER(IntKi), PARAMETER      :: B3N7Cl    =  758
-   INTEGER(IntKi), PARAMETER      :: B3N8Cl    =  759
-   INTEGER(IntKi), PARAMETER      :: B3N9Cl    =  760
-   INTEGER(IntKi), PARAMETER      :: B1N1Cd    =  761
-   INTEGER(IntKi), PARAMETER      :: B1N2Cd    =  762
-   INTEGER(IntKi), PARAMETER      :: B1N3Cd    =  763
-   INTEGER(IntKi), PARAMETER      :: B1N4Cd    =  764
-   INTEGER(IntKi), PARAMETER      :: B1N5Cd    =  765
-   INTEGER(IntKi), PARAMETER      :: B1N6Cd    =  766
-   INTEGER(IntKi), PARAMETER      :: B1N7Cd    =  767
-   INTEGER(IntKi), PARAMETER      :: B1N8Cd    =  768
-   INTEGER(IntKi), PARAMETER      :: B1N9Cd    =  769
-   INTEGER(IntKi), PARAMETER      :: B2N1Cd    =  770
-   INTEGER(IntKi), PARAMETER      :: B2N2Cd    =  771
-   INTEGER(IntKi), PARAMETER      :: B2N3Cd    =  772
-   INTEGER(IntKi), PARAMETER      :: B2N4Cd    =  773
-   INTEGER(IntKi), PARAMETER      :: B2N5Cd    =  774
-   INTEGER(IntKi), PARAMETER      :: B2N6Cd    =  775
-   INTEGER(IntKi), PARAMETER      :: B2N7Cd    =  776
-   INTEGER(IntKi), PARAMETER      :: B2N8Cd    =  777
-   INTEGER(IntKi), PARAMETER      :: B2N9Cd    =  778
-   INTEGER(IntKi), PARAMETER      :: B3N1Cd    =  779
-   INTEGER(IntKi), PARAMETER      :: B3N2Cd    =  780
-   INTEGER(IntKi), PARAMETER      :: B3N3Cd    =  781
-   INTEGER(IntKi), PARAMETER      :: B3N4Cd    =  782
-   INTEGER(IntKi), PARAMETER      :: B3N5Cd    =  783
-   INTEGER(IntKi), PARAMETER      :: B3N6Cd    =  784
-   INTEGER(IntKi), PARAMETER      :: B3N7Cd    =  785
-   INTEGER(IntKi), PARAMETER      :: B3N8Cd    =  786
-   INTEGER(IntKi), PARAMETER      :: B3N9Cd    =  787
-   INTEGER(IntKi), PARAMETER      :: B1N1Cm    =  788
-   INTEGER(IntKi), PARAMETER      :: B1N2Cm    =  789
-   INTEGER(IntKi), PARAMETER      :: B1N3Cm    =  790
-   INTEGER(IntKi), PARAMETER      :: B1N4Cm    =  791
-   INTEGER(IntKi), PARAMETER      :: B1N5Cm    =  792
-   INTEGER(IntKi), PARAMETER      :: B1N6Cm    =  793
-   INTEGER(IntKi), PARAMETER      :: B1N7Cm    =  794
-   INTEGER(IntKi), PARAMETER      :: B1N8Cm    =  795
-   INTEGER(IntKi), PARAMETER      :: B1N9Cm    =  796
-   INTEGER(IntKi), PARAMETER      :: B2N1Cm    =  797
-   INTEGER(IntKi), PARAMETER      :: B2N2Cm    =  798
-   INTEGER(IntKi), PARAMETER      :: B2N3Cm    =  799
-   INTEGER(IntKi), PARAMETER      :: B2N4Cm    =  800
-   INTEGER(IntKi), PARAMETER      :: B2N5Cm    =  801
-   INTEGER(IntKi), PARAMETER      :: B2N6Cm    =  802
-   INTEGER(IntKi), PARAMETER      :: B2N7Cm    =  803
-   INTEGER(IntKi), PARAMETER      :: B2N8Cm    =  804
-   INTEGER(IntKi), PARAMETER      :: B2N9Cm    =  805
-   INTEGER(IntKi), PARAMETER      :: B3N1Cm    =  806
-   INTEGER(IntKi), PARAMETER      :: B3N2Cm    =  807
-   INTEGER(IntKi), PARAMETER      :: B3N3Cm    =  808
-   INTEGER(IntKi), PARAMETER      :: B3N4Cm    =  809
-   INTEGER(IntKi), PARAMETER      :: B3N5Cm    =  810
-   INTEGER(IntKi), PARAMETER      :: B3N6Cm    =  811
-   INTEGER(IntKi), PARAMETER      :: B3N7Cm    =  812
-   INTEGER(IntKi), PARAMETER      :: B3N8Cm    =  813
-   INTEGER(IntKi), PARAMETER      :: B3N9Cm    =  814
-   INTEGER(IntKi), PARAMETER      :: B1N1Cx    =  815
-   INTEGER(IntKi), PARAMETER      :: B1N2Cx    =  816
-   INTEGER(IntKi), PARAMETER      :: B1N3Cx    =  817
-   INTEGER(IntKi), PARAMETER      :: B1N4Cx    =  818
-   INTEGER(IntKi), PARAMETER      :: B1N5Cx    =  819
-   INTEGER(IntKi), PARAMETER      :: B1N6Cx    =  820
-   INTEGER(IntKi), PARAMETER      :: B1N7Cx    =  821
-   INTEGER(IntKi), PARAMETER      :: B1N8Cx    =  822
-   INTEGER(IntKi), PARAMETER      :: B1N9Cx    =  823
-   INTEGER(IntKi), PARAMETER      :: B2N1Cx    =  824
-   INTEGER(IntKi), PARAMETER      :: B2N2Cx    =  825
-   INTEGER(IntKi), PARAMETER      :: B2N3Cx    =  826
-   INTEGER(IntKi), PARAMETER      :: B2N4Cx    =  827
-   INTEGER(IntKi), PARAMETER      :: B2N5Cx    =  828
-   INTEGER(IntKi), PARAMETER      :: B2N6Cx    =  829
-   INTEGER(IntKi), PARAMETER      :: B2N7Cx    =  830
-   INTEGER(IntKi), PARAMETER      :: B2N8Cx    =  831
-   INTEGER(IntKi), PARAMETER      :: B2N9Cx    =  832
-   INTEGER(IntKi), PARAMETER      :: B3N1Cx    =  833
-   INTEGER(IntKi), PARAMETER      :: B3N2Cx    =  834
-   INTEGER(IntKi), PARAMETER      :: B3N3Cx    =  835
-   INTEGER(IntKi), PARAMETER      :: B3N4Cx    =  836
-   INTEGER(IntKi), PARAMETER      :: B3N5Cx    =  837
-   INTEGER(IntKi), PARAMETER      :: B3N6Cx    =  838
-   INTEGER(IntKi), PARAMETER      :: B3N7Cx    =  839
-   INTEGER(IntKi), PARAMETER      :: B3N8Cx    =  840
-   INTEGER(IntKi), PARAMETER      :: B3N9Cx    =  841
-   INTEGER(IntKi), PARAMETER      :: B1N1Cy    =  842
-   INTEGER(IntKi), PARAMETER      :: B1N2Cy    =  843
-   INTEGER(IntKi), PARAMETER      :: B1N3Cy    =  844
-   INTEGER(IntKi), PARAMETER      :: B1N4Cy    =  845
-   INTEGER(IntKi), PARAMETER      :: B1N5Cy    =  846
-   INTEGER(IntKi), PARAMETER      :: B1N6Cy    =  847
-   INTEGER(IntKi), PARAMETER      :: B1N7Cy    =  848
-   INTEGER(IntKi), PARAMETER      :: B1N8Cy    =  849
-   INTEGER(IntKi), PARAMETER      :: B1N9Cy    =  850
-   INTEGER(IntKi), PARAMETER      :: B2N1Cy    =  851
-   INTEGER(IntKi), PARAMETER      :: B2N2Cy    =  852
-   INTEGER(IntKi), PARAMETER      :: B2N3Cy    =  853
-   INTEGER(IntKi), PARAMETER      :: B2N4Cy    =  854
-   INTEGER(IntKi), PARAMETER      :: B2N5Cy    =  855
-   INTEGER(IntKi), PARAMETER      :: B2N6Cy    =  856
-   INTEGER(IntKi), PARAMETER      :: B2N7Cy    =  857
-   INTEGER(IntKi), PARAMETER      :: B2N8Cy    =  858
-   INTEGER(IntKi), PARAMETER      :: B2N9Cy    =  859
-   INTEGER(IntKi), PARAMETER      :: B3N1Cy    =  860
-   INTEGER(IntKi), PARAMETER      :: B3N2Cy    =  861
-   INTEGER(IntKi), PARAMETER      :: B3N3Cy    =  862
-   INTEGER(IntKi), PARAMETER      :: B3N4Cy    =  863
-   INTEGER(IntKi), PARAMETER      :: B3N5Cy    =  864
-   INTEGER(IntKi), PARAMETER      :: B3N6Cy    =  865
-   INTEGER(IntKi), PARAMETER      :: B3N7Cy    =  866
-   INTEGER(IntKi), PARAMETER      :: B3N8Cy    =  867
-   INTEGER(IntKi), PARAMETER      :: B3N9Cy    =  868
-   INTEGER(IntKi), PARAMETER      :: B1N1Cn    =  869
-   INTEGER(IntKi), PARAMETER      :: B1N2Cn    =  870
-   INTEGER(IntKi), PARAMETER      :: B1N3Cn    =  871
-   INTEGER(IntKi), PARAMETER      :: B1N4Cn    =  872
-   INTEGER(IntKi), PARAMETER      :: B1N5Cn    =  873
-   INTEGER(IntKi), PARAMETER      :: B1N6Cn    =  874
-   INTEGER(IntKi), PARAMETER      :: B1N7Cn    =  875
-   INTEGER(IntKi), PARAMETER      :: B1N8Cn    =  876
-   INTEGER(IntKi), PARAMETER      :: B1N9Cn    =  877
-   INTEGER(IntKi), PARAMETER      :: B2N1Cn    =  878
-   INTEGER(IntKi), PARAMETER      :: B2N2Cn    =  879
-   INTEGER(IntKi), PARAMETER      :: B2N3Cn    =  880
-   INTEGER(IntKi), PARAMETER      :: B2N4Cn    =  881
-   INTEGER(IntKi), PARAMETER      :: B2N5Cn    =  882
-   INTEGER(IntKi), PARAMETER      :: B2N6Cn    =  883
-   INTEGER(IntKi), PARAMETER      :: B2N7Cn    =  884
-   INTEGER(IntKi), PARAMETER      :: B2N8Cn    =  885
-   INTEGER(IntKi), PARAMETER      :: B2N9Cn    =  886
-   INTEGER(IntKi), PARAMETER      :: B3N1Cn    =  887
-   INTEGER(IntKi), PARAMETER      :: B3N2Cn    =  888
-   INTEGER(IntKi), PARAMETER      :: B3N3Cn    =  889
-   INTEGER(IntKi), PARAMETER      :: B3N4Cn    =  890
-   INTEGER(IntKi), PARAMETER      :: B3N5Cn    =  891
-   INTEGER(IntKi), PARAMETER      :: B3N6Cn    =  892
-   INTEGER(IntKi), PARAMETER      :: B3N7Cn    =  893
-   INTEGER(IntKi), PARAMETER      :: B3N8Cn    =  894
-   INTEGER(IntKi), PARAMETER      :: B3N9Cn    =  895
-   INTEGER(IntKi), PARAMETER      :: B1N1Ct    =  896
-   INTEGER(IntKi), PARAMETER      :: B1N2Ct    =  897
-   INTEGER(IntKi), PARAMETER      :: B1N3Ct    =  898
-   INTEGER(IntKi), PARAMETER      :: B1N4Ct    =  899
-   INTEGER(IntKi), PARAMETER      :: B1N5Ct    =  900
-   INTEGER(IntKi), PARAMETER      :: B1N6Ct    =  901
-   INTEGER(IntKi), PARAMETER      :: B1N7Ct    =  902
-   INTEGER(IntKi), PARAMETER      :: B1N8Ct    =  903
-   INTEGER(IntKi), PARAMETER      :: B1N9Ct    =  904
-   INTEGER(IntKi), PARAMETER      :: B2N1Ct    =  905
-   INTEGER(IntKi), PARAMETER      :: B2N2Ct    =  906
-   INTEGER(IntKi), PARAMETER      :: B2N3Ct    =  907
-   INTEGER(IntKi), PARAMETER      :: B2N4Ct    =  908
-   INTEGER(IntKi), PARAMETER      :: B2N5Ct    =  909
-   INTEGER(IntKi), PARAMETER      :: B2N6Ct    =  910
-   INTEGER(IntKi), PARAMETER      :: B2N7Ct    =  911
-   INTEGER(IntKi), PARAMETER      :: B2N8Ct    =  912
-   INTEGER(IntKi), PARAMETER      :: B2N9Ct    =  913
-   INTEGER(IntKi), PARAMETER      :: B3N1Ct    =  914
-   INTEGER(IntKi), PARAMETER      :: B3N2Ct    =  915
-   INTEGER(IntKi), PARAMETER      :: B3N3Ct    =  916
-   INTEGER(IntKi), PARAMETER      :: B3N4Ct    =  917
-   INTEGER(IntKi), PARAMETER      :: B3N5Ct    =  918
-   INTEGER(IntKi), PARAMETER      :: B3N6Ct    =  919
-   INTEGER(IntKi), PARAMETER      :: B3N7Ct    =  920
-   INTEGER(IntKi), PARAMETER      :: B3N8Ct    =  921
-   INTEGER(IntKi), PARAMETER      :: B3N9Ct    =  922
-   INTEGER(IntKi), PARAMETER      :: B1N1Fl    =  923
-   INTEGER(IntKi), PARAMETER      :: B1N2Fl    =  924
-   INTEGER(IntKi), PARAMETER      :: B1N3Fl    =  925
-   INTEGER(IntKi), PARAMETER      :: B1N4Fl    =  926
-   INTEGER(IntKi), PARAMETER      :: B1N5Fl    =  927
-   INTEGER(IntKi), PARAMETER      :: B1N6Fl    =  928
-   INTEGER(IntKi), PARAMETER      :: B1N7Fl    =  929
-   INTEGER(IntKi), PARAMETER      :: B1N8Fl    =  930
-   INTEGER(IntKi), PARAMETER      :: B1N9Fl    =  931
-   INTEGER(IntKi), PARAMETER      :: B2N1Fl    =  932
-   INTEGER(IntKi), PARAMETER      :: B2N2Fl    =  933
-   INTEGER(IntKi), PARAMETER      :: B2N3Fl    =  934
-   INTEGER(IntKi), PARAMETER      :: B2N4Fl    =  935
-   INTEGER(IntKi), PARAMETER      :: B2N5Fl    =  936
-   INTEGER(IntKi), PARAMETER      :: B2N6Fl    =  937
-   INTEGER(IntKi), PARAMETER      :: B2N7Fl    =  938
-   INTEGER(IntKi), PARAMETER      :: B2N8Fl    =  939
-   INTEGER(IntKi), PARAMETER      :: B2N9Fl    =  940
-   INTEGER(IntKi), PARAMETER      :: B3N1Fl    =  941
-   INTEGER(IntKi), PARAMETER      :: B3N2Fl    =  942
-   INTEGER(IntKi), PARAMETER      :: B3N3Fl    =  943
-   INTEGER(IntKi), PARAMETER      :: B3N4Fl    =  944
-   INTEGER(IntKi), PARAMETER      :: B3N5Fl    =  945
-   INTEGER(IntKi), PARAMETER      :: B3N6Fl    =  946
-   INTEGER(IntKi), PARAMETER      :: B3N7Fl    =  947
-   INTEGER(IntKi), PARAMETER      :: B3N8Fl    =  948
-   INTEGER(IntKi), PARAMETER      :: B3N9Fl    =  949
-   INTEGER(IntKi), PARAMETER      :: B1N1Fd    =  950
-   INTEGER(IntKi), PARAMETER      :: B1N2Fd    =  951
-   INTEGER(IntKi), PARAMETER      :: B1N3Fd    =  952
-   INTEGER(IntKi), PARAMETER      :: B1N4Fd    =  953
-   INTEGER(IntKi), PARAMETER      :: B1N5Fd    =  954
-   INTEGER(IntKi), PARAMETER      :: B1N6Fd    =  955
-   INTEGER(IntKi), PARAMETER      :: B1N7Fd    =  956
-   INTEGER(IntKi), PARAMETER      :: B1N8Fd    =  957
-   INTEGER(IntKi), PARAMETER      :: B1N9Fd    =  958
-   INTEGER(IntKi), PARAMETER      :: B2N1Fd    =  959
-   INTEGER(IntKi), PARAMETER      :: B2N2Fd    =  960
-   INTEGER(IntKi), PARAMETER      :: B2N3Fd    =  961
-   INTEGER(IntKi), PARAMETER      :: B2N4Fd    =  962
-   INTEGER(IntKi), PARAMETER      :: B2N5Fd    =  963
-   INTEGER(IntKi), PARAMETER      :: B2N6Fd    =  964
-   INTEGER(IntKi), PARAMETER      :: B2N7Fd    =  965
-   INTEGER(IntKi), PARAMETER      :: B2N8Fd    =  966
-   INTEGER(IntKi), PARAMETER      :: B2N9Fd    =  967
-   INTEGER(IntKi), PARAMETER      :: B3N1Fd    =  968
-   INTEGER(IntKi), PARAMETER      :: B3N2Fd    =  969
-   INTEGER(IntKi), PARAMETER      :: B3N3Fd    =  970
-   INTEGER(IntKi), PARAMETER      :: B3N4Fd    =  971
-   INTEGER(IntKi), PARAMETER      :: B3N5Fd    =  972
-   INTEGER(IntKi), PARAMETER      :: B3N6Fd    =  973
-   INTEGER(IntKi), PARAMETER      :: B3N7Fd    =  974
-   INTEGER(IntKi), PARAMETER      :: B3N8Fd    =  975
-   INTEGER(IntKi), PARAMETER      :: B3N9Fd    =  976
-   INTEGER(IntKi), PARAMETER      :: B1N1Mm    =  977
-   INTEGER(IntKi), PARAMETER      :: B1N2Mm    =  978
-   INTEGER(IntKi), PARAMETER      :: B1N3Mm    =  979
-   INTEGER(IntKi), PARAMETER      :: B1N4Mm    =  980
-   INTEGER(IntKi), PARAMETER      :: B1N5Mm    =  981
-   INTEGER(IntKi), PARAMETER      :: B1N6Mm    =  982
-   INTEGER(IntKi), PARAMETER      :: B1N7Mm    =  983
-   INTEGER(IntKi), PARAMETER      :: B1N8Mm    =  984
-   INTEGER(IntKi), PARAMETER      :: B1N9Mm    =  985
-   INTEGER(IntKi), PARAMETER      :: B2N1Mm    =  986
-   INTEGER(IntKi), PARAMETER      :: B2N2Mm    =  987
-   INTEGER(IntKi), PARAMETER      :: B2N3Mm    =  988
-   INTEGER(IntKi), PARAMETER      :: B2N4Mm    =  989
-   INTEGER(IntKi), PARAMETER      :: B2N5Mm    =  990
-   INTEGER(IntKi), PARAMETER      :: B2N6Mm    =  991
-   INTEGER(IntKi), PARAMETER      :: B2N7Mm    =  992
-   INTEGER(IntKi), PARAMETER      :: B2N8Mm    =  993
-   INTEGER(IntKi), PARAMETER      :: B2N9Mm    =  994
-   INTEGER(IntKi), PARAMETER      :: B3N1Mm    =  995
-   INTEGER(IntKi), PARAMETER      :: B3N2Mm    =  996
-   INTEGER(IntKi), PARAMETER      :: B3N3Mm    =  997
-   INTEGER(IntKi), PARAMETER      :: B3N4Mm    =  998
-   INTEGER(IntKi), PARAMETER      :: B3N5Mm    =  999
-   INTEGER(IntKi), PARAMETER      :: B3N6Mm    = 1000
-   INTEGER(IntKi), PARAMETER      :: B3N7Mm    = 1001
-   INTEGER(IntKi), PARAMETER      :: B3N8Mm    = 1002
-   INTEGER(IntKi), PARAMETER      :: B3N9Mm    = 1003
-   INTEGER(IntKi), PARAMETER      :: B1N1Fx    = 1004
-   INTEGER(IntKi), PARAMETER      :: B1N2Fx    = 1005
-   INTEGER(IntKi), PARAMETER      :: B1N3Fx    = 1006
-   INTEGER(IntKi), PARAMETER      :: B1N4Fx    = 1007
-   INTEGER(IntKi), PARAMETER      :: B1N5Fx    = 1008
-   INTEGER(IntKi), PARAMETER      :: B1N6Fx    = 1009
-   INTEGER(IntKi), PARAMETER      :: B1N7Fx    = 1010
-   INTEGER(IntKi), PARAMETER      :: B1N8Fx    = 1011
-   INTEGER(IntKi), PARAMETER      :: B1N9Fx    = 1012
-   INTEGER(IntKi), PARAMETER      :: B2N1Fx    = 1013
-   INTEGER(IntKi), PARAMETER      :: B2N2Fx    = 1014
-   INTEGER(IntKi), PARAMETER      :: B2N3Fx    = 1015
-   INTEGER(IntKi), PARAMETER      :: B2N4Fx    = 1016
-   INTEGER(IntKi), PARAMETER      :: B2N5Fx    = 1017
-   INTEGER(IntKi), PARAMETER      :: B2N6Fx    = 1018
-   INTEGER(IntKi), PARAMETER      :: B2N7Fx    = 1019
-   INTEGER(IntKi), PARAMETER      :: B2N8Fx    = 1020
-   INTEGER(IntKi), PARAMETER      :: B2N9Fx    = 1021
-   INTEGER(IntKi), PARAMETER      :: B3N1Fx    = 1022
-   INTEGER(IntKi), PARAMETER      :: B3N2Fx    = 1023
-   INTEGER(IntKi), PARAMETER      :: B3N3Fx    = 1024
-   INTEGER(IntKi), PARAMETER      :: B3N4Fx    = 1025
-   INTEGER(IntKi), PARAMETER      :: B3N5Fx    = 1026
-   INTEGER(IntKi), PARAMETER      :: B3N6Fx    = 1027
-   INTEGER(IntKi), PARAMETER      :: B3N7Fx    = 1028
-   INTEGER(IntKi), PARAMETER      :: B3N8Fx    = 1029
-   INTEGER(IntKi), PARAMETER      :: B3N9Fx    = 1030
-   INTEGER(IntKi), PARAMETER      :: B1N1Fy    = 1031
-   INTEGER(IntKi), PARAMETER      :: B1N2Fy    = 1032
-   INTEGER(IntKi), PARAMETER      :: B1N3Fy    = 1033
-   INTEGER(IntKi), PARAMETER      :: B1N4Fy    = 1034
-   INTEGER(IntKi), PARAMETER      :: B1N5Fy    = 1035
-   INTEGER(IntKi), PARAMETER      :: B1N6Fy    = 1036
-   INTEGER(IntKi), PARAMETER      :: B1N7Fy    = 1037
-   INTEGER(IntKi), PARAMETER      :: B1N8Fy    = 1038
-   INTEGER(IntKi), PARAMETER      :: B1N9Fy    = 1039
-   INTEGER(IntKi), PARAMETER      :: B2N1Fy    = 1040
-   INTEGER(IntKi), PARAMETER      :: B2N2Fy    = 1041
-   INTEGER(IntKi), PARAMETER      :: B2N3Fy    = 1042
-   INTEGER(IntKi), PARAMETER      :: B2N4Fy    = 1043
-   INTEGER(IntKi), PARAMETER      :: B2N5Fy    = 1044
-   INTEGER(IntKi), PARAMETER      :: B2N6Fy    = 1045
-   INTEGER(IntKi), PARAMETER      :: B2N7Fy    = 1046
-   INTEGER(IntKi), PARAMETER      :: B2N8Fy    = 1047
-   INTEGER(IntKi), PARAMETER      :: B2N9Fy    = 1048
-   INTEGER(IntKi), PARAMETER      :: B3N1Fy    = 1049
-   INTEGER(IntKi), PARAMETER      :: B3N2Fy    = 1050
-   INTEGER(IntKi), PARAMETER      :: B3N3Fy    = 1051
-   INTEGER(IntKi), PARAMETER      :: B3N4Fy    = 1052
-   INTEGER(IntKi), PARAMETER      :: B3N5Fy    = 1053
-   INTEGER(IntKi), PARAMETER      :: B3N6Fy    = 1054
-   INTEGER(IntKi), PARAMETER      :: B3N7Fy    = 1055
-   INTEGER(IntKi), PARAMETER      :: B3N8Fy    = 1056
-   INTEGER(IntKi), PARAMETER      :: B3N9Fy    = 1057
-   INTEGER(IntKi), PARAMETER      :: B1N1Fn    = 1058
-   INTEGER(IntKi), PARAMETER      :: B1N2Fn    = 1059
-   INTEGER(IntKi), PARAMETER      :: B1N3Fn    = 1060
-   INTEGER(IntKi), PARAMETER      :: B1N4Fn    = 1061
-   INTEGER(IntKi), PARAMETER      :: B1N5Fn    = 1062
-   INTEGER(IntKi), PARAMETER      :: B1N6Fn    = 1063
-   INTEGER(IntKi), PARAMETER      :: B1N7Fn    = 1064
-   INTEGER(IntKi), PARAMETER      :: B1N8Fn    = 1065
-   INTEGER(IntKi), PARAMETER      :: B1N9Fn    = 1066
-   INTEGER(IntKi), PARAMETER      :: B2N1Fn    = 1067
-   INTEGER(IntKi), PARAMETER      :: B2N2Fn    = 1068
-   INTEGER(IntKi), PARAMETER      :: B2N3Fn    = 1069
-   INTEGER(IntKi), PARAMETER      :: B2N4Fn    = 1070
-   INTEGER(IntKi), PARAMETER      :: B2N5Fn    = 1071
-   INTEGER(IntKi), PARAMETER      :: B2N6Fn    = 1072
-   INTEGER(IntKi), PARAMETER      :: B2N7Fn    = 1073
-   INTEGER(IntKi), PARAMETER      :: B2N8Fn    = 1074
-   INTEGER(IntKi), PARAMETER      :: B2N9Fn    = 1075
-   INTEGER(IntKi), PARAMETER      :: B3N1Fn    = 1076
-   INTEGER(IntKi), PARAMETER      :: B3N2Fn    = 1077
-   INTEGER(IntKi), PARAMETER      :: B3N3Fn    = 1078
-   INTEGER(IntKi), PARAMETER      :: B3N4Fn    = 1079
-   INTEGER(IntKi), PARAMETER      :: B3N5Fn    = 1080
-   INTEGER(IntKi), PARAMETER      :: B3N6Fn    = 1081
-   INTEGER(IntKi), PARAMETER      :: B3N7Fn    = 1082
-   INTEGER(IntKi), PARAMETER      :: B3N8Fn    = 1083
-   INTEGER(IntKi), PARAMETER      :: B3N9Fn    = 1084
-   INTEGER(IntKi), PARAMETER      :: B1N1Ft    = 1085
-   INTEGER(IntKi), PARAMETER      :: B1N2Ft    = 1086
-   INTEGER(IntKi), PARAMETER      :: B1N3Ft    = 1087
-   INTEGER(IntKi), PARAMETER      :: B1N4Ft    = 1088
-   INTEGER(IntKi), PARAMETER      :: B1N5Ft    = 1089
-   INTEGER(IntKi), PARAMETER      :: B1N6Ft    = 1090
-   INTEGER(IntKi), PARAMETER      :: B1N7Ft    = 1091
-   INTEGER(IntKi), PARAMETER      :: B1N8Ft    = 1092
-   INTEGER(IntKi), PARAMETER      :: B1N9Ft    = 1093
-   INTEGER(IntKi), PARAMETER      :: B2N1Ft    = 1094
-   INTEGER(IntKi), PARAMETER      :: B2N2Ft    = 1095
-   INTEGER(IntKi), PARAMETER      :: B2N3Ft    = 1096
-   INTEGER(IntKi), PARAMETER      :: B2N4Ft    = 1097
-   INTEGER(IntKi), PARAMETER      :: B2N5Ft    = 1098
-   INTEGER(IntKi), PARAMETER      :: B2N6Ft    = 1099
-   INTEGER(IntKi), PARAMETER      :: B2N7Ft    = 1100
-   INTEGER(IntKi), PARAMETER      :: B2N8Ft    = 1101
-   INTEGER(IntKi), PARAMETER      :: B2N9Ft    = 1102
-   INTEGER(IntKi), PARAMETER      :: B3N1Ft    = 1103
-   INTEGER(IntKi), PARAMETER      :: B3N2Ft    = 1104
-   INTEGER(IntKi), PARAMETER      :: B3N3Ft    = 1105
-   INTEGER(IntKi), PARAMETER      :: B3N4Ft    = 1106
-   INTEGER(IntKi), PARAMETER      :: B3N5Ft    = 1107
-   INTEGER(IntKi), PARAMETER      :: B3N6Ft    = 1108
-   INTEGER(IntKi), PARAMETER      :: B3N7Ft    = 1109
-   INTEGER(IntKi), PARAMETER      :: B3N8Ft    = 1110
-   INTEGER(IntKi), PARAMETER      :: B3N9Ft    = 1111
-   INTEGER(IntKi), PARAMETER      :: B1N1Clrnc = 1112
-   INTEGER(IntKi), PARAMETER      :: B1N2Clrnc = 1113
-   INTEGER(IntKi), PARAMETER      :: B1N3Clrnc = 1114
-   INTEGER(IntKi), PARAMETER      :: B1N4Clrnc = 1115
-   INTEGER(IntKi), PARAMETER      :: B1N5Clrnc = 1116
-   INTEGER(IntKi), PARAMETER      :: B1N6Clrnc = 1117
-   INTEGER(IntKi), PARAMETER      :: B1N7Clrnc = 1118
-   INTEGER(IntKi), PARAMETER      :: B1N8Clrnc = 1119
-   INTEGER(IntKi), PARAMETER      :: B1N9Clrnc = 1120
-   INTEGER(IntKi), PARAMETER      :: B2N1Clrnc = 1121
-   INTEGER(IntKi), PARAMETER      :: B2N2Clrnc = 1122
-   INTEGER(IntKi), PARAMETER      :: B2N3Clrnc = 1123
-   INTEGER(IntKi), PARAMETER      :: B2N4Clrnc = 1124
-   INTEGER(IntKi), PARAMETER      :: B2N5Clrnc = 1125
-   INTEGER(IntKi), PARAMETER      :: B2N6Clrnc = 1126
-   INTEGER(IntKi), PARAMETER      :: B2N7Clrnc = 1127
-   INTEGER(IntKi), PARAMETER      :: B2N8Clrnc = 1128
-   INTEGER(IntKi), PARAMETER      :: B2N9Clrnc = 1129
-   INTEGER(IntKi), PARAMETER      :: B3N1Clrnc = 1130
-   INTEGER(IntKi), PARAMETER      :: B3N2Clrnc = 1131
-   INTEGER(IntKi), PARAMETER      :: B3N3Clrnc = 1132
-   INTEGER(IntKi), PARAMETER      :: B3N4Clrnc = 1133
-   INTEGER(IntKi), PARAMETER      :: B3N5Clrnc = 1134
-   INTEGER(IntKi), PARAMETER      :: B3N6Clrnc = 1135
-   INTEGER(IntKi), PARAMETER      :: B3N7Clrnc = 1136
-   INTEGER(IntKi), PARAMETER      :: B3N8Clrnc = 1137
-   INTEGER(IntKi), PARAMETER      :: B3N9Clrnc = 1138
-   INTEGER(IntKi), PARAMETER      :: B1N1Cpmin = 1139
-   INTEGER(IntKi), PARAMETER      :: B1N2Cpmin = 1140
-   INTEGER(IntKi), PARAMETER      :: B1N3Cpmin = 1141
-   INTEGER(IntKi), PARAMETER      :: B1N4Cpmin = 1142
-   INTEGER(IntKi), PARAMETER      :: B1N5Cpmin = 1143
-   INTEGER(IntKi), PARAMETER      :: B1N6Cpmin = 1144
-   INTEGER(IntKi), PARAMETER      :: B1N7Cpmin = 1145
-   INTEGER(IntKi), PARAMETER      :: B1N8Cpmin = 1146
-   INTEGER(IntKi), PARAMETER      :: B1N9Cpmin = 1147
-   INTEGER(IntKi), PARAMETER      :: B2N1Cpmin = 1148
-   INTEGER(IntKi), PARAMETER      :: B2N2Cpmin = 1149
-   INTEGER(IntKi), PARAMETER      :: B2N3Cpmin = 1150
-   INTEGER(IntKi), PARAMETER      :: B2N4Cpmin = 1151
-   INTEGER(IntKi), PARAMETER      :: B2N5Cpmin = 1152
-   INTEGER(IntKi), PARAMETER      :: B2N6Cpmin = 1153
-   INTEGER(IntKi), PARAMETER      :: B2N7Cpmin = 1154
-   INTEGER(IntKi), PARAMETER      :: B2N8Cpmin = 1155
-   INTEGER(IntKi), PARAMETER      :: B2N9Cpmin = 1156
-   INTEGER(IntKi), PARAMETER      :: B3N1Cpmin = 1157
-   INTEGER(IntKi), PARAMETER      :: B3N2Cpmin = 1158
-   INTEGER(IntKi), PARAMETER      :: B3N3Cpmin = 1159
-   INTEGER(IntKi), PARAMETER      :: B3N4Cpmin = 1160
-   INTEGER(IntKi), PARAMETER      :: B3N5Cpmin = 1161
-   INTEGER(IntKi), PARAMETER      :: B3N6Cpmin = 1162
-   INTEGER(IntKi), PARAMETER      :: B3N7Cpmin = 1163
-   INTEGER(IntKi), PARAMETER      :: B3N8Cpmin = 1164
-   INTEGER(IntKi), PARAMETER      :: B3N9Cpmin = 1165
-   INTEGER(IntKi), PARAMETER      :: B1N1SigCr = 1166
-   INTEGER(IntKi), PARAMETER      :: B1N2SigCr = 1167
-   INTEGER(IntKi), PARAMETER      :: B1N3SigCr = 1168
-   INTEGER(IntKi), PARAMETER      :: B1N4SigCr = 1169
-   INTEGER(IntKi), PARAMETER      :: B1N5SigCr = 1170
-   INTEGER(IntKi), PARAMETER      :: B1N6SigCr = 1171
-   INTEGER(IntKi), PARAMETER      :: B1N7SigCr = 1172
-   INTEGER(IntKi), PARAMETER      :: B1N8SigCr = 1173
-   INTEGER(IntKi), PARAMETER      :: B1N9SigCr = 1174
-   INTEGER(IntKi), PARAMETER      :: B2N1SigCr = 1175
-   INTEGER(IntKi), PARAMETER      :: B2N2SigCr = 1176
-   INTEGER(IntKi), PARAMETER      :: B2N3SigCr = 1177
-   INTEGER(IntKi), PARAMETER      :: B2N4SigCr = 1178
-   INTEGER(IntKi), PARAMETER      :: B2N5SigCr = 1179
-   INTEGER(IntKi), PARAMETER      :: B2N6SigCr = 1180
-   INTEGER(IntKi), PARAMETER      :: B2N7SigCr = 1181
-   INTEGER(IntKi), PARAMETER      :: B2N8SigCr = 1182
-   INTEGER(IntKi), PARAMETER      :: B2N9SigCr = 1183
-   INTEGER(IntKi), PARAMETER      :: B3N1SigCr = 1184
-   INTEGER(IntKi), PARAMETER      :: B3N2SigCr = 1185
-   INTEGER(IntKi), PARAMETER      :: B3N3SigCr = 1186
-   INTEGER(IntKi), PARAMETER      :: B3N4SigCr = 1187
-   INTEGER(IntKi), PARAMETER      :: B3N5SigCr = 1188
-   INTEGER(IntKi), PARAMETER      :: B3N6SigCr = 1189
-   INTEGER(IntKi), PARAMETER      :: B3N7SigCr = 1190
-   INTEGER(IntKi), PARAMETER      :: B3N8SigCr = 1191
-   INTEGER(IntKi), PARAMETER      :: B3N9SigCr = 1192
-   INTEGER(IntKi), PARAMETER      :: B1N1SgCav = 1193
-   INTEGER(IntKi), PARAMETER      :: B1N2SgCav = 1194
-   INTEGER(IntKi), PARAMETER      :: B1N3SgCav = 1195
-   INTEGER(IntKi), PARAMETER      :: B1N4SgCav = 1196
-   INTEGER(IntKi), PARAMETER      :: B1N5SgCav = 1197
-   INTEGER(IntKi), PARAMETER      :: B1N6SgCav = 1198
-   INTEGER(IntKi), PARAMETER      :: B1N7SgCav = 1199
-   INTEGER(IntKi), PARAMETER      :: B1N8SgCav = 1200
-   INTEGER(IntKi), PARAMETER      :: B1N9SgCav = 1201
-   INTEGER(IntKi), PARAMETER      :: B2N1SgCav = 1202
-   INTEGER(IntKi), PARAMETER      :: B2N2SgCav = 1203
-   INTEGER(IntKi), PARAMETER      :: B2N3SgCav = 1204
-   INTEGER(IntKi), PARAMETER      :: B2N4SgCav = 1205
-   INTEGER(IntKi), PARAMETER      :: B2N5SgCav = 1206
-   INTEGER(IntKi), PARAMETER      :: B2N6SgCav = 1207
-   INTEGER(IntKi), PARAMETER      :: B2N7SgCav = 1208
-   INTEGER(IntKi), PARAMETER      :: B2N8SgCav = 1209
-   INTEGER(IntKi), PARAMETER      :: B2N9SgCav = 1210
-   INTEGER(IntKi), PARAMETER      :: B3N1SgCav = 1211
-   INTEGER(IntKi), PARAMETER      :: B3N2SgCav = 1212
-   INTEGER(IntKi), PARAMETER      :: B3N3SgCav = 1213
-   INTEGER(IntKi), PARAMETER      :: B3N4SgCav = 1214
-   INTEGER(IntKi), PARAMETER      :: B3N5SgCav = 1215
-   INTEGER(IntKi), PARAMETER      :: B3N6SgCav = 1216
-   INTEGER(IntKi), PARAMETER      :: B3N7SgCav = 1217
-   INTEGER(IntKi), PARAMETER      :: B3N8SgCav = 1218
-   INTEGER(IntKi), PARAMETER      :: B3N9SgCav = 1219
-   INTEGER(IntKi), PARAMETER      :: B1N1Gam   = 1220
-   INTEGER(IntKi), PARAMETER      :: B1N2Gam   = 1221
-   INTEGER(IntKi), PARAMETER      :: B1N3Gam   = 1222
-   INTEGER(IntKi), PARAMETER      :: B1N4Gam   = 1223
-   INTEGER(IntKi), PARAMETER      :: B1N5Gam   = 1224
-   INTEGER(IntKi), PARAMETER      :: B1N6Gam   = 1225
-   INTEGER(IntKi), PARAMETER      :: B1N7Gam   = 1226
-   INTEGER(IntKi), PARAMETER      :: B1N8Gam   = 1227
-   INTEGER(IntKi), PARAMETER      :: B1N9Gam   = 1228
-   INTEGER(IntKi), PARAMETER      :: B2N1Gam   = 1229
-   INTEGER(IntKi), PARAMETER      :: B2N2Gam   = 1230
-   INTEGER(IntKi), PARAMETER      :: B2N3Gam   = 1231
-   INTEGER(IntKi), PARAMETER      :: B2N4Gam   = 1232
-   INTEGER(IntKi), PARAMETER      :: B2N5Gam   = 1233
-   INTEGER(IntKi), PARAMETER      :: B2N6Gam   = 1234
-   INTEGER(IntKi), PARAMETER      :: B2N7Gam   = 1235
-   INTEGER(IntKi), PARAMETER      :: B2N8Gam   = 1236
-   INTEGER(IntKi), PARAMETER      :: B2N9Gam   = 1237
-   INTEGER(IntKi), PARAMETER      :: B3N1Gam   = 1238
-   INTEGER(IntKi), PARAMETER      :: B3N2Gam   = 1239
-   INTEGER(IntKi), PARAMETER      :: B3N3Gam   = 1240
-   INTEGER(IntKi), PARAMETER      :: B3N4Gam   = 1241
-   INTEGER(IntKi), PARAMETER      :: B3N5Gam   = 1242
-   INTEGER(IntKi), PARAMETER      :: B3N6Gam   = 1243
-   INTEGER(IntKi), PARAMETER      :: B3N7Gam   = 1244
-   INTEGER(IntKi), PARAMETER      :: B3N8Gam   = 1245
-   INTEGER(IntKi), PARAMETER      :: B3N9Gam   = 1246
+   INTEGER(IntKi), PARAMETER      :: B1N1VUndx =  221
+   INTEGER(IntKi), PARAMETER      :: B1N2VUndx =  222
+   INTEGER(IntKi), PARAMETER      :: B1N3VUndx =  223
+   INTEGER(IntKi), PARAMETER      :: B1N4VUndx =  224
+   INTEGER(IntKi), PARAMETER      :: B1N5VUndx =  225
+   INTEGER(IntKi), PARAMETER      :: B1N6VUndx =  226
+   INTEGER(IntKi), PARAMETER      :: B1N7VUndx =  227
+   INTEGER(IntKi), PARAMETER      :: B1N8VUndx =  228
+   INTEGER(IntKi), PARAMETER      :: B1N9VUndx =  229
+   INTEGER(IntKi), PARAMETER      :: B1N1VUndy =  230
+   INTEGER(IntKi), PARAMETER      :: B1N2VUndy =  231
+   INTEGER(IntKi), PARAMETER      :: B1N3VUndy =  232
+   INTEGER(IntKi), PARAMETER      :: B1N4VUndy =  233
+   INTEGER(IntKi), PARAMETER      :: B1N5VUndy =  234
+   INTEGER(IntKi), PARAMETER      :: B1N6VUndy =  235
+   INTEGER(IntKi), PARAMETER      :: B1N7VUndy =  236
+   INTEGER(IntKi), PARAMETER      :: B1N8VUndy =  237
+   INTEGER(IntKi), PARAMETER      :: B1N9VUndy =  238
+   INTEGER(IntKi), PARAMETER      :: B1N1VUndz =  239
+   INTEGER(IntKi), PARAMETER      :: B1N2VUndz =  240
+   INTEGER(IntKi), PARAMETER      :: B1N3VUndz =  241
+   INTEGER(IntKi), PARAMETER      :: B1N4VUndz =  242
+   INTEGER(IntKi), PARAMETER      :: B1N5VUndz =  243
+   INTEGER(IntKi), PARAMETER      :: B1N6VUndz =  244
+   INTEGER(IntKi), PARAMETER      :: B1N7VUndz =  245
+   INTEGER(IntKi), PARAMETER      :: B1N8VUndz =  246
+   INTEGER(IntKi), PARAMETER      :: B1N9VUndz =  247
+   INTEGER(IntKi), PARAMETER      :: B2N1VUndx =  248
+   INTEGER(IntKi), PARAMETER      :: B2N2VUndx =  249
+   INTEGER(IntKi), PARAMETER      :: B2N3VUndx =  250
+   INTEGER(IntKi), PARAMETER      :: B2N4VUndx =  251
+   INTEGER(IntKi), PARAMETER      :: B2N5VUndx =  252
+   INTEGER(IntKi), PARAMETER      :: B2N6VUndx =  253
+   INTEGER(IntKi), PARAMETER      :: B2N7VUndx =  254
+   INTEGER(IntKi), PARAMETER      :: B2N8VUndx =  255
+   INTEGER(IntKi), PARAMETER      :: B2N9VUndx =  256
+   INTEGER(IntKi), PARAMETER      :: B2N1VUndy =  257
+   INTEGER(IntKi), PARAMETER      :: B2N2VUndy =  258
+   INTEGER(IntKi), PARAMETER      :: B2N3VUndy =  259
+   INTEGER(IntKi), PARAMETER      :: B2N4VUndy =  260
+   INTEGER(IntKi), PARAMETER      :: B2N5VUndy =  261
+   INTEGER(IntKi), PARAMETER      :: B2N6VUndy =  262
+   INTEGER(IntKi), PARAMETER      :: B2N7VUndy =  263
+   INTEGER(IntKi), PARAMETER      :: B2N8VUndy =  264
+   INTEGER(IntKi), PARAMETER      :: B2N9VUndy =  265
+   INTEGER(IntKi), PARAMETER      :: B2N1VUndz =  266
+   INTEGER(IntKi), PARAMETER      :: B2N2VUndz =  267
+   INTEGER(IntKi), PARAMETER      :: B2N3VUndz =  268
+   INTEGER(IntKi), PARAMETER      :: B2N4VUndz =  269
+   INTEGER(IntKi), PARAMETER      :: B2N5VUndz =  270
+   INTEGER(IntKi), PARAMETER      :: B2N6VUndz =  271
+   INTEGER(IntKi), PARAMETER      :: B2N7VUndz =  272
+   INTEGER(IntKi), PARAMETER      :: B2N8VUndz =  273
+   INTEGER(IntKi), PARAMETER      :: B2N9VUndz =  274
+   INTEGER(IntKi), PARAMETER      :: B3N1VUndx =  275
+   INTEGER(IntKi), PARAMETER      :: B3N2VUndx =  276
+   INTEGER(IntKi), PARAMETER      :: B3N3VUndx =  277
+   INTEGER(IntKi), PARAMETER      :: B3N4VUndx =  278
+   INTEGER(IntKi), PARAMETER      :: B3N5VUndx =  279
+   INTEGER(IntKi), PARAMETER      :: B3N6VUndx =  280
+   INTEGER(IntKi), PARAMETER      :: B3N7VUndx =  281
+   INTEGER(IntKi), PARAMETER      :: B3N8VUndx =  282
+   INTEGER(IntKi), PARAMETER      :: B3N9VUndx =  283
+   INTEGER(IntKi), PARAMETER      :: B3N1VUndy =  284
+   INTEGER(IntKi), PARAMETER      :: B3N2VUndy =  285
+   INTEGER(IntKi), PARAMETER      :: B3N3VUndy =  286
+   INTEGER(IntKi), PARAMETER      :: B3N4VUndy =  287
+   INTEGER(IntKi), PARAMETER      :: B3N5VUndy =  288
+   INTEGER(IntKi), PARAMETER      :: B3N6VUndy =  289
+   INTEGER(IntKi), PARAMETER      :: B3N7VUndy =  290
+   INTEGER(IntKi), PARAMETER      :: B3N8VUndy =  291
+   INTEGER(IntKi), PARAMETER      :: B3N9VUndy =  292
+   INTEGER(IntKi), PARAMETER      :: B3N1VUndz =  293
+   INTEGER(IntKi), PARAMETER      :: B3N2VUndz =  294
+   INTEGER(IntKi), PARAMETER      :: B3N3VUndz =  295
+   INTEGER(IntKi), PARAMETER      :: B3N4VUndz =  296
+   INTEGER(IntKi), PARAMETER      :: B3N5VUndz =  297
+   INTEGER(IntKi), PARAMETER      :: B3N6VUndz =  298
+   INTEGER(IntKi), PARAMETER      :: B3N7VUndz =  299
+   INTEGER(IntKi), PARAMETER      :: B3N8VUndz =  300
+   INTEGER(IntKi), PARAMETER      :: B3N9VUndz =  301
+   INTEGER(IntKi), PARAMETER      :: B1N1VDisx =  302
+   INTEGER(IntKi), PARAMETER      :: B1N2VDisx =  303
+   INTEGER(IntKi), PARAMETER      :: B1N3VDisx =  304
+   INTEGER(IntKi), PARAMETER      :: B1N4VDisx =  305
+   INTEGER(IntKi), PARAMETER      :: B1N5VDisx =  306
+   INTEGER(IntKi), PARAMETER      :: B1N6VDisx =  307
+   INTEGER(IntKi), PARAMETER      :: B1N7VDisx =  308
+   INTEGER(IntKi), PARAMETER      :: B1N8VDisx =  309
+   INTEGER(IntKi), PARAMETER      :: B1N9VDisx =  310
+   INTEGER(IntKi), PARAMETER      :: B1N1VDisy =  311
+   INTEGER(IntKi), PARAMETER      :: B1N2VDisy =  312
+   INTEGER(IntKi), PARAMETER      :: B1N3VDisy =  313
+   INTEGER(IntKi), PARAMETER      :: B1N4VDisy =  314
+   INTEGER(IntKi), PARAMETER      :: B1N5VDisy =  315
+   INTEGER(IntKi), PARAMETER      :: B1N6VDisy =  316
+   INTEGER(IntKi), PARAMETER      :: B1N7VDisy =  317
+   INTEGER(IntKi), PARAMETER      :: B1N8VDisy =  318
+   INTEGER(IntKi), PARAMETER      :: B1N9VDisy =  319
+   INTEGER(IntKi), PARAMETER      :: B1N1VDisz =  320
+   INTEGER(IntKi), PARAMETER      :: B1N2VDisz =  321
+   INTEGER(IntKi), PARAMETER      :: B1N3VDisz =  322
+   INTEGER(IntKi), PARAMETER      :: B1N4VDisz =  323
+   INTEGER(IntKi), PARAMETER      :: B1N5VDisz =  324
+   INTEGER(IntKi), PARAMETER      :: B1N6VDisz =  325
+   INTEGER(IntKi), PARAMETER      :: B1N7VDisz =  326
+   INTEGER(IntKi), PARAMETER      :: B1N8VDisz =  327
+   INTEGER(IntKi), PARAMETER      :: B1N9VDisz =  328
+   INTEGER(IntKi), PARAMETER      :: B2N1VDisx =  329
+   INTEGER(IntKi), PARAMETER      :: B2N2VDisx =  330
+   INTEGER(IntKi), PARAMETER      :: B2N3VDisx =  331
+   INTEGER(IntKi), PARAMETER      :: B2N4VDisx =  332
+   INTEGER(IntKi), PARAMETER      :: B2N5VDisx =  333
+   INTEGER(IntKi), PARAMETER      :: B2N6VDisx =  334
+   INTEGER(IntKi), PARAMETER      :: B2N7VDisx =  335
+   INTEGER(IntKi), PARAMETER      :: B2N8VDisx =  336
+   INTEGER(IntKi), PARAMETER      :: B2N9VDisx =  337
+   INTEGER(IntKi), PARAMETER      :: B2N1VDisy =  338
+   INTEGER(IntKi), PARAMETER      :: B2N2VDisy =  339
+   INTEGER(IntKi), PARAMETER      :: B2N3VDisy =  340
+   INTEGER(IntKi), PARAMETER      :: B2N4VDisy =  341
+   INTEGER(IntKi), PARAMETER      :: B2N5VDisy =  342
+   INTEGER(IntKi), PARAMETER      :: B2N6VDisy =  343
+   INTEGER(IntKi), PARAMETER      :: B2N7VDisy =  344
+   INTEGER(IntKi), PARAMETER      :: B2N8VDisy =  345
+   INTEGER(IntKi), PARAMETER      :: B2N9VDisy =  346
+   INTEGER(IntKi), PARAMETER      :: B2N1VDisz =  347
+   INTEGER(IntKi), PARAMETER      :: B2N2VDisz =  348
+   INTEGER(IntKi), PARAMETER      :: B2N3VDisz =  349
+   INTEGER(IntKi), PARAMETER      :: B2N4VDisz =  350
+   INTEGER(IntKi), PARAMETER      :: B2N5VDisz =  351
+   INTEGER(IntKi), PARAMETER      :: B2N6VDisz =  352
+   INTEGER(IntKi), PARAMETER      :: B2N7VDisz =  353
+   INTEGER(IntKi), PARAMETER      :: B2N8VDisz =  354
+   INTEGER(IntKi), PARAMETER      :: B2N9VDisz =  355
+   INTEGER(IntKi), PARAMETER      :: B3N1VDisx =  356
+   INTEGER(IntKi), PARAMETER      :: B3N2VDisx =  357
+   INTEGER(IntKi), PARAMETER      :: B3N3VDisx =  358
+   INTEGER(IntKi), PARAMETER      :: B3N4VDisx =  359
+   INTEGER(IntKi), PARAMETER      :: B3N5VDisx =  360
+   INTEGER(IntKi), PARAMETER      :: B3N6VDisx =  361
+   INTEGER(IntKi), PARAMETER      :: B3N7VDisx =  362
+   INTEGER(IntKi), PARAMETER      :: B3N8VDisx =  363
+   INTEGER(IntKi), PARAMETER      :: B3N9VDisx =  364
+   INTEGER(IntKi), PARAMETER      :: B3N1VDisy =  365
+   INTEGER(IntKi), PARAMETER      :: B3N2VDisy =  366
+   INTEGER(IntKi), PARAMETER      :: B3N3VDisy =  367
+   INTEGER(IntKi), PARAMETER      :: B3N4VDisy =  368
+   INTEGER(IntKi), PARAMETER      :: B3N5VDisy =  369
+   INTEGER(IntKi), PARAMETER      :: B3N6VDisy =  370
+   INTEGER(IntKi), PARAMETER      :: B3N7VDisy =  371
+   INTEGER(IntKi), PARAMETER      :: B3N8VDisy =  372
+   INTEGER(IntKi), PARAMETER      :: B3N9VDisy =  373
+   INTEGER(IntKi), PARAMETER      :: B3N1VDisz =  374
+   INTEGER(IntKi), PARAMETER      :: B3N2VDisz =  375
+   INTEGER(IntKi), PARAMETER      :: B3N3VDisz =  376
+   INTEGER(IntKi), PARAMETER      :: B3N4VDisz =  377
+   INTEGER(IntKi), PARAMETER      :: B3N5VDisz =  378
+   INTEGER(IntKi), PARAMETER      :: B3N6VDisz =  379
+   INTEGER(IntKi), PARAMETER      :: B3N7VDisz =  380
+   INTEGER(IntKi), PARAMETER      :: B3N8VDisz =  381
+   INTEGER(IntKi), PARAMETER      :: B3N9VDisz =  382
+   INTEGER(IntKi), PARAMETER      :: B1N1STVx  =  383
+   INTEGER(IntKi), PARAMETER      :: B1N2STVx  =  384
+   INTEGER(IntKi), PARAMETER      :: B1N3STVx  =  385
+   INTEGER(IntKi), PARAMETER      :: B1N4STVx  =  386
+   INTEGER(IntKi), PARAMETER      :: B1N5STVx  =  387
+   INTEGER(IntKi), PARAMETER      :: B1N6STVx  =  388
+   INTEGER(IntKi), PARAMETER      :: B1N7STVx  =  389
+   INTEGER(IntKi), PARAMETER      :: B1N8STVx  =  390
+   INTEGER(IntKi), PARAMETER      :: B1N9STVx  =  391
+   INTEGER(IntKi), PARAMETER      :: B1N1STVy  =  392
+   INTEGER(IntKi), PARAMETER      :: B1N2STVy  =  393
+   INTEGER(IntKi), PARAMETER      :: B1N3STVy  =  394
+   INTEGER(IntKi), PARAMETER      :: B1N4STVy  =  395
+   INTEGER(IntKi), PARAMETER      :: B1N5STVy  =  396
+   INTEGER(IntKi), PARAMETER      :: B1N6STVy  =  397
+   INTEGER(IntKi), PARAMETER      :: B1N7STVy  =  398
+   INTEGER(IntKi), PARAMETER      :: B1N8STVy  =  399
+   INTEGER(IntKi), PARAMETER      :: B1N9STVy  =  400
+   INTEGER(IntKi), PARAMETER      :: B1N1STVz  =  401
+   INTEGER(IntKi), PARAMETER      :: B1N2STVz  =  402
+   INTEGER(IntKi), PARAMETER      :: B1N3STVz  =  403
+   INTEGER(IntKi), PARAMETER      :: B1N4STVz  =  404
+   INTEGER(IntKi), PARAMETER      :: B1N5STVz  =  405
+   INTEGER(IntKi), PARAMETER      :: B1N6STVz  =  406
+   INTEGER(IntKi), PARAMETER      :: B1N7STVz  =  407
+   INTEGER(IntKi), PARAMETER      :: B1N8STVz  =  408
+   INTEGER(IntKi), PARAMETER      :: B1N9STVz  =  409
+   INTEGER(IntKi), PARAMETER      :: B2N1STVx  =  410
+   INTEGER(IntKi), PARAMETER      :: B2N2STVx  =  411
+   INTEGER(IntKi), PARAMETER      :: B2N3STVx  =  412
+   INTEGER(IntKi), PARAMETER      :: B2N4STVx  =  413
+   INTEGER(IntKi), PARAMETER      :: B2N5STVx  =  414
+   INTEGER(IntKi), PARAMETER      :: B2N6STVx  =  415
+   INTEGER(IntKi), PARAMETER      :: B2N7STVx  =  416
+   INTEGER(IntKi), PARAMETER      :: B2N8STVx  =  417
+   INTEGER(IntKi), PARAMETER      :: B2N9STVx  =  418
+   INTEGER(IntKi), PARAMETER      :: B2N1STVy  =  419
+   INTEGER(IntKi), PARAMETER      :: B2N2STVy  =  420
+   INTEGER(IntKi), PARAMETER      :: B2N3STVy  =  421
+   INTEGER(IntKi), PARAMETER      :: B2N4STVy  =  422
+   INTEGER(IntKi), PARAMETER      :: B2N5STVy  =  423
+   INTEGER(IntKi), PARAMETER      :: B2N6STVy  =  424
+   INTEGER(IntKi), PARAMETER      :: B2N7STVy  =  425
+   INTEGER(IntKi), PARAMETER      :: B2N8STVy  =  426
+   INTEGER(IntKi), PARAMETER      :: B2N9STVy  =  427
+   INTEGER(IntKi), PARAMETER      :: B2N1STVz  =  428
+   INTEGER(IntKi), PARAMETER      :: B2N2STVz  =  429
+   INTEGER(IntKi), PARAMETER      :: B2N3STVz  =  430
+   INTEGER(IntKi), PARAMETER      :: B2N4STVz  =  431
+   INTEGER(IntKi), PARAMETER      :: B2N5STVz  =  432
+   INTEGER(IntKi), PARAMETER      :: B2N6STVz  =  433
+   INTEGER(IntKi), PARAMETER      :: B2N7STVz  =  434
+   INTEGER(IntKi), PARAMETER      :: B2N8STVz  =  435
+   INTEGER(IntKi), PARAMETER      :: B2N9STVz  =  436
+   INTEGER(IntKi), PARAMETER      :: B3N1STVx  =  437
+   INTEGER(IntKi), PARAMETER      :: B3N2STVx  =  438
+   INTEGER(IntKi), PARAMETER      :: B3N3STVx  =  439
+   INTEGER(IntKi), PARAMETER      :: B3N4STVx  =  440
+   INTEGER(IntKi), PARAMETER      :: B3N5STVx  =  441
+   INTEGER(IntKi), PARAMETER      :: B3N6STVx  =  442
+   INTEGER(IntKi), PARAMETER      :: B3N7STVx  =  443
+   INTEGER(IntKi), PARAMETER      :: B3N8STVx  =  444
+   INTEGER(IntKi), PARAMETER      :: B3N9STVx  =  445
+   INTEGER(IntKi), PARAMETER      :: B3N1STVy  =  446
+   INTEGER(IntKi), PARAMETER      :: B3N2STVy  =  447
+   INTEGER(IntKi), PARAMETER      :: B3N3STVy  =  448
+   INTEGER(IntKi), PARAMETER      :: B3N4STVy  =  449
+   INTEGER(IntKi), PARAMETER      :: B3N5STVy  =  450
+   INTEGER(IntKi), PARAMETER      :: B3N6STVy  =  451
+   INTEGER(IntKi), PARAMETER      :: B3N7STVy  =  452
+   INTEGER(IntKi), PARAMETER      :: B3N8STVy  =  453
+   INTEGER(IntKi), PARAMETER      :: B3N9STVy  =  454
+   INTEGER(IntKi), PARAMETER      :: B3N1STVz  =  455
+   INTEGER(IntKi), PARAMETER      :: B3N2STVz  =  456
+   INTEGER(IntKi), PARAMETER      :: B3N3STVz  =  457
+   INTEGER(IntKi), PARAMETER      :: B3N4STVz  =  458
+   INTEGER(IntKi), PARAMETER      :: B3N5STVz  =  459
+   INTEGER(IntKi), PARAMETER      :: B3N6STVz  =  460
+   INTEGER(IntKi), PARAMETER      :: B3N7STVz  =  461
+   INTEGER(IntKi), PARAMETER      :: B3N8STVz  =  462
+   INTEGER(IntKi), PARAMETER      :: B3N9STVz  =  463
+   INTEGER(IntKi), PARAMETER      :: B1N1VRel  =  464
+   INTEGER(IntKi), PARAMETER      :: B1N2VRel  =  465
+   INTEGER(IntKi), PARAMETER      :: B1N3VRel  =  466
+   INTEGER(IntKi), PARAMETER      :: B1N4VRel  =  467
+   INTEGER(IntKi), PARAMETER      :: B1N5VRel  =  468
+   INTEGER(IntKi), PARAMETER      :: B1N6VRel  =  469
+   INTEGER(IntKi), PARAMETER      :: B1N7VRel  =  470
+   INTEGER(IntKi), PARAMETER      :: B1N8VRel  =  471
+   INTEGER(IntKi), PARAMETER      :: B1N9VRel  =  472
+   INTEGER(IntKi), PARAMETER      :: B2N1VRel  =  473
+   INTEGER(IntKi), PARAMETER      :: B2N2VRel  =  474
+   INTEGER(IntKi), PARAMETER      :: B2N3VRel  =  475
+   INTEGER(IntKi), PARAMETER      :: B2N4VRel  =  476
+   INTEGER(IntKi), PARAMETER      :: B2N5VRel  =  477
+   INTEGER(IntKi), PARAMETER      :: B2N6VRel  =  478
+   INTEGER(IntKi), PARAMETER      :: B2N7VRel  =  479
+   INTEGER(IntKi), PARAMETER      :: B2N8VRel  =  480
+   INTEGER(IntKi), PARAMETER      :: B2N9VRel  =  481
+   INTEGER(IntKi), PARAMETER      :: B3N1VRel  =  482
+   INTEGER(IntKi), PARAMETER      :: B3N2VRel  =  483
+   INTEGER(IntKi), PARAMETER      :: B3N3VRel  =  484
+   INTEGER(IntKi), PARAMETER      :: B3N4VRel  =  485
+   INTEGER(IntKi), PARAMETER      :: B3N5VRel  =  486
+   INTEGER(IntKi), PARAMETER      :: B3N6VRel  =  487
+   INTEGER(IntKi), PARAMETER      :: B3N7VRel  =  488
+   INTEGER(IntKi), PARAMETER      :: B3N8VRel  =  489
+   INTEGER(IntKi), PARAMETER      :: B3N9VRel  =  490
+   INTEGER(IntKi), PARAMETER      :: B1N1DynP  =  491
+   INTEGER(IntKi), PARAMETER      :: B1N2DynP  =  492
+   INTEGER(IntKi), PARAMETER      :: B1N3DynP  =  493
+   INTEGER(IntKi), PARAMETER      :: B1N4DynP  =  494
+   INTEGER(IntKi), PARAMETER      :: B1N5DynP  =  495
+   INTEGER(IntKi), PARAMETER      :: B1N6DynP  =  496
+   INTEGER(IntKi), PARAMETER      :: B1N7DynP  =  497
+   INTEGER(IntKi), PARAMETER      :: B1N8DynP  =  498
+   INTEGER(IntKi), PARAMETER      :: B1N9DynP  =  499
+   INTEGER(IntKi), PARAMETER      :: B2N1DynP  =  500
+   INTEGER(IntKi), PARAMETER      :: B2N2DynP  =  501
+   INTEGER(IntKi), PARAMETER      :: B2N3DynP  =  502
+   INTEGER(IntKi), PARAMETER      :: B2N4DynP  =  503
+   INTEGER(IntKi), PARAMETER      :: B2N5DynP  =  504
+   INTEGER(IntKi), PARAMETER      :: B2N6DynP  =  505
+   INTEGER(IntKi), PARAMETER      :: B2N7DynP  =  506
+   INTEGER(IntKi), PARAMETER      :: B2N8DynP  =  507
+   INTEGER(IntKi), PARAMETER      :: B2N9DynP  =  508
+   INTEGER(IntKi), PARAMETER      :: B3N1DynP  =  509
+   INTEGER(IntKi), PARAMETER      :: B3N2DynP  =  510
+   INTEGER(IntKi), PARAMETER      :: B3N3DynP  =  511
+   INTEGER(IntKi), PARAMETER      :: B3N4DynP  =  512
+   INTEGER(IntKi), PARAMETER      :: B3N5DynP  =  513
+   INTEGER(IntKi), PARAMETER      :: B3N6DynP  =  514
+   INTEGER(IntKi), PARAMETER      :: B3N7DynP  =  515
+   INTEGER(IntKi), PARAMETER      :: B3N8DynP  =  516
+   INTEGER(IntKi), PARAMETER      :: B3N9DynP  =  517
+   INTEGER(IntKi), PARAMETER      :: B1N1Re    =  518
+   INTEGER(IntKi), PARAMETER      :: B1N2Re    =  519
+   INTEGER(IntKi), PARAMETER      :: B1N3Re    =  520
+   INTEGER(IntKi), PARAMETER      :: B1N4Re    =  521
+   INTEGER(IntKi), PARAMETER      :: B1N5Re    =  522
+   INTEGER(IntKi), PARAMETER      :: B1N6Re    =  523
+   INTEGER(IntKi), PARAMETER      :: B1N7Re    =  524
+   INTEGER(IntKi), PARAMETER      :: B1N8Re    =  525
+   INTEGER(IntKi), PARAMETER      :: B1N9Re    =  526
+   INTEGER(IntKi), PARAMETER      :: B2N1Re    =  527
+   INTEGER(IntKi), PARAMETER      :: B2N2Re    =  528
+   INTEGER(IntKi), PARAMETER      :: B2N3Re    =  529
+   INTEGER(IntKi), PARAMETER      :: B2N4Re    =  530
+   INTEGER(IntKi), PARAMETER      :: B2N5Re    =  531
+   INTEGER(IntKi), PARAMETER      :: B2N6Re    =  532
+   INTEGER(IntKi), PARAMETER      :: B2N7Re    =  533
+   INTEGER(IntKi), PARAMETER      :: B2N8Re    =  534
+   INTEGER(IntKi), PARAMETER      :: B2N9Re    =  535
+   INTEGER(IntKi), PARAMETER      :: B3N1Re    =  536
+   INTEGER(IntKi), PARAMETER      :: B3N2Re    =  537
+   INTEGER(IntKi), PARAMETER      :: B3N3Re    =  538
+   INTEGER(IntKi), PARAMETER      :: B3N4Re    =  539
+   INTEGER(IntKi), PARAMETER      :: B3N5Re    =  540
+   INTEGER(IntKi), PARAMETER      :: B3N6Re    =  541
+   INTEGER(IntKi), PARAMETER      :: B3N7Re    =  542
+   INTEGER(IntKi), PARAMETER      :: B3N8Re    =  543
+   INTEGER(IntKi), PARAMETER      :: B3N9Re    =  544
+   INTEGER(IntKi), PARAMETER      :: B1N1M     =  545
+   INTEGER(IntKi), PARAMETER      :: B1N2M     =  546
+   INTEGER(IntKi), PARAMETER      :: B1N3M     =  547
+   INTEGER(IntKi), PARAMETER      :: B1N4M     =  548
+   INTEGER(IntKi), PARAMETER      :: B1N5M     =  549
+   INTEGER(IntKi), PARAMETER      :: B1N6M     =  550
+   INTEGER(IntKi), PARAMETER      :: B1N7M     =  551
+   INTEGER(IntKi), PARAMETER      :: B1N8M     =  552
+   INTEGER(IntKi), PARAMETER      :: B1N9M     =  553
+   INTEGER(IntKi), PARAMETER      :: B2N1M     =  554
+   INTEGER(IntKi), PARAMETER      :: B2N2M     =  555
+   INTEGER(IntKi), PARAMETER      :: B2N3M     =  556
+   INTEGER(IntKi), PARAMETER      :: B2N4M     =  557
+   INTEGER(IntKi), PARAMETER      :: B2N5M     =  558
+   INTEGER(IntKi), PARAMETER      :: B2N6M     =  559
+   INTEGER(IntKi), PARAMETER      :: B2N7M     =  560
+   INTEGER(IntKi), PARAMETER      :: B2N8M     =  561
+   INTEGER(IntKi), PARAMETER      :: B2N9M     =  562
+   INTEGER(IntKi), PARAMETER      :: B3N1M     =  563
+   INTEGER(IntKi), PARAMETER      :: B3N2M     =  564
+   INTEGER(IntKi), PARAMETER      :: B3N3M     =  565
+   INTEGER(IntKi), PARAMETER      :: B3N4M     =  566
+   INTEGER(IntKi), PARAMETER      :: B3N5M     =  567
+   INTEGER(IntKi), PARAMETER      :: B3N6M     =  568
+   INTEGER(IntKi), PARAMETER      :: B3N7M     =  569
+   INTEGER(IntKi), PARAMETER      :: B3N8M     =  570
+   INTEGER(IntKi), PARAMETER      :: B3N9M     =  571
+   INTEGER(IntKi), PARAMETER      :: B1N1Vindx =  572
+   INTEGER(IntKi), PARAMETER      :: B1N2Vindx =  573
+   INTEGER(IntKi), PARAMETER      :: B1N3Vindx =  574
+   INTEGER(IntKi), PARAMETER      :: B1N4Vindx =  575
+   INTEGER(IntKi), PARAMETER      :: B1N5Vindx =  576
+   INTEGER(IntKi), PARAMETER      :: B1N6Vindx =  577
+   INTEGER(IntKi), PARAMETER      :: B1N7Vindx =  578
+   INTEGER(IntKi), PARAMETER      :: B1N8Vindx =  579
+   INTEGER(IntKi), PARAMETER      :: B1N9Vindx =  580
+   INTEGER(IntKi), PARAMETER      :: B2N1Vindx =  581
+   INTEGER(IntKi), PARAMETER      :: B2N2Vindx =  582
+   INTEGER(IntKi), PARAMETER      :: B2N3Vindx =  583
+   INTEGER(IntKi), PARAMETER      :: B2N4Vindx =  584
+   INTEGER(IntKi), PARAMETER      :: B2N5Vindx =  585
+   INTEGER(IntKi), PARAMETER      :: B2N6Vindx =  586
+   INTEGER(IntKi), PARAMETER      :: B2N7Vindx =  587
+   INTEGER(IntKi), PARAMETER      :: B2N8Vindx =  588
+   INTEGER(IntKi), PARAMETER      :: B2N9Vindx =  589
+   INTEGER(IntKi), PARAMETER      :: B3N1Vindx =  590
+   INTEGER(IntKi), PARAMETER      :: B3N2Vindx =  591
+   INTEGER(IntKi), PARAMETER      :: B3N3Vindx =  592
+   INTEGER(IntKi), PARAMETER      :: B3N4Vindx =  593
+   INTEGER(IntKi), PARAMETER      :: B3N5Vindx =  594
+   INTEGER(IntKi), PARAMETER      :: B3N6Vindx =  595
+   INTEGER(IntKi), PARAMETER      :: B3N7Vindx =  596
+   INTEGER(IntKi), PARAMETER      :: B3N8Vindx =  597
+   INTEGER(IntKi), PARAMETER      :: B3N9Vindx =  598
+   INTEGER(IntKi), PARAMETER      :: B1N1Vindy =  599
+   INTEGER(IntKi), PARAMETER      :: B1N2Vindy =  600
+   INTEGER(IntKi), PARAMETER      :: B1N3Vindy =  601
+   INTEGER(IntKi), PARAMETER      :: B1N4Vindy =  602
+   INTEGER(IntKi), PARAMETER      :: B1N5Vindy =  603
+   INTEGER(IntKi), PARAMETER      :: B1N6Vindy =  604
+   INTEGER(IntKi), PARAMETER      :: B1N7Vindy =  605
+   INTEGER(IntKi), PARAMETER      :: B1N8Vindy =  606
+   INTEGER(IntKi), PARAMETER      :: B1N9Vindy =  607
+   INTEGER(IntKi), PARAMETER      :: B2N1Vindy =  608
+   INTEGER(IntKi), PARAMETER      :: B2N2Vindy =  609
+   INTEGER(IntKi), PARAMETER      :: B2N3Vindy =  610
+   INTEGER(IntKi), PARAMETER      :: B2N4Vindy =  611
+   INTEGER(IntKi), PARAMETER      :: B2N5Vindy =  612
+   INTEGER(IntKi), PARAMETER      :: B2N6Vindy =  613
+   INTEGER(IntKi), PARAMETER      :: B2N7Vindy =  614
+   INTEGER(IntKi), PARAMETER      :: B2N8Vindy =  615
+   INTEGER(IntKi), PARAMETER      :: B2N9Vindy =  616
+   INTEGER(IntKi), PARAMETER      :: B3N1Vindy =  617
+   INTEGER(IntKi), PARAMETER      :: B3N2Vindy =  618
+   INTEGER(IntKi), PARAMETER      :: B3N3Vindy =  619
+   INTEGER(IntKi), PARAMETER      :: B3N4Vindy =  620
+   INTEGER(IntKi), PARAMETER      :: B3N5Vindy =  621
+   INTEGER(IntKi), PARAMETER      :: B3N6Vindy =  622
+   INTEGER(IntKi), PARAMETER      :: B3N7Vindy =  623
+   INTEGER(IntKi), PARAMETER      :: B3N8Vindy =  624
+   INTEGER(IntKi), PARAMETER      :: B3N9Vindy =  625
+   INTEGER(IntKi), PARAMETER      :: B1N1AxInd =  626
+   INTEGER(IntKi), PARAMETER      :: B1N2AxInd =  627
+   INTEGER(IntKi), PARAMETER      :: B1N3AxInd =  628
+   INTEGER(IntKi), PARAMETER      :: B1N4AxInd =  629
+   INTEGER(IntKi), PARAMETER      :: B1N5AxInd =  630
+   INTEGER(IntKi), PARAMETER      :: B1N6AxInd =  631
+   INTEGER(IntKi), PARAMETER      :: B1N7AxInd =  632
+   INTEGER(IntKi), PARAMETER      :: B1N8AxInd =  633
+   INTEGER(IntKi), PARAMETER      :: B1N9AxInd =  634
+   INTEGER(IntKi), PARAMETER      :: B2N1AxInd =  635
+   INTEGER(IntKi), PARAMETER      :: B2N2AxInd =  636
+   INTEGER(IntKi), PARAMETER      :: B2N3AxInd =  637
+   INTEGER(IntKi), PARAMETER      :: B2N4AxInd =  638
+   INTEGER(IntKi), PARAMETER      :: B2N5AxInd =  639
+   INTEGER(IntKi), PARAMETER      :: B2N6AxInd =  640
+   INTEGER(IntKi), PARAMETER      :: B2N7AxInd =  641
+   INTEGER(IntKi), PARAMETER      :: B2N8AxInd =  642
+   INTEGER(IntKi), PARAMETER      :: B2N9AxInd =  643
+   INTEGER(IntKi), PARAMETER      :: B3N1AxInd =  644
+   INTEGER(IntKi), PARAMETER      :: B3N2AxInd =  645
+   INTEGER(IntKi), PARAMETER      :: B3N3AxInd =  646
+   INTEGER(IntKi), PARAMETER      :: B3N4AxInd =  647
+   INTEGER(IntKi), PARAMETER      :: B3N5AxInd =  648
+   INTEGER(IntKi), PARAMETER      :: B3N6AxInd =  649
+   INTEGER(IntKi), PARAMETER      :: B3N7AxInd =  650
+   INTEGER(IntKi), PARAMETER      :: B3N8AxInd =  651
+   INTEGER(IntKi), PARAMETER      :: B3N9AxInd =  652
+   INTEGER(IntKi), PARAMETER      :: B1N1TnInd =  653
+   INTEGER(IntKi), PARAMETER      :: B1N2TnInd =  654
+   INTEGER(IntKi), PARAMETER      :: B1N3TnInd =  655
+   INTEGER(IntKi), PARAMETER      :: B1N4TnInd =  656
+   INTEGER(IntKi), PARAMETER      :: B1N5TnInd =  657
+   INTEGER(IntKi), PARAMETER      :: B1N6TnInd =  658
+   INTEGER(IntKi), PARAMETER      :: B1N7TnInd =  659
+   INTEGER(IntKi), PARAMETER      :: B1N8TnInd =  660
+   INTEGER(IntKi), PARAMETER      :: B1N9TnInd =  661
+   INTEGER(IntKi), PARAMETER      :: B2N1TnInd =  662
+   INTEGER(IntKi), PARAMETER      :: B2N2TnInd =  663
+   INTEGER(IntKi), PARAMETER      :: B2N3TnInd =  664
+   INTEGER(IntKi), PARAMETER      :: B2N4TnInd =  665
+   INTEGER(IntKi), PARAMETER      :: B2N5TnInd =  666
+   INTEGER(IntKi), PARAMETER      :: B2N6TnInd =  667
+   INTEGER(IntKi), PARAMETER      :: B2N7TnInd =  668
+   INTEGER(IntKi), PARAMETER      :: B2N8TnInd =  669
+   INTEGER(IntKi), PARAMETER      :: B2N9TnInd =  670
+   INTEGER(IntKi), PARAMETER      :: B3N1TnInd =  671
+   INTEGER(IntKi), PARAMETER      :: B3N2TnInd =  672
+   INTEGER(IntKi), PARAMETER      :: B3N3TnInd =  673
+   INTEGER(IntKi), PARAMETER      :: B3N4TnInd =  674
+   INTEGER(IntKi), PARAMETER      :: B3N5TnInd =  675
+   INTEGER(IntKi), PARAMETER      :: B3N6TnInd =  676
+   INTEGER(IntKi), PARAMETER      :: B3N7TnInd =  677
+   INTEGER(IntKi), PARAMETER      :: B3N8TnInd =  678
+   INTEGER(IntKi), PARAMETER      :: B3N9TnInd =  679
+   INTEGER(IntKi), PARAMETER      :: B1N1Alpha =  680
+   INTEGER(IntKi), PARAMETER      :: B1N2Alpha =  681
+   INTEGER(IntKi), PARAMETER      :: B1N3Alpha =  682
+   INTEGER(IntKi), PARAMETER      :: B1N4Alpha =  683
+   INTEGER(IntKi), PARAMETER      :: B1N5Alpha =  684
+   INTEGER(IntKi), PARAMETER      :: B1N6Alpha =  685
+   INTEGER(IntKi), PARAMETER      :: B1N7Alpha =  686
+   INTEGER(IntKi), PARAMETER      :: B1N8Alpha =  687
+   INTEGER(IntKi), PARAMETER      :: B1N9Alpha =  688
+   INTEGER(IntKi), PARAMETER      :: B2N1Alpha =  689
+   INTEGER(IntKi), PARAMETER      :: B2N2Alpha =  690
+   INTEGER(IntKi), PARAMETER      :: B2N3Alpha =  691
+   INTEGER(IntKi), PARAMETER      :: B2N4Alpha =  692
+   INTEGER(IntKi), PARAMETER      :: B2N5Alpha =  693
+   INTEGER(IntKi), PARAMETER      :: B2N6Alpha =  694
+   INTEGER(IntKi), PARAMETER      :: B2N7Alpha =  695
+   INTEGER(IntKi), PARAMETER      :: B2N8Alpha =  696
+   INTEGER(IntKi), PARAMETER      :: B2N9Alpha =  697
+   INTEGER(IntKi), PARAMETER      :: B3N1Alpha =  698
+   INTEGER(IntKi), PARAMETER      :: B3N2Alpha =  699
+   INTEGER(IntKi), PARAMETER      :: B3N3Alpha =  700
+   INTEGER(IntKi), PARAMETER      :: B3N4Alpha =  701
+   INTEGER(IntKi), PARAMETER      :: B3N5Alpha =  702
+   INTEGER(IntKi), PARAMETER      :: B3N6Alpha =  703
+   INTEGER(IntKi), PARAMETER      :: B3N7Alpha =  704
+   INTEGER(IntKi), PARAMETER      :: B3N8Alpha =  705
+   INTEGER(IntKi), PARAMETER      :: B3N9Alpha =  706
+   INTEGER(IntKi), PARAMETER      :: B1N1Theta =  707
+   INTEGER(IntKi), PARAMETER      :: B1N2Theta =  708
+   INTEGER(IntKi), PARAMETER      :: B1N3Theta =  709
+   INTEGER(IntKi), PARAMETER      :: B1N4Theta =  710
+   INTEGER(IntKi), PARAMETER      :: B1N5Theta =  711
+   INTEGER(IntKi), PARAMETER      :: B1N6Theta =  712
+   INTEGER(IntKi), PARAMETER      :: B1N7Theta =  713
+   INTEGER(IntKi), PARAMETER      :: B1N8Theta =  714
+   INTEGER(IntKi), PARAMETER      :: B1N9Theta =  715
+   INTEGER(IntKi), PARAMETER      :: B2N1Theta =  716
+   INTEGER(IntKi), PARAMETER      :: B2N2Theta =  717
+   INTEGER(IntKi), PARAMETER      :: B2N3Theta =  718
+   INTEGER(IntKi), PARAMETER      :: B2N4Theta =  719
+   INTEGER(IntKi), PARAMETER      :: B2N5Theta =  720
+   INTEGER(IntKi), PARAMETER      :: B2N6Theta =  721
+   INTEGER(IntKi), PARAMETER      :: B2N7Theta =  722
+   INTEGER(IntKi), PARAMETER      :: B2N8Theta =  723
+   INTEGER(IntKi), PARAMETER      :: B2N9Theta =  724
+   INTEGER(IntKi), PARAMETER      :: B3N1Theta =  725
+   INTEGER(IntKi), PARAMETER      :: B3N2Theta =  726
+   INTEGER(IntKi), PARAMETER      :: B3N3Theta =  727
+   INTEGER(IntKi), PARAMETER      :: B3N4Theta =  728
+   INTEGER(IntKi), PARAMETER      :: B3N5Theta =  729
+   INTEGER(IntKi), PARAMETER      :: B3N6Theta =  730
+   INTEGER(IntKi), PARAMETER      :: B3N7Theta =  731
+   INTEGER(IntKi), PARAMETER      :: B3N8Theta =  732
+   INTEGER(IntKi), PARAMETER      :: B3N9Theta =  733
+   INTEGER(IntKi), PARAMETER      :: B1N1Phi   =  734
+   INTEGER(IntKi), PARAMETER      :: B1N2Phi   =  735
+   INTEGER(IntKi), PARAMETER      :: B1N3Phi   =  736
+   INTEGER(IntKi), PARAMETER      :: B1N4Phi   =  737
+   INTEGER(IntKi), PARAMETER      :: B1N5Phi   =  738
+   INTEGER(IntKi), PARAMETER      :: B1N6Phi   =  739
+   INTEGER(IntKi), PARAMETER      :: B1N7Phi   =  740
+   INTEGER(IntKi), PARAMETER      :: B1N8Phi   =  741
+   INTEGER(IntKi), PARAMETER      :: B1N9Phi   =  742
+   INTEGER(IntKi), PARAMETER      :: B2N1Phi   =  743
+   INTEGER(IntKi), PARAMETER      :: B2N2Phi   =  744
+   INTEGER(IntKi), PARAMETER      :: B2N3Phi   =  745
+   INTEGER(IntKi), PARAMETER      :: B2N4Phi   =  746
+   INTEGER(IntKi), PARAMETER      :: B2N5Phi   =  747
+   INTEGER(IntKi), PARAMETER      :: B2N6Phi   =  748
+   INTEGER(IntKi), PARAMETER      :: B2N7Phi   =  749
+   INTEGER(IntKi), PARAMETER      :: B2N8Phi   =  750
+   INTEGER(IntKi), PARAMETER      :: B2N9Phi   =  751
+   INTEGER(IntKi), PARAMETER      :: B3N1Phi   =  752
+   INTEGER(IntKi), PARAMETER      :: B3N2Phi   =  753
+   INTEGER(IntKi), PARAMETER      :: B3N3Phi   =  754
+   INTEGER(IntKi), PARAMETER      :: B3N4Phi   =  755
+   INTEGER(IntKi), PARAMETER      :: B3N5Phi   =  756
+   INTEGER(IntKi), PARAMETER      :: B3N6Phi   =  757
+   INTEGER(IntKi), PARAMETER      :: B3N7Phi   =  758
+   INTEGER(IntKi), PARAMETER      :: B3N8Phi   =  759
+   INTEGER(IntKi), PARAMETER      :: B3N9Phi   =  760
+   INTEGER(IntKi), PARAMETER      :: B1N1Curve =  761
+   INTEGER(IntKi), PARAMETER      :: B1N2Curve =  762
+   INTEGER(IntKi), PARAMETER      :: B1N3Curve =  763
+   INTEGER(IntKi), PARAMETER      :: B1N4Curve =  764
+   INTEGER(IntKi), PARAMETER      :: B1N5Curve =  765
+   INTEGER(IntKi), PARAMETER      :: B1N6Curve =  766
+   INTEGER(IntKi), PARAMETER      :: B1N7Curve =  767
+   INTEGER(IntKi), PARAMETER      :: B1N8Curve =  768
+   INTEGER(IntKi), PARAMETER      :: B1N9Curve =  769
+   INTEGER(IntKi), PARAMETER      :: B2N1Curve =  770
+   INTEGER(IntKi), PARAMETER      :: B2N2Curve =  771
+   INTEGER(IntKi), PARAMETER      :: B2N3Curve =  772
+   INTEGER(IntKi), PARAMETER      :: B2N4Curve =  773
+   INTEGER(IntKi), PARAMETER      :: B2N5Curve =  774
+   INTEGER(IntKi), PARAMETER      :: B2N6Curve =  775
+   INTEGER(IntKi), PARAMETER      :: B2N7Curve =  776
+   INTEGER(IntKi), PARAMETER      :: B2N8Curve =  777
+   INTEGER(IntKi), PARAMETER      :: B2N9Curve =  778
+   INTEGER(IntKi), PARAMETER      :: B3N1Curve =  779
+   INTEGER(IntKi), PARAMETER      :: B3N2Curve =  780
+   INTEGER(IntKi), PARAMETER      :: B3N3Curve =  781
+   INTEGER(IntKi), PARAMETER      :: B3N4Curve =  782
+   INTEGER(IntKi), PARAMETER      :: B3N5Curve =  783
+   INTEGER(IntKi), PARAMETER      :: B3N6Curve =  784
+   INTEGER(IntKi), PARAMETER      :: B3N7Curve =  785
+   INTEGER(IntKi), PARAMETER      :: B3N8Curve =  786
+   INTEGER(IntKi), PARAMETER      :: B3N9Curve =  787
+   INTEGER(IntKi), PARAMETER      :: B1N1Cl    =  788
+   INTEGER(IntKi), PARAMETER      :: B1N2Cl    =  789
+   INTEGER(IntKi), PARAMETER      :: B1N3Cl    =  790
+   INTEGER(IntKi), PARAMETER      :: B1N4Cl    =  791
+   INTEGER(IntKi), PARAMETER      :: B1N5Cl    =  792
+   INTEGER(IntKi), PARAMETER      :: B1N6Cl    =  793
+   INTEGER(IntKi), PARAMETER      :: B1N7Cl    =  794
+   INTEGER(IntKi), PARAMETER      :: B1N8Cl    =  795
+   INTEGER(IntKi), PARAMETER      :: B1N9Cl    =  796
+   INTEGER(IntKi), PARAMETER      :: B2N1Cl    =  797
+   INTEGER(IntKi), PARAMETER      :: B2N2Cl    =  798
+   INTEGER(IntKi), PARAMETER      :: B2N3Cl    =  799
+   INTEGER(IntKi), PARAMETER      :: B2N4Cl    =  800
+   INTEGER(IntKi), PARAMETER      :: B2N5Cl    =  801
+   INTEGER(IntKi), PARAMETER      :: B2N6Cl    =  802
+   INTEGER(IntKi), PARAMETER      :: B2N7Cl    =  803
+   INTEGER(IntKi), PARAMETER      :: B2N8Cl    =  804
+   INTEGER(IntKi), PARAMETER      :: B2N9Cl    =  805
+   INTEGER(IntKi), PARAMETER      :: B3N1Cl    =  806
+   INTEGER(IntKi), PARAMETER      :: B3N2Cl    =  807
+   INTEGER(IntKi), PARAMETER      :: B3N3Cl    =  808
+   INTEGER(IntKi), PARAMETER      :: B3N4Cl    =  809
+   INTEGER(IntKi), PARAMETER      :: B3N5Cl    =  810
+   INTEGER(IntKi), PARAMETER      :: B3N6Cl    =  811
+   INTEGER(IntKi), PARAMETER      :: B3N7Cl    =  812
+   INTEGER(IntKi), PARAMETER      :: B3N8Cl    =  813
+   INTEGER(IntKi), PARAMETER      :: B3N9Cl    =  814
+   INTEGER(IntKi), PARAMETER      :: B1N1Cd    =  815
+   INTEGER(IntKi), PARAMETER      :: B1N2Cd    =  816
+   INTEGER(IntKi), PARAMETER      :: B1N3Cd    =  817
+   INTEGER(IntKi), PARAMETER      :: B1N4Cd    =  818
+   INTEGER(IntKi), PARAMETER      :: B1N5Cd    =  819
+   INTEGER(IntKi), PARAMETER      :: B1N6Cd    =  820
+   INTEGER(IntKi), PARAMETER      :: B1N7Cd    =  821
+   INTEGER(IntKi), PARAMETER      :: B1N8Cd    =  822
+   INTEGER(IntKi), PARAMETER      :: B1N9Cd    =  823
+   INTEGER(IntKi), PARAMETER      :: B2N1Cd    =  824
+   INTEGER(IntKi), PARAMETER      :: B2N2Cd    =  825
+   INTEGER(IntKi), PARAMETER      :: B2N3Cd    =  826
+   INTEGER(IntKi), PARAMETER      :: B2N4Cd    =  827
+   INTEGER(IntKi), PARAMETER      :: B2N5Cd    =  828
+   INTEGER(IntKi), PARAMETER      :: B2N6Cd    =  829
+   INTEGER(IntKi), PARAMETER      :: B2N7Cd    =  830
+   INTEGER(IntKi), PARAMETER      :: B2N8Cd    =  831
+   INTEGER(IntKi), PARAMETER      :: B2N9Cd    =  832
+   INTEGER(IntKi), PARAMETER      :: B3N1Cd    =  833
+   INTEGER(IntKi), PARAMETER      :: B3N2Cd    =  834
+   INTEGER(IntKi), PARAMETER      :: B3N3Cd    =  835
+   INTEGER(IntKi), PARAMETER      :: B3N4Cd    =  836
+   INTEGER(IntKi), PARAMETER      :: B3N5Cd    =  837
+   INTEGER(IntKi), PARAMETER      :: B3N6Cd    =  838
+   INTEGER(IntKi), PARAMETER      :: B3N7Cd    =  839
+   INTEGER(IntKi), PARAMETER      :: B3N8Cd    =  840
+   INTEGER(IntKi), PARAMETER      :: B3N9Cd    =  841
+   INTEGER(IntKi), PARAMETER      :: B1N1Cm    =  842
+   INTEGER(IntKi), PARAMETER      :: B1N2Cm    =  843
+   INTEGER(IntKi), PARAMETER      :: B1N3Cm    =  844
+   INTEGER(IntKi), PARAMETER      :: B1N4Cm    =  845
+   INTEGER(IntKi), PARAMETER      :: B1N5Cm    =  846
+   INTEGER(IntKi), PARAMETER      :: B1N6Cm    =  847
+   INTEGER(IntKi), PARAMETER      :: B1N7Cm    =  848
+   INTEGER(IntKi), PARAMETER      :: B1N8Cm    =  849
+   INTEGER(IntKi), PARAMETER      :: B1N9Cm    =  850
+   INTEGER(IntKi), PARAMETER      :: B2N1Cm    =  851
+   INTEGER(IntKi), PARAMETER      :: B2N2Cm    =  852
+   INTEGER(IntKi), PARAMETER      :: B2N3Cm    =  853
+   INTEGER(IntKi), PARAMETER      :: B2N4Cm    =  854
+   INTEGER(IntKi), PARAMETER      :: B2N5Cm    =  855
+   INTEGER(IntKi), PARAMETER      :: B2N6Cm    =  856
+   INTEGER(IntKi), PARAMETER      :: B2N7Cm    =  857
+   INTEGER(IntKi), PARAMETER      :: B2N8Cm    =  858
+   INTEGER(IntKi), PARAMETER      :: B2N9Cm    =  859
+   INTEGER(IntKi), PARAMETER      :: B3N1Cm    =  860
+   INTEGER(IntKi), PARAMETER      :: B3N2Cm    =  861
+   INTEGER(IntKi), PARAMETER      :: B3N3Cm    =  862
+   INTEGER(IntKi), PARAMETER      :: B3N4Cm    =  863
+   INTEGER(IntKi), PARAMETER      :: B3N5Cm    =  864
+   INTEGER(IntKi), PARAMETER      :: B3N6Cm    =  865
+   INTEGER(IntKi), PARAMETER      :: B3N7Cm    =  866
+   INTEGER(IntKi), PARAMETER      :: B3N8Cm    =  867
+   INTEGER(IntKi), PARAMETER      :: B3N9Cm    =  868
+   INTEGER(IntKi), PARAMETER      :: B1N1Cx    =  869
+   INTEGER(IntKi), PARAMETER      :: B1N2Cx    =  870
+   INTEGER(IntKi), PARAMETER      :: B1N3Cx    =  871
+   INTEGER(IntKi), PARAMETER      :: B1N4Cx    =  872
+   INTEGER(IntKi), PARAMETER      :: B1N5Cx    =  873
+   INTEGER(IntKi), PARAMETER      :: B1N6Cx    =  874
+   INTEGER(IntKi), PARAMETER      :: B1N7Cx    =  875
+   INTEGER(IntKi), PARAMETER      :: B1N8Cx    =  876
+   INTEGER(IntKi), PARAMETER      :: B1N9Cx    =  877
+   INTEGER(IntKi), PARAMETER      :: B2N1Cx    =  878
+   INTEGER(IntKi), PARAMETER      :: B2N2Cx    =  879
+   INTEGER(IntKi), PARAMETER      :: B2N3Cx    =  880
+   INTEGER(IntKi), PARAMETER      :: B2N4Cx    =  881
+   INTEGER(IntKi), PARAMETER      :: B2N5Cx    =  882
+   INTEGER(IntKi), PARAMETER      :: B2N6Cx    =  883
+   INTEGER(IntKi), PARAMETER      :: B2N7Cx    =  884
+   INTEGER(IntKi), PARAMETER      :: B2N8Cx    =  885
+   INTEGER(IntKi), PARAMETER      :: B2N9Cx    =  886
+   INTEGER(IntKi), PARAMETER      :: B3N1Cx    =  887
+   INTEGER(IntKi), PARAMETER      :: B3N2Cx    =  888
+   INTEGER(IntKi), PARAMETER      :: B3N3Cx    =  889
+   INTEGER(IntKi), PARAMETER      :: B3N4Cx    =  890
+   INTEGER(IntKi), PARAMETER      :: B3N5Cx    =  891
+   INTEGER(IntKi), PARAMETER      :: B3N6Cx    =  892
+   INTEGER(IntKi), PARAMETER      :: B3N7Cx    =  893
+   INTEGER(IntKi), PARAMETER      :: B3N8Cx    =  894
+   INTEGER(IntKi), PARAMETER      :: B3N9Cx    =  895
+   INTEGER(IntKi), PARAMETER      :: B1N1Cy    =  896
+   INTEGER(IntKi), PARAMETER      :: B1N2Cy    =  897
+   INTEGER(IntKi), PARAMETER      :: B1N3Cy    =  898
+   INTEGER(IntKi), PARAMETER      :: B1N4Cy    =  899
+   INTEGER(IntKi), PARAMETER      :: B1N5Cy    =  900
+   INTEGER(IntKi), PARAMETER      :: B1N6Cy    =  901
+   INTEGER(IntKi), PARAMETER      :: B1N7Cy    =  902
+   INTEGER(IntKi), PARAMETER      :: B1N8Cy    =  903
+   INTEGER(IntKi), PARAMETER      :: B1N9Cy    =  904
+   INTEGER(IntKi), PARAMETER      :: B2N1Cy    =  905
+   INTEGER(IntKi), PARAMETER      :: B2N2Cy    =  906
+   INTEGER(IntKi), PARAMETER      :: B2N3Cy    =  907
+   INTEGER(IntKi), PARAMETER      :: B2N4Cy    =  908
+   INTEGER(IntKi), PARAMETER      :: B2N5Cy    =  909
+   INTEGER(IntKi), PARAMETER      :: B2N6Cy    =  910
+   INTEGER(IntKi), PARAMETER      :: B2N7Cy    =  911
+   INTEGER(IntKi), PARAMETER      :: B2N8Cy    =  912
+   INTEGER(IntKi), PARAMETER      :: B2N9Cy    =  913
+   INTEGER(IntKi), PARAMETER      :: B3N1Cy    =  914
+   INTEGER(IntKi), PARAMETER      :: B3N2Cy    =  915
+   INTEGER(IntKi), PARAMETER      :: B3N3Cy    =  916
+   INTEGER(IntKi), PARAMETER      :: B3N4Cy    =  917
+   INTEGER(IntKi), PARAMETER      :: B3N5Cy    =  918
+   INTEGER(IntKi), PARAMETER      :: B3N6Cy    =  919
+   INTEGER(IntKi), PARAMETER      :: B3N7Cy    =  920
+   INTEGER(IntKi), PARAMETER      :: B3N8Cy    =  921
+   INTEGER(IntKi), PARAMETER      :: B3N9Cy    =  922
+   INTEGER(IntKi), PARAMETER      :: B1N1Cn    =  923
+   INTEGER(IntKi), PARAMETER      :: B1N2Cn    =  924
+   INTEGER(IntKi), PARAMETER      :: B1N3Cn    =  925
+   INTEGER(IntKi), PARAMETER      :: B1N4Cn    =  926
+   INTEGER(IntKi), PARAMETER      :: B1N5Cn    =  927
+   INTEGER(IntKi), PARAMETER      :: B1N6Cn    =  928
+   INTEGER(IntKi), PARAMETER      :: B1N7Cn    =  929
+   INTEGER(IntKi), PARAMETER      :: B1N8Cn    =  930
+   INTEGER(IntKi), PARAMETER      :: B1N9Cn    =  931
+   INTEGER(IntKi), PARAMETER      :: B2N1Cn    =  932
+   INTEGER(IntKi), PARAMETER      :: B2N2Cn    =  933
+   INTEGER(IntKi), PARAMETER      :: B2N3Cn    =  934
+   INTEGER(IntKi), PARAMETER      :: B2N4Cn    =  935
+   INTEGER(IntKi), PARAMETER      :: B2N5Cn    =  936
+   INTEGER(IntKi), PARAMETER      :: B2N6Cn    =  937
+   INTEGER(IntKi), PARAMETER      :: B2N7Cn    =  938
+   INTEGER(IntKi), PARAMETER      :: B2N8Cn    =  939
+   INTEGER(IntKi), PARAMETER      :: B2N9Cn    =  940
+   INTEGER(IntKi), PARAMETER      :: B3N1Cn    =  941
+   INTEGER(IntKi), PARAMETER      :: B3N2Cn    =  942
+   INTEGER(IntKi), PARAMETER      :: B3N3Cn    =  943
+   INTEGER(IntKi), PARAMETER      :: B3N4Cn    =  944
+   INTEGER(IntKi), PARAMETER      :: B3N5Cn    =  945
+   INTEGER(IntKi), PARAMETER      :: B3N6Cn    =  946
+   INTEGER(IntKi), PARAMETER      :: B3N7Cn    =  947
+   INTEGER(IntKi), PARAMETER      :: B3N8Cn    =  948
+   INTEGER(IntKi), PARAMETER      :: B3N9Cn    =  949
+   INTEGER(IntKi), PARAMETER      :: B1N1Ct    =  950
+   INTEGER(IntKi), PARAMETER      :: B1N2Ct    =  951
+   INTEGER(IntKi), PARAMETER      :: B1N3Ct    =  952
+   INTEGER(IntKi), PARAMETER      :: B1N4Ct    =  953
+   INTEGER(IntKi), PARAMETER      :: B1N5Ct    =  954
+   INTEGER(IntKi), PARAMETER      :: B1N6Ct    =  955
+   INTEGER(IntKi), PARAMETER      :: B1N7Ct    =  956
+   INTEGER(IntKi), PARAMETER      :: B1N8Ct    =  957
+   INTEGER(IntKi), PARAMETER      :: B1N9Ct    =  958
+   INTEGER(IntKi), PARAMETER      :: B2N1Ct    =  959
+   INTEGER(IntKi), PARAMETER      :: B2N2Ct    =  960
+   INTEGER(IntKi), PARAMETER      :: B2N3Ct    =  961
+   INTEGER(IntKi), PARAMETER      :: B2N4Ct    =  962
+   INTEGER(IntKi), PARAMETER      :: B2N5Ct    =  963
+   INTEGER(IntKi), PARAMETER      :: B2N6Ct    =  964
+   INTEGER(IntKi), PARAMETER      :: B2N7Ct    =  965
+   INTEGER(IntKi), PARAMETER      :: B2N8Ct    =  966
+   INTEGER(IntKi), PARAMETER      :: B2N9Ct    =  967
+   INTEGER(IntKi), PARAMETER      :: B3N1Ct    =  968
+   INTEGER(IntKi), PARAMETER      :: B3N2Ct    =  969
+   INTEGER(IntKi), PARAMETER      :: B3N3Ct    =  970
+   INTEGER(IntKi), PARAMETER      :: B3N4Ct    =  971
+   INTEGER(IntKi), PARAMETER      :: B3N5Ct    =  972
+   INTEGER(IntKi), PARAMETER      :: B3N6Ct    =  973
+   INTEGER(IntKi), PARAMETER      :: B3N7Ct    =  974
+   INTEGER(IntKi), PARAMETER      :: B3N8Ct    =  975
+   INTEGER(IntKi), PARAMETER      :: B3N9Ct    =  976
+   INTEGER(IntKi), PARAMETER      :: B1N1Fl    =  977
+   INTEGER(IntKi), PARAMETER      :: B1N2Fl    =  978
+   INTEGER(IntKi), PARAMETER      :: B1N3Fl    =  979
+   INTEGER(IntKi), PARAMETER      :: B1N4Fl    =  980
+   INTEGER(IntKi), PARAMETER      :: B1N5Fl    =  981
+   INTEGER(IntKi), PARAMETER      :: B1N6Fl    =  982
+   INTEGER(IntKi), PARAMETER      :: B1N7Fl    =  983
+   INTEGER(IntKi), PARAMETER      :: B1N8Fl    =  984
+   INTEGER(IntKi), PARAMETER      :: B1N9Fl    =  985
+   INTEGER(IntKi), PARAMETER      :: B2N1Fl    =  986
+   INTEGER(IntKi), PARAMETER      :: B2N2Fl    =  987
+   INTEGER(IntKi), PARAMETER      :: B2N3Fl    =  988
+   INTEGER(IntKi), PARAMETER      :: B2N4Fl    =  989
+   INTEGER(IntKi), PARAMETER      :: B2N5Fl    =  990
+   INTEGER(IntKi), PARAMETER      :: B2N6Fl    =  991
+   INTEGER(IntKi), PARAMETER      :: B2N7Fl    =  992
+   INTEGER(IntKi), PARAMETER      :: B2N8Fl    =  993
+   INTEGER(IntKi), PARAMETER      :: B2N9Fl    =  994
+   INTEGER(IntKi), PARAMETER      :: B3N1Fl    =  995
+   INTEGER(IntKi), PARAMETER      :: B3N2Fl    =  996
+   INTEGER(IntKi), PARAMETER      :: B3N3Fl    =  997
+   INTEGER(IntKi), PARAMETER      :: B3N4Fl    =  998
+   INTEGER(IntKi), PARAMETER      :: B3N5Fl    =  999
+   INTEGER(IntKi), PARAMETER      :: B3N6Fl    = 1000
+   INTEGER(IntKi), PARAMETER      :: B3N7Fl    = 1001
+   INTEGER(IntKi), PARAMETER      :: B3N8Fl    = 1002
+   INTEGER(IntKi), PARAMETER      :: B3N9Fl    = 1003
+   INTEGER(IntKi), PARAMETER      :: B1N1Fd    = 1004
+   INTEGER(IntKi), PARAMETER      :: B1N2Fd    = 1005
+   INTEGER(IntKi), PARAMETER      :: B1N3Fd    = 1006
+   INTEGER(IntKi), PARAMETER      :: B1N4Fd    = 1007
+   INTEGER(IntKi), PARAMETER      :: B1N5Fd    = 1008
+   INTEGER(IntKi), PARAMETER      :: B1N6Fd    = 1009
+   INTEGER(IntKi), PARAMETER      :: B1N7Fd    = 1010
+   INTEGER(IntKi), PARAMETER      :: B1N8Fd    = 1011
+   INTEGER(IntKi), PARAMETER      :: B1N9Fd    = 1012
+   INTEGER(IntKi), PARAMETER      :: B2N1Fd    = 1013
+   INTEGER(IntKi), PARAMETER      :: B2N2Fd    = 1014
+   INTEGER(IntKi), PARAMETER      :: B2N3Fd    = 1015
+   INTEGER(IntKi), PARAMETER      :: B2N4Fd    = 1016
+   INTEGER(IntKi), PARAMETER      :: B2N5Fd    = 1017
+   INTEGER(IntKi), PARAMETER      :: B2N6Fd    = 1018
+   INTEGER(IntKi), PARAMETER      :: B2N7Fd    = 1019
+   INTEGER(IntKi), PARAMETER      :: B2N8Fd    = 1020
+   INTEGER(IntKi), PARAMETER      :: B2N9Fd    = 1021
+   INTEGER(IntKi), PARAMETER      :: B3N1Fd    = 1022
+   INTEGER(IntKi), PARAMETER      :: B3N2Fd    = 1023
+   INTEGER(IntKi), PARAMETER      :: B3N3Fd    = 1024
+   INTEGER(IntKi), PARAMETER      :: B3N4Fd    = 1025
+   INTEGER(IntKi), PARAMETER      :: B3N5Fd    = 1026
+   INTEGER(IntKi), PARAMETER      :: B3N6Fd    = 1027
+   INTEGER(IntKi), PARAMETER      :: B3N7Fd    = 1028
+   INTEGER(IntKi), PARAMETER      :: B3N8Fd    = 1029
+   INTEGER(IntKi), PARAMETER      :: B3N9Fd    = 1030
+   INTEGER(IntKi), PARAMETER      :: B1N1Mm    = 1031
+   INTEGER(IntKi), PARAMETER      :: B1N2Mm    = 1032
+   INTEGER(IntKi), PARAMETER      :: B1N3Mm    = 1033
+   INTEGER(IntKi), PARAMETER      :: B1N4Mm    = 1034
+   INTEGER(IntKi), PARAMETER      :: B1N5Mm    = 1035
+   INTEGER(IntKi), PARAMETER      :: B1N6Mm    = 1036
+   INTEGER(IntKi), PARAMETER      :: B1N7Mm    = 1037
+   INTEGER(IntKi), PARAMETER      :: B1N8Mm    = 1038
+   INTEGER(IntKi), PARAMETER      :: B1N9Mm    = 1039
+   INTEGER(IntKi), PARAMETER      :: B2N1Mm    = 1040
+   INTEGER(IntKi), PARAMETER      :: B2N2Mm    = 1041
+   INTEGER(IntKi), PARAMETER      :: B2N3Mm    = 1042
+   INTEGER(IntKi), PARAMETER      :: B2N4Mm    = 1043
+   INTEGER(IntKi), PARAMETER      :: B2N5Mm    = 1044
+   INTEGER(IntKi), PARAMETER      :: B2N6Mm    = 1045
+   INTEGER(IntKi), PARAMETER      :: B2N7Mm    = 1046
+   INTEGER(IntKi), PARAMETER      :: B2N8Mm    = 1047
+   INTEGER(IntKi), PARAMETER      :: B2N9Mm    = 1048
+   INTEGER(IntKi), PARAMETER      :: B3N1Mm    = 1049
+   INTEGER(IntKi), PARAMETER      :: B3N2Mm    = 1050
+   INTEGER(IntKi), PARAMETER      :: B3N3Mm    = 1051
+   INTEGER(IntKi), PARAMETER      :: B3N4Mm    = 1052
+   INTEGER(IntKi), PARAMETER      :: B3N5Mm    = 1053
+   INTEGER(IntKi), PARAMETER      :: B3N6Mm    = 1054
+   INTEGER(IntKi), PARAMETER      :: B3N7Mm    = 1055
+   INTEGER(IntKi), PARAMETER      :: B3N8Mm    = 1056
+   INTEGER(IntKi), PARAMETER      :: B3N9Mm    = 1057
+   INTEGER(IntKi), PARAMETER      :: B1N1Fx    = 1058
+   INTEGER(IntKi), PARAMETER      :: B1N2Fx    = 1059
+   INTEGER(IntKi), PARAMETER      :: B1N3Fx    = 1060
+   INTEGER(IntKi), PARAMETER      :: B1N4Fx    = 1061
+   INTEGER(IntKi), PARAMETER      :: B1N5Fx    = 1062
+   INTEGER(IntKi), PARAMETER      :: B1N6Fx    = 1063
+   INTEGER(IntKi), PARAMETER      :: B1N7Fx    = 1064
+   INTEGER(IntKi), PARAMETER      :: B1N8Fx    = 1065
+   INTEGER(IntKi), PARAMETER      :: B1N9Fx    = 1066
+   INTEGER(IntKi), PARAMETER      :: B2N1Fx    = 1067
+   INTEGER(IntKi), PARAMETER      :: B2N2Fx    = 1068
+   INTEGER(IntKi), PARAMETER      :: B2N3Fx    = 1069
+   INTEGER(IntKi), PARAMETER      :: B2N4Fx    = 1070
+   INTEGER(IntKi), PARAMETER      :: B2N5Fx    = 1071
+   INTEGER(IntKi), PARAMETER      :: B2N6Fx    = 1072
+   INTEGER(IntKi), PARAMETER      :: B2N7Fx    = 1073
+   INTEGER(IntKi), PARAMETER      :: B2N8Fx    = 1074
+   INTEGER(IntKi), PARAMETER      :: B2N9Fx    = 1075
+   INTEGER(IntKi), PARAMETER      :: B3N1Fx    = 1076
+   INTEGER(IntKi), PARAMETER      :: B3N2Fx    = 1077
+   INTEGER(IntKi), PARAMETER      :: B3N3Fx    = 1078
+   INTEGER(IntKi), PARAMETER      :: B3N4Fx    = 1079
+   INTEGER(IntKi), PARAMETER      :: B3N5Fx    = 1080
+   INTEGER(IntKi), PARAMETER      :: B3N6Fx    = 1081
+   INTEGER(IntKi), PARAMETER      :: B3N7Fx    = 1082
+   INTEGER(IntKi), PARAMETER      :: B3N8Fx    = 1083
+   INTEGER(IntKi), PARAMETER      :: B3N9Fx    = 1084
+   INTEGER(IntKi), PARAMETER      :: B1N1Fy    = 1085
+   INTEGER(IntKi), PARAMETER      :: B1N2Fy    = 1086
+   INTEGER(IntKi), PARAMETER      :: B1N3Fy    = 1087
+   INTEGER(IntKi), PARAMETER      :: B1N4Fy    = 1088
+   INTEGER(IntKi), PARAMETER      :: B1N5Fy    = 1089
+   INTEGER(IntKi), PARAMETER      :: B1N6Fy    = 1090
+   INTEGER(IntKi), PARAMETER      :: B1N7Fy    = 1091
+   INTEGER(IntKi), PARAMETER      :: B1N8Fy    = 1092
+   INTEGER(IntKi), PARAMETER      :: B1N9Fy    = 1093
+   INTEGER(IntKi), PARAMETER      :: B2N1Fy    = 1094
+   INTEGER(IntKi), PARAMETER      :: B2N2Fy    = 1095
+   INTEGER(IntKi), PARAMETER      :: B2N3Fy    = 1096
+   INTEGER(IntKi), PARAMETER      :: B2N4Fy    = 1097
+   INTEGER(IntKi), PARAMETER      :: B2N5Fy    = 1098
+   INTEGER(IntKi), PARAMETER      :: B2N6Fy    = 1099
+   INTEGER(IntKi), PARAMETER      :: B2N7Fy    = 1100
+   INTEGER(IntKi), PARAMETER      :: B2N8Fy    = 1101
+   INTEGER(IntKi), PARAMETER      :: B2N9Fy    = 1102
+   INTEGER(IntKi), PARAMETER      :: B3N1Fy    = 1103
+   INTEGER(IntKi), PARAMETER      :: B3N2Fy    = 1104
+   INTEGER(IntKi), PARAMETER      :: B3N3Fy    = 1105
+   INTEGER(IntKi), PARAMETER      :: B3N4Fy    = 1106
+   INTEGER(IntKi), PARAMETER      :: B3N5Fy    = 1107
+   INTEGER(IntKi), PARAMETER      :: B3N6Fy    = 1108
+   INTEGER(IntKi), PARAMETER      :: B3N7Fy    = 1109
+   INTEGER(IntKi), PARAMETER      :: B3N8Fy    = 1110
+   INTEGER(IntKi), PARAMETER      :: B3N9Fy    = 1111
+   INTEGER(IntKi), PARAMETER      :: B1N1Fn    = 1112
+   INTEGER(IntKi), PARAMETER      :: B1N2Fn    = 1113
+   INTEGER(IntKi), PARAMETER      :: B1N3Fn    = 1114
+   INTEGER(IntKi), PARAMETER      :: B1N4Fn    = 1115
+   INTEGER(IntKi), PARAMETER      :: B1N5Fn    = 1116
+   INTEGER(IntKi), PARAMETER      :: B1N6Fn    = 1117
+   INTEGER(IntKi), PARAMETER      :: B1N7Fn    = 1118
+   INTEGER(IntKi), PARAMETER      :: B1N8Fn    = 1119
+   INTEGER(IntKi), PARAMETER      :: B1N9Fn    = 1120
+   INTEGER(IntKi), PARAMETER      :: B2N1Fn    = 1121
+   INTEGER(IntKi), PARAMETER      :: B2N2Fn    = 1122
+   INTEGER(IntKi), PARAMETER      :: B2N3Fn    = 1123
+   INTEGER(IntKi), PARAMETER      :: B2N4Fn    = 1124
+   INTEGER(IntKi), PARAMETER      :: B2N5Fn    = 1125
+   INTEGER(IntKi), PARAMETER      :: B2N6Fn    = 1126
+   INTEGER(IntKi), PARAMETER      :: B2N7Fn    = 1127
+   INTEGER(IntKi), PARAMETER      :: B2N8Fn    = 1128
+   INTEGER(IntKi), PARAMETER      :: B2N9Fn    = 1129
+   INTEGER(IntKi), PARAMETER      :: B3N1Fn    = 1130
+   INTEGER(IntKi), PARAMETER      :: B3N2Fn    = 1131
+   INTEGER(IntKi), PARAMETER      :: B3N3Fn    = 1132
+   INTEGER(IntKi), PARAMETER      :: B3N4Fn    = 1133
+   INTEGER(IntKi), PARAMETER      :: B3N5Fn    = 1134
+   INTEGER(IntKi), PARAMETER      :: B3N6Fn    = 1135
+   INTEGER(IntKi), PARAMETER      :: B3N7Fn    = 1136
+   INTEGER(IntKi), PARAMETER      :: B3N8Fn    = 1137
+   INTEGER(IntKi), PARAMETER      :: B3N9Fn    = 1138
+   INTEGER(IntKi), PARAMETER      :: B1N1Ft    = 1139
+   INTEGER(IntKi), PARAMETER      :: B1N2Ft    = 1140
+   INTEGER(IntKi), PARAMETER      :: B1N3Ft    = 1141
+   INTEGER(IntKi), PARAMETER      :: B1N4Ft    = 1142
+   INTEGER(IntKi), PARAMETER      :: B1N5Ft    = 1143
+   INTEGER(IntKi), PARAMETER      :: B1N6Ft    = 1144
+   INTEGER(IntKi), PARAMETER      :: B1N7Ft    = 1145
+   INTEGER(IntKi), PARAMETER      :: B1N8Ft    = 1146
+   INTEGER(IntKi), PARAMETER      :: B1N9Ft    = 1147
+   INTEGER(IntKi), PARAMETER      :: B2N1Ft    = 1148
+   INTEGER(IntKi), PARAMETER      :: B2N2Ft    = 1149
+   INTEGER(IntKi), PARAMETER      :: B2N3Ft    = 1150
+   INTEGER(IntKi), PARAMETER      :: B2N4Ft    = 1151
+   INTEGER(IntKi), PARAMETER      :: B2N5Ft    = 1152
+   INTEGER(IntKi), PARAMETER      :: B2N6Ft    = 1153
+   INTEGER(IntKi), PARAMETER      :: B2N7Ft    = 1154
+   INTEGER(IntKi), PARAMETER      :: B2N8Ft    = 1155
+   INTEGER(IntKi), PARAMETER      :: B2N9Ft    = 1156
+   INTEGER(IntKi), PARAMETER      :: B3N1Ft    = 1157
+   INTEGER(IntKi), PARAMETER      :: B3N2Ft    = 1158
+   INTEGER(IntKi), PARAMETER      :: B3N3Ft    = 1159
+   INTEGER(IntKi), PARAMETER      :: B3N4Ft    = 1160
+   INTEGER(IntKi), PARAMETER      :: B3N5Ft    = 1161
+   INTEGER(IntKi), PARAMETER      :: B3N6Ft    = 1162
+   INTEGER(IntKi), PARAMETER      :: B3N7Ft    = 1163
+   INTEGER(IntKi), PARAMETER      :: B3N8Ft    = 1164
+   INTEGER(IntKi), PARAMETER      :: B3N9Ft    = 1165
+   INTEGER(IntKi), PARAMETER      :: B1N1Clrnc = 1166
+   INTEGER(IntKi), PARAMETER      :: B1N2Clrnc = 1167
+   INTEGER(IntKi), PARAMETER      :: B1N3Clrnc = 1168
+   INTEGER(IntKi), PARAMETER      :: B1N4Clrnc = 1169
+   INTEGER(IntKi), PARAMETER      :: B1N5Clrnc = 1170
+   INTEGER(IntKi), PARAMETER      :: B1N6Clrnc = 1171
+   INTEGER(IntKi), PARAMETER      :: B1N7Clrnc = 1172
+   INTEGER(IntKi), PARAMETER      :: B1N8Clrnc = 1173
+   INTEGER(IntKi), PARAMETER      :: B1N9Clrnc = 1174
+   INTEGER(IntKi), PARAMETER      :: B2N1Clrnc = 1175
+   INTEGER(IntKi), PARAMETER      :: B2N2Clrnc = 1176
+   INTEGER(IntKi), PARAMETER      :: B2N3Clrnc = 1177
+   INTEGER(IntKi), PARAMETER      :: B2N4Clrnc = 1178
+   INTEGER(IntKi), PARAMETER      :: B2N5Clrnc = 1179
+   INTEGER(IntKi), PARAMETER      :: B2N6Clrnc = 1180
+   INTEGER(IntKi), PARAMETER      :: B2N7Clrnc = 1181
+   INTEGER(IntKi), PARAMETER      :: B2N8Clrnc = 1182
+   INTEGER(IntKi), PARAMETER      :: B2N9Clrnc = 1183
+   INTEGER(IntKi), PARAMETER      :: B3N1Clrnc = 1184
+   INTEGER(IntKi), PARAMETER      :: B3N2Clrnc = 1185
+   INTEGER(IntKi), PARAMETER      :: B3N3Clrnc = 1186
+   INTEGER(IntKi), PARAMETER      :: B3N4Clrnc = 1187
+   INTEGER(IntKi), PARAMETER      :: B3N5Clrnc = 1188
+   INTEGER(IntKi), PARAMETER      :: B3N6Clrnc = 1189
+   INTEGER(IntKi), PARAMETER      :: B3N7Clrnc = 1190
+   INTEGER(IntKi), PARAMETER      :: B3N8Clrnc = 1191
+   INTEGER(IntKi), PARAMETER      :: B3N9Clrnc = 1192
+   INTEGER(IntKi), PARAMETER      :: B1N1Cpmin = 1193
+   INTEGER(IntKi), PARAMETER      :: B1N2Cpmin = 1194
+   INTEGER(IntKi), PARAMETER      :: B1N3Cpmin = 1195
+   INTEGER(IntKi), PARAMETER      :: B1N4Cpmin = 1196
+   INTEGER(IntKi), PARAMETER      :: B1N5Cpmin = 1197
+   INTEGER(IntKi), PARAMETER      :: B1N6Cpmin = 1198
+   INTEGER(IntKi), PARAMETER      :: B1N7Cpmin = 1199
+   INTEGER(IntKi), PARAMETER      :: B1N8Cpmin = 1200
+   INTEGER(IntKi), PARAMETER      :: B1N9Cpmin = 1201
+   INTEGER(IntKi), PARAMETER      :: B2N1Cpmin = 1202
+   INTEGER(IntKi), PARAMETER      :: B2N2Cpmin = 1203
+   INTEGER(IntKi), PARAMETER      :: B2N3Cpmin = 1204
+   INTEGER(IntKi), PARAMETER      :: B2N4Cpmin = 1205
+   INTEGER(IntKi), PARAMETER      :: B2N5Cpmin = 1206
+   INTEGER(IntKi), PARAMETER      :: B2N6Cpmin = 1207
+   INTEGER(IntKi), PARAMETER      :: B2N7Cpmin = 1208
+   INTEGER(IntKi), PARAMETER      :: B2N8Cpmin = 1209
+   INTEGER(IntKi), PARAMETER      :: B2N9Cpmin = 1210
+   INTEGER(IntKi), PARAMETER      :: B3N1Cpmin = 1211
+   INTEGER(IntKi), PARAMETER      :: B3N2Cpmin = 1212
+   INTEGER(IntKi), PARAMETER      :: B3N3Cpmin = 1213
+   INTEGER(IntKi), PARAMETER      :: B3N4Cpmin = 1214
+   INTEGER(IntKi), PARAMETER      :: B3N5Cpmin = 1215
+   INTEGER(IntKi), PARAMETER      :: B3N6Cpmin = 1216
+   INTEGER(IntKi), PARAMETER      :: B3N7Cpmin = 1217
+   INTEGER(IntKi), PARAMETER      :: B3N8Cpmin = 1218
+   INTEGER(IntKi), PARAMETER      :: B3N9Cpmin = 1219
+   INTEGER(IntKi), PARAMETER      :: B1N1SigCr = 1220
+   INTEGER(IntKi), PARAMETER      :: B1N2SigCr = 1221
+   INTEGER(IntKi), PARAMETER      :: B1N3SigCr = 1222
+   INTEGER(IntKi), PARAMETER      :: B1N4SigCr = 1223
+   INTEGER(IntKi), PARAMETER      :: B1N5SigCr = 1224
+   INTEGER(IntKi), PARAMETER      :: B1N6SigCr = 1225
+   INTEGER(IntKi), PARAMETER      :: B1N7SigCr = 1226
+   INTEGER(IntKi), PARAMETER      :: B1N8SigCr = 1227
+   INTEGER(IntKi), PARAMETER      :: B1N9SigCr = 1228
+   INTEGER(IntKi), PARAMETER      :: B2N1SigCr = 1229
+   INTEGER(IntKi), PARAMETER      :: B2N2SigCr = 1230
+   INTEGER(IntKi), PARAMETER      :: B2N3SigCr = 1231
+   INTEGER(IntKi), PARAMETER      :: B2N4SigCr = 1232
+   INTEGER(IntKi), PARAMETER      :: B2N5SigCr = 1233
+   INTEGER(IntKi), PARAMETER      :: B2N6SigCr = 1234
+   INTEGER(IntKi), PARAMETER      :: B2N7SigCr = 1235
+   INTEGER(IntKi), PARAMETER      :: B2N8SigCr = 1236
+   INTEGER(IntKi), PARAMETER      :: B2N9SigCr = 1237
+   INTEGER(IntKi), PARAMETER      :: B3N1SigCr = 1238
+   INTEGER(IntKi), PARAMETER      :: B3N2SigCr = 1239
+   INTEGER(IntKi), PARAMETER      :: B3N3SigCr = 1240
+   INTEGER(IntKi), PARAMETER      :: B3N4SigCr = 1241
+   INTEGER(IntKi), PARAMETER      :: B3N5SigCr = 1242
+   INTEGER(IntKi), PARAMETER      :: B3N6SigCr = 1243
+   INTEGER(IntKi), PARAMETER      :: B3N7SigCr = 1244
+   INTEGER(IntKi), PARAMETER      :: B3N8SigCr = 1245
+   INTEGER(IntKi), PARAMETER      :: B3N9SigCr = 1246
+   INTEGER(IntKi), PARAMETER      :: B1N1SgCav = 1247
+   INTEGER(IntKi), PARAMETER      :: B1N2SgCav = 1248
+   INTEGER(IntKi), PARAMETER      :: B1N3SgCav = 1249
+   INTEGER(IntKi), PARAMETER      :: B1N4SgCav = 1250
+   INTEGER(IntKi), PARAMETER      :: B1N5SgCav = 1251
+   INTEGER(IntKi), PARAMETER      :: B1N6SgCav = 1252
+   INTEGER(IntKi), PARAMETER      :: B1N7SgCav = 1253
+   INTEGER(IntKi), PARAMETER      :: B1N8SgCav = 1254
+   INTEGER(IntKi), PARAMETER      :: B1N9SgCav = 1255
+   INTEGER(IntKi), PARAMETER      :: B2N1SgCav = 1256
+   INTEGER(IntKi), PARAMETER      :: B2N2SgCav = 1257
+   INTEGER(IntKi), PARAMETER      :: B2N3SgCav = 1258
+   INTEGER(IntKi), PARAMETER      :: B2N4SgCav = 1259
+   INTEGER(IntKi), PARAMETER      :: B2N5SgCav = 1260
+   INTEGER(IntKi), PARAMETER      :: B2N6SgCav = 1261
+   INTEGER(IntKi), PARAMETER      :: B2N7SgCav = 1262
+   INTEGER(IntKi), PARAMETER      :: B2N8SgCav = 1263
+   INTEGER(IntKi), PARAMETER      :: B2N9SgCav = 1264
+   INTEGER(IntKi), PARAMETER      :: B3N1SgCav = 1265
+   INTEGER(IntKi), PARAMETER      :: B3N2SgCav = 1266
+   INTEGER(IntKi), PARAMETER      :: B3N3SgCav = 1267
+   INTEGER(IntKi), PARAMETER      :: B3N4SgCav = 1268
+   INTEGER(IntKi), PARAMETER      :: B3N5SgCav = 1269
+   INTEGER(IntKi), PARAMETER      :: B3N6SgCav = 1270
+   INTEGER(IntKi), PARAMETER      :: B3N7SgCav = 1271
+   INTEGER(IntKi), PARAMETER      :: B3N8SgCav = 1272
+   INTEGER(IntKi), PARAMETER      :: B3N9SgCav = 1273
+   INTEGER(IntKi), PARAMETER      :: B1N1Gam   = 1274
+   INTEGER(IntKi), PARAMETER      :: B1N2Gam   = 1275
+   INTEGER(IntKi), PARAMETER      :: B1N3Gam   = 1276
+   INTEGER(IntKi), PARAMETER      :: B1N4Gam   = 1277
+   INTEGER(IntKi), PARAMETER      :: B1N5Gam   = 1278
+   INTEGER(IntKi), PARAMETER      :: B1N6Gam   = 1279
+   INTEGER(IntKi), PARAMETER      :: B1N7Gam   = 1280
+   INTEGER(IntKi), PARAMETER      :: B1N8Gam   = 1281
+   INTEGER(IntKi), PARAMETER      :: B1N9Gam   = 1282
+   INTEGER(IntKi), PARAMETER      :: B2N1Gam   = 1283
+   INTEGER(IntKi), PARAMETER      :: B2N2Gam   = 1284
+   INTEGER(IntKi), PARAMETER      :: B2N3Gam   = 1285
+   INTEGER(IntKi), PARAMETER      :: B2N4Gam   = 1286
+   INTEGER(IntKi), PARAMETER      :: B2N5Gam   = 1287
+   INTEGER(IntKi), PARAMETER      :: B2N6Gam   = 1288
+   INTEGER(IntKi), PARAMETER      :: B2N7Gam   = 1289
+   INTEGER(IntKi), PARAMETER      :: B2N8Gam   = 1290
+   INTEGER(IntKi), PARAMETER      :: B2N9Gam   = 1291
+   INTEGER(IntKi), PARAMETER      :: B3N1Gam   = 1292
+   INTEGER(IntKi), PARAMETER      :: B3N2Gam   = 1293
+   INTEGER(IntKi), PARAMETER      :: B3N3Gam   = 1294
+   INTEGER(IntKi), PARAMETER      :: B3N4Gam   = 1295
+   INTEGER(IntKi), PARAMETER      :: B3N5Gam   = 1296
+   INTEGER(IntKi), PARAMETER      :: B3N6Gam   = 1297
+   INTEGER(IntKi), PARAMETER      :: B3N7Gam   = 1298
+   INTEGER(IntKi), PARAMETER      :: B3N8Gam   = 1299
+   INTEGER(IntKi), PARAMETER      :: B3N9Gam   = 1300
+   INTEGER(IntKi), PARAMETER      :: B1N1Fbn   = 1301
+   INTEGER(IntKi), PARAMETER      :: B1N2Fbn   = 1302
+   INTEGER(IntKi), PARAMETER      :: B1N3Fbn   = 1303
+   INTEGER(IntKi), PARAMETER      :: B1N4Fbn   = 1304
+   INTEGER(IntKi), PARAMETER      :: B1N5Fbn   = 1305
+   INTEGER(IntKi), PARAMETER      :: B1N6Fbn   = 1306
+   INTEGER(IntKi), PARAMETER      :: B1N7Fbn   = 1307
+   INTEGER(IntKi), PARAMETER      :: B1N8Fbn   = 1308
+   INTEGER(IntKi), PARAMETER      :: B1N9Fbn   = 1309
+   INTEGER(IntKi), PARAMETER      :: B2N1Fbn   = 1310
+   INTEGER(IntKi), PARAMETER      :: B2N2Fbn   = 1311
+   INTEGER(IntKi), PARAMETER      :: B2N3Fbn   = 1312
+   INTEGER(IntKi), PARAMETER      :: B2N4Fbn   = 1313
+   INTEGER(IntKi), PARAMETER      :: B2N5Fbn   = 1314
+   INTEGER(IntKi), PARAMETER      :: B2N6Fbn   = 1315
+   INTEGER(IntKi), PARAMETER      :: B2N7Fbn   = 1316
+   INTEGER(IntKi), PARAMETER      :: B2N8Fbn   = 1317
+   INTEGER(IntKi), PARAMETER      :: B2N9Fbn   = 1318
+   INTEGER(IntKi), PARAMETER      :: B3N1Fbn   = 1319
+   INTEGER(IntKi), PARAMETER      :: B3N2Fbn   = 1320
+   INTEGER(IntKi), PARAMETER      :: B3N3Fbn   = 1321
+   INTEGER(IntKi), PARAMETER      :: B3N4Fbn   = 1322
+   INTEGER(IntKi), PARAMETER      :: B3N5Fbn   = 1323
+   INTEGER(IntKi), PARAMETER      :: B3N6Fbn   = 1324
+   INTEGER(IntKi), PARAMETER      :: B3N7Fbn   = 1325
+   INTEGER(IntKi), PARAMETER      :: B3N8Fbn   = 1326
+   INTEGER(IntKi), PARAMETER      :: B3N9Fbn   = 1327
+   INTEGER(IntKi), PARAMETER      :: B1N1Fbt   = 1328
+   INTEGER(IntKi), PARAMETER      :: B1N2Fbt   = 1329
+   INTEGER(IntKi), PARAMETER      :: B1N3Fbt   = 1330
+   INTEGER(IntKi), PARAMETER      :: B1N4Fbt   = 1331
+   INTEGER(IntKi), PARAMETER      :: B1N5Fbt   = 1332
+   INTEGER(IntKi), PARAMETER      :: B1N6Fbt   = 1333
+   INTEGER(IntKi), PARAMETER      :: B1N7Fbt   = 1334
+   INTEGER(IntKi), PARAMETER      :: B1N8Fbt   = 1335
+   INTEGER(IntKi), PARAMETER      :: B1N9Fbt   = 1336
+   INTEGER(IntKi), PARAMETER      :: B2N1Fbt   = 1337
+   INTEGER(IntKi), PARAMETER      :: B2N2Fbt   = 1338
+   INTEGER(IntKi), PARAMETER      :: B2N3Fbt   = 1339
+   INTEGER(IntKi), PARAMETER      :: B2N4Fbt   = 1340
+   INTEGER(IntKi), PARAMETER      :: B2N5Fbt   = 1341
+   INTEGER(IntKi), PARAMETER      :: B2N6Fbt   = 1342
+   INTEGER(IntKi), PARAMETER      :: B2N7Fbt   = 1343
+   INTEGER(IntKi), PARAMETER      :: B2N8Fbt   = 1344
+   INTEGER(IntKi), PARAMETER      :: B2N9Fbt   = 1345
+   INTEGER(IntKi), PARAMETER      :: B3N1Fbt   = 1346
+   INTEGER(IntKi), PARAMETER      :: B3N2Fbt   = 1347
+   INTEGER(IntKi), PARAMETER      :: B3N3Fbt   = 1348
+   INTEGER(IntKi), PARAMETER      :: B3N4Fbt   = 1349
+   INTEGER(IntKi), PARAMETER      :: B3N5Fbt   = 1350
+   INTEGER(IntKi), PARAMETER      :: B3N6Fbt   = 1351
+   INTEGER(IntKi), PARAMETER      :: B3N7Fbt   = 1352
+   INTEGER(IntKi), PARAMETER      :: B3N8Fbt   = 1353
+   INTEGER(IntKi), PARAMETER      :: B3N9Fbt   = 1354
+   INTEGER(IntKi), PARAMETER      :: B1N1Fbs   = 1355
+   INTEGER(IntKi), PARAMETER      :: B1N2Fbs   = 1356
+   INTEGER(IntKi), PARAMETER      :: B1N3Fbs   = 1357
+   INTEGER(IntKi), PARAMETER      :: B1N4Fbs   = 1358
+   INTEGER(IntKi), PARAMETER      :: B1N5Fbs   = 1359
+   INTEGER(IntKi), PARAMETER      :: B1N6Fbs   = 1360
+   INTEGER(IntKi), PARAMETER      :: B1N7Fbs   = 1361
+   INTEGER(IntKi), PARAMETER      :: B1N8Fbs   = 1362
+   INTEGER(IntKi), PARAMETER      :: B1N9Fbs   = 1363
+   INTEGER(IntKi), PARAMETER      :: B2N1Fbs   = 1364
+   INTEGER(IntKi), PARAMETER      :: B2N2Fbs   = 1365
+   INTEGER(IntKi), PARAMETER      :: B2N3Fbs   = 1366
+   INTEGER(IntKi), PARAMETER      :: B2N4Fbs   = 1367
+   INTEGER(IntKi), PARAMETER      :: B2N5Fbs   = 1368
+   INTEGER(IntKi), PARAMETER      :: B2N6Fbs   = 1369
+   INTEGER(IntKi), PARAMETER      :: B2N7Fbs   = 1370
+   INTEGER(IntKi), PARAMETER      :: B2N8Fbs   = 1371
+   INTEGER(IntKi), PARAMETER      :: B2N9Fbs   = 1372
+   INTEGER(IntKi), PARAMETER      :: B3N1Fbs   = 1373
+   INTEGER(IntKi), PARAMETER      :: B3N2Fbs   = 1374
+   INTEGER(IntKi), PARAMETER      :: B3N3Fbs   = 1375
+   INTEGER(IntKi), PARAMETER      :: B3N4Fbs   = 1376
+   INTEGER(IntKi), PARAMETER      :: B3N5Fbs   = 1377
+   INTEGER(IntKi), PARAMETER      :: B3N6Fbs   = 1378
+   INTEGER(IntKi), PARAMETER      :: B3N7Fbs   = 1379
+   INTEGER(IntKi), PARAMETER      :: B3N8Fbs   = 1380
+   INTEGER(IntKi), PARAMETER      :: B3N9Fbs   = 1381
+   INTEGER(IntKi), PARAMETER      :: B1N1Mbn   = 1382
+   INTEGER(IntKi), PARAMETER      :: B1N2Mbn   = 1383
+   INTEGER(IntKi), PARAMETER      :: B1N3Mbn   = 1384
+   INTEGER(IntKi), PARAMETER      :: B1N4Mbn   = 1385
+   INTEGER(IntKi), PARAMETER      :: B1N5Mbn   = 1386
+   INTEGER(IntKi), PARAMETER      :: B1N6Mbn   = 1387
+   INTEGER(IntKi), PARAMETER      :: B1N7Mbn   = 1388
+   INTEGER(IntKi), PARAMETER      :: B1N8Mbn   = 1389
+   INTEGER(IntKi), PARAMETER      :: B1N9Mbn   = 1390
+   INTEGER(IntKi), PARAMETER      :: B2N1Mbn   = 1391
+   INTEGER(IntKi), PARAMETER      :: B2N2Mbn   = 1392
+   INTEGER(IntKi), PARAMETER      :: B2N3Mbn   = 1393
+   INTEGER(IntKi), PARAMETER      :: B2N4Mbn   = 1394
+   INTEGER(IntKi), PARAMETER      :: B2N5Mbn   = 1395
+   INTEGER(IntKi), PARAMETER      :: B2N6Mbn   = 1396
+   INTEGER(IntKi), PARAMETER      :: B2N7Mbn   = 1397
+   INTEGER(IntKi), PARAMETER      :: B2N8Mbn   = 1398
+   INTEGER(IntKi), PARAMETER      :: B2N9Mbn   = 1399
+   INTEGER(IntKi), PARAMETER      :: B3N1Mbn   = 1400
+   INTEGER(IntKi), PARAMETER      :: B3N2Mbn   = 1401
+   INTEGER(IntKi), PARAMETER      :: B3N3Mbn   = 1402
+   INTEGER(IntKi), PARAMETER      :: B3N4Mbn   = 1403
+   INTEGER(IntKi), PARAMETER      :: B3N5Mbn   = 1404
+   INTEGER(IntKi), PARAMETER      :: B3N6Mbn   = 1405
+   INTEGER(IntKi), PARAMETER      :: B3N7Mbn   = 1406
+   INTEGER(IntKi), PARAMETER      :: B3N8Mbn   = 1407
+   INTEGER(IntKi), PARAMETER      :: B3N9Mbn   = 1408
+   INTEGER(IntKi), PARAMETER      :: B1N1Mbt   = 1409
+   INTEGER(IntKi), PARAMETER      :: B1N2Mbt   = 1410
+   INTEGER(IntKi), PARAMETER      :: B1N3Mbt   = 1411
+   INTEGER(IntKi), PARAMETER      :: B1N4Mbt   = 1412
+   INTEGER(IntKi), PARAMETER      :: B1N5Mbt   = 1413
+   INTEGER(IntKi), PARAMETER      :: B1N6Mbt   = 1414
+   INTEGER(IntKi), PARAMETER      :: B1N7Mbt   = 1415
+   INTEGER(IntKi), PARAMETER      :: B1N8Mbt   = 1416
+   INTEGER(IntKi), PARAMETER      :: B1N9Mbt   = 1417
+   INTEGER(IntKi), PARAMETER      :: B2N1Mbt   = 1418
+   INTEGER(IntKi), PARAMETER      :: B2N2Mbt   = 1419
+   INTEGER(IntKi), PARAMETER      :: B2N3Mbt   = 1420
+   INTEGER(IntKi), PARAMETER      :: B2N4Mbt   = 1421
+   INTEGER(IntKi), PARAMETER      :: B2N5Mbt   = 1422
+   INTEGER(IntKi), PARAMETER      :: B2N6Mbt   = 1423
+   INTEGER(IntKi), PARAMETER      :: B2N7Mbt   = 1424
+   INTEGER(IntKi), PARAMETER      :: B2N8Mbt   = 1425
+   INTEGER(IntKi), PARAMETER      :: B2N9Mbt   = 1426
+   INTEGER(IntKi), PARAMETER      :: B3N1Mbt   = 1427
+   INTEGER(IntKi), PARAMETER      :: B3N2Mbt   = 1428
+   INTEGER(IntKi), PARAMETER      :: B3N3Mbt   = 1429
+   INTEGER(IntKi), PARAMETER      :: B3N4Mbt   = 1430
+   INTEGER(IntKi), PARAMETER      :: B3N5Mbt   = 1431
+   INTEGER(IntKi), PARAMETER      :: B3N6Mbt   = 1432
+   INTEGER(IntKi), PARAMETER      :: B3N7Mbt   = 1433
+   INTEGER(IntKi), PARAMETER      :: B3N8Mbt   = 1434
+   INTEGER(IntKi), PARAMETER      :: B3N9Mbt   = 1435
+   INTEGER(IntKi), PARAMETER      :: B1N1Mbs   = 1436
+   INTEGER(IntKi), PARAMETER      :: B1N2Mbs   = 1437
+   INTEGER(IntKi), PARAMETER      :: B1N3Mbs   = 1438
+   INTEGER(IntKi), PARAMETER      :: B1N4Mbs   = 1439
+   INTEGER(IntKi), PARAMETER      :: B1N5Mbs   = 1440
+   INTEGER(IntKi), PARAMETER      :: B1N6Mbs   = 1441
+   INTEGER(IntKi), PARAMETER      :: B1N7Mbs   = 1442
+   INTEGER(IntKi), PARAMETER      :: B1N8Mbs   = 1443
+   INTEGER(IntKi), PARAMETER      :: B1N9Mbs   = 1444
+   INTEGER(IntKi), PARAMETER      :: B2N1Mbs   = 1445
+   INTEGER(IntKi), PARAMETER      :: B2N2Mbs   = 1446
+   INTEGER(IntKi), PARAMETER      :: B2N3Mbs   = 1447
+   INTEGER(IntKi), PARAMETER      :: B2N4Mbs   = 1448
+   INTEGER(IntKi), PARAMETER      :: B2N5Mbs   = 1449
+   INTEGER(IntKi), PARAMETER      :: B2N6Mbs   = 1450
+   INTEGER(IntKi), PARAMETER      :: B2N7Mbs   = 1451
+   INTEGER(IntKi), PARAMETER      :: B2N8Mbs   = 1452
+   INTEGER(IntKi), PARAMETER      :: B2N9Mbs   = 1453
+   INTEGER(IntKi), PARAMETER      :: B3N1Mbs   = 1454
+   INTEGER(IntKi), PARAMETER      :: B3N2Mbs   = 1455
+   INTEGER(IntKi), PARAMETER      :: B3N3Mbs   = 1456
+   INTEGER(IntKi), PARAMETER      :: B3N4Mbs   = 1457
+   INTEGER(IntKi), PARAMETER      :: B3N5Mbs   = 1458
+   INTEGER(IntKi), PARAMETER      :: B3N6Mbs   = 1459
+   INTEGER(IntKi), PARAMETER      :: B3N7Mbs   = 1460
+   INTEGER(IntKi), PARAMETER      :: B3N8Mbs   = 1461
+   INTEGER(IntKi), PARAMETER      :: B3N9Mbs   = 1462
 
 
      ! Rotor:
 
-   INTEGER(IntKi), PARAMETER      :: RtSpeed   = 1247
-   INTEGER(IntKi), PARAMETER      :: RtTSR     = 1248
-   INTEGER(IntKi), PARAMETER      :: RtVAvgxh  = 1249
-   INTEGER(IntKi), PARAMETER      :: RtVAvgyh  = 1250
-   INTEGER(IntKi), PARAMETER      :: RtVAvgzh  = 1251
-   INTEGER(IntKi), PARAMETER      :: RtSkew    = 1252
-   INTEGER(IntKi), PARAMETER      :: RtAeroFxh = 1253
-   INTEGER(IntKi), PARAMETER      :: RtAeroFyh = 1254
-   INTEGER(IntKi), PARAMETER      :: RtAeroFzh = 1255
-   INTEGER(IntKi), PARAMETER      :: RtAeroMxh = 1256
-   INTEGER(IntKi), PARAMETER      :: RtAeroMyh = 1257
-   INTEGER(IntKi), PARAMETER      :: RtAeroMzh = 1258
-   INTEGER(IntKi), PARAMETER      :: RtAeroPwr = 1259
-   INTEGER(IntKi), PARAMETER      :: RtArea    = 1260
-   INTEGER(IntKi), PARAMETER      :: RtAeroCp  = 1261
-   INTEGER(IntKi), PARAMETER      :: RtAeroCq  = 1262
-   INTEGER(IntKi), PARAMETER      :: RtAeroCt  = 1263
-   INTEGER(IntKi), PARAMETER      :: DBEMTau1  = 1264
-   INTEGER(IntKi), PARAMETER      :: RtAeroFxg = 1265
-   INTEGER(IntKi), PARAMETER      :: RtAeroFyg = 1266
-   INTEGER(IntKi), PARAMETER      :: RtAeroFzg = 1267
-   INTEGER(IntKi), PARAMETER      :: RtAeroMxg = 1268
-   INTEGER(IntKi), PARAMETER      :: RtAeroMyg = 1269
-   INTEGER(IntKi), PARAMETER      :: RtAeroMzg = 1270
+   INTEGER(IntKi), PARAMETER      :: RtSpeed   = 1463
+   INTEGER(IntKi), PARAMETER      :: RtTSR     = 1464
+   INTEGER(IntKi), PARAMETER      :: RtVAvgxh  = 1465
+   INTEGER(IntKi), PARAMETER      :: RtVAvgyh  = 1466
+   INTEGER(IntKi), PARAMETER      :: RtVAvgzh  = 1467
+   INTEGER(IntKi), PARAMETER      :: RtSkew    = 1468
+   INTEGER(IntKi), PARAMETER      :: RtFldFxh  = 1469
+   INTEGER(IntKi), PARAMETER      :: RtFldFyh  = 1470
+   INTEGER(IntKi), PARAMETER      :: RtFldFzh  = 1471
+   INTEGER(IntKi), PARAMETER      :: RtFldMxh  = 1472
+   INTEGER(IntKi), PARAMETER      :: RtFldMyh  = 1473
+   INTEGER(IntKi), PARAMETER      :: RtFldMzh  = 1474
+   INTEGER(IntKi), PARAMETER      :: RtFldPwr  = 1475
+   INTEGER(IntKi), PARAMETER      :: RtArea    = 1476
+   INTEGER(IntKi), PARAMETER      :: RtFldCp   = 1477
+   INTEGER(IntKi), PARAMETER      :: RtFldCq   = 1478
+   INTEGER(IntKi), PARAMETER      :: RtFldCt   = 1479
+   INTEGER(IntKi), PARAMETER      :: DBEMTau1  = 1480
+   INTEGER(IntKi), PARAMETER      :: RtFldFxg  = 1481
+   INTEGER(IntKi), PARAMETER      :: RtFldFyg  = 1482
+   INTEGER(IntKi), PARAMETER      :: RtFldFzg  = 1483
+   INTEGER(IntKi), PARAMETER      :: RtFldMxg  = 1484
+   INTEGER(IntKi), PARAMETER      :: RtFldMyg  = 1485
+   INTEGER(IntKi), PARAMETER      :: RtFldMzg  = 1486
+
+
+     ! Hub:
+
+   INTEGER(IntKi), PARAMETER      :: HbFbx     = 1487
+   INTEGER(IntKi), PARAMETER      :: HbFby     = 1488
+   INTEGER(IntKi), PARAMETER      :: HbFbz     = 1489
+   INTEGER(IntKi), PARAMETER      :: HbMbx     = 1490
+   INTEGER(IntKi), PARAMETER      :: HbMby     = 1491
+   INTEGER(IntKi), PARAMETER      :: HbMbz     = 1492
+
+
+     ! Nacelle:
+
+   INTEGER(IntKi), PARAMETER      :: NcFbx     = 1493
+   INTEGER(IntKi), PARAMETER      :: NcFby     = 1494
+   INTEGER(IntKi), PARAMETER      :: NcFbz     = 1495
+   INTEGER(IntKi), PARAMETER      :: NcMbx     = 1496
+   INTEGER(IntKi), PARAMETER      :: NcMby     = 1497
+   INTEGER(IntKi), PARAMETER      :: NcMbz     = 1498
+
+
+     ! TailFin:
+
+   INTEGER(IntKi), PARAMETER      :: TFAlpha   = 1499
+   INTEGER(IntKi), PARAMETER      :: TFMach    = 1500
+   INTEGER(IntKi), PARAMETER      :: TFRe      = 1501
+   INTEGER(IntKi), PARAMETER      :: TFVrel    = 1502
+   INTEGER(IntKi), PARAMETER      :: TFVundxi  = 1503
+   INTEGER(IntKi), PARAMETER      :: TFVundyi  = 1504
+   INTEGER(IntKi), PARAMETER      :: TFVundzi  = 1505
+   INTEGER(IntKi), PARAMETER      :: TFVindxi  = 1506
+   INTEGER(IntKi), PARAMETER      :: TFVindyi  = 1507
+   INTEGER(IntKi), PARAMETER      :: TFVindzi  = 1508
+   INTEGER(IntKi), PARAMETER      :: TFVrelxi  = 1509
+   INTEGER(IntKi), PARAMETER      :: TFVrelyi  = 1510
+   INTEGER(IntKi), PARAMETER      :: TFVrelzi  = 1511
+   INTEGER(IntKi), PARAMETER      :: TFSTVxi   = 1512
+   INTEGER(IntKi), PARAMETER      :: TFSTVyi   = 1513
+   INTEGER(IntKi), PARAMETER      :: TFSTVzi   = 1514
+   INTEGER(IntKi), PARAMETER      :: TFFxi     = 1515
+   INTEGER(IntKi), PARAMETER      :: TFFyi     = 1516
+   INTEGER(IntKi), PARAMETER      :: TFFzi     = 1517
+   INTEGER(IntKi), PARAMETER      :: TFMxi     = 1518
+   INTEGER(IntKi), PARAMETER      :: TFMyi     = 1519
+   INTEGER(IntKi), PARAMETER      :: TFMzi     = 1520
 
 
      ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1270
+   INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1520
 
 !End of code generated by Matlab script Write_ChckOutLst
 ! ===================================================================================================
+
    
    INTEGER,  PARAMETER          :: TwNVUnd(3, 9) = RESHAPE( (/ &           ! Undisturbed wind velocity
                                      TwN1VUndx,TwN1VUndy,TwN1VUndz, &
@@ -1370,23 +1633,29 @@ MODULE AeroDyn_IO
    INTEGER,  PARAMETER          :: TwNM(9)    = (/TwN1M,TwN2M,TwN3M,TwN4M,TwN5M,TwN6M,TwN7M,TwN8M,TwN9M/)                              ! Mach number
    INTEGER,  PARAMETER          :: TwNFdx(9)  = (/TwN1Fdx,TwN2Fdx,TwN3Fdx,TwN4Fdx,TwN5Fdx,TwN6Fdx,TwN7Fdx,TwN8Fdx,TwN9Fdx/)            ! x-component drag force per unit length   
    INTEGER,  PARAMETER          :: TwNFdy(9)  = (/TwN1Fdy,TwN2Fdy,TwN3Fdy,TwN4Fdy,TwN5Fdy,TwN6Fdy,TwN7Fdy,TwN8Fdy,TwN9Fdy/)            ! y-component drag force per unit length
+   INTEGER,  PARAMETER          :: TwNFbx(9)  = (/TwN1Fbx,TwN2Fbx,TwN3Fbx,TwN4Fbx,TwN5Fbx,TwN6Fbx,TwN7Fbx,TwN8Fbx,TwN9Fbx/)            ! x-component buoyant force per unit length
+   INTEGER,  PARAMETER          :: TwNFby(9)  = (/TwN1Fby,TwN2Fby,TwN3Fby,TwN4Fby,TwN5Fby,TwN6Fby,TwN7Fby,TwN8Fby,TwN9Fby/)            ! y-component buoyant force per unit length
+   INTEGER,  PARAMETER          :: TwNFbz(9)  = (/TwN1Fbz,TwN2Fbz,TwN3Fbz,TwN4Fbz,TwN5Fbz,TwN6Fbz,TwN7Fbz,TwN8Fbz,TwN9Fbz/)            ! z-component buoyant force per unit length
+   INTEGER,  PARAMETER          :: TwNMbx(9)  = (/TwN1Mbx,TwN2Mbx,TwN3Mbx,TwN4Mbx,TwN5Mbx,TwN6Mbx,TwN7Mbx,TwN8Mbx,TwN9Mbx/)            ! x-component buoyant moment per unit length
+   INTEGER,  PARAMETER          :: TwNMby(9)  = (/TwN1Mby,TwN2Mby,TwN3Mby,TwN4Mby,TwN5Mby,TwN6Mby,TwN7Mby,TwN8Mby,TwN9Mby/)            ! y-component buoyant moment per unit length
+   INTEGER,  PARAMETER          :: TwNMbz(9)  = (/TwN1Mbz,TwN2Mbz,TwN3Mbz,TwN4Mbz,TwN5Mbz,TwN6Mbz,TwN7Mbz,TwN8Mbz,TwN9Mbz/)            ! z-component buoyant moment per unit length
+   
    INTEGER,  PARAMETER          :: BAzimuth(3) = (/B1Azimuth,B2Azimuth,B3Azimuth/)                                                     ! azimuth angle 
    INTEGER,  PARAMETER          :: BPitch(3)   = (/B1Pitch,  B2Pitch,  B3Pitch/)                                                       ! pitch 
-   
-  INTEGER,  PARAMETER          :: BAeroFx(4)  = (/B1AeroFx,  B2AeroFx,  B3AeroFx, B4AeroFx/)                                                   ! x-component of total blade root aero force
-  INTEGER,  PARAMETER          :: BAeroFy(4)  = (/B1AeroFy,  B2AeroFy,  B3AeroFy, B4AeroFy/)                                                   ! y-component of total blade root aero force 
-  INTEGER,  PARAMETER          :: BAeroFz(4)  = (/B1AeroFz,  B2AeroFz,  B3AeroFz, B4AeroFz/)                                                   ! z-component of total blade root aero force 
-  INTEGER,  PARAMETER          :: BAeroMx(4)  = (/B1AeroMx,  B2AeroMx,  B3AeroMx, B4AeroMx/)                                                   ! x-component of total blade root aero moment
-  INTEGER,  PARAMETER          :: BAeroMy(4)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy, B4AeroMy/)                                                   ! y-component of total blade root aero moment
-  INTEGER,  PARAMETER          :: BAeroMz(4)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz, B4AeroMz/)                                                   ! z-component of total blade root aero moment 
-  INTEGER,  PARAMETER          :: BAeroPwr(4) = (/B1AeroPwr,  B2AeroPwr,  B3AeroPwr, B4AeroPwr/)                                               ! Blade contribution to power
-  INTEGER,  PARAMETER          :: BAeroFxg(4)  = (/B1AeroFxg,  B2AeroFxg,  B3AeroFxg, B4AeroFxg/)                                              ! x-component of total blade root aero force in global
-  INTEGER,  PARAMETER          :: BAeroFyg(4)  = (/B1AeroFyg,  B2AeroFyg,  B3AeroFyg, B4AeroFyg/)                                              ! y-component of total blade root aero force in global
-  INTEGER,  PARAMETER          :: BAeroFzg(4)  = (/B1AeroFzg,  B2AeroFzg,  B3AeroFzg, B4AeroFzg/)                                              ! z-component of total blade root aero force in global
-  INTEGER,  PARAMETER          :: BAeroMxg(4)  = (/B1AeroMxg,  B2AeroMxg,  B3AeroMxg, B4AeroMxg/)                                              ! x-component of total blade root aero moment wrt hub in global
-  INTEGER,  PARAMETER          :: BAeroMyg(4)  = (/B1AeroMyg,  B2AeroMyg,  B3AeroMyg, B4AeroMyg/)                                              ! y-component of total blade root aero moment wrt hub in global
-  INTEGER,  PARAMETER          :: BAeroMzg(4)  = (/B1AeroMzg,  B2AeroMzg,  B3AeroMzg, B4AeroMzg/)                                              ! z-component of total blade root aero moment wrt hub in global
-   
+   INTEGER,  PARAMETER          :: BFldFx(4)  = (/B1FldFx,  B2FldFx,  B3FldFx,  B4FldFx/)                                              ! total blade aero/hydro load (force in x-direction)
+   INTEGER,  PARAMETER          :: BFldFy(4)  = (/B1FldFy,  B2FldFy,  B3FldFy,  B4FldFy/)                                              ! total blade aero/hydro load (force in y-direction) 
+   INTEGER,  PARAMETER          :: BFldFz(4)  = (/B1FldFz,  B2FldFz,  B3FldFz,  B4FldFz/)                                              ! total blade aero/hydro load (force in z-direction)
+   INTEGER,  PARAMETER          :: BFldMx(4)  = (/B1FldMx,  B2FldMx,  B3FldMx,  B4FldMx/)                                              ! total blade aero/hydro load (moment in x-direction)
+   INTEGER,  PARAMETER          :: BFldMy(4)  = (/B1FldMy,  B2FldMy,  B3FldMy,  B4FldMy/)                                              ! total blade aero/hydro load (moment in y-direction)
+   INTEGER,  PARAMETER          :: BFldMz(4)  = (/B1FldMz,  B2FldMz,  B3FldMz,  B4FldMz/)                                              ! total blade aero/hydro load (moment in z-direction) 
+   INTEGER,  PARAMETER          :: BFldPwr(4) = (/B1FldPwr, B2FldPwr, B3FldPwr, B4FldPwr/)                                             ! total blade aero/hydro power 
+   INTEGER,  PARAMETER          :: BFldFxg(4) = (/B1FldFxg, B2FldFxg, B3FldFxg, B4FldFxg/)                                             ! total blade aero/hydro load (force in x-direction) in global
+   INTEGER,  PARAMETER          :: BFldFyg(4) = (/B1FldFyg, B2FldFyg, B3FldFyg, B4FldFyg/)                                             ! total blade aero/hydro load (force in y-direction) in global
+   INTEGER,  PARAMETER          :: BFldFzg(4) = (/B1FldFzg, B2FldFzg, B3FldFzg, B4FldFzg/)                                             ! total blade aero/hydro load (force in z-direction) in global
+   INTEGER,  PARAMETER          :: BFldMxg(4) = (/B1FldMxg, B2FldMxg, B3FldMxg, B4FldMxg/)                                             ! total blade aero/hydro load (moment in x-direction) in global
+   INTEGER,  PARAMETER          :: BFldMyg(4) = (/B1FldMyg, B2FldMyg, B3FldMyg, B4FldMyg/)                                             ! total blade aero/hydro load (moment in y-direction) in global
+   INTEGER,  PARAMETER          :: BFldMzg(4) = (/B1FldMzg, B2FldMzg, B3FldMzg, B4FldMzg/)                                             ! total blade aero/hydro load (moment in z-direction) in global
+
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
                                      B2N1VUndx,B2N2VUndx,B2N3VUndx,B2N4VUndx,B2N5VUndx,B2N6VUndx,B2N7VUndx,B2N8VUndx,B2N9VUndx, &
@@ -1462,140 +1731,166 @@ MODULE AeroDyn_IO
                                      B2N1VIndx,B2N2VIndx,B2N3VIndx,B2N4VIndx,B2N5VIndx,B2N6VIndx,B2N7VIndx,B2N8VIndx,B2N9VIndx, &
                                      B3N1VIndx,B3N2VIndx,B3N3VIndx,B3N4VIndx,B3N5VIndx,B3N6VIndx,B3N7VIndx,B3N8VIndx,B3N9VIndx  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNVIndy(9, 3) = RESHAPE( (/ &     ! tangential induced wind velocity
+   INTEGER,  PARAMETER          :: BNVIndy(9, 3) = RESHAPE( (/ &     ! tangential induced wind velocity
                                      B1N1VIndy,B1N2VIndy,B1N3VIndy,B1N4VIndy,B1N5VIndy,B1N6VIndy,B1N7VIndy,B1N8VIndy,B1N9VIndy, &
                                      B2N1VIndy,B2N2VIndy,B2N3VIndy,B2N4VIndy,B2N5VIndy,B2N6VIndy,B2N7VIndy,B2N8VIndy,B2N9VIndy, &
                                      B3N1VIndy,B3N2VIndy,B3N3VIndy,B3N4VIndy,B3N5VIndy,B3N6VIndy,B3N7VIndy,B3N8VIndy,B3N9VIndy  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNAxInd(9, 3) = RESHAPE( (/ &     ! axial induction factor
+   INTEGER,  PARAMETER          :: BNAxInd(9, 3) = RESHAPE( (/ &     ! axial induction factor
                                      B1N1AxInd,B1N2AxInd,B1N3AxInd,B1N4AxInd,B1N5AxInd,B1N6AxInd,B1N7AxInd,B1N8AxInd,B1N9AxInd, &
                                      B2N1AxInd,B2N2AxInd,B2N3AxInd,B2N4AxInd,B2N5AxInd,B2N6AxInd,B2N7AxInd,B2N8AxInd,B2N9AxInd, &
                                      B3N1AxInd,B3N2AxInd,B3N3AxInd,B3N4AxInd,B3N5AxInd,B3N6AxInd,B3N7AxInd,B3N8AxInd,B3N9AxInd  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNTnInd(9, 3) = RESHAPE( (/ &     ! tangential induction factor
+   INTEGER,  PARAMETER          :: BNTnInd(9, 3) = RESHAPE( (/ &     ! tangential induction factor
                                      B1N1TnInd,B1N2TnInd,B1N3TnInd,B1N4TnInd,B1N5TnInd,B1N6TnInd,B1N7TnInd,B1N8TnInd,B1N9TnInd, &
                                      B2N1TnInd,B2N2TnInd,B2N3TnInd,B2N4TnInd,B2N5TnInd,B2N6TnInd,B2N7TnInd,B2N8TnInd,B2N9TnInd, &
                                      B3N1TnInd,B3N2TnInd,B3N3TnInd,B3N4TnInd,B3N5TnInd,B3N6TnInd,B3N7TnInd,B3N8TnInd,B3N9TnInd  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNAlpha(9, 3) = RESHAPE( (/ &     ! angle of attach
+   INTEGER,  PARAMETER          :: BNAlpha(9, 3) = RESHAPE( (/ &     ! angle of attack
                                      B1N1Alpha,B1N2Alpha,B1N3Alpha,B1N4Alpha,B1N5Alpha,B1N6Alpha,B1N7Alpha,B1N8Alpha,B1N9Alpha, &
                                      B2N1Alpha,B2N2Alpha,B2N3Alpha,B2N4Alpha,B2N5Alpha,B2N6Alpha,B2N7Alpha,B2N8Alpha,B2N9Alpha, &
                                      B3N1Alpha,B3N2Alpha,B3N3Alpha,B3N4Alpha,B3N5Alpha,B3N6Alpha,B3N7Alpha,B3N8Alpha,B3N9Alpha  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNTheta(9, 3) = RESHAPE( (/ &     ! pitch+twist angle
+   INTEGER,  PARAMETER          :: BNTheta(9, 3) = RESHAPE( (/ &     ! pitch+twist angle
                                      B1N1Theta,B1N2Theta,B1N3Theta,B1N4Theta,B1N5Theta,B1N6Theta,B1N7Theta,B1N8Theta,B1N9Theta, &
                                      B2N1Theta,B2N2Theta,B2N3Theta,B2N4Theta,B2N5Theta,B2N6Theta,B2N7Theta,B2N8Theta,B2N9Theta, &
                                      B3N1Theta,B3N2Theta,B3N3Theta,B3N4Theta,B3N5Theta,B3N6Theta,B3N7Theta,B3N8Theta,B3N9Theta  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNPhi(9, 3) = RESHAPE( (/ &      ! inflow angle
+   INTEGER,  PARAMETER          :: BNPhi(9, 3) = RESHAPE( (/ &      ! inflow angle
                                      B1N1Phi,B1N2Phi,B1N3Phi,B1N4Phi,B1N5Phi,B1N6Phi,B1N7Phi,B1N8Phi,B1N9Phi, &
                                      B2N1Phi,B2N2Phi,B2N3Phi,B2N4Phi,B2N5Phi,B2N6Phi,B2N7Phi,B2N8Phi,B2N9Phi, &
                                      B3N1Phi,B3N2Phi,B3N3Phi,B3N4Phi,B3N5Phi,B3N6Phi,B3N7Phi,B3N8Phi,B3N9Phi  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCurve(9, 3) = RESHAPE( (/ &    ! curvature angle
+   INTEGER,  PARAMETER          :: BNCurve(9, 3) = RESHAPE( (/ &    ! curvature angle
                                      B1N1Curve,B1N2Curve,B1N3Curve,B1N4Curve,B1N5Curve,B1N6Curve,B1N7Curve,B1N8Curve,B1N9Curve, &
                                      B2N1Curve,B2N2Curve,B2N3Curve,B2N4Curve,B2N5Curve,B2N6Curve,B2N7Curve,B2N8Curve,B2N9Curve, &
                                      B3N1Curve,B3N2Curve,B3N3Curve,B3N4Curve,B3N5Curve,B3N6Curve,B3N7Curve,B3N8Curve,B3N9Curve  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCl(9, 3) = RESHAPE( (/ &    ! lift force coefficient
+   INTEGER,  PARAMETER          :: BNCl(9, 3) = RESHAPE( (/ &    ! lift force coefficient
                                      B1N1Cl,B1N2Cl,B1N3Cl,B1N4Cl,B1N5Cl,B1N6Cl,B1N7Cl,B1N8Cl,B1N9Cl, &
                                      B2N1Cl,B2N2Cl,B2N3Cl,B2N4Cl,B2N5Cl,B2N6Cl,B2N7Cl,B2N8Cl,B2N9Cl, &
                                      B3N1Cl,B3N2Cl,B3N3Cl,B3N4Cl,B3N5Cl,B3N6Cl,B3N7Cl,B3N8Cl,B3N9Cl  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCd(9, 3) = RESHAPE( (/ &    ! drag force coefficient
+   INTEGER,  PARAMETER          :: BNCd(9, 3) = RESHAPE( (/ &    ! drag force coefficient
                                      B1N1Cd,B1N2Cd,B1N3Cd,B1N4Cd,B1N5Cd,B1N6Cd,B1N7Cd,B1N8Cd,B1N9Cd, &
                                      B2N1Cd,B2N2Cd,B2N3Cd,B2N4Cd,B2N5Cd,B2N6Cd,B2N7Cd,B2N8Cd,B2N9Cd, &
                                      B3N1Cd,B3N2Cd,B3N3Cd,B3N4Cd,B3N5Cd,B3N6Cd,B3N7Cd,B3N8Cd,B3N9Cd  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCm(9, 3) = RESHAPE( (/ &    ! pitching moment coefficient
+   INTEGER,  PARAMETER          :: BNCm(9, 3) = RESHAPE( (/ &    ! pitching moment coefficient
                                      B1N1Cm,B1N2Cm,B1N3Cm,B1N4Cm,B1N5Cm,B1N6Cm,B1N7Cm,B1N8Cm,B1N9Cm, &
                                      B2N1Cm,B2N2Cm,B2N3Cm,B2N4Cm,B2N5Cm,B2N6Cm,B2N7Cm,B2N8Cm,B2N9Cm, &
                                      B3N1Cm,B3N2Cm,B3N3Cm,B3N4Cm,B3N5Cm,B3N6Cm,B3N7Cm,B3N8Cm,B3N9Cm  &
-                                   /), (/9, 3/) )
-    
-    INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
-                                     B1N1Cpmin,B1N2Cpmin,B1N3Cpmin,B1N4Cpmin,B1N5Cpmin,B1N6Cpmin,B1N7Cpmin,B1N8Cpmin,B1N9Cpmin, &
-                                     B2N1Cpmin,B2N2Cpmin,B2N3Cpmin,B2N4Cpmin,B2N5Cpmin,B2N6Cpmin,B2N7Cpmin,B2N8Cpmin,B2N9Cpmin, &
-                                     B3N1Cpmin,B3N2Cpmin,B3N3Cpmin,B3N4Cpmin,B3N5Cpmin,B3N6Cpmin,B3N7Cpmin,B3N8Cpmin,B3N9Cpmin  &
-                                   /), (/9, 3/) )  
-                                     
-    INTEGER,  PARAMETER          :: BNSigCr(9, 3) = RESHAPE( (/ &    ! Critical cavitation number
-                                     B1N1SigCr,B1N2SigCr,B1N3SigCr,B1N4SigCr,B1N5SigCr,B1N6SigCr,B1N7SigCr,B1N8SigCr,B1N9SigCr, &
-                                     B2N1SigCr,B2N2SigCr,B2N3SigCr,B2N4SigCr,B2N5SigCr,B2N6SigCr,B2N7SigCr,B2N8SigCr,B2N9SigCr, &
-                                     B3N1SigCr,B3N2SigCr,B3N3SigCr,B3N4SigCr,B3N5SigCr,B3N6SigCr,B3N7SigCr,B3N8SigCr,B3N9SigCr  &
                                    /), (/9, 3/) )   
-                                     
-    INTEGER,  PARAMETER          :: BNSgCav(9, 3) = RESHAPE( (/ &    !  Cavitation number
-                                     B1N1SgCav,B1N2SgCav,B1N3SgCav,B1N4SgCav,B1N5SgCav,B1N6SgCav,B1N7SgCav,B1N8SgCav,B1N9SgCav, &
-                                     B2N1SgCav,B2N2SgCav,B2N3SgCav,B2N4SgCav,B2N5SgCav,B2N6SgCav,B2N7SgCav,B2N8SgCav,B2N9SgCav, &
-                                     B3N1SgCav,B3N2SgCav,B3N3SgCav,B3N4SgCav,B3N5SgCav,B3N6SgCav,B3N7SgCav,B3N8SgCav,B3N9SgCav  &
-                                   /), (/9, 3/) )   
-   
-    INTEGER,  PARAMETER          :: BNCx(9, 3) = RESHAPE( (/ &    ! normal force (to plane) coefficient
+   INTEGER,  PARAMETER          :: BNCx(9, 3) = RESHAPE( (/ &    ! normal force (to plane) coefficient
                                      B1N1Cx,B1N2Cx,B1N3Cx,B1N4Cx,B1N5Cx,B1N6Cx,B1N7Cx,B1N8Cx,B1N9Cx, &
                                      B2N1Cx,B2N2Cx,B2N3Cx,B2N4Cx,B2N5Cx,B2N6Cx,B2N7Cx,B2N8Cx,B2N9Cx, &
                                      B3N1Cx,B3N2Cx,B3N3Cx,B3N4Cx,B3N5Cx,B3N6Cx,B3N7Cx,B3N8Cx,B3N9Cx  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCy(9, 3) = RESHAPE( (/ &    ! tangential force (to plane) coefficient
+   INTEGER,  PARAMETER          :: BNCy(9, 3) = RESHAPE( (/ &    ! tangential force (to plane) coefficient
                                      B1N1Cy,B1N2Cy,B1N3Cy,B1N4Cy,B1N5Cy,B1N6Cy,B1N7Cy,B1N8Cy,B1N9Cy, &
                                      B2N1Cy,B2N2Cy,B2N3Cy,B2N4Cy,B2N5Cy,B2N6Cy,B2N7Cy,B2N8Cy,B2N9Cy, &
                                      B3N1Cy,B3N2Cy,B3N3Cy,B3N4Cy,B3N5Cy,B3N6Cy,B3N7Cy,B3N8Cy,B3N9Cy  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCn(9, 3) = RESHAPE( (/ &    ! normal force (to chord) coefficient
+   INTEGER,  PARAMETER          :: BNCn(9, 3) = RESHAPE( (/ &    ! normal force (to chord) coefficient
                                      B1N1Cn,B1N2Cn,B1N3Cn,B1N4Cn,B1N5Cn,B1N6Cn,B1N7Cn,B1N8Cn,B1N9Cn, &
                                      B2N1Cn,B2N2Cn,B2N3Cn,B2N4Cn,B2N5Cn,B2N6Cn,B2N7Cn,B2N8Cn,B2N9Cn, &
                                      B3N1Cn,B3N2Cn,B3N3Cn,B3N4Cn,B3N5Cn,B3N6Cn,B3N7Cn,B3N8Cn,B3N9Cn  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNCt(9, 3) = RESHAPE( (/ &    ! tangential force (to chord) coefficient
+   INTEGER,  PARAMETER          :: BNCt(9, 3) = RESHAPE( (/ &    ! tangential force (to chord) coefficient
                                      B1N1Ct,B1N2Ct,B1N3Ct,B1N4Ct,B1N5Ct,B1N6Ct,B1N7Ct,B1N8Ct,B1N9Ct, &
                                      B2N1Ct,B2N2Ct,B2N3Ct,B2N4Ct,B2N5Ct,B2N6Ct,B2N7Ct,B2N8Ct,B2N9Ct, &
                                      B3N1Ct,B3N2Ct,B3N3Ct,B3N4Ct,B3N5Ct,B3N6Ct,B3N7Ct,B3N8Ct,B3N9Ct  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFl(9, 3) = RESHAPE( (/ &    ! lift force per unit length
+   INTEGER,  PARAMETER          :: BNFl(9, 3) = RESHAPE( (/ &    ! lift force per unit length
                                      B1N1Fl,B1N2Fl,B1N3Fl,B1N4Fl,B1N5Fl,B1N6Fl,B1N7Fl,B1N8Fl,B1N9Fl, &
                                      B2N1Fl,B2N2Fl,B2N3Fl,B2N4Fl,B2N5Fl,B2N6Fl,B2N7Fl,B2N8Fl,B2N9Fl, &
                                      B3N1Fl,B3N2Fl,B3N3Fl,B3N4Fl,B3N5Fl,B3N6Fl,B3N7Fl,B3N8Fl,B3N9Fl  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFd(9, 3) = RESHAPE( (/ &    ! drag force per unit length
+   INTEGER,  PARAMETER          :: BNFd(9, 3) = RESHAPE( (/ &    ! drag force per unit length
                                      B1N1Fd,B1N2Fd,B1N3Fd,B1N4Fd,B1N5Fd,B1N6Fd,B1N7Fd,B1N8Fd,B1N9Fd, &
                                      B2N1Fd,B2N2Fd,B2N3Fd,B2N4Fd,B2N5Fd,B2N6Fd,B2N7Fd,B2N8Fd,B2N9Fd, &
                                      B3N1Fd,B3N2Fd,B3N3Fd,B3N4Fd,B3N5Fd,B3N6Fd,B3N7Fd,B3N8Fd,B3N9Fd  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNMm(9, 3) = RESHAPE( (/ &    ! pitching moment per unit length
+   INTEGER,  PARAMETER          :: BNMm(9, 3) = RESHAPE( (/ &    ! pitching moment per unit length
                                      B1N1Mm,B1N2Mm,B1N3Mm,B1N4Mm,B1N5Mm,B1N6Mm,B1N7Mm,B1N8Mm,B1N9Mm, &
                                      B2N1Mm,B2N2Mm,B2N3Mm,B2N4Mm,B2N5Mm,B2N6Mm,B2N7Mm,B2N8Mm,B2N9Mm, &
                                      B3N1Mm,B3N2Mm,B3N3Mm,B3N4Mm,B3N5Mm,B3N6Mm,B3N7Mm,B3N8Mm,B3N9Mm  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFx(9, 3) = RESHAPE( (/ &    ! normal force (to plane) per unit length
+   INTEGER,  PARAMETER          :: BNFx(9, 3) = RESHAPE( (/ &    ! normal force (to plane) per unit length
                                      B1N1Fx,B1N2Fx,B1N3Fx,B1N4Fx,B1N5Fx,B1N6Fx,B1N7Fx,B1N8Fx,B1N9Fx, &
                                      B2N1Fx,B2N2Fx,B2N3Fx,B2N4Fx,B2N5Fx,B2N6Fx,B2N7Fx,B2N8Fx,B2N9Fx, &
                                      B3N1Fx,B3N2Fx,B3N3Fx,B3N4Fx,B3N5Fx,B3N6Fx,B3N7Fx,B3N8Fx,B3N9Fx  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFy(9, 3) = RESHAPE( (/ &    ! tangential force (to plane) per unit length
+   INTEGER,  PARAMETER          :: BNFy(9, 3) = RESHAPE( (/ &    ! tangential force (to plane) per unit length
                                      B1N1Fy,B1N2Fy,B1N3Fy,B1N4Fy,B1N5Fy,B1N6Fy,B1N7Fy,B1N8Fy,B1N9Fy, &
                                      B2N1Fy,B2N2Fy,B2N3Fy,B2N4Fy,B2N5Fy,B2N6Fy,B2N7Fy,B2N8Fy,B2N9Fy, &
                                      B3N1Fy,B3N2Fy,B3N3Fy,B3N4Fy,B3N5Fy,B3N6Fy,B3N7Fy,B3N8Fy,B3N9Fy  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFn(9, 3) = RESHAPE( (/ &    ! normal force (to chord) per unit length
+   INTEGER,  PARAMETER          :: BNFn(9, 3) = RESHAPE( (/ &    ! normal force (to chord) per unit length
                                      B1N1Fn,B1N2Fn,B1N3Fn,B1N4Fn,B1N5Fn,B1N6Fn,B1N7Fn,B1N8Fn,B1N9Fn, &
                                      B2N1Fn,B2N2Fn,B2N3Fn,B2N4Fn,B2N5Fn,B2N6Fn,B2N7Fn,B2N8Fn,B2N9Fn, &
                                      B3N1Fn,B3N2Fn,B3N3Fn,B3N4Fn,B3N5Fn,B3N6Fn,B3N7Fn,B3N8Fn,B3N9Fn  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNFt(9, 3) = RESHAPE( (/ &    ! tangential force (to chord) per unit length
+   INTEGER,  PARAMETER          :: BNFt(9, 3) = RESHAPE( (/ &    ! tangential force (to chord) per unit length
                                      B1N1Ft,B1N2Ft,B1N3Ft,B1N4Ft,B1N5Ft,B1N6Ft,B1N7Ft,B1N8Ft,B1N9Ft, &
                                      B2N1Ft,B2N2Ft,B2N3Ft,B2N4Ft,B2N5Ft,B2N6Ft,B2N7Ft,B2N8Ft,B2N9Ft, &
                                      B3N1Ft,B3N2Ft,B3N3Ft,B3N4Ft,B3N5Ft,B3N6Ft,B3N7Ft,B3N8Ft,B3N9Ft  &
                                    /), (/9, 3/) )
-    INTEGER,  PARAMETER          :: BNClrnc(9, 3) = RESHAPE( (/ &    ! tower clearance
+   INTEGER,  PARAMETER          :: BNClrnc(9, 3) = RESHAPE( (/ &    ! tower clearance
                                      B1N1Clrnc,B1N2Clrnc,B1N3Clrnc,B1N4Clrnc,B1N5Clrnc,B1N6Clrnc,B1N7Clrnc,B1N8Clrnc,B1N9Clrnc, &
                                      B2N1Clrnc,B2N2Clrnc,B2N3Clrnc,B2N4Clrnc,B2N5Clrnc,B2N6Clrnc,B2N7Clrnc,B2N8Clrnc,B2N9Clrnc, &
                                      B3N1Clrnc,B3N2Clrnc,B3N3Clrnc,B3N4Clrnc,B3N5Clrnc,B3N6Clrnc,B3N7Clrnc,B3N8Clrnc,B3N9Clrnc  &
                                    /), (/9, 3/) )
-   INTEGER, PARAMETER            :: BNGam(9,3) = RESHAPE( (/ &    ! Vorticity gamma
-                                       B1N1Gam,B1N2Gam,B1N3Gam,B1N4Gam,B1N5Gam,B1N6Gam,B1N7Gam,B1N8Gam,B1N9Gam,   &
-                                       B2N1Gam,B2N2Gam,B2N3Gam,B2N4Gam,B2N5Gam,B2N6Gam,B2N7Gam,B2N8Gam,B2N9Gam,   &
-                                       B3N1Gam,B3N2Gam,B3N3Gam,B3N4Gam,B3N5Gam,B3N6Gam,B3N7Gam,B3N8Gam,B3N9Gam    &
-                                    /), (/9,3/) )
+   INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
+                                     B1N1Cpmin,B1N2Cpmin,B1N3Cpmin,B1N4Cpmin,B1N5Cpmin,B1N6Cpmin,B1N7Cpmin,B1N8Cpmin,B1N9Cpmin, &
+                                     B2N1Cpmin,B2N2Cpmin,B2N3Cpmin,B2N4Cpmin,B2N5Cpmin,B2N6Cpmin,B2N7Cpmin,B2N8Cpmin,B2N9Cpmin, &
+                                     B3N1Cpmin,B3N2Cpmin,B3N3Cpmin,B3N4Cpmin,B3N5Cpmin,B3N6Cpmin,B3N7Cpmin,B3N8Cpmin,B3N9Cpmin  &
+                                   /), (/9, 3/) )  
+   INTEGER,  PARAMETER          :: BNSigCr(9, 3) = RESHAPE( (/ &    ! Critical cavitation number
+                                     B1N1SigCr,B1N2SigCr,B1N3SigCr,B1N4SigCr,B1N5SigCr,B1N6SigCr,B1N7SigCr,B1N8SigCr,B1N9SigCr, &
+                                     B2N1SigCr,B2N2SigCr,B2N3SigCr,B2N4SigCr,B2N5SigCr,B2N6SigCr,B2N7SigCr,B2N8SigCr,B2N9SigCr, &
+                                     B3N1SigCr,B3N2SigCr,B3N3SigCr,B3N4SigCr,B3N5SigCr,B3N6SigCr,B3N7SigCr,B3N8SigCr,B3N9SigCr  &
+                                   /), (/9, 3/) )   
+   INTEGER,  PARAMETER          :: BNSgCav(9, 3) = RESHAPE( (/ &    !  Cavitation number
+                                     B1N1SgCav,B1N2SgCav,B1N3SgCav,B1N4SgCav,B1N5SgCav,B1N6SgCav,B1N7SgCav,B1N8SgCav,B1N9SgCav, &
+                                     B2N1SgCav,B2N2SgCav,B2N3SgCav,B2N4SgCav,B2N5SgCav,B2N6SgCav,B2N7SgCav,B2N8SgCav,B2N9SgCav, &
+                                     B3N1SgCav,B3N2SgCav,B3N3SgCav,B3N4SgCav,B3N5SgCav,B3N6SgCav,B3N7SgCav,B3N8SgCav,B3N9SgCav  &
+                                   /), (/9, 3/) )
+   INTEGER, PARAMETER           :: BNGam(9,3) = RESHAPE( (/ &    ! Vorticity gamma
+                                     B1N1Gam,B1N2Gam,B1N3Gam,B1N4Gam,B1N5Gam,B1N6Gam,B1N7Gam,B1N8Gam,B1N9Gam,   &
+                                     B2N1Gam,B2N2Gam,B2N3Gam,B2N4Gam,B2N5Gam,B2N6Gam,B2N7Gam,B2N8Gam,B2N9Gam,   &
+                                     B3N1Gam,B3N2Gam,B3N3Gam,B3N4Gam,B3N5Gam,B3N6Gam,B3N7Gam,B3N8Gam,B3N9Gam    &
+                                   /), (/9,3/) )
+   INTEGER,  PARAMETER          :: BNFbn(9, 3) = RESHAPE( (/ &    ! normal buoyant force (to chord) per unit length
+                                     B1N1Fbn,B1N2Fbn,B1N3Fbn,B1N4Fbn,B1N5Fbn,B1N6Fbn,B1N7Fbn,B1N8Fbn,B1N9Fbn, &
+                                     B2N1Fbn,B2N2Fbn,B2N3Fbn,B2N4Fbn,B2N5Fbn,B2N6Fbn,B2N7Fbn,B2N8Fbn,B2N9Fbn, &
+                                     B3N1Fbn,B3N2Fbn,B3N3Fbn,B3N4Fbn,B3N5Fbn,B3N6Fbn,B3N7Fbn,B3N8Fbn,B3N9Fbn  &
+                                   /), (/9, 3/) )
+   INTEGER,  PARAMETER          :: BNFbt(9, 3) = RESHAPE( (/ &    ! tangential buoyant force (to chord) per unit length
+                                     B1N1Fbt,B1N2Fbt,B1N3Fbt,B1N4Fbt,B1N5Fbt,B1N6Fbt,B1N7Fbt,B1N8Fbt,B1N9Fbt, &
+                                     B2N1Fbt,B2N2Fbt,B2N3Fbt,B2N4Fbt,B2N5Fbt,B2N6Fbt,B2N7Fbt,B2N8Fbt,B2N9Fbt, &
+                                     B3N1Fbt,B3N2Fbt,B3N3Fbt,B3N4Fbt,B3N5Fbt,B3N6Fbt,B3N7Fbt,B3N8Fbt,B3N9Fbt  &
+                                   /), (/9, 3/) )
+   INTEGER,  PARAMETER          :: BNFbs(9, 3) = RESHAPE( (/ &    ! spanwise buoyant force per unit length
+                                     B1N1Fbs,B1N2Fbs,B1N3Fbs,B1N4Fbs,B1N5Fbs,B1N6Fbs,B1N7Fbs,B1N8Fbs,B1N9Fbs, &
+                                     B2N1Fbs,B2N2Fbs,B2N3Fbs,B2N4Fbs,B2N5Fbs,B2N6Fbs,B2N7Fbs,B2N8Fbs,B2N9Fbs, &
+                                     B3N1Fbs,B3N2Fbs,B3N3Fbs,B3N4Fbs,B3N5Fbs,B3N6Fbs,B3N7Fbs,B3N8Fbs,B3N9Fbs  &
+                                   /), (/9, 3/) )
+   INTEGER,  PARAMETER          :: BNMbn(9, 3) = RESHAPE( (/ &    ! normal buoyant moment (to chord) per unit length
+                                     B1N1Mbn,B1N2Mbn,B1N3Mbn,B1N4Mbn,B1N5Mbn,B1N6Mbn,B1N7Mbn,B1N8Mbn,B1N9Mbn, &
+                                     B2N1Mbn,B2N2Mbn,B2N3Mbn,B2N4Mbn,B2N5Mbn,B2N6Mbn,B2N7Mbn,B2N8Mbn,B2N9Mbn, &
+                                     B3N1Mbn,B3N2Mbn,B3N3Mbn,B3N4Mbn,B3N5Mbn,B3N6Mbn,B3N7Mbn,B3N8Mbn,B3N9Mbn  &
+                                   /), (/9, 3/) )
+   INTEGER,  PARAMETER          :: BNMbt(9, 3) = RESHAPE( (/ &    ! tangential buoyant moment (to chord) per unit length
+                                     B1N1Mbt,B1N2Mbt,B1N3Mbt,B1N4Mbt,B1N5Mbt,B1N6Mbt,B1N7Mbt,B1N8Mbt,B1N9Mbt, &
+                                     B2N1Mbt,B2N2Mbt,B2N3Mbt,B2N4Mbt,B2N5Mbt,B2N6Mbt,B2N7Mbt,B2N8Mbt,B2N9Mbt, &
+                                     B3N1Mbt,B3N2Mbt,B3N3Mbt,B3N4Mbt,B3N5Mbt,B3N6Mbt,B3N7Mbt,B3N8Mbt,B3N9Mbt  &
+                                   /), (/9, 3/) )
+   INTEGER,  PARAMETER          :: BNMbs(9, 3) = RESHAPE( (/ &    ! spanwise buoyant moment per unit length
+                                     B1N1Mbs,B1N2Mbs,B1N3Mbs,B1N4Mbs,B1N5Mbs,B1N6Mbs,B1N7Mbs,B1N8Mbs,B1N9Mbs, &
+                                     B2N1Mbs,B2N2Mbs,B2N3Mbs,B2N4Mbs,B2N5Mbs,B2N6Mbs,B2N7Mbs,B2N8Mbs,B2N9Mbs, &
+                                     B3N1Mbs,B3N2Mbs,B3N3Mbs,B3N4Mbs,B3N5Mbs,B3N6Mbs,B3N7Mbs,B3N8Mbs,B3N9Mbs  &
+                                   /), (/9, 3/) )
  
    
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
@@ -1671,6 +1966,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
    
    INTEGER(IntKi)                               :: j,k,beta
    REAL(ReKi)                                   :: tmp(3)
+   REAL(ReKi)                                   :: tmpHubFB(3)
+   REAL(ReKi)                                   :: tmpHubMB(3)   
    REAL(ReKi)                                   :: force(3)
    REAL(ReKi)                                   :: moment(3)
    REAL(ReKi)                                   :: denom, rmax, omega
@@ -1682,6 +1979,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   tmpHubFB  = 0.0_ReKi
+   tmpHubMB  = 0.0_ReKi
 
    ! Compute max radius and rotor speed
    if (p_AD%WakeMod /= WakeMod_FVW) then
@@ -1707,6 +2006,8 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
    else
       call Calc_WriteOutput_FVW()
    endif
+
+
 
       ! set these for debugging
 !   m%AllOuts( Debug1 ) = 0.0_ReKi !TwoNorm( m%BEMT%u_SkewWake(1)%v_qsw )
@@ -1734,25 +2035,62 @@ CONTAINS
          m%AllOuts( TwNFdx( beta) ) = m%X_Twr(j)         
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       
+         if ( p%Buoyancy ) then
+            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Force(:,j) )
+            m%AllOuts( TwNFbx(beta) ) = tmp(1)
+            m%AllOuts( TwNFby(beta) ) = tmp(2)
+            m%AllOuts( TwNFbz(beta) ) = tmp(3)
+   
+            tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Moment(:,j) )
+            m%AllOuts( TwNMbx(beta) ) = tmp(1)
+            m%AllOuts( TwNMby(beta) ) = tmp(2)
+            m%AllOuts( TwNMbz(beta) ) = tmp(3)
+         end if
+   
       end do ! out nodes
-
+   
+         ! hub outputs
+      if ( p%Buoyancy ) then
+         tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
+         m%AllOuts( HbFbx ) = tmpHubFB(1)
+         m%AllOuts( HbFby ) = tmpHubFB(2)
+         m%AllOuts( HbFbz ) = tmpHubFB(3)
+   
+         tmpHubMB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubMB )
+         m%AllOuts( HbMbx ) = tmpHubMB(1)
+         m%AllOuts( HbMby ) = tmpHubMB(2)
+         m%AllOuts( HbMbz ) = tmpHubMB(3)
+      end if
+   
+         ! nacelle outputs
+      if ( p%Buoyancy ) then
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
+         m%AllOuts( NcFbx ) = tmp(1)
+         m%AllOuts( NcFby ) = tmp(2)
+         m%AllOuts( NcFbz ) = tmp(3)
+   
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacMB )
+         m%AllOuts( NcMbx ) = tmp(1)
+         m%AllOuts( NcMby ) = tmp(2)
+         m%AllOuts( NcMbz ) = tmp(3)
+      end if
 
          ! blade outputs
-      do k=1,min(p%numBlades,3)   ! limit this
+      do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
-            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), u%InflowOnBlade(:,j,k) )
             m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
             m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
             m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
 
-            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), m%DisturbedInflow(:,j,k) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), m%DisturbedInflow(:,j,k) )
             m%AllOuts( BNVDisx(beta,k) ) = tmp(1)
             m%AllOuts( BNVDisy(beta,k) ) = tmp(2)
             m%AllOuts( BNVDisz(beta,k) ) = tmp(3)
 
-            tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
             m%AllOuts( BNSTVx( beta,k) ) = tmp(1)
             m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
             m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
@@ -1762,6 +2100,18 @@ CONTAINS
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
+            if ( p%Buoyancy ) then
+               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Force(:,j) )
+               m%AllOuts( BNFbn(beta,k) ) = tmp(1)
+               m%AllOuts( BNFbt(beta,k) ) = tmp(2)
+               m%AllOuts( BNFbs(beta,k) ) = tmp(3)
+
+               tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Moment(:,j) )
+               m%AllOuts( BNMbn(beta,k) ) = tmp(1)
+               m%AllOuts( BNMbt(beta,k) ) = tmp(2)
+               m%AllOuts( BNMbs(beta,k) ) = tmp(3)
+            end if
+
          end do ! nodes
       end do ! blades
    
@@ -1769,7 +2119,7 @@ CONTAINS
 
       ! blade node tower clearance (requires tower influence calculation):
       if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
-         do k=1,p%numBlades
+         do k=1,min(p%numBlades,AD_MaxBl_Out)
             do beta=1,p%NBlOuts
                j=p%BlOutNd(beta)
                m%AllOuts( BNClrnc( beta,k) ) = m%TwrClrnc(j,k)
@@ -1791,46 +2141,46 @@ CONTAINS
       
 
          ! integrate force/moments over blades by performing mesh transfer to hub point:
-      force  = 0.0_ReKi
-      moment = 0.0_ReKi
+      force  = tmpHubFB
+      moment = tmpHubMB
       do k=1,p%NumBlades
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%HubLoad, m%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
          force  = force  + m%HubLoad%force( :,1)
          moment = moment + m%HubLoad%moment(:,1)
          
-         if (k<=size(BAeroFxg)) then
+         if (k<=size(BFldFxg)) then
             ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
-            m%AllOuts( BAeroPwr(k) ) = omega * tmp(1)
+            m%AllOuts( BFldPwr(k) ) = omega * tmp(1)
             
             ! In global, wrt hub! 
-            m%AllOuts( BAeroFxg(k) ) = m%HubLoad%force(1,1)
-            m%AllOuts( BAeroFyg(k) ) = m%HubLoad%force(2,1)
-            m%AllOuts( BAeroFzg(k) ) = m%HubLoad%force(3,1)
-            m%AllOuts( BAeroMxg(k) ) = m%HubLoad%moment(1,1)
-            m%AllOuts( BAeroMyg(k) ) = m%HubLoad%moment(2,1)
-            m%AllOuts( BAeroMzg(k) ) = m%HubLoad%moment(3,1)
+            m%AllOuts( BFldFxg(k) ) = m%HubLoad%force(1,1)
+            m%AllOuts( BFldFyg(k) ) = m%HubLoad%force(2,1)
+            m%AllOuts( BFldFzg(k) ) = m%HubLoad%force(3,1)
+            m%AllOuts( BFldMxg(k) ) = m%HubLoad%moment(1,1)
+            m%AllOuts( BFldMyg(k) ) = m%HubLoad%moment(2,1)
+            m%AllOuts( BFldMzg(k) ) = m%HubLoad%moment(3,1)
          end if
       end do
 
         ! In global
-      m%AllOuts( RtAeroFxg ) = force(1)
-      m%AllOuts( RtAeroFyg ) = force(2)
-      m%AllOuts( RtAeroFzg ) = force(3)
-      m%AllOuts( RtAeroMxg ) = moment(1)
-      m%AllOuts( RtAeroMyg ) = moment(2)
-      m%AllOuts( RtAeroMzg ) = moment(3)
+      m%AllOuts( RtFldFxg ) = force(1)
+      m%AllOuts( RtFldFyg ) = force(2)
+      m%AllOuts( RtFldFzg ) = force(3)
+      m%AllOuts( RtFldMxg ) = moment(1)
+      m%AllOuts( RtFldMyg ) = moment(2)
+      m%AllOuts( RtFldMzg ) = moment(3)
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
-      m%AllOuts( RtAeroFxh ) = tmp(1)
-      m%AllOuts( RtAeroFyh ) = tmp(2)
-      m%AllOuts( RtAeroFzh ) = tmp(3)
+      m%AllOuts( RtFldFxh ) = tmp(1)
+      m%AllOuts( RtFldFyh ) = tmp(2)
+      m%AllOuts( RtFldFzh ) = tmp(3)
    
       tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
-      m%AllOuts( RtAeroMxh ) = tmp(1)
-      m%AllOuts( RtAeroMyh ) = tmp(2)
-      m%AllOuts( RtAeroMzh ) = tmp(3)
+      m%AllOuts( RtFldMxh ) = tmp(1)
+      m%AllOuts( RtFldMyh ) = tmp(2)
+      m%AllOuts( RtFldMzh ) = tmp(3)
       
-      m%AllOuts( RtAeroPwr ) = omega * m%AllOuts( RtAeroMxh )
+      m%AllOuts( RtFldPwr ) = omega * m%AllOuts( RtFldMxh )
       
      
    
@@ -1838,35 +2188,50 @@ CONTAINS
       do k=1,p%NumBlades
          call Transfer_Line2_to_Point( y%BladeLoad(k), m%BladeRootLoad(k), m%B_L_2_R_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%BladeRootMotion(k) )
       end do
-      do k=1,min(p%NumBlades,size(BAeroFx))
+      do k=1,min(p%NumBlades,size(BFldFx))
          ! Transform force vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%force( :,1) )
-         m%AllOuts( BAeroFx(k) ) = tmp(1)
-         m%AllOuts( BAeroFy(k) ) = tmp(2)
-         m%AllOuts( BAeroFz(k) ) = tmp(3)
+         m%AllOuts( BFldFx(k) ) = tmp(1)
+         m%AllOuts( BFldFy(k) ) = tmp(2)
+         m%AllOuts( BFldFz(k) ) = tmp(3)
       
          ! Transform moment vector to blade root coordinate system
          tmp = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), m%BladeRootLoad(k)%moment( :,1) )
-         m%AllOuts( BAeroMx(k) ) = tmp(1)
-         m%AllOuts( BAeroMy(k) ) = tmp(2)
-         m%AllOuts( BAeroMz(k) ) = tmp(3)
+         m%AllOuts( BFldMx(k) ) = tmp(1)
+         m%AllOuts( BFldMy(k) ) = tmp(2)
+         m%AllOuts( BFldMz(k) ) = tmp(3)
       end do  ! k=blades
    
          ! rotor outputs
       if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
          m%AllOuts( RtTSR )    = 0.0_ReKi
-         m%AllOuts( RtAeroCp ) = 0.0_ReKi
-         m%AllOuts( RtAeroCq ) = 0.0_ReKi
-         m%AllOuts( RtAeroCt ) = 0.0_ReKi
+         m%AllOuts( RtFldCp ) = 0.0_ReKi
+         m%AllOuts( RtFldCq ) = 0.0_ReKi
+         m%AllOuts( RtFldCt ) = 0.0_ReKi
       else
          m%AllOuts( RtTSR )    = omega * rmax / m%V_dot_x
 
          denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
-         m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
-         m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax )
-         m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom
+         m%AllOuts( RtFldCp ) = m%AllOuts( RtFldPwr ) / (denom * m%V_dot_x)
+         m%AllOuts( RtFldCq ) = m%AllOuts( RtFldMxh ) / (denom * rmax )
+         m%AllOuts( RtFldCt ) = m%AllOuts( RtFldFxh ) /  denom
       end if
       
+
+      ! TailFin
+      if (p%TFinAero) then
+         m%AllOuts( TFAlpha )           = m%TFinAlpha*R2D ! [deg]
+         m%AllOuts( TFRe )              = m%TFinRe
+         !m%AllOuts( TFM )              = m%TFinVrel/p%SpdSound
+         m%AllOuts( TFVrel )            = m%TFinVrel
+         m%AllOuts( TFVundxi:TFVundzi)  = m%TFinVund_i
+         m%AllOuts( TFVindxi:TFVindzi ) = m%TFinVind_i
+         m%AllOuts( TFVrelxi:TFVrelzi ) = m%TFinVrel_i
+         m%AllOuts( TFSTVxi:TFSTVzi )   = m%TFinSTV_i
+         m%AllOuts( TFFxi:TFFzi )       = m%TFinF_i
+         m%AllOuts( TFMxi:TFMzi )       = m%TFinM_i
+      endif
+
             
    end subroutine Calc_WriteOutput_AD
    !..........................................................................................
@@ -1882,7 +2247,7 @@ CONTAINS
 
    
          ! blade outputs
-      do k=1,min(p%numBlades,size(BAzimuth) )    ! limit this
+      do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
          m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
@@ -2016,7 +2381,7 @@ CONTAINS
 
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, AeroProjMod, UnEcho, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
@@ -2031,6 +2396,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
    INTEGER(IntKi),          INTENT(INOUT) :: UnEcho          ! Unit number for the echo file
 
    INTEGER(IntKi),          INTENT(IN)    :: NumBlades(:)    ! Number of blades per rotor 
+   INTEGER(IntKi),          INTENT(IN)    :: AeroProjMod(:)  ! AeroProjMod per rotor
    INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
    CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
 
@@ -2065,7 +2431,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          
    !FIXME: add options for passing the blade files.  This routine will need restructuring to handle that.
       DO I=1,NumBlades(iR)
-         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
+         CALL ReadBladeInputs ( InputFileData%ADBlFile(iBld), InputFileData%rotors(iR)%BladeProps(I), AeroProjMod(iR), UnEcho, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL Cleanup()
@@ -2075,6 +2441,18 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
       END DO
    
    end do ! loop on rotors
+
+   ! Read TailFin
+   do iR = 1, size(InputFileData%rotors)
+      if (InputFileData%rotors(iR)%TFinAero) then 
+         call ReadTailFinInputs(InputFileData%rotors(iR)%TFinFile, InputFileData%rotors(iR)%TFin, UnEcho, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if ( ErrStat >= AbortErrLev ) then
+            call Cleanup()
+            return
+         end if
+      endif
+   enddo ! iR, rotors
       
 
    CALL Cleanup ( )
@@ -2117,7 +2495,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    character(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
-   real(ReKi)                                      :: TmpRe4(4)         !< temporary 4 number array for reading values in
+   real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
 
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -2182,6 +2560,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       if (Failed()) return
       ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
    call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
+      if (Failed()) return
+      ! Buoyancy - Include buoyancy effects? (flag)
+   call ParseVar( FileInfo_In, CurLine, "Buoyancy", InputFileData%Buoyancy, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
       ! CompAA - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
    call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
@@ -2272,11 +2653,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
    call ParseVar( FileInfo_In, CurLine, "FLookup", InputFileData%FLookup, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      
       ! UAStartRad - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
    call ParseVar( FileInfo_In, CurLine, "UAStartRad", InputFileData%UAStartRad, ErrStat2, ErrMsg2, UnEc )
       if (ErrStat2>= AbortErrLev) InputFileData%UAStartRad = 0.0_ReKi
-   
       ! UAEndRad - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2]:
    call ParseVar( FileInfo_In, CurLine, "UAEndRad", InputFileData%UAEndRad, ErrStat2, ErrMsg2, UnEc )
       if (ErrStat2>= AbortErrLev) InputFileData%UAEndRad = 1.0_ReKi
@@ -2334,37 +2713,77 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
-   !======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
-
+   !======  Hub Properties ============================================================================== [used only when Buoyancy=True]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
-         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, or TwrAero=True]
+         ! VolHub - Hub volume (m^3)
+      call ParseVar( FileInfo_In, CurLine, "VolHub", InputFileData%rotors(iR)%VolHub, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return   
+         ! HubCenBx - Hub center of buoyancy x direction offset (m)
+      call ParseVar( FileInfo_In, CurLine, "HubCenBx", InputFileData%rotors(iR)%HubCenBx, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return 		 
+   end do
+
+   !======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! VolNac - Nacelle volume (m^3)
+      call ParseVar( FileInfo_In, CurLine, "VolNac", InputFileData%rotors(iR)%VolNac, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return	 
+         ! NacCenB - Nacelle center of buoyancy x,y,z direction offsets (m)
+      call ParseAry( FileInfo_In, CurLine, 'NacCenB', InputFileData%rotors(iR)%NacCenB, 3 , ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return   
+   end do
+
+   !======  Tail fin aerodynamics ========================================================================
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+      ! NOTE: being nice with legacy input file. Uncomment in next release
+      call ParseVar(FileInfo_In, CurLine, "TFinAero", InputFileData%rotors(iR)%TFinAero, ErrStat2, ErrMsg2, UnEc); 
+      if (ErrStat2==ErrID_None) then
+         call ParseVar(FileInfo_In, CurLine, "TFinFile", InputFileData%rotors(iR)%TFinFile, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+         InputFileData%rotors(iR)%TFinFile = trim(PriPath) // trim(InputFileData%rotors(iR)%TFinFile)
+      else
+         call LegacyWarning('Tail Fin section (TFinAero, TFinFile) is missing from input file.')
+         CurLine = CurLine - 1
+      endif
+   enddo
+
+   !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+   do iR = 1,size(NumBlades) ! Loop on rotors
+      if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
+      CurLine = CurLine + 1
+         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
       call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         !TwrElev        TwrDiam        TwrCd
+         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
-         !(m)              (m)           (-)
+         !(m)            (m)            (-)          (-)          (-)
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
          ! Allocate space for tower table
-      CALL AllocAry( InputFileData%rotors(iR)%TwrElev,  InputFileData%rotors(iR)%NumTwrNds, 'TwrElev',  ErrStat2, ErrMsg2)
+      CALL AllocAry( InputFileData%rotors(iR)%TwrElev, InputFileData%rotors(iR)%NumTwrNds, 'TwrElev',  ErrStat2, ErrMsg2)
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrDiam, InputFileData%rotors(iR)%NumTwrNds, 'TwrDiam', ErrStat2, ErrMsg2)
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrCd, InputFileData%rotors(iR)%NumTwrNds, 'TwrCd', ErrStat2, ErrMsg2)
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrTI, InputFileData%rotors(iR)%NumTwrNds, 'TwrTI', ErrStat2, ErrMsg2)
-         if (Failed()) return
-
+         if (Failed()) return	
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCb, InputFileData%rotors(iR)%NumTwrNds, 'TwrCb', ErrStat2, ErrMsg2)
+         if (Failed()) return	 
       do I=1,InputFileData%rotors(iR)%NumTwrNds
-         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe4, 4, ErrStat2, ErrMsg2, UnEc )
+         call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe5, 5, ErrStat2, ErrMsg2, UnEc )
             if (Failed()) return;
-         InputFileData%rotors(iR)%TwrElev(I) = TmpRe4( 1)
-         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe4( 2)
-         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe4( 3)
-         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe4( 4)
+         InputFileData%rotors(iR)%TwrElev(I) = TmpRe5( 1)
+         InputFileData%rotors(iR)%TwrDiam(I) = TmpRe5( 2)
+         InputFileData%rotors(iR)%TwrCd(I)   = TmpRe5( 3)
+         InputFileData%rotors(iR)%TwrTI(I)   = TmpRe5( 4)
+         InputFileData%rotors(iR)%TwrCb(I)   = TmpRe5( 5)
       end do
    enddo
 
@@ -2452,10 +2871,18 @@ CONTAINS
          call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       endif
    end function FailedNodal
+   subroutine LegacyWarning(Message)
+      character(len=*), intent(in) :: Message
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('Warning: the AeroDyn input file is not at the latest format!' )
+      call WrScr('         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html')
+      call WrScr('> Issue: '//trim(Message))
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+   end subroutine LegacyWarning
    !-------------------------------------------------------------------------------------------------
 END SUBROUTINE ParsePrimaryFileInfo
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, ErrStat, ErrMsg )
 ! This routine reads a blade input file.
 !..................................................................................................................................
 
@@ -2464,6 +2891,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
 
    TYPE(AD_BladePropsType),  INTENT(INOUT)  :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
    CHARACTER(*),             INTENT(IN)     :: ADBlFile                            ! Name of the blade input file data
+   INTEGER(IntKi),           INTENT(IN)     :: AeroProjMod                         ! AeroProjMod
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
@@ -2477,6 +2905,10 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    INTEGER(IntKi)               :: ErrStat2 , IOS                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
    CHARACTER(*), PARAMETER      :: RoutineName = 'ReadBladeInputs'
+   CHARACTER(len=1024)          :: Line
+   CHARACTER(len=50)            :: HeaderCols(10)                                  ! Header columns in file
+   LOGICAL                      :: hasBuoyancy                                     ! Does file contain Buoyancy columns
+
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2515,8 +2947,18 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
          RETURN
       END IF
 
-   CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc, Comment=Line )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! Check if 10 columns are present
+   READ (Line,*, IOSTAT=ErrStat2) ( HeaderCols(I), I=1,10 )
+   hasBuoyancy = .true.
+   IF ( ErrStat2 < 0 )  THEN ! end of line reached
+      hasBuoyancy = .false.
+      !call WrScr('Blade input file is missing buoyancy columns.')
+   ELSE IF ( ErrStat2 > 0 )  THEN
+      CALL SetErrStat(ErrID_Fatal, 'Unexpected error while trying to infer column headers in blade file.', ErrStat, ErrMsg, RoutineName)
+   endif
+
 
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2542,6 +2984,18 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlAFID,  BladeKInputFileData%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCb, BladeKInputFileData%NumBlNds, 'BlCb', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCenBn, BladeKInputFileData%NumBlNds, 'BlCenBn', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( BladeKInputFileData%BlCenBt, BladeKInputFileData%NumBlNds, 'BlCenBt', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   IF (.not. hasBuoyancy) THEN
+      BladeKInputFileData%BlCb    = 0.0_ReKi
+      BladeKInputFileData%BlCenBn = 0.0_ReKi
+      BladeKInputFileData%BlCenBt = 0.0_ReKi
+   ENDIF
       
       ! Return on error if we didn't allocate space for the next inputs
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -2550,9 +3004,15 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
    END IF
             
    DO I=1,BladeKInputFileData%NumBlNds
-      READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
-                                  BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I)  
+      IF (hasBuoyancy) THEN
+         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
+                                     BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I) 
+      ELSE
+         READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+                                     BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
+                                     BladeKInputFileData%BlAFID(I)
+      ENDIF
          CALL CheckIOS( IOS, ADBlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                ! Return on error if we couldn't read this line
@@ -2562,11 +3022,27 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
             END IF
          
          IF (UnEc > 0) THEN
-            WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
+            WRITE( UnEc, "(6(F9.4,1x),I9,4(F9.4,1x))", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                   BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
-                                  BladeKInputFileData%BlAFID(I)
+                                  BladeKInputFileData%BlAFID(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I)
          END IF         
    END DO
+
+
+   if (all(BladeKInputFileData%BlCrvAC.eq.0.0_ReKi)) then
+        BladeKInputFileData%BlCrvAng = 0.0_ReKi
+   else
+      if (AeroProjMod==APM_BEM_NoSweepPitchTwist .or. AeroProjMod==APM_LiftingLine) then
+         !call WrScr('>>> ReadBladeInputs: Not computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
+      else if (AeroProjMod==APM_BEM_Polar) then
+         call WrScr('>>> ReadBladeInputs: Computing cant angle (BlCrvAng), AeroProjMod='//trim(num2lstr(AeroProjMod)))
+         call calcCantAngle(BladeKInputFileData%BlCrvAC,BladeKInputFileData%BlSpn,3, size(BladeKInputFileData%BlSpn),BladeKInputFileData%BlCrvAng) 
+      else
+         call SetErrStat(ErrID_Fatal, 'Unsupported AeroProjMod='//trim(num2lstr(AeroProjMod)), ErrStat, ErrMsg, RoutineName)
+         call Cleanup()
+         return
+      endif
+   endif
    BladeKInputFileData%BlCrvAng = BladeKInputFileData%BlCrvAng*D2R
    BladeKInputFileData%BlTwist  = BladeKInputFileData%BlTwist*D2R
                   
@@ -2587,6 +3063,70 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE ReadBladeInputs      
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Read Tail Fin inputs
+SUBROUTINE ReadTailFinInputs(FileName, TFData, UnEc, ErrStat, ErrMsg)
+   character(*),                    intent(in   )  :: FileName          !< Name of the file containing the Tail Fin aero data
+   type(TFinInputFileType),         intent(inout)  :: TFData            !< All the data in the Tail Fin input file
+   integer(IntKi),                  intent(in   )  :: UnEc              !< Echo unit 
+   integer(IntKi),                  intent(  out)  :: ErrStat           !< Error status
+   character(ErrMsgLen),            intent(  out)  :: ErrMsg            !< Error message
+   ! Local
+   type(FileInfoType)   :: FileInfo_In ! < The derived type for holding the file information.
+   integer(IntKi)       :: iLine       !< current entry in FileInfo_In%Lines array
+   integer(IntKi)       :: ErrStat2    !< Temporary Error status
+   character(ErrMsgLen) :: ErrMsg2     !< Temporary Error message
+   character(len=1024 ) :: DummyLine
+
+   ! --- Read Tail fin input file into array of strings
+   call ProcessComFile( FileName, FileInfo_In, ErrStat2, ErrMsg2)
+
+   ! --- Parse the array of strings
+   ! Skip the first two lines as they are known to be header lines and separators
+   do iLine = 1,2 
+      if ( UnEc>0 )   WRITE(UnEc, '(A)') FileInfo_In%Lines(iLine)    ! Write header to echo
+   enddo
+   iLine = 3 
+   !====== General inputs ============================================================
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinMod'   , TFData%TFinMod       , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinChord' , TFData%TFinChord     , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinArea'  , TFData%TFinArea      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_In, iLine, 'TFinRefP_n', TFData%TFinRefP_n, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseAry(FileInfo_In, iLine, 'TFinAngles', TFData%TFinAngles, 3 , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinIndMod', TFData%TFinIndMod    , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Polar-based model ================================ [used only when TFinMod=1]
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   call ParseVar(FileInfo_In, iLine, 'TFinAFID'  , TFData%TFinAFID      , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   !====== Unsteady slender body model ===================== [used only when TFinMod=2]
+   call ParseCom(FileInfo_in, iLine, DummyLine                          , ErrStat2, ErrMsg2, UnEc); if (Failed()) return;
+   ! TODO
+
+   ! --- Triggers
+   TFData%TFinAngles = TFData%TFinAngles*D2R ! deg2rad
+
+   ! --- Validation on the fly
+   !if (all((/TFinAero_none,TFinAero_polar, TFinAero_USB/) /= TFData%TFinMod)) then
+   if (all((/TFinAero_none,TFinAero_polar/) /= TFData%TFinMod)) then
+      call Fatal('TFinMod needs to be 0, or 1')
+   endif
+   !if (all((/TFinIndMod_none,TFinIndMod_rotavg/) /= TFData%TFinIndMod)) then
+   if (all((/TFinIndMod_none/) /= TFData%TFinIndMod)) then
+      call Fatal('TFinIndMod needs to be 0')
+   endif
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadTailFinInputs' )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+
+   subroutine Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      call SetErrStat(ErrID_Fatal, 'File:'//trim(FileName)//':'//trim(ErrMsg_in), ErrStat, ErrMsg, 'ReadTailFinInputs')
+   end subroutine Fatal
+   
+END SUBROUTINE ReadTailFinInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
@@ -2883,507 +3423,599 @@ END SUBROUTINE AD_PrintSum
 !! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 07-Sep-2022 16:15:55.
 SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
 !..................................................................................................................................
-
+   
    IMPLICIT                        NONE
-
+   
       ! Passed variables
-
-   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
+   
+   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list of user-requested outputs
    TYPE(RotParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
    TYPE(AD_ParameterType),    INTENT(INOUT)  :: p_AD                              !< The module parameters
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
-
+   
       ! Local variables
-
+   
    INTEGER                      :: ErrStat2                                        ! temporary (local) error status
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
-
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
-
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1270) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "B1AEROFX ","B1AEROFXG","B1AEROFY ","B1AEROFYG","B1AEROFZ ","B1AEROFZG","B1AEROMX ","B1AEROMXG", &
-                               "B1AEROMY ","B1AEROMYG","B1AEROMZ ","B1AEROMZG","B1AEROPWR","B1AZIMUTH","B1N1ALPHA","B1N1AXIND", &
+   
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1520) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "B1AZIMUTH","B1FLDFX  ","B1FLDFXG ","B1FLDFY  ","B1FLDFYG ","B1FLDFZ  ","B1FLDFZG ","B1FLDMX  ", &
+                               "B1FLDMXG ","B1FLDMY  ","B1FLDMYG ","B1FLDMZ  ","B1FLDMZG ","B1FLDPWR ","B1N1ALPHA","B1N1AXIND", &
                                "B1N1CD   ","B1N1CL   ","B1N1CLRNC","B1N1CM   ","B1N1CN   ","B1N1CPMIN","B1N1CT   ","B1N1CURVE", &
-                               "B1N1CX   ","B1N1CY   ","B1N1DYNP ","B1N1FD   ","B1N1FL   ","B1N1FN   ","B1N1FT   ","B1N1FX   ", &
-                               "B1N1FY   ","B1N1GAM  ","B1N1M    ","B1N1MM   ","B1N1PHI  ","B1N1RE   ","B1N1SGCAV","B1N1SIGCR", &
-                               "B1N1STVX ","B1N1STVY ","B1N1STVZ ","B1N1THETA","B1N1TNIND","B1N1VDISX","B1N1VDISY","B1N1VDISZ", &
-                               "B1N1VINDX","B1N1VINDY","B1N1VREL ","B1N1VUNDX","B1N1VUNDY","B1N1VUNDZ","B1N2ALPHA","B1N2AXIND", &
-                               "B1N2CD   ","B1N2CL   ","B1N2CLRNC","B1N2CM   ","B1N2CN   ","B1N2CPMIN","B1N2CT   ","B1N2CURVE", &
-                               "B1N2CX   ","B1N2CY   ","B1N2DYNP ","B1N2FD   ","B1N2FL   ","B1N2FN   ","B1N2FT   ","B1N2FX   ", &
-                               "B1N2FY   ","B1N2GAM  ","B1N2M    ","B1N2MM   ","B1N2PHI  ","B1N2RE   ","B1N2SGCAV","B1N2SIGCR", &
-                               "B1N2STVX ","B1N2STVY ","B1N2STVZ ","B1N2THETA","B1N2TNIND","B1N2VDISX","B1N2VDISY","B1N2VDISZ", &
-                               "B1N2VINDX","B1N2VINDY","B1N2VREL ","B1N2VUNDX","B1N2VUNDY","B1N2VUNDZ","B1N3ALPHA","B1N3AXIND", &
-                               "B1N3CD   ","B1N3CL   ","B1N3CLRNC","B1N3CM   ","B1N3CN   ","B1N3CPMIN","B1N3CT   ","B1N3CURVE", &
-                               "B1N3CX   ","B1N3CY   ","B1N3DYNP ","B1N3FD   ","B1N3FL   ","B1N3FN   ","B1N3FT   ","B1N3FX   ", &
-                               "B1N3FY   ","B1N3GAM  ","B1N3M    ","B1N3MM   ","B1N3PHI  ","B1N3RE   ","B1N3SGCAV","B1N3SIGCR", &
-                               "B1N3STVX ","B1N3STVY ","B1N3STVZ ","B1N3THETA","B1N3TNIND","B1N3VDISX","B1N3VDISY","B1N3VDISZ", &
-                               "B1N3VINDX","B1N3VINDY","B1N3VREL ","B1N3VUNDX","B1N3VUNDY","B1N3VUNDZ","B1N4ALPHA","B1N4AXIND", &
-                               "B1N4CD   ","B1N4CL   ","B1N4CLRNC","B1N4CM   ","B1N4CN   ","B1N4CPMIN","B1N4CT   ","B1N4CURVE", &
-                               "B1N4CX   ","B1N4CY   ","B1N4DYNP ","B1N4FD   ","B1N4FL   ","B1N4FN   ","B1N4FT   ","B1N4FX   ", &
-                               "B1N4FY   ","B1N4GAM  ","B1N4M    ","B1N4MM   ","B1N4PHI  ","B1N4RE   ","B1N4SGCAV","B1N4SIGCR", &
+                               "B1N1CX   ","B1N1CY   ","B1N1DYNP ","B1N1FBN  ","B1N1FBS  ","B1N1FBT  ","B1N1FD   ","B1N1FL   ", &
+                               "B1N1FN   ","B1N1FT   ","B1N1FX   ","B1N1FY   ","B1N1GAM  ","B1N1M    ","B1N1MBN  ","B1N1MBS  ", &
+                               "B1N1MBT  ","B1N1MM   ","B1N1PHI  ","B1N1RE   ","B1N1SGCAV","B1N1SIGCR","B1N1STVX ","B1N1STVY ", &
+                               "B1N1STVZ ","B1N1THETA","B1N1TNIND","B1N1VDISX","B1N1VDISY","B1N1VDISZ","B1N1VINDX","B1N1VINDY", &
+                               "B1N1VREL ","B1N1VUNDX","B1N1VUNDY","B1N1VUNDZ","B1N2ALPHA","B1N2AXIND","B1N2CD   ","B1N2CL   ", &
+                               "B1N2CLRNC","B1N2CM   ","B1N2CN   ","B1N2CPMIN","B1N2CT   ","B1N2CURVE","B1N2CX   ","B1N2CY   ", &
+                               "B1N2DYNP ","B1N2FBN  ","B1N2FBS  ","B1N2FBT  ","B1N2FD   ","B1N2FL   ","B1N2FN   ","B1N2FT   ", &
+                               "B1N2FX   ","B1N2FY   ","B1N2GAM  ","B1N2M    ","B1N2MBN  ","B1N2MBS  ","B1N2MBT  ","B1N2MM   ", &
+                               "B1N2PHI  ","B1N2RE   ","B1N2SGCAV","B1N2SIGCR","B1N2STVX ","B1N2STVY ","B1N2STVZ ","B1N2THETA", &
+                               "B1N2TNIND","B1N2VDISX","B1N2VDISY","B1N2VDISZ","B1N2VINDX","B1N2VINDY","B1N2VREL ","B1N2VUNDX", &
+                               "B1N2VUNDY","B1N2VUNDZ","B1N3ALPHA","B1N3AXIND","B1N3CD   ","B1N3CL   ","B1N3CLRNC","B1N3CM   ", &
+                               "B1N3CN   ","B1N3CPMIN","B1N3CT   ","B1N3CURVE","B1N3CX   ","B1N3CY   ","B1N3DYNP ","B1N3FBN  ", &
+                               "B1N3FBS  ","B1N3FBT  ","B1N3FD   ","B1N3FL   ","B1N3FN   ","B1N3FT   ","B1N3FX   ","B1N3FY   ", &
+                               "B1N3GAM  ","B1N3M    ","B1N3MBN  ","B1N3MBS  ","B1N3MBT  ","B1N3MM   ","B1N3PHI  ","B1N3RE   ", &
+                               "B1N3SGCAV","B1N3SIGCR","B1N3STVX ","B1N3STVY ","B1N3STVZ ","B1N3THETA","B1N3TNIND","B1N3VDISX", &
+                               "B1N3VDISY","B1N3VDISZ","B1N3VINDX","B1N3VINDY","B1N3VREL ","B1N3VUNDX","B1N3VUNDY","B1N3VUNDZ", &
+                               "B1N4ALPHA","B1N4AXIND","B1N4CD   ","B1N4CL   ","B1N4CLRNC","B1N4CM   ","B1N4CN   ","B1N4CPMIN", &
+                               "B1N4CT   ","B1N4CURVE","B1N4CX   ","B1N4CY   ","B1N4DYNP ","B1N4FBN  ","B1N4FBS  ","B1N4FBT  ", &
+                               "B1N4FD   ","B1N4FL   ","B1N4FN   ","B1N4FT   ","B1N4FX   ","B1N4FY   ","B1N4GAM  ","B1N4M    ", &
+                               "B1N4MBN  ","B1N4MBS  ","B1N4MBT  ","B1N4MM   ","B1N4PHI  ","B1N4RE   ","B1N4SGCAV","B1N4SIGCR", &
                                "B1N4STVX ","B1N4STVY ","B1N4STVZ ","B1N4THETA","B1N4TNIND","B1N4VDISX","B1N4VDISY","B1N4VDISZ", &
                                "B1N4VINDX","B1N4VINDY","B1N4VREL ","B1N4VUNDX","B1N4VUNDY","B1N4VUNDZ","B1N5ALPHA","B1N5AXIND", &
                                "B1N5CD   ","B1N5CL   ","B1N5CLRNC","B1N5CM   ","B1N5CN   ","B1N5CPMIN","B1N5CT   ","B1N5CURVE", &
-                               "B1N5CX   ","B1N5CY   ","B1N5DYNP ","B1N5FD   ","B1N5FL   ","B1N5FN   ","B1N5FT   ","B1N5FX   ", &
-                               "B1N5FY   ","B1N5GAM  ","B1N5M    ","B1N5MM   ","B1N5PHI  ","B1N5RE   ","B1N5SGCAV","B1N5SIGCR", &
-                               "B1N5STVX ","B1N5STVY ","B1N5STVZ ","B1N5THETA","B1N5TNIND","B1N5VDISX","B1N5VDISY","B1N5VDISZ", &
-                               "B1N5VINDX","B1N5VINDY","B1N5VREL ","B1N5VUNDX","B1N5VUNDY","B1N5VUNDZ","B1N6ALPHA","B1N6AXIND", &
-                               "B1N6CD   ","B1N6CL   ","B1N6CLRNC","B1N6CM   ","B1N6CN   ","B1N6CPMIN","B1N6CT   ","B1N6CURVE", &
-                               "B1N6CX   ","B1N6CY   ","B1N6DYNP ","B1N6FD   ","B1N6FL   ","B1N6FN   ","B1N6FT   ","B1N6FX   ", &
-                               "B1N6FY   ","B1N6GAM  ","B1N6M    ","B1N6MM   ","B1N6PHI  ","B1N6RE   ","B1N6SGCAV","B1N6SIGCR", &
-                               "B1N6STVX ","B1N6STVY ","B1N6STVZ ","B1N6THETA","B1N6TNIND","B1N6VDISX","B1N6VDISY","B1N6VDISZ", &
-                               "B1N6VINDX","B1N6VINDY","B1N6VREL ","B1N6VUNDX","B1N6VUNDY","B1N6VUNDZ","B1N7ALPHA","B1N7AXIND", &
-                               "B1N7CD   ","B1N7CL   ","B1N7CLRNC","B1N7CM   ","B1N7CN   ","B1N7CPMIN","B1N7CT   ","B1N7CURVE", &
-                               "B1N7CX   ","B1N7CY   ","B1N7DYNP ","B1N7FD   ","B1N7FL   ","B1N7FN   ","B1N7FT   ","B1N7FX   ", &
-                               "B1N7FY   ","B1N7GAM  ","B1N7M    ","B1N7MM   ","B1N7PHI  ","B1N7RE   ","B1N7SGCAV","B1N7SIGCR", &
-                               "B1N7STVX ","B1N7STVY ","B1N7STVZ ","B1N7THETA","B1N7TNIND","B1N7VDISX","B1N7VDISY","B1N7VDISZ", &
-                               "B1N7VINDX","B1N7VINDY","B1N7VREL ","B1N7VUNDX","B1N7VUNDY","B1N7VUNDZ","B1N8ALPHA","B1N8AXIND", &
-                               "B1N8CD   ","B1N8CL   ","B1N8CLRNC","B1N8CM   ","B1N8CN   ","B1N8CPMIN","B1N8CT   ","B1N8CURVE", &
-                               "B1N8CX   ","B1N8CY   ","B1N8DYNP ","B1N8FD   ","B1N8FL   ","B1N8FN   ","B1N8FT   ","B1N8FX   ", &
-                               "B1N8FY   ","B1N8GAM  ","B1N8M    ","B1N8MM   ","B1N8PHI  ","B1N8RE   ","B1N8SGCAV","B1N8SIGCR", &
+                               "B1N5CX   ","B1N5CY   ","B1N5DYNP ","B1N5FBN  ","B1N5FBS  ","B1N5FBT  ","B1N5FD   ","B1N5FL   ", &
+                               "B1N5FN   ","B1N5FT   ","B1N5FX   ","B1N5FY   ","B1N5GAM  ","B1N5M    ","B1N5MBN  ","B1N5MBS  ", &
+                               "B1N5MBT  ","B1N5MM   ","B1N5PHI  ","B1N5RE   ","B1N5SGCAV","B1N5SIGCR","B1N5STVX ","B1N5STVY ", &
+                               "B1N5STVZ ","B1N5THETA","B1N5TNIND","B1N5VDISX","B1N5VDISY","B1N5VDISZ","B1N5VINDX","B1N5VINDY", &
+                               "B1N5VREL ","B1N5VUNDX","B1N5VUNDY","B1N5VUNDZ","B1N6ALPHA","B1N6AXIND","B1N6CD   ","B1N6CL   ", &
+                               "B1N6CLRNC","B1N6CM   ","B1N6CN   ","B1N6CPMIN","B1N6CT   ","B1N6CURVE","B1N6CX   ","B1N6CY   ", &
+                               "B1N6DYNP ","B1N6FBN  ","B1N6FBS  ","B1N6FBT  ","B1N6FD   ","B1N6FL   ","B1N6FN   ","B1N6FT   ", &
+                               "B1N6FX   ","B1N6FY   ","B1N6GAM  ","B1N6M    ","B1N6MBN  ","B1N6MBS  ","B1N6MBT  ","B1N6MM   ", &
+                               "B1N6PHI  ","B1N6RE   ","B1N6SGCAV","B1N6SIGCR","B1N6STVX ","B1N6STVY ","B1N6STVZ ","B1N6THETA", &
+                               "B1N6TNIND","B1N6VDISX","B1N6VDISY","B1N6VDISZ","B1N6VINDX","B1N6VINDY","B1N6VREL ","B1N6VUNDX", &
+                               "B1N6VUNDY","B1N6VUNDZ","B1N7ALPHA","B1N7AXIND","B1N7CD   ","B1N7CL   ","B1N7CLRNC","B1N7CM   ", &
+                               "B1N7CN   ","B1N7CPMIN","B1N7CT   ","B1N7CURVE","B1N7CX   ","B1N7CY   ","B1N7DYNP ","B1N7FBN  ", &
+                               "B1N7FBS  ","B1N7FBT  ","B1N7FD   ","B1N7FL   ","B1N7FN   ","B1N7FT   ","B1N7FX   ","B1N7FY   ", &
+                               "B1N7GAM  ","B1N7M    ","B1N7MBN  ","B1N7MBS  ","B1N7MBT  ","B1N7MM   ","B1N7PHI  ","B1N7RE   ", &
+                               "B1N7SGCAV","B1N7SIGCR","B1N7STVX ","B1N7STVY ","B1N7STVZ ","B1N7THETA","B1N7TNIND","B1N7VDISX", &
+                               "B1N7VDISY","B1N7VDISZ","B1N7VINDX","B1N7VINDY","B1N7VREL ","B1N7VUNDX","B1N7VUNDY","B1N7VUNDZ", &
+                               "B1N8ALPHA","B1N8AXIND","B1N8CD   ","B1N8CL   ","B1N8CLRNC","B1N8CM   ","B1N8CN   ","B1N8CPMIN", &
+                               "B1N8CT   ","B1N8CURVE","B1N8CX   ","B1N8CY   ","B1N8DYNP ","B1N8FBN  ","B1N8FBS  ","B1N8FBT  ", &
+                               "B1N8FD   ","B1N8FL   ","B1N8FN   ","B1N8FT   ","B1N8FX   ","B1N8FY   ","B1N8GAM  ","B1N8M    ", &
+                               "B1N8MBN  ","B1N8MBS  ","B1N8MBT  ","B1N8MM   ","B1N8PHI  ","B1N8RE   ","B1N8SGCAV","B1N8SIGCR", &
                                "B1N8STVX ","B1N8STVY ","B1N8STVZ ","B1N8THETA","B1N8TNIND","B1N8VDISX","B1N8VDISY","B1N8VDISZ", &
                                "B1N8VINDX","B1N8VINDY","B1N8VREL ","B1N8VUNDX","B1N8VUNDY","B1N8VUNDZ","B1N9ALPHA","B1N9AXIND", &
                                "B1N9CD   ","B1N9CL   ","B1N9CLRNC","B1N9CM   ","B1N9CN   ","B1N9CPMIN","B1N9CT   ","B1N9CURVE", &
-                               "B1N9CX   ","B1N9CY   ","B1N9DYNP ","B1N9FD   ","B1N9FL   ","B1N9FN   ","B1N9FT   ","B1N9FX   ", &
-                               "B1N9FY   ","B1N9GAM  ","B1N9M    ","B1N9MM   ","B1N9PHI  ","B1N9RE   ","B1N9SGCAV","B1N9SIGCR", &
-                               "B1N9STVX ","B1N9STVY ","B1N9STVZ ","B1N9THETA","B1N9TNIND","B1N9VDISX","B1N9VDISY","B1N9VDISZ", &
-                               "B1N9VINDX","B1N9VINDY","B1N9VREL ","B1N9VUNDX","B1N9VUNDY","B1N9VUNDZ","B1PITCH  ","B2AEROFX ", &
-                               "B2AEROFXG","B2AEROFY ","B2AEROFYG","B2AEROFZ ","B2AEROFZG","B2AEROMX ","B2AEROMXG","B2AEROMY ", &
-                               "B2AEROMYG","B2AEROMZ ","B2AEROMZG","B2AEROPWR","B2AZIMUTH","B2N1ALPHA","B2N1AXIND","B2N1CD   ", &
-                               "B2N1CL   ","B2N1CLRNC","B2N1CM   ","B2N1CN   ","B2N1CPMIN","B2N1CT   ","B2N1CURVE","B2N1CX   ", &
-                               "B2N1CY   ","B2N1DYNP ","B2N1FD   ","B2N1FL   ","B2N1FN   ","B2N1FT   ","B2N1FX   ","B2N1FY   ", &
-                               "B2N1GAM  ","B2N1M    ","B2N1MM   ","B2N1PHI  ","B2N1RE   ","B2N1SGCAV","B2N1SIGCR","B2N1STVX ", &
-                               "B2N1STVY ","B2N1STVZ ","B2N1THETA","B2N1TNIND","B2N1VDISX","B2N1VDISY","B2N1VDISZ","B2N1VINDX", &
-                               "B2N1VINDY","B2N1VREL ","B2N1VUNDX","B2N1VUNDY","B2N1VUNDZ","B2N2ALPHA","B2N2AXIND","B2N2CD   ", &
-                               "B2N2CL   ","B2N2CLRNC","B2N2CM   ","B2N2CN   ","B2N2CPMIN","B2N2CT   ","B2N2CURVE","B2N2CX   ", &
-                               "B2N2CY   ","B2N2DYNP ","B2N2FD   ","B2N2FL   ","B2N2FN   ","B2N2FT   ","B2N2FX   ","B2N2FY   ", &
-                               "B2N2GAM  ","B2N2M    ","B2N2MM   ","B2N2PHI  ","B2N2RE   ","B2N2SGCAV","B2N2SIGCR","B2N2STVX ", &
-                               "B2N2STVY ","B2N2STVZ ","B2N2THETA","B2N2TNIND","B2N2VDISX","B2N2VDISY","B2N2VDISZ","B2N2VINDX", &
-                               "B2N2VINDY","B2N2VREL ","B2N2VUNDX","B2N2VUNDY","B2N2VUNDZ","B2N3ALPHA","B2N3AXIND","B2N3CD   ", &
-                               "B2N3CL   ","B2N3CLRNC","B2N3CM   ","B2N3CN   ","B2N3CPMIN","B2N3CT   ","B2N3CURVE","B2N3CX   ", &
-                               "B2N3CY   ","B2N3DYNP ","B2N3FD   ","B2N3FL   ","B2N3FN   ","B2N3FT   ","B2N3FX   ","B2N3FY   ", &
-                               "B2N3GAM  ","B2N3M    ","B2N3MM   ","B2N3PHI  ","B2N3RE   ","B2N3SGCAV","B2N3SIGCR","B2N3STVX ", &
+                               "B1N9CX   ","B1N9CY   ","B1N9DYNP ","B1N9FBN  ","B1N9FBS  ","B1N9FBT  ","B1N9FD   ","B1N9FL   ", &
+                               "B1N9FN   ","B1N9FT   ","B1N9FX   ","B1N9FY   ","B1N9GAM  ","B1N9M    ","B1N9MBN  ","B1N9MBS  ", &
+                               "B1N9MBT  ","B1N9MM   ","B1N9PHI  ","B1N9RE   ","B1N9SGCAV","B1N9SIGCR","B1N9STVX ","B1N9STVY ", &
+                               "B1N9STVZ ","B1N9THETA","B1N9TNIND","B1N9VDISX","B1N9VDISY","B1N9VDISZ","B1N9VINDX","B1N9VINDY", &
+                               "B1N9VREL ","B1N9VUNDX","B1N9VUNDY","B1N9VUNDZ","B1PITCH  ","B2AZIMUTH","B2FLDFX  ","B2FLDFXG ", &
+                               "B2FLDFY  ","B2FLDFYG ","B2FLDFZ  ","B2FLDFZG ","B2FLDMX  ","B2FLDMXG ","B2FLDMY  ","B2FLDMYG ", &
+                               "B2FLDMZ  ","B2FLDMZG ","B2FLDPWR ","B2N1ALPHA","B2N1AXIND","B2N1CD   ","B2N1CL   ","B2N1CLRNC", &
+                               "B2N1CM   ","B2N1CN   ","B2N1CPMIN","B2N1CT   ","B2N1CURVE","B2N1CX   ","B2N1CY   ","B2N1DYNP ", &
+                               "B2N1FBN  ","B2N1FBS  ","B2N1FBT  ","B2N1FD   ","B2N1FL   ","B2N1FN   ","B2N1FT   ","B2N1FX   ", &
+                               "B2N1FY   ","B2N1GAM  ","B2N1M    ","B2N1MBN  ","B2N1MBS  ","B2N1MBT  ","B2N1MM   ","B2N1PHI  ", &
+                               "B2N1RE   ","B2N1SGCAV","B2N1SIGCR","B2N1STVX ","B2N1STVY ","B2N1STVZ ","B2N1THETA","B2N1TNIND", &
+                               "B2N1VDISX","B2N1VDISY","B2N1VDISZ","B2N1VINDX","B2N1VINDY","B2N1VREL ","B2N1VUNDX","B2N1VUNDY", &
+                               "B2N1VUNDZ","B2N2ALPHA","B2N2AXIND","B2N2CD   ","B2N2CL   ","B2N2CLRNC","B2N2CM   ","B2N2CN   ", &
+                               "B2N2CPMIN","B2N2CT   ","B2N2CURVE","B2N2CX   ","B2N2CY   ","B2N2DYNP ","B2N2FBN  ","B2N2FBS  ", &
+                               "B2N2FBT  ","B2N2FD   ","B2N2FL   ","B2N2FN   ","B2N2FT   ","B2N2FX   ","B2N2FY   ","B2N2GAM  ", &
+                               "B2N2M    ","B2N2MBN  ","B2N2MBS  ","B2N2MBT  ","B2N2MM   ","B2N2PHI  ","B2N2RE   ","B2N2SGCAV", &
+                               "B2N2SIGCR","B2N2STVX ","B2N2STVY ","B2N2STVZ ","B2N2THETA","B2N2TNIND","B2N2VDISX","B2N2VDISY", &
+                               "B2N2VDISZ","B2N2VINDX","B2N2VINDY","B2N2VREL ","B2N2VUNDX","B2N2VUNDY","B2N2VUNDZ","B2N3ALPHA", &
+                               "B2N3AXIND","B2N3CD   ","B2N3CL   ","B2N3CLRNC","B2N3CM   ","B2N3CN   ","B2N3CPMIN","B2N3CT   ", &
+                               "B2N3CURVE","B2N3CX   ","B2N3CY   ","B2N3DYNP ","B2N3FBN  ","B2N3FBS  ","B2N3FBT  ","B2N3FD   ", &
+                               "B2N3FL   ","B2N3FN   ","B2N3FT   ","B2N3FX   ","B2N3FY   ","B2N3GAM  ","B2N3M    ","B2N3MBN  ", &
+                               "B2N3MBS  ","B2N3MBT  ","B2N3MM   ","B2N3PHI  ","B2N3RE   ","B2N3SGCAV","B2N3SIGCR","B2N3STVX ", &
                                "B2N3STVY ","B2N3STVZ ","B2N3THETA","B2N3TNIND","B2N3VDISX","B2N3VDISY","B2N3VDISZ","B2N3VINDX", &
                                "B2N3VINDY","B2N3VREL ","B2N3VUNDX","B2N3VUNDY","B2N3VUNDZ","B2N4ALPHA","B2N4AXIND","B2N4CD   ", &
                                "B2N4CL   ","B2N4CLRNC","B2N4CM   ","B2N4CN   ","B2N4CPMIN","B2N4CT   ","B2N4CURVE","B2N4CX   ", &
-                               "B2N4CY   ","B2N4DYNP ","B2N4FD   ","B2N4FL   ","B2N4FN   ","B2N4FT   ","B2N4FX   ","B2N4FY   ", &
-                               "B2N4GAM  ","B2N4M    ","B2N4MM   ","B2N4PHI  ","B2N4RE   ","B2N4SGCAV","B2N4SIGCR","B2N4STVX ", &
-                               "B2N4STVY ","B2N4STVZ ","B2N4THETA","B2N4TNIND","B2N4VDISX","B2N4VDISY","B2N4VDISZ","B2N4VINDX", &
-                               "B2N4VINDY","B2N4VREL ","B2N4VUNDX","B2N4VUNDY","B2N4VUNDZ","B2N5ALPHA","B2N5AXIND","B2N5CD   ", &
-                               "B2N5CL   ","B2N5CLRNC","B2N5CM   ","B2N5CN   ","B2N5CPMIN","B2N5CT   ","B2N5CURVE","B2N5CX   ", &
-                               "B2N5CY   ","B2N5DYNP ","B2N5FD   ","B2N5FL   ","B2N5FN   ","B2N5FT   ","B2N5FX   ","B2N5FY   ", &
-                               "B2N5GAM  ","B2N5M    ","B2N5MM   ","B2N5PHI  ","B2N5RE   ","B2N5SGCAV","B2N5SIGCR","B2N5STVX ", &
-                               "B2N5STVY ","B2N5STVZ ","B2N5THETA","B2N5TNIND","B2N5VDISX","B2N5VDISY","B2N5VDISZ","B2N5VINDX", &
-                               "B2N5VINDY","B2N5VREL ","B2N5VUNDX","B2N5VUNDY","B2N5VUNDZ","B2N6ALPHA","B2N6AXIND","B2N6CD   ", &
-                               "B2N6CL   ","B2N6CLRNC","B2N6CM   ","B2N6CN   ","B2N6CPMIN","B2N6CT   ","B2N6CURVE","B2N6CX   ", &
-                               "B2N6CY   ","B2N6DYNP ","B2N6FD   ","B2N6FL   ","B2N6FN   ","B2N6FT   ","B2N6FX   ","B2N6FY   ", &
-                               "B2N6GAM  ","B2N6M    ","B2N6MM   ","B2N6PHI  ","B2N6RE   ","B2N6SGCAV","B2N6SIGCR","B2N6STVX ", &
-                               "B2N6STVY ","B2N6STVZ ","B2N6THETA","B2N6TNIND","B2N6VDISX","B2N6VDISY","B2N6VDISZ","B2N6VINDX", &
-                               "B2N6VINDY","B2N6VREL ","B2N6VUNDX","B2N6VUNDY","B2N6VUNDZ","B2N7ALPHA","B2N7AXIND","B2N7CD   ", &
-                               "B2N7CL   ","B2N7CLRNC","B2N7CM   ","B2N7CN   ","B2N7CPMIN","B2N7CT   ","B2N7CURVE","B2N7CX   ", &
-                               "B2N7CY   ","B2N7DYNP ","B2N7FD   ","B2N7FL   ","B2N7FN   ","B2N7FT   ","B2N7FX   ","B2N7FY   ", &
-                               "B2N7GAM  ","B2N7M    ","B2N7MM   ","B2N7PHI  ","B2N7RE   ","B2N7SGCAV","B2N7SIGCR","B2N7STVX ", &
+                               "B2N4CY   ","B2N4DYNP ","B2N4FBN  ","B2N4FBS  ","B2N4FBT  ","B2N4FD   ","B2N4FL   ","B2N4FN   ", &
+                               "B2N4FT   ","B2N4FX   ","B2N4FY   ","B2N4GAM  ","B2N4M    ","B2N4MBN  ","B2N4MBS  ","B2N4MBT  ", &
+                               "B2N4MM   ","B2N4PHI  ","B2N4RE   ","B2N4SGCAV","B2N4SIGCR","B2N4STVX ","B2N4STVY ","B2N4STVZ ", &
+                               "B2N4THETA","B2N4TNIND","B2N4VDISX","B2N4VDISY","B2N4VDISZ","B2N4VINDX","B2N4VINDY","B2N4VREL ", &
+                               "B2N4VUNDX","B2N4VUNDY","B2N4VUNDZ","B2N5ALPHA","B2N5AXIND","B2N5CD   ","B2N5CL   ","B2N5CLRNC", &
+                               "B2N5CM   ","B2N5CN   ","B2N5CPMIN","B2N5CT   ","B2N5CURVE","B2N5CX   ","B2N5CY   ","B2N5DYNP ", &
+                               "B2N5FBN  ","B2N5FBS  ","B2N5FBT  ","B2N5FD   ","B2N5FL   ","B2N5FN   ","B2N5FT   ","B2N5FX   ", &
+                               "B2N5FY   ","B2N5GAM  ","B2N5M    ","B2N5MBN  ","B2N5MBS  ","B2N5MBT  ","B2N5MM   ","B2N5PHI  ", &
+                               "B2N5RE   ","B2N5SGCAV","B2N5SIGCR","B2N5STVX ","B2N5STVY ","B2N5STVZ ","B2N5THETA","B2N5TNIND", &
+                               "B2N5VDISX","B2N5VDISY","B2N5VDISZ","B2N5VINDX","B2N5VINDY","B2N5VREL ","B2N5VUNDX","B2N5VUNDY", &
+                               "B2N5VUNDZ","B2N6ALPHA","B2N6AXIND","B2N6CD   ","B2N6CL   ","B2N6CLRNC","B2N6CM   ","B2N6CN   ", &
+                               "B2N6CPMIN","B2N6CT   ","B2N6CURVE","B2N6CX   ","B2N6CY   ","B2N6DYNP ","B2N6FBN  ","B2N6FBS  ", &
+                               "B2N6FBT  ","B2N6FD   ","B2N6FL   ","B2N6FN   ","B2N6FT   ","B2N6FX   ","B2N6FY   ","B2N6GAM  ", &
+                               "B2N6M    ","B2N6MBN  ","B2N6MBS  ","B2N6MBT  ","B2N6MM   ","B2N6PHI  ","B2N6RE   ","B2N6SGCAV", &
+                               "B2N6SIGCR","B2N6STVX ","B2N6STVY ","B2N6STVZ ","B2N6THETA","B2N6TNIND","B2N6VDISX","B2N6VDISY", &
+                               "B2N6VDISZ","B2N6VINDX","B2N6VINDY","B2N6VREL ","B2N6VUNDX","B2N6VUNDY","B2N6VUNDZ","B2N7ALPHA", &
+                               "B2N7AXIND","B2N7CD   ","B2N7CL   ","B2N7CLRNC","B2N7CM   ","B2N7CN   ","B2N7CPMIN","B2N7CT   ", &
+                               "B2N7CURVE","B2N7CX   ","B2N7CY   ","B2N7DYNP ","B2N7FBN  ","B2N7FBS  ","B2N7FBT  ","B2N7FD   ", &
+                               "B2N7FL   ","B2N7FN   ","B2N7FT   ","B2N7FX   ","B2N7FY   ","B2N7GAM  ","B2N7M    ","B2N7MBN  ", &
+                               "B2N7MBS  ","B2N7MBT  ","B2N7MM   ","B2N7PHI  ","B2N7RE   ","B2N7SGCAV","B2N7SIGCR","B2N7STVX ", &
                                "B2N7STVY ","B2N7STVZ ","B2N7THETA","B2N7TNIND","B2N7VDISX","B2N7VDISY","B2N7VDISZ","B2N7VINDX", &
                                "B2N7VINDY","B2N7VREL ","B2N7VUNDX","B2N7VUNDY","B2N7VUNDZ","B2N8ALPHA","B2N8AXIND","B2N8CD   ", &
                                "B2N8CL   ","B2N8CLRNC","B2N8CM   ","B2N8CN   ","B2N8CPMIN","B2N8CT   ","B2N8CURVE","B2N8CX   ", &
-                               "B2N8CY   ","B2N8DYNP ","B2N8FD   ","B2N8FL   ","B2N8FN   ","B2N8FT   ","B2N8FX   ","B2N8FY   ", &
-                               "B2N8GAM  ","B2N8M    ","B2N8MM   ","B2N8PHI  ","B2N8RE   ","B2N8SGCAV","B2N8SIGCR","B2N8STVX ", &
-                               "B2N8STVY ","B2N8STVZ ","B2N8THETA","B2N8TNIND","B2N8VDISX","B2N8VDISY","B2N8VDISZ","B2N8VINDX", &
-                               "B2N8VINDY","B2N8VREL ","B2N8VUNDX","B2N8VUNDY","B2N8VUNDZ","B2N9ALPHA","B2N9AXIND","B2N9CD   ", &
-                               "B2N9CL   ","B2N9CLRNC","B2N9CM   ","B2N9CN   ","B2N9CPMIN","B2N9CT   ","B2N9CURVE","B2N9CX   ", &
-                               "B2N9CY   ","B2N9DYNP ","B2N9FD   ","B2N9FL   ","B2N9FN   ","B2N9FT   ","B2N9FX   ","B2N9FY   ", &
-                               "B2N9GAM  ","B2N9M    ","B2N9MM   ","B2N9PHI  ","B2N9RE   ","B2N9SGCAV","B2N9SIGCR","B2N9STVX ", &
-                               "B2N9STVY ","B2N9STVZ ","B2N9THETA","B2N9TNIND","B2N9VDISX","B2N9VDISY","B2N9VDISZ","B2N9VINDX", &
-                               "B2N9VINDY","B2N9VREL ","B2N9VUNDX","B2N9VUNDY","B2N9VUNDZ","B2PITCH  ","B3AEROFX ","B3AEROFXG", &
-                               "B3AEROFY ","B3AEROFYG","B3AEROFZ ","B3AEROFZG","B3AEROMX ","B3AEROMXG","B3AEROMY ","B3AEROMYG", &
-                               "B3AEROMZ ","B3AEROMZG","B3AEROPWR","B3AZIMUTH","B3N1ALPHA","B3N1AXIND","B3N1CD   ","B3N1CL   ", &
-                               "B3N1CLRNC","B3N1CM   ","B3N1CN   ","B3N1CPMIN","B3N1CT   ","B3N1CURVE","B3N1CX   ","B3N1CY   ", &
-                               "B3N1DYNP ","B3N1FD   ","B3N1FL   ","B3N1FN   ","B3N1FT   ","B3N1FX   ","B3N1FY   ","B3N1GAM  ", &
-                               "B3N1M    ","B3N1MM   ","B3N1PHI  ","B3N1RE   ","B3N1SGCAV","B3N1SIGCR","B3N1STVX ","B3N1STVY ", &
-                               "B3N1STVZ ","B3N1THETA","B3N1TNIND","B3N1VDISX","B3N1VDISY","B3N1VDISZ","B3N1VINDX","B3N1VINDY", &
-                               "B3N1VREL ","B3N1VUNDX","B3N1VUNDY","B3N1VUNDZ","B3N2ALPHA","B3N2AXIND","B3N2CD   ","B3N2CL   ", &
-                               "B3N2CLRNC","B3N2CM   ","B3N2CN   ","B3N2CPMIN","B3N2CT   ","B3N2CURVE","B3N2CX   ","B3N2CY   ", &
-                               "B3N2DYNP ","B3N2FD   ","B3N2FL   ","B3N2FN   ","B3N2FT   ","B3N2FX   ","B3N2FY   ","B3N2GAM  ", &
-                               "B3N2M    ","B3N2MM   ","B3N2PHI  ","B3N2RE   ","B3N2SGCAV","B3N2SIGCR","B3N2STVX ","B3N2STVY ", &
+                               "B2N8CY   ","B2N8DYNP ","B2N8FBN  ","B2N8FBS  ","B2N8FBT  ","B2N8FD   ","B2N8FL   ","B2N8FN   ", &
+                               "B2N8FT   ","B2N8FX   ","B2N8FY   ","B2N8GAM  ","B2N8M    ","B2N8MBN  ","B2N8MBS  ","B2N8MBT  ", &
+                               "B2N8MM   ","B2N8PHI  ","B2N8RE   ","B2N8SGCAV","B2N8SIGCR","B2N8STVX ","B2N8STVY ","B2N8STVZ ", &
+                               "B2N8THETA","B2N8TNIND","B2N8VDISX","B2N8VDISY","B2N8VDISZ","B2N8VINDX","B2N8VINDY","B2N8VREL ", &
+                               "B2N8VUNDX","B2N8VUNDY","B2N8VUNDZ","B2N9ALPHA","B2N9AXIND","B2N9CD   ","B2N9CL   ","B2N9CLRNC", &
+                               "B2N9CM   ","B2N9CN   ","B2N9CPMIN","B2N9CT   ","B2N9CURVE","B2N9CX   ","B2N9CY   ","B2N9DYNP ", &
+                               "B2N9FBN  ","B2N9FBS  ","B2N9FBT  ","B2N9FD   ","B2N9FL   ","B2N9FN   ","B2N9FT   ","B2N9FX   ", &
+                               "B2N9FY   ","B2N9GAM  ","B2N9M    ","B2N9MBN  ","B2N9MBS  ","B2N9MBT  ","B2N9MM   ","B2N9PHI  ", &
+                               "B2N9RE   ","B2N9SGCAV","B2N9SIGCR","B2N9STVX ","B2N9STVY ","B2N9STVZ ","B2N9THETA","B2N9TNIND", &
+                               "B2N9VDISX","B2N9VDISY","B2N9VDISZ","B2N9VINDX","B2N9VINDY","B2N9VREL ","B2N9VUNDX","B2N9VUNDY", &
+                               "B2N9VUNDZ","B2PITCH  ","B3AZIMUTH","B3FLDFX  ","B3FLDFXG ","B3FLDFY  ","B3FLDFYG ","B3FLDFZ  ", &
+                               "B3FLDFZG ","B3FLDMX  ","B3FLDMXG ","B3FLDMY  ","B3FLDMYG ","B3FLDMZ  ","B3FLDMZG ","B3FLDPWR ", &
+                               "B3N1ALPHA","B3N1AXIND","B3N1CD   ","B3N1CL   ","B3N1CLRNC","B3N1CM   ","B3N1CN   ","B3N1CPMIN", &
+                               "B3N1CT   ","B3N1CURVE","B3N1CX   ","B3N1CY   ","B3N1DYNP ","B3N1FBN  ","B3N1FBS  ","B3N1FBT  ", &
+                               "B3N1FD   ","B3N1FL   ","B3N1FN   ","B3N1FT   ","B3N1FX   ","B3N1FY   ","B3N1GAM  ","B3N1M    ", &
+                               "B3N1MBN  ","B3N1MBS  ","B3N1MBT  ","B3N1MM   ","B3N1PHI  ","B3N1RE   ","B3N1SGCAV","B3N1SIGCR", &
+                               "B3N1STVX ","B3N1STVY ","B3N1STVZ ","B3N1THETA","B3N1TNIND","B3N1VDISX","B3N1VDISY","B3N1VDISZ", &
+                               "B3N1VINDX","B3N1VINDY","B3N1VREL ","B3N1VUNDX","B3N1VUNDY","B3N1VUNDZ","B3N2ALPHA","B3N2AXIND", &
+                               "B3N2CD   ","B3N2CL   ","B3N2CLRNC","B3N2CM   ","B3N2CN   ","B3N2CPMIN","B3N2CT   ","B3N2CURVE", &
+                               "B3N2CX   ","B3N2CY   ","B3N2DYNP ","B3N2FBN  ","B3N2FBS  ","B3N2FBT  ","B3N2FD   ","B3N2FL   ", &
+                               "B3N2FN   ","B3N2FT   ","B3N2FX   ","B3N2FY   ","B3N2GAM  ","B3N2M    ","B3N2MBN  ","B3N2MBS  ", &
+                               "B3N2MBT  ","B3N2MM   ","B3N2PHI  ","B3N2RE   ","B3N2SGCAV","B3N2SIGCR","B3N2STVX ","B3N2STVY ", &
                                "B3N2STVZ ","B3N2THETA","B3N2TNIND","B3N2VDISX","B3N2VDISY","B3N2VDISZ","B3N2VINDX","B3N2VINDY", &
                                "B3N2VREL ","B3N2VUNDX","B3N2VUNDY","B3N2VUNDZ","B3N3ALPHA","B3N3AXIND","B3N3CD   ","B3N3CL   ", &
                                "B3N3CLRNC","B3N3CM   ","B3N3CN   ","B3N3CPMIN","B3N3CT   ","B3N3CURVE","B3N3CX   ","B3N3CY   ", &
-                               "B3N3DYNP ","B3N3FD   ","B3N3FL   ","B3N3FN   ","B3N3FT   ","B3N3FX   ","B3N3FY   ","B3N3GAM  ", &
-                               "B3N3M    ","B3N3MM   ","B3N3PHI  ","B3N3RE   ","B3N3SGCAV","B3N3SIGCR","B3N3STVX ","B3N3STVY ", &
-                               "B3N3STVZ ","B3N3THETA","B3N3TNIND","B3N3VDISX","B3N3VDISY","B3N3VDISZ","B3N3VINDX","B3N3VINDY", &
-                               "B3N3VREL ","B3N3VUNDX","B3N3VUNDY","B3N3VUNDZ","B3N4ALPHA","B3N4AXIND","B3N4CD   ","B3N4CL   ", &
-                               "B3N4CLRNC","B3N4CM   ","B3N4CN   ","B3N4CPMIN","B3N4CT   ","B3N4CURVE","B3N4CX   ","B3N4CY   ", &
-                               "B3N4DYNP ","B3N4FD   ","B3N4FL   ","B3N4FN   ","B3N4FT   ","B3N4FX   ","B3N4FY   ","B3N4GAM  ", &
-                               "B3N4M    ","B3N4MM   ","B3N4PHI  ","B3N4RE   ","B3N4SGCAV","B3N4SIGCR","B3N4STVX ","B3N4STVY ", &
-                               "B3N4STVZ ","B3N4THETA","B3N4TNIND","B3N4VDISX","B3N4VDISY","B3N4VDISZ","B3N4VINDX","B3N4VINDY", &
-                               "B3N4VREL ","B3N4VUNDX","B3N4VUNDY","B3N4VUNDZ","B3N5ALPHA","B3N5AXIND","B3N5CD   ","B3N5CL   ", &
-                               "B3N5CLRNC","B3N5CM   ","B3N5CN   ","B3N5CPMIN","B3N5CT   ","B3N5CURVE","B3N5CX   ","B3N5CY   ", &
-                               "B3N5DYNP ","B3N5FD   ","B3N5FL   ","B3N5FN   ","B3N5FT   ","B3N5FX   ","B3N5FY   ","B3N5GAM  ", &
-                               "B3N5M    ","B3N5MM   ","B3N5PHI  ","B3N5RE   ","B3N5SGCAV","B3N5SIGCR","B3N5STVX ","B3N5STVY ", &
-                               "B3N5STVZ ","B3N5THETA","B3N5TNIND","B3N5VDISX","B3N5VDISY","B3N5VDISZ","B3N5VINDX","B3N5VINDY", &
-                               "B3N5VREL ","B3N5VUNDX","B3N5VUNDY","B3N5VUNDZ","B3N6ALPHA","B3N6AXIND","B3N6CD   ","B3N6CL   ", &
-                               "B3N6CLRNC","B3N6CM   ","B3N6CN   ","B3N6CPMIN","B3N6CT   ","B3N6CURVE","B3N6CX   ","B3N6CY   ", &
-                               "B3N6DYNP ","B3N6FD   ","B3N6FL   ","B3N6FN   ","B3N6FT   ","B3N6FX   ","B3N6FY   ","B3N6GAM  ", &
-                               "B3N6M    ","B3N6MM   ","B3N6PHI  ","B3N6RE   ","B3N6SGCAV","B3N6SIGCR","B3N6STVX ","B3N6STVY ", &
+                               "B3N3DYNP ","B3N3FBN  ","B3N3FBS  ","B3N3FBT  ","B3N3FD   ","B3N3FL   ","B3N3FN   ","B3N3FT   ", &
+                               "B3N3FX   ","B3N3FY   ","B3N3GAM  ","B3N3M    ","B3N3MBN  ","B3N3MBS  ","B3N3MBT  ","B3N3MM   ", &
+                               "B3N3PHI  ","B3N3RE   ","B3N3SGCAV","B3N3SIGCR","B3N3STVX ","B3N3STVY ","B3N3STVZ ","B3N3THETA", &
+                               "B3N3TNIND","B3N3VDISX","B3N3VDISY","B3N3VDISZ","B3N3VINDX","B3N3VINDY","B3N3VREL ","B3N3VUNDX", &
+                               "B3N3VUNDY","B3N3VUNDZ","B3N4ALPHA","B3N4AXIND","B3N4CD   ","B3N4CL   ","B3N4CLRNC","B3N4CM   ", &
+                               "B3N4CN   ","B3N4CPMIN","B3N4CT   ","B3N4CURVE","B3N4CX   ","B3N4CY   ","B3N4DYNP ","B3N4FBN  ", &
+                               "B3N4FBS  ","B3N4FBT  ","B3N4FD   ","B3N4FL   ","B3N4FN   ","B3N4FT   ","B3N4FX   ","B3N4FY   ", &
+                               "B3N4GAM  ","B3N4M    ","B3N4MBN  ","B3N4MBS  ","B3N4MBT  ","B3N4MM   ","B3N4PHI  ","B3N4RE   ", &
+                               "B3N4SGCAV","B3N4SIGCR","B3N4STVX ","B3N4STVY ","B3N4STVZ ","B3N4THETA","B3N4TNIND","B3N4VDISX", &
+                               "B3N4VDISY","B3N4VDISZ","B3N4VINDX","B3N4VINDY","B3N4VREL ","B3N4VUNDX","B3N4VUNDY","B3N4VUNDZ", &
+                               "B3N5ALPHA","B3N5AXIND","B3N5CD   ","B3N5CL   ","B3N5CLRNC","B3N5CM   ","B3N5CN   ","B3N5CPMIN", &
+                               "B3N5CT   ","B3N5CURVE","B3N5CX   ","B3N5CY   ","B3N5DYNP ","B3N5FBN  ","B3N5FBS  ","B3N5FBT  ", &
+                               "B3N5FD   ","B3N5FL   ","B3N5FN   ","B3N5FT   ","B3N5FX   ","B3N5FY   ","B3N5GAM  ","B3N5M    ", &
+                               "B3N5MBN  ","B3N5MBS  ","B3N5MBT  ","B3N5MM   ","B3N5PHI  ","B3N5RE   ","B3N5SGCAV","B3N5SIGCR", &
+                               "B3N5STVX ","B3N5STVY ","B3N5STVZ ","B3N5THETA","B3N5TNIND","B3N5VDISX","B3N5VDISY","B3N5VDISZ", &
+                               "B3N5VINDX","B3N5VINDY","B3N5VREL ","B3N5VUNDX","B3N5VUNDY","B3N5VUNDZ","B3N6ALPHA","B3N6AXIND", &
+                               "B3N6CD   ","B3N6CL   ","B3N6CLRNC","B3N6CM   ","B3N6CN   ","B3N6CPMIN","B3N6CT   ","B3N6CURVE", &
+                               "B3N6CX   ","B3N6CY   ","B3N6DYNP ","B3N6FBN  ","B3N6FBS  ","B3N6FBT  ","B3N6FD   ","B3N6FL   ", &
+                               "B3N6FN   ","B3N6FT   ","B3N6FX   ","B3N6FY   ","B3N6GAM  ","B3N6M    ","B3N6MBN  ","B3N6MBS  ", &
+                               "B3N6MBT  ","B3N6MM   ","B3N6PHI  ","B3N6RE   ","B3N6SGCAV","B3N6SIGCR","B3N6STVX ","B3N6STVY ", &
                                "B3N6STVZ ","B3N6THETA","B3N6TNIND","B3N6VDISX","B3N6VDISY","B3N6VDISZ","B3N6VINDX","B3N6VINDY", &
                                "B3N6VREL ","B3N6VUNDX","B3N6VUNDY","B3N6VUNDZ","B3N7ALPHA","B3N7AXIND","B3N7CD   ","B3N7CL   ", &
                                "B3N7CLRNC","B3N7CM   ","B3N7CN   ","B3N7CPMIN","B3N7CT   ","B3N7CURVE","B3N7CX   ","B3N7CY   ", &
-                               "B3N7DYNP ","B3N7FD   ","B3N7FL   ","B3N7FN   ","B3N7FT   ","B3N7FX   ","B3N7FY   ","B3N7GAM  ", &
-                               "B3N7M    ","B3N7MM   ","B3N7PHI  ","B3N7RE   ","B3N7SGCAV","B3N7SIGCR","B3N7STVX ","B3N7STVY ", &
-                               "B3N7STVZ ","B3N7THETA","B3N7TNIND","B3N7VDISX","B3N7VDISY","B3N7VDISZ","B3N7VINDX","B3N7VINDY", &
-                               "B3N7VREL ","B3N7VUNDX","B3N7VUNDY","B3N7VUNDZ","B3N8ALPHA","B3N8AXIND","B3N8CD   ","B3N8CL   ", &
-                               "B3N8CLRNC","B3N8CM   ","B3N8CN   ","B3N8CPMIN","B3N8CT   ","B3N8CURVE","B3N8CX   ","B3N8CY   ", &
-                               "B3N8DYNP ","B3N8FD   ","B3N8FL   ","B3N8FN   ","B3N8FT   ","B3N8FX   ","B3N8FY   ","B3N8GAM  ", &
-                               "B3N8M    ","B3N8MM   ","B3N8PHI  ","B3N8RE   ","B3N8SGCAV","B3N8SIGCR","B3N8STVX ","B3N8STVY ", &
-                               "B3N8STVZ ","B3N8THETA","B3N8TNIND","B3N8VDISX","B3N8VDISY","B3N8VDISZ","B3N8VINDX","B3N8VINDY", &
-                               "B3N8VREL ","B3N8VUNDX","B3N8VUNDY","B3N8VUNDZ","B3N9ALPHA","B3N9AXIND","B3N9CD   ","B3N9CL   ", &
-                               "B3N9CLRNC","B3N9CM   ","B3N9CN   ","B3N9CPMIN","B3N9CT   ","B3N9CURVE","B3N9CX   ","B3N9CY   ", &
-                               "B3N9DYNP ","B3N9FD   ","B3N9FL   ","B3N9FN   ","B3N9FT   ","B3N9FX   ","B3N9FY   ","B3N9GAM  ", &
-                               "B3N9M    ","B3N9MM   ","B3N9PHI  ","B3N9RE   ","B3N9SGCAV","B3N9SIGCR","B3N9STVX ","B3N9STVY ", &
-                               "B3N9STVZ ","B3N9THETA","B3N9TNIND","B3N9VDISX","B3N9VDISY","B3N9VDISZ","B3N9VINDX","B3N9VINDY", &
-                               "B3N9VREL ","B3N9VUNDX","B3N9VUNDY","B3N9VUNDZ","B3PITCH  ","B4AEROFX ","B4AEROFXG","B4AEROFY ", &
-                               "B4AEROFYG","B4AEROFZ ","B4AEROFZG","B4AEROMX ","B4AEROMXG","B4AEROMY ","B4AEROMYG","B4AEROMZ ", &
-                               "B4AEROMZG","B4AEROPWR","DBEMTAU1 ","RTAEROCP ","RTAEROCQ ","RTAEROCT ","RTAEROFXG","RTAEROFXH", &
-                               "RTAEROFYG","RTAEROFYH","RTAEROFZG","RTAEROFZH","RTAEROMXG","RTAEROMXH","RTAEROMYG","RTAEROMYH", &
-                               "RTAEROMZG","RTAEROMZH","RTAEROPWR","RTAREA   ","RTSKEW   ","RTSPEED  ","RTTSR    ","RTVAVGXH ", &
-                               "RTVAVGYH ","RTVAVGZH ","TWN1DYNP ","TWN1FDX  ","TWN1FDY  ","TWN1M    ","TWN1RE   ","TWN1STVX ", &
-                               "TWN1STVY ","TWN1STVZ ","TWN1VREL ","TWN1VUNDX","TWN1VUNDY","TWN1VUNDZ","TWN2DYNP ","TWN2FDX  ", &
-                               "TWN2FDY  ","TWN2M    ","TWN2RE   ","TWN2STVX ","TWN2STVY ","TWN2STVZ ","TWN2VREL ","TWN2VUNDX", &
-                               "TWN2VUNDY","TWN2VUNDZ","TWN3DYNP ","TWN3FDX  ","TWN3FDY  ","TWN3M    ","TWN3RE   ","TWN3STVX ", &
-                               "TWN3STVY ","TWN3STVZ ","TWN3VREL ","TWN3VUNDX","TWN3VUNDY","TWN3VUNDZ","TWN4DYNP ","TWN4FDX  ", &
-                               "TWN4FDY  ","TWN4M    ","TWN4RE   ","TWN4STVX ","TWN4STVY ","TWN4STVZ ","TWN4VREL ","TWN4VUNDX", &
-                               "TWN4VUNDY","TWN4VUNDZ","TWN5DYNP ","TWN5FDX  ","TWN5FDY  ","TWN5M    ","TWN5RE   ","TWN5STVX ", &
-                               "TWN5STVY ","TWN5STVZ ","TWN5VREL ","TWN5VUNDX","TWN5VUNDY","TWN5VUNDZ","TWN6DYNP ","TWN6FDX  ", &
-                               "TWN6FDY  ","TWN6M    ","TWN6RE   ","TWN6STVX ","TWN6STVY ","TWN6STVZ ","TWN6VREL ","TWN6VUNDX", &
-                               "TWN6VUNDY","TWN6VUNDZ","TWN7DYNP ","TWN7FDX  ","TWN7FDY  ","TWN7M    ","TWN7RE   ","TWN7STVX ", &
-                               "TWN7STVY ","TWN7STVZ ","TWN7VREL ","TWN7VUNDX","TWN7VUNDY","TWN7VUNDZ","TWN8DYNP ","TWN8FDX  ", &
-                               "TWN8FDY  ","TWN8M    ","TWN8RE   ","TWN8STVX ","TWN8STVY ","TWN8STVZ ","TWN8VREL ","TWN8VUNDX", &
-                               "TWN8VUNDY","TWN8VUNDZ","TWN9DYNP ","TWN9FDX  ","TWN9FDY  ","TWN9M    ","TWN9RE   ","TWN9STVX ", &
-                               "TWN9STVY ","TWN9STVZ ","TWN9VREL ","TWN9VUNDX","TWN9VUNDY","TWN9VUNDZ"/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1270) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                 B1AeroFx , B1AeroFxg ,  B1AeroFy , B1AeroFyg ,  B1AeroFz , B1AeroFzg ,  B1AeroMx , B1AeroMxg , &
-                                 B1AeroMy , B1AeroMyg ,  B1AeroMz , B1AeroMzg , B1AeroPwr , B1Azimuth , B1N1Alpha , B1N1AxInd , &
+                               "B3N7DYNP ","B3N7FBN  ","B3N7FBS  ","B3N7FBT  ","B3N7FD   ","B3N7FL   ","B3N7FN   ","B3N7FT   ", &
+                               "B3N7FX   ","B3N7FY   ","B3N7GAM  ","B3N7M    ","B3N7MBN  ","B3N7MBS  ","B3N7MBT  ","B3N7MM   ", &
+                               "B3N7PHI  ","B3N7RE   ","B3N7SGCAV","B3N7SIGCR","B3N7STVX ","B3N7STVY ","B3N7STVZ ","B3N7THETA", &
+                               "B3N7TNIND","B3N7VDISX","B3N7VDISY","B3N7VDISZ","B3N7VINDX","B3N7VINDY","B3N7VREL ","B3N7VUNDX", &
+                               "B3N7VUNDY","B3N7VUNDZ","B3N8ALPHA","B3N8AXIND","B3N8CD   ","B3N8CL   ","B3N8CLRNC","B3N8CM   ", &
+                               "B3N8CN   ","B3N8CPMIN","B3N8CT   ","B3N8CURVE","B3N8CX   ","B3N8CY   ","B3N8DYNP ","B3N8FBN  ", &
+                               "B3N8FBS  ","B3N8FBT  ","B3N8FD   ","B3N8FL   ","B3N8FN   ","B3N8FT   ","B3N8FX   ","B3N8FY   ", &
+                               "B3N8GAM  ","B3N8M    ","B3N8MBN  ","B3N8MBS  ","B3N8MBT  ","B3N8MM   ","B3N8PHI  ","B3N8RE   ", &
+                               "B3N8SGCAV","B3N8SIGCR","B3N8STVX ","B3N8STVY ","B3N8STVZ ","B3N8THETA","B3N8TNIND","B3N8VDISX", &
+                               "B3N8VDISY","B3N8VDISZ","B3N8VINDX","B3N8VINDY","B3N8VREL ","B3N8VUNDX","B3N8VUNDY","B3N8VUNDZ", &
+                               "B3N9ALPHA","B3N9AXIND","B3N9CD   ","B3N9CL   ","B3N9CLRNC","B3N9CM   ","B3N9CN   ","B3N9CPMIN", &
+                               "B3N9CT   ","B3N9CURVE","B3N9CX   ","B3N9CY   ","B3N9DYNP ","B3N9FBN  ","B3N9FBS  ","B3N9FBT  ", &
+                               "B3N9FD   ","B3N9FL   ","B3N9FN   ","B3N9FT   ","B3N9FX   ","B3N9FY   ","B3N9GAM  ","B3N9M    ", &
+                               "B3N9MBN  ","B3N9MBS  ","B3N9MBT  ","B3N9MM   ","B3N9PHI  ","B3N9RE   ","B3N9SGCAV","B3N9SIGCR", &
+                               "B3N9STVX ","B3N9STVY ","B3N9STVZ ","B3N9THETA","B3N9TNIND","B3N9VDISX","B3N9VDISY","B3N9VDISZ", &
+                               "B3N9VINDX","B3N9VINDY","B3N9VREL ","B3N9VUNDX","B3N9VUNDY","B3N9VUNDZ","B3PITCH  ","B4FLDFX  ", &
+                               "B4FLDFXG ","B4FLDFY  ","B4FLDFYG ","B4FLDFZ  ","B4FLDFZG ","B4FLDMX  ","B4FLDMXG ","B4FLDMY  ", &
+                               "B4FLDMYG ","B4FLDMZ  ","B4FLDMZG ","B4FLDPWR ","DBEMTAU1 ","HBFBX    ","HBFBY    ","HBFBZ    ", &
+                               "HBMBX    ","HBMBY    ","HBMBZ    ","NCFBX    ","NCFBY    ","NCFBZ    ","NCMBX    ","NCMBY    ", &
+                               "NCMBZ    ","RTAREA   ","RTFLDCP  ","RTFLDCQ  ","RTFLDCT  ","RTFLDFXG ","RTFLDFXH ","RTFLDFYG ", &
+                               "RTFLDFYH ","RTFLDFZG ","RTFLDFZH ","RTFLDMXG ","RTFLDMXH ","RTFLDMYG ","RTFLDMYH ","RTFLDMZG ", &
+                               "RTFLDMZH ","RTFLDPWR ","RTSKEW   ","RTSPEED  ","RTTSR    ","RTVAVGXH ","RTVAVGYH ","RTVAVGZH ", &
+                               "TFALPHA  ","TFFXI    ","TFFYI    ","TFFZI    ","TFMACH   ","TFMXI    ","TFMYI    ","TFMZI    ", &
+                               "TFRE     ","TFSTVXI  ","TFSTVYI  ","TFSTVZI  ","TFVINDXI ","TFVINDYI ","TFVINDZI ","TFVREL   ", &
+                               "TFVRELXI ","TFVRELYI ","TFVRELZI ","TFVUNDXI ","TFVUNDYI ","TFVUNDZI ","TWN1DYNP ","TWN1FBX  ", &
+                               "TWN1FBY  ","TWN1FBZ  ","TWN1FDX  ","TWN1FDY  ","TWN1M    ","TWN1MBX  ","TWN1MBY  ","TWN1MBZ  ", &
+                               "TWN1RE   ","TWN1STVX ","TWN1STVY ","TWN1STVZ ","TWN1VREL ","TWN1VUNDX","TWN1VUNDY","TWN1VUNDZ", &
+                               "TWN2DYNP ","TWN2FBX  ","TWN2FBY  ","TWN2FBZ  ","TWN2FDX  ","TWN2FDY  ","TWN2M    ","TWN2MBX  ", &
+                               "TWN2MBY  ","TWN2MBZ  ","TWN2RE   ","TWN2STVX ","TWN2STVY ","TWN2STVZ ","TWN2VREL ","TWN2VUNDX", &
+                               "TWN2VUNDY","TWN2VUNDZ","TWN3DYNP ","TWN3FBX  ","TWN3FBY  ","TWN3FBZ  ","TWN3FDX  ","TWN3FDY  ", &
+                               "TWN3M    ","TWN3MBX  ","TWN3MBY  ","TWN3MBZ  ","TWN3RE   ","TWN3STVX ","TWN3STVY ","TWN3STVZ ", &
+                               "TWN3VREL ","TWN3VUNDX","TWN3VUNDY","TWN3VUNDZ","TWN4DYNP ","TWN4FBX  ","TWN4FBY  ","TWN4FBZ  ", &
+                               "TWN4FDX  ","TWN4FDY  ","TWN4M    ","TWN4MBX  ","TWN4MBY  ","TWN4MBZ  ","TWN4RE   ","TWN4STVX ", &
+                               "TWN4STVY ","TWN4STVZ ","TWN4VREL ","TWN4VUNDX","TWN4VUNDY","TWN4VUNDZ","TWN5DYNP ","TWN5FBX  ", &
+                               "TWN5FBY  ","TWN5FBZ  ","TWN5FDX  ","TWN5FDY  ","TWN5M    ","TWN5MBX  ","TWN5MBY  ","TWN5MBZ  ", &
+                               "TWN5RE   ","TWN5STVX ","TWN5STVY ","TWN5STVZ ","TWN5VREL ","TWN5VUNDX","TWN5VUNDY","TWN5VUNDZ", &
+                               "TWN6DYNP ","TWN6FBX  ","TWN6FBY  ","TWN6FBZ  ","TWN6FDX  ","TWN6FDY  ","TWN6M    ","TWN6MBX  ", &
+                               "TWN6MBY  ","TWN6MBZ  ","TWN6RE   ","TWN6STVX ","TWN6STVY ","TWN6STVZ ","TWN6VREL ","TWN6VUNDX", &
+                               "TWN6VUNDY","TWN6VUNDZ","TWN7DYNP ","TWN7FBX  ","TWN7FBY  ","TWN7FBZ  ","TWN7FDX  ","TWN7FDY  ", &
+                               "TWN7M    ","TWN7MBX  ","TWN7MBY  ","TWN7MBZ  ","TWN7RE   ","TWN7STVX ","TWN7STVY ","TWN7STVZ ", &
+                               "TWN7VREL ","TWN7VUNDX","TWN7VUNDY","TWN7VUNDZ","TWN8DYNP ","TWN8FBX  ","TWN8FBY  ","TWN8FBZ  ", &
+                               "TWN8FDX  ","TWN8FDY  ","TWN8M    ","TWN8MBX  ","TWN8MBY  ","TWN8MBZ  ","TWN8RE   ","TWN8STVX ", &
+                               "TWN8STVY ","TWN8STVZ ","TWN8VREL ","TWN8VUNDX","TWN8VUNDY","TWN8VUNDZ","TWN9DYNP ","TWN9FBX  ", &
+                               "TWN9FBY  ","TWN9FBZ  ","TWN9FDX  ","TWN9FDY  ","TWN9M    ","TWN9MBX  ","TWN9MBY  ","TWN9MBZ  ", &
+                               "TWN9RE   ","TWN9STVX ","TWN9STVY ","TWN9STVZ ","TWN9VREL ","TWN9VUNDX","TWN9VUNDY","TWN9VUNDZ"/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1520) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                B1Azimuth ,   B1FldFx ,  B1FldFxg ,   B1FldFy ,  B1FldFyg ,   B1FldFz ,  B1FldFzg ,   B1FldMx , &
+                                 B1FldMxg ,   B1FldMy ,  B1FldMyg ,   B1FldMz ,  B1FldMzg ,  B1FldPwr , B1N1Alpha , B1N1AxInd , &
                                    B1N1Cd ,    B1N1Cl , B1N1Clrnc ,    B1N1Cm ,    B1N1Cn , B1N1Cpmin ,    B1N1Ct , B1N1Curve , &
-                                   B1N1Cx ,    B1N1Cy ,  B1N1DynP ,    B1N1Fd ,    B1N1Fl ,    B1N1Fn ,    B1N1Ft ,    B1N1Fx , &
-                                   B1N1Fy ,   B1N1Gam ,     B1N1M ,    B1N1Mm ,   B1N1Phi ,    B1N1Re , B1N1SgCav , B1N1SigCr , &
-                                 B1N1STVx ,  B1N1STVy ,  B1N1STVz , B1N1Theta , B1N1TnInd , B1N1VDisx , B1N1VDisy , B1N1VDisz , &
-                                B1N1Vindx , B1N1Vindy ,  B1N1VRel , B1N1VUndx , B1N1VUndy , B1N1VUndz , B1N2Alpha , B1N2AxInd , &
-                                   B1N2Cd ,    B1N2Cl , B1N2Clrnc ,    B1N2Cm ,    B1N2Cn , B1N2Cpmin ,    B1N2Ct , B1N2Curve , &
-                                   B1N2Cx ,    B1N2Cy ,  B1N2DynP ,    B1N2Fd ,    B1N2Fl ,    B1N2Fn ,    B1N2Ft ,    B1N2Fx , &
-                                   B1N2Fy ,   B1N2Gam ,     B1N2M ,    B1N2Mm ,   B1N2Phi ,    B1N2Re , B1N2SgCav , B1N2SigCr , &
-                                 B1N2STVx ,  B1N2STVy ,  B1N2STVz , B1N2Theta , B1N2TnInd , B1N2VDisx , B1N2VDisy , B1N2VDisz , &
-                                B1N2Vindx , B1N2Vindy ,  B1N2VRel , B1N2VUndx , B1N2VUndy , B1N2VUndz , B1N3Alpha , B1N3AxInd , &
-                                   B1N3Cd ,    B1N3Cl , B1N3Clrnc ,    B1N3Cm ,    B1N3Cn , B1N3Cpmin ,    B1N3Ct , B1N3Curve , &
-                                   B1N3Cx ,    B1N3Cy ,  B1N3DynP ,    B1N3Fd ,    B1N3Fl ,    B1N3Fn ,    B1N3Ft ,    B1N3Fx , &
-                                   B1N3Fy ,   B1N3Gam ,     B1N3M ,    B1N3Mm ,   B1N3Phi ,    B1N3Re , B1N3SgCav , B1N3SigCr , &
-                                 B1N3STVx ,  B1N3STVy ,  B1N3STVz , B1N3Theta , B1N3TnInd , B1N3VDisx , B1N3VDisy , B1N3VDisz , &
-                                B1N3Vindx , B1N3Vindy ,  B1N3VRel , B1N3VUndx , B1N3VUndy , B1N3VUndz , B1N4Alpha , B1N4AxInd , &
-                                   B1N4Cd ,    B1N4Cl , B1N4Clrnc ,    B1N4Cm ,    B1N4Cn , B1N4Cpmin ,    B1N4Ct , B1N4Curve , &
-                                   B1N4Cx ,    B1N4Cy ,  B1N4DynP ,    B1N4Fd ,    B1N4Fl ,    B1N4Fn ,    B1N4Ft ,    B1N4Fx , &
-                                   B1N4Fy ,   B1N4Gam ,     B1N4M ,    B1N4Mm ,   B1N4Phi ,    B1N4Re , B1N4SgCav , B1N4SigCr , &
+                                   B1N1Cx ,    B1N1Cy ,  B1N1DynP ,   B1N1Fbn ,   B1N1Fbs ,   B1N1Fbt ,    B1N1Fd ,    B1N1Fl , &
+                                   B1N1Fn ,    B1N1Ft ,    B1N1Fx ,    B1N1Fy ,   B1N1Gam ,     B1N1M ,   B1N1Mbn ,   B1N1Mbs , &
+                                  B1N1Mbt ,    B1N1Mm ,   B1N1Phi ,    B1N1Re , B1N1SgCav , B1N1SigCr ,  B1N1STVx ,  B1N1STVy , &
+                                 B1N1STVz , B1N1Theta , B1N1TnInd , B1N1VDisx , B1N1VDisy , B1N1VDisz , B1N1Vindx , B1N1Vindy , &
+                                 B1N1VRel , B1N1VUndx , B1N1VUndy , B1N1VUndz , B1N2Alpha , B1N2AxInd ,    B1N2Cd ,    B1N2Cl , &
+                                B1N2Clrnc ,    B1N2Cm ,    B1N2Cn , B1N2Cpmin ,    B1N2Ct , B1N2Curve ,    B1N2Cx ,    B1N2Cy , &
+                                 B1N2DynP ,   B1N2Fbn ,   B1N2Fbs ,   B1N2Fbt ,    B1N2Fd ,    B1N2Fl ,    B1N2Fn ,    B1N2Ft , &
+                                   B1N2Fx ,    B1N2Fy ,   B1N2Gam ,     B1N2M ,   B1N2Mbn ,   B1N2Mbs ,   B1N2Mbt ,    B1N2Mm , &
+                                  B1N2Phi ,    B1N2Re , B1N2SgCav , B1N2SigCr ,  B1N2STVx ,  B1N2STVy ,  B1N2STVz , B1N2Theta , &
+                                B1N2TnInd , B1N2VDisx , B1N2VDisy , B1N2VDisz , B1N2Vindx , B1N2Vindy ,  B1N2VRel , B1N2VUndx , &
+                                B1N2VUndy , B1N2VUndz , B1N3Alpha , B1N3AxInd ,    B1N3Cd ,    B1N3Cl , B1N3Clrnc ,    B1N3Cm , &
+                                   B1N3Cn , B1N3Cpmin ,    B1N3Ct , B1N3Curve ,    B1N3Cx ,    B1N3Cy ,  B1N3DynP ,   B1N3Fbn , &
+                                  B1N3Fbs ,   B1N3Fbt ,    B1N3Fd ,    B1N3Fl ,    B1N3Fn ,    B1N3Ft ,    B1N3Fx ,    B1N3Fy , &
+                                  B1N3Gam ,     B1N3M ,   B1N3Mbn ,   B1N3Mbs ,   B1N3Mbt ,    B1N3Mm ,   B1N3Phi ,    B1N3Re , &
+                                B1N3SgCav , B1N3SigCr ,  B1N3STVx ,  B1N3STVy ,  B1N3STVz , B1N3Theta , B1N3TnInd , B1N3VDisx , &
+                                B1N3VDisy , B1N3VDisz , B1N3Vindx , B1N3Vindy ,  B1N3VRel , B1N3VUndx , B1N3VUndy , B1N3VUndz , &
+                                B1N4Alpha , B1N4AxInd ,    B1N4Cd ,    B1N4Cl , B1N4Clrnc ,    B1N4Cm ,    B1N4Cn , B1N4Cpmin , &
+                                   B1N4Ct , B1N4Curve ,    B1N4Cx ,    B1N4Cy ,  B1N4DynP ,   B1N4Fbn ,   B1N4Fbs ,   B1N4Fbt , &
+                                   B1N4Fd ,    B1N4Fl ,    B1N4Fn ,    B1N4Ft ,    B1N4Fx ,    B1N4Fy ,   B1N4Gam ,     B1N4M , &
+                                  B1N4Mbn ,   B1N4Mbs ,   B1N4Mbt ,    B1N4Mm ,   B1N4Phi ,    B1N4Re , B1N4SgCav , B1N4SigCr , &
                                  B1N4STVx ,  B1N4STVy ,  B1N4STVz , B1N4Theta , B1N4TnInd , B1N4VDisx , B1N4VDisy , B1N4VDisz , &
                                 B1N4Vindx , B1N4Vindy ,  B1N4VRel , B1N4VUndx , B1N4VUndy , B1N4VUndz , B1N5Alpha , B1N5AxInd , &
                                    B1N5Cd ,    B1N5Cl , B1N5Clrnc ,    B1N5Cm ,    B1N5Cn , B1N5Cpmin ,    B1N5Ct , B1N5Curve , &
-                                   B1N5Cx ,    B1N5Cy ,  B1N5DynP ,    B1N5Fd ,    B1N5Fl ,    B1N5Fn ,    B1N5Ft ,    B1N5Fx , &
-                                   B1N5Fy ,   B1N5Gam ,     B1N5M ,    B1N5Mm ,   B1N5Phi ,    B1N5Re , B1N5SgCav , B1N5SigCr , &
-                                 B1N5STVx ,  B1N5STVy ,  B1N5STVz , B1N5Theta , B1N5TnInd , B1N5VDisx , B1N5VDisy , B1N5VDisz , &
-                                B1N5Vindx , B1N5Vindy ,  B1N5VRel , B1N5VUndx , B1N5VUndy , B1N5VUndz , B1N6Alpha , B1N6AxInd , &
-                                   B1N6Cd ,    B1N6Cl , B1N6Clrnc ,    B1N6Cm ,    B1N6Cn , B1N6Cpmin ,    B1N6Ct , B1N6Curve , &
-                                   B1N6Cx ,    B1N6Cy ,  B1N6DynP ,    B1N6Fd ,    B1N6Fl ,    B1N6Fn ,    B1N6Ft ,    B1N6Fx , &
-                                   B1N6Fy ,   B1N6Gam ,     B1N6M ,    B1N6Mm ,   B1N6Phi ,    B1N6Re , B1N6SgCav , B1N6SigCr , &
-                                 B1N6STVx ,  B1N6STVy ,  B1N6STVz , B1N6Theta , B1N6TnInd , B1N6VDisx , B1N6VDisy , B1N6VDisz , &
-                                B1N6Vindx , B1N6Vindy ,  B1N6VRel , B1N6VUndx , B1N6VUndy , B1N6VUndz , B1N7Alpha , B1N7AxInd , &
-                                   B1N7Cd ,    B1N7Cl , B1N7Clrnc ,    B1N7Cm ,    B1N7Cn , B1N7Cpmin ,    B1N7Ct , B1N7Curve , &
-                                   B1N7Cx ,    B1N7Cy ,  B1N7DynP ,    B1N7Fd ,    B1N7Fl ,    B1N7Fn ,    B1N7Ft ,    B1N7Fx , &
-                                   B1N7Fy ,   B1N7Gam ,     B1N7M ,    B1N7Mm ,   B1N7Phi ,    B1N7Re , B1N7SgCav , B1N7SigCr , &
-                                 B1N7STVx ,  B1N7STVy ,  B1N7STVz , B1N7Theta , B1N7TnInd , B1N7VDisx , B1N7VDisy , B1N7VDisz , &
-                                B1N7Vindx , B1N7Vindy ,  B1N7VRel , B1N7VUndx , B1N7VUndy , B1N7VUndz , B1N8Alpha , B1N8AxInd , &
-                                   B1N8Cd ,    B1N8Cl , B1N8Clrnc ,    B1N8Cm ,    B1N8Cn , B1N8Cpmin ,    B1N8Ct , B1N8Curve , &
-                                   B1N8Cx ,    B1N8Cy ,  B1N8DynP ,    B1N8Fd ,    B1N8Fl ,    B1N8Fn ,    B1N8Ft ,    B1N8Fx , &
-                                   B1N8Fy ,   B1N8Gam ,     B1N8M ,    B1N8Mm ,   B1N8Phi ,    B1N8Re , B1N8SgCav , B1N8SigCr , &
+                                   B1N5Cx ,    B1N5Cy ,  B1N5DynP ,   B1N5Fbn ,   B1N5Fbs ,   B1N5Fbt ,    B1N5Fd ,    B1N5Fl , &
+                                   B1N5Fn ,    B1N5Ft ,    B1N5Fx ,    B1N5Fy ,   B1N5Gam ,     B1N5M ,   B1N5Mbn ,   B1N5Mbs , &
+                                  B1N5Mbt ,    B1N5Mm ,   B1N5Phi ,    B1N5Re , B1N5SgCav , B1N5SigCr ,  B1N5STVx ,  B1N5STVy , &
+                                 B1N5STVz , B1N5Theta , B1N5TnInd , B1N5VDisx , B1N5VDisy , B1N5VDisz , B1N5Vindx , B1N5Vindy , &
+                                 B1N5VRel , B1N5VUndx , B1N5VUndy , B1N5VUndz , B1N6Alpha , B1N6AxInd ,    B1N6Cd ,    B1N6Cl , &
+                                B1N6Clrnc ,    B1N6Cm ,    B1N6Cn , B1N6Cpmin ,    B1N6Ct , B1N6Curve ,    B1N6Cx ,    B1N6Cy , &
+                                 B1N6DynP ,   B1N6Fbn ,   B1N6Fbs ,   B1N6Fbt ,    B1N6Fd ,    B1N6Fl ,    B1N6Fn ,    B1N6Ft , &
+                                   B1N6Fx ,    B1N6Fy ,   B1N6Gam ,     B1N6M ,   B1N6Mbn ,   B1N6Mbs ,   B1N6Mbt ,    B1N6Mm , &
+                                  B1N6Phi ,    B1N6Re , B1N6SgCav , B1N6SigCr ,  B1N6STVx ,  B1N6STVy ,  B1N6STVz , B1N6Theta , &
+                                B1N6TnInd , B1N6VDisx , B1N6VDisy , B1N6VDisz , B1N6Vindx , B1N6Vindy ,  B1N6VRel , B1N6VUndx , &
+                                B1N6VUndy , B1N6VUndz , B1N7Alpha , B1N7AxInd ,    B1N7Cd ,    B1N7Cl , B1N7Clrnc ,    B1N7Cm , &
+                                   B1N7Cn , B1N7Cpmin ,    B1N7Ct , B1N7Curve ,    B1N7Cx ,    B1N7Cy ,  B1N7DynP ,   B1N7Fbn , &
+                                  B1N7Fbs ,   B1N7Fbt ,    B1N7Fd ,    B1N7Fl ,    B1N7Fn ,    B1N7Ft ,    B1N7Fx ,    B1N7Fy , &
+                                  B1N7Gam ,     B1N7M ,   B1N7Mbn ,   B1N7Mbs ,   B1N7Mbt ,    B1N7Mm ,   B1N7Phi ,    B1N7Re , &
+                                B1N7SgCav , B1N7SigCr ,  B1N7STVx ,  B1N7STVy ,  B1N7STVz , B1N7Theta , B1N7TnInd , B1N7VDisx , &
+                                B1N7VDisy , B1N7VDisz , B1N7Vindx , B1N7Vindy ,  B1N7VRel , B1N7VUndx , B1N7VUndy , B1N7VUndz , &
+                                B1N8Alpha , B1N8AxInd ,    B1N8Cd ,    B1N8Cl , B1N8Clrnc ,    B1N8Cm ,    B1N8Cn , B1N8Cpmin , &
+                                   B1N8Ct , B1N8Curve ,    B1N8Cx ,    B1N8Cy ,  B1N8DynP ,   B1N8Fbn ,   B1N8Fbs ,   B1N8Fbt , &
+                                   B1N8Fd ,    B1N8Fl ,    B1N8Fn ,    B1N8Ft ,    B1N8Fx ,    B1N8Fy ,   B1N8Gam ,     B1N8M , &
+                                  B1N8Mbn ,   B1N8Mbs ,   B1N8Mbt ,    B1N8Mm ,   B1N8Phi ,    B1N8Re , B1N8SgCav , B1N8SigCr , &
                                  B1N8STVx ,  B1N8STVy ,  B1N8STVz , B1N8Theta , B1N8TnInd , B1N8VDisx , B1N8VDisy , B1N8VDisz , &
                                 B1N8Vindx , B1N8Vindy ,  B1N8VRel , B1N8VUndx , B1N8VUndy , B1N8VUndz , B1N9Alpha , B1N9AxInd , &
                                    B1N9Cd ,    B1N9Cl , B1N9Clrnc ,    B1N9Cm ,    B1N9Cn , B1N9Cpmin ,    B1N9Ct , B1N9Curve , &
-                                   B1N9Cx ,    B1N9Cy ,  B1N9DynP ,    B1N9Fd ,    B1N9Fl ,    B1N9Fn ,    B1N9Ft ,    B1N9Fx , &
-                                   B1N9Fy ,   B1N9Gam ,     B1N9M ,    B1N9Mm ,   B1N9Phi ,    B1N9Re , B1N9SgCav , B1N9SigCr , &
-                                 B1N9STVx ,  B1N9STVy ,  B1N9STVz , B1N9Theta , B1N9TnInd , B1N9VDisx , B1N9VDisy , B1N9VDisz , &
-                                B1N9Vindx , B1N9Vindy ,  B1N9VRel , B1N9VUndx , B1N9VUndy , B1N9VUndz ,   B1Pitch ,  B2AeroFx , &
-                                B2AeroFxg ,  B2AeroFy , B2AeroFyg ,  B2AeroFz , B2AeroFzg ,  B2AeroMx , B2AeroMxg ,  B2AeroMy , &
-                                B2AeroMyg ,  B2AeroMz , B2AeroMzg , B2AeroPwr , B2Azimuth , B2N1Alpha , B2N1AxInd ,    B2N1Cd , &
-                                   B2N1Cl , B2N1Clrnc ,    B2N1Cm ,    B2N1Cn , B2N1Cpmin ,    B2N1Ct , B2N1Curve ,    B2N1Cx , &
-                                   B2N1Cy ,  B2N1DynP ,    B2N1Fd ,    B2N1Fl ,    B2N1Fn ,    B2N1Ft ,    B2N1Fx ,    B2N1Fy , &
-                                  B2N1Gam ,     B2N1M ,    B2N1Mm ,   B2N1Phi ,    B2N1Re , B2N1SgCav , B2N1SigCr ,  B2N1STVx , &
-                                 B2N1STVy ,  B2N1STVz , B2N1Theta , B2N1TnInd , B2N1VDisx , B2N1VDisy , B2N1VDisz , B2N1Vindx , &
-                                B2N1Vindy ,  B2N1VRel , B2N1VUndx , B2N1VUndy , B2N1VUndz , B2N2Alpha , B2N2AxInd ,    B2N2Cd , &
-                                   B2N2Cl , B2N2Clrnc ,    B2N2Cm ,    B2N2Cn , B2N2Cpmin ,    B2N2Ct , B2N2Curve ,    B2N2Cx , &
-                                   B2N2Cy ,  B2N2DynP ,    B2N2Fd ,    B2N2Fl ,    B2N2Fn ,    B2N2Ft ,    B2N2Fx ,    B2N2Fy , &
-                                  B2N2Gam ,     B2N2M ,    B2N2Mm ,   B2N2Phi ,    B2N2Re , B2N2SgCav , B2N2SigCr ,  B2N2STVx , &
-                                 B2N2STVy ,  B2N2STVz , B2N2Theta , B2N2TnInd , B2N2VDisx , B2N2VDisy , B2N2VDisz , B2N2Vindx , &
-                                B2N2Vindy ,  B2N2VRel , B2N2VUndx , B2N2VUndy , B2N2VUndz , B2N3Alpha , B2N3AxInd ,    B2N3Cd , &
-                                   B2N3Cl , B2N3Clrnc ,    B2N3Cm ,    B2N3Cn , B2N3Cpmin ,    B2N3Ct , B2N3Curve ,    B2N3Cx , &
-                                   B2N3Cy ,  B2N3DynP ,    B2N3Fd ,    B2N3Fl ,    B2N3Fn ,    B2N3Ft ,    B2N3Fx ,    B2N3Fy , &
-                                  B2N3Gam ,     B2N3M ,    B2N3Mm ,   B2N3Phi ,    B2N3Re , B2N3SgCav , B2N3SigCr ,  B2N3STVx , &
+                                   B1N9Cx ,    B1N9Cy ,  B1N9DynP ,   B1N9Fbn ,   B1N9Fbs ,   B1N9Fbt ,    B1N9Fd ,    B1N9Fl , &
+                                   B1N9Fn ,    B1N9Ft ,    B1N9Fx ,    B1N9Fy ,   B1N9Gam ,     B1N9M ,   B1N9Mbn ,   B1N9Mbs , &
+                                  B1N9Mbt ,    B1N9Mm ,   B1N9Phi ,    B1N9Re , B1N9SgCav , B1N9SigCr ,  B1N9STVx ,  B1N9STVy , &
+                                 B1N9STVz , B1N9Theta , B1N9TnInd , B1N9VDisx , B1N9VDisy , B1N9VDisz , B1N9Vindx , B1N9Vindy , &
+                                 B1N9VRel , B1N9VUndx , B1N9VUndy , B1N9VUndz ,   B1Pitch , B2Azimuth ,   B2FldFx ,  B2FldFxg , &
+                                  B2FldFy ,  B2FldFyg ,   B2FldFz ,  B2FldFzg ,   B2FldMx ,  B2FldMxg ,   B2FldMy ,  B2FldMyg , &
+                                  B2FldMz ,  B2FldMzg ,  B2FldPwr , B2N1Alpha , B2N1AxInd ,    B2N1Cd ,    B2N1Cl , B2N1Clrnc , &
+                                   B2N1Cm ,    B2N1Cn , B2N1Cpmin ,    B2N1Ct , B2N1Curve ,    B2N1Cx ,    B2N1Cy ,  B2N1DynP , &
+                                  B2N1Fbn ,   B2N1Fbs ,   B2N1Fbt ,    B2N1Fd ,    B2N1Fl ,    B2N1Fn ,    B2N1Ft ,    B2N1Fx , &
+                                   B2N1Fy ,   B2N1Gam ,     B2N1M ,   B2N1Mbn ,   B2N1Mbs ,   B2N1Mbt ,    B2N1Mm ,   B2N1Phi , &
+                                   B2N1Re , B2N1SgCav , B2N1SigCr ,  B2N1STVx ,  B2N1STVy ,  B2N1STVz , B2N1Theta , B2N1TnInd , &
+                                B2N1VDisx , B2N1VDisy , B2N1VDisz , B2N1Vindx , B2N1Vindy ,  B2N1VRel , B2N1VUndx , B2N1VUndy , &
+                                B2N1VUndz , B2N2Alpha , B2N2AxInd ,    B2N2Cd ,    B2N2Cl , B2N2Clrnc ,    B2N2Cm ,    B2N2Cn , &
+                                B2N2Cpmin ,    B2N2Ct , B2N2Curve ,    B2N2Cx ,    B2N2Cy ,  B2N2DynP ,   B2N2Fbn ,   B2N2Fbs , &
+                                  B2N2Fbt ,    B2N2Fd ,    B2N2Fl ,    B2N2Fn ,    B2N2Ft ,    B2N2Fx ,    B2N2Fy ,   B2N2Gam , &
+                                    B2N2M ,   B2N2Mbn ,   B2N2Mbs ,   B2N2Mbt ,    B2N2Mm ,   B2N2Phi ,    B2N2Re , B2N2SgCav , &
+                                B2N2SigCr ,  B2N2STVx ,  B2N2STVy ,  B2N2STVz , B2N2Theta , B2N2TnInd , B2N2VDisx , B2N2VDisy , &
+                                B2N2VDisz , B2N2Vindx , B2N2Vindy ,  B2N2VRel , B2N2VUndx , B2N2VUndy , B2N2VUndz , B2N3Alpha , &
+                                B2N3AxInd ,    B2N3Cd ,    B2N3Cl , B2N3Clrnc ,    B2N3Cm ,    B2N3Cn , B2N3Cpmin ,    B2N3Ct , &
+                                B2N3Curve ,    B2N3Cx ,    B2N3Cy ,  B2N3DynP ,   B2N3Fbn ,   B2N3Fbs ,   B2N3Fbt ,    B2N3Fd , &
+                                   B2N3Fl ,    B2N3Fn ,    B2N3Ft ,    B2N3Fx ,    B2N3Fy ,   B2N3Gam ,     B2N3M ,   B2N3Mbn , &
+                                  B2N3Mbs ,   B2N3Mbt ,    B2N3Mm ,   B2N3Phi ,    B2N3Re , B2N3SgCav , B2N3SigCr ,  B2N3STVx , &
                                  B2N3STVy ,  B2N3STVz , B2N3Theta , B2N3TnInd , B2N3VDisx , B2N3VDisy , B2N3VDisz , B2N3Vindx , &
                                 B2N3Vindy ,  B2N3VRel , B2N3VUndx , B2N3VUndy , B2N3VUndz , B2N4Alpha , B2N4AxInd ,    B2N4Cd , &
                                    B2N4Cl , B2N4Clrnc ,    B2N4Cm ,    B2N4Cn , B2N4Cpmin ,    B2N4Ct , B2N4Curve ,    B2N4Cx , &
-                                   B2N4Cy ,  B2N4DynP ,    B2N4Fd ,    B2N4Fl ,    B2N4Fn ,    B2N4Ft ,    B2N4Fx ,    B2N4Fy , &
-                                  B2N4Gam ,     B2N4M ,    B2N4Mm ,   B2N4Phi ,    B2N4Re , B2N4SgCav , B2N4SigCr ,  B2N4STVx , &
-                                 B2N4STVy ,  B2N4STVz , B2N4Theta , B2N4TnInd , B2N4VDisx , B2N4VDisy , B2N4VDisz , B2N4Vindx , &
-                                B2N4Vindy ,  B2N4VRel , B2N4VUndx , B2N4VUndy , B2N4VUndz , B2N5Alpha , B2N5AxInd ,    B2N5Cd , &
-                                   B2N5Cl , B2N5Clrnc ,    B2N5Cm ,    B2N5Cn , B2N5Cpmin ,    B2N5Ct , B2N5Curve ,    B2N5Cx , &
-                                   B2N5Cy ,  B2N5DynP ,    B2N5Fd ,    B2N5Fl ,    B2N5Fn ,    B2N5Ft ,    B2N5Fx ,    B2N5Fy , &
-                                  B2N5Gam ,     B2N5M ,    B2N5Mm ,   B2N5Phi ,    B2N5Re , B2N5SgCav , B2N5SigCr ,  B2N5STVx , &
-                                 B2N5STVy ,  B2N5STVz , B2N5Theta , B2N5TnInd , B2N5VDisx , B2N5VDisy , B2N5VDisz , B2N5Vindx , &
-                                B2N5Vindy ,  B2N5VRel , B2N5VUndx , B2N5VUndy , B2N5VUndz , B2N6Alpha , B2N6AxInd ,    B2N6Cd , &
-                                   B2N6Cl , B2N6Clrnc ,    B2N6Cm ,    B2N6Cn , B2N6Cpmin ,    B2N6Ct , B2N6Curve ,    B2N6Cx , &
-                                   B2N6Cy ,  B2N6DynP ,    B2N6Fd ,    B2N6Fl ,    B2N6Fn ,    B2N6Ft ,    B2N6Fx ,    B2N6Fy , &
-                                  B2N6Gam ,     B2N6M ,    B2N6Mm ,   B2N6Phi ,    B2N6Re , B2N6SgCav , B2N6SigCr ,  B2N6STVx , &
-                                 B2N6STVy ,  B2N6STVz , B2N6Theta , B2N6TnInd , B2N6VDisx , B2N6VDisy , B2N6VDisz , B2N6Vindx , &
-                                B2N6Vindy ,  B2N6VRel , B2N6VUndx , B2N6VUndy , B2N6VUndz , B2N7Alpha , B2N7AxInd ,    B2N7Cd , &
-                                   B2N7Cl , B2N7Clrnc ,    B2N7Cm ,    B2N7Cn , B2N7Cpmin ,    B2N7Ct , B2N7Curve ,    B2N7Cx , &
-                                   B2N7Cy ,  B2N7DynP ,    B2N7Fd ,    B2N7Fl ,    B2N7Fn ,    B2N7Ft ,    B2N7Fx ,    B2N7Fy , &
-                                  B2N7Gam ,     B2N7M ,    B2N7Mm ,   B2N7Phi ,    B2N7Re , B2N7SgCav , B2N7SigCr ,  B2N7STVx , &
+                                   B2N4Cy ,  B2N4DynP ,   B2N4Fbn ,   B2N4Fbs ,   B2N4Fbt ,    B2N4Fd ,    B2N4Fl ,    B2N4Fn , &
+                                   B2N4Ft ,    B2N4Fx ,    B2N4Fy ,   B2N4Gam ,     B2N4M ,   B2N4Mbn ,   B2N4Mbs ,   B2N4Mbt , &
+                                   B2N4Mm ,   B2N4Phi ,    B2N4Re , B2N4SgCav , B2N4SigCr ,  B2N4STVx ,  B2N4STVy ,  B2N4STVz , &
+                                B2N4Theta , B2N4TnInd , B2N4VDisx , B2N4VDisy , B2N4VDisz , B2N4Vindx , B2N4Vindy ,  B2N4VRel , &
+                                B2N4VUndx , B2N4VUndy , B2N4VUndz , B2N5Alpha , B2N5AxInd ,    B2N5Cd ,    B2N5Cl , B2N5Clrnc , &
+                                   B2N5Cm ,    B2N5Cn , B2N5Cpmin ,    B2N5Ct , B2N5Curve ,    B2N5Cx ,    B2N5Cy ,  B2N5DynP , &
+                                  B2N5Fbn ,   B2N5Fbs ,   B2N5Fbt ,    B2N5Fd ,    B2N5Fl ,    B2N5Fn ,    B2N5Ft ,    B2N5Fx , &
+                                   B2N5Fy ,   B2N5Gam ,     B2N5M ,   B2N5Mbn ,   B2N5Mbs ,   B2N5Mbt ,    B2N5Mm ,   B2N5Phi , &
+                                   B2N5Re , B2N5SgCav , B2N5SigCr ,  B2N5STVx ,  B2N5STVy ,  B2N5STVz , B2N5Theta , B2N5TnInd , &
+                                B2N5VDisx , B2N5VDisy , B2N5VDisz , B2N5Vindx , B2N5Vindy ,  B2N5VRel , B2N5VUndx , B2N5VUndy , &
+                                B2N5VUndz , B2N6Alpha , B2N6AxInd ,    B2N6Cd ,    B2N6Cl , B2N6Clrnc ,    B2N6Cm ,    B2N6Cn , &
+                                B2N6Cpmin ,    B2N6Ct , B2N6Curve ,    B2N6Cx ,    B2N6Cy ,  B2N6DynP ,   B2N6Fbn ,   B2N6Fbs , &
+                                  B2N6Fbt ,    B2N6Fd ,    B2N6Fl ,    B2N6Fn ,    B2N6Ft ,    B2N6Fx ,    B2N6Fy ,   B2N6Gam , &
+                                    B2N6M ,   B2N6Mbn ,   B2N6Mbs ,   B2N6Mbt ,    B2N6Mm ,   B2N6Phi ,    B2N6Re , B2N6SgCav , &
+                                B2N6SigCr ,  B2N6STVx ,  B2N6STVy ,  B2N6STVz , B2N6Theta , B2N6TnInd , B2N6VDisx , B2N6VDisy , &
+                                B2N6VDisz , B2N6Vindx , B2N6Vindy ,  B2N6VRel , B2N6VUndx , B2N6VUndy , B2N6VUndz , B2N7Alpha , &
+                                B2N7AxInd ,    B2N7Cd ,    B2N7Cl , B2N7Clrnc ,    B2N7Cm ,    B2N7Cn , B2N7Cpmin ,    B2N7Ct , &
+                                B2N7Curve ,    B2N7Cx ,    B2N7Cy ,  B2N7DynP ,   B2N7Fbn ,   B2N7Fbs ,   B2N7Fbt ,    B2N7Fd , &
+                                   B2N7Fl ,    B2N7Fn ,    B2N7Ft ,    B2N7Fx ,    B2N7Fy ,   B2N7Gam ,     B2N7M ,   B2N7Mbn , &
+                                  B2N7Mbs ,   B2N7Mbt ,    B2N7Mm ,   B2N7Phi ,    B2N7Re , B2N7SgCav , B2N7SigCr ,  B2N7STVx , &
                                  B2N7STVy ,  B2N7STVz , B2N7Theta , B2N7TnInd , B2N7VDisx , B2N7VDisy , B2N7VDisz , B2N7Vindx , &
                                 B2N7Vindy ,  B2N7VRel , B2N7VUndx , B2N7VUndy , B2N7VUndz , B2N8Alpha , B2N8AxInd ,    B2N8Cd , &
                                    B2N8Cl , B2N8Clrnc ,    B2N8Cm ,    B2N8Cn , B2N8Cpmin ,    B2N8Ct , B2N8Curve ,    B2N8Cx , &
-                                   B2N8Cy ,  B2N8DynP ,    B2N8Fd ,    B2N8Fl ,    B2N8Fn ,    B2N8Ft ,    B2N8Fx ,    B2N8Fy , &
-                                  B2N8Gam ,     B2N8M ,    B2N8Mm ,   B2N8Phi ,    B2N8Re , B2N8SgCav , B2N8SigCr ,  B2N8STVx , &
-                                 B2N8STVy ,  B2N8STVz , B2N8Theta , B2N8TnInd , B2N8VDisx , B2N8VDisy , B2N8VDisz , B2N8Vindx , &
-                                B2N8Vindy ,  B2N8VRel , B2N8VUndx , B2N8VUndy , B2N8VUndz , B2N9Alpha , B2N9AxInd ,    B2N9Cd , &
-                                   B2N9Cl , B2N9Clrnc ,    B2N9Cm ,    B2N9Cn , B2N9Cpmin ,    B2N9Ct , B2N9Curve ,    B2N9Cx , &
-                                   B2N9Cy ,  B2N9DynP ,    B2N9Fd ,    B2N9Fl ,    B2N9Fn ,    B2N9Ft ,    B2N9Fx ,    B2N9Fy , &
-                                  B2N9Gam ,     B2N9M ,    B2N9Mm ,   B2N9Phi ,    B2N9Re , B2N9SgCav , B2N9SigCr ,  B2N9STVx , &
-                                 B2N9STVy ,  B2N9STVz , B2N9Theta , B2N9TnInd , B2N9VDisx , B2N9VDisy , B2N9VDisz , B2N9Vindx , &
-                                B2N9Vindy ,  B2N9VRel , B2N9VUndx , B2N9VUndy , B2N9VUndz ,   B2Pitch ,  B3AeroFx , B3AeroFxg , &
-                                 B3AeroFy , B3AeroFyg ,  B3AeroFz , B3AeroFzg ,  B3AeroMx , B3AeroMxg ,  B3AeroMy , B3AeroMyg , &
-                                 B3AeroMz , B3AeroMzg , B3AeroPwr , B3Azimuth , B3N1Alpha , B3N1AxInd ,    B3N1Cd ,    B3N1Cl , &
-                                B3N1Clrnc ,    B3N1Cm ,    B3N1Cn , B3N1Cpmin ,    B3N1Ct , B3N1Curve ,    B3N1Cx ,    B3N1Cy , &
-                                 B3N1DynP ,    B3N1Fd ,    B3N1Fl ,    B3N1Fn ,    B3N1Ft ,    B3N1Fx ,    B3N1Fy ,   B3N1Gam , &
-                                    B3N1M ,    B3N1Mm ,   B3N1Phi ,    B3N1Re , B3N1SgCav , B3N1SigCr ,  B3N1STVx ,  B3N1STVy , &
-                                 B3N1STVz , B3N1Theta , B3N1TnInd , B3N1VDisx , B3N1VDisy , B3N1VDisz , B3N1Vindx , B3N1Vindy , &
-                                 B3N1VRel , B3N1VUndx , B3N1VUndy , B3N1VUndz , B3N2Alpha , B3N2AxInd ,    B3N2Cd ,    B3N2Cl , &
-                                B3N2Clrnc ,    B3N2Cm ,    B3N2Cn , B3N2Cpmin ,    B3N2Ct , B3N2Curve ,    B3N2Cx ,    B3N2Cy , &
-                                 B3N2DynP ,    B3N2Fd ,    B3N2Fl ,    B3N2Fn ,    B3N2Ft ,    B3N2Fx ,    B3N2Fy ,   B3N2Gam , &
-                                    B3N2M ,    B3N2Mm ,   B3N2Phi ,    B3N2Re , B3N2SgCav , B3N2SigCr ,  B3N2STVx ,  B3N2STVy , &
+                                   B2N8Cy ,  B2N8DynP ,   B2N8Fbn ,   B2N8Fbs ,   B2N8Fbt ,    B2N8Fd ,    B2N8Fl ,    B2N8Fn , &
+                                   B2N8Ft ,    B2N8Fx ,    B2N8Fy ,   B2N8Gam ,     B2N8M ,   B2N8Mbn ,   B2N8Mbs ,   B2N8Mbt , &
+                                   B2N8Mm ,   B2N8Phi ,    B2N8Re , B2N8SgCav , B2N8SigCr ,  B2N8STVx ,  B2N8STVy ,  B2N8STVz , &
+                                B2N8Theta , B2N8TnInd , B2N8VDisx , B2N8VDisy , B2N8VDisz , B2N8Vindx , B2N8Vindy ,  B2N8VRel , &
+                                B2N8VUndx , B2N8VUndy , B2N8VUndz , B2N9Alpha , B2N9AxInd ,    B2N9Cd ,    B2N9Cl , B2N9Clrnc , &
+                                   B2N9Cm ,    B2N9Cn , B2N9Cpmin ,    B2N9Ct , B2N9Curve ,    B2N9Cx ,    B2N9Cy ,  B2N9DynP , &
+                                  B2N9Fbn ,   B2N9Fbs ,   B2N9Fbt ,    B2N9Fd ,    B2N9Fl ,    B2N9Fn ,    B2N9Ft ,    B2N9Fx , &
+                                   B2N9Fy ,   B2N9Gam ,     B2N9M ,   B2N9Mbn ,   B2N9Mbs ,   B2N9Mbt ,    B2N9Mm ,   B2N9Phi , &
+                                   B2N9Re , B2N9SgCav , B2N9SigCr ,  B2N9STVx ,  B2N9STVy ,  B2N9STVz , B2N9Theta , B2N9TnInd , &
+                                B2N9VDisx , B2N9VDisy , B2N9VDisz , B2N9Vindx , B2N9Vindy ,  B2N9VRel , B2N9VUndx , B2N9VUndy , &
+                                B2N9VUndz ,   B2Pitch , B3Azimuth ,   B3FldFx ,  B3FldFxg ,   B3FldFy ,  B3FldFyg ,   B3FldFz , &
+                                 B3FldFzg ,   B3FldMx ,  B3FldMxg ,   B3FldMy ,  B3FldMyg ,   B3FldMz ,  B3FldMzg ,  B3FldPwr , &
+                                B3N1Alpha , B3N1AxInd ,    B3N1Cd ,    B3N1Cl , B3N1Clrnc ,    B3N1Cm ,    B3N1Cn , B3N1Cpmin , &
+                                   B3N1Ct , B3N1Curve ,    B3N1Cx ,    B3N1Cy ,  B3N1DynP ,   B3N1Fbn ,   B3N1Fbs ,   B3N1Fbt , &
+                                   B3N1Fd ,    B3N1Fl ,    B3N1Fn ,    B3N1Ft ,    B3N1Fx ,    B3N1Fy ,   B3N1Gam ,     B3N1M , &
+                                  B3N1Mbn ,   B3N1Mbs ,   B3N1Mbt ,    B3N1Mm ,   B3N1Phi ,    B3N1Re , B3N1SgCav , B3N1SigCr , &
+                                 B3N1STVx ,  B3N1STVy ,  B3N1STVz , B3N1Theta , B3N1TnInd , B3N1VDisx , B3N1VDisy , B3N1VDisz , &
+                                B3N1Vindx , B3N1Vindy ,  B3N1VRel , B3N1VUndx , B3N1VUndy , B3N1VUndz , B3N2Alpha , B3N2AxInd , &
+                                   B3N2Cd ,    B3N2Cl , B3N2Clrnc ,    B3N2Cm ,    B3N2Cn , B3N2Cpmin ,    B3N2Ct , B3N2Curve , &
+                                   B3N2Cx ,    B3N2Cy ,  B3N2DynP ,   B3N2Fbn ,   B3N2Fbs ,   B3N2Fbt ,    B3N2Fd ,    B3N2Fl , &
+                                   B3N2Fn ,    B3N2Ft ,    B3N2Fx ,    B3N2Fy ,   B3N2Gam ,     B3N2M ,   B3N2Mbn ,   B3N2Mbs , &
+                                  B3N2Mbt ,    B3N2Mm ,   B3N2Phi ,    B3N2Re , B3N2SgCav , B3N2SigCr ,  B3N2STVx ,  B3N2STVy , &
                                  B3N2STVz , B3N2Theta , B3N2TnInd , B3N2VDisx , B3N2VDisy , B3N2VDisz , B3N2Vindx , B3N2Vindy , &
                                  B3N2VRel , B3N2VUndx , B3N2VUndy , B3N2VUndz , B3N3Alpha , B3N3AxInd ,    B3N3Cd ,    B3N3Cl , &
                                 B3N3Clrnc ,    B3N3Cm ,    B3N3Cn , B3N3Cpmin ,    B3N3Ct , B3N3Curve ,    B3N3Cx ,    B3N3Cy , &
-                                 B3N3DynP ,    B3N3Fd ,    B3N3Fl ,    B3N3Fn ,    B3N3Ft ,    B3N3Fx ,    B3N3Fy ,   B3N3Gam , &
-                                    B3N3M ,    B3N3Mm ,   B3N3Phi ,    B3N3Re , B3N3SgCav , B3N3SigCr ,  B3N3STVx ,  B3N3STVy , &
-                                 B3N3STVz , B3N3Theta , B3N3TnInd , B3N3VDisx , B3N3VDisy , B3N3VDisz , B3N3Vindx , B3N3Vindy , &
-                                 B3N3VRel , B3N3VUndx , B3N3VUndy , B3N3VUndz , B3N4Alpha , B3N4AxInd ,    B3N4Cd ,    B3N4Cl , &
-                                B3N4Clrnc ,    B3N4Cm ,    B3N4Cn , B3N4Cpmin ,    B3N4Ct , B3N4Curve ,    B3N4Cx ,    B3N4Cy , &
-                                 B3N4DynP ,    B3N4Fd ,    B3N4Fl ,    B3N4Fn ,    B3N4Ft ,    B3N4Fx ,    B3N4Fy ,   B3N4Gam , &
-                                    B3N4M ,    B3N4Mm ,   B3N4Phi ,    B3N4Re , B3N4SgCav , B3N4SigCr ,  B3N4STVx ,  B3N4STVy , &
-                                 B3N4STVz , B3N4Theta , B3N4TnInd , B3N4VDisx , B3N4VDisy , B3N4VDisz , B3N4Vindx , B3N4Vindy , &
-                                 B3N4VRel , B3N4VUndx , B3N4VUndy , B3N4VUndz , B3N5Alpha , B3N5AxInd ,    B3N5Cd ,    B3N5Cl , &
-                                B3N5Clrnc ,    B3N5Cm ,    B3N5Cn , B3N5Cpmin ,    B3N5Ct , B3N5Curve ,    B3N5Cx ,    B3N5Cy , &
-                                 B3N5DynP ,    B3N5Fd ,    B3N5Fl ,    B3N5Fn ,    B3N5Ft ,    B3N5Fx ,    B3N5Fy ,   B3N5Gam , &
-                                    B3N5M ,    B3N5Mm ,   B3N5Phi ,    B3N5Re , B3N5SgCav , B3N5SigCr ,  B3N5STVx ,  B3N5STVy , &
-                                 B3N5STVz , B3N5Theta , B3N5TnInd , B3N5VDisx , B3N5VDisy , B3N5VDisz , B3N5Vindx , B3N5Vindy , &
-                                 B3N5VRel , B3N5VUndx , B3N5VUndy , B3N5VUndz , B3N6Alpha , B3N6AxInd ,    B3N6Cd ,    B3N6Cl , &
-                                B3N6Clrnc ,    B3N6Cm ,    B3N6Cn , B3N6Cpmin ,    B3N6Ct , B3N6Curve ,    B3N6Cx ,    B3N6Cy , &
-                                 B3N6DynP ,    B3N6Fd ,    B3N6Fl ,    B3N6Fn ,    B3N6Ft ,    B3N6Fx ,    B3N6Fy ,   B3N6Gam , &
-                                    B3N6M ,    B3N6Mm ,   B3N6Phi ,    B3N6Re , B3N6SgCav , B3N6SigCr ,  B3N6STVx ,  B3N6STVy , &
+                                 B3N3DynP ,   B3N3Fbn ,   B3N3Fbs ,   B3N3Fbt ,    B3N3Fd ,    B3N3Fl ,    B3N3Fn ,    B3N3Ft , &
+                                   B3N3Fx ,    B3N3Fy ,   B3N3Gam ,     B3N3M ,   B3N3Mbn ,   B3N3Mbs ,   B3N3Mbt ,    B3N3Mm , &
+                                  B3N3Phi ,    B3N3Re , B3N3SgCav , B3N3SigCr ,  B3N3STVx ,  B3N3STVy ,  B3N3STVz , B3N3Theta , &
+                                B3N3TnInd , B3N3VDisx , B3N3VDisy , B3N3VDisz , B3N3Vindx , B3N3Vindy ,  B3N3VRel , B3N3VUndx , &
+                                B3N3VUndy , B3N3VUndz , B3N4Alpha , B3N4AxInd ,    B3N4Cd ,    B3N4Cl , B3N4Clrnc ,    B3N4Cm , &
+                                   B3N4Cn , B3N4Cpmin ,    B3N4Ct , B3N4Curve ,    B3N4Cx ,    B3N4Cy ,  B3N4DynP ,   B3N4Fbn , &
+                                  B3N4Fbs ,   B3N4Fbt ,    B3N4Fd ,    B3N4Fl ,    B3N4Fn ,    B3N4Ft ,    B3N4Fx ,    B3N4Fy , &
+                                  B3N4Gam ,     B3N4M ,   B3N4Mbn ,   B3N4Mbs ,   B3N4Mbt ,    B3N4Mm ,   B3N4Phi ,    B3N4Re , &
+                                B3N4SgCav , B3N4SigCr ,  B3N4STVx ,  B3N4STVy ,  B3N4STVz , B3N4Theta , B3N4TnInd , B3N4VDisx , &
+                                B3N4VDisy , B3N4VDisz , B3N4Vindx , B3N4Vindy ,  B3N4VRel , B3N4VUndx , B3N4VUndy , B3N4VUndz , &
+                                B3N5Alpha , B3N5AxInd ,    B3N5Cd ,    B3N5Cl , B3N5Clrnc ,    B3N5Cm ,    B3N5Cn , B3N5Cpmin , &
+                                   B3N5Ct , B3N5Curve ,    B3N5Cx ,    B3N5Cy ,  B3N5DynP ,   B3N5Fbn ,   B3N5Fbs ,   B3N5Fbt , &
+                                   B3N5Fd ,    B3N5Fl ,    B3N5Fn ,    B3N5Ft ,    B3N5Fx ,    B3N5Fy ,   B3N5Gam ,     B3N5M , &
+                                  B3N5Mbn ,   B3N5Mbs ,   B3N5Mbt ,    B3N5Mm ,   B3N5Phi ,    B3N5Re , B3N5SgCav , B3N5SigCr , &
+                                 B3N5STVx ,  B3N5STVy ,  B3N5STVz , B3N5Theta , B3N5TnInd , B3N5VDisx , B3N5VDisy , B3N5VDisz , &
+                                B3N5Vindx , B3N5Vindy ,  B3N5VRel , B3N5VUndx , B3N5VUndy , B3N5VUndz , B3N6Alpha , B3N6AxInd , &
+                                   B3N6Cd ,    B3N6Cl , B3N6Clrnc ,    B3N6Cm ,    B3N6Cn , B3N6Cpmin ,    B3N6Ct , B3N6Curve , &
+                                   B3N6Cx ,    B3N6Cy ,  B3N6DynP ,   B3N6Fbn ,   B3N6Fbs ,   B3N6Fbt ,    B3N6Fd ,    B3N6Fl , &
+                                   B3N6Fn ,    B3N6Ft ,    B3N6Fx ,    B3N6Fy ,   B3N6Gam ,     B3N6M ,   B3N6Mbn ,   B3N6Mbs , &
+                                  B3N6Mbt ,    B3N6Mm ,   B3N6Phi ,    B3N6Re , B3N6SgCav , B3N6SigCr ,  B3N6STVx ,  B3N6STVy , &
                                  B3N6STVz , B3N6Theta , B3N6TnInd , B3N6VDisx , B3N6VDisy , B3N6VDisz , B3N6Vindx , B3N6Vindy , &
                                  B3N6VRel , B3N6VUndx , B3N6VUndy , B3N6VUndz , B3N7Alpha , B3N7AxInd ,    B3N7Cd ,    B3N7Cl , &
                                 B3N7Clrnc ,    B3N7Cm ,    B3N7Cn , B3N7Cpmin ,    B3N7Ct , B3N7Curve ,    B3N7Cx ,    B3N7Cy , &
-                                 B3N7DynP ,    B3N7Fd ,    B3N7Fl ,    B3N7Fn ,    B3N7Ft ,    B3N7Fx ,    B3N7Fy ,   B3N7Gam , &
-                                    B3N7M ,    B3N7Mm ,   B3N7Phi ,    B3N7Re , B3N7SgCav , B3N7SigCr ,  B3N7STVx ,  B3N7STVy , &
-                                 B3N7STVz , B3N7Theta , B3N7TnInd , B3N7VDisx , B3N7VDisy , B3N7VDisz , B3N7Vindx , B3N7Vindy , &
-                                 B3N7VRel , B3N7VUndx , B3N7VUndy , B3N7VUndz , B3N8Alpha , B3N8AxInd ,    B3N8Cd ,    B3N8Cl , &
-                                B3N8Clrnc ,    B3N8Cm ,    B3N8Cn , B3N8Cpmin ,    B3N8Ct , B3N8Curve ,    B3N8Cx ,    B3N8Cy , &
-                                 B3N8DynP ,    B3N8Fd ,    B3N8Fl ,    B3N8Fn ,    B3N8Ft ,    B3N8Fx ,    B3N8Fy ,   B3N8Gam , &
-                                    B3N8M ,    B3N8Mm ,   B3N8Phi ,    B3N8Re , B3N8SgCav , B3N8SigCr ,  B3N8STVx ,  B3N8STVy , &
-                                 B3N8STVz , B3N8Theta , B3N8TnInd , B3N8VDisx , B3N8VDisy , B3N8VDisz , B3N8Vindx , B3N8Vindy , &
-                                 B3N8VRel , B3N8VUndx , B3N8VUndy , B3N8VUndz , B3N9Alpha , B3N9AxInd ,    B3N9Cd ,    B3N9Cl , &
-                                B3N9Clrnc ,    B3N9Cm ,    B3N9Cn , B3N9Cpmin ,    B3N9Ct , B3N9Curve ,    B3N9Cx ,    B3N9Cy , &
-                                 B3N9DynP ,    B3N9Fd ,    B3N9Fl ,    B3N9Fn ,    B3N9Ft ,    B3N9Fx ,    B3N9Fy ,   B3N9Gam , &
-                                    B3N9M ,    B3N9Mm ,   B3N9Phi ,    B3N9Re , B3N9SgCav , B3N9SigCr ,  B3N9STVx ,  B3N9STVy , &
-                                 B3N9STVz , B3N9Theta , B3N9TnInd , B3N9VDisx , B3N9VDisy , B3N9VDisz , B3N9Vindx , B3N9Vindy , &
-                                 B3N9VRel , B3N9VUndx , B3N9VUndy , B3N9VUndz ,   B3Pitch ,  B4AeroFx , B4AeroFxg ,  B4AeroFy , &
-                                B4AeroFyg ,  B4AeroFz , B4AeroFzg ,  B4AeroMx , B4AeroMxg ,  B4AeroMy , B4AeroMyg ,  B4AeroMz , &
-                                B4AeroMzg , B4AeroPwr ,  DBEMTau1 ,  RtAeroCp ,  RtAeroCq ,  RtAeroCt , RtAeroFxg , RtAeroFxh , &
-                                RtAeroFyg , RtAeroFyh , RtAeroFzg , RtAeroFzh , RtAeroMxg , RtAeroMxh , RtAeroMyg , RtAeroMyh , &
-                                RtAeroMzg , RtAeroMzh , RtAeroPwr ,    RtArea ,    RtSkew ,   RtSpeed ,     RtTSR ,  RtVAvgxh , &
-                                 RtVAvgyh ,  RtVAvgzh ,  TwN1DynP ,   TwN1Fdx ,   TwN1Fdy ,     TwN1M ,    TwN1Re ,  TwN1STVx , &
-                                 TwN1STVy ,  TwN1STVz ,  TwN1Vrel , TwN1VUndx , TwN1VUndy , TwN1VUndz ,  TwN2DynP ,   TwN2Fdx , &
-                                  TwN2Fdy ,     TwN2M ,    TwN2Re ,  TwN2STVx ,  TwN2STVy ,  TwN2STVz ,  TwN2Vrel , TwN2VUndx , &
-                                TwN2VUndy , TwN2VUndz ,  TwN3DynP ,   TwN3Fdx ,   TwN3Fdy ,     TwN3M ,    TwN3Re ,  TwN3STVx , &
-                                 TwN3STVy ,  TwN3STVz ,  TwN3Vrel , TwN3VUndx , TwN3VUndy , TwN3VUndz ,  TwN4DynP ,   TwN4Fdx , &
-                                  TwN4Fdy ,     TwN4M ,    TwN4Re ,  TwN4STVx ,  TwN4STVy ,  TwN4STVz ,  TwN4Vrel , TwN4VUndx , &
-                                TwN4VUndy , TwN4VUndz ,  TwN5DynP ,   TwN5Fdx ,   TwN5Fdy ,     TwN5M ,    TwN5Re ,  TwN5STVx , &
-                                 TwN5STVy ,  TwN5STVz ,  TwN5Vrel , TwN5VUndx , TwN5VUndy , TwN5VUndz ,  TwN6DynP ,   TwN6Fdx , &
-                                  TwN6Fdy ,     TwN6M ,    TwN6Re ,  TwN6STVx ,  TwN6STVy ,  TwN6STVz ,  TwN6Vrel , TwN6VUndx , &
-                                TwN6VUndy , TwN6VUndz ,  TwN7DynP ,   TwN7Fdx ,   TwN7Fdy ,     TwN7M ,    TwN7Re ,  TwN7STVx , &
-                                 TwN7STVy ,  TwN7STVz ,  TwN7Vrel , TwN7VUndx , TwN7VUndy , TwN7VUndz ,  TwN8DynP ,   TwN8Fdx , &
-                                  TwN8Fdy ,     TwN8M ,    TwN8Re ,  TwN8STVx ,  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , &
-                                TwN8VUndy , TwN8VUndz ,  TwN9DynP ,   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,    TwN9Re ,  TwN9STVx , &
-                                 TwN9STVy ,  TwN9STVz ,  TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1270) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
-                               "(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ", &
-                               "(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(deg)  ","(-)    ", &
+                                 B3N7DynP ,   B3N7Fbn ,   B3N7Fbs ,   B3N7Fbt ,    B3N7Fd ,    B3N7Fl ,    B3N7Fn ,    B3N7Ft , &
+                                   B3N7Fx ,    B3N7Fy ,   B3N7Gam ,     B3N7M ,   B3N7Mbn ,   B3N7Mbs ,   B3N7Mbt ,    B3N7Mm , &
+                                  B3N7Phi ,    B3N7Re , B3N7SgCav , B3N7SigCr ,  B3N7STVx ,  B3N7STVy ,  B3N7STVz , B3N7Theta , &
+                                B3N7TnInd , B3N7VDisx , B3N7VDisy , B3N7VDisz , B3N7Vindx , B3N7Vindy ,  B3N7VRel , B3N7VUndx , &
+                                B3N7VUndy , B3N7VUndz , B3N8Alpha , B3N8AxInd ,    B3N8Cd ,    B3N8Cl , B3N8Clrnc ,    B3N8Cm , &
+                                   B3N8Cn , B3N8Cpmin ,    B3N8Ct , B3N8Curve ,    B3N8Cx ,    B3N8Cy ,  B3N8DynP ,   B3N8Fbn , &
+                                  B3N8Fbs ,   B3N8Fbt ,    B3N8Fd ,    B3N8Fl ,    B3N8Fn ,    B3N8Ft ,    B3N8Fx ,    B3N8Fy , &
+                                  B3N8Gam ,     B3N8M ,   B3N8Mbn ,   B3N8Mbs ,   B3N8Mbt ,    B3N8Mm ,   B3N8Phi ,    B3N8Re , &
+                                B3N8SgCav , B3N8SigCr ,  B3N8STVx ,  B3N8STVy ,  B3N8STVz , B3N8Theta , B3N8TnInd , B3N8VDisx , &
+                                B3N8VDisy , B3N8VDisz , B3N8Vindx , B3N8Vindy ,  B3N8VRel , B3N8VUndx , B3N8VUndy , B3N8VUndz , &
+                                B3N9Alpha , B3N9AxInd ,    B3N9Cd ,    B3N9Cl , B3N9Clrnc ,    B3N9Cm ,    B3N9Cn , B3N9Cpmin , &
+                                   B3N9Ct , B3N9Curve ,    B3N9Cx ,    B3N9Cy ,  B3N9DynP ,   B3N9Fbn ,   B3N9Fbs ,   B3N9Fbt , &
+                                   B3N9Fd ,    B3N9Fl ,    B3N9Fn ,    B3N9Ft ,    B3N9Fx ,    B3N9Fy ,   B3N9Gam ,     B3N9M , &
+                                  B3N9Mbn ,   B3N9Mbs ,   B3N9Mbt ,    B3N9Mm ,   B3N9Phi ,    B3N9Re , B3N9SgCav , B3N9SigCr , &
+                                 B3N9STVx ,  B3N9STVy ,  B3N9STVz , B3N9Theta , B3N9TnInd , B3N9VDisx , B3N9VDisy , B3N9VDisz , &
+                                B3N9Vindx , B3N9Vindy ,  B3N9VRel , B3N9VUndx , B3N9VUndy , B3N9VUndz ,   B3Pitch ,   B4FldFx , &
+                                 B4FldFxg ,   B4FldFy ,  B4FldFyg ,   B4FldFz ,  B4FldFzg ,   B4FldMx ,  B4FldMxg ,   B4FldMy , &
+                                 B4FldMyg ,   B4FldMz ,  B4FldMzg ,  B4FldPwr ,  DBEMTau1 ,     HbFbx ,     HbFby ,     HbFbz , &
+                                    HbMbx ,     HbMby ,     HbMbz ,     NcFbx ,     NcFby ,     NcFbz ,     NcMbx ,     NcMby , &
+                                    NcMbz ,    RtArea ,   RtFldCp ,   RtFldCq ,   RtFldCt ,  RtFldFxg ,  RtFldFxh ,  RtFldFyg , &
+                                 RtFldFyh ,  RtFldFzg ,  RtFldFzh ,  RtFldMxg ,  RtFldMxh ,  RtFldMyg ,  RtFldMyh ,  RtFldMzg , &
+                                 RtFldMzh ,  RtFldPwr ,    RtSkew ,   RtSpeed ,     RtTSR ,  RtVAvgxh ,  RtVAvgyh ,  RtVAvgzh , &
+                                  TFAlpha ,     TFFxi ,     TFFyi ,     TFFzi , TFMach    ,     TFMxi ,     TFMyi ,     TFMzi , &
+                                  TFRe    ,   TFSTVxi ,   TFSTVyi ,   TFSTVzi ,  TFVindxi ,  TFVindyi ,  TFVindzi ,   TFVrel  , &
+                                 TFVrelxi ,  TFVrelyi ,  TFVrelzi ,  TFVundxi ,  TFVundyi ,  TFVundzi ,  TwN1DynP ,   TwN1Fbx , &
+                                  TwN1Fby ,   TwN1Fbz ,   TwN1Fdx ,   TwN1Fdy ,     TwN1M ,   TwN1Mbx ,   TwN1Mby ,   TwN1Mbz , &
+                                   TwN1Re ,  TwN1STVx ,  TwN1STVy ,  TwN1STVz ,  TwN1Vrel , TwN1VUndx , TwN1VUndy , TwN1VUndz , &
+                                 TwN2DynP ,   TwN2Fbx ,   TwN2Fby ,   TwN2Fbz ,   TwN2Fdx ,   TwN2Fdy ,     TwN2M ,   TwN2Mbx , &
+                                  TwN2Mby ,   TwN2Mbz ,    TwN2Re ,  TwN2STVx ,  TwN2STVy ,  TwN2STVz ,  TwN2Vrel , TwN2VUndx , &
+                                TwN2VUndy , TwN2VUndz ,  TwN3DynP ,   TwN3Fbx ,   TwN3Fby ,   TwN3Fbz ,   TwN3Fdx ,   TwN3Fdy , &
+                                    TwN3M ,   TwN3Mbx ,   TwN3Mby ,   TwN3Mbz ,    TwN3Re ,  TwN3STVx ,  TwN3STVy ,  TwN3STVz , &
+                                 TwN3Vrel , TwN3VUndx , TwN3VUndy , TwN3VUndz ,  TwN4DynP ,   TwN4Fbx ,   TwN4Fby ,   TwN4Fbz , &
+                                  TwN4Fdx ,   TwN4Fdy ,     TwN4M ,   TwN4Mbx ,   TwN4Mby ,   TwN4Mbz ,    TwN4Re ,  TwN4STVx , &
+                                 TwN4STVy ,  TwN4STVz ,  TwN4Vrel , TwN4VUndx , TwN4VUndy , TwN4VUndz ,  TwN5DynP ,   TwN5Fbx , &
+                                  TwN5Fby ,   TwN5Fbz ,   TwN5Fdx ,   TwN5Fdy ,     TwN5M ,   TwN5Mbx ,   TwN5Mby ,   TwN5Mbz , &
+                                   TwN5Re ,  TwN5STVx ,  TwN5STVy ,  TwN5STVz ,  TwN5Vrel , TwN5VUndx , TwN5VUndy , TwN5VUndz , &
+                                 TwN6DynP ,   TwN6Fbx ,   TwN6Fby ,   TwN6Fbz ,   TwN6Fdx ,   TwN6Fdy ,     TwN6M ,   TwN6Mbx , &
+                                  TwN6Mby ,   TwN6Mbz ,    TwN6Re ,  TwN6STVx ,  TwN6STVy ,  TwN6STVz ,  TwN6Vrel , TwN6VUndx , &
+                                TwN6VUndy , TwN6VUndz ,  TwN7DynP ,   TwN7Fbx ,   TwN7Fby ,   TwN7Fbz ,   TwN7Fdx ,   TwN7Fdy , &
+                                    TwN7M ,   TwN7Mbx ,   TwN7Mby ,   TwN7Mbz ,    TwN7Re ,  TwN7STVx ,  TwN7STVy ,  TwN7STVz , &
+                                 TwN7Vrel , TwN7VUndx , TwN7VUndy , TwN7VUndz ,  TwN8DynP ,   TwN8Fbx ,   TwN8Fby ,   TwN8Fbz , &
+                                  TwN8Fdx ,   TwN8Fdy ,     TwN8M ,   TwN8Mbx ,   TwN8Mby ,   TwN8Mbz ,    TwN8Re ,  TwN8STVx , &
+                                 TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , TwN8VUndy , TwN8VUndz ,  TwN9DynP ,   TwN9Fbx , &
+                                  TwN9Fby ,   TwN9Fbz ,   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,   TwN9Mbx ,   TwN9Mby ,   TwN9Mbz , &
+                                   TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz ,  TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1520) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
+                               "(deg)  ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ", &
+                               "(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(-)    ", &
                                "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
                                "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ", &
+                               "(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ", &
+                               "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
                                "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
                                "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ", &
+                               "(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ", &
+                               "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
                                "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
                                "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(deg)  ","(N)    ","(N)    ", &
+                               "(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
+                               "(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ", &
+                               "(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ", &
+                               "(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ", &
+                               "(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
+                               "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
+                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
+                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ", &
+                               "(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ", &
+                               "(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ", &
+                               "(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
+                               "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
+                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
+                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ", &
+                               "(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ", &
+                               "(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(deg)  ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ", &
+                               "(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
                                "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
                                "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ", &
+                               "(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ", &
+                               "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
                                "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
                                "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
-                               "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
-                               "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
-                               "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
-                               "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
-                               "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
-                               "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ", &
-                               "(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ", &
-                               "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
+                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ", &
+                               "(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(m^2/s)","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ", &
+                               "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(-)    ", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(N)    ", &
                                "(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ", &
-                               "(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ", &
-                               "(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(m^2/s)","(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(N)    ","(N)    ", &
-                               "(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
-                               "(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)", &
-                               "(-)    ","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(N)    ","(N)    ","(N)    ", &
+                               "(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(s)    ","(N)    ","(N)    ","(N)    ", &
+                               "(N-m)  ","(N-m)  ","(N-m)  ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ", &
+                               "(N-m)  ","(m^2)  ","(-)    ","(-)    ","(-)    ","(N)    ","(N)    ","(N)    ", &
                                "(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
-                               "(N-m)  ","(W)    ","(s)    ","(-)    ","(-)    ","(-)    ","(N)    ","(N)    ", &
-                               "(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
-                               "(N-m)  ","(N-m)  ","(W)    ","(m^2)  ","(deg)  ","(rpm)  ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(-)    ","(-)    ","(m/s)  ", &
+                               "(N-m)  ","(W)    ","(deg)  ","(rpm)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(deg)  ","(N)    ","(N)    ","(N)    ","(-)    ","(N-m)  ","(N-m)  ","(N-m)  ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
-                               "(N/m)  ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(-)    ","(-)    ","(m/s)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
-                               "(N/m)  ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(-)    ","(-)    ","(m/s)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
-                               "(N/m)  ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
-                               "(N/m)  ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(-)    ","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
 
 
       ! Initialize values
@@ -3408,6 +4040,45 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
    if (p_AD%WakeMod /= WakeMod_DBEMT) then
       InvalidOutput( DBEMTau1 ) = .true.
    end if
+
+   if (.not. p%Buoyancy) then  ! Invalid buoyant loads
+      InvalidOutput( HbFbx ) = .true.
+      InvalidOutput( HbFby ) = .true.
+      InvalidOutput( HbFbz ) = .true.
+      InvalidOutput( HbMbx ) = .true.
+      InvalidOutput( HbMby ) = .true.
+      InvalidOutput( HbMbz ) = .true.
+      InvalidOutput( NcFbx ) = .true.
+      InvalidOutput( NcFby ) = .true.
+      InvalidOutput( NcFbz ) = .true.
+      InvalidOutput( NcMbx ) = .true.
+      InvalidOutput( NcMby ) = .true.
+      InvalidOutput( NcMbz ) = .true.
+      InvalidOutput( TwNFbx ) = .true.
+      InvalidOutput( TwNFby ) = .true.
+      InvalidOutput( TwNFbz ) = .true.
+      InvalidOutput( TwNMbx ) = .true.
+      InvalidOutput( TwNMby ) = .true.
+      InvalidOutput( TwNMbz ) = .true.
+      do i = 1,size(BNFbn,2)
+         InvalidOutput( BNFbn(:,i) ) = .true.
+      end do
+      do i = 1,size(BNFbt,2)
+         InvalidOutput( BNFbt(:,i) ) = .true.
+      end do
+      do i = 1,size(BNFbs,2)
+         InvalidOutput( BNFbs(:,i) ) = .true.
+      end do
+      do i = 1,size(BNMbn,2)
+         InvalidOutput( BNMbn(:,i) ) = .true.
+      end do
+      do i = 1,size(BNMbt,2) 
+         InvalidOutput( BNMbt(:,i) ) = .true.
+      end do
+      do i = 1,size(BNMbs,2)
+         InvalidOutput( BNMbs(:,i) ) = .true.
+      end do
+   end if
    
    DO i = p%NTwOuts+1,9  ! Invalid tower nodes
    
@@ -3419,6 +4090,12 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( TwNM(     i) ) = .true.
       InvalidOutput( TwNFdx(   i) ) = .true.
       InvalidOutput( TwNFdy(   i) ) = .true.
+      InvalidOutput( TwNFbx(   i) ) = .true.
+      InvalidOutput( TwNFby(   i) ) = .true.
+      InvalidOutput( TwNFbz(   i) ) = .true.
+      InvalidOutput( TwNMbx(   i) ) = .true.
+      InvalidOutput( TwNMby(   i) ) = .true.
+      InvalidOutput( TwNMbz(   i) ) = .true.
       
    END DO
    
@@ -3466,12 +4143,18 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( BNSgCav(:,i) ) = .true.
       InvalidOutput( BNSigCr(:,i) ) = .true.
       InvalidOutput( BNCpMin(:,i) ) = .true.
-      InvalidOutput( BAeroFx(  i) ) = .true.
-      InvalidOutput( BAeroFy(  i) ) = .true.
-      InvalidOutput( BAeroFz(  i) ) = .true.
-      InvalidOutput( BAeroMx(  i) ) = .true.
-      InvalidOutput( BAeroMy(  i) ) = .true.
-      InvalidOutput( BAeroMz(  i) ) = .true.
+      InvalidOutput( BFldFx(  i) ) = .true.
+      InvalidOutput( BFldFy(  i) ) = .true.
+      InvalidOutput( BFldFz(  i) ) = .true.
+      InvalidOutput( BFldMx(  i) ) = .true.
+      InvalidOutput( BFldMy(  i) ) = .true.
+      InvalidOutput( BFldMz(  i) ) = .true.
+      InvalidOutput( BNFbn(   :,i) ) = .true.
+      InvalidOutput( BNFbt(   :,i) ) = .true.
+      InvalidOutput( BNFbs(   :,i) ) = .true.
+      InvalidOutput( BNMbn(   :,i) ) = .true.
+      InvalidOutput( BNMbt(   :,i) ) = .true.
+      InvalidOutput( BNMbs(   :,i) ) = .true.
                
    END DO
       
@@ -3517,9 +4200,15 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( BNSgCav(i,:) ) = .true.
       InvalidOutput( BNSigCr(i,:) ) = .true.
       InvalidOutput( BNCpMin(i,:) ) = .true.
+      InvalidOutput( BNFbn(  i,:) ) = .true.
+      InvalidOutput( BNFbt(  i,:) ) = .true.
+      InvalidOutput( BNFbs(  i,:) ) = .true.
+      InvalidOutput( BNMbn(  i,:) ) = .true.
+      InvalidOutput( BNMbt(  i,:) ) = .true.
+      InvalidOutput( BNMbs(  i,:) ) = .true.
          
-   END DO   
-   
+   END DO
+
 !   ................. End of validity checking .................
 
 
@@ -3564,12 +4253,12 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
          p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
-
+   
          CALL SetErrStat(ErrID_Fatal, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
-
+   
    END DO
-
+   
    RETURN
 END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3578,4 +4267,413 @@ END SUBROUTINE SetOutParam
 
 
 
+subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
+! This subroutine calculates implicit cant angle based on the blade reference line that includes prebend.
+    implicit none
+    integer(IntKi), intent(in)  :: stencilSize, n 
+    integer(IntKi)              :: i, j
+    integer(IntKi)              :: sortInd(n)
+    integer(IntKi)              :: info
+    real(ReKi),  intent(in)     :: f(n), xi(n)
+    real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
+    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
+    real(ReKi), intent(inout)   :: cantAngle(n)
+     
+    !dimension       :: f(n),xi(n), sortInd(n), cx(stencilSize),cf(stencilSize), xiIn(stencilSize)
+    !dimension       :: cantAngle(n), fIn(stencilSize), cPrime(n), fPrime(n), indexIn(stencilSize), xiAbs(n)
+    
+
+    
+    do i = 1,size(xi)
+        
+        xiAbs = abs(xi-xi(i))
+        call hpsort_eps_epw (n, xiAbs, sortInd, 1e-6)
+     
+        if (i.eq.1) then
+            fIn = f(1:stencilSize)
+            xiIn = xi(1:stencilSize)
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        elseif (i.eq.size(xi)) then
+            fIn = f(size(xi)-stencilSize +1:size(xi))
+            xiIn = xi(size(xi)-stencilSize+1:size(xi))
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        else
+            fIn = f(i-1:i+1)
+            xiIn = xi(i-1:i+1)
+            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+            if (info /= 0) return ! use default cantAngle in this case
+            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+            if (info /= 0) return ! use default cantAngle in this case
+        endif
+    
+        cPrime(i) = 0.0
+        fPrime(i) = 0.0
+
+        do j = 1,size(cx)
+            cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
+            fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
+        end do
+        cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+    end do
+    
+end subroutine calcCantAngle
+
+
+
+subroutine differ_stencil ( x0, o, p, x, c, info )
+
+!*****************************************************************************80
+!
+!! DIFFER_STENCIL computes finite difference coefficients.
+!
+!  Discussion:
+!
+!    We determine coefficients C to approximate the derivative at X0
+!    of order O and precision P, using finite differences, so that 
+!
+!      d^o f(x)/dx^o (x0) = sum ( 0 <= i <= o+p-1 ) c(i) f(x(i)) 
+!        + O(h^(p))
+!
+!    where H is the maximum spacing between X0 and any X(I).
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license.
+!
+!  Modified:
+!
+!    10 November 2013
+!
+!  Author:
+!
+!    John Burkardt
+!
+!  Parameters:
+!
+!    Input, real ( kind = 8 ) X0, the point where the derivative is to 
+!    be approximated.
+!
+!    Input, integer ( kind = 4 ) O, the order of the derivative to be 
+!    approximated.  1 <= O.
+!
+!    Input, integer ( kind = 4 ) P, the order of the error, as a power of H.
+!
+!    Input, real ( kind = 8 ) X(O+P), the evaluation points.
+!
+!    Output, real ( kind = 8 ) C(O+P), the coefficients.
+!
+  implicit none
+
+  integer(IntKi), intent(in)   :: o
+  integer(IntKi), intent(in)   :: p
+
+  real(ReKi)                   :: b(o+p)
+  real(ReKi), intent(out)      :: c(o+p)
+  real(ReKi)                   :: dx(o+p)
+  integer(IntKi)               :: i
+  integer(IntKi), intent(out)  :: info
+  integer(IntKi)               :: job
+  integer(IntKi)               :: n
+  real(R8Ki)                   :: r8_factorial
+  real(ReKi), intent(in)       :: x(o+p)
+  real(ReKi), intent(in)       :: x0
+
+  n = o + p
+
+  dx(1:n) = x(1:n) - x0
+
+  b(1:o+p) = 0.0D+00
+  b(o+1) = 1.0D+00
+
+  job = 0
+  call r8vm_sl ( n, dx, b, c, job, info )
+
+  if ( info /= 0 ) then
+    call WrScr('DIFFER_STENCIL: Vandermonde linear system is singular.')
+    return
+  end if
+    r8_factorial = 1.0D+00
+  do i = 1,o
+    r8_factorial = r8_factorial*i
+  end do
+  c(1:n) = c(1:n) * r8_factorial
+
+  return
+  
+end subroutine differ_stencil
+
+subroutine r8vm_sl ( n, a, b, x, job, info )
+
+!*****************************************************************************80
+!
+!! R8VM_SL solves an R8VM linear system.
+!
+!  Discussion:
+!
+!    The R8VM storage format is used for an M by N Vandermonde matrix.
+!    An M by N Vandermonde matrix is defined by the values in its second
+!    row, which will be written here as X(1:N).  The matrix has a first 
+!    row of 1's, a second row equal to X(1:N), a third row whose entries
+!    are the squares of the X values, up to the M-th row whose entries
+!    are the (M-1)th powers of the X values.  The matrix can be stored
+!    compactly by listing just the values X(1:N).
+!
+!    Vandermonde systems are very close to singularity.  The singularity
+!    gets worse as N increases, and as any pair of values defining
+!    the matrix get close.  Even a system as small as N = 10 will
+!    involve the 9th power of the defining values.
+!
+!  Licensing:
+!
+!    This code is distributed under the GNU LGPL license. 
+!
+!  Modified:
+!
+!    29 September 2003
+!
+!  Author:
+!
+!    John Burkardt.
+!
+!  Reference:
+!
+!    Gene Golub, Charles Van Loan,
+!    Matrix Computations,
+!    Third Edition,
+!    Johns Hopkins, 1996.
+!
+!  Parameters:
+!
+!    Input, integer ( kind = 4 ) N, the number of rows and columns of 
+!    the matrix.
+!
+!    Input, real ( kind = 8 ) A(N), the R8VM matrix.
+!
+!    Input, real ( kind = 8 ) B(N), the right hand side.
+!
+!    Output, real ( kind = 8 ) X(N), the solution of the linear system.
+!
+!    Input, integer ( kind = 4 ) JOB, specifies the system to solve.
+!    0, solve A * x = b.
+!    nonzero, solve A' * x = b.
+!
+!    Output, integer ( kind = 4 ) INFO.
+!    0, no error.
+!    nonzero, at least two of the values in A are equal.
+!
+  implicit none
+
+  integer (IntKi ), intent(in) :: n
+
+  real(ReKi),     intent(in)   :: a(n)
+  real(ReKi),     intent(in)   :: b(n)
+  integer(IntKi)               :: i
+  integer(IntKi), intent(out)  :: info
+  integer(IntKi)               :: j
+  integer(IntKi), intent(in)   :: job
+  real(ReKi),     intent(out)  :: x(n)
+!
+!  Check for explicit singularity.
+!
+  info = 0
+
+  do j = 1, n - 1
+    do i = j + 1, n
+      if ( a(i) == a(j) ) then
+        info = 1
+        return
+      end if
+    end do
+  end do
+
+  x(1:n) = b(1:n)
+
+  if ( job == 0 ) then
+
+    do j = 1, n - 1
+      do i = n, j + 1, -1
+        x(i) = x(i) - a(j) * x(i-1)
+      end do
+    end do
+
+    do j = n - 1, 1, -1
+
+      do i = j + 1, n
+        x(i) = x(i) / ( a(i) - a(i-j) )
+      end do
+
+      do i = j, n - 1
+        x(i) = x(i) - x(i+1)
+      end do
+
+    end do
+
+  else
+
+    do j = 1, n - 1
+      do i = n, j + 1, -1
+        x(i) = ( x(i) - x(i-1) ) / ( a(i) - a(i-j) )
+      end do
+    end do
+
+    do j = n - 1, 1, -1
+      do i = j, n - 1
+        x(i) = x(i) - x(i+1) * a(j)
+      end do
+    end do
+
+  end if
+
+  return
+end subroutine r8vm_sl
+
+!                                                                            
+  ! Copyright (C) 2010-2016 Samuel Ponce', Roxana Margine, Carla Verdi, Feliciano Giustino 
+  ! Copyright (C) 2007-2009 Jesse Noffsinger, Brad Malone, Feliciano Giustino  
+  !                                                                            
+  ! This file is distributed under the terms of the GNU General Public         
+  ! License. See the file `LICENSE' in the root directory of the               
+  ! present distribution, or http://www.gnu.org/copyleft.gpl.txt .             
+  !                                                                            
+  ! Adapted from flib/hpsort_eps
+  !---------------------------------------------------------------------
+  subroutine hpsort_eps_epw (n, ra, ind, eps)
+  !---------------------------------------------------------------------
+  ! sort an array ra(1:n) into ascending order using heapsort algorithm,
+  ! and considering two elements being equal if their values differ
+  ! for less than "eps".
+  ! n is input, ra is replaced on output by its sorted rearrangement.
+  ! create an index table (ind) by making an exchange in the index array
+  ! whenever an exchange is made on the sorted data array (ra).
+  ! in case of equal values in the data array (ra) the values in the
+  ! index array (ind) are used to order the entries.
+  ! if on input ind(1)  = 0 then indices are initialized in the routine,
+  ! if on input ind(1) != 0 then indices are assumed to have been
+  !                initialized before entering the routine and these
+  !                indices are carried around during the sorting process
+  !
+  ! no work space needed !
+  ! free us from machine-dependent sorting-routines !
+  !
+  ! adapted from Numerical Recipes pg. 329 (new edition)
+  !
+  !use kinds, ONLY : DP
+  implicit none  
+  !-input/output variables
+  integer(IntKi), intent(in)    :: n  
+  real(ReKi), intent(in)        :: eps
+  integer(IntKi)                :: ind (n)  
+  real(ReKi)                    :: ra (n)
+  !-local variables
+  integer(IntKi)                :: i, ir, j, l, iind  
+  real(ReKi)                    :: rra  
+!
+  ! initialize index array
+  IF (ind (1) .eq.0) then  
+     DO i = 1, n  
+        ind (i) = i  
+     ENDDO
+  ENDIF
+  ! nothing to order
+  IF (n.lt.2) return  
+  ! initialize indices for hiring and retirement-promotion phase
+  l = n / 2 + 1  
+
+  ir = n  
+
+  sorting: do 
+  
+    ! still in hiring phase
+    IF ( l .gt. 1 ) then  
+       l    = l - 1  
+       rra  = ra (l)  
+       iind = ind (l)  
+       ! in retirement-promotion phase.
+    ELSE  
+       ! clear a space at the end of the array
+       rra  = ra (ir)  
+       !
+       iind = ind (ir)  
+       ! retire the top of the heap into it
+       ra (ir) = ra (1)  
+       !
+       ind (ir) = ind (1)  
+       ! decrease the size of the corporation
+       ir = ir - 1  
+       ! done with the last promotion
+       IF ( ir .eq. 1 ) then  
+          ! the least competent worker at all !
+          ra (1)  = rra  
+          !
+          ind (1) = iind  
+          exit sorting  
+       ENDIF
+    ENDIF
+    ! wheter in hiring or promotion phase, we
+    i = l  
+    ! set up to place rra in its proper level
+    j = l + l  
+    !
+    DO while ( j .le. ir )  
+       IF ( j .lt. ir ) then  
+          ! compare to better underling
+          IF ( hslt( ra (j),  ra (j + 1) ) ) then  
+             j = j + 1  
+          !else if ( .not. hslt( ra (j+1),  ra (j) ) ) then
+             ! this means ra(j) == ra(j+1) within tolerance
+           !  if (ind (j) .lt.ind (j + 1) ) j = j + 1
+          ENDIF
+       ENDIF
+       ! demote rra
+       IF ( hslt( rra, ra (j) ) ) then  
+          ra (i) = ra (j)  
+          ind (i) = ind (j)  
+          i = j  
+          j = j + j  
+       !else if ( .not. hslt ( ra(j) , rra ) ) then
+          !this means rra == ra(j) within tolerance
+          ! demote rra
+         ! if (iind.lt.ind (j) ) then
+         !    ra (i) = ra (j)
+         !    ind (i) = ind (j)
+         !    i = j
+         !    j = j + j
+         ! else
+             ! set j to terminate do-while loop
+         !    j = ir + 1
+         ! endif
+          ! this is the right place for rra
+       ELSE
+          ! set j to terminate do-while loop
+          j = ir + 1  
+       ENDIF
+    ENDDO
+    ra (i) = rra  
+    ind (i) = iind  
+
+  END DO sorting    
+contains 
+
+  !  internal function 
+  !  compare two real number and return the result
+
+  logical function hslt( a, b )
+    REAL(ReKi) :: a, b
+    IF( abs(a-b) <  eps ) then
+      hslt = .false.
+    ELSE
+      hslt = ( a < b )
+    end if
+  end function hslt
+
+  !
+end subroutine hpsort_eps_epw
+
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn_IO
