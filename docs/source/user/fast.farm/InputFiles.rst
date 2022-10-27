@@ -437,9 +437,8 @@ model and must be greater than zero.
 Preferably the filter constant should be set as follows:
 
 .. math::  :label: fffc
-    \tau_1=\frac{1.1}{1-1.3 \min(a_\text{avg},0.5)} \frac{R}{U_\infty}
-    , \qquad
-    f_c = \frac{2.4}{\tau_1}
+
+     \tau_1=\frac{1.1}{1-1.3 \operatorname{min}(a_\text{avg}, 0.5)} \frac{R}{U_\infty} , \qquad f_c = \frac{2.4}{\tau_1}
 
 where 
 :math:`\tau_1` is a time scale similar to the one used in the Oye dynamic inflow model and 
