@@ -783,4 +783,4 @@ jobs:
         with:
           name: rtest-FF
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fastfarm
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm
