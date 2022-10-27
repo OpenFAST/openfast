@@ -2097,7 +2097,7 @@ end subroutine userHubMotion_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !> User routine to set hub motion
 subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc, errStat, errMsg)
-   use AeroDyn_IO, only: RtFldMxh
+   use AeroDyn_IO, only: RtAeroMxh
    integer(IntKi)             , intent(in   ) :: nt       !< time step number
    integer(IntKi)             , intent(in   ) :: iWT      !< Wind turbine index
    type(Dvr_SimData),           intent(in   ) :: dvr      !< Driver arr 
@@ -2177,7 +2177,8 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
-   rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtFldMxh )
+   !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
+   rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev
 

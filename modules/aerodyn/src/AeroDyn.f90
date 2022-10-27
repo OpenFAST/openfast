@@ -2463,9 +2463,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
       
    ! local variables
-   real(R8Ki)                              :: x_hat(3)
-   real(R8Ki)                              :: y_hat(3)
-   real(R8Ki)                              :: z_hat(3)
+   !real(R8Ki)                              :: x_hat(3)
+   !real(R8Ki)                              :: y_hat(3)
+   !real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -3519,7 +3519,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                endif
             end do ! j=nodes
          end if
-		 
+
       end if
    end do ! iR rotor
             
