@@ -13,24 +13,11 @@ Thus, be sure to implement each in order so that subsequent line numbers are cor
 OpenFAST v3.3.0 to OpenFAST `dev`
 ----------------------------------
 
-None
-
-
-
-OpenFAST v3.2.0 to OpenFAST v3.3.0
-----------------------------------
-
-============================================= ==== ================= ======================================================================================================================================================================================================
-Added in OpenFAST v3.3.0
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `dev`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
-FAST.Farm                                     9    ModWaveField      2           Mod_WaveField     - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
-FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
-FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
-FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile   -  Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
-FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring       -  Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
-FAST.Farm                                     43   Mod_Wake          1          Mod_Wake          -  Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
 FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
 FAST.Farm                                     68   Swirl             False      Swirl             - Switch to include swirl velocities in wake [only used if Mod_Wake=2 or Mod_Wake=3] (-) (switch)
 FAST.Farm                                     69   k_VortexDecay     0.         k_VortexDecay     - Vortex decay constant for curl (-)
@@ -54,13 +41,29 @@ AeroDyn 15                                         TwrCb             1.0        
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
-AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
 \$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
 
+
+OpenFAST v3.2.0 to OpenFAST v3.3.0
+----------------------------------
+
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `3.3.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField     - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile   -  Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring       -  Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+============================================= ==== ================= ========================================================================================================================================================================================================
 
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
