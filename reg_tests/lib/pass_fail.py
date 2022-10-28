@@ -18,7 +18,7 @@
     This library provides tools for comparing a test solution to a baseline solution
     for any structured output file generated within the OpenFAST framework.
 """
-import sys, os
+import sys
 import numpy as np
 from numpy import linalg as LA
 from fast_io import load_output
@@ -30,12 +30,38 @@ def readFASTOut(fastoutput):
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def passRegressionTest(norm, tolerance):
-    if np.any(np.isnan(norm)):
-        return False
-    if np.any(np.isinf(norm)):
-        return False
-    return True if max(norm) < tolerance else False
+def passing_channels(test, baseline, RTOL_MAGNITUDE, ATOL_MAGNITUDE) -> np.ndarray:
+    """
+    test, baseline: arrays containing the results from OpenFAST in the following format
+        [
+            channels,
+            data
+        ]
+    So that test[0,:] are the data for the 0th channel and test[:,0] are the 0th entry in each channel.
+    """
+
+    NUMEPS = 1e-12
+    ATOL_MIN = 1e-6
+
+    n_channels = np.shape(test)[0]
+    where_close = np.zeros_like(test, dtype=bool)
+
+    rtol = 10**(-1 * RTOL_MAGNITUDE)
+    for i in range(n_channels):
+        baseline_offset = baseline[i] - np.min(baseline[i])
+        b_order_of_magnitude = np.floor( np.log10( baseline_offset + NUMEPS ) )
+        # atol = 10**(-1 * ATOL_MAGNITUDE)
+        # atol = max( atol, 1e-6 )
+        # atol[atol < ATOL_MIN] = ATOL_MIN
+        atol = 10**(max(b_order_of_magnitude) - ATOL_MAGNITUDE)
+        atol = max(atol, ATOL_MIN)
+        where_close[i] = np.isclose( test[i], baseline[i], atol=atol, rtol=rtol )
+
+    where_not_nan = ~np.isnan(test)
+    where_not_inf = ~np.isinf(test)
+
+    passing_channels = np.all(where_close * where_not_nan * where_not_inf, axis=1)
+    return passing_channels
 
 def maxnorm(data, axis=0):
     return LA.norm(data, np.inf, axis=axis)
@@ -69,13 +95,25 @@ def calculate_max_norm(testData, baselineData):
     return maxnorm(abs(testData - baselineData))
     
 def calculateNorms(test_data, baseline_data):
-    relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
-    max_norm = calculate_max_norm(test_data, baseline_data)
-    relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
-    results = np.hstack((
-        relative_norm.reshape(-1, 1), relative_l2_norm.reshape(-1, 1),
-        max_norm.reshape(-1, 1)
-    ))
+    if test_data.size != baseline_data.size:
+       # print("Calculate Norms size(testdata)={}".format(test_data.size)) 
+       # print("Calculate Norms size(baseline)={}".format(baseline_data.size))
+       relative_norm = np.nan * calculate_max_norm_over_range(test_data, test_data)
+       max_norm = relative_norm
+       relative_l2_norm = relative_norm
+    else:
+       relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
+       max_norm = calculate_max_norm(test_data, baseline_data)
+       relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
+
+    results = np.stack(
+        (
+            relative_norm,
+            relative_l2_norm,
+            max_norm
+        ),
+        axis=1
+    )
     return results
     
 if __name__=="__main__":
@@ -84,22 +122,18 @@ if __name__=="__main__":
 
     testSolution = sys.argv[1]
     baselineSolution = sys.argv[2]
-    tolerance = sys.argv[3]
-
-    try:
-        tolerance = float(tolerance)
-    except ValueError:
-        rtl.exitWithError("Error: invalid tolerance given, {}".format(tolerance))
+    tolerance = float(sys.argv[3])
 
     rtl.validateFileOrExit(testSolution)
     rtl.validateFileOrExit(baselineSolution)
 
     testData, testInfo, testPack = readFASTOut(testSolution)
-    baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
-    
-    normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
-    if passRegressionTest(normalizedNorm, tolerance):
-        sys.exit(0)
-    else:
-        dict1, info1, pack1 = readFASTOut(testSolution)
-        sys.exit(1)
+    baselineData, baselineInfo, _ = readFASTOut(baselineSolution)
+    relative_norm, normalized_norm, max_norm = calculateNorms(testData, baselineData)
+    print(relative_norm)
+    print(normalized_norm)
+    print(max_norm)
+
+    # if not passRegressionTest(normalizedNorm, tolerance):
+    #     dict1, info1, pack1 = readFASTOut(testSolution)
+    #     sys.exit(1)

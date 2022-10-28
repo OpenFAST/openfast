@@ -194,6 +194,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cl_Static      !< Coefficient lift,   excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cd_Static      !< Coefficient drag.   excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cm_Static      !< Coefficient moment, excluding unsteady aero effects [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cpmin      !< Coefficient minimum pressure, excluding unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cl      !< Coefficient lift,   including unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cd      !< Coefficient drag,   including unsteady aero effects [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BN_Cm      !< Coefficient moment, including unsteady aero effects [-]
@@ -406,15 +407,27 @@ ENDIF
     DstGridOutTypeData%tLastOutput = SrcGridOutTypeData%tLastOutput
  END SUBROUTINE FVW_CopyGridOutType
 
- SUBROUTINE FVW_DestroyGridOutType( GridOutTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyGridOutType( GridOutTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(GridOutType), INTENT(INOUT) :: GridOutTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyGridOutType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyGridOutType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(GridOutTypeData%uGrid)) THEN
   DEALLOCATE(GridOutTypeData%uGrid)
 ENDIF
@@ -807,15 +820,27 @@ ENDIF
     DstT_SgmtData%nActP = SrcT_SgmtData%nActP
  END SUBROUTINE FVW_CopyT_Sgmt
 
- SUBROUTINE FVW_DestroyT_Sgmt( T_SgmtData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyT_Sgmt( T_SgmtData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(T_Sgmt), INTENT(INOUT) :: T_SgmtData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyT_Sgmt'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyT_Sgmt'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(T_SgmtData%Points)) THEN
   DEALLOCATE(T_SgmtData%Points)
 ENDIF
@@ -1205,15 +1230,27 @@ IF (ALLOCATED(SrcWng_ParameterTypeData%PrescribedCirculation)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_ParameterType
 
- SUBROUTINE FVW_DestroyWng_ParameterType( Wng_ParameterTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_ParameterType( Wng_ParameterTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_ParameterType), INTENT(INOUT) :: Wng_ParameterTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ParameterType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ParameterType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_ParameterTypeData%chord_LL)) THEN
   DEALLOCATE(Wng_ParameterTypeData%chord_LL)
 ENDIF
@@ -1666,18 +1703,31 @@ ENDIF
     DstParamData%Induction = SrcParamData%Induction
  END SUBROUTINE FVW_CopyParam
 
- SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%W)) THEN
 DO i1 = LBOUND(ParamData%W,1), UBOUND(ParamData%W,1)
-  CALL FVW_Destroywng_parametertype( ParamData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_parametertype( ParamData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%W)
 ENDIF
@@ -2282,15 +2332,27 @@ IF (ALLOCATED(SrcWng_ContinuousStateTypeData%r_FW)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_ContinuousStateType
 
- SUBROUTINE FVW_DestroyWng_ContinuousStateType( Wng_ContinuousStateTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_ContinuousStateType( Wng_ContinuousStateTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_ContinuousStateType), INTENT(INOUT) :: Wng_ContinuousStateTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ContinuousStateType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ContinuousStateType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_ContinuousStateTypeData%Gamma_NW)) THEN
   DEALLOCATE(Wng_ContinuousStateTypeData%Gamma_NW)
 ENDIF
@@ -2783,24 +2845,38 @@ IF (ALLOCATED(SrcContStateData%UA)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyContState
 
- SUBROUTINE FVW_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%W)) THEN
 DO i1 = LBOUND(ContStateData%W,1), UBOUND(ContStateData%W,1)
-  CALL FVW_Destroywng_continuousstatetype( ContStateData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_continuousstatetype( ContStateData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%W)
 ENDIF
 IF (ALLOCATED(ContStateData%UA)) THEN
 DO i1 = LBOUND(ContStateData%UA,1), UBOUND(ContStateData%UA,1)
-  CALL UA_DestroyContState( ContStateData%UA(i1), ErrStat, ErrMsg )
+  CALL UA_DestroyContState( ContStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%UA)
 ENDIF
@@ -3172,15 +3248,27 @@ IF (ALLOCATED(SrcWng_OutputTypeData%Vind)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_OutputType
 
- SUBROUTINE FVW_DestroyWng_OutputType( Wng_OutputTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_OutputType( Wng_OutputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_OutputType), INTENT(INOUT) :: Wng_OutputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_OutputType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_OutputType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_OutputTypeData%Vind)) THEN
   DEALLOCATE(Wng_OutputTypeData%Vind)
 ENDIF
@@ -3361,18 +3449,31 @@ IF (ALLOCATED(SrcOutputData%W)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyOutput
 
- SUBROUTINE FVW_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%W)) THEN
 DO i1 = LBOUND(OutputData%W,1), UBOUND(OutputData%W,1)
-  CALL FVW_Destroywng_outputtype( OutputData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_outputtype( OutputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%W)
 ENDIF
@@ -4070,6 +4171,18 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cm_Static)) THEN
   END IF
     DstWng_MiscVarTypeData%BN_Cm_Static = SrcWng_MiscVarTypeData%BN_Cm_Static
 ENDIF
+IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cpmin)) THEN
+  i1_l = LBOUND(SrcWng_MiscVarTypeData%BN_Cpmin,1)
+  i1_u = UBOUND(SrcWng_MiscVarTypeData%BN_Cpmin,1)
+  IF (.NOT. ALLOCATED(DstWng_MiscVarTypeData%BN_Cpmin)) THEN 
+    ALLOCATE(DstWng_MiscVarTypeData%BN_Cpmin(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWng_MiscVarTypeData%BN_Cpmin.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstWng_MiscVarTypeData%BN_Cpmin = SrcWng_MiscVarTypeData%BN_Cpmin
+ENDIF
 IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cl)) THEN
   i1_l = LBOUND(SrcWng_MiscVarTypeData%BN_Cl,1)
   i1_u = UBOUND(SrcWng_MiscVarTypeData%BN_Cl,1)
@@ -4132,15 +4245,27 @@ IF (ALLOCATED(SrcWng_MiscVarTypeData%BN_Cy)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_MiscVarType
 
- SUBROUTINE FVW_DestroyWng_MiscVarType( Wng_MiscVarTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_MiscVarType( Wng_MiscVarTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_MiscVarType), INTENT(INOUT) :: Wng_MiscVarTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_MiscVarType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_MiscVarType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_MiscVarTypeData%LE)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%LE)
 ENDIF
@@ -4207,14 +4332,18 @@ ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%u_UA)) THEN
 DO i2 = LBOUND(Wng_MiscVarTypeData%u_UA,2), UBOUND(Wng_MiscVarTypeData%u_UA,2)
 DO i1 = LBOUND(Wng_MiscVarTypeData%u_UA,1), UBOUND(Wng_MiscVarTypeData%u_UA,1)
-  CALL UA_DestroyInput( Wng_MiscVarTypeData%u_UA(i1,i2), ErrStat, ErrMsg )
+  CALL UA_DestroyInput( Wng_MiscVarTypeData%u_UA(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
   DEALLOCATE(Wng_MiscVarTypeData%u_UA)
 ENDIF
-  CALL UA_DestroyMisc( Wng_MiscVarTypeData%m_UA, ErrStat, ErrMsg )
-  CALL UA_DestroyOutput( Wng_MiscVarTypeData%y_UA, ErrStat, ErrMsg )
-  CALL UA_DestroyParam( Wng_MiscVarTypeData%p_UA, ErrStat, ErrMsg )
+  CALL UA_DestroyMisc( Wng_MiscVarTypeData%m_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL UA_DestroyOutput( Wng_MiscVarTypeData%y_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL UA_DestroyParam( Wng_MiscVarTypeData%p_UA, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(Wng_MiscVarTypeData%Vind_LL)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%Vind_LL)
 ENDIF
@@ -4247,6 +4376,9 @@ IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cd_Static)) THEN
 ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cm_Static)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%BN_Cm_Static)
+ENDIF
+IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cpmin)) THEN
+  DEALLOCATE(Wng_MiscVarTypeData%BN_Cpmin)
 ENDIF
 IF (ALLOCATED(Wng_MiscVarTypeData%BN_Cl)) THEN
   DEALLOCATE(Wng_MiscVarTypeData%BN_Cl)
@@ -4538,6 +4670,11 @@ ENDIF
   IF ( ALLOCATED(InData%BN_Cm_Static) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! BN_Cm_Static upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%BN_Cm_Static)  ! BN_Cm_Static
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BN_Cpmin allocated yes/no
+  IF ( ALLOCATED(InData%BN_Cpmin) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BN_Cpmin upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%BN_Cpmin)  ! BN_Cpmin
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! BN_Cl allocated yes/no
   IF ( ALLOCATED(InData%BN_Cl) ) THEN
@@ -5317,6 +5454,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%BN_Cm_Static,1), UBOUND(InData%BN_Cm_Static,1)
         ReKiBuf(Re_Xferred) = InData%BN_Cm_Static(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BN_Cpmin) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BN_Cpmin,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BN_Cpmin,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BN_Cpmin,1), UBOUND(InData%BN_Cpmin,1)
+        ReKiBuf(Re_Xferred) = InData%BN_Cpmin(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -6302,6 +6454,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BN_Cpmin not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BN_Cpmin)) DEALLOCATE(OutData%BN_Cpmin)
+    ALLOCATE(OutData%BN_Cpmin(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BN_Cpmin.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BN_Cpmin,1), UBOUND(OutData%BN_Cpmin,1)
+        OutData%BN_Cpmin(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BN_Cl not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -6509,28 +6679,45 @@ IF (ALLOCATED(SrcMiscData%GridOutputs)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyMisc
 
- SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%W)) THEN
 DO i1 = LBOUND(MiscData%W,1), UBOUND(MiscData%W,1)
-  CALL FVW_Destroywng_miscvartype( MiscData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_miscvartype( MiscData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%W)
 ENDIF
 IF (ALLOCATED(MiscData%r_wind)) THEN
   DEALLOCATE(MiscData%r_wind)
 ENDIF
-  CALL FVW_DestroyContState( MiscData%dxdt, ErrStat, ErrMsg )
-  CALL FVW_DestroyContState( MiscData%x1, ErrStat, ErrMsg )
-  CALL FVW_DestroyContState( MiscData%x2, ErrStat, ErrMsg )
-  CALL FVW_Destroyt_sgmt( MiscData%Sgmt, ErrStat, ErrMsg )
+  CALL FVW_DestroyContState( MiscData%dxdt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FVW_DestroyContState( MiscData%x1, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FVW_DestroyContState( MiscData%x2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL FVW_Destroyt_sgmt( MiscData%Sgmt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%CPs)) THEN
   DEALLOCATE(MiscData%CPs)
 ENDIF
@@ -6539,7 +6726,8 @@ IF (ALLOCATED(MiscData%Uind)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%GridOutputs)) THEN
 DO i1 = LBOUND(MiscData%GridOutputs,1), UBOUND(MiscData%GridOutputs,1)
-  CALL FVW_Destroygridouttype( MiscData%GridOutputs(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroygridouttype( MiscData%GridOutputs(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%GridOutputs)
 ENDIF
@@ -7439,15 +7627,27 @@ ENDIF
     DstRot_InputTypeData%HubPosition = SrcRot_InputTypeData%HubPosition
  END SUBROUTINE FVW_CopyRot_InputType
 
- SUBROUTINE FVW_DestroyRot_InputType( Rot_InputTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyRot_InputType( Rot_InputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Rot_InputType), INTENT(INOUT) :: Rot_InputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyRot_InputType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyRot_InputType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FVW_DestroyRot_InputType
 
  SUBROUTINE FVW_PackRot_InputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -7616,15 +7816,27 @@ IF (ALLOCATED(SrcWng_InputTypeData%omega_z)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_InputType
 
- SUBROUTINE FVW_DestroyWng_InputType( Wng_InputTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_InputType( Wng_InputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_InputType), INTENT(INOUT) :: Wng_InputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_InputType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_InputType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_InputTypeData%Vwnd_LL)) THEN
   DEALLOCATE(Wng_InputTypeData%Vwnd_LL)
 ENDIF
@@ -7893,30 +8105,45 @@ IF (ALLOCATED(SrcInputData%V_wind)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyInput
 
- SUBROUTINE FVW_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%rotors)) THEN
 DO i1 = LBOUND(InputData%rotors,1), UBOUND(InputData%rotors,1)
-  CALL FVW_Destroyrot_inputtype( InputData%rotors(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroyrot_inputtype( InputData%rotors(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%rotors)
 ENDIF
 IF (ALLOCATED(InputData%W)) THEN
 DO i1 = LBOUND(InputData%W,1), UBOUND(InputData%W,1)
-  CALL FVW_Destroywng_inputtype( InputData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_inputtype( InputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%W)
 ENDIF
 IF (ALLOCATED(InputData%WingsMesh)) THEN
 DO i1 = LBOUND(InputData%WingsMesh,1), UBOUND(InputData%WingsMesh,1)
-  CALL MeshDestroy( InputData%WingsMesh(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%WingsMesh(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%WingsMesh)
 ENDIF
@@ -8462,18 +8689,31 @@ IF (ALLOCATED(SrcDiscStateData%UA)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyDiscState
 
- SUBROUTINE FVW_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DiscStateData%UA)) THEN
 DO i1 = LBOUND(DiscStateData%UA,1), UBOUND(DiscStateData%UA,1)
-  CALL UA_DestroyDiscState( DiscStateData%UA(i1), ErrStat, ErrMsg )
+  CALL UA_DestroyDiscState( DiscStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%UA)
 ENDIF
@@ -8727,15 +8967,27 @@ IF (ALLOCATED(SrcWng_ConstraintStateTypeData%Gamma_LL)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyWng_ConstraintStateType
 
- SUBROUTINE FVW_DestroyWng_ConstraintStateType( Wng_ConstraintStateTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_ConstraintStateType( Wng_ConstraintStateTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_ConstraintStateType), INTENT(INOUT) :: Wng_ConstraintStateTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ConstraintStateType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_ConstraintStateType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_ConstraintStateTypeData%Gamma_LL)) THEN
   DEALLOCATE(Wng_ConstraintStateTypeData%Gamma_LL)
 ENDIF
@@ -8906,18 +9158,31 @@ ENDIF
     DstConstrStateData%residual = SrcConstrStateData%residual
  END SUBROUTINE FVW_CopyConstrState
 
- SUBROUTINE FVW_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ConstrStateData%W)) THEN
 DO i1 = LBOUND(ConstrStateData%W,1), UBOUND(ConstrStateData%W,1)
-  CALL FVW_Destroywng_constraintstatetype( ConstrStateData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_constraintstatetype( ConstrStateData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%W)
 ENDIF
@@ -9176,18 +9441,31 @@ IF (ALLOCATED(SrcOtherStateData%UA)) THEN
 ENDIF
  END SUBROUTINE FVW_CopyOtherState
 
- SUBROUTINE FVW_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OtherStateData%UA)) THEN
 DO i1 = LBOUND(OtherStateData%UA,1), UBOUND(OtherStateData%UA,1)
-  CALL UA_DestroyOtherState( OtherStateData%UA(i1), ErrStat, ErrMsg )
+  CALL UA_DestroyOtherState( OtherStateData%UA(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%UA)
 ENDIF
@@ -9471,15 +9749,27 @@ ENDIF
     DstWng_InitInputTypeData%UAOff_outerNode = SrcWng_InitInputTypeData%UAOff_outerNode
  END SUBROUTINE FVW_CopyWng_InitInputType
 
- SUBROUTINE FVW_DestroyWng_InitInputType( Wng_InitInputTypeData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyWng_InitInputType( Wng_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wng_InitInputType), INTENT(INOUT) :: Wng_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_InitInputType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyWng_InitInputType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(Wng_InitInputTypeData%AFindx)) THEN
   DEALLOCATE(Wng_InitInputTypeData%AFindx)
 ENDIF
@@ -9783,24 +10073,38 @@ ENDIF
     DstInitInputData%SumPrint = SrcInitInputData%SumPrint
  END SUBROUTINE FVW_CopyInitInput
 
- SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%W)) THEN
 DO i1 = LBOUND(InitInputData%W,1), UBOUND(InitInputData%W,1)
-  CALL FVW_Destroywng_initinputtype( InitInputData%W(i1), ErrStat, ErrMsg )
+  CALL FVW_Destroywng_initinputtype( InitInputData%W(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%W)
 ENDIF
 IF (ALLOCATED(InitInputData%WingsMesh)) THEN
 DO i1 = LBOUND(InitInputData%WingsMesh,1), UBOUND(InitInputData%WingsMesh,1)
-  CALL MeshDestroy( InitInputData%WingsMesh(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( InitInputData%WingsMesh(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%WingsMesh)
 ENDIF
@@ -10245,15 +10549,27 @@ ENDIF
     DstInputFileData%VTKCoord = SrcInputFileData%VTKCoord
  END SUBROUTINE FVW_CopyInputFile
 
- SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInputFile'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInputFile'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FVW_DestroyInputFile
 
  SUBROUTINE FVW_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10524,15 +10840,27 @@ ENDIF
     DstInitOutputData%Null = SrcInitOutputData%Null
  END SUBROUTINE FVW_CopyInitOutput
 
- SUBROUTINE FVW_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE FVW_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FVW_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FVW_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FVW_DestroyInitOutput
 
  SUBROUTINE FVW_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

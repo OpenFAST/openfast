@@ -46,8 +46,8 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
 ----- Turbine(1) Motion [used only when AnalysisType=1] ---------------------------------
 0               BaseMotionType(1)       - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
 1               DegreeOfFreedom(1)      - {1:xt, 2:yt, 3:zt, 4:theta_xt, 5:theta_yt, 6:theta_zt} [used only when BaseMotionType=1] (flag)
-0               Amplitude(1)            - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
-0               Frequency(1)            - Frequency of sinusoidal motion   [used only when BaseMotionType=1]
+0               Amplitude(1)            - Amplitude of sinusoidal motion   [used only when BaseMotionType=1] (m or rad)
+0               Frequency(1)            - Frequency of sinusoidal motion   [used only when BaseMotionType=1] (Hz)
 "unused"        BaseMotionFileName(1)   - Filename containing arbitrary base motion (19 columns: Time, x, y, z, theta_x, ..., alpha_z)  [used only when BaseMotionType=2]
 0               NacMotionType(1)        - Type of motion prescribed for the nacelle {0: fixed yaw, 1: time varying yaw angle} (flag)
 0               NacYaw(1)               - Yaw angle (about z_t) of the nacelle [user only when NacMotionType=0] (deg)
@@ -75,8 +75,8 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
 ----- Turbine(2) Motion [used only when AnalysisType=1] ---------------------------------
 0               BaseMotionType(2)      - Type of motion prescribed for this base {0: fixed, 1: Sinusoidal motion, 2: arbitrary motion} (flag)
 0               DegreeOfFreedom(2)     - {1:xt, 2:yt, 3:zt, 4:theta_xt, 5:theta_yt, 6:theta_zt} [used only when BaseMotionType=1] (flag)
-0.0             Amplitude(2)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1]
-0.0             Frequency(2)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1]
+0.0             Amplitude(2)           - Amplitude of sinusoidal motion   [used only when BaseMotionType=1] (m or deg)
+0.0             Frequency(2)           - Frequency of sinusoidal motion   [used only when BaseMotionType=1] (Hz)
 "unused"        BaseMotionFileName(2)  - Filename containing arbitrary base motion (29 columns: Time, x, y, z, theta_x, ..., alpha_z)  [used only when BaseMotionType=2]
 0               NacYaw(2)       - Yaw angle (about z_t) of the nacelle [user only when NacMotionType=0] (deg)
 6               RotSpeed(2)     - Rotational speed of rotor in rotor coordinates [used only when RotorMotionType=0] (rpm)
@@ -86,10 +86,11 @@ True            HAWTprojection(1)      - True if turbine is a horizontal axis tu
 ----- Combined-Case Analysis [used only when AnalysisType=3, numTurbines=1] -------------
           0  NumCases     - Number of cases to run
 HWndSpeed    PLExp       RotSpd       Pitch        Yaw     dT      Tmax  DOF  Amplitude Frequency  
-(m/s)        (-)          (rpm)        (deg)        (deg)   (s)     (s)    (-)     (-)     (Hz)
+(m/s)        (-)          (rpm)        (deg)        (deg)   (s)     (s)    (-)  (m or rad) (Hz)
 ----- Output Settings -------------------------------------------------------------------
 "ES15.8E2"  OutFmt        - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
 2           OutFileFmt    - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
-0           WrVTK         - VTK visualization data output: (switch) {0=none; 1=animation}
+0           WrVTK         - VTK visualization data output: (switch) {0=none; 1=init; 2=animation}
+1           WrVTK_Type    - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
 2           VTKHubRad     - HubRadius for VTK visualization (m)
 -7,-4,0,21,8,8    VTKNacDim     - Nacelle Dimension for VTK visualization x0,y0,z0,Lx,Ly,Lz (m)

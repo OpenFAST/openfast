@@ -10,10 +10,66 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.2.0 to OpenFAST `dev`
+OpenFAST v3.3.0 to OpenFAST `dev`
 ----------------------------------
 
 None
+
+
+
+OpenFAST v3.2.0 to OpenFAST v3.3.0
+----------------------------------
+
+============================================= ==== ================= ======================================================================================================================================================================================================
+Added in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ======================================================================================================================================================================================================
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type         - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField      Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring  Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile     Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring         Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+============================================= ==== ================= ======================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    na                Name     Diam      MassDen       EA    BA/-zeta    EI    Cd      Ca     CdAx   CaAx
+MoorDyn\&                                     6    na                (-)       (m)      (kg/m)        (N)    (N-s/-)    (-)   (-)     (-)    (-)    (-)
+MoorDyn\&                                     7    na                main     0.0766    113.35     7.536E8     -1.0      0    2.0     0.8    0.4   0.25
+MoorDyn\&                                     8\*  na                ---------------------- POINTS --------------------------------
+MoorDyn\&                                     9\*  na                ID     Attachment   X          Y         Z      M      V       CdA   CA
+MoorDyn\&                                     10\* na                (-)    (-)         (m)        (m)       (m)    (kg)   (m^3)   (m^2)  (-)
+MoorDyn\&                                     11\* na                1      Fixed     418.8      725.383   -200.0     0      0       0     0
+MoorDyn\&                                     17\* na                ---------------------- LINES --------------------------------------
+MoorDyn\&                                     18\* na                ID      LineType   AttachA   AttachB  UnstrLen  NumSegs   Outputs
+MoorDyn\&                                     19\* na                (-)       (-)       (-)       (-)         (m)      (-)         (-)
+MoorDyn\&                                     20\* na                1         main       1         4        835.35      20          -
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    NTypes            1        NTypes    - number of LineTypes
+MoorDyn\&                                     10\* NConnects         6        NConnects - number of connections including anchors and fairleads
+MoorDyn\&                                     20\* NLines            3        NLines    - number of line objects
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
 
 
 
@@ -303,12 +359,22 @@ Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                       Line    Flag Name / section                              Example Value
 ============================ ====== ================================================ ====================================================================================
-MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table  .. code-block:: none
-
-                                                                                        Line    LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Outputs  CtrlChan
-                                                                                        (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
-                                                                                        1         main     835.35      20        1         4         -        0
+MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table    
 ============================ ====== ================================================ ====================================================================================
+
+============== ====== =============== ============== =============================================================================================================================================================================
+Renamed in OpenFAST v2.5.0
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module          Line   Previous Name   New Name       Example Value
+============== ====== =============== ============== =============================================================================================================================================================================
+InflowWind      17    Filename         FileName_Uni   "Shr11_30.wnd"    FileName_Uni   - Filename of time series data for uniform wind field.      (-)
+InflowWind      18    RefHt            RefHt_Uni      90                RefHt_Uni      - Reference height for horizontal wind speed                (m)
+InflowWind      21    Filename         FileName_BTS   "unused"          FileName_BTS   - Name of the Full field wind file to use (.bts)            (-)
+InflowWind      23    Filename         FileNameRoot   "unused"          FileNameRoot   - WindType=4: Rootname of the full-field wind file to use (.wnd, .sum); WindType=7: name of the intermediate file with wind scaling values
+InflowWind      35    RefHt            RefHt_Hawc     90                RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid  (m)
+InflowWind      47    PLExp            PLExp_Hawc     0.2               PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)
+InflowWind      49    InitPosition(x)  XOffset        0                 XOffset        - Initial offset in +x direction (shift of wind box)
+============== ====== =============== ============== =============================================================================================================================================================================
 
 
 
@@ -343,11 +409,6 @@ Modified in OpenFAST v2.4.0
  Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
 ============== ==== ================== ======================================================================================================================================================= =========================
 AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
-InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
-InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
-InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
-InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
-InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.

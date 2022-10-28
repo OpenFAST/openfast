@@ -20,7 +20,12 @@ endif()
 
 set(MOORDYN_LIBS_SOURCES
   src/MoorDyn.f90
+  src/MoorDyn_Body.f90
   src/MoorDyn_IO.f90
+  src/MoorDyn_Line.f90
+  src/MoorDyn_Misc.f90
+  src/MoorDyn_Point.f90
+  src/MoorDyn_Rod.f90
   src/MoorDyn_Types.f90
 )
 
@@ -41,3 +46,4 @@ install(TARGETS moordyn_driver
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
