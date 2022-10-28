@@ -1475,8 +1475,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,SiKi)
 
             ! Calculate the normalization constant for the wave spreading.
-         WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_SiKi))/               &
-                                (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_SiKi))
+         IF ( InitInp%WaveDirSpread < 25.0_SiKi ) THEN ! Use exact expression
+            WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_SiKi))/               &
+                                   (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_SiKi))
+         ELSE ! Use asymptotic approximation for large argument
+            WvSpreadCos2SConst   = sqrt(Pi*InitInp%WaveDirSpread)*(1.0_SiKi+0.125_SiKi/InitInp%WaveDirSpread)/InitInp%WaveDirRange
+         ENDIF
 
             ! Allocate arrays to use for storing the intermediate values
          ALLOCATE( WvSpreadCos2SArr(0:WvSpreadNDir),  STAT=ErrStatTmp )
