@@ -169,8 +169,9 @@ real(ReKi) function jinc ( x )
 
 end function jinc
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine
-!!
+!> Loop over the entire grid of low resolution ambient wind data to compute:
+!!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+!! TODO explain algorithm
 subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
@@ -271,15 +272,13 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      ! Reset interpolation counter
                   ILo = 0
                   np1 = np + 1
-                     ! Construct the endcaps of the current wake plane volume
+                  ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
                   ! H Long: again, replace intrinsic dot_product
                   !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
                   tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,np1,nt))
                   tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,np1,nt))
                   tmp_z = u%xhat_plane(3,np1,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,np1,nt))
-
-
                   x_end_plane = tmp_x + tmp_y + tmp_z
 
                      ! test if the point is within the endcaps of the wake volume
@@ -300,8 +299,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         p_tmp_plane = delta*m%pvec_ce(:,np,nt) + deltad*m%pvec_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
                      end if
 
-
-
+                     ! Vector between current grid point and plane position
                      r_vec_plane = p%Grid_Low(:,nXYZ_low) - p_tmp_plane
                      r_tmp_plane = TwoNorm( r_vec_plane )
 
@@ -332,13 +330,16 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
         end do      ! do nt = 1,p%NumTurbines
 
         if (n_wake > 0) then
+           ! Normalize xhatBar to unit vector
            tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
            if ( EqualRealNos(tmp_xhatBar_plane, 0.0_ReKi) ) then
               xhatBar_plane = 0.0_ReKi
            else
               xhatBar_plane = xhatBar_plane / tmp_xhatBar_plane
            end if
-
+           ! Compute average contributions
+           ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
+           ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
            Vx_wake_tmp   = 0.0_ReKi
            Vr_wake_tmp   = 0.0_ReKi
            do nw = 1,n_wake
@@ -347,11 +348,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
               Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
               Vr_wake_tmp = Vr_wake_tmp + Vr_term
            end do
-                  ! [I - XX']V = V - (V dot X)X
+           ! [I - XX']V = V - (V dot X)X
            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
            m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
         end if  ! (n_wake > 0)
-   end do
+   end do ! i, loop NumGrid_low points
    !      end do ! do nx_low=0, p%nX_low-1
    !   end do    ! do ny_low=0, p%nY_low-1
    !end do       ! do nz_low=0, p%nZ_low-1
@@ -494,8 +495,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
          end if
 
-      end do
-   end do
+      end do ! np, tmpPln
+   end do ! nt, turbines
 
 !#ifdef _OPENMP  
 !   tm2 =  omp_get_wtime() 
@@ -512,8 +513,9 @@ end subroutine LowResGridCalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine
-!!
+!> Loop over each point of the high resolution ambient wind to compute:
+!!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+!! TODO explain algorithm
 subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n           !< Current high-res, simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
@@ -547,7 +549,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
 
-
    maxPln =  min(n,p%NumPlanes-2)
 
       ! We only need one high res file for that last simulation time
@@ -558,9 +559,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    end if
 
 
-      ! Loop over the entire grid of low resolution ambient wind data to compute:
+      ! Loop over the entire grid of high resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
-
+      ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
+      ! instead of grid > turbines > planes
+      ! TODO explain 
 
    do nt = 1,p%NumTurbines
       nXYZ_high = 0
@@ -568,6 +571,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             ! set the disturbed flow equal to the ambient flow for this time step
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
+      ! Loop over all points of the high resolution ambiend wind
       do nz_high=0, p%nZ_high-1
          do ny_high=0, p%nY_high-1
             do nx_high=0, p%nX_high-1
@@ -586,36 +590,40 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                            ! Reset interpolation counter
                         ILo = 0
 
-                           ! Construct the endcaps of the current wake plane volume
+                        ! Construct the endcaps of the current wake plane volume
                         x_start_plane = x_end_plane
                         x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
 
-                           ! test if the point is within the endcaps of the wake volume
+                        ! test if the point is within the endcaps of the wake volume
                         if ( ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) .or. &
                              ( ( x_start_plane <= 0.0_ReKi ) .and. ( x_end_plane > 0.0_ReKi ) )        ) then
 
+                           ! Plane interpolation factor
                            if ( EqualRealNos( x_start_plane, x_end_plane ) ) then
                               delta = 0.5_ReKi
                            else
                               delta = x_start_plane / ( x_start_plane - x_end_plane )
                            end if
                            deltad = (1.0_ReKi - delta)
+
+                           ! Interpolate x_hat, plane normal at grid point 
                            if ( m%parallelFlag(np,nt2) ) then
                               p_tmp_plane = delta*u%p_plane(:,np+1,nt2) + deltad*u%p_plane(:,np,nt2)
                            else
-                              tmp_vec  = delta*m%rhat_e(:,np,nt2) + deltad*m%rhat_s(:,np,nt2)
+                              tmp_vec     = delta*m%rhat_e(:,np,nt2)  + deltad*m%rhat_s(:,np,nt2)
                               p_tmp_plane = delta*m%pvec_ce(:,np,nt2) + deltad*m%pvec_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
                            end if
 
+                           ! Vector between current grid and plane position
                            r_vec_plane = p%Grid_high(:,nXYZ_high,nt) - p_tmp_plane
                            r_tmp_plane = TwoNorm( r_vec_plane )
 
-                              ! test if the point is within radial finite-difference grid
+                           ! test if the point is within radial finite-difference grid
                            if ( r_tmp_plane <= p%r(p%numRadii-1) ) then
 
                               n_wake = n_wake + 1
 
-
+                              ! Store unit vectors for projection
                               if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then
                                  m%rhat_plane(:,n_wake) = 0.0_ReKi
                               else
@@ -630,6 +638,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                               m%xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np+1,nt2) + deltad*u%xhat_plane(:,np,nt2)
                               m%xhat_plane(:,n_wake) = m%xhat_plane(:,n_wake) / TwoNorm(m%xhat_plane(:,n_wake))
+                              ! Average xhat over overlapping wakes
                               xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)
 
                            end if  ! if the point is within radial finite-difference grid
@@ -639,7 +648,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   end if    ! nt /= nt2
                end do        ! nt2 = 1,p%NumTurbines
                if (n_wake > 0) then
-
+                  ! Normalize xhatBar to unit vector
                   tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
                   if ( EqualRealNos(tmp_xhatBar_plane, 0.0_ReKi) ) then
                      xhatBar_plane = 0.0_ReKi
@@ -647,6 +656,9 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      xhatBar_plane = xhatBar_plane / tmp_xhatBar_plane
                   end if
 
+                  ! Compute average contributions
+                  ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
+                  ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
                   Vx_wake_tmp   = 0.0_ReKi
                   Vr_wake_tmp   = 0.0_ReKi
                   do nw = 1,n_wake
@@ -655,12 +667,11 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                      Vr_wake_tmp = Vr_wake_tmp + Vr_term
                   end do
-                     ! [I - XX']V = V - (V dot X)X
+                  ! [I - XX']V = V - (V dot X)X
                   Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
                   do n_hl=0, n_high_low
                      y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
                   end do
-
                end if  ! (n_wake > 0)
 
             end do ! nx_high=0, p%nX_high-1
@@ -753,6 +764,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt_low)
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
+   p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
 
    select case ( p%Mod_Meander )
    case (MeanderMod_Uniform)
@@ -796,6 +808,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    end if
 
 
+   ! Plane grids
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
       if (errStat2 /= 0) then
          call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%r.', errStat, errMsg, RoutineName )
