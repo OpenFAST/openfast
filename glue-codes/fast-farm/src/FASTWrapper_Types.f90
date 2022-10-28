@@ -116,10 +116,13 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< Turbine-dependent commands to the super controller [(various units)]
     REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk      !< Orientation of rotor centerline, normal to disk [-]
     REAL(ReKi)  :: YawErr      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
+    REAL(ReKi)  :: psi_skew      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
+    REAL(ReKi)  :: chi_skew      !< Inflow skew angle [rad]
     REAL(ReKi) , DIMENSION(1:3)  :: p_hub      !< Center position of hub [m]
     REAL(ReKi)  :: D_rotor      !< Rotor diameter [m]
     REAL(ReKi)  :: DiskAvg_Vx_Rel      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Ct      !< Azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Cq      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE FWrap_OutputType
 ! =======================
 CONTAINS
@@ -2683,6 +2686,8 @@ IF (ALLOCATED(SrcOutputData%toSC)) THEN
 ENDIF
     DstOutputData%xHat_Disk = SrcOutputData%xHat_Disk
     DstOutputData%YawErr = SrcOutputData%YawErr
+    DstOutputData%psi_skew = SrcOutputData%psi_skew
+    DstOutputData%chi_skew = SrcOutputData%chi_skew
     DstOutputData%p_hub = SrcOutputData%p_hub
     DstOutputData%D_rotor = SrcOutputData%D_rotor
     DstOutputData%DiskAvg_Vx_Rel = SrcOutputData%DiskAvg_Vx_Rel
@@ -2697,6 +2702,18 @@ IF (ALLOCATED(SrcOutputData%AzimAvg_Ct)) THEN
     END IF
   END IF
     DstOutputData%AzimAvg_Ct = SrcOutputData%AzimAvg_Ct
+ENDIF
+IF (ALLOCATED(SrcOutputData%AzimAvg_Cq)) THEN
+  i1_l = LBOUND(SrcOutputData%AzimAvg_Cq,1)
+  i1_u = UBOUND(SrcOutputData%AzimAvg_Cq,1)
+  IF (.NOT. ALLOCATED(DstOutputData%AzimAvg_Cq)) THEN 
+    ALLOCATE(DstOutputData%AzimAvg_Cq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%AzimAvg_Cq.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%AzimAvg_Cq = SrcOutputData%AzimAvg_Cq
 ENDIF
  END SUBROUTINE FWrap_CopyOutput
 
@@ -2726,6 +2743,9 @@ IF (ALLOCATED(OutputData%toSC)) THEN
 ENDIF
 IF (ALLOCATED(OutputData%AzimAvg_Ct)) THEN
   DEALLOCATE(OutputData%AzimAvg_Ct)
+ENDIF
+IF (ALLOCATED(OutputData%AzimAvg_Cq)) THEN
+  DEALLOCATE(OutputData%AzimAvg_Cq)
 ENDIF
  END SUBROUTINE FWrap_DestroyOutput
 
@@ -2771,6 +2791,8 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%xHat_Disk)  ! xHat_Disk
       Re_BufSz   = Re_BufSz   + 1  ! YawErr
+      Re_BufSz   = Re_BufSz   + 1  ! psi_skew
+      Re_BufSz   = Re_BufSz   + 1  ! chi_skew
       Re_BufSz   = Re_BufSz   + SIZE(InData%p_hub)  ! p_hub
       Re_BufSz   = Re_BufSz   + 1  ! D_rotor
       Re_BufSz   = Re_BufSz   + 1  ! DiskAvg_Vx_Rel
@@ -2778,6 +2800,11 @@ ENDIF
   IF ( ALLOCATED(InData%AzimAvg_Ct) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! AzimAvg_Ct upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AzimAvg_Ct)  ! AzimAvg_Ct
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AzimAvg_Cq allocated yes/no
+  IF ( ALLOCATED(InData%AzimAvg_Cq) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AzimAvg_Cq upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AzimAvg_Cq)  ! AzimAvg_Cq
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2827,6 +2854,10 @@ ENDIF
     END DO
     ReKiBuf(Re_Xferred) = InData%YawErr
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%psi_skew
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%chi_skew
+    Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%p_hub,1), UBOUND(InData%p_hub,1)
       ReKiBuf(Re_Xferred) = InData%p_hub(i1)
       Re_Xferred = Re_Xferred + 1
@@ -2847,6 +2878,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%AzimAvg_Ct,1), UBOUND(InData%AzimAvg_Ct,1)
         ReKiBuf(Re_Xferred) = InData%AzimAvg_Ct(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AzimAvg_Cq) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AzimAvg_Cq,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AzimAvg_Cq,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%AzimAvg_Cq,1), UBOUND(InData%AzimAvg_Cq,1)
+        ReKiBuf(Re_Xferred) = InData%AzimAvg_Cq(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -2905,6 +2951,10 @@ ENDIF
     END DO
     OutData%YawErr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%psi_skew = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%chi_skew = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%p_hub,1)
     i1_u = UBOUND(OutData%p_hub,1)
     DO i1 = LBOUND(OutData%p_hub,1), UBOUND(OutData%p_hub,1)
@@ -2930,6 +2980,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%AzimAvg_Ct,1), UBOUND(OutData%AzimAvg_Ct,1)
         OutData%AzimAvg_Ct(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AzimAvg_Cq not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AzimAvg_Cq)) DEALLOCATE(OutData%AzimAvg_Cq)
+    ALLOCATE(OutData%AzimAvg_Cq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AzimAvg_Cq.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%AzimAvg_Cq,1), UBOUND(OutData%AzimAvg_Cq,1)
+        OutData%AzimAvg_Cq(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

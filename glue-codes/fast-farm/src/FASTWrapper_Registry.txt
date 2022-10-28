@@ -92,8 +92,11 @@ typedef      ^            InputType           SiKi       Vdist_High     {:}{:}{:
 typedef      ^            OutputType          SiKi       toSC              {:}    -      -      "Turbine-dependent commands to the super controller"      "(various units)"
 typedef      ^            OutputType          ReKi       xHat_Disk                 {3}    -      -      "Orientation of rotor centerline, normal to disk"      "-"
 typedef      ^            OutputType          ReKi       YawErr                     -     -      -      "Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane"      "rad"
+typedef      ^            OutputType          ReKi       psi_skew                   -     -      -      "Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined"    rad
+typedef      ^            OutputType          ReKi       chi_skew                   -     -      -      "Inflow skew angle"    rad
 typedef      ^            OutputType          ReKi       p_hub                     {3}    -      -      "Center position of hub"      "m"
 typedef      ^            OutputType          ReKi       D_rotor                    -     -      -      "Rotor diameter"      "m"
 typedef      ^            OutputType          ReKi       DiskAvg_Vx_Rel             -     -      -      "Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      "m/s"
 typedef      ^            OutputType          ReKi       AzimAvg_Ct                {:}    -      -      "Azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      "-"
+typedef      ^            OutputType          ReKi       AzimAvg_Cq                {:}    -      -      "Azimuthally averaged torque coefficient (normal to disk), distributed radially"      "-"
 
