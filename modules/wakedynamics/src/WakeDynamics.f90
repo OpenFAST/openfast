@@ -733,46 +733,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    ! --- Compute eddy viscosity terms
    ! compute eddy-viscosity terms for all planes, NOTE: starting from maxPln+1 here
-      ! create eddy viscosity info for most downstream plane
-   i = maxPln+1
-   lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
-   
-   Vx_wake_min = huge(ReKi)
-   do j = 0,p%NumRadii-1
-      Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
-   end do
-        
-   EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
-   EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
-   do j = 0,p%NumRadii-1      
-      if ( j == 0 ) then
-         m%dvdr(j) =   0.0_ReKi
-      elseif (j <= p%NumRadii-2) then
-         m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
-      else
-         m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
-      end if
-       !     All of the following states are at [n] 
-      m%vt_amb(j,i-1) = EddyTermA
-      m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-      m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
-   end do   
-  
-      ! We are going to update Vx_Wake
-      ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
-   do i = maxPln, 1, -1  
-    
+   do i = maxPln+1, 1, -1  
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
-         ! The following two quantities need to be for the time increments:
-         !           [n+1]             [n]
-         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
-         ! This is equivalent to
-      
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
-      absdx = abs(dx)
-      if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
-      
       Vx_wake_min = huge(ReKi)
       if (p%Mod_Wake == Mod_Wake_Polar) then
          do j = 0,p%NumRadii-1
@@ -799,50 +762,20 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
          end do
       endif
+   end do ! loop on planes i = maxPln+1, 1, -1
    ! --- Update Vx and Vr
-               ! The following two quantities need to be for the time increments:
-         !           [n+1]             [n]
-         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
-         ! This is equivalent to
-      
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
-      absdx = abs(dx)
-      if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
-      
-         ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
-         ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
-      
-      m%dvtdr(0) = 0.0_ReKi
-      m%a(0)     = 0.0_ReKi
-      m%b(0)     = p%dr * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx + m%vt_tot(0,i-1)/p%dr
-      m%c(0)     = -m%vt_tot(0,i-1)/p%dr
-      m%c(p%NumRadii-1) = 0.0_ReKi
-      m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i-1) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i-1) 
-      
-      do j = p%NumRadii-1, 1, -1 
-         
-         if (j <= p%NumRadii-2) then
-            m%dvtdr(j) = ( m%vt_tot(j+1,i-1) - m%vt_tot(j-1,i-1) ) / (2_ReKi*p%dr)
-            m%c(j) = real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi
-            m%d(j) =    ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) &
-                    + (-real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi ) * xd%Vx_wake(j+1,i-1)
-             
-         else
-            m%dvtdr(j) = 0.0_ReKi
-            m%d(j) = ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) 
-                    
-         end if  
-         
-         m%a(j) = -real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1.0_ReKi-2.0_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi 
-         m%b(j) = p%r(j) * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  ) / absdx + real(j,ReKi)*m%vt_tot(j,i-1)/p%dr
-         
-        
-      end do ! j = 1,p%NumRadii-1
-
+   if (p%Mod_Wake == Mod_Wake_Polar) then
+      call updateVelocityPolar()
+   else
+      ! Should never happen
+   endif
+   if (errStat >= AbortErrLev) then
+      call CleanUp()
+      return
+   endif
+ 
    ! --- Update plane positions and filtered states
-      
+   do i = maxPln, 1, -1  
       ! dx  = xd%x_plane(i) - xd%x_plane(i-1)
       
       ! NEW which one for dx? 
@@ -869,27 +802,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
 
-         ! Update Vx_wake and Vr_wake to [n+1]
-      if ( EqualRealNos( dx, 0.0_ReKi ) ) then
-         xd%Vx_wake(:,i) = xd%Vx_wake(:,i-1)
-         xd%Vr_wake(:,i) = xd%Vr_wake(:,i-1)
-      else
-         call ThomasAlgorithm(p%NumRadii, m%a, m%b, m%c, m%d, xd%Vx_wake(:,i), errStat2, errMsg2)
-            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName) 
-            if (errStat >= AbortErrLev) then
-               ! TEST: E16, E17, or E18
-               call Cleanup()
-               return
-            end if  
-         do j = 1,p%NumRadii-1
-               ! NOTE: xd%Vr_wake(0,:) was initialized to 0 and remains 0.
-            xd%Vr_wake(j,i) = real(  j-1,ReKi)*(  xd%Vr_wake(j-1,i)  )/real(j,ReKi) &
-               !  Vx_wake is for the                         [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
-                            - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * absdx )
-         end do  
-      end if
-   end do ! i = 1,min(n+2,p%NumPlanes-1) 
-
+   end do ! loop on planes i = maxPln+1, 1, -1
       
    ! --------------------------------------------------------------------------------
    ! --- Update states at disk-plane (0) to time [n+1] 
@@ -949,6 +862,72 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    call Cleanup()
    
 contains
+
+   subroutine updateVelocityPolar()
+      integer(intKi) :: i,j
+      real(ReKi)  :: dx, absdx
+      ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1] (loop in reversed)
+      do i = maxPln, 1, -1  
+         ! dx is used instead of delta t since plane are updated based on their indices
+         !           [n+1]             [n]
+         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
+         dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+         absdx = abs(dx)
+         if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
+         
+            ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
+            ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
+         
+         m%dvtdr(0) = 0.0_ReKi
+         m%a(0)     = 0.0_ReKi
+         m%b(0)     = p%dr * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx + m%vt_tot(0,i-1)/p%dr
+         m%c(0)     = -m%vt_tot(0,i-1)/p%dr
+         m%c(p%NumRadii-1) = 0.0_ReKi
+         m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i-1) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i-1) 
+         
+         do j = p%NumRadii-1, 1, -1 
+            
+            if (j <= p%NumRadii-2) then
+               m%dvtdr(j) = ( m%vt_tot(j+1,i-1) - m%vt_tot(j-1,i-1) ) / (2_ReKi*p%dr)
+               m%c(j) = real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi
+               m%d(j) =    ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
+                       + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) &
+                       + (-real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi ) * xd%Vx_wake(j+1,i-1)
+                
+            else
+               m%dvtdr(j) = 0.0_ReKi
+               m%d(j) = ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
+                       + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) 
+                       
+            end if  
+            
+            m%a(j) = -real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1.0_ReKi-2.0_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi 
+            m%b(j) = p%r(j) * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  ) / absdx + real(j,ReKi)*m%vt_tot(j,i-1)/p%dr
+           
+         end do ! j = 1,p%NumRadii-1
+      
+         ! Update Vx_wake and Vr_wake to [n+1]
+         if ( EqualRealNos( dx, 0.0_ReKi ) ) then
+            xd%Vx_wake(:,i) = xd%Vx_wake(:,i-1)
+            xd%Vr_wake(:,i) = xd%Vr_wake(:,i-1)
+         else
+            call ThomasAlgorithm(p%NumRadii, m%a, m%b, m%c, m%d, xd%Vx_wake(:,i), errStat2, errMsg2)
+               call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName) 
+               if (errStat >= AbortErrLev) then
+                  ! TEST: E16, E17, or E18
+                  return
+               end if  
+            do j = 1,p%NumRadii-1
+               ! NOTE: xd%Vr_wake(0,:) was initialized to 0 and remains 0.
+               xd%Vr_wake(j,i) = real(  j-1,ReKi)*(  xd%Vr_wake(j-1,i)  )/real(j,ReKi) &
+               !  Vx_wake is for the                           [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
+                               - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * absdx )
+            end do  
+         end if
+      end do ! i = 1,min(n+2,p%NumPlanes-1) 
+   end subroutine updateVelocityPolar
+
+
    subroutine Cleanup()
    end subroutine Cleanup
    
