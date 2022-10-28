@@ -2212,13 +2212,24 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. CALL WD_US         
   
+   !$OMP PARALLEL default(shared)
+   !$OMP do private(nt, errStatWD, errMsgWD) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                      farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
+
+
+      ! Error handling
+      if (errStatWD /= ErrID_None) then
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          call SetErrStat(ErrStatWD, ErrMsgWD, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+         !$OMP END CRITICAL
+      endif
          
    END DO
+   !$OMP END DO 
+   !$OMP END PARALLEL
    
    if (ErrStat >= AbortErrLev) return
    
