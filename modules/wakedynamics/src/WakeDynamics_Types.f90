@@ -108,6 +108,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: D_rotor_filt      !< Time-filtered rotor diameter associated with each wake plane [m]
     REAL(ReKi)  :: Vx_rel_disk_filt      !< Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Ct_azavg_filt      !< Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cq_azavg_filt      !< Time-filtered azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE WD_DiscreteStateType
 ! =======================
 ! =========  WD_ConstraintStateType  =======
@@ -133,6 +134,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: d      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r_wake      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_high      !<  [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_polar      !< Vx as function of r for Cartesian implementation [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vt_wake      !< Vr as function of r for Cartesian implementation [-]
+    REAL(ReKi)  :: Ct_avg      !< Circulation used in Curled wake model [-]
   END TYPE WD_MiscVarType
 ! =======================
 ! =========  WD_ParameterType  =======
@@ -1385,6 +1389,18 @@ IF (ALLOCATED(SrcDiscStateData%Ct_azavg_filt)) THEN
   END IF
     DstDiscStateData%Ct_azavg_filt = SrcDiscStateData%Ct_azavg_filt
 ENDIF
+IF (ALLOCATED(SrcDiscStateData%Cq_azavg_filt)) THEN
+  i1_l = LBOUND(SrcDiscStateData%Cq_azavg_filt,1)
+  i1_u = UBOUND(SrcDiscStateData%Cq_azavg_filt,1)
+  IF (.NOT. ALLOCATED(DstDiscStateData%Cq_azavg_filt)) THEN 
+    ALLOCATE(DstDiscStateData%Cq_azavg_filt(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%Cq_azavg_filt.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstDiscStateData%Cq_azavg_filt = SrcDiscStateData%Cq_azavg_filt
+ENDIF
  END SUBROUTINE WD_CopyDiscState
 
  SUBROUTINE WD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1440,6 +1456,9 @@ IF (ALLOCATED(DiscStateData%D_rotor_filt)) THEN
 ENDIF
 IF (ALLOCATED(DiscStateData%Ct_azavg_filt)) THEN
   DEALLOCATE(DiscStateData%Ct_azavg_filt)
+ENDIF
+IF (ALLOCATED(DiscStateData%Cq_azavg_filt)) THEN
+  DEALLOCATE(DiscStateData%Cq_azavg_filt)
 ENDIF
  END SUBROUTINE WD_DestroyDiscState
 
@@ -1535,6 +1554,11 @@ ENDIF
   IF ( ALLOCATED(InData%Ct_azavg_filt) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Ct_azavg_filt upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Ct_azavg_filt)  ! Ct_azavg_filt
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Cq_azavg_filt allocated yes/no
+  IF ( ALLOCATED(InData%Cq_azavg_filt) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Cq_azavg_filt upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Cq_azavg_filt)  ! Cq_azavg_filt
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1756,6 +1780,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%Ct_azavg_filt,1), UBOUND(InData%Ct_azavg_filt,1)
         ReKiBuf(Re_Xferred) = InData%Ct_azavg_filt(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Cq_azavg_filt) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Cq_azavg_filt,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Cq_azavg_filt,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Cq_azavg_filt,1), UBOUND(InData%Cq_azavg_filt,1)
+        ReKiBuf(Re_Xferred) = InData%Cq_azavg_filt(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -2015,6 +2054,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%Ct_azavg_filt,1), UBOUND(OutData%Ct_azavg_filt,1)
         OutData%Ct_azavg_filt(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Cq_azavg_filt not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Cq_azavg_filt)) DEALLOCATE(OutData%Cq_azavg_filt)
+    ALLOCATE(OutData%Cq_azavg_filt(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Cq_azavg_filt.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Cq_azavg_filt,1), UBOUND(OutData%Cq_azavg_filt,1)
+        OutData%Cq_azavg_filt(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -2448,6 +2505,31 @@ IF (ALLOCATED(SrcMiscData%Vx_high)) THEN
   END IF
     DstMiscData%Vx_high = SrcMiscData%Vx_high
 ENDIF
+IF (ALLOCATED(SrcMiscData%Vx_polar)) THEN
+  i1_l = LBOUND(SrcMiscData%Vx_polar,1)
+  i1_u = UBOUND(SrcMiscData%Vx_polar,1)
+  IF (.NOT. ALLOCATED(DstMiscData%Vx_polar)) THEN 
+    ALLOCATE(DstMiscData%Vx_polar(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vx_polar.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vx_polar = SrcMiscData%Vx_polar
+ENDIF
+IF (ALLOCATED(SrcMiscData%Vt_wake)) THEN
+  i1_l = LBOUND(SrcMiscData%Vt_wake,1)
+  i1_u = UBOUND(SrcMiscData%Vt_wake,1)
+  IF (.NOT. ALLOCATED(DstMiscData%Vt_wake)) THEN 
+    ALLOCATE(DstMiscData%Vt_wake(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vt_wake.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vt_wake = SrcMiscData%Vt_wake
+ENDIF
+    DstMiscData%Ct_avg = SrcMiscData%Ct_avg
  END SUBROUTINE WD_CopyMisc
 
  SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2503,6 +2585,12 @@ IF (ALLOCATED(MiscData%r_wake)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%Vx_high)) THEN
   DEALLOCATE(MiscData%Vx_high)
+ENDIF
+IF (ALLOCATED(MiscData%Vx_polar)) THEN
+  DEALLOCATE(MiscData%Vx_polar)
+ENDIF
+IF (ALLOCATED(MiscData%Vt_wake)) THEN
+  DEALLOCATE(MiscData%Vt_wake)
 ENDIF
  END SUBROUTINE WD_DestroyMisc
 
@@ -2596,6 +2684,17 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! Vx_high upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_high)  ! Vx_high
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vx_polar allocated yes/no
+  IF ( ALLOCATED(InData%Vx_polar) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vx_polar upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_polar)  ! Vx_polar
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vt_wake allocated yes/no
+  IF ( ALLOCATED(InData%Vt_wake) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vt_wake upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vt_wake)  ! Vt_wake
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! Ct_avg
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2803,6 +2902,38 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%Vx_polar) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_polar,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_polar,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Vx_polar,1), UBOUND(InData%Vx_polar,1)
+        ReKiBuf(Re_Xferred) = InData%Vx_polar(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Vt_wake) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vt_wake,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vt_wake,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Vt_wake,1), UBOUND(InData%Vt_wake,1)
+        ReKiBuf(Re_Xferred) = InData%Vt_wake(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%Ct_avg
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_PackMisc
 
  SUBROUTINE WD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3046,6 +3177,44 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vx_polar not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vx_polar)) DEALLOCATE(OutData%Vx_polar)
+    ALLOCATE(OutData%Vx_polar(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vx_polar.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Vx_polar,1), UBOUND(OutData%Vx_polar,1)
+        OutData%Vx_polar(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vt_wake not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vt_wake)) DEALLOCATE(OutData%Vt_wake)
+    ALLOCATE(OutData%Vt_wake(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vt_wake.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Vt_wake,1), UBOUND(OutData%Vt_wake,1)
+        OutData%Vt_wake(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%Ct_avg = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_UnPackMisc
 
  SUBROUTINE WD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

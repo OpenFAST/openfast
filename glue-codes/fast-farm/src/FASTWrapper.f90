@@ -204,6 +204,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !.................
          
       call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       if ( InitInp%UseSC ) then
          call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -516,6 +517,7 @@ END SUBROUTINE FWrap_t0
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the FASTWrapper outputs based on what this instance of FAST computed.
 SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
+   use AeroDyn_IO, only: Calc_Chi0
 
    TYPE(FWrap_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
@@ -530,8 +532,16 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    REAL(ReKi)                                      :: num         ! numerator
    REAL(ReKi)                                      :: denom       ! denominator
    REAL(ReKi)                                      :: p0(3)       ! hub location (in FAST with 0,0,0 as turbine reference)
+   REAL(ReKi)                                      :: yHat_plane(3) ! horizontal unit vector normal to xhat
+   REAL(ReKi)                                      :: zHat_plane(3) ! nominally vertical
+   REAL(ReKi)                                      :: zHat_Disk(3) 
    REAL(R8Ki)                                      :: theta(3)    
    REAL(R8Ki)                                      :: orientation(3,3)    
+   REAL(ReKi)                                      :: tmp_sz_z, tmp_sz_y
+
+   REAL(ReKi)                                      :: xSkew(3) 
+   REAL(ReKi)                                      :: ySkew(3) 
+   REAL(ReKi)                                      :: zSkew(3) 
    
    INTEGER(IntKi)                                  :: j, k        ! loop counters
    
@@ -596,10 +606,10 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    
    ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
    y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
-   
+
    ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
    theta = 0.0_ReKi
-   do k=1,size(m%ADRotorDisk)
+   do k=1,size(m%ADRotorDisk) ! loop on blades
             
       m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
       m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
@@ -622,25 +632,77 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
    end do
          
+   ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
       y%AzimAvg_Ct = 0.0_ReKi
+      y%AzimAvg_Cq = 0.0_ReKi
    else
       y%AzimAvg_Ct(1) = 0.0_ReKi
+      y%AzimAvg_Cq(1) = 0.0_ReKi
       
       do j=2,p%nr
          
+         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
+
+         ! Thrust coefficient
+         ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
          num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk)
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
             num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
          end do
-         
-         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
-            
          y%AzimAvg_Ct(j) = num / denom
+
+         ! Torque coefficient 
+         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
+         num = 0.0_ReKi
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+            num = num - p%r(j)*dot_product(m%ADRotorDisk(k)%RefOrientation(2,:,1), m%ADRotorDisk(k)%Force(:,j) ) + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) )
+         end do
+         y%AzimAvg_Cq(j) = num / (denom * p%r(j) )
       end do
          
    end if  
       
+   ! --- Variables needed to orient wake planes in "skew" coordinate system
+   ! chi_skew and psi_skew
+   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
+
+   ! TODO place me in an AeroDyn Function like Calc_Chi0
+   ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+   yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
+   yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
+   ! Construct z_hat
+   zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
+   zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
+   zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
+   zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
+
+!~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
+
+   ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
+   xSkew = y%xHat_Disk 
+   ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
+   denom = TwoNorm(ySkew)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      ! There is no skew
+      ySkew = yHat_plane
+      zSkew = zHat_plane
+   else
+      ySkew = ySkew / denom
+      zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
+      zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
+      zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
+   endif
+   zHat_Disk = zSkew
+
+   tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
+   tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
+   if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
+      y%psi_skew = 0.0_ReKi
+   else
+      y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
+   end if
+  
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST

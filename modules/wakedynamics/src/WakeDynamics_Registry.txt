@@ -87,6 +87,7 @@ typedef ^  DiscreteStateType   ReKi  TI_amb_filt       {:}    - -   "Time-filter
 typedef ^  DiscreteStateType   ReKi  D_rotor_filt      {:}    - -   "Time-filtered rotor diameter associated with each wake plane"     m
 typedef ^  DiscreteStateType   ReKi  Vx_rel_disk_filt   -     - -   "Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk"      m/s
 typedef ^  DiscreteStateType   ReKi  Ct_azavg_filt     {:}    - -   "Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially"      -
+typedef ^  DiscreteStateType   ReKi  Cq_azavg_filt     {:}    - -   "Time-filtered azimuthally averaged torque coefficient (normal to disk), distributed radially"      -
 
 # Define constraint states here:
 typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
@@ -108,6 +109,9 @@ typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  d       {:}    - -   "" 
 typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""    
 typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
+typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -  "Vx as function of r for Cartesian implementation"    
+typedef   ^         MiscVarType   ReKi  Vt_wake {:}    - -   "Vr as function of r for Cartesian implementation"    
+typedef   ^         MiscVarType   ReKi  Ct_avg     -   - -   "Circulation used in Curled wake model"     
  
 
 # ..... Parameters ................................................................................................................
