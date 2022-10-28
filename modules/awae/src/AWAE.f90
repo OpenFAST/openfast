@@ -53,7 +53,6 @@ module AWAE
    public :: AWAE_TEST_Init_BadData
    public :: AWAE_TEST_Init_GoodData
    public :: AWAE_TEST_CalcOutput
-
    public :: AWAE_TEST_Interp2D
 
 
@@ -222,7 +221,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
    maxPln =  min(n,p%NumPlanes-2)
    tmpPln =  min(p%NumPlanes-1, n+1)
-  
+
    
 !#ifdef _OPENMP  
 !   tm1 =  omp_get_wtime() 
@@ -268,7 +267,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
             do nt = 1,p%NumTurbines
 
-               ! TODO TODO TODO: all this should be put into a common function between low-res and high-res (watch for nt, nt2)
                ! H Long: replace intrinsic dot_product with explicit do product can save as much as 10% of total calculation time!
                !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
                tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
@@ -373,34 +371,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
            ! [I - XX']V = V - (V dot X)X
            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
            ! Compute C matrix and update Vdist_low
-           if(p%Mod_Projection==1) then        
+           if(p%Mod_Projection==1) then
               ! We keep the full field (including cross flow components), done for outputs and VTK outputs
               m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
               m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
-              
-           else if (p%Mod_Projection==2) then
-              ! We project against the normal of the plane to remove the cross flow components
-              C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-              C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-              C_rot(1,3) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
-
-              C_rot(2,1) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-              C_rot(2,2) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-              C_rot(2,3) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
-              
-              C_rot(3,1) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-              C_rot(3,2) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-              C_rot(3,3) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
-
-              C_rot_norm = C_rot(1,1) + C_rot(2,2) + C_rot(3,3) 
-              if (EqualRealNos( C_rot_norm, 0.0_SiKi) ) then
-                 ! do nothing
-              else
-                 C_rot = C_rot / C_rot_norm
-                 ! Full field is for VTK outputs, contains the cross flow components
-                 m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + matmul(C_rot, real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi))
-                 m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low)               + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
-              endif
            endif
            
         end if  ! (n_wake > 0)
@@ -639,7 +613,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then
 
-                     ! TODO TODO TODO: all this should be put into a common function between low-res and high-res (watch for nt, nt2)
                      x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
 
                      do np = 0, maxPln !p%NumPlanes-2

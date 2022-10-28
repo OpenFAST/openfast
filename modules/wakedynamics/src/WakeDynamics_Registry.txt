@@ -101,6 +101,7 @@ typedef   ^      OtherStateType               LOGICAL     firstPass          -  
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^         MiscVarType   ReKi  dvdr    {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
@@ -120,9 +121,8 @@ typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  d       {:}    - -   "" 
 typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""    
 typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
-typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -   "Vx as function of r for Carteisna implementation"    
-typedef   ^         MiscVarType   ReKi  Vt_wake {:}    - -   "Vx as function of r for Carteisna implementation"    
-typedef   ^         MiscVarType   ReKi  GammaCurl  -   - -   "Circulation used in Curled wake model"     
+typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -  "Vx as function of r for Cartesian implementation"    
+typedef   ^         MiscVarType   ReKi  Vt_wake {:}    - -   "Vr as function of r for Cartesian implementation"    
 typedef   ^         MiscVarType   ReKi  Ct_avg     -   - -   "Circulation used in Curled wake model"     
  
 
@@ -142,7 +142,7 @@ typedef ^ ParameterType  Logical          Swirl          - - -    "Switch to add
 typedef ^ ParameterType  ReKi             k_VortexDecay  - - -    "Vortex decay constant for curl" - 
 typedef ^ ParameterType  ReKi             sigma_D        -  - 0.2 "The width of the Gaussian vortices used for the curled wake model divided by diameter"      -
 typedef ^ ParameterType  IntKi            NumVortices    -  - 100 "The number of vortices used for the curled wake model"      -
-typedef ^ ParameterType  ReKi             filtParam      -  - -   "alpha, Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
+typedef ^ ParameterType  ReKi             filtParam      -  - -   "Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
 typedef ^ ParameterType  ReKi             oneMinusFiltParam - - - "1.0 - filtParam" -
 typedef ^ ParameterType  ReKi             C_HWkDfl_O     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
 typedef ^ ParameterType  ReKi             C_HWkDfl_OY    -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error" m/rad
@@ -186,8 +186,8 @@ typedef      ^      InputType          ReKi       Cq_azavg             {:}     -
 # Define outputs that are contained on the mesh here:
 typedef      ^      OutputType         ReKi       xhat_plane           {:}{:}  -      -      "Orientations of wake planes, normal to wake planes"      -
 typedef      ^      OutputType         ReKi       p_plane              {:}{:}  -      -      "Center positions of wake planes"      m
-typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "TODO Axial wake velocity deficit at wake planes, distributed radially"      m/s
-typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "TODO Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "Axial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "Radial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef      ^      OutputType         ReKi       Vx_wake2             {:}{:}{:} -    -      "Axial wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:} -    -      "Transverse horizontal wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s

@@ -631,7 +631,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          call setErrStat(ErrStat2,ErrMsg2,ErrStat2,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
    end do
-   
+         
    ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
       y%AzimAvg_Ct = 0.0_ReKi
@@ -702,10 +702,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    else
       y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
    end if
-
-!~ ! Do this to make sure angle does not oscillate between -pi and pi
-!~    call zero2twopi(y%psi_skew)
-   
+  
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST
