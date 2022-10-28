@@ -82,6 +82,9 @@ typedef ^  DiscreteStateType   ReKi  p_plane           {:}{:} - -   "Center posi
 typedef ^  DiscreteStateType   ReKi  x_plane           {:}    - -   "Downwind distance from rotor to each wake plane"      m
 typedef ^  DiscreteStateType   ReKi  Vx_wake           {:}{:} - -   "Axial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef ^  DiscreteStateType   ReKi  Vr_wake           {:}{:} - -   "Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vx_wake2          {:}{:}{:} - -   "Axial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vy_wake2          {:}{:}{:} - -   "Longitudinal wake velocity deficit at wake planes, distributed radially"      m/s
+typedef ^  DiscreteStateType   ReKi  Vz_wake2          {:}{:}{:} - -   "Vertical wake velocity deficit at wake planes, distributed radially"      m/s
 typedef ^  DiscreteStateType   ReKi  Vx_wind_disk_filt {:}    - -   "Time-filtered rotor-disk-averaged ambient wind speed of wake planes, normal to planes"      m/s
 typedef ^  DiscreteStateType   ReKi  TI_amb_filt       {:}    - -   "Time-filtered ambient turbulence intensity of wind at wake planes"      -
 typedef ^  DiscreteStateType   ReKi  D_rotor_filt      {:}    - -   "Time-filtered rotor diameter associated with each wake plane"     m
@@ -103,6 +106,15 @@ typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_shr  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_tot2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_amb2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  vt_shr2 {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dvx_dy  {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dvx_dz  {:}{:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dy  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dz  {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dnuvx_dy   {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dnuvx_dz   {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  a       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  b       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""     
@@ -176,6 +188,9 @@ typedef      ^      OutputType         ReKi       xhat_plane           {:}{:}  -
 typedef      ^      OutputType         ReKi       p_plane              {:}{:}  -      -      "Center positions of wake planes"      m
 typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "Axial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "Radial wake velocity deficit at wake planes, distributed radially"      m/s
+typedef      ^      OutputType         ReKi       Vx_wake2             {:}{:}{:} -    -      "Axial wake velocity deficit at wake planes, distributed across the plane"      m/s
+typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:} -    -      "Transverse horizontal wake velocity deficit at wake planes, distributed across the plane"      m/s
+typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
 

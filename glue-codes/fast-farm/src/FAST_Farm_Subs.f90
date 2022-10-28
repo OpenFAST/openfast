@@ -1468,7 +1468,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
       
    ! --- WAKE DYNAMICS ---
-   IF (WD_InitInp%Mod_Wake /= 1) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%Mod_Wake /= 1 .and. WD_InitInp%Mod_Wake /=3) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1 or 3',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
@@ -2045,7 +2045,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    farm%AWAE%u%xhat_plane = 0.0_ReKi     ! Orientations of wake planes, normal to wake planes, for each turbine
    farm%AWAE%u%p_plane    = 0.0_ReKi     ! Center positions of wake planes for each turbine
    farm%AWAE%u%Vx_wake    = 0.0_ReKi     ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-   farm%AWAE%u%Vr_wake    = 0.0_ReKi     ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vy_wake    = 0.0_ReKi     ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vz_wake    = 0.0_ReKi     ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%D_wake     = 0.0_ReKi     ! Wake diameters at wake planes for each turbine      
    
       !--------------------
@@ -2921,8 +2922,9 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    DO nt = 1,farm%p%NumTurbines   
       farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
       farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    
