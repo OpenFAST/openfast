@@ -3328,7 +3328,6 @@ CONTAINS
    !...............................................................................................................................
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      INTEGER(IntKi)             :: nb 
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
       INTEGER(IntKi)             :: nb_local
          

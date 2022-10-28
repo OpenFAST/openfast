@@ -879,10 +879,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    
    ! Estimate rotor raidus based on grid size, if user follow approximately the guidelines
-   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%dr) / 3._ReKi
-   
-
-      
+   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%NumRadii) / 3._ReKi
+         
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    DefaultReVal = 12.5_ReKi/EstimatedRotorRadius ! Eq. (32) of https://doi.org/10.1002/we.2785, with U=10, a=1/3
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
@@ -1468,7 +1466,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
       
    ! --- WAKE DYNAMICS ---
-   IF (WD_InitInp%Mod_Wake /= 1 .and. WD_InitInp%Mod_Wake /=3) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1 or 3',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
@@ -1510,7 +1508,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
-   IF (.not.(ANY((/1/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1',ErrStat,ErrMsg,RoutineName)
+   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )

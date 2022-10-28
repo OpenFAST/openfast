@@ -101,7 +101,6 @@ typedef   ^      OtherStateType               LOGICAL     firstPass          -  
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^         MiscVarType   ReKi  dvdr    {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
 typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
@@ -123,6 +122,7 @@ typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""
 typedef   ^         MiscVarType   ReKi  Vx_high {:}    - -   ""    
 typedef   ^         MiscVarType   ReKi  Vx_polar {:}    - -  "Vx as function of r for Cartesian implementation"    
 typedef   ^         MiscVarType   ReKi  Vt_wake {:}    - -   "Vr as function of r for Cartesian implementation"    
+typedef   ^         MiscVarType   ReKi  GammaCurl  -   - -   "Circulation used in Curled wake model"     
 typedef   ^         MiscVarType   ReKi  Ct_avg     -   - -   "Circulation used in Curled wake model"     
  
 

@@ -375,6 +375,30 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
               ! We keep the full field (including cross flow components), done for outputs and VTK outputs
               m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
               m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+              
+           else if (p%Mod_Projection==2) then
+              ! We project against the normal of the plane to remove the cross flow components
+              C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(1,3) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+
+              C_rot(2,1) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(2,2) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(2,3) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+              
+              C_rot(3,1) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
+              C_rot(3,2) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
+              C_rot(3,3) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+
+              C_rot_norm = C_rot(1,1) + C_rot(2,2) + C_rot(3,3) 
+              if (EqualRealNos( C_rot_norm, 0.0_SiKi) ) then
+                 ! do nothing
+              else
+                 C_rot = C_rot / C_rot_norm
+                 ! Full field is for VTK outputs, contains the cross flow components
+                 m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + matmul(C_rot, real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi))
+                 m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low)               + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+              endif
            endif
            
         end if  ! (n_wake > 0)

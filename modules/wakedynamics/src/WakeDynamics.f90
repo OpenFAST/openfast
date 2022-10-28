@@ -44,6 +44,7 @@ module WakeDynamics
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
    public :: WD_TEST_Axi2Cart
+   public :: WD_TEST_AddVelocityCurl
    contains  
 
 function  WD_Interp ( yVal, xArr, yArr )
@@ -564,12 +565,11 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       ! miscvars to avoid the allocation per timestep
    if (p%Mod_Wake == Mod_Wake_Polar) then
-      allocate (   m%dvdr   (0:p%NumRadii-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvdr.', errStat, errMsg, RoutineName )   
       allocate (   m%dvtdr  (0:p%NumRadii-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvtdr.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_tot (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_amb (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_shr (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr.', errStat, errMsg, RoutineName )  
-   else if (p%Mod_Wake == Mod_Wake_Cartesian) then
+   else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot2.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb2.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr2.', errStat, errMsg, RoutineName )  
@@ -741,6 +741,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    real(ReKi)                                   :: dvdr, r_tmp, C, S, dvdtheta_r
    integer(intKi)                               :: i,j, maxPln
    integer(intKi)                               :: iy, iz            ! indices on y and z
+   real(ReKi)                                   :: vt_min            ! Minimum Eddy viscosity
 
    errStat = ErrID_None
    errMsg  = ""
@@ -783,9 +784,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
       Vx_wake_min = huge(ReKi)
-      if (p%Mod_Wake == Mod_Wake_Cartesian) then
+      if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
          Vx_wake_min = minval(xd%Vx_wake2(:,:,i-1))
-      else if (p%Mod_Wake == Mod_Wake_Polar) then
+      else
          do j = 0,p%NumRadii-1
             Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
          end do
@@ -793,23 +794,24 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
 
       EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
       EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
+      vt_min    = abs(1.e-4_ReKi * xd%D_Rotor_filt(i-1) * xd%Vx_rel_disk_filt) ! Miminum eddy viscosity
       if (p%Mod_Wake == Mod_Wake_Polar) then
          ! Polar grid
          do j = 0,p%NumRadii-1      
             if ( j == 0 ) then
-             m%dvdr(j) =   0.0_ReKi
+             dvdr =   0.0_ReKi
             elseif (j <= p%NumRadii-2) then
-               m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
+               dvdr = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
             else
-               m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
+               dvdr = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
             end if
                ! All of the following states are at [n] 
             m%vt_amb(j,i-1) = EddyTermA
-            m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
+            m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
             m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1) 
 
          end do
-      else if (p%Mod_Wake == Mod_Wake_Cartesian) then
+      else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
          ! First compute gradients of dVx/dy and dVx/dz
          call gradient_y(xd%Vx_wake2(:,:,i-1), p%dr, m%dvx_dy(:,:,i-1))
          call gradient_z(xd%Vx_wake2(:,:,i-1), p%dr, m%dvx_dz(:,:,i-1))
@@ -841,7 +843,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    ! --- Update Vx and Vr
    if (p%Mod_Wake == Mod_Wake_Polar) then
       call updateVelocityPolar()
-   else if (p%Mod_Wake == Mod_Wake_Cartesian) then
+   else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       call updateVelocityCartesian()
    else
       ! Should never happen
@@ -928,11 +930,14 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%Cq_azavg_filt (:) = xd%Cq_azavg_filt(:)*p%filtParam + u%Cq_azavg(:)*p%oneMinusFiltParam
    
    ! --- Set velocity at disk plane
+   m%GammaCurl = 0.0_ReKi ! Storing for outputs
+   m%Ct_avg    = 0.0_ReKi ! Storing for outputs
    if (p%Mod_Wake == Mod_Wake_Polar) then
 
       ! Compute wake deficit of first plane based on rotor loading, outputs: Vx_Wake, m
        call NearWakeCorrection( xd%Ct_azavg_filt, xd%Cq_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake(:,0), m%Vt_wake, xd%D_rotor_filt(0), errStat, errMsg )
-   else if (p%Mod_Wake == Mod_Wake_Cartesian) then
+
+   else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
 
       ! Initialize the spanwise velocities to zero.
       ! Thses will be changed by AddSwirl and/or AddVelocityCurl
@@ -946,6 +951,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       call Axisymmetric2CartesianVx(m%Vx_polar, p%r, p%y, p%z, xd%Vx_wake2(:,:,0))
       call FilterVx(xd%Vx_wake2(:,:,0), p%FilterInit) ! don't filter if FilterInit is 0
       m%Ct_avg =  get_Ctavg(p%r, xd%Ct_azavg_filt, xd%D_rotor_filt(0))
+      ! --- Add V/W from vorticies 
+      if (p%Mod_Wake == Mod_Wake_Curl) then
+         call AddVelocityCurl(xd%Vx_wind_disk_filt(0), xd%chi_skew_filt, p%NumVortices, xd%D_Rotor_filt(0)/2., &
+                           xd%psi_skew_filt, p%y, p%z, m%Ct_avg, p%sigma_D, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0), m%GammaCurl)
+
+      endif
       ! --- Add Swirl
       if (p%Swirl) then
          call AddSwirl(p%r, m%Vt_wake, p%y, p%z, xd%Vy_wake2(:,:,0), xd%Vz_wake2(:,:,0))
@@ -1103,6 +1114,97 @@ subroutine gradient_z(field, dz, gradient)
 end subroutine gradient_z
 
     
+    
+
+! The velocities from a lamboseen vortex
+subroutine lamb_oseen_2d(y, z, Gamma, sigma, v, w)
+   real(ReKi), intent(in) :: y     ! The spanwise coordinate [m]
+   real(ReKi), intent(in) :: z     ! The wallnormal coordinate [m]
+   real(ReKi), intent(in) :: sigma ! The width of the vortex [m]
+   real(ReKi), intent(in) :: Gamma ! The circulation strength [kg / (m s)]
+   real(ReKi), intent(inout) :: v  ! The spanwise velocity
+   real(ReKi), intent(inout) :: w  ! The wall-normal velocity
+   
+   ! Compute the velocities from the lamb-oseen vortex
+   v =  Gamma / (2. * pi) * z / (y**2 + z**2 + 1.e-5) * (1. - exp(-(y**2 + z**2)/(sigma**2) ))
+   w = -Gamma / (2. * pi) * y / (y**2 + z**2 + 1.e-5) * (1. - exp(-(y**2 + z**2)/(sigma**2) ))
+
+end subroutine lamb_oseen_2d
+
+! A subroutine to compute the spanwise velocities from curl
+subroutine AddVelocityCurl(Vx, yaw_angle, nVortex, R, psi_skew, y, z, Ct_avg, sigma_d, Vy_curl, Vz_curl, Gamma0)
+ 
+   real(ReKi), intent(in) :: Vx                         ! The inflow velocity
+   real(ReKi), intent(in) :: yaw_angle                  ! The yaw angle (rad)
+   integer(intKi), intent(in) :: nVortex                ! The number of vortices (-)
+   real(ReKi), intent(in) :: R                          ! The turbine radius (m)
+   real(ReKi), intent(in) :: psi_skew                   ! The angle of tilt + yaw (rad)
+   real(ReKi), dimension(:),   intent(in)    :: y       ! Spanwise Cartesian coordinate (m)
+   real(ReKi), dimension(:),   intent(in)    :: z       ! Wall-normal Cartesian coordinate (m)
+   real(ReKi),                 intent(in)    :: Ct_avg  ! Average thrust coefficient
+   real(ReKi),                 intent(in)    :: sigma_d ! The width of Gaussian kernel for the vortices divided by diameter (-)
+   real(ReKi), dimension(:,:), intent(inout) :: Vy_curl ! Curl velocity in the y direction (m/s)
+   real(ReKi), dimension(:,:), intent(inout) :: Vz_curl ! Curl velocity in the z direction (m/s)
+   real(ReKi)                , intent(  out) :: Gamma0  ! Circulation used
+   real(ReKi) dR, G, zp, y0, z0, v, w, sigma, w_mean, v_mean
+   integer(intKi) ir, iy, iz, iIn
+   
+   ! The width of the Guassian vortices
+   sigma = sigma_d * 2 * R
+   
+   ! The separation between vortices
+   dR = 2 * R / nVortex
+     
+   ! Compute the Ct
+   ! Add another cosine term to project the vortices
+   Gamma0 =  R * Vx * Ct_avg * sin(yaw_angle) * cos(yaw_angle) 
+
+   ! Loop through all the points
+   do ir = 2, nVortex-1
+
+      ! The vertical location of the vortices along a line in z
+      zp = -R + dR * ir
+      
+      ! The center location of the vortex
+      ! This projection is used to change from only yaw to combination of
+      !   yaw and tilt
+      y0 = -zp * sin(psi_skew)
+      z0 =  zp * cos(psi_skew)
+      
+      ! Scale the circulation based on location 
+      G = Gamma0 * zp * dR / (R * sqrt(R**2 - zp**2))
+
+      ! Loop through all planes 
+      w_mean = 0.0_ReKi
+      v_mean = 0.0_ReKi
+      iIn = 0 !  number of points inside rotor area
+      do iz = 1,size(z)
+         do iy = 1,size(y)
+           
+      
+            call lamb_oseen_2d(y(iy) - y0, z(iz) - z0, G, sigma, v, w)
+            
+            if (sqrt(y(iy)**2 + z(iz)**2)<=R ) then
+               v_mean = v_mean + v
+               w_mean = w_mean + w
+               iIn = iIn +1
+            endif
+             
+            Vy_curl(iy, iz) = Vy_curl(iy, iz) + v
+            Vz_curl(iy, iz) = Vz_curl(iy, iz) + w
+
+         enddo          
+      enddo
+   enddo
+   if (.false.) then
+      v_mean = v_mean / (iIn)
+      w_mean = w_mean / (iIn)
+      Vy_curl(:, :) = Vy_curl(:, :) - v_mean
+      Vz_curl(:, :) = Vz_curl(:, :) - w_mean
+   endif
+
+end subroutine AddVelocityCurl
+
 
 !> This subroutine computes the near wake correction : Vx_wake  
 subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
@@ -1141,6 +1243,38 @@ subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
    enddo
    
 end subroutine AddSwirl
+
+!> Test the curled wake velocity curl function
+subroutine WD_TEST_AddVelocityCurl()
+  
+   real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
+   real(ReKi) :: Vy_curl_ref(2,2)
+   real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
+   real(ReKi) :: Vz_curl_ref(2,2)
+   real(ReKi) :: y(2)=(/ 0., 2./)
+   real(ReKi) :: z(2)=(/-1.,1./)
+   real(ReKi) :: Gamma0
+
+   call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
+      y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
+
+   if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
+      print*,'Test fail for vy'
+      !STOP
+   endif
+   if (abs(Vz_curl(2,2)-4.45974602276e-2)>1e-5) then
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      print*,'>>>>>>>>>>>>>> Test fail for vz'
+      !STOP
+   endif
+end subroutine
+
 
 
 !> Weighted average of two angles
@@ -1395,7 +1529,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       do i = 0, maxPln
          call Axisymmetric2Cartesian(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
       enddo
-   else if (p%Mod_Wake == Mod_Wake_Cartesian) then
+   else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       do i = 0, maxPln
          y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i)
          y%Vy_wake2(:,:,i) = xd%Vy_wake2(:,:,i)
@@ -1406,7 +1540,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
 
    ! --- VTK outputs per plane
-   if (p%Mod_Wake == Mod_Wake_Cartesian) then
+   if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
    endif
    
 end subroutine WD_CalcOutput
