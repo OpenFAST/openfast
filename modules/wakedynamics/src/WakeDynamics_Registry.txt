@@ -101,19 +101,19 @@ typedef   ^      OtherStateType               LOGICAL     firstPass          -  
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_shr  {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_tot2 {:}{:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_amb2 {:}{:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  vt_shr2 {:}{:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  dvx_dy  {:}{:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  dvx_dz  {:}{:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  nu_dvx_dy  {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  nu_dvx_dz  {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  dnuvx_dy   {:}{:} - -   ""     
-typedef   ^         MiscVarType   ReKi  dnuvx_dz   {:}{:} - -   ""     
+typedef   ^         MiscVarType   ReKi  dvtdr   {:}    - -   "Radial gradient of total eddy viscosity (nr)"     
+typedef   ^         MiscVarType   ReKi  vt_tot  {:}{:} - -   "Polar total   eddy viscosity (nr,np)"     
+typedef   ^         MiscVarType   ReKi  vt_amb  {:}{:} - -   "Polar ambient eddy viscosity (nr,np)"      
+typedef   ^         MiscVarType   ReKi  vt_shr  {:}{:} - -   "Polar shear   eddy viscosity (nr,np)"     
+typedef   ^         MiscVarType   ReKi  vt_tot2 {:}{:}{:} - -   "Cartesian total   eddy viscosity (ny,nz,np)"     
+typedef   ^         MiscVarType   ReKi  vt_amb2 {:}{:}{:} - -   "Cartesian ambient eddy viscosity (ny,nz,np)"     
+typedef   ^         MiscVarType   ReKi  vt_shr2 {:}{:}{:} - -   "Cartesian shear   eddy viscosity (ny,nz,np)"     
+typedef   ^         MiscVarType   ReKi  dvx_dy  {:}{:}{:} - -   "Cartesian velocity gradient dVx/dy"     
+typedef   ^         MiscVarType   ReKi  dvx_dz  {:}{:}{:} - -   "Cartesian velocity gradient dVx/dz"     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dy  {:}{:} - -   "Product of total eddy viscosity and gradient"     
+typedef   ^         MiscVarType   ReKi  nu_dvx_dz  {:}{:} - -   "Product of total eddy viscosity and gradient"     
+typedef   ^         MiscVarType   ReKi  dnuvx_dy   {:}{:} - -   "Gradient of nu_dvx_dy wrt y"     
+typedef   ^         MiscVarType   ReKi  dnuvx_dz   {:}{:} - -   "Gradient of nu_dvx_dz wrt z"     
 typedef   ^         MiscVarType   ReKi  a       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  b       {:}    - -   ""     
 typedef   ^         MiscVarType   ReKi  c       {:}    - -   ""     
@@ -165,6 +165,7 @@ typedef ^ ParameterType  IntKi            FilterInit     - - -    "Switch to fil
 typedef ^ ParameterType  ReKi             k_vCurl        - - -    "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
 typedef ^ ParameterType  Logical          OutAllPlanes   - - -    "Output all planes" - 
 typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    - - -    "The root name derived from the primary FAST.Farm input file" -
+typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent directory for all VTK files written by WD" -
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

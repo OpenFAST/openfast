@@ -399,11 +399,10 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(WD_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if errStat /= ErrID_None
-   
-
       ! Local variables
    integer(IntKi)                              :: i             ! loop counter
-   
+   character(1024)                             :: rootDir
+   character(1024)                             :: basename
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
    character(*), parameter                     :: RoutineName = 'WD_Init'
@@ -471,7 +470,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate(p%y(-p%NumRadii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
    allocate(p%z(-p%NumRadii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%z.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
-      
    do i = 0,p%NumRadii-1
       p%r(i)       = p%dr*i     
    end do
@@ -479,6 +477,10 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%y(i)       = p%dr*i     
       p%z(i)       = p%dr*i     
    end do
+
+   ! Path for VTK outputs
+   call GetPath( p%OutFileRoot, rootDir, baseName ) 
+   p%OutFileVTKDir = trim(rootDir) // 'vtk_ff_planes'
 
 
    
@@ -564,25 +566,27 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    OtherState%firstPass            = .true.     
    
       ! miscvars to avoid the allocation per timestep
+      ! Cartesian eddy viscosity (allocated even for polar if plane outputs are requested)
+   allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot2.', errStat, errMsg, RoutineName )  
+   allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb2.', errStat, errMsg, RoutineName )  
+   allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr2.', errStat, errMsg, RoutineName )  
+   if (errStat /= ErrID_None) return
+   m%vt_tot2   = 0.0_ReKi
+   m%vt_amb2   = 0.0_ReKi
+   m%vt_shr2   = 0.0_ReKi
    if (p%Mod_Wake == Mod_Wake_Polar) then
       allocate (   m%dvtdr  (0:p%NumRadii-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvtdr.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_tot (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_amb (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb.', errStat, errMsg, RoutineName )  
       allocate (   m%vt_shr (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr.', errStat, errMsg, RoutineName )  
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-      allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot2.', errStat, errMsg, RoutineName )  
-      allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb2.', errStat, errMsg, RoutineName )  
-      allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr2.', errStat, errMsg, RoutineName )  
-
       allocate (   m%dvx_dy   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvx_dy.', errStat, errMsg, RoutineName )  
       allocate (   m%dvx_dz   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvx_dz.', errStat, errMsg, RoutineName )  
       allocate (   m%nu_dvx_dy(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%nu_dvx_dy.', errStat, errMsg, RoutineName )  
       allocate (   m%nu_dvx_dz(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%nu_dvx_dz.', errStat, errMsg, RoutineName )  
       allocate (   m%dnuvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dnuvx_dy.', errStat, errMsg, RoutineName )  
       allocate (   m%dnuvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dnuvx_dz.', errStat, errMsg, RoutineName )  
-      m%vt_tot2   = 0.0_ReKi
-      m%vt_amb2   = 0.0_ReKi
-      m%vt_shr2   = 0.0_ReKi
+      if (errStat /= ErrID_None) return
       m%dvx_dy    = 0.0_ReKi
       m%dvx_dz    = 0.0_ReKi
       m%nu_dvx_dy = 0.0_ReKi
@@ -1321,7 +1325,7 @@ end subroutine filter_angles2
 
 
 !> Converts velocity vectors from an axisymmetric system in radial coordinates to a Cartesian system in Cartesian coordinates
-subroutine Axisymmetric2Cartesian(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
+subroutine Axisymmetric2CartesianVel(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
    real(ReKi), dimension(:),   intent(in)    :: Vx_axi !< Axial velocity, distributed radially (m/s)
    real(ReKi), dimension(:),   intent(in)    :: Vr_axi !< Radial velocity deficit, distributed radially (m/s)
    real(ReKi), dimension(:),   intent(in)    :: r      !< Discretization of radial finite-difference grid (m
@@ -1351,6 +1355,31 @@ subroutine Axisymmetric2Cartesian(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
          Vr        = InterpBin(r_tmp, r, Vr_axi, iLow, nr)
          Vy(iy,iz) = Vr * C
          Vz(iy,iz) = Vr * S
+      enddo
+   enddo
+end subroutine Axisymmetric2CartesianVel
+
+!> Converts scalar polar field from an axisymmetric system in radial coordinates to a Cartesian system in Cartesian coordinates
+!! Values outside of the max radius are set to 0
+subroutine Axisymmetric2Cartesian(f_axi, r, y, z, f_cart)
+   real(ReKi), dimension(:),   intent(in)    :: f_axi  !< Polar field, f(r), distributed radially (misc)
+   real(ReKi), dimension(:),   intent(in)    :: r      !< Discretization of radial finite-difference grid (m
+   real(ReKi), dimension(:),   intent(in)    :: y      !< Horizontal discretization of Cartesian grid (m)
+   real(ReKi), dimension(:),   intent(in)    :: z      !< Nominally vertical discretization of Cartesian grid (m)
+   real(ReKi), dimension(:,:), intent(inout) :: f_cart !< Cartesian field, f(x,y)  (misc)
+   integer(IntKi) :: iz, iy, nr, iLow
+   real(ReKi) :: r_tmp, r_max
+   nr = size(r)
+   r_max = r(nr)
+   do iz = 1,size(z)
+      do iy = 1,size(y)
+         r_tmp =  sqrt(y(iy)**2 + z(iz)**2) 
+         if (r_tmp<=r_max) then
+            iLow=0
+            f_cart(iy,iz) = InterpBin(r_tmp, r, f_axi, iLow, nr) !( XVal, XAry, YAry, ILo, AryLen )
+         else
+            f_cart(iy,iz) = 0.0_ReKi
+         endif
       enddo
    enddo
 end subroutine Axisymmetric2Cartesian
@@ -1425,7 +1454,7 @@ subroutine WD_TEST_Axi2Cart()
    real(ReKi) :: Vr, r_tmp
    Vr_axi=4._ReKi*r
    Vx_axi=3._ReKi*r
-   call Axisymmetric2Cartesian(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
+   call Axisymmetric2CartesianVel(Vx_axi, Vr_axi, r, y, z, Vx, Vy, Vz)
 
    do i = 1,size(y)
       do j = 1,size(z)
@@ -1455,6 +1484,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
+   use FVW_VTK ! 
 
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(WD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
@@ -1476,7 +1506,8 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
-   character(256):: Filename
+   character(1024) :: Filename
+   type(FVW_VTK_Misc)   :: mvtk
    real(ReKi), dimension(3) :: dx
    errStat = ErrID_None
    errMsg  = ""
@@ -1527,8 +1558,15 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    if (p%Mod_Wake == Mod_Wake_Polar) then
       ! Convert to Cartesian
       do i = 0, maxPln
-         call Axisymmetric2Cartesian(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
+         call Axisymmetric2CartesianVel(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
       enddo
+      if (p%OutAllPlanes) then 
+         do i = 0, maxPln
+            call Axisymmetric2Cartesian(m%vt_amb(:,i), p%r, p%y, p%z, m%vt_amb2(:,:,i))
+            call Axisymmetric2Cartesian(m%vt_shr(:,i), p%r, p%y, p%z, m%vt_shr2(:,:,i))
+            call Axisymmetric2Cartesian(m%vt_tot(:,i), p%r, p%y, p%z, m%vt_tot2(:,:,i))
+         enddo
+      endif
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
       do i = 0, maxPln
          y%Vx_wake2(:,:,i) = xd%Vx_wake2(:,:,i)
@@ -1537,11 +1575,55 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       enddo
    endif ! Curl or Polar
 
-
-
    ! --- VTK outputs per plane
-   if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-   endif
+   if (p%OutAllPlanes) then 
+       call vtk_misc_init(mvtk)
+       call set_vtk_binary_format(.false., mvtk)
+       if ( OtherState%firstPass ) then
+          call MKDIR(p%OutFileVTKDir)
+       endif
+       do i = 0, min(n-1,p%NumPlanes-1), 1
+!             if (EqualRealNos(t,0.0_DbKi) ) then
+!                write(Filename,'(A,I4.4,A)') trim(p%OutFileVTKDir)//'/PlaneOutputsAtPlane_',i,'_Init.vtk'
+!             else
+!                write(Filename,'(A,I4.4,A,I9.9,A)') trim(p%OutFileVTKDir)//'PlaneOutputsAtPlane_',i,'_Time_',int(t*10),'.vtk'
+!             endif
+!             if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
+!                dx(1) = 0.0
+!                dx(2) = p%dr
+!                dx(3) = p%dr
+!                call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+!                call vtk_point_data_init(mvtk)
+!                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+!                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+!                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+!                call vtk_close_file(mvtk)
+!             endif
+
+          ! --- Output Plane "per time"
+          write(Filename,'(A,I9.9,A,I4.4,A)') trim(p%OutFileVTKDir)// PathSep //trim(p%OutFileRoot)//'.WT'//trim(num2lstr(p%TurbNum))//'.PlaneAtTime_',int(t*100),'_Plane_',i,'.vtk'
+          if ( vtk_new_ascii_file(trim(filename),'vel',mvtk) ) then
+             dx(1) = 0.0
+             dx(2) = p%dr
+             dx(3) = p%dr
+             call vtk_dataset_structured_points((/xd%p_plane(1,i),-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+             call vtk_point_data_init(mvtk)
+             call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+             call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+             call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+             call vtk_point_data_scalar_2D(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
+             call vtk_point_data_scalar_2D(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
+             call vtk_point_data_scalar_2D(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 
+
+             if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+                call vtk_point_data_scalar_2D(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
+                call vtk_point_data_scalar_2D(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
+             endif
+             
+             call vtk_close_file(mvtk)
+          endif
+       enddo ! loop on planes
+    endif
    
 end subroutine WD_CalcOutput
 

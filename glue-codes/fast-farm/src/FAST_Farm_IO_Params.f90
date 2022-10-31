@@ -10758,7 +10758,6 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
 
    LOGICAL                      :: InvalidOutput(0:Farm_MaxOutPts)                 ! This array determines if the output channel is valid for this configuration
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
-   LOGICAL                      :: PolarOutputsInvalid                             ! True if user request polar outputs when curled or cartesian is used
    
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry1(1356) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "AZISKEWFILTT1","AZISKEWFILTT2","AZISKEWFILTT3","AZISKEWFILTT4","AZISKEWFILTT5","AZISKEWFILTT6", &
@@ -15795,11 +15794,9 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
 
 
    ! Curled/Cartesian wake checks 
-   PolarOutputsInvalid = .false.
    do i = 1,farm%p%NOutTurb ! Valid turbine number 
       if (farm%WD(i)%p%Mod_Wake /= Mod_Wake_Polar) then
          ! Polar outputs not available
-         PolarOutputsInvalid = .true.
          do j =1, 9 ! Diameters
             InvalidOutput( WkDfVxTND(:,j,i) ) = .true.
             InvalidOutput( WkDfVrTND(:,j,i) ) = .true.
@@ -15813,9 +15810,6 @@ SUBROUTINE Farm_SetOutParam(OutList, farm, ErrStat, ErrMsg )
          InvalidOutput( RtGamCurlT  (i) ) = .true.
       endif
    end do
-   if (PolarOutputsInvalid) then
-      call WrScr('   Warning: FAST.Farm polar outputs (WkDfVx*, WkDfVr*, Edd*) are only available when Mod_Wake=1')
-   endif
 
    do i = farm%SC%p%nInpGlobal+1,9
       InvalidOutput( SCGblIn (i  ) ) = .true.
