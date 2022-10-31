@@ -289,7 +289,7 @@ if(BUILD_FASTFARM)
   ff_regression("TSinflow"  "fastfarm")
   ff_regression("LESinflow"  "fastfarm")
 #   ff_regression("Uninflow_curl"  "fastfarm")
-#   ff_regression("TSinflow_curl"  "fastfarm")
+  ff_regression("TSinflow_curl"  "fastfarm")
 endif()
 
 # AeroDyn regression tests
