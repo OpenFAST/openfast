@@ -3017,10 +3017,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                IF (z2 >= Zeta2) THEN  ! Partially submerged element
 
                   ! Check that this is not the 1st element of the member
-                  IF (( i == 1 ) .AND. (z2 > Zeta2)) THEN
-                    CALL SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )
-                    RETURN
-                  END IF
+                  ! IF (( i == 1 ) .AND. (z2 > Zeta2)) THEN
+                  !   CALL SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )
+                  !   RETURN
+                  ! END IF
 
                   ! Submergence ratio
                   SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
@@ -3113,26 +3113,35 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                           - 0.25*Pi*r1**4* (   r_hat(3)                                  *t_hat - t_hat(3)   *   r_hat )
                   MbVec = p%WtrDens * g * MbVec
 
-                  ! Distribute element load to nodes
-                  pwr = 3
-                  alpha = (1.0-mem%alpha(i))*(z1-Zeta1)**pwr / ( -mem%alpha(i)*(z2-Zeta2)**pwr + (1.0-mem%alpha(i))*(z1-Zeta1)**pwr )
+                  IF ( i == 1 ) THEN ! This is the 1st element of the member
+                     ! Assign the element load to the lower (1st) node of the member
+                     F_B1(1:3) = FbVec
+                     F_B1(4:6) = MbVec
+                     m%memberLoads(im)%F_B(:,i) = m%memberLoads(im)%F_B(:,i) + F_B1
+                     y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_B1(1:3)
+                     y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_B1(4:6)
+                  ELSE ! This is not the 1st element of the member
+                     ! Distribute element load to nodes
+                     pwr = 3
+                     alpha = (1.0-mem%alpha(i))*(z1-Zeta1)**pwr / ( -mem%alpha(i)*(z2-Zeta2)**pwr + (1.0-mem%alpha(i))*(z1-Zeta1)**pwr )
 
-                  ! Hydrostatic force
-                  F_B1(1:3) =    alpha  * FbVec
-                  F_B2(1:3) = (1-alpha) * FbVec
+                     ! Hydrostatic force
+                     F_B1(1:3) =    alpha  * FbVec
+                     F_B2(1:3) = (1-alpha) * FbVec
 
-                  ! Hydrostatic moment correction followed by redistribution
-                  MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
-                  F_B1(4:6) =    alpha  * MbVec
-                  F_B2(4:6) = (1-alpha) * MbVec
+                     ! Hydrostatic moment correction followed by redistribution
+                     MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
+                     F_B1(4:6) =    alpha  * MbVec
+                     F_B2(4:6) = (1-alpha) * MbVec
 
-                  ! Add nodal loads to mesh
-                  m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
-                  m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B2  ! 1-alpha
-                  y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
-                  y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
-                  y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
-                  y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)
+                     ! Add nodal loads to mesh
+                     m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
+                     m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B2  ! 1-alpha
+                     y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
+                     y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
+                     y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
+                     y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)
+                  END IF
 
                ELSE ! fully submerged element
 
@@ -3638,7 +3647,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
            IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
-              CALL SetErrStat(ErrID_Fatal, 'An initially fully submerged member cannot pierce the free surface.  This has happend for Member ID ' & 
+              CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
                                      //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
               RETURN
            END IF
@@ -3857,7 +3866,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
          r_hat = Cross_Product(t_hat,k_hat1)
          IF ( ABS((Zeta1-z1)*n_hat(3)) < r1*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
          END IF
 
          !-------- End plate of node N+1 --------
@@ -3893,7 +3902,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          END IF
          r_hat = Cross_Product(t_hat,k_hat2)
          IF ( ABS((Zeta2-z2)*n_hat(3)) < r2*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Fatal, 'End plates cannot be partially wetted. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
          END IF
          !------------------------ Check if the end plates are partially wetted: End ------------------------!
       
