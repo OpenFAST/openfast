@@ -863,7 +863,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
       ! NEW which one for dx? 
 !~       dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low
+      dx = dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1))*p%DT_low
 
       ! Update these states to [n+1]
       xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT_low ; don't use absdx here  
@@ -878,9 +878,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call Cleanup()
             return
          end if
-      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
-                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
-         
+      ! Old convection
+      !xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
+      !                        + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT_low
+      ! New convection model (dx = V * dt)
+      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + u%V_Plane(:,i-1) * p%DT_low + dy_HWkDfl 
+      
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
