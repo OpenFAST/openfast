@@ -810,7 +810,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                dvdr = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
             end if
                ! All of the following states are at [n] 
-            m%vt_amb(j,i-1) = EddyTermA
+            m%vt_amb(j,i-1) = max(EddyTermA, vt_min)
             m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(dvdr) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
             m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1) 
 
@@ -836,7 +836,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
                endif
             
                dvdr = m%dvx_dy(iy,iz,i-1) * C  + m%dvx_dz(iy,iz,i-1) * S
-               m%vt_amb2(iy,iz,i-1) = EddyTermA
+               m%vt_amb2(iy,iz,i-1) = max(EddyTermA, vt_min)
                m%vt_shr2(iy,iz,i-1) = EddyTermB * max( (lstar**2)* (abs(dvdr) + abs(dvdtheta_r)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
                m%vt_tot2(iy,iz,i-1) = m%vt_amb2(iy,iz,i-1) + p%k_vCurl*m%vt_shr2(iy,iz,i-1)
 
