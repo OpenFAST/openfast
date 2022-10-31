@@ -649,18 +649,18 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             ! set the disturbed flow equal to the ambient flow for this time step
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
-      !OMP PARALLEL DO DEFAULT(NONE) &
-      !OMP PRIVATE (nx_high, ny_high, nz_high,&
-      !OMP&         nXYZ_high, n_wake, xhatBar_plane,&
-      !OMP&         nt2, x_end_plane, np, np1,&
-      !OMP&         x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane,&
-      !OMP&         xHat_plane, yHat_plane, zHat_plane,&
-      !OMP&         y_tmp_plane, z_tmp_plane,&
-      !OMP&         tmp_xhat_plane, tmp_yhat_plan, tmp_zhat_plane,&
-      !OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
-      !OMP&         xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term,& 
-      !OMP&         n_hl)& 
-      !OMP SHARED(m, u, p, y, nt, maxPln, n_high_low, errStat, errMsg)
+      !$OMP PARALLEL DO DEFAULT(NONE) &
+      !$OMP PRIVATE (nx_high, ny_high, nz_high,&
+      !$OMP&         nXYZ_high, n_wake, xhatBar_plane,&
+      !$OMP&         nt2, x_end_plane, np, np1,&
+      !$OMP&         x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane,&
+      !$OMP&         xHat_plane, yHat_plane, zHat_plane,&
+      !$OMP&         y_tmp_plane, z_tmp_plane,&
+      !$OMP&         tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
+      !$OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
+      !$OMP&         xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term,& 
+      !$OMP&         n_hl)& 
+      !$OMP SHARED(NumGrid_High, m, u, p, y, nt, maxPln, n_high_low, errStat, errMsg)
       ! Loop over all points of the high resolution ambiend wind
       do iXYZ=0, NumGrid_high-1
                ! From flat index iXYZ to grid indices nx, ny, nz
@@ -776,7 +776,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   end do
                end if  ! (n_wake > 0)
       end do       ! iXYZ=0,NumGrid_high-1
-      !OMP END PARALLEL DO
+      !$OMP END PARALLEL DO
    end do          ! nt = 1,p%NumTurbines
 
    if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
