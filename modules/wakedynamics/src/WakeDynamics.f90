@@ -1543,6 +1543,17 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       call NearWakeCorrection( u%Ct_azavg, u%Cq_azavg, u%Vx_rel_disk, p, m, y%Vx_wake(:,0), m%Vt_wake, u%D_rotor, errStat, errMsg )
          if (errStat > AbortErrLev)  return
       y%Vx_wake(:,1) = y%Vx_wake(:,0) 
+
+      ! States approx
+      ! NOTE: can't modify xd
+      !xd%psi_skew_filt     = u%psi_skew
+      !xd%chi_skew_filt     = u%chi_skew
+      !xd%Vx_wind_disk_filt(0) = u%Vx_wind_disk
+      !xd%D_rotor_filt  (0) = u%D_rotor
+      !xd%Ct_azavg_filt (:) = u%Ct_azavg(:)
+      ! Misc approx
+      m%Ct_avg    = get_Ctavg(p%r, u%Ct_azavg, u%D_rotor)
+      m%GammaCurl = u%D_Rotor/2. * u%Vx_wind_disk * m%Ct_avg * sin(u%chi_skew) * cos(u%chi_skew)
  
       
    else

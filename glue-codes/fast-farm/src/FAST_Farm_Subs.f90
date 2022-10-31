@@ -2480,7 +2480,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          farm%m%AllOuts(RtVAmbT(nt)) = farm%AWAE%y%Vx_wind_disk(nt)
          
             ! Time-filtered rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
-         farm%m%AllOuts(RtVAmbFiltT(nt)) = farm%WD(nt)%xd%Vx_wind_disk_filt(0)
+         farm%m%AllOuts(RtVAmbFiltT(nt)) = farm%WD(nt)%xd%Vx_wind_disk_filt(0) ! NOTE: filtered value will be 0 at t=0
 
             ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
          farm%m%AllOuts(RtVRelT(nt)) = farm%FWrap(nt)%y%DiskAvg_Vx_Rel
@@ -2489,13 +2489,13 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          farm%m%AllOuts(AziSkewT(nt)) = farm%FWrap(nt)%y%psi_skew* R2D
 
             ! Skew azimuth angle (time-filtered)
-         farm%m%AllOuts(AziSkewFiltT(nt)) = farm%WD(nt)%xd%psi_skew_filt*R2D
+         farm%m%AllOuts(AziSkewFiltT(nt)) = farm%WD(nt)%xd%psi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
 
             ! Skew angle (instantaneous)
          farm%m%AllOuts(RtSkewT(nt)) = farm%FWrap(nt)%y%chi_skew * R2D
 
             ! Skew angle (time-filtered)
-         farm%m%AllOuts(RtSkewFiltT(nt)) = farm%WD(nt)%xd%chi_skew_filt*R2D
+         farm%m%AllOuts(RtSkewFiltT(nt)) = farm%WD(nt)%xd%chi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
 
             ! Rotor circulation for curled-wake model
          farm%m%AllOuts(RtGamCurlT(nt)) = farm%WD(nt)%m%GammaCurl
