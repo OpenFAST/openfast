@@ -2603,6 +2603,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                      
                         end do  
                      else
+                         ! These outputs are invalid for Curl and Cartesian
                      endif
 
                   else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
@@ -2722,6 +2723,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. call WD_CO and transfer y_WD to u_AWAE        
    
+   !OMP PARALLEL default(shared)
+   !OMP do private(nt, errStat2, errMsg2) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -2729,6 +2732,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
          
    END DO
+   !OMP END DO 
+   !OMP END PARALLEL
    if (ErrStat >= AbortErrLev) return
 
    call Transfer_WD_to_AWAE(farm)

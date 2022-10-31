@@ -443,8 +443,9 @@ Preferably the filter constant should be set as follows:
 where 
 :math:`\tau_1` is a time scale similar to the one used in the Oye dynamic inflow model and 
 :math:`a_\text{avg}` is the average axial induction factor across the rotor disk.
-If the DEFAULT keyword is specified in place of a numerical value, **f_c** is set to :math:`0.25` Hz
-which corresponds to :math:`R=50` m, :math:`U=10` m/s, :math:`a=1/3` in the equation above.
+If the DEFAULT keyword is specified in place of a numerical value, **f_c** is set to :math:`12.5/R_\text{est}` Hz
+which corresponds :math:`U=10` m/s, :math:`a=1/3` in the equation above, and 
+where the estimated rotor radius is obtained as: :math:`R_text{est} = (dr * NumRadii) / 3`
 If numerical issues occur, you may attempt to lower the value of **f_c** to introduce more filtering of high frequencies.
 In previous release, the default value was excessively small, set to :math:`0.0007`.
 
@@ -612,7 +613,7 @@ and **Mod_Projection=1** otherwise.
 
 
 **OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
-Note: this option will be require intensive writin to disk and can slow down the simulation.
+Note: this option requires intensive writing to disk and will drastically slow down the simulation.
 DEFAULT is False.
 
 Visualize
