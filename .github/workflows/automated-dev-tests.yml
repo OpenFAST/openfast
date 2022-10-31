@@ -776,9 +776,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
         run: |
-          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}  --verbose --extra-verbose
-          rm -rf ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm/LESinflow/Inflow
-          rm -rf ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm/TSinflow/90m_*
+          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()

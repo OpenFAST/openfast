@@ -105,6 +105,7 @@
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Types.f90"/></Filter>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm.f90"/>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO.f90"/>
+		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_IO_Params.f90"/>
 		<File RelativePath="..\..\glue-codes\fast-farm\src\FAST_Farm_Subs.f90"/></Filter>
 		<Filter Name="FASTWrapper">
 		<Filter Name="RegistryFiles">
