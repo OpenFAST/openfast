@@ -1696,7 +1696,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_Interval = farm%p%dt_low        ! otherwise FASTWrapper will be called at the regular FAST.Farm time step
       end if
       
-     !$OMP PARALLEL DO default(shared) PRIVATE(nt, ErrStat2, ErrMsg2) schedule(runtime)
+     !OMP PARALLEL DO default(shared) PRIVATE(nt, FWarp_InitOut, FWrap_Interval, ErrStat2, ErrMsg2) schedule(runtime)
       DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
@@ -1720,19 +1720,20 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
             FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
+            ! NOTE: FWrap_interval, and FWrap_InitOut appear unused
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                           farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, FWrap_Interval, FWrap_InitOut, ErrStat2, ErrMsg2 )
          
          farm%FWrap(nt)%IsInitialized = .true.
          
          if (ErrStat2 >= AbortErrLev) then
-            !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+            !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
-            !$OMP END CRITICAL
+            !OMP END CRITICAL
          endif
             
       END DO   
-      !$OMP END PARALLEL DO  
+      !OMP END PARALLEL DO  
 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
