@@ -771,37 +771,6 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       
 END SUBROUTINE
 !----------------------------------------------------------------------------------------------------------------------------------
-!>
-subroutine CreatePointMesh(mesh, posInit, orientInit, HasMotion, HasLoads, errStat, errMsg)
-   type(MeshType),               intent(inout) :: mesh
-   real(ReKi),                   intent(in   ) :: PosInit(3)                                             !< Xi,Yi,Zi, coordinates of node
-   real(R8Ki),                   intent(in   ) :: orientInit(3,3)                                        !< Orientation (direction cosine matrix) of node; identity by default
-   logical,                      intent(in   ) :: HasMotion   !< include displacements in mesh
-   logical,                      intent(in   ) :: HasLoads   !< include loads in mesh
-   integer(IntKi)              , intent(out)   :: errStat       ! Status of error message
-   character(*)                , intent(out)   :: errMsg        ! Error message if ErrStat /= ErrID_None
-   integer(IntKi)       :: errStat2      ! local status of error message
-   character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
-   errStat = ErrID_None
-   errMsg  = ''
-
-   call MeshCreate(mesh, COMPONENT_INPUT, 1, errStat2, errMsg2,  &
-      Orientation=HasMotion, TranslationDisp=HasMotion, TranslationVel=HasMotion, RotationVel=HasMotion, TranslationAcc=HasMotion, RotationAcc=HasMotion, &
-      Force = HasLoads, Moment = HasLoads)
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-   if (ErrStat >= AbortErrLev) return
-
-   call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-   call MeshCommit(mesh, errStat2, errMsg2);
-   call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
-
-end subroutine CreatePointMesh
-!----------------------------------------------------------------------------------------------------------------------------------
 !> Compute Rigid body loads at the PRP, after a perturbation of the PRP
 SUBROUTINE PRP_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, EDRPtMotion, Loads, mappingData, ErrStat, ErrMsg)
    TYPE(MeshType)         ,            INTENT(INOUT)  :: EDRPtMotion !<
