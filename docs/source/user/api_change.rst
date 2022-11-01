@@ -10,7 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.2.0 to OpenFAST `dev`
+OpenFAST v3.3.0 to OpenFAST `dev`
 ----------------------------------
 
 ============================================= ==== ================= ========================================================================================================================================================================================================
@@ -18,11 +18,15 @@ Added in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
-FAST.Farm                                     9    ModWaveField      2           Mod_WaveField      Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
-FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring  Shared mooring system model (switch) {0: None, 3=MoorDyn}}
-FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
-FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile     Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
-FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring         Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
+FAST.Farm                                     68   Swirl             False      Swirl             - Switch to include swirl velocities in wake [only used if Mod_Wake=2 or Mod_Wake=3] (-) (switch)
+FAST.Farm                                     69   k_VortexDecay     0.         k_VortexDecay     - Vortex decay constant for curl (-)
+FAST.Farm                                     70   NumVortices       DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100]
+FAST.Farm                                     71   sigma_D           DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimesionalized by rotor diameter (-) [DEFAULT=0.2]
+FAST.Farm                                     72   FilterInit        DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] [unused for Mod_Wake=1] (switch)
+FAST.Farm                                     73   k_vCurl           20         k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [only used if Mod_Wake=2 or Mod_Wake=3] [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FAST.Farm                                     74   Mod_Projection    DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] (switch)
+FAST.Farm                                     91   OutAllPlanes      True       OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
 AeroDyn 15                                    13   Buoyancy          True       Buoyancy          - Include buoyancy effects? (flag)
 AeroDyn 15                                    65   HubPropsSection   ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
 AeroDyn 15                                    66   VolHub            7.0        VolHub            - Hub volume (m^3)
@@ -37,7 +41,6 @@ AeroDyn 15                                         TwrCb             1.0        
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
-AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
@@ -45,9 +48,26 @@ AeroDyn driver                                54\* WrVTK_Type        1          
 \$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
 
 
+OpenFAST v3.2.0 to OpenFAST v3.3.0
+----------------------------------
+
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `3.3.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField     - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile   -  Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring       -  Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Modified in OpenFAST dev 
+Modified in OpenFAST v3.3.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -68,7 +88,7 @@ MoorDyn\&                                     20\* na                1         m
 
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Removed in OpenFAST dev 
+Removed in OpenFAST v3.3.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
@@ -80,6 +100,7 @@ MoorDyn\&                                     20\* NLines            3        NL
 \*Exact line number depends on number of entries in various preceeding tables.
 
 \&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
 
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
