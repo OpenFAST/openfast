@@ -407,19 +407,14 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
    character(*), parameter                     :: RoutineName = 'WD_Init'
    
-   
       ! Initialize variables for this routine
-
    errStat = ErrID_None
    errMsg  = ""
   
       ! Initialize the NWTC Subroutine Library
-
    call NWTC_Init( EchoLibVer=.FALSE. )
 
-   
       ! Display the module information
-
    if (InitInp%TurbNum <= 1) call DispNVD( WD_Ver )       
       
       ! Validate the initialization inputs
@@ -1265,19 +1260,12 @@ subroutine WD_TEST_AddVelocityCurl()
    call AddVelocityCurl(Vx=10., yaw_angle=0.1, nVortex=100, R=63., psi_skew=0.2, &
       y=y, z=z, Ct_avg=0.7, sigma_d=0.2, Vy_curl=Vy_curl, Vz_curl=Vz_curl, Gamma0=Gamma0)
 
-   if (abs(Vy_curl(1,1)-0.2171091922)>1e-5) then
+   if (abs(Vy_curl(1,1)+0.217109)>1e-4) then
       print*,'Test fail for vy'
       !STOP
    endif
-   if (abs(Vz_curl(2,2)-4.45974602276e-2)>1e-5) then
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
-      print*,'>>>>>>>>>>>>>> Test fail for vz'
+   if (abs(Vz_curl(2,2)+4.459746e-2)>1e-4) then
+      print*,'>>> Test fail for vz'
       !STOP
    endif
 end subroutine
