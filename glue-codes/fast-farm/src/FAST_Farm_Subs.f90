@@ -2723,17 +2723,18 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. call WD_CO and transfer y_WD to u_AWAE        
    
-   !OMP PARALLEL default(shared)
-   !OMP do private(nt, errStat2, errMsg2) schedule(runtime)
+   !$OMP PARALLEL DO DEFAULT (shared) PRIVATE(nt, ErrStat2, ErrMsg2) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                      farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+      if (ErrStat2 >= AbortErrLev) then
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
-         
+         !$OMP END CRITICAL
+      endif
    END DO
-   !OMP END DO 
-   !OMP END PARALLEL
+   !$OMP END PARALLEL DO  
    if (ErrStat >= AbortErrLev) return
 
    call Transfer_WD_to_AWAE(farm)
