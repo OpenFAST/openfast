@@ -93,17 +93,19 @@ overlapped itself.
       |                                                              |                   | induction or wakes from upstream turbines) for  |
       |                                                              |                   | turbine :math:`\alpha`                          |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | RtVAmbFiltT\ :math:`\alpha`                                  | (m/s)             | Time-filtered value of RtVAmbT                  |
+      | RtVAmbFiltT\ :math:`\alpha`                                  | (m/s)             | Time-filtered value of RtVAmbT:math:`\alpha`    |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | AxiSkewT\ :math:`\alpha`                                     | (deg)             | Skew azimuth angle (used in curled-wake model)  |
       |                                                              |                   |  for turbine  :math:`\alpha`                    |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | AxiSkewFiltT\ :math:`\alpha`                                 | (deg)             | Time-filtered value of AxiSkewT                 |
+      | AxiSkewFiltT\ :math:`\alpha`                                 | (deg)             | Time-filtered value of AxiSkewT:math:`\alpha`   |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | RtSkewT\ :math:`\alpha`                                      | (deg)             | Skew angle (used in curled-wake model)          |
       |                                                              |                   | for turbine  :math:`\alpha`                     |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
-      | RtSkewFiltT\ :math:`\alpha`                                  | (deg)             | Time-filtered value of RtSkewT                  |
+      | RtSkewFiltT\ :math:`\alpha`                                  | (deg)             | Time-filtered value of RtSkewT:math:`\alpha`    |
       |                                                              |                   |  for turbine  :math:`\alpha`                    |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | RtGamCurlT\ :math:`\alpha`                                   | (m^2/s)           | Rotor circulation (used in curled-wake model)   |

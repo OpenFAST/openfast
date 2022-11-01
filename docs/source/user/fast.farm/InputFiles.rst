@@ -409,12 +409,15 @@ The wake planes are defined by the following parameters:
 -  **dr** [m] sets the radial increment. To ensure the wake deficits are
    accurately computed by FAST.Farm, **dr** should be set so that
    FAST.Farm sufficiently resolves the wake deficit within each plane.
-   When a cartesian grid is 
+   When a cartesian grid is used (**Mod_Wake=2 or 2**), **dr** represents the 
+   spacing in the y and z direction of the plane.
 
 -  **NumRadii** [integer] (:math:`N_r`) sets the number of radii. To
    ensure the wake deficits are accurately computed by FAST.Farm,
    **NumRadii** should be set so that the diameter of each wake plane,
    2(**NumRadii**-1)\ **dr**, is large relative to the rotor diameter.
+   When a Cartesian grid is used, the y and z coordinates extend from
+   (-NumRaddi+1)*dr to  (NumRadii-1)*dr.
 
 -  **NumPlanes** [integer] (:math:`N_p`) sets the number of wake planes.
    To ensure the wake deficits are accurately captured by FAST.Farm,
@@ -444,10 +447,12 @@ where
 :math:`\tau_1` is a time scale similar to the one used in the Oye dynamic inflow model and 
 :math:`a_\text{avg}` is the average axial induction factor across the rotor disk.
 If the DEFAULT keyword is specified in place of a numerical value, **f_c** is set to :math:`12.5/R_\text{est}` Hz
-which corresponds :math:`U=10` m/s, :math:`a=1/3` in the equation above, and 
-where the estimated rotor radius is obtained as: :math:`R_text{est} = (dr * NumRadii) / 3`
+which corresponds to :math:`U=10` m/s, :math:`a=1/3` in the equation above, and 
+where the estimated rotor radius is obtained as: :math:`R_text{est} = (dr * NumRadii) / 3`.
+Changing the grid resolution will change the estimated radius, therefore it is recommended to set a numerical 
+value for **f_c** directly instead of using DEFAULT. 
 If numerical issues occur, you may attempt to lower the value of **f_c** to introduce more filtering of high frequencies.
-In previous release, the default value was excessively small, set to :math:`0.0007`.
+In previous release, the default value was excessively small, set to :math:`0.0007` Hz.
 
 **C_HWkDfl_O** [m] (:math:`C_{HWkDfl}^{O}`) is the calibrated parameter
 for the wake deflection correction defining the horizontal offset at the
@@ -586,10 +591,10 @@ non-dimesionalized by rotor diameter.  If the DEFAULT keyword is
 specified in place of a numerical value, **sigma_D** is set to 
 :math:`0.2`.
 
-**FilterInit** [switch] Switch to filter the initial wake plane deficit.
-This indicated how many grid points in the `y` and `z` directions are 
-used to filter the wake velocity deficit of the initial plane in the
-curled wake model. 
+**FilterInit** [switch] The number of grid points (in the `y` and `z` directions)
+used to filter the initial wake plane deficit in the curled wake model.
+A value of zero corresponds to no filter. The filter is used to remove strong gradients  
+in the wake, and stabilize the solution.
 DEFAULT is 1.
 
 **k_vCurl** [-] Calibrated parameter for scaling the eddy viscosity in the 
