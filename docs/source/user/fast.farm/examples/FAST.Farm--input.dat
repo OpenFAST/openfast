@@ -43,7 +43,7 @@ WT_X    WT_Y     WT_Z   WT_FASTInFile       X0_High Y0_High  Z0_High dX_High dY_
 5.0           dr                    - Radial increment of radial finite-difference grid (m) [>0.0]
 40            NumRadii              - Number of radii in the radial finite-difference grid (-) [>=2]
 140           NumPlanes             - Number of wake planes (-) [>=2]
-DEFAULT       f_c                   - Cutoff (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [=0.0007]
+DEFAULT       f_c                   - Cutoff (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model [recommended=1.28*U0/R] (Hz) [>0.0]
 DEFAULT       C_HWkDfl_O            - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [=0.0]
 DEFAULT       C_HWkDfl_OY           - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [=0.3]
 DEFAULT       C_HWkDfl_x            - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [=0.0]

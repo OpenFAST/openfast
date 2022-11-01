@@ -121,10 +121,6 @@ typedef   ^ MiscVarType    ReKi     Vamb_lowpol     {:}{:} - -  "UVW components 
 typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
 typedef   ^ MiscVarType    SiKi     Vdist_low_full    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm, for outputs" m/s
 typedef   ^ MiscVarType    AWAE_HighWindGrid Vamb_High   {:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
-typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
-typedef   ^ MiscVarType    ReKi     yhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
-typedef   ^ MiscVarType    ReKi     zhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
-typedef   ^ MiscVarType    ReKi     rhat_plane   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
@@ -132,9 +128,6 @@ typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vy_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vz_wake      {:}       - - "" m/s
 #
 typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -

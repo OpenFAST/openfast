@@ -879,10 +879,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    
    ! Estimate rotor raidus based on grid size, if user follow approximately the guidelines
-   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%dr) / 3._ReKi
-   
-
-      
+   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%NumRadii) / 3._ReKi
+         
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    DefaultReVal = 12.5_ReKi/EstimatedRotorRadius ! Eq. (32) of https://doi.org/10.1002/we.2785, with U=10, a=1/3
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
@@ -1468,7 +1466,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
       
    ! --- WAKE DYNAMICS ---
-   IF (WD_InitInp%Mod_Wake /= 1 .and. WD_InitInp%Mod_Wake /=3) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1 or 3',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
@@ -1510,7 +1508,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
-   IF (.not.(ANY((/1/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1',ErrStat,ErrMsg,RoutineName)
+   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
@@ -2481,8 +2479,29 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             ! Rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
          farm%m%AllOuts(RtVAmbT(nt)) = farm%AWAE%y%Vx_wind_disk(nt)
          
+            ! Time-filtered rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
+         farm%m%AllOuts(RtVAmbFiltT(nt)) = farm%WD(nt)%xd%Vx_wind_disk_filt(0) ! NOTE: filtered value will be 0 at t=0
+
             ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
          farm%m%AllOuts(RtVRelT(nt)) = farm%FWrap(nt)%y%DiskAvg_Vx_Rel
+
+            ! Skew azimuth angle (instantaneous)
+         farm%m%AllOuts(AziSkewT(nt)) = farm%FWrap(nt)%y%psi_skew* R2D
+
+            ! Skew azimuth angle (time-filtered)
+         farm%m%AllOuts(AziSkewFiltT(nt)) = farm%WD(nt)%xd%psi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
+
+            ! Skew angle (instantaneous)
+         farm%m%AllOuts(RtSkewT(nt)) = farm%FWrap(nt)%y%chi_skew * R2D
+
+            ! Skew angle (time-filtered)
+         farm%m%AllOuts(RtSkewFiltT(nt)) = farm%WD(nt)%xd%chi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
+
+            ! Rotor circulation for curled-wake model
+         farm%m%AllOuts(RtGamCurlT(nt)) = farm%WD(nt)%m%GammaCurl
+
+            !Rotor-disk averaged thrust coefficient
+         farm%m%AllOuts(RtCtAvgT(nt)) = farm%WD(nt)%m%Ct_avg
          
             ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
          do ir = 1, farm%p%NOutRadii
@@ -2584,6 +2603,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                      
                         end do  
                      else
+                         ! These outputs are invalid for Curl and Cartesian
                      endif
 
                   else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
@@ -2703,6 +2723,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. call WD_CO and transfer y_WD to u_AWAE        
    
+   !OMP PARALLEL default(shared)
+   !OMP do private(nt, errStat2, errMsg2) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -2710,6 +2732,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
          
    END DO
+   !OMP END DO 
+   !OMP END PARALLEL
    if (ErrStat >= AbortErrLev) return
 
    call Transfer_WD_to_AWAE(farm)
