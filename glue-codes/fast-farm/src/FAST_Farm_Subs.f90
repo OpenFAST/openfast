@@ -1696,6 +1696,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_Interval = farm%p%dt_low        ! otherwise FASTWrapper will be called at the regular FAST.Farm time step
       end if
       
+     !$OMP PARALLEL DO default(shared) PRIVATE(nt, ErrStat2, ErrMsg2) schedule(runtime)
       DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
@@ -1724,13 +1725,19 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          
          farm%FWrap(nt)%IsInitialized = .true.
          
+         if (ErrStat2 >= AbortErrLev) then
+            !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
-            if (ErrStat >= AbortErrLev) then
-               call cleanup()
-               return
-            end if
+            !$OMP END CRITICAL
+         endif
             
       END DO   
+      !$OMP END PARALLEL DO  
+
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
    
       farm%p%Module_Ver( ModuleFF_FWrap ) = FWrap_InitOut%Ver
       
