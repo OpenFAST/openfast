@@ -7345,7 +7345,8 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
 
    INTEGER(IntKi)                          :: iLinTime            ! generic loop counters
    INTEGER(IntKi)                          :: it                  ! generic loop counters
-   INTEGER(IntKi)                          :: iMode               ! generic loop counters
+   INTEGER(IntKi)                          :: iMode               ! loop counter on modes
+   INTEGER(IntKi)                          :: iModeMax            ! maximum mode number (based on what is present in the binary file)
    INTEGER(IntKi)                          :: ModeNo              ! mode number
    INTEGER(IntKi)                          :: NLinTimes
 
@@ -7383,8 +7384,14 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
    call MKDIR( trim(VTK_RootDir) )
 
 
+   iModeMax = size(p_FAST%VTK_Modes%x_eig_magnitude, 3)
+
    do iMode = 1,p_FAST%VTK_modes%VTKLinModes
       ModeNo = p_FAST%VTK_modes%VTKModes(iMode)
+      if (ModeNo>iModeMax) then
+         call WrScr('   Skipping mode '//trim(num2lstr(ModeNo))//', maximum number of modes reached ('//trim(num2lstr(iModeMax))//'). Exiting.')
+         exit; 
+      endif
       call  GetTimeConstants(p_FAST%VTK_modes%DampedFreq_Hz(ModeNo), p_FAST%VTK_fps, p_FAST%VTK_modes%VTKLinTim, nt, dt, p_FAST%VTK_tWidth )
       write(sInfo, '(A,I4,A,F12.4,A,I4,A,I0)') 'Mode',ModeNo,', Freq=', p_FAST%VTK_modes%DampedFreq_Hz(ModeNo),'Hz, NLinTimes=',NLinTimes,', nt=',nt
       call WrScr(trim(sInfo))
@@ -7518,6 +7525,7 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
 
    INTEGER(4)                              :: FileType
    INTEGER(4)                              :: nModes
+   INTEGER(4)                              :: iModeMax !< Max index of modes that the user requests
    INTEGER(4)                              :: nStates
    INTEGER(4)                              :: NLinTimes
    INTEGER(IntKi)                          :: iMode
@@ -7536,7 +7544,7 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
       ! Process the requested data records of this file.
 
    CALL WrScr ( NewLine//' =======================================================' )
-   CALL WrScr ( ' Reading in data from file "'//TRIM( p_FAST%VTK_modes%MatlabFileName )//'".'//NewLine )
+   CALL WrScr ( ' Reading binary mode file "'//TRIM( p_FAST%VTK_modes%MatlabFileName )//'".')
 
 
       ! Read some of the header information.
@@ -7564,6 +7572,7 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
       CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading NLinTimes from file "'//TRIM( p_FAST%VTK_modes%MatlabFileName )//'".', ErrStat, ErrMsg, RoutineName )
       RETURN
    ENDIF
+   CALL WrScr ( ' Number of modes: '//TRIM(num2lstr(nModes))//', states: '//TRIM(num2lstr(nStates))//', linTimes: '//TRIM(num2lstr(NLinTimes))//'.')
 
    ALLOCATE( p_FAST%VTK_Modes%NaturalFreq_Hz(nModes), &
              p_FAST%VTK_Modes%DampingRatio(  nModes), &
@@ -7592,12 +7601,15 @@ SUBROUTINE ReadModeShapeMatlabFile(p_FAST, ErrStat, ErrMsg)
       RETURN
    ENDIF
 
-   if (nModes < p_FAST%VTK_Modes%VTKLinModes) CALL SetErrStat(ErrID_Severe,'Number of modes requested exceeds the number of modes in the linearization analysis file "'//TRIM( p_FAST%VTK_modes%MatlabFileName )//'".', ErrStat, ErrMsg, RoutineName)
    if (NLinTimes /= p_FAST%NLinTimes) CALL SetErrStat(ErrID_Severe,'Number of times linearization was performed is not the same as the number of linearization times in the linearization analysis file "'//TRIM( p_FAST%VTK_modes%MatlabFileName )//'".', ErrStat, ErrMsg, RoutineName)
 
-
-      !Let's read only the number of modes we need to use
-   nModes = min( nModes, p_FAST%VTK_Modes%VTKLinModes )
+   ! Maximum mode index requested by user
+   iModeMax = maxval(p_FAST%VTK_modes%VTKModes(:))
+   if (nModes < iModeMax) then
+      call WrScr(' Warning: the maximum index in VTKModes ('//trim(num2lstr(iModeMax))//') exceeds the number of modes ('//trim(num2lstr(nModes))//') from binary file.');
+   endif
+   ! Let's read only the number of modes we need to use
+   nModes = min( nModes, iModeMax)
 
    ALLOCATE( p_FAST%VTK_Modes%x_eig_magnitude(nStates, NLinTimes, nModes), &
              p_FAST%VTK_Modes%x_eig_phase(    nStates, NLinTimes, nModes), STAT=ErrStat2 )
