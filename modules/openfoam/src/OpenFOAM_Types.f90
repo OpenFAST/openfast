@@ -49,8 +49,8 @@ IMPLICIT NONE
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
-    INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
+    INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade -- from extern [-]
+    INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower -- from extern [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructBldRNodes => NULL()      !< Radius to structural model analysis nodes relative to hub [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructTwrHNodes => NULL()      !< Location of variable-spaced structural model tower nodes (relative to the tower rigid base height) [-]
     REAL(ReKi)  :: BladeLength      !< Blade length [meters]
@@ -116,8 +116,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NnodesForce      !< number of force nodes on FAST v8-OpenFOAM interface [-]
     INTEGER(IntKi)  :: NnodesForceBlade      !< number of force nodes on FAST v8-OpenFOAM interface [-]
     INTEGER(IntKi)  :: NnodesForceTower      !< number of force nodes on FAST v8-OpenFOAM interface [-]
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceBldRnodes => NULL() 
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceTwrHnodes => NULL() 
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceBldRnodes => NULL()      !< Radial location of force nodes [-]
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceTwrHnodes => NULL()      !< Radial location of force nodes [-]
     REAL(ReKi)  :: BladeLength      !< Blade length (same for all blades) [m]
     REAL(ReKi)  :: TowerHeight      !< Tower height [m]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower base height [m]
