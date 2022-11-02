@@ -776,7 +776,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
         run: |
-          set OMP_NUM_THREADS=8
+          set OMP_NUM_THREADS=2
           ctest -VV -L fastfarm -j ${{env.NUM_PROCS}} --verbose
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
