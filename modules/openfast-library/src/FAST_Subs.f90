@@ -272,6 +272,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
    
       Init%InData_ED%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ED))
       Init%InData_ED%CompElast     = p_FAST%CompElast == Module_ED
+      Init%InData_ED%RigidAero     = p_FAST%CompAero  == Module_ADsk
    
       Init%InData_ED%Gravity       = p_FAST%Gravity
    
