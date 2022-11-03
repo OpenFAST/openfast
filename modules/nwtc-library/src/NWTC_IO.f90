@@ -2081,6 +2081,11 @@ END SUBROUTINE CheckR16Var
       
       IF ( IntKiBuf(1) == 1 .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0 ) THEN
          CALL LoadDynamicLib( OutData, ErrStat, ErrMsg )
+      else
+         ! Nullifying
+         OutData%FileAddr  = INT(0,C_INTPTR_T)
+         OutData%FileAddrX = C_NULL_PTR
+         OutData%ProcAddr  = C_NULL_FUNPTR
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
