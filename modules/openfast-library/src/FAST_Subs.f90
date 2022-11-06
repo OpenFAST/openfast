@@ -639,18 +639,17 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
       ! get blade and tower info from AD.  Assumption made that all blades have same spanwise characteristics
       Init%InData_OpFM%BladeLength = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds)
-      Init%InData_OpFM%TowerHeight = Init%OutData_AD%rotors(1)%TwrElev(SIZE(Init%OutData_AD%rotors(1)%TwrElev)) - Init%OutData_AD%rotors(1)%TwrElev(1)   ! TwrElev is based on ground or MSL.  Need flexible tower length and first node
-      Init%InData_OpFM%TowerBaseHeight = Init%OutData_AD%rotors(1)%TwrElev(1)
-!FIXME: make sure rotor blade props is actually set
-!FIXME: may not need this if full mesh is used internally
+      if (allocated(Init%OutData_AD%rotors(1)%TwrElev)) then
+         Init%InData_OpFM%TowerHeight     = Init%OutData_AD%rotors(1)%TwrElev(SIZE(Init%OutData_AD%rotors(1)%TwrElev)) - Init%OutData_AD%rotors(1)%TwrElev(1)   ! TwrElev is based on ground or MSL.  Need flexible tower length and first node
+         Init%InData_OpFM%TowerBaseHeight = Init%OutData_AD%rotors(1)%TwrElev(1)
+         ALLOCATE(Init%InData_OpFM%StructTwrHNodes( SIZE(Init%OutData_AD%rotors(1)%TwrElev)),  STAT=ErrStat2)
+         Init%InData_OpFM%StructTwrHNodes(:) = Init%OutData_AD%rotors(1)%TwrElev(:)
+      else
+         Init%InData_OpFM%TowerHeight     = 0.0_ReKi
+         Init%InData_OpFM%TowerBaseHeight = 0.0_ReKi
+      endif
       ALLOCATE(Init%InData_OpFM%StructBldRNodes(Init%OutData_AD%rotors(1)%BladeProps(1)%NumBlNds),  STAT=ErrStat2)
       Init%InData_OpFM%StructBldRNodes(:) = Init%OutData_AD%rotors(1)%BladeProps(1)%BlSpn(:)
-!FIXME: error handling on above
-!FIXME: add some checks on allocation of the TwrElev -- want this to work without towers
-!FIXME: may not need this if full mesh is used internally
-      ALLOCATE(Init%InData_OpFM%StructTwrHNodes( SIZE(Init%OutData_AD%rotors(1)%TwrElev)),  STAT=ErrStat2)
-      Init%InData_OpFM%StructTwrHNodes(:) = Init%OutData_AD%rotors(1)%TwrElev(:)
-!FIXME: do I need to send over the blade node positions and orientations at init?  Or is the full mesh used from u_AD?
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating OpFM%InitInput.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()

@@ -30,14 +30,10 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 
 # ..... MiscVars ................................................................................................................
-typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceLoads	{:}	-	-	"line2 mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
-typedef	^	^	MeshType	ActForceMotions	{:}	-	-	"line2 mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
-typedef	^	^	MeshType	ActForceMotionsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
-typedef	^	^	MeshType	ActForceLoadsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
-typedef	^	^	MeshMapType	Line2_to_Line2_Loads	{:}	-	-	"mapping data structure to convert line2 loads to line2 loads"	-
-typedef	^	^	MeshMapType	Line2_to_Line2_Motions	{:}	-	-	"mapping data structure to convert line2 loads to line2 motions"	-
-typedef	^	^	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
-typedef	^	^	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point motions"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceMotionsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceLoadsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point motions"	-
 
 
 # ..... Parameters ................................................................................................................
