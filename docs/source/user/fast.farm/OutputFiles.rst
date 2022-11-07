@@ -90,6 +90,30 @@ take up a lot of disk space, especially when generating full low- and
 high-resolution disturbed wind data files. Therefore, disabling
 visualization is recommended when running many FAST.Farm simulations.
 
+
+.. _FF:Output:Planes:
+
+Wake dynamics Plane Files
+-------------------------
+
+Setting the option **OutAllPlanes** to true in the main FAST.Farm input file
+will result in the wake planes of the Wake Dynamics module to be written.
+This option requires intensive writing to disk and will drastically slow down the simulation.
+The wake planes are written in VTK format, in the folder `vtk_ff_planes` at the root
+of the simulation directory.
+A VTK file is written for each plane, time step and turbine. 
+The number of planes written will increase with each **DT_Low** time step, until 
+the full number of planes **Num_Planes** is reached.
+The coordinates of the planes are in the meandering frame of reference (not global coordinates)
+and using Cartesian coordinates.
+The following field are always written: 
+x,y,z components of the wake deficit velocity (in the meandering frame),
+ambient, shear, and  total eddy viscosity. 
+When **Mod_Wake=1`** (polar wake), the fields are converted from polar to Cartesian.
+Additional velocity gradients are provided in the VTK file when **Mod_Wake/=1`**.
+
+
+
 .. _FF:Output:Time:
 
 Time-Series Results File

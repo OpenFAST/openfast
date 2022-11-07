@@ -126,20 +126,19 @@ IMPLICIT NONE
 ! =======================
 ! =========  WD_MiscVarType  =======
   TYPE, PUBLIC :: WD_MiscVarType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dvdr      !<  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dvtdr      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_tot      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_amb      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_shr      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_tot2      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_amb2      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_shr2      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dvx_dy      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dvx_dz      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: nu_dvx_dy      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: nu_dvx_dz      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dnuvx_dy      !<  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dnuvx_dz      !<  [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dvtdr      !< Radial gradient of total eddy viscosity (nr) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_tot      !< Polar total   eddy viscosity (nr,np) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_amb      !< Polar ambient eddy viscosity (nr,np) [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: vt_shr      !< Polar shear   eddy viscosity (nr,np) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_tot2      !< Cartesian total   eddy viscosity (ny,nz,np) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_amb2      !< Cartesian ambient eddy viscosity (ny,nz,np) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: vt_shr2      !< Cartesian shear   eddy viscosity (ny,nz,np) [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dvx_dy      !< Cartesian velocity gradient dVx/dy [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dvx_dz      !< Cartesian velocity gradient dVx/dz [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: nu_dvx_dy      !< Product of total eddy viscosity and gradient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: nu_dvx_dz      !< Product of total eddy viscosity and gradient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dnuvx_dy      !< Gradient of nu_dvx_dy wrt y [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: dnuvx_dz      !< Gradient of nu_dvx_dz wrt z [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: a      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: b      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: c      !<  [-]
@@ -148,6 +147,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_high      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_polar      !< Vx as function of r for Cartesian implementation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vt_wake      !< Vr as function of r for Cartesian implementation [-]
+    REAL(ReKi)  :: GammaCurl      !< Circulation used in Curled wake model [-]
     REAL(ReKi)  :: Ct_avg      !< Circulation used in Curled wake model [-]
   END TYPE WD_MiscVarType
 ! =======================
@@ -188,6 +188,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k_vCurl      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes      !< Output all planes [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
   END TYPE WD_ParameterType
 ! =======================
@@ -2618,18 +2619,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcMiscData%dvdr)) THEN
-  i1_l = LBOUND(SrcMiscData%dvdr,1)
-  i1_u = UBOUND(SrcMiscData%dvdr,1)
-  IF (.NOT. ALLOCATED(DstMiscData%dvdr)) THEN 
-    ALLOCATE(DstMiscData%dvdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dvdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%dvdr = SrcMiscData%dvdr
-ENDIF
 IF (ALLOCATED(SrcMiscData%dvtdr)) THEN
   i1_l = LBOUND(SrcMiscData%dvtdr,1)
   i1_u = UBOUND(SrcMiscData%dvtdr,1)
@@ -2916,6 +2905,7 @@ IF (ALLOCATED(SrcMiscData%Vt_wake)) THEN
   END IF
     DstMiscData%Vt_wake = SrcMiscData%Vt_wake
 ENDIF
+    DstMiscData%GammaCurl = SrcMiscData%GammaCurl
     DstMiscData%Ct_avg = SrcMiscData%Ct_avg
  END SUBROUTINE WD_CopyMisc
 
@@ -2940,9 +2930,6 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-IF (ALLOCATED(MiscData%dvdr)) THEN
-  DEALLOCATE(MiscData%dvdr)
-ENDIF
 IF (ALLOCATED(MiscData%dvtdr)) THEN
   DEALLOCATE(MiscData%dvtdr)
 ENDIF
@@ -3043,11 +3030,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! dvdr allocated yes/no
-  IF ( ALLOCATED(InData%dvdr) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! dvdr upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%dvdr)  ! dvdr
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! dvtdr allocated yes/no
   IF ( ALLOCATED(InData%dvtdr) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! dvtdr upper/lower bounds for each dimension
@@ -3153,6 +3135,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! Vt_wake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vt_wake)  ! Vt_wake
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! GammaCurl
       Re_BufSz   = Re_BufSz   + 1  ! Ct_avg
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -3181,21 +3164,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%dvdr) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dvdr,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dvdr,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%dvdr,1), UBOUND(InData%dvdr,1)
-        ReKiBuf(Re_Xferred) = InData%dvdr(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( .NOT. ALLOCATED(InData%dvtdr) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3596,6 +3564,8 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%GammaCurl
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Ct_avg
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_PackMisc
@@ -3629,24 +3599,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dvdr not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%dvdr)) DEALLOCATE(OutData%dvdr)
-    ALLOCATE(OutData%dvdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dvdr.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%dvdr,1), UBOUND(OutData%dvdr,1)
-        OutData%dvdr(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dvtdr not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4110,6 +4062,8 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+    OutData%GammaCurl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%Ct_avg = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE WD_UnPackMisc
@@ -4197,6 +4151,7 @@ ENDIF
     DstParamData%k_vCurl = SrcParamData%k_vCurl
     DstParamData%OutAllPlanes = SrcParamData%OutAllPlanes
     DstParamData%OutFileRoot = SrcParamData%OutFileRoot
+    DstParamData%OutFileVTKDir = SrcParamData%OutFileVTKDir
     DstParamData%TurbNum = SrcParamData%TurbNum
  END SUBROUTINE WD_CopyParam
 
@@ -4314,6 +4269,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! k_vCurl
       Int_BufSz  = Int_BufSz  + 1  ! OutAllPlanes
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileRoot)  ! OutFileRoot
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileVTKDir)  ! OutFileVTKDir
       Int_BufSz  = Int_BufSz  + 1  ! TurbNum
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -4451,6 +4407,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%OutFileRoot)
       IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileRoot(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(InData%OutFileVTKDir)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFileVTKDir(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     IntKiBuf(Int_Xferred) = InData%TurbNum
@@ -4602,6 +4562,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%OutFileRoot)
       OutData%OutFileRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    DO I = 1, LEN(OutData%OutFileVTKDir)
+      OutData%OutFileVTKDir(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%TurbNum = IntKiBuf(Int_Xferred)
