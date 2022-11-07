@@ -1359,14 +1359,20 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
    !#endif   
       
+      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, n_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
       do nt = 1,p%NumTurbines
          do n_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
             call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2)
-               call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-               if (errStat >= AbortErrLev) return 
+            if (ErrStat2 >= AbortErrLev) then
+               !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+                call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+               !$OMP END CRITICAL
+            endif
          end do
       end do
+      !$OMP END PARALLEL DO  
+      if (errStat >= AbortErrLev) return 
 
    else ! p%Mod_AmbWind == 2 .or. 3
 
