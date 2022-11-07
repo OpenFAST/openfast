@@ -27,10 +27,10 @@ MODULE MoorDyn_C
 
 IMPLICIT NONE
 
-PUBLIC :: MD_INIT_C
-PUBLIC :: MD_UPDATESTATES_C
-PUBLIC :: MD_CALCOUTPUT_C
-PUBLIC :: MD_END_C
+PUBLIC :: MD_C_Init
+PUBLIC :: MD_C_UpdateStates
+PUBLIC :: MD_C_CalcOutput
+PUBLIC :: MD_C_End
 
 !--------------------------------------------------------------------------------------------------------------------------------------------------------
 ! Global Variables
@@ -81,9 +81,7 @@ CONTAINS
 !===============================================================================================================
 !---------------------------------------------- MD INIT --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_INIT_C')
-
-
+SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_C, DEPTH_C, PtfmInit_C, InterpOrder_C, NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_Init')
     TYPE(C_PTR)                                    , INTENT(IN   )   :: InputFileString_C        !< Input file as a single string with lines deliniated by C_NULL_CHAR
     INTEGER(C_INT)                                 , INTENT(IN   )   :: InputFileStringLength_C  !< length of the input file string
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: DT_C
@@ -106,7 +104,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     INTEGER                                                          :: I, J, K
 
 
-    ! Set up error handling for MD_CALCOUTPUT_C
+    ! Set up error handling for MD_C_CalcOutput
     ErrStat = ErrID_None
     ErrMsg = ''
 
@@ -118,7 +116,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
 
     ! Convert string inputs to FileInfoType
     CALL InitFileInfo(InputFileString, InitInp%PassedPrimaryInputData, ErrStat, ErrMsg)
-    LocMsg = "MD_INIT_C: Failed to convert main input file string to FileInfoType"
+    LocMsg = "MD_C_Init: Failed to convert main input file string to FileInfoType"
     IF (Failed(LocMsg)) RETURN
 
     ! Set other inputs for calling MD_Init
@@ -129,7 +127,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
         InterpOrder = INT(InterpOrder_C, IntKi)
         ALLOCATE(InputTimes(InterpOrder+1), STAT = ErrStat)
     ELSE
-        CALL WrScr('MD_INIT_C: Please set InterpOrder to 1 (linear) or 2 (quadratic)')
+        CALL WrScr('MD_C_Init: Please set InterpOrder to 1 (linear) or 2 (quadratic)')
         RETURN
     END IF
 
@@ -151,14 +149,14 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     END DO
 
     ALLOCATE(u(InterpOrder+1), STAT=ErrStat)
-    LocMsg = "MD_INIT_C: Could not allocate input u"
+    LocMsg = "MD_C_Init: Could not allocate input u"
     IF (Failed(LocMsg)) RETURN
     
     !-------------------------------------------------
     ! Call the main subroutine MD_Init
     !-------------------------------------------------
     CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, DTcoupling, InitOutData, ErrStat, ErrMsg)
-    LocMsg = "MD_INIT_C: Main MD_Init call failed"
+    LocMsg = "MD_C_Init: Main MD_Init call failed"
     IF (Failed(LocMsg)) RETURN
 
     !-------------------------------------------------
@@ -186,12 +184,12 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     ! Set the interface  meshes for motion inputs and loads output
     !-------------------------------------------------------------
     CALL SetMotionLoadsInterfaceMeshes(ErrStat,ErrMsg)
-    LocMsg = "MD_INIT_C: SetMotionLoadsInterfaceMeshes failed"
+    LocMsg = "MD_C_Init: SetMotionLoadsInterfaceMeshes failed"
     IF (Failed(LocMsg))  RETURN
 
     DO i=2,InterpOrder+1
         CALL MD_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat, ErrMsg)
-        LocMsg = "MD_INIT_C: MD_CopyInput failed"
+        LocMsg = "MD_C_Init: MD_CopyInput failed"
         IF (Failed(LocMsg))  RETURN
     END DO
     InputTimePrev = -DTcoupling    ! Initialize for MD_UpdateStates_C
@@ -199,7 +197,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     !-------------------------------------------------------------
     ! Initial setup of other pieces of x,xd,z,other
     !-------------------------------------------------------------
-    LocMsg = "MD_INIT_C: Copying of states failed"
+    LocMsg = "MD_C_Init: Copying of states failed"
 
     CALL MD_CopyContState  ( x(          STATE_CURR), x(          STATE_PRED), MESH_NEWCOPY, Errstat, ErrMsg);    if (Failed(LocMsg))  return
     CALL MD_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_PRED), MESH_NEWCOPY, Errstat, ErrMsg);    if (Failed(LocMsg))  return
@@ -215,14 +213,14 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     CALL MD_CopyOtherState ( other(STATE_CURR), other(STATE_LAST), MESH_NEWCOPY, Errstat, ErrMsg);                if (Failed(LocMsg))  return
 
     !-------------------------------------------------
-    ! Clean up variables and set up for MD_CALCOUTPUT_C
+    ! Clean up variables and set up for MD_C_CalcOutput
     !------------------------------------------------- 
     CALL MD_DestroyInitInput( InitInp, ErrStat, ErrMsg )
-    LocMsg = "MD_INIT_C: MD_DestroyInitInput failed"
+    LocMsg = "MD_C_Init: MD_DestroyInitInput failed"
     IF (Failed(LocMsg)) RETURN
 
     CALL MD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
-    LocMsg = "MD_INIT_C: MD_DestroyInitOutput failed"
+    LocMsg = "MD_C_Init: MD_DestroyInitOutput failed"
     IF (Failed(LocMsg)) RETURN
 
     IF (ErrStat >= AbortErrLev) THEN
@@ -232,7 +230,7 @@ SUBROUTINE MD_INIT_C(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
     END IF
     ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-    ! PRINT*, "DONE WITH MD_INIT_C!"
+    ! PRINT*, "DONE WITH MD_C_Init!"
 
 CONTAINS
 
@@ -250,13 +248,12 @@ CONTAINS
     END IF
     END FUNCTION Failed
 
-END SUBROUTINE MD_INIT_C
+END SUBROUTINE MD_C_Init
 
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_UPDATESTATES_C')
-
+SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_UpdateStates')
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: T0_C, T1_C, T2_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
@@ -269,7 +266,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, LocMsg
     LOGICAL                                                          :: CorrectionStep
 
-    ! Set up error handling for MD_CALCOUTPUT_C
+    ! Set up error handling for MD_C_CalcOutput
     ErrStat = ErrID_None
     ErrMsg = ''
     CorrectionStep = .FALSE.
@@ -283,7 +280,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
         InputTimes(2)  = REAL(T1_C, DbKi)         ! t
         InputTimes(3)  = REAL(T2_C, DbKi)         ! t + dt
     ELSE
-        CALL WrScr('MD_UPDATESTATES_C: INTERPORDER MUST BE 1 (LINEAR) OR 2 (QUADRATIC). YOU SHOULDNT BE HERE!')
+        CALL WrScr('MD_C_UpdateStates: INTERPORDER MUST BE 1 (LINEAR) OR 2 (QUADRATIC). YOU SHOULDNT BE HERE!')
         RETURN
     END IF
 
@@ -319,14 +316,14 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
         ! Step back to previous state because we are doing a correction step
         !     -- repeating the T -> T+dt update with new inputs at T+dt
         !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
-        LocMsg = 'MD_UPDATESTATES_C: Copy States during correction step failed'
+        LocMsg = 'MD_C_UpdateStates: Copy States during correction step failed'
         CALL MD_CopyContState   (x(          STATE_LAST), x(          STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
         CALL MD_CopyDiscState   (xd(         STATE_LAST), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
         CALL MD_CopyConstrState (z(          STATE_LAST), z(          STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
         CALL MD_CopyOtherState  (other(      STATE_LAST), other(      STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
     ELSE
         ! Cycle inputs back one timestep since we are moving forward in time.
-        LocMsg = 'MD_UPDATESTATES_C: CopyInput during correction step failed'
+        LocMsg = 'MD_C_UpdateStates: CopyInput during correction step failed'
         IF (InterpOrder>1) THEN ! quadratic, so keep the old time
             CALL MD_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat, ErrMsg);        IF (Failed(LocMsg))  RETURN
         END IF
@@ -343,16 +340,16 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
 
     ! Transfer motions to input meshes
     CALL Set_MotionMesh( ErrStat, ErrMsg )                    ! update motion mesh with input motion arrays
-    LocMsg = "MD_UPDATESTATES_C: Set_MotionMesh failed"
+    LocMsg = "MD_C_UpdateStates: Set_MotionMesh failed"
     IF (Failed(LocMsg)) RETURN
     CALL MD_SetInputMotion( u(1), ErrStat, ErrMsg )           ! transfer input motion mesh to u(1) meshes
-    LocMsg = "MD_UPDATESTATES_C: MD_SetInputMotion failed"
+    LocMsg = "MD_C_UpdateStates: MD_SetInputMotion failed"
     IF (Failed(LocMsg)) RETURN
 
     ! Set copy the current state over to the predicted state for sending to UpdateStates
     !     -- The STATE_PREDicted will get updated in the call.
     !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
-    LocMsg = 'MD_UPDATESTATES_C: Copy States failed'
+    LocMsg = 'MD_C_UpdateStates: Copy States failed'
     CALL MD_CopyContState   (x(          STATE_CURR), x(          STATE_PRED), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
     CALL MD_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_PRED), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
     CALL MD_CopyConstrState (z(          STATE_CURR), z(          STATE_PRED), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
@@ -362,7 +359,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
     ! Call the main subroutine MD_UpdateStates
     !-------------------------------------------------
     CALL MD_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), other(STATE_PRED), m, ErrStat, ErrMsg)
-    LocMsg = "MD_UPDATESTATES_C: Main MD_UpdateStates subroutine failed!"
+    LocMsg = "MD_C_UpdateStates: Main MD_UpdateStates subroutine failed!"
     IF (Failed(LocMsg)) RETURN
 
    !-------------------------------------------------------
@@ -371,7 +368,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
    ! Move current state at T to previous state at T-dt
    !     -- STATE_LAST now contains info at time T
    !     -- this allows repeating the T --> T+dt update
-    LocMsg = "MD_UPDATESTATES_C: copy states after MD_UpdateStates call failed"
+    LocMsg = "MD_C_UpdateStates: copy states after MD_UpdateStates call failed"
     CALL MD_CopyContState   (x(          STATE_CURR), x(          STATE_LAST), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
     CALL MD_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_LAST), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
     CALL MD_CopyConstrState (z(          STATE_CURR), z(          STATE_LAST), MESH_UPDATECOPY, Errstat, ErrMsg);  IF (Failed(LocMsg))  RETURN
@@ -393,7 +390,7 @@ SUBROUTINE MD_UPDATESTATES_C(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
     END IF
     ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-    ! PRINT*, "DONE WITH MD_UPDATESTATES_C!"
+    ! PRINT*, "DONE WITH MD_C_UpdateStates!"
 
 CONTAINS
 
@@ -411,13 +408,12 @@ CONTAINS
     END IF
     END FUNCTION Failed
 
-END SUBROUTINE MD_UPDATESTATES_C
+END SUBROUTINE MD_C_UpdateStates
 
 !===============================================================================================================
 !---------------------------------------------- MD CALC OUTPUT -------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, FORCES_C, OUTPUTS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_CALCOUTPUT_C')
-
+SUBROUTINE MD_C_CalcOutput(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, FORCES_C, OUTPUTS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_CalcOutput')
     REAL(C_DOUBLE)                                 , INTENT(IN   )   :: Time_C
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
     REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
@@ -432,7 +428,7 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
     INTEGER(IntKi)                                                   :: ErrStat, J
     CHARACTER(ErrMsgLen)                                             :: ErrMsg, LocMsg
 
-    ! Set up error handling for MD_CALCOUTPUT_C
+    ! Set up error handling for MD_C_CalcOutput
     ErrStat = ErrID_None
     ErrMsg = ''
 
@@ -451,18 +447,18 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
 
     ! Transfer motions to input meshes
     CALL Set_MotionMesh(ErrStat, ErrMsg )             ! update motion mesh with input motion arrays
-    LocMsg = "MD_CALCOUTPUT_C: Set_MotionMesh failed"
+    LocMsg = "MD_C_CalcOutput: Set_MotionMesh failed"
     IF (Failed(LocMsg))  RETURN
 
     CALL MD_SetInputMotion( u(1), ErrStat, ErrMsg )   ! transfer input motion mesh to u(1) meshes
-    LocMsg = "MD_CALCOUTPUT_C: MD_SetInputMotion failed"
+    LocMsg = "MD_C_CalcOutput: MD_SetInputMotion failed"
     IF (Failed(LocMsg))  RETURN
 
     !-------------------------------------------------
     ! Call the main subroutine MD_CalcOutput
     !-------------------------------------------------
     CALL MD_CalcOutput( t, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, ErrStat, ErrMsg )
-    LocMsg = "MD_CALCOUTPUT_C: Call to main MD_CalcOutput routine failed!"
+    LocMsg = "MD_C_CalcOutput: Call to main MD_CalcOutput routine failed!"
     IF (Failed(LocMsg)) RETURN
 
     !-------------------------------------------------
@@ -470,7 +466,7 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
     !-------------------------------------------------
     ! Transfer resulting load meshes to intermediate mesh
     CALL MD_TransferLoads( u(1), y, ErrStat, ErrMsg )
-    LocMsg = "MD_CALCOUTPUT_C: MD_TransferLoads failed"
+    LocMsg = "MD_C_CalcOutput: MD_TransferLoads failed"
     IF (Failed(LocMsg))  RETURN
 
     ! Set output force/moment array
@@ -490,7 +486,7 @@ SUBROUTINE MD_CALCOUTPUT_C(Time_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, F
     END IF
     ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-    !PRINT*, "DONE WITH MD_CALCOUTPUT_C!"
+    !PRINT*, "DONE WITH MD_C_CalcOutput!"
 
 CONTAINS
 
@@ -508,13 +504,12 @@ CONTAINS
         END IF
     END FUNCTION Failed
 
-END SUBROUTINE MD_CALCOUTPUT_C
+END SUBROUTINE MD_C_CalcOutput
 
 !===============================================================================================================
 !----------------------------------------------- MD END --------------------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
-
+SUBROUTINE MD_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_C_End')
     INTEGER(C_INT)                , INTENT(  OUT)      :: ErrStat_C
     CHARACTER(KIND=C_CHAR)        , INTENT(  OUT)      :: ErrMsg_C(1025)
 
@@ -522,13 +517,13 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
     INTEGER(IntKi)                                     :: ErrStat, i
     CHARACTER(ErrMsgLen)                               :: ErrMsg, LocMsg
 
-    ! Set up error handling for MD_END_C
+    ! Set up error handling for MD_C_End
     ErrStat = ErrID_None
     ErrMsg = ''
 
     ! Call the main subroutine MD_End
     CALL MD_End(u(1), p, x(1), xd(1), z(1), other(1), y, m, ErrStat , ErrMsg)
-    LocMsg = "MD_END_C: Main call to MD_End failed!"
+    LocMsg = "MD_C_End: Main call to MD_End failed!"
     IF (Failed(LocMsg)) RETURN
 
     !  NOTE: MoorDyn_End only takes 1 instance of u, not the array.  So extra
@@ -550,7 +545,7 @@ SUBROUTINE MD_END_C(ErrStat_C,ErrMsg_C) BIND (C, NAME='MD_END_C')
     END IF
     ErrMsg_C = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_C )
 
-    !PRINT*, "DONE WITH MD_END_C!"
+    !PRINT*, "DONE WITH MD_C_End!"
 
 CONTAINS
 
@@ -568,7 +563,7 @@ CONTAINS
     END IF
     END FUNCTION Failed
 
-END SUBROUTINE MD_END_C
+END SUBROUTINE MD_C_End
 
 !===============================================================================================================
 !----------------------------------------- ADDITIONAL SUBROUTINES ----------------------------------------------
