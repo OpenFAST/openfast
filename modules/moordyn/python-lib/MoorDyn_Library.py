@@ -99,7 +99,6 @@ class MoorDynLib(CDLL):
         self.MD_C_CalcOutput.restype = c_int
         
         self.MD_C_UpdateStates.argtypes = [
-            POINTER(c_double),                    # IN: time @ n-1
             POINTER(c_double),                    # IN: time @ n
             POINTER(c_double),                    # IN: time @ n+1
             POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)
@@ -207,7 +206,6 @@ class MoorDynLib(CDLL):
             accelerations_c[i] = c_float(p)
 
         self.MD_C_UpdateStates(
-            byref(c_double(t0)),                   # IN: previous time step (t-1)
             byref(c_double(t1)),                   # IN: current time (t)
             byref(c_double(t2)),                   # IN: next time step (t+1)
             positions_c,                           # IN: positions

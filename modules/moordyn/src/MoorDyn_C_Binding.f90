@@ -20,10 +20,11 @@
 !**********************************************************************************************************************************
 MODULE MoorDyn_C
 
-    USE ISO_C_BINDING
-    USE MoorDyn
-    USE MoorDyn_Types
-    USE NWTC_Library
+   USE ISO_C_BINDING
+   USE MoorDyn
+   USE MoorDyn_Types
+   USE NWTC_Library
+   USE VersionInfo
 
 IMPLICIT NONE
 
@@ -39,6 +40,11 @@ PUBLIC :: MD_C_End
 !     to correctly handle different lengths of the strings
 integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
 integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
+
+
+!------------------------------------------------------------------------------------
+!  Version info for display
+TYPE(ProgDesc), PARAMETER              :: version   = ProgDesc( 'MoorDyn library', '', '' )
 
 
 !--------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -80,10 +86,12 @@ TYPE(MD_InitOutputType)                 :: InitOutData         !< Output for ini
 !     the glue code.  However, here we do not pass state information through the
 !     interface and therefore must store it here analogously to how it is handled
 !     in the OpenFAST glue code.
-INTEGER(IntKi)                          :: N_Global=0          !< Global timestep. MOORDYN IS NOT CURRENTLY USING, BUT MAY CHANGE IN THE FUTURE
 INTEGER(IntKi)                          :: InterpOrder         !< Interpolation order: must be 1 (linear) or 2 (quadratic)
 REAL(DbKi), DIMENSION(:), ALLOCATABLE   :: InputTimes(:)       !< InputTimes array
 REAL(DbKi)                              :: InputTimePrev       !< input time of last UpdateStates call
+real(DbKi)                              :: dT_Global           !< dT of the code calling this module
+integer(IntKi)                          :: N_Global            !< global timestep
+real(DbKi)                              :: T_Initial           !< initial Time of simulation
 
 ! We are including the previous state info here (not done in OpenFAST this way)
 INTEGER(IntKi),   PARAMETER             :: STATE_LAST = 0      !< Index for previous state (not needed in OF, but necessary here)
@@ -164,15 +172,21 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
 
    ! Local Variables
    CHARACTER(KIND=C_char, LEN=InputFileStringLength_C), POINTER     :: InputFileString          !< Input file as a single string with NULL chracter separating lines
-   REAL(DbKi)                                                       :: DTcoupling
    INTEGER(IntKi)                                                   :: ErrStat, ErrStat2
    CHARACTER(ErrMsgLen)                                             :: ErrMsg,  ErrMsg2
    INTEGER                                                          :: I, J, K
    character(*), parameter                                          :: RoutineName = 'MD_C_Init'
 
-   ! Set up error handling for MD_C_CalcOutput
+
+   ! Initialize library and display info on this compile
    ErrStat = ErrID_None
    ErrMsg = ''
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
+
+
 
    ! Convert the MD input file to FileInfoType
    !----------------------------------------------------------------------------------------------------------------------------------------------
@@ -196,7 +210,8 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
       if (Failed()) return
    END IF
 
-   DTcoupling               = REAL(DT_C, DbKi)
+   dT_Global                = REAL(DT_C, DbKi)
+   N_Global                 = 0_IntKi                     ! Assume we are on timestep 0 at start
    InitInp%FileName         = 'notUsed'
    InitInp%RootName         = 'MDroot'
    InitInp%UsePrimaryInputFile = .FALSE.
@@ -223,7 +238,7 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    !-------------------------------------------------
    ! Call the main subroutine MD_Init
    !-------------------------------------------------
-   CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, DTcoupling, InitOutData, ErrStat2, ErrMsg2); if (Failed()) return
+   CALL MD_Init(InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), other(STATE_CURR), y, m, dT_Global, InitOutData, ErrStat2, ErrMsg2); if (Failed()) return
 
    !-------------------------------------------------
    !  Set output channel information for driver code
@@ -254,7 +269,7 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    DO i=2,InterpOrder+1
       CALL MD_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
    END DO
-   InputTimePrev = -DTcoupling    ! Initialize for MD_UpdateStates_C
+   InputTimePrev = -dT_Global    ! Initialize for MD_C_UpdateStates
 
    !-------------------------------------------------------------
    ! Initial setup of other pieces of x,xd,z,other
@@ -294,12 +309,13 @@ END SUBROUTINE MD_C_Init
 !===============================================================================================================
 !---------------------------------------------- MD UPDATE STATES -----------------------------------------------
 !===============================================================================================================
-SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_UpdateStates')
+SUBROUTINE MD_C_UpdateStates(Time_C, TimeNext_C, POSITIONS_C, VELOCITIES_C, ACCELERATIONS_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='MD_C_UpdateStates')
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: MD_C_UpdateStates
 !GCC$ ATTRIBUTES DLLEXPORT :: MD_C_UpdateStates
 #endif
-   REAL(C_DOUBLE)                                 , INTENT(IN   )   :: T0_C, T1_C, T2_C
+   real(c_double),                                  intent(in   )  :: Time_C
+   real(c_double),                                  intent(in   )  :: TimeNext_C
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: POSITIONS_C(1,6)
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: VELOCITIES_C(1,6)
    REAL(C_FLOAT)                                  , INTENT(IN   )   :: ACCELERATIONS_C(1,6)
@@ -316,19 +332,6 @@ SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
    ErrStat = ErrID_None
    ErrMsg = ''
    CorrectionStep = .FALSE.
-
-   ! Set up inputs to MD_UpdateStates
-   IF (InterpOrder == 1) THEN
-      InputTimes(1)  = REAL(T1_C, DbKi)         ! t
-      InputTimes(2)  = REAL(T2_C, DbKi)         ! t + dt
-   ELSEIF (InterpOrder == 2) THEN
-      InputTimes(1)  = REAL(T0_C, DbKi)         ! t - dt
-      InputTimes(2)  = REAL(T1_C, DbKi)         ! t
-      InputTimes(3)  = REAL(T2_C, DbKi)         ! t + dt
-   ELSE
-      CALL WrScr('MD_C_UpdateStates: INTERPORDER MUST BE 1 (LINEAR) OR 2 (QUADRATIC). YOU SHOULDNT BE HERE!')
-      RETURN
-   END IF
 
    !-------------------------------------------------------
    ! Check the time for current timestep and next timestep
@@ -351,11 +354,17 @@ SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
    !        but should not affect any results.
 
    !  Check if we are repeating an UpdateStates call (for example in a predictor/corrector loop)
-    IF ( EqualRealNos( REAL(T1_C,DbKi), InputTimePrev ) ) THEN
-        CorrectionStep = .TRUE.
-    ELSE ! Setup time input times array
-        InputTimePrev  = REAL(T1_C,DbKi)            ! Store for check next time
-    END IF
+   if ( EqualRealNos( real(Time_C,DbKi), InputTimePrev ) ) then
+      CorrectionStep = .true.
+   else ! Setup time input times array
+      InputTimePrev          = real(Time_C,DbKi)            ! Store for check next time
+      if (InterpOrder>1) then ! quadratic, so keep the old time
+         InputTimes(INPUT_LAST) = ( N_Global - 1 ) * dT_Global    ! u(3) at T-dT
+      endif
+      InputTimes(INPUT_CURR) =   N_Global       * dT_Global       ! u(2) at T
+      InputTimes(INPUT_PRED) = ( N_Global + 1 ) * dT_Global       ! u(1) at T+dT
+      N_Global = N_Global + 1_IntKi                               ! increment counter to T+dT
+   endif
 
 
    IF (CorrectionStep) THEN
@@ -384,7 +393,7 @@ SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
 
    ! Transfer motions to input meshes
    CALL Set_MotionMesh( ErrStat2, ErrMsg2 );          IF (Failed())  RETURN
-   CALL MD_SetInputMotion( u(1), ErrStat2, ErrMsg2 ); IF (Failed())  RETURN
+   CALL MD_SetInputMotion( u(INPUT_PRED), ErrStat2, ErrMsg2 ); IF (Failed())  RETURN
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
    !     -- The STATE_PREDicted will get updated in the call.
@@ -417,13 +426,14 @@ SUBROUTINE MD_C_UpdateStates(T0_C, T1_C, T2_C, POSITIONS_C, VELOCITIES_C, ACCELE
    CALL MD_CopyOtherState  (other(STATE_PRED), other(STATE_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);  IF (Failed())  RETURN
 
 
+
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
 CONTAINS
    logical function Failed()
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
-      if (Failed) then
-         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-      endif
+      if (Failed)  call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
 END SUBROUTINE MD_C_UpdateStates
 

@@ -34,7 +34,7 @@ target_link_libraries(moordynlib nwtclibs)
 
 # c-bindings interface library
 add_library(moordyn_c_binding SHARED src/MoorDyn_C_Binding.f90)
-target_link_libraries(moordyn_c_binding moordynlib)
+target_link_libraries(moordyn_c_binding moordynlib versioninfolib ${CMAKE_DL_LIBS})
 if(APPLE OR UNIX)
    target_compile_definitions(moordyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()
