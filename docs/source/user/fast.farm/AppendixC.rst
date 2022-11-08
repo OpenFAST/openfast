@@ -47,6 +47,7 @@ to entry :math:`\gamma` in the **OutDist** list. Setting :math:`\gamma`
 calculated or for any distance where the wake from the turbine has
 overlapped itself.
 
+
 .. container::
    :name: Tab:FF:Outputs
 
@@ -92,10 +93,31 @@ overlapped itself.
       |                                                              |                   | induction or wakes from upstream turbines) for  |
       |                                                              |                   | turbine :math:`\alpha`                          |
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | RtVAmbFiltT\ :math:`\alpha`                                  | (m/s)             | Time-filtered value of RtVAmbT:math:`\alpha`    |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | AxiSkewT\ :math:`\alpha`                                     | (deg)             | Skew azimuth angle (used in curled-wake model)  |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | AxiSkewFiltT\ :math:`\alpha`                                 | (deg)             | Time-filtered value of AxiSkewT:math:`\alpha`   |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | RtSkewT\ :math:`\alpha`                                      | (deg)             | Skew angle (used in curled-wake model)          |
+      |                                                              |                   | for turbine  :math:`\alpha`                     |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | RtSkewFiltT\ :math:`\alpha`                                  | (deg)             | Time-filtered value of RtSkewT:math:`\alpha`    |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | RtGamCurlT\ :math:`\alpha`                                   | (m^2/s)           | Rotor circulation (used in curled-wake model)   |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | RtVRelT\ :math:`\alpha`                                      | (m/s)             | Rotor-disk-averaged relative wind speed (normal |
       |                                                              |                   | to disk, including structural motion and wakes  |
       |                                                              |                   | from upstream turbines, but not including local |
       |                                                              |                   | induction) for turbine :math:`\alpha`           |
+      +--------------------------------------------------------------+-------------------+-------------------------------------------------+
+      | RtCtAvgT\ :math:`\alpha`                                     | (-)               | Rotor-disk-averaged thrust coefficient          |
+      |                                                              |                   |  for turbine  :math:`\alpha`                    |      
       +--------------------------------------------------------------+-------------------+-------------------------------------------------+
       | CtT\ :math:`\alpha`\ N\ :math:`\beta`                        | (-)               | Azimuthally averaged thrust force coefficient   |
       |                                                              |                   | (normal to disk) for radial output node         |

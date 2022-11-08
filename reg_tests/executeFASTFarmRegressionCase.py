@@ -112,10 +112,12 @@ else:
 if not os.path.isdir(testBuildDirectory):
     rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
+caseName='FAST.Farm' # for ease of comparison
+
 ### Run openfast on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fstf")
-    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         sys.exit(returnCode*10)
     

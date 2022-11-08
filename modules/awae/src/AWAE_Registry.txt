@@ -64,6 +64,9 @@ typedef  ^            ^                   ReKi            X0_low         -  - - 
 typedef  ^            ^                   ReKi            Y0_low         -  - -   "Y-component of the origin of the low-resolution spatial domain" m
 typedef  ^            ^                   ReKi            Z0_low         -  - -   "Z-component of the origin of the low-resolution spatial domain" m
 typedef  ^            ^                   ReKi            WT_Position  {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
+typedef  ^            ^                   IntKi           Mod_Projection -  - -   "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
+
+
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -116,9 +119,8 @@ typedef   ^ OtherStateType      InflowWind_OtherStateType     IfW  {:} - -  "Dum
 typedef   ^ MiscVarType    SiKi     Vamb_low     {:}{:}{:}{:} - -  "UVW components of ambient wind across the low-resolution domain throughout the farm" m/s
 typedef   ^ MiscVarType    ReKi     Vamb_lowpol     {:}{:} - -  "UVW components of disturbed wind (ambient + wakes) at points in the polar grid for each wake plane for each turbine" m/s
 typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
+typedef   ^ MiscVarType    SiKi     Vdist_low_full    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm, for outputs" m/s
 typedef   ^ MiscVarType    AWAE_HighWindGrid Vamb_High   {:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
-typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
-typedef   ^ MiscVarType    ReKi     rhat_plane   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
@@ -126,8 +128,7 @@ typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
-typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
+#
 typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
 typedef	^	MiscVarType	   SiKi	   outVizXZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
@@ -144,7 +145,8 @@ typedef   ^ ParameterType  CHARACTER(1024)  WindFilePath       -  - -   "Path na
 typedef   ^ ParameterType  IntKi            NumTurbines        -  - -   "Number of wind turbines in the farm [>=1]" -
 typedef   ^ ParameterType  IntKi            NumRadii           -  - -   "Number of radii in the radial finite-difference grid  [>=2]" -
 typedef   ^ ParameterType  IntKi            NumPlanes          -  - -   "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
-typedef   ^ ParameterType  ReKi             r                 {:} - -   "Discretization of radial finite-difference grid"        m
+typedef   ^ ParameterType  ReKi             y                 {:} - -   "Horizontal discretization of the wake planes"        m
+typedef   ^ ParameterType  ReKi             z                 {:} - -   "Vertical discretization of the wake planes"        m
 typedef   ^ ^              IntKi            Mod_AmbWind        -  - -   "Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module}" -
 typedef   ^ ParameterType  IntKi            nX_low             -  - -   "Number of low-resolution spatial nodes in X direction" -
 typedef   ^ ParameterType  IntKi            nY_low             -  - -   "Number of low-resolution spatial nodes in Y direction" -
@@ -178,6 +180,7 @@ typedef   ^ ParameterType  IntKi            NumDT              -  - -   "Number 
 typedef   ^ ParameterType  IntKi            Mod_Meander        -  - -   "Spatial filter model for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_Meander          -  - -   "Calibrated parameter for wake meandering"      -
 typedef   ^ ParameterType  ReKi             C_ScaleDiam        -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
+typedef   ^ ParameterType  IntKi            Mod_Projection     - - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
 typedef   ^ ParameterType  InflowWind_ParameterType IfW        {:}  - -   "InflowWind module parameters" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
@@ -207,7 +210,8 @@ typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -     
 # Define inputs that are contained on the mesh here:
 typedef   ^ InputType      ReKi       xhat_plane   {:}{:}{:}              -      -      "Orientations of wake planes, normal to wake planes, for each turbine"      -
 typedef   ^ InputType      ReKi       p_plane      {:}{:}{:}              -      -      "Center positions of wake planes for each turbine"      m
-typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}              -      -      "Axial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
-typedef   ^ InputType      ReKi       Vr_wake      {:}{:}{:}              -      -      "Radial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
+typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}{:}           -      -      "Axial wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s
+typedef   ^ InputType      ReKi       Vy_wake      {:}{:}{:}{:}           -      -      "Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s
+typedef   ^ InputType      ReKi       Vz_wake      {:}{:}{:}{:}           -      -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s
 typedef   ^ InputType      ReKi       D_wake       {:}{:}                 -      -      "Wake diameters at wake planes for each turbine"     m
 

@@ -33,6 +33,7 @@ endif()
 
 add_executable(FAST.Farm
   src/FAST_Farm_IO.f90
+  src/FAST_Farm_IO_Params.f90
   src/FAST_Farm_Subs.f90
   src/FASTWrapper.f90
   src/FAST_Farm.f90
