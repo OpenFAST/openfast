@@ -37,7 +37,7 @@ from ctypes import (
 import numpy as np
 import datetime
 
-class MoorDynLibAPI(CDLL):
+class MoorDynLib(CDLL):
 
     # Human readable error levels
     error_levels = {
@@ -69,7 +69,7 @@ class MoorDynLibAPI(CDLL):
 
     # Initialize routines ------------------------------------------------------------------------------------------------------------
     def _initialize_routines(self):
-        self.MD_INIT_C.argtypes = [
+        self.MD_C_Init.argtypes = [
             POINTER(c_char_p),                    # IN: input file string
             POINTER(c_int),                       # IN: input file string length
             POINTER(c_double),                    # IN: dt
@@ -84,9 +84,9 @@ class MoorDynLibAPI(CDLL):
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
-        self.MD_INIT_C.restype = c_int
+        self.MD_C_Init.restype = c_int
 
-        self.MD_CALCOUTPUT_C.argtypes = [
+        self.MD_C_CalcOutput.argtypes = [
             POINTER(c_double),                    # IN: Time @ n
             POINTER(c_float),                     # IN: Positions -- node positions    (1 x 6 array)  
             POINTER(c_float),                     # IN: Velocities -- node velocities  (1 x 6 array)
@@ -96,9 +96,9 @@ class MoorDynLibAPI(CDLL):
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
-        self.MD_CALCOUTPUT_C.restype = c_int
+        self.MD_C_CalcOutput.restype = c_int
         
-        self.MD_UPDATESTATES_C.argtypes = [
+        self.MD_C_UpdateStates.argtypes = [
             POINTER(c_double),                    # IN: time @ n-1
             POINTER(c_double),                    # IN: time @ n
             POINTER(c_double),                    # IN: time @ n+1
@@ -108,19 +108,16 @@ class MoorDynLibAPI(CDLL):
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
-        self.MD_UPDATESTATES_C.restype = c_int
+        self.MD_C_UpdateStates.restype = c_int
 
-        self.MD_END_C.argtypes = [
+        self.MD_C_End.argtypes = [
             POINTER(c_int),                       # OUT: ErrStat_C
             POINTER(c_char)                       # OUT: ErrMsg_C
         ]
-        self.MD_END_C.restype = c_int
+        self.MD_C_End.restype = c_int
 
     # md_init ------------------------------------------------------------------------------------------------------------
     def md_init(self, input_string_array, g, rho_water, depth_water, platform_init_pos, interpOrder):
-
-        # For debugging only
-        #print('MoorDyn_Library.py: Running MD_INIT_C .....')
 
         # Convert the string into a c_char byte array
         input_string = '\x00'.join(input_string_array)
@@ -134,7 +131,7 @@ class MoorDynLibAPI(CDLL):
 
         self._numChannels = c_int(0)
 
-        self.MD_INIT_C(
+        self.MD_C_Init(
             c_char_p(input_string),                # IN: input file string
             byref(c_int(input_string_length)),     # IN: input file string length
             byref(c_double(self.dt)),              # IN: time step (dt)
@@ -152,14 +149,8 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        # For debugging only
-        #print('MoorDyn_Library.py: Completed MD_INIT_C')
-
     # md_calcOutput ------------------------------------------------------------------------------------------------------------
     def md_calcOutput(self, t, positions, velocities, accelerations, forces, output_channel_values):
-
-        # For debugging only
-        #print('MoorDyn_Library.py: Running MD_CALCOUTPUT_C .....')
 
         positions_c = (c_float * 6)(0.0,)
         for i, p in enumerate(positions):
@@ -181,7 +172,7 @@ class MoorDynLibAPI(CDLL):
         for i, p in enumerate(output_channel_values):
             outputs_c[i] = c_float(p)
 
-        self.MD_CALCOUTPUT_C(
+        self.MD_C_CalcOutput(
             byref(c_double(t)),                    # IN: time
             positions_c,                           # IN: positions
             velocities_c,                          # IN: velocities
@@ -200,14 +191,8 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        # For debugging only
-        #print('MoorDyn_Library.py: Completed MD_CALCOUTPUT_C')
-
     # md_updateStates ------------------------------------------------------------------------------------------------------------
     def md_updateStates(self, t0, t1, t2, positions, velocities, accelerations):
-
-        # For debugging only
-        #print('MoorDyn_Library.py: Running MD_UPDATESTATES_C .....')
 
         positions_c = (c_float * 6)(0.0,)
         for i, p in enumerate(positions):
@@ -221,7 +206,7 @@ class MoorDynLibAPI(CDLL):
         for i, p in enumerate(accelerations):
             accelerations_c[i] = c_float(p)
 
-        self.MD_UPDATESTATES_C(
+        self.MD_C_UpdateStates(
             byref(c_double(t0)),                   # IN: previous time step (t-1)
             byref(c_double(t1)),                   # IN: current time (t)
             byref(c_double(t2)),                   # IN: next time step (t+1)
@@ -234,26 +219,17 @@ class MoorDynLibAPI(CDLL):
         
         self.check_error()
 
-        # For debugging only
-        #print('MoorDyn_Library.py: Completed MD_UPDATESTATES_C')
-
     # md_end ------------------------------------------------------------------------------------------------------------
     def md_end(self):
 
-        # For debugging only
-        #print('MoorDyn_Library.py: Running MD_END_C .....')
-
         if not self.ended:
             self.ended = True
-            self.MD_END_C(
+            self.MD_C_End(
                 byref(self.error_status),              # OUT: ErrStat_C
                 self.error_message                     # OUT: ErrMsg_C
             )
             self.check_error()
 
-        # For debugging only
-        #print('MoorDyn_Library.py: Completed MD_END_C')
-    
     #===============================================================================
     # OTHER FUNCTIONS --------------------------------------------------------------------------------------------------
 

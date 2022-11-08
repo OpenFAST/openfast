@@ -28,7 +28,7 @@ import MoorDyn_Library
 try: 
     # User inserts their own appropriate library path here
     library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
-    md_lib = MoorDyn_Library.MoorDynLibAPI(library_path)
+    md_lib = MoorDyn_Library.MoorDynLib(library_path)
 except Exception as e:
     print("{}".format(e))
     print(f"MD: Cannot load MoorDyn library")
