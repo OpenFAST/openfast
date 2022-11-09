@@ -1700,9 +1700,9 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
             member%Vouter = member%Vouter + Vouter_l + Vouter_u
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
          else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
-            if (i == 1) then
-               call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
-            end if
+            ! if (i == 1) then
+            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
+            ! end if
             
             ! partially submerged element
             member%Vinner = member%Vinner + Vinner_l + Vinner_u
