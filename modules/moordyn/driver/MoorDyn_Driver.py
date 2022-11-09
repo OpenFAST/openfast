@@ -22,12 +22,18 @@
 # This is the Python driver code for MoorDyn
 # Usage: This program gives an example for how the user calls the main subroutines of MoorDyn, and thus is specific to the user
 import numpy as np   
+import os
+import sys
+
+# path to find the aerodyn_inflow_library.py from the local directory
+sys.path.insert(0, os.path.sep.join(["..", "python-lib"]))
 import MoorDyn_Library
+
 
 # Library path
 try: 
     # User inserts their own appropriate library path here
-    library_path = "/home/nmendoza/Projects/CCT2/OpenFAST/build_test/modules/moordyn/libmd_c_lib.so"
+    library_path = "/Users/aplatt/software-development/GitHub/openfast-5/build-Single-Debug/modules/moordyn/libmoordyn_c_binding.dylib"
     md_lib = MoorDyn_Library.MoorDynLib(library_path)
 except Exception as e:
     print("{}".format(e))
@@ -62,46 +68,8 @@ md_test_file = "5MW_OC4Semi_WSt_WavesWN.out"
 # Usage: the contents of this string follow the identical syntax to what is described for the MoorDyn input file in the user guides and documentation
 # Please modify the string contents based on your specific use case
 md_input_string_array = []
-# md_input_string_array.append('--------------------- MoorDyn v2.a8 Input File ------------------------------                                                                                                      ')
-# md_input_string_array.append('Mooring system for OC4-DeepCwind Semi                                                                                                                                              ')
-# md_input_string_array.append('---------------------- LINE TYPES -------------------------------------                                                                                                            ')
-# md_input_string_array.append('TypeName   Diam    Mass/m     EA     BA/-zeta   EI     Cd    Ca   CdAx  CaAx                                                                                                       ')
-# md_input_string_array.append('(-)        (m)     (kg/m)     (N)    (N-s/-)  (N-m^2)  (-)   (-)  (-)   (-)                                                                                                        ')
-# md_input_string_array.append('main     0.0766    113.35   7.536E8   -1.0      0      2.0   0.8  0.4   0.25                                                                                                       ')
-# md_input_string_array.append('------------------------ POINTS ---------------------------------------                                                                                                            ')
-# md_input_string_array.append('PointID Type     X        Y         Z     Mass  Volume  CdA    Ca                                                                                                                  ')
-# md_input_string_array.append('(-)     (-)     (m)      (m)       (m)    (kg)  (m?3)   (m^2)  (-)                                                                                                                 ')
-# md_input_string_array.append('1      Fixed   418.8    725.383  -200.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('2      Fixed  -837.6      0.0    -200.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('3      Fixed   418.8   -725.383  -200.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('4     Coupled   20.434   35.393   -14.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('5     Coupled  -40.868    0.0     -14.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('6     Coupled   20.434  -35.393   -14.0    0      0      0      0                                                                                                                  ')
-# md_input_string_array.append('------------------------ LINES ----------------------------------------                                                                                                            ')
-# md_input_string_array.append('LineID  LineType  UnstrLen   NumSegs  AttachA   AttachB  LineOutputs                                                                                                               ')
-# md_input_string_array.append('(-)       (-)       (m)        (-)    (point#)  (point#)    (-)                                                                                                                    ')
-# md_input_string_array.append('1         main     835.35      20        1         4         -                                                                                                                     ')
-# md_input_string_array.append('2         main     835.35      20        2         5         -                                                                                                                     ')
-# md_input_string_array.append('3         main     835.35      20        3         6         -                                                                                                                     ')
-# md_input_string_array.append('------------------------ OPTIONS ---------------------------------------                                                                                                           ')
-# md_input_string_array.append('0.001    dtM       - time step to use in mooring integration (s)                                                                                                                   ')
-# md_input_string_array.append('3.0e6    kbot      - bottom stiffness (Pa/m)                                                                                                                                       ')
-# md_input_string_array.append('3.0e5    cbot      - bottom damping (Pa-s/m)                                                                                                                                       ')
-# md_input_string_array.append('2.0      dtIC      - time interval for analyzing convergence during IC gen (s)                                                                                                     ')
-# md_input_string_array.append('60.0     TmaxIC    - max time for ic gen (s)                                                                                                                                       ')
-# md_input_string_array.append('4.0      CdScaleIC - factor by which to scale drag coefficients during dynamic relaxation (-)                                                                                      ')
-# md_input_string_array.append('0.01     threshIC  - threshold for IC convergence (-)                                                                                                                              ')
-# md_input_string_array.append('------------------------ OUTPUTS ---------------------------------------                                                                                                           ')
-# md_input_string_array.append('FairTen1                                                                                                                                                                           ')
-# md_input_string_array.append('FairTen2                                                                                                                                                                           ')
-# md_input_string_array.append('FairTen3                                                                                                                                                                           ')
-# md_input_string_array.append('AnchTen1                                                                                                                                                                           ')
-# md_input_string_array.append('AnchTen2                                                                                                                                                                           ')
-# md_input_string_array.append('AnchTen3                                                                                                                                                                           ')
-# md_input_string_array.append('END                                                                                                                                                                                ')
-# md_input_string_array.append('---------------------- need this line ----------------------------------                                                                                                           ')
 
-#   Main HydroDyn input file
+#   Main MoorDyn input file
 #       This file is read from disk to an array of strings with the line
 #       endings stripped off.  This array will have the same number of elements
 #       as there are lines in the file.
@@ -168,7 +136,7 @@ NumCorrections      = 0 # SET TO 0 IF NOT DOING CORRECTION STEP
 # MD_INIT: Only need to call md_init once
 # ----------------------------------------------------------------------------------------------------------------------------
 try:
-    md_lib.md_init(md_input_string_array, g, rho_h2o, d_h2o, platform_init_pos, InterpOrder)  
+    md_lib.md_init(md_input_string_array, g, rho_h2o, d_h2o, platform_init_pos, InterpOrder)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     if verbose:
@@ -179,21 +147,13 @@ except Exception as e:
 # Set up the output channels listed in the MD input file
 output_channel_names = md_lib._channel_names.value
 output_channel_units = md_lib._channel_units.value
-#print('output channel names are: ',output_channel_names)
-#print('output channel units are: ',output_channel_units)
 output_channel_values = np.zeros(md_lib._numChannels.value)
 output_channel_array  = np.zeros( (md_lib.numTimeSteps,md_lib._numChannels.value+1) ) # includes time
 
 # MD_calcOutput: calculates outputs for initial time t=0 and initial position & velocity
 # ----------------------------------------------------------------------------------------------------------------------------
 try: 
-    # Debugging only - delete when done
-    #print("Initial positions = ", platform_init_pos)
-    #print("Initial velocities = ", platform_init_vel)
-    #print("Initial accelerations = ", platform_init_acc)
     md_lib.md_calcOutput(time[0], platform_init_pos, platform_init_vel, platform_init_acc, forces, output_channel_values)
-    #print("Initial forces = ", forces)
-    #print("Initial outputs = ", output_channel_values)
 except Exception as e:
     print("{}".format(e))   # Exceptions handled in moordyn_library.py
     if verbose:
@@ -202,7 +162,6 @@ except Exception as e:
     exit(1)
 
 # Write the outputs at t = t_initial
-print("t = ",time[0]," completed")
 output_channel_array[0,:] = np.append(time[0],output_channel_values)
 if verbose:
     dbg_outfile.write(time[0],platform_init_pos,platform_init_vel,platform_init_acc,forces)
@@ -223,32 +182,13 @@ for i in range( 0, len(time)-1):
         Accelerations = [data[i+1,66], data[i+1,67], data[i+1,68], data[i+1,69], data[i+1,70], data[i+1,71]]
 
         # Call md_updateStates - propagate the arrays
-        if InterpOrder == 1:
-            try: 
-                #                     ---    t          t+dt
-                md_lib.md_updateStates(0, time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
-            except Exception as e:
-                print("{}".format(e))   # Exceptions handled in moordyn_library.py
-                if verbose:
-                    #dbg_outfile.write("MoorDyn_Driver.py: MD_updateStates call failed")
-                    dbg_outfile.end()
-                exit(1)
-        elif InterpOrder == 2:
-            try: 
-                if i ==0:
-                    md_lib.md_updateStates(-md_lib.dt, time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
-                else:
-                    #                         t-dt      t           t+dt
-                    md_lib.md_updateStates(time[i-1], time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
-            except Exception as e:
-                print("{}".format(e))   # Exceptions handled in moordyn_library.py
-                if verbose:
-                    #dbg_outfile.write("MoorDyn_Driver.py: MD_updateStates call failed")
-                    dbg_outfile.end()
-                exit(1)
-        else:
-            #dbg_outfile.write("MoorDyn_Driver.py: Invalid interpolation order")
-            dbg_outfile.end()
+        try: 
+            md_lib.md_updateStates(time[i], time[i+1], Positions, Velocities, Accelerations) # positions, velocities, and accelerations are all at current time
+        except Exception as e:
+            print("{}".format(e))   # Exceptions handled in moordyn_library.py
+            if verbose:
+                #dbg_outfile.write("MoorDyn_Driver.py: MD_updateStates call failed")
+                dbg_outfile.end()
             exit(1)
 
         # Call md_calcOutput: calculate outputs for the current time step @ t+dt
@@ -262,7 +202,6 @@ for i in range( 0, len(time)-1):
             exit(1)
         
         # Clean up before moving on to next time step
-        print("t = ",time[i+1]," completed")
         output_channel_array[i+1,:] = np.append(time[i+1],output_channel_values)
         if verbose:
             dbg_outfile.write(time[i+1],Positions,Velocities,Accelerations,forces)
@@ -282,6 +221,4 @@ except Exception as e:
 OutFile=MoorDyn_Library.WriteOutChans(md_output_file,md_lib.output_channel_names,md_lib.output_channel_units)
 OutFile.write(output_channel_array)
 OutFile.end()
-
-print("We have successfully run MoorDyn!")
 exit()

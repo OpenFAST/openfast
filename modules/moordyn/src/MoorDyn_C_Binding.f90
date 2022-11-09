@@ -264,6 +264,11 @@ SUBROUTINE MD_C_Init(InputFileString_C, InputFileStringLength_C, DT_C, G_C, RHO_
    !-------------------------------------------------------------
    ! Set the interface  meshes for motion inputs and loads output
    !-------------------------------------------------------------
+   DO i = 1,6
+       tmpPositions(i,1)     = REAL(PtfmInit_C(i),ReKi)
+   END DO
+   tmpVelocities     = 0_ReKi
+   tmpAccelerations  = 0_ReKi
    CALL SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2); if (Failed()) return
 
    DO i=2,InterpOrder+1

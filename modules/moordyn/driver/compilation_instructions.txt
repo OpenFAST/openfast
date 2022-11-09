@@ -1,4 +1,0 @@
-# had to update openfast/modules/hydrodyn/cmakelists.txt in addition, to include waves module
-cmake ..
-# in cmake gui, make sure that BUILD_SHARED_LIBS=ON
-make md_c_lib

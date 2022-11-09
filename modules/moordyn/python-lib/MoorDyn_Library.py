@@ -48,15 +48,26 @@ class MoorDynLib(CDLL):
         4: "Fatal Error"
     }
 
+    #   NOTE:   the error message length in Fortran is controlled by the
+    #           ErrMsgLen variable in the NWTC_Base.f90 file.  If that ever
+    #           changes, it may be necessary to update the corresponding size
+    #           here.
+    error_msg_c_len = 1025
+
+    #   NOTE:   the length of the name used for any output file written by the
+    #           HD Fortran code is 1025.
+    default_str_c_len = 1025
+
     def __init__(self, library_path):
         super().__init__(library_path)
         self.library_path = library_path
 
         self._initialize_routines()
 
-        # Initialize variables
-        self.abort_error_level = c_int(4)
-        self.error_status      = c_int(0)
+        # Create buffers for class data
+        self.abort_error_level = 4
+        self.error_status_c = c_int(0)
+        self.error_message_c = create_string_buffer(self.error_msg_c_len)
         self.error_message     = create_string_buffer(1025)
         self.ended             = False   # For error handling at end
 
@@ -142,8 +153,8 @@ class MoorDynLib(CDLL):
             byref(self._numChannels),              # OUT: number of channels
             self._channel_names,                   # OUT: output channel names
             self._channel_units,                   # OUT: output channel units
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
         
         self.check_error()
@@ -178,8 +189,8 @@ class MoorDynLib(CDLL):
             accelerations_c,                       # IN: accelerations
             forces_c,                              # OUT: forces
             outputs_c,                             # OUT: output channel values
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
 
         for i in range(0,len(forces_c)):
@@ -191,7 +202,7 @@ class MoorDynLib(CDLL):
         self.check_error()
 
     # md_updateStates ------------------------------------------------------------------------------------------------------------
-    def md_updateStates(self, t0, t1, t2, positions, velocities, accelerations):
+    def md_updateStates(self, t1, t2, positions, velocities, accelerations):
 
         positions_c = (c_float * 6)(0.0,)
         for i, p in enumerate(positions):
@@ -211,8 +222,8 @@ class MoorDynLib(CDLL):
             positions_c,                           # IN: positions
             velocities_c,                          # IN: velocities
             accelerations_c,                       # IN: accelerations
-            byref(self.error_status),              # OUT: ErrStat_C
-            self.error_message                     # OUT: ErrMsg_C
+            byref(self.error_status_c),            # OUT: ErrStat_C
+            self.error_message_c                   # OUT: ErrMsg_C
         )
         
         self.check_error()
@@ -223,8 +234,8 @@ class MoorDynLib(CDLL):
         if not self.ended:
             self.ended = True
             self.MD_C_End(
-                byref(self.error_status),              # OUT: ErrStat_C
-                self.error_message                     # OUT: ErrMsg_C
+                byref(self.error_status_c),            # OUT: ErrStat_C
+                self.error_message_c                   # OUT: ErrMsg_C
             )
             self.check_error()
 
@@ -232,17 +243,13 @@ class MoorDynLib(CDLL):
     # OTHER FUNCTIONS --------------------------------------------------------------------------------------------------
 
     # Error Handling Functions
-    @property
-    def fatal_error(self):
-        return self.error_status.value >= self.abort_error_level.value
-
     def check_error(self):
-        if self.error_status.value == 0:
+        if self.error_status_c.value == 0:
             return
-        elif self.error_status.value < self.abort_error_level:
-            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+        elif self.error_status_c.value < self.abort_error_level:
+            print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
         else:
-            print(f"{self.error_levels[self.error_status.value]}: {self.error_message.value.decode('ascii')}")
+            print(f"MoorDyn error status: {self.error_levels[self.error_status_c.value]}: {self.error_message_c.value.decode('ascii')}")
             self.md_end()
             raise Exception("\nMoorDyn terminated prematurely.")
 
