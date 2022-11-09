@@ -2483,9 +2483,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: numer, denom, ratio, signOfAngle ! helper variables for calculating u%chi0  
    real(ReKi)                              :: tilt, yaw
    real(ReKi)                              :: SkewVec(3), tmp_skewVec(3), x_hat_wind(3), tmpD(3), tmpW(3)
-   real(R8Ki)                              :: windCrossDisk(3)
-   real(R8Ki)                              :: windCrossDiskMag
-   real(R8Ki)                              :: x_vec(3), y_vec(3), z_vec(3)
+!   real(R8Ki)                              :: windCrossDisk(3)
+!   real(R8Ki)                              :: windCrossDiskMag
+!   real(R8Ki)                              :: x_vec(3), y_vec(3), z_vec(3)
    real(R8Ki)                              :: elemPosRelToHub(3,p%NUMBLNDS)
    real(R8Ki)                              :: elemPosRotorProj(3,p%NUMBLNDS)
    real(R8Ki)                              :: dr(3), dz(3)
@@ -4178,7 +4178,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    real(ReKi)              :: V_str(3)          ! structural velocity
    real(ReKi)              :: force_tf(3)       ! force in tf system
    real(ReKi)              :: moment_tf(3)      ! moment in tf system
-   real(ReKi)              :: alpha, Cl, Cd, Cm, Re, Cx, Cy, q
+   real(ReKi)              :: alpha, Re, Cx, Cy, q ! Cl, Cd, Cm, 
    type(AFI_OutputType)    :: AFI_interp  ! Resulting values from lookup table
    integer(intKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2

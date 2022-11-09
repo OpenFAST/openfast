@@ -2731,10 +2731,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       CurLine = CurLine + 1
          ! VolNac - Nacelle volume (m^3)
       call ParseVar( FileInfo_In, CurLine, "VolNac", InputFileData%rotors(iR)%VolNac, ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return 
+         if (Failed()) return
          ! NacCenB - Nacelle center of buoyancy x,y,z direction offsets (m)
       call ParseAry( FileInfo_In, CurLine, 'NacCenB', InputFileData%rotors(iR)%NacCenB, 3 , ErrStat2, ErrMsg2, UnEc )
-         if (Failed()) return   
+         if (Failed()) return
    end do
 
    !======  Tail fin aerodynamics ========================================================================

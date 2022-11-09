@@ -7196,13 +7196,11 @@ END SUBROUTINE CheckR16Var
       ErrMsg  = ""
 
          ! Is this file already open from earlier in the recursion.  That would be bad.
-
+         ! But if it's being read by another thread, we allow it.
       FileName = ThisFile%Filename
       INQUIRE ( FILE=Filename, OPENED=IsOpen )
       IF ( IsOpen )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'Fatal error scanning "'//TRIM( Filename ) &
-                          //'". A file cannot directly or indirectly include itself.', ErrStat, ErrMsg, RoutineName )
-         RETURN
+         CALL SetErrStat( ErrID_Warn, 'The file being read is already opened (maybe by another thread?): "'//TRIM( Filename ), ErrStat, ErrMsg, RoutineName )
       ENDIF
 
 
