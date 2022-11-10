@@ -1700,9 +1700,9 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
             member%Vouter = member%Vouter + Vouter_l + Vouter_u
             member%Vsubmerged = member%Vsubmerged + Vouter_l + Vouter_u
          else if ((0.0 > Za) .AND. (0.0 < Zb)) then ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
-            if (i == 1) then
-               call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
-            end if
+            ! if (i == 1) then
+            !    call SetErrStat(ErrID_Fatal, 'The lowest element of a member must not cross the free surface.  This is true for MemberID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties')
+            ! end if
             
             ! partially submerged element
             member%Vinner = member%Vinner + Vinner_l + Vinner_u
@@ -3415,14 +3415,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END DO ! i =1,N+1    ! loop through member nodes  
 
-        IF (FSElem < 0) THEN ! No partially wetted element identified - Bad!
-          CALL SetErrStat(ErrID_Fatal, 'No partially wetted element identified for an initially surface-piercing member.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-          RETURN
-        ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
-          CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-          RETURN
+        IF (FSElem < 0_IntKi) THEN ! No partially wetted element identified - Bad!
+          CALL SetErrStat(ErrID_Warn, 'No partially wetted element identified for an initially surface-piercing member.  Skipping load smoothing.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+          ! RETURN
+        ! ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
+        !   CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+        !   RETURN
         END IF
 
+        IF (FSElem > 0_IntKi) THEN ! Perform load smoothing if there is a partially wetted element
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
@@ -3560,18 +3561,28 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Viscous drag
         ! Apply load redistribution to the first node below the free surface
-        Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
+        IF (FSElem > 1_IntKi) THEN ! At least one fully submerged element
+           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
+        ELSE IF (FSElem > 0_IntKi) THEN ! No fully submerged element
+           Df_hydro =  (SubRatio-1.0_ReKi)*F_D0 + SubRatio*F_DS
+        END IF
         CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
         m%memberLoads(im)%F_D(:, FSElem) = m%memberLoads(im)%F_D(:, FSElem) + Df_hydro_lumped
         y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
         y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
         
         ! Apply load redistribution to the second node below the free surface
-        Df_hydro = f_redist * F_D0
-        CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
-        m%memberLoads(im)%F_D(:, FSElem-1) = m%memberLoads(im)%F_D(:, FSElem-1) + Df_hydro_lumped
-        y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
-        y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+        IF (FSElem > 1_IntKi) THEN ! Note: Only need to modify the loads on the second node below the free surface when there is at least one fully submerged element.
+           IF (FSElem > 2_IntKi) THEN ! At least two fully submerged element
+              Df_hydro = f_redist * F_D0
+           ELSE ! One fully submerged element
+              Df_hydro = 2.0_ReKi * f_redist * F_D0
+           END IF
+           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+           m%memberLoads(im)%F_D(:, FSElem-1) = m%memberLoads(im)%F_D(:, FSElem-1) + Df_hydro_lumped
+           y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+           y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+        END IF
 
         ! Hydrodynamic added mass and inertia loads
         IF ( .NOT. mem%PropPot ) THEN
@@ -3579,35 +3590,54 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( p%AMMod > 0_IntKi ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               ! Apply load redistribution to the first node below the free surface
-              Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
+              IF (FSElem > 1_IntKi) THEN
+                  Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
+              ELSE IF (FSElem > 0_IntKi) THEN
+                  Df_hydro =  (SubRatio-1.0_ReKi)*F_A0 + SubRatio*F_AS
+              END IF
               CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
               m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
               y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
               y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
         
               ! Apply load redistribution to the second node below the free surface
-              Df_hydro = f_redist * F_A0
-              CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
-              m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
-              y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
-              y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+              IF (FSElem > 1_IntKi) THEN
+                  IF (FSElem > 2_IntKi) THEN
+                      Df_hydro = f_redist * F_A0
+                  ELSE
+                      Df_hydro = 2.0_ReKi * f_redist *F_A0
+                  END IF
+                  CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+                  m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
+                  y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+                  y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+              END IF
            END IF
            
            !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
            ! Apply load redistribution to the first node below the free surface
-           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
+           IF (FSElem > 1_IntKi) THEN
+               Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
+           ELSE IF (FSElem > 0_IntKi) THEN
+               Df_hydro =  (SubRatio-1.0_ReKi)*F_I0 + SubRatio*F_IS
+           END IF
            CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
            m%memberLoads(im)%F_I(:, FSElem) = m%memberLoads(im)%F_I(:, FSElem) + Df_hydro_lumped
            y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
            y%Mesh%Moment(:,mem%NodeIndx(FSElem)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(4:6)
         
            ! Apply load redistribution to the second node below the free surface
-           Df_hydro = f_redist * F_I0
-           CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
-           m%memberLoads(im)%F_I(:, FSElem-1) = m%memberLoads(im)%F_I(:, FSElem-1) + Df_hydro_lumped
-           y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
-           y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
-           
+           IF (FSElem > 1_IntKi) THEN
+               IF (FSElem > 2_IntKi) THEN
+                   Df_hydro = f_redist * F_I0
+               ELSE
+                   Df_hydro = 2.0_ReKi * f_redist * F_I0
+               END IF
+               CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
+               m%memberLoads(im)%F_I(:, FSElem-1) = m%memberLoads(im)%F_I(:, FSElem-1) + Df_hydro_lumped
+               y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
+               y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(4:6)
+           END IF
         END IF
 
         !----------------------------------------------------------------------------------------------------!
@@ -3628,8 +3658,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         DM_hydro = 0.5_ReKi * SubRatio**2 * deltal * cross_product(mem%k, F_S)
         y%Mesh%Moment(:,mem%NodeIndx(FSElem))   = y%Mesh%Moment(:,mem%NodeIndx(FSElem))   + DM_hydro * deltal
         ! Second node below the free surface
-        DM_hydro =               f_redist * deltal * cross_product(mem%k, F_0)
-        y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
+        IF (FSElem > 1_IntKi) THEN
+            DM_hydro =               f_redist * deltal * cross_product(mem%k, F_0)
+            y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
+        END IF
+
+        END IF
 
 
       ELSE !-------------------------------Fully Submerged Member or No Wave Stretching-------------------------------!
@@ -3649,7 +3683,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
               CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
                                      //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-              RETURN
+              !RETURN
            END IF
                       
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
