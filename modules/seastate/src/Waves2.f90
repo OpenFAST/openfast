@@ -35,7 +35,7 @@ MODULE Waves2
    USE Waves2_Types
    USE NWTC_Library
    USE NWTC_FFTPACK
-   USE Waves,  ONLY : WaveNumber
+   USE Waves,  ONLY : WaveNumber, ImagNmbr
 
    IMPLICIT NONE
 
@@ -69,8 +69,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
 
          ! Local Variables
-      COMPLEX(SiKi)                                      :: ImagNmbr = (0.0,1.0) !< The imaginary number, \f$ \sqrt{-1.0} \f$
-
       INTEGER(IntKi)                                     :: I,ii                 !< Generic counters
       INTEGER(IntKi)                                     :: J, jj,k,kk           !< Generic counters
       integer(IntKi)                                     :: masterCount          !< Counter from 1 to NWaveKinGrid

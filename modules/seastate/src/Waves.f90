@@ -33,6 +33,8 @@ MODULE Waves
    PRIVATE
 
    TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', '', '' )
+   
+   COMPLEX(SiKi),  PARAMETER, PUBLIC    :: ImagNmbr = (0.0_SiKi,1.0_SiKi)  ! The imaginary number, SQRT(-1.0)
 
 
       ! ..... Public Subroutines ...................................................................................................
@@ -665,9 +667,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
    ! Local Variables
-   COMPLEX(SiKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
    COMPLEX(SiKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
- !  REAL(SiKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2)
    COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:,:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2)
@@ -2023,7 +2023,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(2) + 1
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
+            ! note that this subroutine resets tmpComplexArr
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), tmpComplexArr, ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -2358,20 +2359,25 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 CONTAINS
 
-
-   SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevAtXY, WaveElevCAtXY, ErrStatLcl, ErrMsgLcl )
+!--------------------------------------------------------------------------------
+   SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevAtXY, WaveElevCAtXY, tmpComplexArr, ErrStatLcl, ErrMsgLcl )
 
       REAL(SiKi),       INTENT(IN   )                 :: Xcoord
       REAL(SiKi),       INTENT(IN   )                 :: Ycoord
       REAL(SiKi),       INTENT(  OUT)                 :: WaveElevAtXY(0:InitOut%NStepWave)
       real(SiKi),       INTENT(  OUT)                 :: WaveElevCAtXY(2,0:InitOut%NStepWave2)
+      COMPLEX(SiKi),    INTENT(INOUT)                 :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use.
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
-      INTEGER(IntKi)                                  :: ErrStatLcl2
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
+      
+      integer                                         :: i
+      REAL(SiKi)                                      :: Omega                                           ! Wave frequency (rad/s)
+      REAL(SiKi)                                      :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
+      INTEGER(IntKi)                                  :: ErrStatLcl2
 
-      ! This is probably poor programming practice, but we will use I, Omega, WaveNmbr, and tmpComplexArr from the calling routine here.
-
+      ! note that InitOut, InitInp, FFT_Data, CosWaveDir and SinWaveDir are used here, but their values are not changed
       ErrStatLcl  = ErrID_None
+      ErrMsgLcl = ""
 
          ! Zero out the temporary array.
       tmpComplexArr  = CMPLX(0.0_SiKi,0.0_SiKi)
@@ -2382,8 +2388,8 @@ CONTAINS
          Omega             = I*       InitOut%WaveDOmega
          WaveNmbr          = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
          tmpComplexArr(I)  =  CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))   *          &
-                  EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
-                                             Ycoord*SinWaveDir(I) )   )
+                                      EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
+                                                                 Ycoord*SinWaveDir(I) )   )
       ENDDO
 
       CALL ApplyFFT_cx (   WaveElevAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
@@ -2391,11 +2397,12 @@ CONTAINS
 
       WaveElevCAtXY( 1,: ) = REAL(tmpComplexArr(:))
       WaveElevCAtXY( 2,: ) = AIMAG(tmpComplexArr(:))
+      
          ! Append first datpoint as the last as aid for repeated wave data
       WaveElevAtXY(InitOut%NStepWave) = WaveElevAtXY(0)
 
    END SUBROUTINE WaveElevTimeSeriesAtXY
-
+!--------------------------------------------------------------------------------
 
 
    SUBROUTINE CleanUp( )
