@@ -799,7 +799,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveAccMCF     => Init%OutData_SeaSt%WaveAccMCF
          Init%InData_HD%PWaveAccMCF0   => Init%OutData_SeaSt%PWaveAccMCF0
          
-         call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, 0, ErrStat, ErrMsg )
+         call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
       end if
       
