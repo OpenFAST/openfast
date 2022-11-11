@@ -269,7 +269,6 @@
 		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Current.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn.f90"/>
-		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_DriverCode.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Input.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Output.f90"/>
 		<File RelativePath="..\..\modules\HydroDyn\src\Morison.f90"/>
