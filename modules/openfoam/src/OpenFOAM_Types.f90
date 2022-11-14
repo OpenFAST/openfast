@@ -49,10 +49,10 @@ IMPLICIT NONE
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade -- from extern [-]
-    INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower -- from extern [-]
+    INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade -- from extern (used to linearly interpolate along AD15 blades) [-]
+    INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower -- from extern (used to linearly interpolate along AD15 tower) [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructBldRNodes => NULL()      !< Radius to structural model analysis nodes relative to hub [-]
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructTwrHNodes => NULL()      !< Location of variable-spaced structural model tower nodes (relative to the tower rigid base height) [-]
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructTwrHNodes => NULL()      !< Location of tower nodes from AD15 (relative to the tower rigid base height) [-]
     REAL(ReKi)  :: BladeLength      !< Blade length [meters]
     REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower Base Height [meters]
@@ -79,8 +79,8 @@ IMPLICIT NONE
   END TYPE OpFM_MiscVarType_C
   TYPE, PUBLIC :: OpFM_MiscVarType
     TYPE( OpFM_MiscVarType_C ) :: C_obj
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceMotionsPoints      !< point mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp) [-]
-    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceLoadsPoints      !< point mesh for transferring AeroDyn distributed loads to OpenFOAM [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceMotionsPoints      !< point mesh for transferring AeroDyn motions to OpenFOAM  (includes hub+blades+nacelle+tower+tailfin) [-]
+    TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: ActForceLoadsPoints      !< point mesh for transferring AeroDyn distributed loads to OpenFOAM (includes hub+blades+nacelle+tower+tailfin) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Line2_to_Point_Loads      !< mapping data structure to convert line2 loads to point loads [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Line2_to_Point_Motions      !< mapping data structure to convert line2 loads to point motions [-]
   END TYPE OpFM_MiscVarType
@@ -113,7 +113,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NnodesForceBlade      !< number of force nodes on FAST v8-OpenFOAM interface [-]
     INTEGER(IntKi)  :: NnodesForceTower      !< number of force nodes on FAST v8-OpenFOAM interface [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceBldRnodes => NULL()      !< Radial location of force nodes [-]
-    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceTwrHnodes => NULL()      !< Radial location of force nodes [-]
+    REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceTwrHnodes => NULL()      !< Vertical location of force nodes [-]
     REAL(ReKi)  :: BladeLength      !< Blade length (same for all blades) [m]
     REAL(ReKi)  :: TowerHeight      !< Tower height [m]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower base height [m]

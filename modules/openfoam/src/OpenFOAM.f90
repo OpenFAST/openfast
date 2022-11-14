@@ -68,16 +68,16 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
 
 
       ! Sanity check that a reasonable number of nodes are used in AD15 (at least 60% as many nodes)
-   if (0.25 * Opfm%p%NnodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
-      ErrMsg2=trim(Num2LStr(Opfm%p%NnodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
+   if (0.25 * Opfm%p%nNodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
+      ErrMsg2=trim(Num2LStr(Opfm%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
             //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points. ' &
             //'Increase number of AD15 mesh points to at least 60% as many points as the CFD requested.'
       call WrScr('OpFM Error: '//trim(ErrMsg2))
       call SetErrStat(ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       return
    endif
-   if (0.60 * Opfm%p%NnodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
-      ErrMsg2=trim(Num2LStr(Opfm%p%NnodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
+   if (0.60 * Opfm%p%nNodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
+      ErrMsg2=trim(Num2LStr(Opfm%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
             //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points.  This may result in inacurate loads.'
       call WrScr('OpFM WARNING: '//trim(ErrMsg2))
       call SetErrStat(ErrID_Severe, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -88,43 +88,43 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
       !---------------------------
 
       ! Hub node (always set)
-   OpFM%p%NnodesVel = 1  ! Hub is first point always
+   OpFM%p%nNodesVel = 1  ! Hub is first point always
 
       ! Blade nodes (always set)
    DO k=1,OpFM%p%NumBl
-      OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%rotors(1)%BladeMotion(k)%NNodes
+      OpFM%p%nNodesVel = OpFM%p%nNodesVel + u_AD%rotors(1)%BladeMotion(k)%NNodes
    END DO
 
       ! Tower motion
-   OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%rotors(1)%TowerMotion%NNodes
+   OpFM%p%nNodesVel = OpFM%p%nNodesVel + u_AD%rotors(1)%TowerMotion%NNodes
 
       ! Nacelle motion
    if (u_AD%rotors(1)%HubMotion%NNodes > 0) then
-      OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%rotors(1)%HubMotion%NNodes
+      OpFM%p%nNodesVel = OpFM%p%nNodesVel + u_AD%rotors(1)%HubMotion%NNodes
    endif
 
       ! Tail fin nodes
    if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
-      OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%rotors(1)%TFinMotion%NNodes
+      OpFM%p%nNodesVel = OpFM%p%nNodesVel + u_AD%rotors(1)%TFinMotion%NNodes
    endif
 
 
       !---------------------------
       ! number of force actuator points from CFD.
       !---------------------------
-   Opfm%p%NnodesForceBlade = InitInp%NumActForcePtsBlade    ! from extern CFD
-   OpFM%p%NnodesForceTower = InitInp%NumActForcePtsTower    ! from extern CFD
+   Opfm%p%nNodesForceBlade = InitInp%NumActForcePtsBlade    ! from extern CFD
+   OpFM%p%nNodesForceTower = InitInp%NumActForcePtsTower    ! from extern CFD
 
       ! Hub + blades
-   OpFM%p%NnodesForce = 1 + OpFM%p%NumBl * Opfm%p%NnodesForceBlade  ! +1 for hub
+   OpFM%p%nNodesForce = 1 + OpFM%p%NumBl * Opfm%p%nNodesForceBlade  ! +1 for hub
    OpFM%p%BladeLength = InitInp%BladeLength
 
       ! Tower motion
-   if ( (u_AD%rotors(1)%TowerMotion%NNodes > 0) .and. (OpFM%p%NnodesForceTower > 0) ) then
+   if ( (u_AD%rotors(1)%TowerMotion%NNodes > 0) .and. (OpFM%p%nNodesForceTower > 0) ) then
       OpFM%p%NMappings = OpFM%p%NumBl + 1
       OpFM%p%TowerHeight = InitInp%TowerHeight
       OpFM%p%TowerBaseHeight = InitInp%TowerBaseHeight
-      OpFM%p%NnodesForce = OpFM%p%NnodesForce + OpFM%p%NnodesForceTower
+      OpFM%p%nNodesForce = OpFM%p%nNodesForce + OpFM%p%nNodesForceTower
    else
       OpFM%p%NMappings = OpFM%p%NumBl
    end if
@@ -135,45 +135,45 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
       ! Allocate arrays and define initial guesses for the OpenFOAM inputs here:
       !............................................................................................
       ! Motion points (from AD15)
-   CALL AllocPAry( OpFM%u%pxVel,           OpFM%p%NnodesVel,   'pxVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%pyVel,           OpFM%p%NnodesVel,   'pyVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%pzVel,           OpFM%p%NnodesVel,   'pzVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pxVel,           OpFM%p%nNodesVel,   'pxVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pyVel,           OpFM%p%nNodesVel,   'pyVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pzVel,           OpFM%p%nNodesVel,   'pzVel',           ErrStat2, ErrMsg2 );  if (Failed()) return;
       ! Force actuator points (large number set by CFD)
-   CALL AllocPAry( OpFM%u%pxForce,         OpFM%p%NnodesForce, 'pxForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%pyForce,         OpFM%p%NnodesForce, 'pyForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%pzForce,         OpFM%p%NnodesForce, 'pzForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%xdotForce,       OpFM%p%NnodesForce, 'xdotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%ydotForce,       OpFM%p%NnodesForce, 'ydotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%zdotForce,       OpFM%p%NnodesForce, 'zdotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%pOrientation,3*3*OpFM%p%NnodesForce, 'pOrientation',    ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%fx,              OpFM%p%NnodesForce, 'fx',              ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%fy,              OpFM%p%NnodesForce, 'fy',              ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%fz,              OpFM%p%NnodesForce, 'fz',              ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%momentx,         OpFM%p%NnodesForce, 'momentx',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%momenty,         OpFM%p%NnodesForce, 'momenty',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%momentz,         OpFM%p%NnodesForce, 'momentz',         ErrStat2, ErrMsg2 );  if (Failed()) return;
-   CALL AllocPAry( OpFM%u%forceNodesChord, OpFM%p%NnodesForce, 'forceNodesChord', ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pxForce,         OpFM%p%nNodesForce, 'pxForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pyForce,         OpFM%p%nNodesForce, 'pyForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pzForce,         OpFM%p%nNodesForce, 'pzForce',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%xdotForce,       OpFM%p%nNodesForce, 'xdotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%ydotForce,       OpFM%p%nNodesForce, 'ydotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%zdotForce,       OpFM%p%nNodesForce, 'zdotForce',       ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%pOrientation,3*3*OpFM%p%nNodesForce, 'pOrientation',    ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%fx,              OpFM%p%nNodesForce, 'fx',              ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%fy,              OpFM%p%nNodesForce, 'fy',              ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%fz,              OpFM%p%nNodesForce, 'fz',              ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%momentx,         OpFM%p%nNodesForce, 'momentx',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%momenty,         OpFM%p%nNodesForce, 'momenty',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%momentz,         OpFM%p%nNodesForce, 'momentz',         ErrStat2, ErrMsg2 );  if (Failed()) return;
+   CALL AllocPAry( OpFM%u%forceNodesChord, OpFM%p%nNodesForce, 'forceNodesChord', ErrStat2, ErrMsg2 );  if (Failed()) return;
 
       ! make sure the C versions are synced with these arrays:
       ! Motion points (from AD15)
-   OpFM%u%c_obj%pxVel_Len        = OpFM%p%NnodesVel;       OpFM%u%c_obj%pxVel = C_LOC( OpFM%u%pxVel(1) )
-   OpFM%u%c_obj%pyVel_Len        = OpFM%p%NnodesVel;       OpFM%u%c_obj%pyVel = C_LOC( OpFM%u%pyVel(1) )
-   OpFM%u%c_obj%pzVel_Len        = OpFM%p%NnodesVel;       OpFM%u%c_obj%pzVel = C_LOC( OpFM%u%pzVel(1) )
+   OpFM%u%c_obj%pxVel_Len        = OpFM%p%nNodesVel;       OpFM%u%c_obj%pxVel = C_LOC( OpFM%u%pxVel(1) )
+   OpFM%u%c_obj%pyVel_Len        = OpFM%p%nNodesVel;       OpFM%u%c_obj%pyVel = C_LOC( OpFM%u%pyVel(1) )
+   OpFM%u%c_obj%pzVel_Len        = OpFM%p%nNodesVel;       OpFM%u%c_obj%pzVel = C_LOC( OpFM%u%pzVel(1) )
       ! Force actuator points (large number set by CFD)
-   OpFM%u%c_obj%pxForce_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%pxForce      = C_LOC( OpFM%u%pxForce(1) )
-   OpFM%u%c_obj%pyForce_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%pyForce      = C_LOC( OpFM%u%pyForce(1) )
-   OpFM%u%c_obj%pzForce_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%pzForce      = C_LOC( OpFM%u%pzForce(1) )
-   OpFM%u%c_obj%xdotForce_Len    = OpFM%p%NnodesForce;     OpFM%u%c_obj%xdotForce    = C_LOC( OpFM%u%xdotForce(1) )
-   OpFM%u%c_obj%ydotForce_Len    = OpFM%p%NnodesForce;     OpFM%u%c_obj%ydotForce    = C_LOC( OpFM%u%ydotForce(1) )
-   OpFM%u%c_obj%zdotForce_Len    = OpFM%p%NnodesForce;     OpFM%u%c_obj%zdotForce    = C_LOC( OpFM%u%zdotForce(1) )
-   OpFM%u%c_obj%pOrientation_Len = OpFM%p%NnodesForce*3*3; OpFM%u%c_obj%pOrientation = C_LOC( OpFM%u%pOrientation(1) )
-   OpFM%u%c_obj%fx_Len           = OpFM%p%NnodesForce;     OpFM%u%c_obj%fx           = C_LOC( OpFM%u%fx(1) )
-   OpFM%u%c_obj%fy_Len           = OpFM%p%NnodesForce;     OpFM%u%c_obj%fy           = C_LOC( OpFM%u%fy(1) )
-   OpFM%u%c_obj%fz_Len           = OpFM%p%NnodesForce;     OpFM%u%c_obj%fz           = C_LOC( OpFM%u%fz(1) )
-   OpFM%u%c_obj%momentx_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%momentx      = C_LOC( OpFM%u%momentx(1) )
-   OpFM%u%c_obj%momenty_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%momenty      = C_LOC( OpFM%u%momenty(1) )
-   OpFM%u%c_obj%momentz_Len      = OpFM%p%NnodesForce;     OpFM%u%c_obj%momentz      = C_LOC( OpFM%u%momentz(1) )
-   OpFM%u%c_obj%forceNodesChord_Len = OpFM%p%NnodesForce;  OpFM%u%c_obj%forceNodesChord = C_LOC( OpFM%u%forceNodesChord(1) )
+   OpFM%u%c_obj%pxForce_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%pxForce      = C_LOC( OpFM%u%pxForce(1) )
+   OpFM%u%c_obj%pyForce_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%pyForce      = C_LOC( OpFM%u%pyForce(1) )
+   OpFM%u%c_obj%pzForce_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%pzForce      = C_LOC( OpFM%u%pzForce(1) )
+   OpFM%u%c_obj%xdotForce_Len    = OpFM%p%nNodesForce;     OpFM%u%c_obj%xdotForce    = C_LOC( OpFM%u%xdotForce(1) )
+   OpFM%u%c_obj%ydotForce_Len    = OpFM%p%nNodesForce;     OpFM%u%c_obj%ydotForce    = C_LOC( OpFM%u%ydotForce(1) )
+   OpFM%u%c_obj%zdotForce_Len    = OpFM%p%nNodesForce;     OpFM%u%c_obj%zdotForce    = C_LOC( OpFM%u%zdotForce(1) )
+   OpFM%u%c_obj%pOrientation_Len = OpFM%p%nNodesForce*3*3; OpFM%u%c_obj%pOrientation = C_LOC( OpFM%u%pOrientation(1) )
+   OpFM%u%c_obj%fx_Len           = OpFM%p%nNodesForce;     OpFM%u%c_obj%fx           = C_LOC( OpFM%u%fx(1) )
+   OpFM%u%c_obj%fy_Len           = OpFM%p%nNodesForce;     OpFM%u%c_obj%fy           = C_LOC( OpFM%u%fy(1) )
+   OpFM%u%c_obj%fz_Len           = OpFM%p%nNodesForce;     OpFM%u%c_obj%fz           = C_LOC( OpFM%u%fz(1) )
+   OpFM%u%c_obj%momentx_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%momentx      = C_LOC( OpFM%u%momentx(1) )
+   OpFM%u%c_obj%momenty_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%momenty      = C_LOC( OpFM%u%momenty(1) )
+   OpFM%u%c_obj%momentz_Len      = OpFM%p%nNodesForce;     OpFM%u%c_obj%momentz      = C_LOC( OpFM%u%momentz(1) )
+   OpFM%u%c_obj%forceNodesChord_Len = OpFM%p%nNodesForce;  OpFM%u%c_obj%forceNodesChord = C_LOC( OpFM%u%forceNodesChord(1) )
 
       ! initialize the arrays:
       !-----------------------
@@ -228,14 +228,14 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
       !............................................................................................
       ! Define system output initializations (set up mesh) here:
       !............................................................................................
-   CALL AllocPAry( OpFM%y%u, OpFM%p%NnodesVel, 'u', ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL AllocPAry( OpFM%y%v, OpFM%p%NnodesVel, 'v', ErrStat2, ErrMsg2 ); if (Failed()) return;
-   CALL AllocPAry( OpFM%y%w, OpFM%p%NnodesVel, 'w', ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocPAry( OpFM%y%u, OpFM%p%nNodesVel, 'u', ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocPAry( OpFM%y%v, OpFM%p%nNodesVel, 'v', ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocPAry( OpFM%y%w, OpFM%p%nNodesVel, 'w', ErrStat2, ErrMsg2 ); if (Failed()) return;
 
       ! make sure the C versions are synced with these arrays
-   OpFM%y%c_obj%u_Len = OpFM%p%NnodesVel; OpFM%y%c_obj%u = C_LOC( OpFM%y%u(1) )
-   OpFM%y%c_obj%v_Len = OpFM%p%NnodesVel; OpFM%y%c_obj%v = C_LOC( OpFM%y%v(1) )
-   OpFM%y%c_obj%w_Len = OpFM%p%NnodesVel; OpFM%y%c_obj%w = C_LOC( OpFM%y%w(1) )
+   OpFM%y%c_obj%u_Len = OpFM%p%nNodesVel; OpFM%y%c_obj%u = C_LOC( OpFM%y%u(1) )
+   OpFM%y%c_obj%v_Len = OpFM%p%nNodesVel; OpFM%y%c_obj%v = C_LOC( OpFM%y%v(1) )
+   OpFM%y%c_obj%w_Len = OpFM%p%nNodesVel; OpFM%y%c_obj%w = C_LOC( OpFM%y%w(1) )
 
 
       !............................................................................................
@@ -326,7 +326,7 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
 
    ! blade nodes
    DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
+      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%nNodes
 
          Node = Node + 1
          OpFM%u%pxVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j)
@@ -368,7 +368,7 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
       call Transfer_Line2_to_Point( u_AD%rotors(1)%BladeMotion(k), OpFM%m%ActForceMotionsPoints(k), OpFM%m%Line2_to_Point_Motions(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
 
-      DO J = 1, OpFM%p%NnodesForceBlade
+      DO J = 1, OpFM%p%nNodesForceBlade
          Node = Node + 1
          OpFM%u%pxForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
          OpFM%u%pyForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
@@ -392,8 +392,8 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
    if (OpFM%p%NMappings .gt. OpFM%p%NumBl) then
       DO K = OpFM%p%NumBl+1,OpFM%p%NMappings
          call Transfer_Line2_to_Point( u_AD%rotors(1)%TowerMotion, OpFM%m%ActForceMotionsPoints(k), OpFM%m%Line2_to_Point_Motions(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
- 
-         DO J=1,OpFM%p%NnodesForceTower
+
+         DO J=1,OpFM%p%nNodesForceTower
             Node = Node + 1
             OpFM%u%pxForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
             OpFM%u%pyForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
@@ -471,7 +471,7 @@ SUBROUTINE SetOpFMForces(p_FAST, u_AD, y_AD, OpFM, ErrStat, ErrMsg)
 
       call Transfer_Line2_to_Point( y_AD%rotors(1)%BladeLoad(k), OpFM%m%ActForceLoadsPoints(k), OpFM%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%BladeMotion(k), OpFM%m%ActForceMotionsPoints(k) );   if (Failed()) return;
 
-      DO J = 1, OpFM%p%NnodesForceBlade
+      DO J = 1, OpFM%p%nNodesForceBlade
          Node = Node + 1
          OpFM%u%fx(Node) = OpFM%m%ActForceLoadsPoints(k)%Force(1,j)
          OpFM%u%fy(Node) = OpFM%m%ActForceLoadsPoints(k)%Force(2,j)
@@ -503,7 +503,7 @@ SUBROUTINE SetOpFMForces(p_FAST, u_AD, y_AD, OpFM, ErrStat, ErrMsg)
 
       call Transfer_Line2_to_Point( y_AD%rotors(1)%TowerLoad, OpFM%m%ActForceLoadsPoints(k), OpFM%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, u_AD%rotors(1)%TowerMotion, OpFM%m%ActForceMotionsPoints(k) );   if (Failed()) return;
 
-      DO J=1,OpFM%p%NnodesForceTower
+      DO J=1,OpFM%p%nNodesForceTower
          Node = Node + 1
          OpFM%u%fx(Node) = OpFM%m%ActForceLoadsPoints(k)%Force(1,j)
          OpFM%u%fy(Node) = OpFM%m%ActForceLoadsPoints(k)%Force(2,j)
@@ -548,7 +548,7 @@ SUBROUTINE OpFM_SetWriteOutput( OpFM )
 END SUBROUTINE OpFM_SetWriteOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> FIXME: this routine may not be needed now.
+!> Create the actuator line force point mesh
 SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),        INTENT(IN   )  :: p_FAST      ! Parameters for the glue code
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        ! The input meshes (already calculated) from AeroDyn
@@ -572,6 +572,8 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrS
    ! Allocate space for mapping data structures
    ALLOCATE(tmpActForceMotionsMesh(OpFM%p%NMappings) ,      STAT=ErrStat2);  if (Failed2()) return;
    ALLOCATE(OpFM%m%ActForceMotionsPoints(OpFM%p%NMappings), STAT=ErrStat2);  if (Failed2()) return;
+   ! create a temporary mesh with the correct orientation info (stored in Orientation).  This is then stored as the RefOrientation on the real mesh.
+   ! ADP: this is a clever method @gantech came up with to interpolate orientations from one mesh to a finer mesh.
    CALL OpFM_CreateTmpActForceMotionsMesh( p_FAST, u_AD, OpFM%p, InitIn_OpFM, tmpActForceMotionsMesh, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
    !-------
@@ -579,7 +581,7 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrS
    DO k=1,OpFM%p%NumBl
       call MeshCreate ( BlankMesh       = OpFM%m%ActForceMotionsPoints(k)  &
                        ,IOS             = COMPONENT_INPUT                  &
-                       ,Nnodes          = OpFM%p%NnodesForceBlade          &
+                       ,nNodes          = OpFM%p%nNodesForceBlade          &
                        ,Orientation     = .true.                           &
                        ,TranslationDisp = .true.                           &
                        ,TranslationVel  = .true.                           &
@@ -590,7 +592,8 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrS
             if (Failed()) return;
             OpFM%m%ActForceMotionsPoints(k)%RemapFlag = .false.
 
-      do j=1,OpFM%p%NnodesForceBlade
+      do j=1,OpFM%p%nNodesForceBlade
+         ! Use the temp mesh Orientation info as the RefOrientation for this mesh.
          call MeshPositionNode(OpFM%m%ActForceMotionsPoints(k), j, tmpActForceMotionsMesh(k)%position(:,j), errStat2, errMsg2,  orient=tmpActForceMotionsMesh(k)%Orientation(:,:,j)); if (Failed()) return;
          call MeshConstructElement(OpFM%m%ActForceMotionsPoints(k), ELEMENT_POINT, errStat2, errMsg2, p1=j ); if (Failed()) return;
       end do !j
@@ -604,7 +607,7 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrS
       DO k=OpFM%p%NumBl+1,OpFM%p%NMappings
          call MeshCreate ( BlankMesh       = OpFM%m%ActForceMotionsPoints(k)  &
                           ,IOS             = COMPONENT_INPUT                  &
-                          ,Nnodes          = OpFM%p%NnodesForceTower          &
+                          ,nNodes          = OpFM%p%nNodesForceTower          &
                           ,Orientation     = .true.                           &
                           ,TranslationDisp = .true.                           &
                           ,TranslationVel  = .true.                           &
@@ -614,8 +617,8 @@ SUBROUTINE OpFM_CreateActForceMotionsMesh( p_FAST, u_AD, InitIn_OpFM, OpFM, ErrS
                          )
             if (Failed()) return;
             OpFM%m%ActForceMotionsPoints(k)%RemapFlag = .false.
- 
-         do j=1,OpFM%p%NnodesForceTower
+
+         do j=1,OpFM%p%nNodesForceTower
             call MeshPositionNode(OpFM%m%ActForceMotionsPoints(k), j, tmpActForceMotionsMesh(k)%position(:,j), errStat2, errMsg2, orient=tmpActForceMotionsMesh(k)%Orientation(:,:,j)); if (Failed()) return;
             call MeshConstructElement(OpFM%m%ActForceMotionsPoints(k), ELEMENT_POINT, errStat2, errMsg2, p1=j); if (Failed()) return;
          end do !j
@@ -653,7 +656,9 @@ contains
 END SUBROUTINE OpFM_CreateActForceMotionsMesh
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> FIXME: this routine is no longer needed.  So remove it.
+!> this routine is used to create a temporary mesh with the number of points requested by CFD using the AD15 blade definition.  This
+!! mesh is then used as an intermediate to interpolate the AD15 orientations over using mesh mapping.  This routine only exists to
+!! facilitate the orientation calculations.
 SUBROUTINE OpFM_CreateTmpActForceMotionsMesh( p_FAST, u_AD, p_OpFM, InitIn_OpFM, tmpActForceMotions, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),        INTENT(IN   )  :: p_FAST      ! Parameters for the glue code
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        ! The input meshes (already calculated) from AeroDyn
@@ -686,22 +691,22 @@ SUBROUTINE OpFM_CreateTmpActForceMotionsMesh( p_FAST, u_AD, p_OpFM, InitIn_OpFM,
    ALLOCATE( tmp_line2_to_point_Motions(p_OpFM%NMappings),STAT=ErrStat2);  if (Failed2()) return;
 
    ! Blade nodes
-   call AllocAry(forceNodePositions, 3, p_OpFM%NnodesForceBlade, "forceNodePositions", ErrStat2, ErrMsg2); if (Failed()) return;
+   call AllocAry(forceNodePositions, 3, p_OpFM%nNodesForceBlade, "forceNodePositions", ErrStat2, ErrMsg2); if (Failed()) return;
    DO k=1,p_OpFM%NumBl
       call MeshCreate ( BlankMesh   = tmpActForceMotions(k)   &
                       , IOS         = COMPONENT_INPUT         &
-                      , Nnodes      = p_OpFM%NnodesForceBlade &
+                      , nNodes      = p_OpFM%nNodesForceBlade &
                       , ErrStat     = ErrStat2                &
                       , ErrMess     = ErrMsg2                 &
                       , force       = .false.                 &
                       , moment      = .false.                 &
                       , orientation = .true.                  &
-                      ) 
+                      )
       if (Failed()) return;
 
       tmpActForceMotions(k)%RemapFlag = .false.
       call CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, tmp_StructModelMesh(k)%position, forceNodePositions, errStat2, errMsg2); if (Failed()) return;
-      do j=1,p_OpFM%NnodesForceBlade
+      do j=1,p_OpFM%nNodesForceBlade
          call MeshPositionNode(tmpActForceMotions(k), j, forceNodePositions(:,j), errStat2, errMsg2); if (Failed()) return;
          call MeshConstructElement( tmpActForceMotions(k), ELEMENT_POINT, errStat2, errMsg2, p1=j );  if (Failed()) return;
       end do !j
@@ -713,13 +718,13 @@ SUBROUTINE OpFM_CreateTmpActForceMotionsMesh( p_FAST, u_AD, p_OpFM, InitIn_OpFM,
 
    ! Tower nodes
    if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
-      call AllocAry(forceNodePositions, 3, p_OpFM%NnodesForceTower, "forceNodePositions", ErrStat2, ErrMsg2); if (Failed()) return;
+      call AllocAry(forceNodePositions, 3, p_OpFM%nNodesForceTower, "forceNodePositions", ErrStat2, ErrMsg2); if (Failed()) return;
       DO k=p_OpFM%NumBl+1,p_OpFM%NMappings
          call CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, tmp_StructModelMesh(k)%position, forceNodePositions, errStat2, errMsg2); if (Failed()) return;
- 
+
          call MeshCreate ( BlankMesh = tmpActForceMotions(k)        &
               ,IOS       = COMPONENT_INPUT             &
-              ,Nnodes    = p_OpFM%NnodesForceTower &
+              ,nNodes    = p_OpFM%nNodesForceTower &
               ,ErrStat   = ErrStat2                    &
               ,ErrMess   = ErrMsg2                     &
               ,force     = .false.                     &
@@ -727,13 +732,13 @@ SUBROUTINE OpFM_CreateTmpActForceMotionsMesh( p_FAST, u_AD, p_OpFM, InitIn_OpFM,
               ,orientation = .true.                    &
               )
          if (Failed()) return;
- 
+
          tmpActForceMotions(k)%RemapFlag = .false.
-         do j=1,p_OpFM%NnodesForceTower
+         do j=1,p_OpFM%nNodesForceTower
             call MeshPositionNode(tmpActForceMotions(k), j, forceNodePositions(:,j), errStat2, errMsg2); if (Failed()) return;
             call MeshConstructElement( tmpActForceMotions(k), ELEMENT_POINT, errStat2, errMsg2, p1=j );  if (Failed()) return;
          end do !j
- 
+
          call MeshCommit(tmpActForceMotions(k), errStat2, errMsg2 ); if (Failed()) return;
       END DO
       if (allocated(forceNodePositions))  deallocate(forceNodePositions) ! Free space
@@ -788,7 +793,8 @@ contains
 END SUBROUTINE OpFM_CreateTmpActForceMotionsMesh
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> FIXME: this routine is no longer needed.  So remove it.
+!> A temporary mesh is a copy of the AD15 mesh with the RefOrientation set to identity, and Orientation set to the AD15 RefOrientation.
+!! This is used to map orientations over to a more refined mesh.
 SUBROUTINE CreateTmpStructModelMesh(p_FAST, u_AD, p_OpFM, tmpBladeMesh, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),        INTENT(IN   )  :: p_FAST      ! Parameters for the glue code
    TYPE(AD_InputType),              INTENT(IN   )  :: u_AD        ! The inputs for AD15
@@ -856,7 +862,7 @@ SUBROUTINE CreateTmpStructModelMesh(p_FAST, u_AD, p_OpFM, tmpBladeMesh, ErrStat,
             CALL MeshPositionNode ( tmpBladeMesh(K), J, u_AD%rotors(1)%TowerMotion%Position(:,J), ErrStat2, ErrMsg2 )
             if (Failed()) return;
          END DO
- 
+
          ! create elements:
          DO J = 2,nNodes
             CALL MeshConstructElement(  Mesh       = tmpBladeMesh(K) &
@@ -867,10 +873,10 @@ SUBROUTINE CreateTmpStructModelMesh(p_FAST, u_AD, p_OpFM, tmpBladeMesh, ErrStat,
                                      ,  ErrMess    = ErrMsg2         )
          END DO ! J (blade nodes)
          if (Failed()) return;
- 
+
          ! that's our entire mesh:
          CALL MeshCommit ( tmpBladeMesh(K), ErrStat2, ErrMsg2 ); if (Failed()) return;
- 
+
          ! Copy the orientation
          DO J=1,nNodes
             tmpBladeMesh(K)%Orientation(:,:,J) = u_AD%rotors(1)%TowerMotion%RefOrientation(:,:,J)
@@ -911,12 +917,13 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
    nStructNodes = SIZE(structPositions,2)
    call AllocAry(rStructNodes, nStructNodes, "rStructNodes", ErrStat2, ErrMsg2); if (Failed()) return;
 
-   ! Store the distance of the structural model nodes from the root into an array
+   ! Store the distance of the structural model nodes from the root into an array (from AD15 blade defenition)
    rStructNodes(:) = InitIn_OpFM%StructBldRnodes(:)
 
    ! Now calculate the positions of the force nodes based on interpolation
+   ! NOTE: the InterpArray function from the NWTC Library could be used here instead.  This interpolation will eventually be removed, so we won't update it here.
    forceNodePositions(:,1) = structPositions(:,1)
-   DO I=2,p_OpFM%NnodesForceBlade-1 ! Calculate the position of the force nodes
+   DO I=2,p_OpFM%nNodesForceBlade-1 ! Calculate the position of the force nodes
       do jLower = 1, (nStructNodes - 1)
          if ((rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .le. 0) then
             exit
@@ -925,7 +932,7 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
       rInterp =  (p_OpFM%forceBldRnodes(I) - rStructNodes(jLower))/(rStructNodes(jLower+1)-rStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
       forceNodePositions(:,I) = structPositions(:,jLower) + rInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
    END DO
-   forceNodePositions(:,p_OpFM%NnodesForceBlade) = structPositions(:,nStructNodes)
+   forceNodePositions(:,p_OpFM%nNodesForceBlade) = structPositions(:,nStructNodes)
 
    if (allocated(rStructNodes)) deallocate(rStructNodes)
 
@@ -968,8 +975,9 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
   hStructNodes(nStructNodes) = p_OpFM%TowerHeight+p_OpFM%TowerBaseHeight
 
   ! Now calculate the positions of the force nodes based on interpolation
+  ! NOTE: the InterpArray function from the NWTC Library could be used here instead.  This interpolation will eventually be removed, so we won't update it here.
   forceNodePositions(:,1) = structPositions(:,1)
-  DO I=2,p_OpFM%NnodesForceTower-1 ! Calculate the position of the force nodes
+  DO I=2,p_OpFM%nNodesForceTower-1 ! Calculate the position of the force nodes
      do jLower = 1, (nStructNodes - 1)
         if ((hStructNodes(jLower) - (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight))*(hStructNodes(jLower+1) - (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight)) .le. 0) then
            exit
@@ -978,7 +986,7 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
      hInterp =  (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight - hStructNodes(jLower))/(hStructNodes(jLower+1)-hStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
      forceNodePositions(:,I) = structPositions(:,jLower) + hInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
   END DO
-  forceNodePositions(:,p_OpFM%NnodesForceTower) = structPositions(:,nStructNodes)
+  forceNodePositions(:,p_OpFM%nNodesForceTower) = structPositions(:,nStructNodes)
   if (allocated(hStructNodes)) deallocate(hStructNodes)
 
   RETURN
@@ -1010,22 +1018,22 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(p_OpFM, ErrStat, ErrMsg)
    ! Line2 to Line2 mapping expects the destination mesh to be smaller than the source mesh for deformation mapping and larger than the source mesh for load mapping. This forces me to create nodes at the very ends of the blade.
 
    ! Blades
-   allocate(p_OpFM%forceBldRnodes(p_OpFM%NnodesForceBlade), stat=errStat2);   if (Failed2()) return;
-   dRforceNodes = p_OpFM%BladeLength/(p_OpFM%NnodesForceBlade-1)
-   do i=1,p_OpFM%NnodesForceBlade-1
+   allocate(p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade), stat=errStat2);   if (Failed2()) return;
+   dRforceNodes = p_OpFM%BladeLength/(p_OpFM%nNodesForceBlade-1)
+   do i=1,p_OpFM%nNodesForceBlade-1
       p_OpFM%forceBldRnodes(i) = (i-1)*dRforceNodes
    end do
-   p_OpFM%forceBldRnodes(p_OpFM%NnodesForceBlade) = p_OpFM%BladeLength
+   p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
 
 
    if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
       ! tower
-      allocate(p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower), stat=errStat2);   if (Failed2()) return;
-      dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%NnodesForceTower-1)
-      do i=1,p_OpFM%NnodesForceTower-1
+      allocate(p_OpFM%forceTwrHnodes(p_OpFM%nNodesForceTower), stat=errStat2);   if (Failed2()) return;
+      dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%nNodesForceTower-1)
+      do i=1,p_OpFM%nNodesForceTower-1
          p_OpFM%forceTwrHnodes(i) = (i-1)*dRforceNodes
       end do
-      p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower) = p_OpFM%TowerHeight
+      p_OpFM%forceTwrHnodes(p_OpFM%nNodesForceTower) = p_OpFM%TowerHeight
    end if
 
    return
@@ -1067,8 +1075,9 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
   ! The blades first
   do k = 1, p_OpFM%NumBl
      ! Calculate the chord at the force nodes based on interpolation
+     ! NOTE: the InterpArray function from the NWTC Library could be used here instead.  This interpolation will eventually be removed, so we won't update it here.
      nNodesBladeProps = SIZE(InitOut_AD%rotors(1)%BladeProps(k)%BlChord)
-     DO I=1,p_OpFM%NnodesForceBlade
+     DO I=1,p_OpFM%nNodesForceBlade
         Node = Node + 1
         do jLower = 1, (nNodesBladeProps - 1)
            if ( (InitOut_AD%rotors(1)%BladeProps(k)%BlSpn(jLower) - p_OpFM%forceBldRnodes(I))*(InitOut_AD%rotors(1)%BladeProps(k)%BlSpn(jLower+1) - p_OpFM%forceBldRnodes(I)) .le. 0 ) then
@@ -1090,7 +1099,7 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
       do k = p_OpFM%NumBl+1,p_OpFM%NMappings
          nNodesTowerProps = SIZE(InitOut_AD%rotors(1)%TwrElev)
          ! Calculate the chord at the force nodes based on interpolation
-         DO I=1,p_OpFM%NnodesForceTower
+         DO I=1,p_OpFM%nNodesForceTower
             Node = Node + 1
             do jLower = 1, (nNodesTowerProps - 1)
                if ( (InitOut_AD%rotors(1)%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%rotors(1)%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .le. 0) then
