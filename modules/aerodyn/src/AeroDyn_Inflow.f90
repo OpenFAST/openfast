@@ -68,8 +68,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%dt         = interval
    p%storeHHVel = InitInp%storeHHVel
    p%WrVTK      = InitInp%WrVTK
-   p%MHK        = InitInp%MHK
-   p%WtrDpth    = InitInp%WtrDpth
+   p%MHK        = InitInp%AD%MHK
+   p%WtrDpth    = InitInp%AD%WtrDpth
 
    ! --- Initialize AeroDyn
    if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
