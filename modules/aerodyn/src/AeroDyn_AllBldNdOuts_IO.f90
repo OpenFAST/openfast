@@ -19,7 +19,6 @@ MODULE AeroDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-!   INTEGER(IntKi), PARAMETER      :: OutStrLenM1_Msuffix = ChanLen - 6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N##namesuffix
 
 
 ! ===================================================================================================
@@ -253,7 +252,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndx )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(1,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -262,7 +261,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndy )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(2,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -270,7 +269,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndz )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(3,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -309,7 +308,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VDisx )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(1,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -317,7 +316,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VDisy )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(2,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -325,7 +324,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VDisz )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(3,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -335,7 +334,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_STVx )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(1,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -343,7 +342,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_STVy )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(2,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -351,7 +350,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_STVz )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%WithoutSweepPitchTwist(3,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -1166,7 +1165,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
                      Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%WithoutSweepPitchTwist(:,:,IdxNode,IdxBlade))
+                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
                      y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), Vind_g(1:3) ) ! Uihn, hub normal
                      OutIdx = OutIdx + 1
                   ENDDO
@@ -1187,7 +1186,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
                      Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%WithoutSweepPitchTwist(:,:,IdxNode,IdxBlade))
+                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
                      y%WriteOutput( OutIdx ) = dot_product(M_pg(2,1:3,IdxBlade), Vind_g(1:3) ) ! Uiht, hub tangential
                      OutIdx = OutIdx + 1
                   ENDDO
@@ -1208,7 +1207,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
                      Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%WithoutSweepPitchTwist(:,:,IdxNode,IdxBlade))
+                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
                      y%WriteOutput( OutIdx ) = dot_product(M_pg(3,1:3,IdxBlade), Vind_g(1:3) ) ! Uihr, hub radial
                      OutIdx = OutIdx + 1
                   ENDDO
@@ -1304,7 +1303,7 @@ SUBROUTINE AllBldNdOuts_SetParameters( InputFileData, p, p_AD, ErrStat, ErrMsg )
 
 
       ! Check if the requested blades exist
-   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) then
+   IF ( (InputFileData%BldNd_BladesOut < 0_IntKi) ) THEN
       p%BldNd_BladesOut = 0_IntKi
    ELSE IF ((InputFileData%BldNd_BladesOut > p%NumBlades) ) THEN
       CALL SetErrStat( ErrID_Warn, " Number of blades to output data at all blade nodes (BldNd_BladesOut) must be no more than the total number of blades, "//TRIM(Num2LStr(p%NumBlades))//".", ErrStat, ErrMsg, RoutineName)

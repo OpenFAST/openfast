@@ -55,7 +55,7 @@ MODULE SysSubs
 
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 
-   CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
+   CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]; Note: NewLine change to ACHAR(10) here on Windows to fix issues with C/Fortran interoperability using WrScr
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows/Matlab' ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.

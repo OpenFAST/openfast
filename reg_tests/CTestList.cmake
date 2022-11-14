@@ -146,6 +146,15 @@ function(ad_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ad_regression)
 
+# aerodyn-Py
+function(py_ad_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodynPyRegressionCase.py")
+  set(AERODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(py_ad_regression)
+
 # beamdyn
 function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
@@ -279,6 +288,8 @@ of_regression_linear("StC_test_OC4Semi_Linear_Tow"  "openfast;linear;servodyn;st
 if(BUILD_FASTFARM)
   ff_regression("TSinflow"  "fastfarm")
   ff_regression("LESinflow"  "fastfarm")
+#   ff_regression("Uninflow_curl"  "fastfarm")
+  ff_regression("TSinflow_curl"  "fastfarm")
 endif()
 
 # AeroDyn regression tests
@@ -295,6 +306,7 @@ ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
+py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")

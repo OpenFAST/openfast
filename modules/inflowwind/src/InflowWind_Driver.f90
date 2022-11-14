@@ -170,6 +170,7 @@ PROGRAM InflowWind_Driver
    CLSettingsFlags%WrHAWC              =  .FALSE.        ! don't convert to HAWC format
    CLSettingsFlags%WrBladed            =  .FALSE.        ! don't convert to Bladed format
    CLSettingsFlags%WrVTK               =  .FALSE.        ! don't convert to VTK format
+   CLSettingsFlags%WrUniform           =  .FALSE.        ! don't convert to UniformWind format
 
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
    Settings       =  CLSettings
@@ -278,6 +279,7 @@ PROGRAM InflowWind_Driver
       SettingsFlags%WrHAWC = .FALSE.
       SettingsFlags%WrBladed = .FALSE.
       SettingsFlags%WrVTK = .FALSE.
+      SettingsFlags%WrUniform = .FALSE.
 
          ! VVerbose error reporting
       IF ( IfWDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
@@ -458,6 +460,7 @@ PROGRAM InflowWind_Driver
       !InflowWind_InitInp%RootName = ""
    END IF
    InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
+   InflowWind_InitInp%RadAvg = -1.0_ReKi ! let the IfW code guess what to use
    
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
@@ -471,11 +474,15 @@ PROGRAM InflowWind_Driver
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
-   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
-      CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
-                 NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
-   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose < 7_IntKi ) ) THEN
-      CALL ProgWarn( ErrMsg )
+   ELSEIF ( ErrStat /= ErrID_None ) THEN
+      IF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+         CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                    NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+      ELSEIF ( ErrStat >= ErrID_Warn ) THEN
+         CALL ProgWarn( ErrMsg )
+      ELSE
+         CALL WrScr(TRIM(ErrMsg))
+      ENDIF
    ENDIF
 
 
@@ -538,7 +545,23 @@ PROGRAM InflowWind_Driver
    
    END IF
    
+   
+   IF (SettingsFlags%WrUniform) THEN
+      CALL InflowWind_Convert2Uniform( InflowWind_InitInp%RootName, InflowWind_p, InflowWind_MiscVars, ErrStat, ErrMsg )
 
+      IF (ErrStat > ErrID_None) THEN
+         CALL WrScr( TRIM(ErrMsg) )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+            CALL WrScr(NewLine//' InflowWind_Convert2Uniform returned: ErrStat: '//TRIM(Num2LStr(ErrStat)))
+         END IF
+      ELSE
+         IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Convert2Uniform CALL returned without errors.'//NewLine)
+      END IF
+   END IF
+   
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Other Setup -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -624,6 +647,9 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
          ENDDO
       ENDDO
 
+      Counter = MAX(1, NINT(Counter/2.0))
+      InflowWind_u1%HubPosition = InflowWind_u1%PositionXYZ(:,Counter)
+      
    ELSE
 
          ! We are going to set the WindGrid with only a single point at the RefHt so that we can calculate something
@@ -631,15 +657,19 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
       InflowWind_u1%PositionXYZ(2,1)  =  0.0_ReKi                                ! Y
       InflowWind_u1%PositionXYZ(3,1)  =  InflowWind_InitOut%WindFileInfo%RefHt   ! Z
 
+      InflowWind_u1%HubPosition = InflowWind_u1%PositionXYZ(:,1)
    ENDIF
 
-
+   call Eye(InflowWind_u1%HubOrientation, ErrStat, ErrMsg)
+   call Eye(InflowWind_u2%HubOrientation, ErrStat, ErrMsg)
 
       ! If we read in a list of points from the Points input file, setup the arrays for it.
    IF ( SettingsFlags%PointsFile ) THEN
 
          ! Move the points list
       CALL MOVE_ALLOC( PointsXYZ, InflowWind_u2%PositionXYZ )
+      Counter = MAX(1, NINT(size(InflowWind_u2%PositionXYZ,2)/2.0))
+      InflowWind_u2%HubPosition = InflowWind_u2%PositionXYZ(:,Counter)
 
          ! Allocate the array for the velocity results -- 3 x Npoints
       CALL AllocAry( InflowWind_y2%VelocityUVW, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
@@ -713,23 +743,25 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
 
 
       ! Report the rotation of the coordinates.
-   IF ( IfWDriver_Verbose >= 10_IntKi .AND. InflowWind_p%NWindVel > 0_IntKi )   THEN
+   IF ( IfWDriver_Verbose >= 10_IntKi .and. InflowWind_p%NumOuts > 0 )   THEN
       CALL WrScr(NewLine//NewLine//'  Rotation of coordinates to prime (wind file) coordinates by rotating '//   &
                   TRIM(Num2LStr(R2D*InflowWind_p%PropagationDir))// &
                   ' degrees (meteorological wind direction change) ...'//NewLine)
-      CALL WrScr('          ------ WindViXYZ ---------    ----- WindViXYZprime -----')
+      if (InflowWind_p%NWindVel > 0_IntKi) then
+         CALL WrScr('          ------ WindViXYZ ---------    ----- WindViXYZprime -----')
 
-      DO I = 1,InflowWind_p%NWindVel
-         ErrMsgTmp   =  ''
-         ErrMsgTmp   =  '   '//TRIM(Num2LStr(I))//'  '
-         ErrMsgTmp   =  TRIM(ErrMsgTmp)//'      ('//TRIM(Num2LStr(InflowWind_p%WindViXYZ(1,I)))//      &
-                        ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZ(2,I)))//', '//                      &
-                        TRIM(Num2LStr(InflowWind_p%WindViXYZ(3,I)))//')'
-         ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(1,I)))//   &
-                        ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(2,I)))//', '//             &
-                        TRIM(Num2LStr(InflowWind_p%WindViXYZprime(3,I)))//')'
-         CALL WrScr(TRIM(ErrMsgTmp))
-      ENDDO
+         DO I = 1,InflowWind_p%NWindVel
+            ErrMsgTmp   =  ''
+            ErrMsgTmp   =  '   '//TRIM(Num2LStr(I))//'  '
+            ErrMsgTmp   =  TRIM(ErrMsgTmp)//'      ('//TRIM(Num2LStr(InflowWind_p%WindViXYZ(1,I)))//      &
+                           ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZ(2,I)))//', '//                      &
+                           TRIM(Num2LStr(InflowWind_p%WindViXYZ(3,I)))//')'
+            ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(1,I)))//   &
+                           ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(2,I)))//', '//             &
+                           TRIM(Num2LStr(InflowWind_p%WindViXYZprime(3,I)))//')'
+            CALL WrScr(TRIM(ErrMsgTmp))
+         ENDDO
+      end if
       CALL WrScr(NewLine)
    ENDIF
 
