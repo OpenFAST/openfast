@@ -764,10 +764,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                      :: J_Min                                           ! The minimum value of index J such that WaveKinzi(J) >= -WtrDpth
    INTEGER                      :: K                                               ! Generic index
    INTEGER                      :: LastInd                                         ! Index into the arrays saved from the last call as a starting point for this call
-   INTEGER                      :: nSeeds                                          ! number of seeds required to initialize the intrinsic random number generator
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
    integer                      :: primeCount                                      ! Counter for locations before applying stretching
-   INTEGER,    ALLOCATABLE      :: TmpWaveSeeds(:)                                 ! A temporary array used for portability. IVF/CVF use a random number generator initialized with 2 seeds; other platforms can use different implementations (e.g. gfortran needs 8 or 12 seeds)
    COMPLEX(SiKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    COMPLEX(SiKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use.
    TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
@@ -994,8 +992,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
 
-      ! Perform some initialization computations including initializing the
-      !   pseudorandom number generator, calculating the total number of frequency
+      ! Perform some initialization computations including calculating the total number of frequency
       !   components = total number of time steps in the incident wave,
       !   calculating the frequency step, calculating the index of the frequency
       !   component nearest to WaveTp, and ALLOCATing the arrays:
@@ -1009,37 +1006,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !          WaveDOmega = 2*Pi/(NStepWave*WaveDT)
       !                     = 2*Pi/WaveTMax
 
-      CALL RANDOM_SEED ( SIZE = nSeeds )
 
-      IF ( nSeeds /= 2 ) THEN
-         ErrMsgTmp   = ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
-                                  //TRIM(Int2LStr(nSeeds))//' seeds instead of the 2 in the HydroDyn input file.'
-         CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-      END IF
-
-      ALLOCATE ( TmpWaveSeeds ( nSeeds ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpWaveSeeds.',ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-         ! We'll just populate this with odd seeds = Seed(1) and even seeds = Seed(2)
-      DO I = 1,nSeeds,2
-         TmpWaveSeeds(I) = InitInp%WaveSeed(1)
-      END DO
-      DO I = 2,nSeeds,2
-         TmpWaveSeeds(I) = InitInp%WaveSeed(2)
-      END DO
-
-
-      CALL RANDOM_SEED ( PUT=TmpWaveSeeds )
-      DEALLOCATE(TmpWaveSeeds, STAT=ErrStatTmp)
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array TmpWaveSeeds.',ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
 
 
       ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
@@ -2412,7 +2379,6 @@ CONTAINS
       IF (ALLOCATED( WvSpreadCos2SArr ))  DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp)
       IF (ALLOCATED( WvSpreadIntegral ))  DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp)
       IF (ALLOCATED( WvSpreadThetas ))    DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp)
-      IF (ALLOCATED( TmpWaveSeeds ))      DEALLOCATE( TmpWaveSeeds,     STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveAcc ))         DEALLOCATE( GHWaveAcc,        STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
