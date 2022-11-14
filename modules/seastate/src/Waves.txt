@@ -72,9 +72,7 @@ typedef     ^                 InitOutputType    SiKi                 WaveElevC  
 typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
 typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
-typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Incident wave propagation heading direction" (degrees)
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
-typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
 typedef     ^                 ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 SiKi                 WaveKinzi         {:}      -        -        "zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean see level" (meters)
 typedef     ^                 ^                 SiKi                 WaveDynP          {*}{*}{*}{*}   -        -        "Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed" (N/m^2)

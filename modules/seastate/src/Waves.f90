@@ -839,7 +839,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !  Set the WaveNDir information (number of wave directions).
       !     -> Since this must be adjusted later, put it in InitOut first and adjust that later in the code.
    InitOut%WaveNDir  = InitInp%WaveNDir
-   InitOut%WaveDir   = InitInp%WaveDir                         ! We may want this value later (I had a nasty surprise when this wasn't set)
    WaveNDirMax       = CEILING(InitOut%WaveNDir*1.25_SiKi)     ! Value we allow WaveNDir to reach before aborting
 
 
@@ -2491,8 +2490,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
          ! subroutine calls as necessary.
       InitOut%WaveDirMin   = InitInp%WaveDir
       InitOut%WaveDirMax   = InitInp%WaveDir
-      InitOut%WaveDir      = InitInp%WaveDir     ! Not sure why there are so many copies of this variable, but InitOut%WaveDir must be set, and isn't in all cases otherwise.
-
 
 
             ! Initialize the variables associated with the incident wave:
@@ -2548,8 +2545,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN 
          
       ENDSELECT
-
-   InitOut%WaveMultiDir = InitInp%WaveMultiDir
 
 END SUBROUTINE Waves_Init
 

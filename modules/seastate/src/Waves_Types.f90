@@ -90,9 +90,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction. [(degrees)]
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDir      !< Incident wave propagation heading direction [(degrees)]
     INTEGER(IntKi)  :: WaveNDir      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
-    LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean see level [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(N/m^2)]
@@ -946,9 +944,7 @@ IF (ASSOCIATED(SrcInitOutputData%WaveDirArr)) THEN
 ENDIF
     DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
     DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
-    DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
     DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
-    DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
     DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
 IF (ALLOCATED(SrcInitOutputData%WaveKinzi)) THEN
   i1_l = LBOUND(SrcInitOutputData%WaveKinzi,1)
@@ -1317,9 +1313,7 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMin
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMax
-      Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1  ! WaveNDir
-      Int_BufSz  = Int_BufSz  + 1  ! WaveMultiDir
       Re_BufSz   = Re_BufSz   + 1  ! WaveDOmega
   Int_BufSz   = Int_BufSz   + 1     ! WaveKinzi allocated yes/no
   IF ( ALLOCATED(InData%WaveKinzi) ) THEN
@@ -1481,11 +1475,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDirMax
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WaveDir
-    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveNDir
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WaveMultiDir, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDOmega
     Re_Xferred = Re_Xferred + 1
@@ -1943,11 +1933,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WaveDirMax = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-    OutData%WaveDir = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
     OutData%WaveNDir = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WaveMultiDir = TRANSFER(IntKiBuf(Int_Xferred), OutData%WaveMultiDir)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveDOmega = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
