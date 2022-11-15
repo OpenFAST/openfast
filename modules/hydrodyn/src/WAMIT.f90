@@ -1282,7 +1282,7 @@ end if
                         end do  
                      
                         ! Compute the inverse discrete Fourier transforms to find the time-domain
-                        !   representations of the wave kinematics without stretcing:
+                        !   representations of the wave kinematics without stretching:
 
                         CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStat2 )
                         CALL SetErrStat(ErrStat2,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'WAMIT_Init')

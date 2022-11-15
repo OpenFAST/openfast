@@ -2166,10 +2166,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! If something went wrong during allocation of the temporary arrays...
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2182,10 +2179,7 @@ END SUBROUTINE WAMIT2_Init
       CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
@@ -2197,10 +2191,7 @@ END SUBROUTINE WAMIT2_Init
       CALL MnDrift_InitCalc( InitInp, p, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2214,10 +2205,7 @@ END SUBROUTINE WAMIT2_Init
                      ErrStat,ErrMsg,RoutineName)
       ENDDO
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2291,10 +2279,7 @@ END SUBROUTINE WAMIT2_Init
                                              DiffQTFData%Data4D%WvDir1, DiffQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
                         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                         IF (ErrStat >= AbortErrLev ) THEN
-                           IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                           IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+                           call cleanup()
                            RETURN
                         ENDIF
 
@@ -2375,10 +2360,7 @@ END SUBROUTINE WAMIT2_Init
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+               call cleanup()
                RETURN
             END IF
 
@@ -2402,20 +2384,22 @@ END SUBROUTINE WAMIT2_Init
       CALL  ExitFFT(FFT_Data, ErrStatTmp)
       CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
+      call cleanup()
+      
+   contains
+!--------------------------------------------------- 
+      subroutine cleanup()
 
-         ! Cleanup
-      IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
-
-
+            ! Cleanup
+         IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+      end subroutine cleanup
+!--------------------------------------------------- 
    END SUBROUTINE DiffQTF_InitCalc
 
 

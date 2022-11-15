@@ -441,10 +441,10 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
    
-      CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
+      CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp )
+      IF ( ErrStatTmp /= 0 ) THEN
+         ErrMsgTmp  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
+         CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
@@ -509,10 +509,10 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    FileName = TRIM(InitInp%WvKinFile) // '.Elev'
    
-   CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-   IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
+   CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp ) 
+   IF ( ErrStatTmp /= 0 ) THEN
+      ErrMsgTmp  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
+      CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       RETURN
    END IF
 
@@ -655,8 +655,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL OpenFInpFile(  WaveCompUnit, WaveCompData%FileName, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -664,8 +663,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL GetFileLength(WaveCompUnit, TRIM(WaveCompData%Filename), NumDataColumns, WaveCompData%NCompWave, NumHeaderLines, ErrStatTmp, ErrMsgTmp)
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -673,8 +671,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL ReadLine( WaveCompUnit, '', TextLine, LineLen, ErrStatTmp )
    IF (ErrStatTmp /= ErrID_None) THEN
       CALL SetErrStat( ErrID_Fatal, 'Error reading the first line of ' // TRIM(WaveCompData%FileName), ErrStat, ErrMsg, RoutineName)
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    If (TextLine(1:28) == 'source: SEAFileGenerator.exe') THEN
@@ -690,8 +687,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
          ! Make sure the wave direction convention is not nautial, which is not supported
          IF (TRIM(Words(1)) == 'dconv:' .AND. TRIM(Words(2)) == 'naut') THEN
             CALL SetErrStat( ErrID_Fatal, 'Nautical (naut) convention for wave direction is not supported. Must use cartesian (cart) convention.', ErrStat, ErrMsg, RoutineName)
-            CLOSE ( WaveCompUnit )
-            CALL CleanUp()
+            CALL CleanUpError()
             RETURN
          END IF
          
@@ -715,8 +711,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    IF ( NumDataColumns /= 4_IntKi ) THEN
       CALL SetErrStat( ErrID_Fatal, ' Wave component files should contain four columns of data: (angular) frequency, wave height/amplitude, wave direction, wave phase. '// &
                'Found '//TRIM(Num2LStr(NumDataColumns))//' of data in "'//TRIM(WaveCompData%FileName)//'".', ErrStat, ErrMsg, RoutineName)
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -731,32 +726,28 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    ALLOCATE ( WaveCompData%WaveAngFreq(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveAngFreq array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WaveAmp(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveAmp array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WaveDir(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveDir array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WavePhase(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WavePhase array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
  
@@ -773,8 +764,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       IF ( ErrStatTmp /= 0 ) THEN      
          CALL SetErrStat( ErrID_Fatal, 'Error in reading in value from the file: line number '//TRIM(Num2LStr(I))//'. Expecting a total of '// &
                TRIM(Num2LStr(WaveCompData%NCompWave))//' rows of data.', ErrStat, ErrMsg, RoutineName )
-         CLOSE ( WaveCompUnit )
-         CALL CleanUp() 
+         CALL CleanUpCleanUpError() 
          RETURN
       END IF
 
@@ -787,13 +777,11 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       OmegaRatio = WaveAngFreq/InitOut%WaveDOmega
       IF (ABS(OmegaRatio - REAL(NINT(OmegaRatio),SiKi))>WaveDOmega_RelTol) THEN
           CALL SetErrStat( ErrID_Fatal, 'The wave frequency on line number '//TRIM(Num2LStr(I))//' is not an integer multiple of the frequency resolution given by 1/WaveTMax.', ErrStat, ErrMsg, RoutineName )
-          CLOSE ( WaveCompUnit )
-          CALL CleanUp() 
+          CALL CleanUpCleanUpError() 
           RETURN
       ELSE IF (WaveAngFreq <= 0.0_ReKi) THEN
           CALL SetErrStat( ErrID_Fatal, 'The wave frequency on line number '//TRIM(Num2LStr(I))//' is less than or equal to zero. All frequency must be positive.', ErrStat, ErrMsg, RoutineName )
-          CLOSE ( WaveCompUnit )
-          CALL CleanUp() 
+          CALL CleanUpCleanUpError() 
           RETURN  
       END IF
       
@@ -819,14 +807,16 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
 
    CONTAINS
 
-      SUBROUTINE CleanUp
+      SUBROUTINE CleanUpError
 
+         CLOSE ( WaveCompUnit )
+      
          IF (ALLOCATED( WaveCompData%WaveAngFreq ))    DEALLOCATE( WaveCompData%WaveAngFreq, STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WaveAmp  ))       DEALLOCATE( WaveCompData%WaveAmp,     STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WaveDir     ))    DEALLOCATE( WaveCompData%WaveDir,     STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WavePhase   ))    DEALLOCATE( WaveCompData%WavePhase,   STAT=ErrStatTmp)
 
-      END SUBROUTINE CleanUp
+      END SUBROUTINE CleanUpError
 END SUBROUTINE WaveComp_ReadFile
    
    
