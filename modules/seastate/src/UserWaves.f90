@@ -244,13 +244,13 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ! Check that the file timestep is the same as the HD file, and check that the WaveTMax value of the file is larger than that of HD.
    IF ( InitInp%WaveTMax > WaveElevData%WaveTMax ) THEN
-      CALL SetErrStat(ErrID_Fatal,' HydroDyn requires a minimum of '//TRIM(Num2LStr(InitInp%WaveTMax))//', but '//TRIM(WaveElevData%FileName)// &
+      CALL SetErrStat(ErrID_Fatal,' SeaState requires a minimum of '//TRIM(Num2LStr(InitInp%WaveTMax))//', but '//TRIM(WaveElevData%FileName)// &
             ' only contains a maximum time of '//TRIM(Num2LStr(WaveElevData%WaveTMax))//' (last line).',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
    ! Check that the values of WaveDT are the same or similar enough
    IF ( ABS(InitInp%WaveDT - WaveElevData%WaveDT) > WaveDT_Tol ) THEN
-      CALL SetErrStat(ErrID_Fatal,' WaveDT from Hydrodyn ('//TRIM(Num2LStr(InitInp%WaveDT))//') and timestep size in wave elevation file '// &
+      CALL SetErrStat(ErrID_Fatal,' WaveDT from SeaState ('//TRIM(Num2LStr(InitInp%WaveDT))//') and timestep size in wave elevation file '// &
             TRIM(WaveElevData%FileName)//' (WaveDT = '//TRIM(Num2LStr(WaveElevData%WaveDT))//')  do not match.  These need to be within '// &
             TRIM(Num2LStr(WaveDT_Tol))//' seconds of each other.',ErrStat,ErrMsg,RoutineName)
    ENDIF

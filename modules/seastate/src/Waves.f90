@@ -684,23 +684,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
    COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
    COMPLEX(SiKi)                :: WGNC                                            ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
-!   REAL(SiKi)                   :: CurrVxi                                         ! xi-component of the current velocity at the instantaneous elevation (m/s)
-!   REAL(SiKi)                   :: CurrVyi                                         ! yi-component of the current velocity at the instantaneous elevation (m/s)
-!   REAL(SiKi)                   :: CurrVxi0                                        ! xi-component of the current velocity at zi =  0.0 meters            (m/s)
-!   REAL(SiKi)                   :: CurrVyi0                                        ! yi-component of the current velocity at zi =  0.0 meters            (m/s)
-!   REAL(SiKi)                   :: CurrVxiS                                        ! xi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
-!   REAL(SiKi)                   :: CurrVyiS                                        ! yi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
+
    REAL(SiKi), ALLOCATABLE      :: CosWaveDir(:)                                   ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
    REAL(SiKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
    REAL(SiKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
-!   REAL(SiKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
+
    REAL(SiKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
    REAL(SiKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
-!UNUSED:   !REAL(SiKi), PARAMETER        :: n_Massel = 3.0                                  ! Factor used to the scale the peak spectral frequency in order to find the cut-off frequency based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.  This reference recommends n_Massel > 3.0 (higher for higher-order wave kinemetics); the ">" designation is accounted for by checking if ( Omega > OmegaCutOff ).
+
    REAL(SiKi)                   :: Omega                                           ! Wave frequency (rad/s)
-!UNUSED:   !REAL(SiKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
-!UNUSED:   !   REAL(SiKi)                   :: PCurrVxiPz0                                     ! Partial derivative of CurrVxi        with respect to zi at zi = 0 (1/s  )
-!UNUSED:   !   REAL(SiKi)                   :: PCurrVyiPz0                                     ! Partial derivative of CurrVyi        with respect to zi at zi = 0 (1/s  )
+
    REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:,:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
    REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:,:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
    REAL(SiKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:,:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
@@ -708,57 +701,27 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(SiKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:,:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
    REAL(SiKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:,:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
    REAL(SiKi), ALLOCATABLE      :: PWaveVel0VPz0  (:,:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
-!   REAL(SiKi)                   :: Slope                                           ! Miscellanous slope used in an interpolation (-)
+
    REAL(SiKi), PARAMETER        :: SmllNmbr  = 9.999E-4                            ! A small number representing epsilon for taking numerical derivatives.  !bjj: how about using SQRT(EPSILON())?
    REAL(SiKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
    REAL(SiKi), ALLOCATABLE      :: SinWaveDir     (:)                              ! SIN( WaveDirArr(I) )
    REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hxi (:,:)                               ! Instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hyi (:,:)                               ! Instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
-!   REAL(SiKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
-!   REAL(SiKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
-!   REAL(SiKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
+
    REAL(SiKi), ALLOCATABLE      :: WaveAcc0V (:,:)                                 ! Instantaneous vertical   acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveAcc0VExtrap                                 ! Temporary value extrapolated from the WaveAcc0V  (:,:) array (m/s^2)
-!   REAL(SiKi)                   :: WaveAcc0VInterp                                 ! Temporary value interpolated from the WaveAcc0V  (:,:) array (m/s^2)
+
    REAL(SiKi), ALLOCATABLE      :: WaveDynP0B(:,:)                                 ! Instantaneous dynamic pressure        of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveDynP0BExtrap                                ! Temporary value extrapolated from the WaveDynP0B (:,:) array (N/m^2)
-!   REAL(SiKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
-!   REAL(SiKi)                   :: WaveElev_Max                                    ! Maximum expected value of the instantaneous elevation of incident waves (meters)
-!   REAL(SiKi)                   :: WaveElev_Min                                    ! Minimum expected value of the instantaneous elevation of incident waves (meters)
+
    COMPLEX(SiKi)                :: WaveElevxiPrime0
    REAL(SiKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
-!   REAL(SiKi), ALLOCATABLE      :: WaveKinzi0St   (:)                              ! Array of elevations found by stretching the elevations in the WaveKinzi0Prime(:) array using the instantaneous wave elevation; these are relative to the mean see level (meters)
    REAL(SiKi)                   :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
    REAL(SiKi)                   :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    REAL(SiKi)                   :: WaveS2Sdd                                       ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
-   REAL(DbKi)                   :: WaveTMax                                        ! Analysis time for incident wave calculations (sec)
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)                            ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveVel0HxiExtrap                               ! Temporary value extrapolated from the WaveVel0Hxi(:,:) array (m/s  )
-!   REAL(SiKi)                   :: WaveVel0HxiInterp                               ! Temporary value interpolated from the WaveVel0Hxi(:,:) array (m/s  )
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)                            ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveVel0HyiExtrap                               ! Temporary value extrapolated from the WaveVel0Hyi(:,:) array (m/s  )
-!   REAL(SiKi)                   :: WaveVel0HyiInterp                               ! Temporary value interpolated from the WaveVel0Hyi(:,:) array (m/s  )
    REAL(SiKi), ALLOCATABLE      :: WaveVel0V (:,:)                                 ! Instantaneous vertical     velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
-!UNUSED:  for future wave stretching
-!   REAL(SiKi)                   :: WaveVel0VExtrap                                 ! Temporary value extrapolated from the WaveVel0V  (:,:) array (m/s  )
-!   REAL(SiKi)                   :: WaveVel0VInterp                                 ! Temporary value interpolated from the WaveVel0V  (:,:) array (m/s  )
-!   REAL(SiKi)                   :: zi_Max                                          ! Maximum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
-!   REAL(SiKi)                   :: zi_Min                                          ! Minimum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
-!   REAL(SiKi)                   :: ziPrime_Max                                     ! Maximum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
-!   REAL(SiKi)                   :: ziPrime_Min                                     ! Minimum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
-
-!   REAL(SiKi)                   :: WGNC_Fact
-!   INTEGER                      :: GHNStepWave                                     ! Total number of time steps in the GH Bladed wave data files.
-!   INTEGER                      :: GHNWvDpth                                       ! Number of vertical locations in GH Bladed wave data files.
    INTEGER                      :: I,count                                               ! Generic index
-!   INTEGER                      :: I_Orig                                          ! The index of the time step from original (input) part of data
    INTEGER                      :: I_WaveTp                                        ! The index of the frequency component nearest to WaveTp
    INTEGER                      :: J                                               ! Generic index
    INTEGER                      :: J_Min                                           ! The minimum value of index J such that WaveKinzi(J) >= -WtrDpth
