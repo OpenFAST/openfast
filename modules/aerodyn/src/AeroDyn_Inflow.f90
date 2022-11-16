@@ -436,7 +436,7 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer :: K, J, node, iWT
+   integer :: K, node, iWT
    errStat = ErrID_None
    errMsg  = ''
    node=0
@@ -492,10 +492,6 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
    INTEGER(IntKi)                               :: errStat     !< Error status of the operation
    CHARACTER(*)                                 :: errMsg      !< Error message if errStat /= ErrID_None
    ! Local variables:
-   INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
-   INTEGER(IntKi)                               :: K           ! Loops through blades.
-   INTEGER(IntKi)                               :: NumBl
-   INTEGER(IntKi)                               :: NNodes
    INTEGER(IntKi)                               :: node
    INTEGER(IntKi)                               :: iWT
    errStat = ErrID_None
