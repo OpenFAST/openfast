@@ -631,12 +631,13 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ! Add the current velocities to the wave velocities:
 
 
-      count = 1
+      count = 0
 
       !DO J = 1,InitInp%NWaveKinGrid      ! Loop through all points where the incident wave kinematics will be computed
       do k = 1, InitInp%NGrid(3)
          do j = 1, InitInp%NGrid(2)
             do i = 1, InitInp%NGrid(1)
+               count = count + 1
                InitOut%WaveVel(:,i,j,k,1) =  InitInp%CurrVxi(count)  ! xi-direction
                InitOut%WaveVel(:,i,j,k,2) =  InitInp%CurrVyi(count)  ! yi-direction
                IF (    InitInp%WaveKinGridzi(count) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(count) <= 0 )  THEN
