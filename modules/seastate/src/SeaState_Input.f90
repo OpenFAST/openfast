@@ -22,7 +22,7 @@ module SeaState_Input
    use                              SeaState_Types
    use                              SeaState_Output
    use                              Waves
-   use                              NWTC_RandomNumber
+   use                              NWTC_RandomNumber ! for parameters pRNG_INTRINSIC and pRNG_RANLUX
 
    implicit                         none
 
@@ -41,7 +41,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    real(ReKi),                    intent(in   ) :: defWtrDpth           !< default value for water depth
    real(ReKi),                    intent(in   ) :: defMSL2SWL           !< default value for mean sea level to still water level
    type(FileInfoType),            INTENT(IN   ) :: FileInfo_In          !< The derived type for holding the file information
-   type(SeaSt_InputFile),      INTENT(INOUT) :: InputFileData        ! the SeaState input file data
+   type(SeaSt_InputFile),         INTENT(INOUT) :: InputFileData        ! the SeaState input file data
    integer,                       INTENT(  OUT) :: ErrStat              ! returns a non-zero value when an error occurs
    character(*),                  INTENT(  OUT) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 

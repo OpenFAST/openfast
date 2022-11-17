@@ -1309,7 +1309,7 @@ end if
                      end if 
                   else
                      !TODO: Error message because we need WaveElev0 for ExctnDisp=0
-                     end if
+                  end if
                else
                      SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
                end if

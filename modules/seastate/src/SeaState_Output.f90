@@ -23,7 +23,7 @@ MODULE SeaState_Output
 
    USE                              NWTC_Library
    USE                              SeaState_Types
-   USE                              Waves
+   USE                              Waves ! for WaveNumber
    USE                              VersionInfo
    
    IMPLICIT                         NONE
