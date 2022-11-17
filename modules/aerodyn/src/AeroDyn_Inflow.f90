@@ -450,13 +450,12 @@ subroutine ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat, e
       do iWT=1,size(u_AD%rotors)
          node = node + 1
          u_IfW%PositionXYZ(:,node) = u_AD%rotors(iWT)%hubMotion%Position(:,1) + u_AD%rotors(iWT)%hubMotion%TranslationDisp(:,1)
-         if ( p_AD%MHK == 1 .or. p_AD%MHK == 2 ) then
-            u_IfW%PositionXYZ(3,node) = u_IfW%PositionXYZ(3,node) + p_AD%WtrDpth
-         endif
       enddo
    endif
    call AD_SetExternalWindPositions(u_AD, o_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
-
+   if ( p_AD%MHK == 1 .or. p_AD%MHK == 2 ) then
+      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_AD%WtrDpth
+   endif 
 end subroutine ADI_Set_IW_Inputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
