@@ -1475,7 +1475,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
-   use FVW_VTK ! 
+   use VTK ! 
 
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(WD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
@@ -1498,7 +1498,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
    character(1024) :: Filename
-   type(FVW_VTK_Misc)   :: mvtk
+   type(VTK_Misc)   :: mvtk
    real(ReKi), dimension(3) :: dx
    errStat = ErrID_None
    errMsg  = ""

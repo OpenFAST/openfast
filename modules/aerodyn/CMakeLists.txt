@@ -71,7 +71,6 @@ set(FVW_LIBS_SOURCES
   src/FVW_BiotSavart.f90
   src/FVW_Tests.f90
   src/FVW_Types.f90
-  src/FVW_VTK.f90
 )
 
 # ADI lib
