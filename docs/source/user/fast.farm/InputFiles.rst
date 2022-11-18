@@ -245,7 +245,7 @@ choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
 When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
 of **dr** and **DT_Low**.
-(typically  :math:`\textbf{DT_Low}  \gtrapprox 2 \textbf{dr}/V_\text{Hub}`, 
+(typically  :math:`\textbf{DT_Low}  \lessapprox \textbf{dr}/(2V_\text{Hub})`, 
 see :numref:`FF:ModGuidance`)
 
 
