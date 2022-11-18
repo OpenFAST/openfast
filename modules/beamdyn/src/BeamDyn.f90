@@ -6711,6 +6711,7 @@ END SUBROUTINE BD_GetOP
 
 
 SUBROUTINE BD_WriteMassStiff( p, m, ErrStat, ErrMsg )
+   use Yaml, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
    INTEGER(IntKi),                      INTENT(  OUT) :: ErrStat     !< Error status of the operation
@@ -6731,17 +6732,16 @@ SUBROUTINE BD_WriteMassStiff( p, m, ErrStat, ErrMsg )
 
       ! Write out the mass and stiffness in the calculation frame
    WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(m%StifK, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full stiffness matrix (BD calculation coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'K_BD', RESHAPE(m%StifK, (/p%dof_total, p%dof_total/)), p%OutFmt, ErrStat, ErrMsg, comment='Full stiffness matrix (BD calculation coordinate frame).')
    WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(m%MassM, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full mass matrix (BD calculation coordinate frame)')
-
-   RETURN
+   call yaml_write_array(m%Un_Sum, 'M_BD', RESHAPE(m%MassM, (/p%dof_total, p%dof_total/)), p%OutFmt, ErrStat, ErrMsg, comment='Full mass matrix (BD calculation coordinate frame)')
 
 END SUBROUTINE BD_WriteMassStiff
 !----------------------------------------------------------------------------------------------------------------------------------
 
 
 SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
+   use Yaml, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_ContinuousStateType),        INTENT(IN   ) :: x           !< Continuous states at t
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
@@ -6789,10 +6789,8 @@ SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
    enddo
 
       ! Write out the mass and stiffness in the first node frame
-   WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(TmpStifK, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full stiffness matrix (IEC blade first node coordinate frame)')
-   WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(TmpMassM, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full mass matrix (IEC blade first node coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'K_IEC', TmpStifK, p%OutFmt, ErrStat, ErrMsg, comment='Full stiffness matrix (IEC blade first node coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'M_IEC', TmpMassM, p%OutFmt, ErrStat, ErrMsg, comment='Full mass matrix (IEC blade first node coordinate frame)')
 
 
 
