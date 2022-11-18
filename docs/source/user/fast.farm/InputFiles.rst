@@ -243,6 +243,11 @@ low-resolution ambient wind calculation, as well as the global
 called every **DT_Low** seconds, although OpenFAST and its modules may
 choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
+When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
+of **dr** and **DT_Low**.
+(typically  :math:`\textbf{DT_Low}  \lessapprox \textbf{dr}/(2V_\text{Hub})`, 
+see :numref:`FF:ModGuidance`)
+
 
 **DT_High** [sec] sets the time step of the high-resolution ambient wind
 data calculation and must be an integer multiple smaller than or equal
@@ -389,17 +394,18 @@ Three wake formulations are available (see :numref:`FF:Theory` for more details)
 
 **Mod_Wake** [switch] is used to switch between wake formulations.
 There are three options available:
-1) Polar [**Mod_Wake=1**] (default). 
-The wake is axi-symmetric, defined on a polar grid, 
+1) Polar [**Mod_Wake=1**] (default); 
+the wake is axi-symmetric, defined on a polar grid, 
 solved using an implicit Crank-Nicolson scheme,
 satisfying both the momentum and mass conservation laws under a shear layer approximation.
-2) Curled-wake model [**Mod_Wake=2**]. 
-The wake is defined on a Cartesian grid, 
+2) Curled-wake model [**Mod_Wake=2**];
+the wake is defined on a Cartesian grid, 
 the effect of curled wake vorticies in skewed inflow is accounted for by introducing cross-flow velocities, the momentum conservation is solved using a first-order forward Euler scheme, 
 mass conservation is not enforced, the effect of wake swirl may be accounted for.
 The wake will adopt a "curled" shape in skewed inflow.
-3) Cartesian [**Mod_Wake=3**]
-This corresponds to model 2 with curled-wake vortices of zero intensities, leading to an axi-symmetric wake.
+3) Cartesian [**Mod_Wake=3**]; corresponds to model 2 with curled-wake vortices of zero intensities, leading to an axi-symmetric wake.
+
+When Wake_Mod=2,3, the stability of the algorithm will depend on the choice of **dr** and **DT_Low** (see the guidelines (see the guidelines given in :numref:`FF:ModGuidance`).
 
 
 
@@ -411,6 +417,8 @@ The wake planes are defined by the following parameters:
    FAST.Farm sufficiently resolves the wake deficit within each plane.
    When a cartesian grid is used (**Mod_Wake=2 or 2**), **dr** represents the 
    spacing in the y and z direction of the plane.
+   When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
+   of **dr** and **DT_Low** (see the guidelines given in :numref:`FF:ModGuidance`).
 
 -  **NumRadii** [integer] (:math:`N_r`) sets the number of radii. To
    ensure the wake deficits are accurately computed by FAST.Farm,
@@ -448,7 +456,7 @@ where
 :math:`a_\text{avg}` is the average axial induction factor across the rotor disk.
 If the DEFAULT keyword is specified in place of a numerical value, **f_c** is set to :math:`12.5/R_\text{est}` Hz
 which corresponds to :math:`U=10` m/s, :math:`a=1/3` in the equation above, and 
-where the estimated rotor radius is obtained as: :math:`R_text{est} = (dr * NumRadii) / 3`.
+where the estimated rotor radius is obtained as: :math:`R_\text{est} = (dr * NumRadii) / 3`.
 Changing the grid resolution will change the estimated radius, therefore it is recommended to set a numerical 
 value for **f_c** directly instead of using DEFAULT. 
 If numerical issues occur, you may attempt to lower the value of **f_c** to introduce more filtering of high frequencies.
