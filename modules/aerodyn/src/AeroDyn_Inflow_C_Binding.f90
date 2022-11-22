@@ -23,6 +23,8 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE AeroDyn_Inflow
    USE AeroDyn_Inflow_Types
    USE NWTC_Library
+   USE VersionInfo
+
  
    IMPLICIT NONE
 
@@ -31,6 +33,11 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: AeroDyn_Inflow_C_CalcOutput
    PUBLIC :: AeroDyn_Inflow_C_UpdateStates
    PUBLIC :: AeroDyn_Inflow_C_End
+
+   !------------------------------------------------------------------------------------
+   !  Version info for display
+   type(ProgDesc), parameter              :: version   = ProgDesc( 'AeroDyn-Inflow library', '', '' )
+
 
    !------------------------------------------------------------------------------------
    !  Debugging: debugverbose
@@ -301,6 +308,10 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    NumChannels_C = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
 
 
    !--------------------------

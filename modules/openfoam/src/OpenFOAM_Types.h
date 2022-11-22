@@ -42,10 +42,6 @@
 
 
 
-
-
-
-
   } OpFM_MiscVarType_t ;
   typedef struct OpFM_ParameterType {
     void * object ;
