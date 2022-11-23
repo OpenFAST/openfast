@@ -201,9 +201,15 @@ program UnsteadyAero_Driver
    !u(2) = time at n=0  (t= -dt)
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
 
-   DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
-   END DO
+   if ( dvrInitInp%SimMod == 1 ) then
+     DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
+        call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp)
+     end do
+   else
+      DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
+        call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
+      END DO
+   end if
    
       ! Set inputs which do not vary with node or time
 
@@ -220,8 +226,12 @@ program UnsteadyAero_Driver
       END DO
   
       ! first value of uTimes/u contain inputs at t+dt
-      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
-
+      if ( dvrInitInp%SimMod == 1 ) then
+        call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp)
+      else
+        call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
+      end if
+        
       t = uTimes(2)
 
          ! Use existing states to compute the outputs
@@ -283,10 +293,10 @@ program UnsteadyAero_Driver
    real(DbKi),             intent(  out)        :: t
    real(DbKi),             intent(in)           :: dt
    TYPE(UA_Dvr_InitInput), intent(in)           :: dvrInitInp           ! Initialization data for the driver program
-   real(DbKi),             intent(in)           :: timeArr(:)
-   real(ReKi),             intent(in)           :: AOAarr(:)
-   real(ReKi),             intent(in)           :: Uarr(:)
-   real(ReKi),             intent(in)           :: OmegaArr(:)
+   real(DbKi),             intent(in), optional :: timeArr(:)
+   real(ReKi),             intent(in), optional :: AOAarr(:)
+   real(ReKi),             intent(in), optional :: Uarr(:)
+   real(ReKi),             intent(in), optional :: OmegaArr(:)
    integer                                      :: indx
    real(ReKi)                                   :: phase
    real(ReKi)                                   :: d_ref2AC
