@@ -1262,7 +1262,7 @@ CONTAINS
                   
                   call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(N), Mforce_im1)  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
                   
-                  Mforce_i =  Mforce_im1                                         ! set force on node i to cancel out forces on adjacent nodes
+                  Mforce_i =  -Mforce_im1                                         ! set force on node i to cancel out forces on adjacent nodes
                   
                   ! apply these forces to the node forces
                   Line%Bs(:,i-1) = Line%Bs(:,i-1) +  Mforce_im1
