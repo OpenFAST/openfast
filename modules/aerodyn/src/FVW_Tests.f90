@@ -745,6 +745,96 @@ contains
       endsubroutine 
    endsubroutine Test_LatticeToSegment
 
+   !> Test Wake Induced velocity calcualtion when using nNWMax or nNWFree
+   !! A dummy helical wake is created. The induced velocity is computed on 
+   !! either the full wake, or just the "free" wake (which should be way faster)
+   subroutine FVW_Test_WakeInducedVelocities(ErrStat, ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
+      character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+      type(FVW_ParameterType)       :: p !< Parameters
+      type(FVW_ContinuousStateType) :: x !< States
+      type(FVW_MiscVarType)         :: m !< Initial misc/optimization variables
+      !type(FVW_VTK_Misc)   :: mvtk
+      integer :: iW, j, k, nSpan
+      integer(IntKi)       :: ErrStat2
+      character(ErrMsgLen) :: ErrMsg2
+      character(*), parameter  :: RoutineName = 'FVW_Test_CPUTime'
+      integer(ReKi), parameter :: nR          = 20
+      real(ReKi), parameter    :: R           = 100
+      real(ReKi), parameter    :: G           = 100
+      real(ReKi), allocatable, dimension(:,:) :: V1
+      real(ReKi), allocatable, dimension(:,:) :: V2
+      real(ReKi) :: t1,t2 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      ! --- Create a helical wake TODO, put me into FVW_*
+      p%nWings  = 3
+      p%nNWMax           = 1600
+      nSpan              = 50
+      m%nNW              = p%nNWMax
+      m%nFW              = 0
+      p%nFWMax           = 0
+      p%nFWFree          = 0
+      p%ShearModel       = idShearNone
+      p%RegFunction      = idRegVatistas
+      p%VelocityMethod   = idVelocityTree
+      p%FWShedVorticity  = .false.
+      p%TreeBranchFactor = 1.5_ReKi
+      p%PartPerSegment   = 1
+      allocate(p%W(p%nWings))
+      p%W(:)%nSpan       = nSpan
+      call FVW_InitStates( x, p, ErrStat, ErrMsg )
+      do iW=1,size(x%W); 
+         do j=1,size(x%W(iW)%r_NW,2); 
+            do k=1,size(x%W(iW)%r_NW,3); 
+               x%W(iW)%r_NW(1,j,k) = real(k, ReKi)/p%nNWMax*(nR*R)
+               x%W(iW)%r_NW(2,j,k) = real(j, ReKi)/nSpan*R*cos(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5)
+               x%W(iW)%r_NW(3,j,k) = real(j, ReKi)/nSpan*R*sin(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5)
+            enddo
+         enddo
+         do j=1,size(x%W(iW)%r_NW,2)-1 
+            do k=1,size(x%W(iW)%r_NW,3)-1
+               x%W(iW)%Gamma_NW(j,k) = G*4.0_ReKi*(real((j-1),ReKi)/nSpan -0.5)**2
+               x%W(iW)%Eps_NW(:,j,k) = 0.03*R*(real(k,ReKi)/p%nNWMax)
+            enddo
+         enddo
+      enddo
+      allocate(m%W(p%nWings))
+      do iW = 1,p%nWings
+         call AllocAry( m%W(iW)%Vind_NW , 3   ,  nSpan+1  ,p%nNWMax+1, 'Vind on NW ', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); m%W(iW)%Vind_NW= -999_ReKi;
+         call AllocAry( m%W(iW)%Vind_FW , 3   ,  FWnSpan+1,p%nFWMax+1, 'Vind on FW ', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); m%W(iW)%Vind_FW= -999_ReKi;
+      enddo
+      call FVW_InitMiscVarsPostParam( p, m, ErrStat2, ErrMsg2) ! Alloc Sgmt, CPs, Uind
+
+      ! --- Compute induced velocity on full wake
+      allocate(V1(3,nSpan+1))
+      p%nNWFree=p%nNWMax
+      call cpu_time(t1)
+      call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); 
+      call cpu_time(t2)
+      print*,'Ellapsed time',t2-t1
+      V1 = m%W(1)%Vind_NW(:,:,1)
+
+      ! --- Compute induced velocity on free wake only
+      allocate(V2(3,nSpan+1))
+      p%nNWFree=int(p%nNWMax/5)
+      call cpu_time(t1)
+      call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); 
+      call cpu_time(t2)
+      print*,'Ellapsed time',t2-t1
+      V2 = m%W(1)%Vind_NW(:,:,1)
+      !print*,'>>>Vx mean ',sum(abs((V1(1,:))))/nSpan
+      !print*,'>>>Vx mean ',sum(abs((V2(1,:))))/nSpan
+      !print*,'>>> Vx error',sum(abs(V1(1,:)-V2(1,:)))/nSpan
+      !print*,'>>> Vy error',sum(abs(V1(2,:)-V2(2,:)))/nSpan
+      !print*,'>>> Vz error',sum(abs(V1(3,:)-V2(3,:)))/nSpan
+      !call WrVTK_Segments('_TEST.vtk', mvtk, m%Sgmt%Points(:,:), m%Sgmt%Connct(:,:), m%Sgmt%Gamma(:), m%Sgmt%Epsilon(:), .false.) 
+
+      call test_almost_equal(RoutineName,'Uind nNW/nNWFree', V1, V2, 1e-6_ReKi, .true.,.true.)
+
+   end subroutine FVW_Test_WakeInducedVelocities
+
    !> Main test function 
    subroutine FVW_RunTests(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
@@ -760,6 +850,7 @@ contains
       call Test_BiotSavart_Part(testname, ErrStat2, ErrMsg2)
       call Test_BiotSavart_PartTree(testname, ErrStat2, ErrMsg2)
       call Test_SegmentsToPart(testname, ErrStat2, ErrMsg2)
+      call FVW_Test_WakeInducedVelocities(ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests
