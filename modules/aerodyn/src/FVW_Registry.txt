@@ -60,6 +60,7 @@ typedef     ^                   ^               Wng_ParameterType               
 typedef     ^                   ^               IntKi                            Bld2Wings        :: -  - "Index mapping from blades to wings" - 
 typedef     ^                   ^               IntKi                            iNWStart          -  -  -  "Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1)"          -
 typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
+typedef     ^                   ^               IntKi                            nNWFree           -  -  -  "Number of nw panels that are free, per wing"          -
 typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
 typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
 typedef     ^                   ^               Logical                          FWShedVorticity   -  -  -  "Include shed vorticity in the far wake"          -
@@ -270,6 +271,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               IntKi                            CircSolvPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
+typedef     ^                   ^               IntKi                            nNWPanelsFree        -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanelsFree        -  -  -  "Number of fw panels that are free"          -
 typedef     ^                   ^               Logical                          FWShedVorticity   -  -  -  "Include shed vorticity in the far wake"          -

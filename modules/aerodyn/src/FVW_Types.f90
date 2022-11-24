@@ -88,6 +88,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Bld2Wings      !< Index mapping from blades to wings [-]
     INTEGER(IntKi)  :: iNWStart      !< Index where NW start in r_NW. (iNWStart=2, the first panel contains the lifting line panel, otherwise, start at 1) [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
+    INTEGER(IntKi)  :: nNWFree      !< Number of nw panels that are free, per wing [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
     INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
     LOGICAL  :: FWShedVorticity      !< Include shed vorticity in the far wake [-]
@@ -309,6 +310,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     INTEGER(IntKi)  :: CircSolvPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
+    INTEGER(IntKi)  :: nNWPanelsFree      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
     INTEGER(IntKi)  :: nFWPanelsFree      !< Number of fw panels that are free [-]
     LOGICAL  :: FWShedVorticity      !< Include shed vorticity in the far wake [-]
@@ -1663,6 +1665,7 @@ IF (ALLOCATED(SrcParamData%Bld2Wings)) THEN
 ENDIF
     DstParamData%iNWStart = SrcParamData%iNWStart
     DstParamData%nNWMax = SrcParamData%nNWMax
+    DstParamData%nNWFree = SrcParamData%nNWFree
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%nFWFree = SrcParamData%nFWFree
     DstParamData%FWShedVorticity = SrcParamData%FWShedVorticity
@@ -1804,6 +1807,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! iNWStart
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
+      Int_BufSz  = Int_BufSz  + 1  ! nNWFree
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWFree
       Int_BufSz  = Int_BufSz  + 1  ! FWShedVorticity
@@ -1937,6 +1941,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%iNWStart
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNWMax
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nNWFree
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFWMax
     Int_Xferred = Int_Xferred + 1
@@ -2136,6 +2142,8 @@ ENDIF
     OutData%iNWStart = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nNWMax = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%nNWFree = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nFWMax = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -10528,6 +10536,7 @@ ENDIF
     DstInputFileData%DTfvw = SrcInputFileData%DTfvw
     DstInputFileData%CircSolvPolar = SrcInputFileData%CircSolvPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
+    DstInputFileData%nNWPanelsFree = SrcInputFileData%nNWPanelsFree
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
     DstInputFileData%nFWPanelsFree = SrcInputFileData%nFWPanelsFree
     DstInputFileData%FWShedVorticity = SrcInputFileData%FWShedVorticity
@@ -10619,6 +10628,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
+      Int_BufSz  = Int_BufSz  + 1  ! nNWPanelsFree
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanelsFree
       Int_BufSz  = Int_BufSz  + 1  ! FWShedVorticity
@@ -10690,6 +10700,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%CircSolvPolar
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNWPanels
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%nNWPanelsFree
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFWPanels
     Int_Xferred = Int_Xferred + 1
@@ -10782,6 +10794,8 @@ ENDIF
     OutData%CircSolvPolar = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nNWPanels = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%nNWPanelsFree = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nFWPanels = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
