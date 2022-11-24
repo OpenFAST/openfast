@@ -75,7 +75,7 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! InitInp%IfW%InputFileName is already set in FAST
    InitInp%IfW%UseInputFile     = .TRUE.
    InitInp%IfW%NumWindPoints    = 1
-   InitInp%IfW%lidar%SensorType = SensorType_None      
+  ! InitInp%IfW%lidar%SensorType = SensorType_None      
    InitInp%IfW%Use4Dext         = .false.
    
    CALL InflowWind_Init( InitInp%IfW, u%IfW, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, y%IfW,  m%IfW,  &
