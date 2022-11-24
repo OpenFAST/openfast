@@ -91,10 +91,15 @@ typedef  ^                       ^                 ReKi              HAWC_dz    
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 CHARACTER(ChanLen) OutList           :     -     -     "List of user-requested output channels"                 -
-typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
+typedef  ^                       ^                 IntKi             SensorType        -   -    -     "Sensor type (for lidar/sensor module)"                 -
 typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
-typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
+typedef  ^                       ^                 ReKi              RotorApexOffsetPos {3}    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
 typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef  ^                       ^                 ReKi              FocalDistanceX    -     -     -     "LIDAR LOS focal distance in the x direction"	m
+typedef  ^                       ^                 ReKi              FocalDistanceY    -     -     -     "LIDAR LOS focal distance in the y direction"	m
+typedef  ^                       ^                 ReKi              FocalDistanceZ    -     -     -     "LIDAR LOS focal distance in the z direction"	m
+typedef ^			             ^                 IntKi	         MAXDLLChainOutputs			-	-	-	"Number of entries in the avrSWAP reserved for the DLL chain" -
+typedef	^			             ^                 ReKi	             t_measurement_interval		-	-	-	"Time between each measurement"	s
 typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data" -
 
 
@@ -103,8 +108,6 @@ typedef  ^                       InitInputType     CHARACTER(1024)   InputFileNa
 typedef  ^                       ^                 LOGICAL           Linearize         -   .FALSE. -     "Flag that tells this module if the glue code wants to linearize." -
 typedef  ^                       ^                 LOGICAL           Use4Dext          -   .FALSE. -     "Flag that tells this module if an external module will pass it 4-D velocity grids." -
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
-typedef  ^                       ^                 IntKi             TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
-typedef  ^                       ^                 LOGICAL           FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
