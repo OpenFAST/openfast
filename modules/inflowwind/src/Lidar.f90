@@ -62,9 +62,10 @@ CONTAINS
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
 !! note that we're calling this with the InflowWind data types, so that data is INOUT instead of OUT
-SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Lidar_Init( InitInp, InputFileData, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 
    TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(InflowWind_InputFile),            INTENT(IN  )  :: InputFileData        !< The data for initialization
    TYPE(InflowWind_InputType),            INTENT(INOUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(InflowWind_ParameterType),        INTENT(INOUT)  :: p           !< Parameters
    TYPE(InflowWind_ContinuousStateType),  INTENT(INOUT)  :: x           !< Initial continuous states
@@ -98,18 +99,29 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      
+            !initialize variables and outputs
+    p%lidar%MeasurementCurrentStep = -1                                                               !< there was no measurement yet
+    p%lidar%LastMeasuringPoint = 1                                                                    !< First measurement point
+    p%lidar%MeasurementTimeStep    = 0                                                                ! First time step of lidar measurement
+    
       
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
+    
+      !Transfering InputFileData to the p
+   p%lidar%MAXDLLChainOutputs    =   InputFileData%MAXDLLChainOutputs
+    p%lidar%MeasurementMaxSteps   =   CEILING(REAL(NINT(InputFileData%t_measurement_interval*100000))/REAL(NINT(p%DT*100000))) !NINT to remove float precision errors. Back to REAL, otherwise the divion ignores everything behind the decima point. Ceiling to round up to next integer
+    
+   
+    
+    
+   p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
       
-   p%lidar%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
-      
-   p%lidar%SensorType = InitInp%lidar%SensorType      
-   IF (p%lidar%SensorType == SensorType_None) THEN
+   p%lidar%SensorType = InputFileData%SensorType      
+   IF (p%lidar%SensorType == -1) THEN
       p%lidar%NumPulseGate = 0
-   ELSEIF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+   ELSEIF (p%lidar%SensorType == 0) THEN
       p%lidar%NumPulseGate = 1
    ELSE
       
@@ -121,18 +133,18 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%lidar%SpatialRes     =  0.5_ReKi*TempWindSpeed(1)*Interval      
       p%lidar%RayRangeSq     =  (Pi*(BeamRad**2)/LsrWavLen)**2
    
-      p%lidar%LidRadialVel   = InitInp%lidar%LidRadialVel  !.FALSE.
+      p%lidar%LidRadialVel   = InputFileData%LidRadialVel  !.FALSE.
    
 
-      IF (p%lidar%SensorType == SensorType_ContinuousLidar) THEN
+      IF (p%lidar%SensorType == 1) THEN
       
          p%lidar%WtFnTrunc    = 0.02_ReKi   
          p%lidar%NumPulseGate = 1
    
-      ELSEIF (p%lidar%SensorType == SensorType_PulsedLidar) THEN
+      ELSEIF (p%lidar%SensorType == 2) THEN
       
          p%lidar%WtFnTrunc    = 0.01_ReKi      
-         p%lidar%NumPulseGate = InitInp%lidar%NumPulseGate
+         p%lidar%NumPulseGate = InputFileData%NumPulseGate
             
             ! values for the WindCube
          p%lidar%DeltaP        = 30.0_ReKi
@@ -166,9 +178,10 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !............................................................................................
 
    u%lidar%LidPosition = InitInp%lidar%HubPosition
-   u%lidar%MsrPosition = InitInp%lidar%HubPosition + (/ 50.0, 0.0, 0.0 /) !bjj: todo FIXME  with initial guess of lidar focus.
+   u%lidar%MsrPosition = InitInp%lidar%HubPosition + (/ InputFileData%FocalDistanceX, InputFileData%FocalDistanceY, InputFileData%FocalDistanceZ /) !bjj: todo FIXME  with initial guess of lidar focus.
    u%lidar%PulseLidEl  = 0.0_ReKi
    u%lidar%PulseLidAz  = 0.0_ReKi
+   
    
    
       !............................................................................................
@@ -263,7 +276,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
 
    REAL(DbKi),                            INTENT(IN   )  :: t                    !< Current simulation time in seconds
    TYPE(InflowWind_InputType),            INTENT(IN   )  :: u                    !< Inputs at t
-   TYPE(InflowWind_ParameterType),        INTENT(IN   )  :: p                    !< Parameters
+   TYPE(InflowWind_ParameterType),        INTENT(INOUT)  :: p                    !< Parameters
    TYPE(InflowWind_ContinuousStateType),  INTENT(IN   )  :: x                    !< Continuous states at t
    TYPE(InflowWind_DiscreteStateType),    INTENT(IN   )  :: xd                   !< Discrete states at t
    TYPE(InflowWind_ConstraintStateType),  INTENT(IN   )  :: z                    !< Constraint states at t
@@ -294,7 +307,9 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    TYPE(InflowWind_OutputType)                           :: Output               ! velocity at Input%Position
    
    REAL(ReKi)                                            :: OutputVelocity(3)
-   
+   REAL(ReKi)                                           ::  LidPosition_N(3)          !Transformed Lidar Position
+   REAL(ReKi)                                           ::  LidarMsrPosition(3)          !Transformed Lidar Position
+  
       
    INTEGER(IntKi)                                        :: IRangeGt
    INTEGER(IntKi)                                        :: ErrStat2
@@ -308,7 +323,29 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   IF (p%lidar%SensorType == SensorType_None) RETURN
+
+   
+   
+   IF(p%lidar%MeasurementCurrentStep>=p%lidar%MeasurementMaxSteps .OR. p%lidar%MeasurementCurrentStep == -1) THEN         !Check if there must be a new measurement     !(NINT(Time*1000)-NINT(p%t_last_measurement*1000)) >= NINT(p%t_measurement_interval*1000)
+      p%lidar%MeasurementCurrentStep = 0
+  
+        !LidarPosition_I = LidarSim_TransformLidarToInertial( u%lidar%HubMotion ,p, (/0.0,0.0,0.0/) )                               !Calculation of the lidar positon ( 0 / 0 / 0 ) in the lidar coordinate system
+    
+    ! CALL LidarSim_CalculateIMU(p)                ! Calculation of Inertial measurement unit
+       
+    !  LidPosition_N =  (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /) & ! rotor apex position (absolute)
+     !                                               + p%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
+      
+ 
+      
+      LidarMsrPosition = u%lidar%MsrPosition + p%lidar%RotorApexOffsetPos !bjj: todo FIXME  with initial guess of lidar focus.
+
+     
+    !   LidarDispX = 0
+     !  LidarDispY = 0
+      ! LidarDispZ = 100
+      
+   IF (p%lidar%SensorType == -1) RETURN
    
       
       ! allocate arrays to compute outputs
@@ -322,27 +359,28 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       CALL Cleanup()
       RETURN      
    END IF
+ 
    
    !...............................................................................................................................   
    ! Compute the outputs
    !...............................................................................................................................   
 
 
-   IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+   IF (p%lidar%SensorType == 0) THEN
       
       !get lidar speed at the focal point to see if it is out of bounds   
-      Input%PositionXYZ(:,1) = u%lidar%MsrPosition      
+      Input%PositionXYZ(:,1) = LidarMsrPosition 
       CALL CalculateOutput( t, Input, p, x, xd, z, OtherState, Output, m, .FALSE., ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                
       
       y%lidar%LidSpeed = Output%VelocityUVW(:,1)
       y%lidar%WtTrunc  = 1.0_ReKi
          
-   ELSEIF (p%lidar%SensorType == SensorType_ContinuousLidar) THEN
+   ELSEIF (p%lidar%SensorType == 1) THEN
       !calculate the focal distance of the lidar as well as the modified focal distance so that the peak of the weighting func
       !is at the intended focal distance
    
-      Distance   = u%lidar%MsrPosition - u%lidar%LidPosition      
+      Distance   = LidarMsrPosition - u%lidar%LidPosition
       FocDist    = SQRT( DOT_PRODUCT( Distance, Distance ) ) !TwoNorm
       
       IF(EqualRealNos(FocDist,0.0_ReKi)) THEN ! Avoid division-by-zero
@@ -358,7 +396,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    
       !Find angles that the lidar is pointed at
       LidPhi = ATAN(Distance(3)/SQRT(Distance(1)**2 + Distance(2)**2))
-      !LidTheta = ATAN(Distance(2)/ABS(Distance(1)))
+      LidTheta = ATAN(Distance(2)/ABS(Distance(1)))
       LidTheta = ATAN2(Distance(2),-Distance(1))
    
    
@@ -369,7 +407,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       LidWtRatio = 1.0_ReKi !LidWt/LidWtMax
    
       !get lidar speed at the focal point to see if it is out of bounds   
-      Input%PositionXYZ(:,1) = u%lidar%MsrPosition      
+      Input%PositionXYZ(:,1) = LidarMsrPosition
       CALL CalculateOutput( t, Input, p, x, xd, z, OtherState, Output, m, .FALSE., ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                
     
@@ -570,6 +608,14 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       
       
    END IF !type of lidar measurements
+   
+   ELSE 
+   
+   Output%VelocityUVW(:,1) = 0
+      
+   END IF
+   
+  p%lidar%MeasurementCurrentStep = p%lidar%MeasurementCurrentStep + 1
          
    
    CALL Cleanup()
@@ -584,6 +630,7 @@ CONTAINS
    END SUBROUTINE Cleanup
    
 END SUBROUTINE Lidar_CalcOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE Lidar
 !**********************************************************************************************************************************
