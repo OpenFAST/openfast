@@ -50,8 +50,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadCom        (UnIn,FileName,                        '--- Wake options header'               , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadCom        (UnIn,FileName,                        '--- Wake extent header'                , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
-   Inp%nNWPanelsFree=Inp%nNWPanels
-   !CALL ReadVarWDefault(UnIn,FileName,Inp%nNWPanelsFree      ,'nNWPanelsFree'     ,'', Inp%nNWPanels  , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%nNWPanelsFree      ,'nNWPanelsFree'     ,'', Inp%nNWPanels  , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,'', Inp%nFWPanels  , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FWShedVorticity    ,'FWShedVorticity'   ,'', .False.        , ErrStat2,ErrMsg2); if(Failed())return
@@ -158,6 +157,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if (Check( Inp%nNWPanelsFree<0 , 'Number of free near wake panels must be >=0')) return
    if (Check( Inp%nNWPanelsFree>Inp%nNWPanels , 'Number of free near wake panels must be <=Number of near wake panels')) return
    if (Inp%nNWPanels-Inp%nNWPanelsFree>0) then
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('nNWPanelsFree < nNWPanels is a beta feature for simulation speed up.')
+      call WrScr('The frozen near-wake convection might slightly change in the future.')
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
       if (Check( Inp%nFWPanels>0     , 'Number of far wake panels must be 0 when using a fixed NW')) return
       if (Check( Inp%nFWPanelsFree>0 , 'Number of free wake panels must be 0 when using a fixed NW')) return
    endif
