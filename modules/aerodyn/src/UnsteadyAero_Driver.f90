@@ -185,7 +185,7 @@ program UnsteadyAero_Driver
 !   call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName)
    
    
-    ! Initialize UnsteadyAero (after AFI)
+      ! Initialize UnsteadyAero (after AFI)
    call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, AFI_Params, AFIndx, InitOutData, errStat, errMsg ) 
       call checkError()
 
@@ -202,8 +202,8 @@ program UnsteadyAero_Driver
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
 
    DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-     call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
-      call checkError()
+      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
+         call checkError()
    END DO
    
       ! Set inputs which do not vary with node or time
@@ -222,7 +222,7 @@ program UnsteadyAero_Driver
   
       ! first value of uTimes/u contain inputs at t+dt
       call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
-        call checkError()
+         call checkError()
         
       t = uTimes(2)
 
@@ -336,7 +336,7 @@ program UnsteadyAero_Driver
 
       else
          ! check optional variables and allocation status
-          if (any([allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr)])) then
+         if (any([allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr)])) then
              
             indx = min(n,size(timeArr))
             indx = max(1, indx) ! use constant data at initialization
@@ -353,10 +353,10 @@ program UnsteadyAero_Driver
             end if
             u%v_ac(1) = sin(u%alpha)*u%U
             u%v_ac(2) = cos(u%alpha)*u%U
-          else
+         else
             errStat = -1
             errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
-          end if
+         end if
              
       end if
    
