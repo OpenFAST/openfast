@@ -15,12 +15,8 @@ param	^	-	IntKi	SensorType_ContinuousLidar	-	1	-		-
 param	^	-	IntKi	SensorType_PulsedLidar	-	2	-		-
 
 # ..... LIDAR_InitInputType data .......................................................................................................
-typedef	^	Lidar_InitInputType	IntKi	SensorType	-	SensorType_None	-	"SensorType_* parameter"	-
 typedef	^	Lidar_InitInputType	DbKi	Tmax	-	-	-	"the length of the simulation"	"s"
-typedef	^	Lidar_InitInputType	ReKi	RotorApexOffsetPos	{3}	-	-	"position of the lidar unit relative to the rotor apex of rotation"	m
 typedef	^	Lidar_InitInputType	ReKi	HubPosition	{3}	-	-	"initial position of the hub (lidar mounted on hub) [0,0,HubHeight]"	"m"
-typedef	^	Lidar_InitInputType	IntKi	NumPulseGate	-	-	-	"the number of range gates to return wind speeds at"	-
-typedef	^	Lidar_InitInputType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 
 # ..... LIDAR_InitInputType data .......................................................................................................
 typedef	^	Lidar_InitOutputType	ReKi	DummyInitOut	-
@@ -37,6 +33,14 @@ typedef	^	Lidar_ParameterType	ReKi	DeltaP    	-	-	-	"the distance between range 
 typedef	^	Lidar_ParameterType	ReKi	DeltaR    	-	-	-	"the FWHM width of the pulse"
 typedef	^	Lidar_ParameterType	ReKi	r_p	-	-	-
 typedef	^	Lidar_ParameterType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef	^   Lidar_ParameterType	ReKi	DisplacementLidarX		-  	-   -	"Displacement of the lidar system from the focal measurement point"	-
+typedef	^   Lidar_ParameterType	ReKi	DisplacementLidarY		-  	-   -	"Displacement of the lidar system from the focal measurement point"	-
+typedef	^   Lidar_ParameterType	ReKi	DisplacementLidarZ		-  	-   -	"Displacement of the lidar system from the focal measurement point"	-
+typedef ^   Lidar_ParameterType IntKi	MAXDLLChainOutputs			-		-	-	"Number of entries in the avrSWAP reserved for the DLL chain" -
+typedef ^	Lidar_ParameterType	IntKi	MeasurementMaxSteps			-		-	-	"Time steps between lidar measurements" -
+typedef ^	Lidar_ParameterType	IntKi	MeasurementCurrentStep		-		-	-	"Current amount of time steps after last measurement" -
+typedef ^	Lidar_ParameterType	IntKi	MeasurementTimeStep		    -		-	-	"Current time steps of lidar measurement" -
+typedef	^	Lidar_ParameterType	IntKi	LastMeasuringPoint			-		-	-	"Index of last measuring point"	-
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
