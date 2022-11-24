@@ -336,7 +336,7 @@ program UnsteadyAero_Driver
 
       else
          ! check optional variables and allocation status
-         if (any([allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr)])) then
+         if (any( (/ allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr) /) )) then
              
             indx = min(n,size(timeArr))
             indx = max(1, indx) ! use constant data at initialization
