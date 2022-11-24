@@ -191,10 +191,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       SumFileName   = TRIM(p%RootFileName)//".sum"
 
          ! these values (and others hard-coded in lidar_init) should be set in the input file, too
-      InputFileData%SensorType = InitInp%lidar%SensorType
-      InputFileData%NumPulseGate = InitInp%lidar%NumPulseGate
-      InputFileData%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
-      InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
+     ! InputFileData%SensorType = InitInp%lidar%SensorType
+     ! InputFileData%NumPulseGate = InitInp%lidar%NumPulseGate
+     ! InputFileData%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
+ !     InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
 
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
       CALL GetPath( InitInp%InputFileName, PriPath )
@@ -221,8 +221,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          
       ENDIF
 
-      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
-
+      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -237,7 +236,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       END IF
 
          ! initialize sensor data:   
-      CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
+      CALL Lidar_Init( InitInp, InputFileData, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
                        y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
       
@@ -503,18 +502,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Set InitInp information
             BladedFF_InitData%SumFileUnit                =  SumFileUnit
-            BladedFF_InitData%FixedWindFileRootName      = InitInp%FixedWindFileRootName
-            BladedFF_InitData%TurbineID                  = InitInp%TurbineID
             
             if (InputFileData%WindType /= BladedFF_Shr_WindNumber) then  
-               IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-                  IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
-                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
-                  ELSE                                   ! FAST.Farm high-resolution domain(s)
-                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-                  ENDIF
-               ENDIF
-               
                BladedFF_InitData%WindFileName            = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
                BladedFF_InitData%TowerFileExist          =  InputFileData%BladedFF_TowerFile
                BladedFF_InitData%NativeBladedFmt         = .false.
@@ -759,9 +748,6 @@ CONTAINS
       CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
-      ! Ignore error messages from InFileInfo destruction
-      call NWTC_Library_DestroyFileInfoType( InFileInfo, TmpErrStat, TmpErrMsg )
-
          ! Close the summary file if we were writing one
       IF ( SumFileUnit > 0 ) THEN
          CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
@@ -840,7 +826,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
 
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
+   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p                 !< Parameters
    TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: ContStates        !< Continuous states at Time
    TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
    TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
@@ -891,7 +877,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    !-----------------------------
       
       ! return sensor values
-   IF (p%lidar%SensorType /= SensorType_None) THEN
+   IF (p%lidar%SensorType /= -1) THEN
          
       CALL Lidar_CalcOutput(Time, InputData, p, &
                            ContStates, DiscStates, ConstrStates, OtherStates, &  
