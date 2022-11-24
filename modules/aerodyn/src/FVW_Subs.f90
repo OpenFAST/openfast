@@ -1231,13 +1231,15 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iW, nCPs, iHeadP
-   integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
+   integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current time step
+   integer(IntKi) :: nNWEff  ! Number of nearwake panels that are free at current time step
    type(T_Tree)   :: Tree
    type(T_Part)   :: Part
    ErrStat= ErrID_None
    ErrMsg =''
 
    nFWEff = min(m%nFW, p%nFWFree)
+   nNWEff = min(m%nNW, p%nNWFree)
 
    ! --- Pack control points
    call PackConvectingPoints() ! m%CPs
@@ -1245,6 +1247,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    ! --- Compute induced velocity
    ! Convert Panels to segments, segments to particles, particles to tree
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
+   m%Uind(:,nCPs+1:)=1000.0_ReKi ! TODO For debugging only
    call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
    call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
    call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
@@ -1257,12 +1260,12 @@ contains
    !> Pack all the points that convect
    subroutine PackConvectingPoints()
       ! Counting total number of control points that convects
-      nCPs = CountCPs(p, m%nNW, nFWEff)
+      nCPs = CountCPs(p, nNWEff, nFWEff)
       m%CPs=-999.9_ReKi
       ! Packing
       iHeadP=1
       do iW=1,p%nWings
-         CALL LatticeToPoints(x%W(iW)%r_NW(1:3,:,1:m%nNW+1), 1, m%CPs, iHeadP)
+         CALL LatticeToPoints(x%W(iW)%r_NW(1:3,:,1:nNWEff+1), 1, m%CPs, iHeadP)
       enddo
       if (nFWEff>0) then
          do iW=1,p%nWings
@@ -1275,12 +1278,15 @@ contains
             call print_x_NW_FW(p,m,x,'pack')
             ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
          endif
-         if ((iHeadP-1)/=nCPs) then
-            print*,'PackConvectingPoints: Number of points wrongly estimated',nCPs, iHeadP-1
-            STOP ! Keep me. The check will be removed once the code is well established
-            ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+         if (p%nNWMax==p%nNWFree) then
+            ! Number of CP should be number of SegP
+            if ((iHeadP-1)/=nCPs) then
+               print*,'PackConvectingPoints: Number of points wrongly estimated',nCPs, iHeadP-1
+               STOP ! Keep me. The check will be removed once the code is well established
+               ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+            endif
          endif
-         call find_nan_2D(m%CPs, 'WakeInducedVel CPs')
+         call find_nan_2D(m%CPs(:,1:nCPs), 'WakeInducedVel CPs')
       endif
    end subroutine
    !> Distribute the induced velocity to the proper location
@@ -1288,10 +1294,11 @@ contains
       do iW=1,p%nWings
          m%W(iW)%Vind_NW = -9999._ReKi !< Safety
          m%W(iW)%Vind_FW = -9999._ReKi !< Safety
+         m%W(iW)%Vind_NW(:,:,p%nNWFree+1:) = 2222._ReKi !< Safety
       enddo
       iHeadP=1
       do iW=1,p%nWings
-         CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_NW(:,:,1:m%nNW+1), iHeadP)
+         CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_NW(:,:,1:nNWEff+1), iHeadP)
       enddo
       if (nFWEff>0) then
          do iW=1,p%nWings
@@ -1306,12 +1313,15 @@ contains
          endif
       endif
       if (DEV_VERSION) then
-         if ((iHeadP-1)/=nCPs) then
-            print*,'UnPackInducedVelocity: Number of points wrongly estimated',nCPs, iHeadP-1
-            STOP ! Keep me. The check will be removed once the code is well established
-            ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+         if (p%nNWMax==p%nNWFree) then
+            ! Number of CP should be number of SegP
+            if ((iHeadP-1)/=nCPs) then
+               print*,'UnPackInducedVelocity: Number of points wrongly estimated',nCPs, iHeadP-1
+               STOP ! Keep me. The check will be removed once the code is well established
+               ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+            endif
          endif
-         call find_nan_2D(m%Uind, 'WakeInducedVel Uind')
+         call find_nan_2D(m%Uind(:,:), 'WakeInducedVel Uind')
       endif
    end subroutine
 

@@ -105,6 +105,7 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! Trigger required before allocations
    p%nNWMax  = max(InputFileData%nNWPanels,0)+1          ! +1 since LL panel included in NW
    p%nFWMax  = max(InputFileData%nFWPanels,0)
+   p%nNWFree = max(InputFileData%nNWPanelsFree,0)+1      ! +1 since LL panel included in NW
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
    p%DTfvw   = InputFileData%DTfvw
    p%DTvtk   = InputFileData%DTvtk
@@ -615,7 +616,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
-   integer(IntKi) :: nP, nFWEff, iW
+   integer(IntKi) :: nP, nFWEff, nNWEff, iW
    real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
    logical :: bOverCycling
@@ -648,9 +649,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    do iW=1,p%nWings
       nP = np + (  (p%W(iW)%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
    enddo
+   nNWEff = min(m%nNW, p%nNWFree)
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP, 's Comp:',m%ComputeWakeInduced
+   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'-',nNWEff-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
    ! Inputs at t
@@ -838,9 +840,11 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi)       :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
+   integer(IntKi)       :: nNWEff ! Number of nearwake panels that are free at current time step
    integer(IntKi)       :: j,k,iW,nP
    real(ReKi)           :: visc_fact  ! Viscosity factor for diffusion of reg param
-   real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
+   real(ReKi), dimension(3) :: VmeanFWFree, VmeanNW, VmeanNWFree ! Mean velocity of the near wake and far wake
+   real(ReKi), dimension(3) :: VmeanNWFixed
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -863,6 +867,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
    if ((t>= p%FreeWakeStart)) then
+      nNWEff = min(m%nNW, p%nNWFree)
       nFWEff = min(m%nFW, p%nFWFree)
 
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
@@ -871,7 +876,25 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! Out:  m%W(iW)%Vind_NW, m%Vind_FW 
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-      ! --- Mean induced velocity over the near wake (NW) TODO, store per wing
+      ! --- Mean induced velocity over the free near wake (NW) TODO, store per wing
+      VmeanNWFree(1:3)=0
+      if (nNWEff >0) then
+         nP=0;
+         do iW=1,size(m%W); do j=2,nNWEff+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+            VmeanNWFree(1:3) = VmeanNWFree(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
+         enddo; enddo; enddo; 
+         VmeanNWFree(1:3) = VmeanNWFree(1:3) / nP
+      endif
+      ! --- Convecting non-free NW with a constant induced velocity (and free stream)
+      ! TODO consider using a velocity more local
+      do iW=1,p%nWings
+         m%W(iW)%Vind_NW(1, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(1) !
+         m%W(iW)%Vind_NW(2, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(2) !
+         m%W(iW)%Vind_NW(3, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(3) !
+      enddo
+
+      ! --- Mean induced velocity over the full near wake (NW) TODO, store per wing
       VmeanNW(1:3)=0
       if (m%nNW >1) then
          nP=0;
@@ -881,31 +904,41 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
          enddo; enddo; enddo; 
          VmeanNW(1:3) = VmeanNW(1:3) / nP
       endif
-      ! --- Induced velocity over the free far wake (FWEff)
-      VmeanFW(1:3)=0
+
+      ! --- Mean induced velocity over the fixed near wake (NW) TODO REMOVE FOR DEBUG ONLY
+      VmeanNWFixed(1:3)=0
+         nP=0;
+         do iW=1,size(m%W); do j=p%nNWFree+2,p%nNWMax+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+            VmeanNWFixed(1:3) = VmeanNWFixed(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
+         enddo; enddo; enddo; 
+      VmeanNWFixed(1:3) = VmeanNWFixed(1:3) / nP
+
+      ! --- Mean induced velocity over the free far wake (FWEff)
+      VmeanFWFree(1:3)=0
       if (nFWEff >0) then
          nP=0
          do iW=1,size(m%W); do j=1,nFWEff; do k=1,size(m%W(iW)%Vind_FW,2); 
-            VmeanFW(1:3) = VmeanFW(1:3) + m%W(iW)%Vind_FW(1:3, k, j)
+            VmeanFWFree(1:3) = VmeanFWFree(1:3) + m%W(iW)%Vind_FW(1:3, k, j)
             nP=nP+1;
          enddo; enddo; enddo; 
-         VmeanFW(1:3) = VmeanFW(1:3) / nP
+         VmeanFWFree(1:3) = VmeanFWFree(1:3) / nP
       else
-         VmeanFW=VmeanNW
+         VmeanFWFree=VmeanNW
          ! Since we convect the first FW point, we need a reasonable velocity there 
          ! NOTE: mostly needed for sub-cycling and when no FW
          do iW=1,p%nWings
-            m%W(iW)%Vind_FW(1, 1:FWnSpan+1, 1) = VmeanFW(1)
-            m%W(iW)%Vind_FW(2, 1:FWnSpan+1, 1) = VmeanFW(2)
-            m%W(iW)%Vind_FW(3, 1:FWnSpan+1, 1) = VmeanFW(3)
+            m%W(iW)%Vind_FW(1, 1:FWnSpan+1, 1) = VmeanFWFree(1)
+            m%W(iW)%Vind_FW(2, 1:FWnSpan+1, 1) = VmeanFWFree(2)
+            m%W(iW)%Vind_FW(3, 1:FWnSpan+1, 1) = VmeanFWFree(3)
          enddo
       endif
 
       ! --- Convecting non-free FW with a constant induced velocity (and free stream)
       do iW=1,p%nWings
-         m%W(iW)%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFW(1) !
-         m%W(iW)%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFW(2) !
-         m%W(iW)%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFW(3) !
+         m%W(iW)%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(1) !
+         m%W(iW)%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(2) !
+         m%W(iW)%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(3) !
       enddo
 
       if (DEV_VERSION) then
@@ -915,8 +948,11 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
                call print_mean_3d( m%W(iW)%Vind_FW(:,:, 1:nFWEff), 'Mean induced vel. FW')
             endif
          enddo
-         print'(A25,3F12.4)','MeanNW           ',VmeanNW
-         print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
+         print'(A25,3F12.4)','MeanNW (all)     ',VmeanNW
+         print'(A25,3F12.4)','MeanNW (all2)    ',(VmeanNWFree+VmeanNWFixed)/2
+         print'(A25,3F12.4)','MeanNW (free)    ',VmeanNWFree
+         print'(A25,3F12.4)','MeanNW (fixed)   ',VmeanNWFixed
+         print'(A25,3F12.4)','MeanFW (non free)',VmeanFWFree
          !call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
          !call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
          !call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')
