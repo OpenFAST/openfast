@@ -1419,7 +1419,7 @@ FUNCTION filter_velocity (OS,m,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
     
     TYPE(DWM_OtherStateType),      INTENT(IN   )  :: OS
     TYPE(DWM_MiscVarType),         INTENT(INOUT)  :: m
-    TYPE(DWM_ParameterType),       INTENT(IN   )  :: p
+    TYPE(DWM_ParameterType),       INTENT(INOUT )  :: p
     TYPE(DWM_OutputType),          INTENT(INOUT)  :: y
     TYPE(DWM_InputType),           INTENT(INOUT)  :: u           ! An initial guess for the input; input mesh must be defined
     TYPE(DWM_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
@@ -1512,7 +1512,7 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
     
     TYPE(DWM_OtherStateType),      INTENT(IN   )  :: OS
     TYPE(DWM_MiscVarType),         INTENT(INOUT)  :: m
-    TYPE(DWM_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+    TYPE(DWM_ParameterType),       INTENT(INOUT   )  :: p           ! Parameters
     TYPE(DWM_OutputType),          INTENT(INOUT)  :: y
     TYPE(DWM_InputType),           INTENT(INOUT)  :: u           ! An initial guess for the input; input mesh must be defined
     TYPE(DWM_ContinuousStateType), INTENT(INOUT)  :: x           ! continuous states
