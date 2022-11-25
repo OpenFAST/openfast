@@ -11,6 +11,24 @@ module FVW_VortexTools
 
    implicit none
 
+   logical,parameter :: DEV_VERSION_VT = .False.
+
+   ! --- TIC TOC MODULE
+   ! Parameters
+   logical, parameter    :: bSilentTicToc =.false.   !< If set to true, will only show times bigger than SmartTicTocVal
+   logical, parameter    :: bSmartTicToc =.true.     !< If set to true, will only show times bigger than SmartTicTocVal
+   integer, parameter    :: nmax_store=40            !< maximum number of storage in tic toc stack
+   integer, parameter    :: nmax_label=46            !< maximum length of label
+   real(ReKi), parameter :: SmartTicTocVal=0.02_ReKi !< duration below this value will not be displayed (if bSmartTicToc is True)
+   ! Reals
+   real(ReKi), save :: start_time,finish_time
+   ! Tic toc stack arrays
+   integer, save                                          :: npos = 0    ! < position on the stack
+   integer, dimension(8), save                            :: time_array
+   integer, dimension(nmax_store,8), save                 :: start_arrays = 0
+   character(len=nmax_label), dimension(nmax_store), save :: labels
+   ! --- END TIC TOC MODULE
+
    ! Tree parameters
    integer, parameter :: IK1 = selected_int_kind(1) ! to store particle branch number (from 1 to 8)
    integer,parameter :: M0 = 1, M1_1=2, M1_2=3, M1_3=4, M2_11=5, M2_21=6, M2_22=7, M2_31=8, M2_32=9, M2_33=10  ! For moment coefficients
@@ -18,8 +36,6 @@ module FVW_VortexTools
    integer,parameter :: M1_100 = 2
    integer,parameter :: M1_010 = 3
    integer,parameter :: M1_001 = 4
-
-   logical,parameter :: DEV_VERSION_VT = .False.
 
    !> 
    type T_Part
@@ -67,22 +83,6 @@ module FVW_VortexTools
    interface cut_tree_segment
       module procedure cut_tree_segment_parallel ; ! to switch between parallel and rec easily
    end interface
-
-   ! --- TIC TOC MODULE
-   ! Parameters
-   logical, parameter    :: bSilentTicToc =.false.   !< If set to true, will only show times bigger than SmartTicTocVal
-   logical, parameter    :: bSmartTicToc =.true.     !< If set to true, will only show times bigger than SmartTicTocVal
-   integer, parameter    :: nmax_store=40            !< maximum number of storage in tic toc stack
-   integer, parameter    :: nmax_label=46            !< maximum length of label
-   real(ReKi), parameter :: SmartTicTocVal=0.05_ReKi !< duration below this value will not be displayed (if bSmartTicToc is True)
-   ! Reals
-   real(ReKi), save :: start_time,finish_time
-   ! Tic toc stack arrays
-   integer, save                                          :: npos = 0    ! < position on the stack
-   integer, dimension(8), save                            :: time_array
-   integer, dimension(nmax_store,8), save                 :: start_arrays = 0
-   character(len=nmax_label), dimension(nmax_store), save :: labels
-   ! --- END TIC TOC MODULE
 
 contains
 
@@ -872,7 +872,7 @@ contains
    ! --------------------------------------------------------------------------------}
    ! --- Tree -Grow for vortex lines
    ! --------------------------------------------------------------------------------{
-   subroutine grow_tree_segment(Tree_Seg, SegPoints, SegConnct,SegGamma, SegRegFunction, SegRegParam, iStep)
+   subroutine grow_tree_segment(Tree_Seg, SegPoints, SegConnct, SegGamma, SegRegFunction, SegRegParam, iStep)
       type(T_Tree),               intent(inout), target :: Tree_Seg           !<
       real(ReKi), dimension(:,:),     intent(in   ), target :: SegPoints      !<
       integer(IntKi), dimension(:,:), intent(in   ), target :: SegConnct  !<
@@ -958,7 +958,7 @@ contains
          node%nPart=Seg%n
          ! --- Calling grow function on subbranches
          call grow_tree_segment_parallel(Tree_Seg%root, Tree_Seg%Seg)
-!          call grow_tree_rec(Tree%root, Tree%Part)
+         !call grow_tree_segment_rec(Tree_Seg%root, Tree_Seg%Seg)
       endif
       Tree_Seg%iStep  = iStep
       Tree_Seg%bGrown = .true.
@@ -1422,11 +1422,9 @@ contains
    ! --------------------------------------------------------------------------------
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
-   subroutine ui_tree_part(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+   subroutine ui_tree_part(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: fourpi_inv, ui_part_nograd_11
       type(T_Tree), target,          intent(inout) :: Tree            !< 
-      integer,                       intent(in   ) :: ioff            !< 
-      integer,                       intent(in   ) :: icp_beg         !< 
       integer,                       intent(in   ) :: icp_end         !< 
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
       real(ReKi),                    intent(in   ) :: DistanceDirect  !< Distance under which direct evaluation should be done no matter what the tree cell size is
@@ -1446,19 +1444,19 @@ contains
       endif
       !$OMP PARALLEL DEFAULT(SHARED)
       !$OMP DO PRIVATE(icp,CP,Uind_tmp) schedule(runtime)
-      do icp=icp_beg,icp_end
+      do icp=1,icp_end
          CP = CPs(1:3,icp)
          Uind_tmp(1:3) = 0.0_ReKi
          call ui_tree_part_11(Tree%root, CP, Uind_tmp) !< SIDE EFFECTS
-         !print*,'Number of direct calls, and quad calls'
-         Uind(1:3,ioff+icp-icp_beg+1) = Uind(1:3,ioff+icp-icp_beg+1) + Uind_tmp(1:3)
+         Uind(1:3, icp) = Uind(1:3, icp) + Uind_tmp(1:3)
       enddo
       !$OMP END DO 
       !$OMP END PARALLEL
    contains
       !> Velocity at one control point from the entire tree
       recursive subroutine ui_tree_part_11(node, CP, Uind)
-         real(ReKi),dimension(3),intent(inout) :: CP, Uind  !< Velocity at control point, with side effect
+         real(ReKi), dimension(3), intent(in   ) :: CP
+         real(ReKi), dimension(3), intent(inout) :: Uind  !< Velocity at control point, with side effect
          type(T_Node), intent(inout) :: node
          real(ReKi) :: distDirect, coeff, coeff3, coeff5, coeff7, coeff7ij
          real(ReKi),dimension(3) :: DeltaP, phi, Uloc
@@ -1570,11 +1568,9 @@ contains
       end subroutine ui_tree_part_11
    end subroutine  ui_tree_part
 
-   subroutine ui_tree_segment(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+   subroutine ui_tree_segment(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: fourpi_inv, ui_seg_11
       type(T_Tree), target,          intent(inout) :: Tree            !<
-      integer,                       intent(in   ) :: ioff            !<
-      integer,                       intent(in   ) :: icp_beg         !<
       integer,                       intent(in   ) :: icp_end         !<
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
       real(ReKi),                    intent(in   ) :: DistanceDirect  !< Distance under which direct evaluation should be done no matter what the tree cell size is
@@ -1588,23 +1584,23 @@ contains
       type(T_Seg), pointer :: Seg ! Alias
       Seg => Tree%Seg
       if(.not. associated(Seg%SP)) then
-         ErrMsg='Ui Part Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return
+         ErrMsg='Ui Sgmt Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return
       endif
       !$OMP PARALLEL DEFAULT(SHARED)
       !$OMP DO PRIVATE(icp,CP,Uind_tmp) schedule(runtime)
-      do icp=icp_beg,icp_end
+      do icp=1,icp_end
          CP = CPs(1:3,icp)
          Uind_tmp(1:3) = 0.0_ReKi
          call ui_tree_segment_11(Tree%root, CP, Uind_tmp) !< SIDE EFFECTS
-         !print*,' Segment Number of direct calls, and quad calls'
-         Uind(1:3,ioff+icp-icp_beg+1) = Uind(1:3,ioff+icp-icp_beg+1) + Uind_tmp(1:3)
+         Uind(1:3, icp) = Uind(1:3, icp) + Uind_tmp(1:3)
       enddo
       !$OMP END DO
       !$OMP END PARALLEL
    contains
       !> Velocity at one control point from the entire tree
       recursive subroutine ui_tree_segment_11(node, CP, Uind)
-         real(ReKi),dimension(3),intent(inout) :: CP, Uind  !< Velocity at control point, with side effect
+         real(ReKi), dimension(3), intent(in   ) :: CP
+         real(ReKi), dimension(3), intent(inout) :: Uind  !< Velocity at control point, with side effect
          type(T_Node), intent(inout) :: node
          real(ReKi) :: distDirect, coeff
          real(ReKi),dimension(3) :: DeltaP, DeltaPa, DeltaPb, phi, Uloc

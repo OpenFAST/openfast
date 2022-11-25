@@ -88,6 +88,8 @@ subroutine ui_seg_11(DeltaPa, DeltaPb, SegGamma, RegFunction, RegParam1, Uind)
                Kv        = 1.0_ReKi
                denominator=denominator+RegParam1**2*norm2_r0
             case default
+               print*,'Unknown SgmtReg', RegFunction
+               STOP ! Will never happen
                Kv=1.0_ReKi !< Should be an error
             end select 
             Kv=SegGamma*fourpi_inv*Kv*(norm_a+norm_b)/denominator

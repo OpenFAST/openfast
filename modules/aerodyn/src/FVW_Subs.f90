@@ -32,7 +32,7 @@ module FVW_SUBS
    integer(IntKi), parameter, dimension(2) :: idRegMethodVALID      = (/idRegConstant,idRegAge/)
    ! Regularization determination method
    integer(IntKi), parameter :: idRegDeterConstant  = 0
-   integer(IntKi), parameter :: idRegDeterAuto    = 1
+   integer(IntKi), parameter :: idRegDeterAuto      = 1
    integer(IntKi), parameter :: idRegDeterChord     = 2
    integer(IntKi), parameter :: idRegDeterSpan      = 3
    integer(IntKi), parameter, dimension(4) :: idRegDeterVALID      = (/idRegDeterConstant, idRegDeterAuto, idRegDeterChord, idRegDeterSpan /)
@@ -994,7 +994,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    real(ReKi) :: c_min, c_max, c_mean !< min,max and mean of chord
    real(ReKi) :: d_min, d_max, d_mean !< min,max and mean of panel diagonal
    real(ReKi) :: RegParam
-   real(ReKi) :: Span !< "Blade span"
+   real(ReKi) :: Span !< Wing "span"/length (taken as curvilinear coordinate)
    integer :: iW, iSpan
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1253,13 +1253,13 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
    elseif (p%VelocityMethod==idVelocityTreePart) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree_part(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, CPs, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
 
    elseif (p%VelocityMethod==idVelocityPart) then
       call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
 
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
-      call ui_tree_segment(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
    endif
 end subroutine InducedVelocitiesAll_Calc
 
@@ -1419,14 +1419,15 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
    logical,                         intent(in   ) :: InductionAtCP !< Compute induction at CP or on LL nodes
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
-   !real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_CP !< Control points where velocity is to be evaluated
+   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
+   real(ReKi) :: MaxWingLength, DistanceDirect !< Maximum wing length, used to determined distance for direct evaluation of tree
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
-   integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
-   character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   logical ::  bMirror
+   type(T_Tree) :: Tree !< Tree of particles/segment if needed
+   logical      :: bMirror
    ErrStat = ErrID_None
    ErrMsg  = ""
    do iW=1,p%nWings
@@ -1437,6 +1438,9 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
 
    ! --- Packing all vortex elements into a list of segments
    call PackPanelsToSegments(p, x, iDepthStart, bMirror, m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
+   m%Sgmt%RegFunction=p%RegFunction
+   m%Sgmt%nAct  = nSeg
+   m%Sgmt%nActP = nSegP
 
    ! --- Computing induced velocity
    if (nSegP==0) then
@@ -1459,21 +1463,42 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
             nCPs = nCPs + p%W(iW)%nSpan+1
          enddo
       endif
+
       allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
-      ! ---
+
+      ! --- Pack
       call PackLiftingLinePoints()
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
-      call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
 
-      !call ui_tree_segment(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+      ! --- Compute
+      !if (nSeg<1000) then
+         ! NOTE: We keep this to avoid the "grow_tree" cost.
+         ! Also, this helps for EllipticWingInf_OLAF. Using an infinite make the DistanceDirect criteria fail (probably because based on cell center, and not cell extent)
+         call tic('ui_seg')
+         call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
+         call toc()
+      !else
+      !   ! --- Compute maximum wing length
+      !   MaxWingLength = 0.0_ReKi
+      !   do iW=1,p%nWings
+      !      MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
+      !   enddo
+      !   DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
+      !   call tic('ui_tree_seg')
+      !   call tic('grow tree')
+      !   call grow_tree_segment(Tree, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
+      !   call toc()
+      !   call tic('tree calc')
+      !   call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+      !   call toc()
+      !   call toc()
+      !endif
 
-
-
-
+      ! --- Unpack
       call UnPackLiftingLineVelocities()
 
       deallocate(Uind)
