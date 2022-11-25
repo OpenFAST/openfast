@@ -8,6 +8,7 @@ module FVW_VortexTools
 
    use NWTC_LIBRARY, only: ReKi, IntKi, num2lstr, ErrID_Fatal, ErrID_None, EqualRealNos !< Not desired
    use NWTC_LIBRARY, only: InterpArray
+   use FVW_BiotSavart, only: fourpi_inv
 
    implicit none
 
@@ -661,24 +662,24 @@ contains
       real(ReKi)   :: wTot, wLoc ! Total and local vorticity strength
       real(ReKi)   :: halfSize ! TODO remove me
       real(ReKi),dimension(3) :: locCenter, DeltaP,PartPos,PartAlpha
-      real(ReKi),dimension(3) :: nodeGeomCenter !< Geometric center from division of the domain in powers of 2
-      real(ReKi),dimension(3) :: nodeBaryCenter !< Vorticity weighted center
+      real(ReKi),dimension(3) :: GeomC !< Geometric center from division of the domain in powers of 2
+      real(ReKi),dimension(3) :: VortC !< Vorticity weighted center
       integer(IK1),dimension(:),allocatable :: PartOctant !< Stores the octant (1-8) where each particle belongs
       integer,dimension(8) :: npart_per_octant !< Number of particle per octant
       integer,dimension(8) :: octant2branches  !< Mapping between 8 octants, to index of non empty branch
       integer,dimension(8) :: octant2leaves    !< Idem for singleton/leaves 
       real(ReKi) :: max_x,max_y,max_z !< for domain dimension
       real(ReKi) :: min_x,min_y,min_z !< for domain dimension
-      nodeGeomCenter = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value 
-      nodeBaryCenter = 0.0_ReKi
+      GeomC = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value 
+      VortC = 0.0_ReKi
       wTot = 0.0_ReKi
       ! --- Barycenter of vorticity of the node 
       do i = 1,node%nPart
-         PartPos        = Part%P(:,node%iPart(i))
-         PartAlpha      = Part%Alpha(:,node%iPart(i))
-         wLoc           = (PartAlpha(1)**2 + PartAlpha(2)**2 + PartAlpha(3)**2)**0.5_ReKi ! Vorticity norm
-         nodeBaryCenter = nodeBaryCenter + wLoc*PartPos                                   ! Sum coordinates weighted by vorticity
-         wTot           = wTot + wLoc                                                     ! Total vorticity
+         PartPos   = Part%P(:,node%iPart(i))
+         PartAlpha = Part%Alpha(:,node%iPart(i))
+         wLoc      = (PartAlpha(1)**2 + PartAlpha(2)**2 + PartAlpha(3)**2)**0.5_ReKi ! Vorticity norm
+         VortC     = VortC + wLoc*PartPos                                   ! Sum coordinates weighted by vorticity
+         wTot      = wTot + wLoc                                                     ! Total vorticity
       end do
       ! There is no vorticity, we make it a empty node and we exit 
       if(EqualRealNos(abs(wTot),0.0_ReKi)) then
@@ -686,26 +687,33 @@ contains
          if (associated(node%iPart)) deallocate(node%iPart)
          return ! NOTE: we exit 
       endif
-      nodeBaryCenter = nodeBaryCenter/wTot ! barycenter of vorticity
-      node%center   = nodeBaryCenter  ! updating
+      VortC = VortC/wTot ! barycenter of vorticity
+      node%center   = VortC  ! updating
 
-      ! --- Calculation of moments about nodeBaryCenter
+      ! --- Calculation of moments about VortC
       do i = 1,node%nPart
          PartPos   = Part%P    (:,node%iPart(i))
          PartAlpha = Part%Alpha(:,node%iPart(i))
-         DeltaP    = PartPos-nodeBaryCenter
+         DeltaP    = PartPos-VortC
          ! Order 0
          node%Moments(1:3,M0_000) = node%Moments(1:3,M0_000) + PartAlpha
          ! 1st order
          node%Moments(1:3,M1_100) = node%Moments(1:3,M1_100) + PartAlpha*DeltaP(1) ! 100
          node%Moments(1:3,M1_010) = node%Moments(1:3,M1_010) + PartAlpha*DeltaP(2) ! 010
          node%Moments(1:3,M1_001) = node%Moments(1:3,M1_001) + PartAlpha*DeltaP(3) ! 001
-         ! 2nd order
-         do j=1,3
-            do k=1,j
-               node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + PartAlpha*DeltaP(j)*DeltaP(k)
-            end do
-         end do
+         ! 2nd order                                                                  j         k
+         ! KEEP ME:
+         !   do j=1,3
+         !      do k=1,j
+         !         node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + PartAlpha*DeltaP(j)*DeltaP(k)
+         !      end do
+         !   end do
+         node%Moments(1:3, 5) = node%Moments(1:3, 5) + PartAlpha*DeltaP(1)*DeltaP(1) ! j=1,k=1
+         node%Moments(1:3, 6) = node%Moments(1:3, 6) + PartAlpha*DeltaP(2)*DeltaP(1) ! j=2,k=1
+         node%Moments(1:3, 7) = node%Moments(1:3, 7) + PartAlpha*DeltaP(2)*DeltaP(2) ! j=2,k=2
+         node%Moments(1:3, 8) = node%Moments(1:3, 8) + PartAlpha*DeltaP(3)*DeltaP(1) ! j=3,k=1
+         node%Moments(1:3, 9) = node%Moments(1:3, 9) + PartAlpha*DeltaP(3)*DeltaP(2) ! j=3,k=2
+         node%Moments(1:3,10) = node%Moments(1:3,10) + PartAlpha*DeltaP(3)*DeltaP(3) ! j=3,k=3
       end do
 
       ! --- Distributing particles to the 8 octants (based on the geometric center!)
@@ -715,9 +723,9 @@ contains
          PartPos      = Part%P(:,node%iPart(i))
          ! index corresponding to which octant the particle falls into
          iPartOctant = int(1,IK1)
-         if (PartPos(1) > nodeGeomCenter(1)) iPartOctant = iPartOctant + int(1,IK1)
-         if (PartPos(2) > nodeGeomCenter(2)) iPartOctant = iPartOctant + int(2,IK1)
-         if (PartPos(3) > nodeGeomCenter(3)) iPartOctant = iPartOctant + int(4,IK1)
+         if (PartPos(1) > GeomC(1)) iPartOctant = iPartOctant + int(1,IK1)
+         if (PartPos(2) > GeomC(2)) iPartOctant = iPartOctant + int(2,IK1)
+         if (PartPos(3) > GeomC(3)) iPartOctant = iPartOctant + int(4,IK1)
          npart_per_octant(iPartOctant) = npart_per_octant(iPartOctant) + 1 ! Counter of particles per octant
          PartOctant(i)=iPartOctant ! Store in which octant particle i is
       end do
@@ -777,7 +785,7 @@ contains
             allocate(node%branches(iBranch)%iPart(1:npart_per_octant(iOctant)))
             node%branches(iBranch)%nPart=npart_per_octant(iOctant)
             ! NOTE: this is geometric center not barycenter
-            locCenter = nodeGeomCenter + 0.5*halfSize*(/ (-1)**(iOctant), (-1)**floor(0.5*real(iOctant-1)+1), (-1)**floor(0.25*real(iOctant-1)+1) /)
+            locCenter = GeomC + 0.5*halfSize*(/ (-1)**(iOctant), (-1)**floor(0.5*real(iOctant-1)+1), (-1)**floor(0.25*real(iOctant-1)+1) /)
             ! Init of branches
             node%branches(iBranch)%radius  = halfSize  ! 
             node%branches(iBranch)%center  = locCenter ! NOTE: this is the geometric center
@@ -974,13 +982,10 @@ contains
       !  Sub Step:
       !   -  compute moments and center for the current node
       !   -  allocate branches and leaves
-      !write(*,*) 'Calling grow_tree_segment_substep in rec'
-      !write(*,*) 'node%nPart', node%nPart
       call grow_tree_segment_substep(node, Seg)
       ! Call grow_tree on branches
       if(associated(node%branches)) then
          do i = 1,size(node%branches)
-            !write(*,*) 'calling rec'
             call grow_tree_segment_rec(node%branches(i), Seg)
          end do
       endif
@@ -1005,25 +1010,24 @@ contains
       real(ReKi)   :: halfSize ! TODO remove me
       real(ReKi),dimension(3) :: locCenter, SegCenter,DP, SegGammaVec
       real(ReKi),dimension(3) :: P1,P2 !< Segment extremities
-      real(ReKi),dimension(3) :: nodeGeomCenter !< Geometric center from division of the domain in powers of 2
-      real(ReKi),dimension(3) :: nodeBaryCenter !< Vorticity weighted center
+      real(ReKi),dimension(3) :: GeomC !< Geometric center from division of the domain in powers of 2
+      real(ReKi),dimension(3) :: VortC !< Vorticity weighted center
       integer(IK1),dimension(:),allocatable :: PartOctant !< Stores the octant (1-8) where each particle belongs
       integer,dimension(8) :: npart_per_octant !< Number of particle per octant
       integer,dimension(8) :: octant2branches  !< Mapping between 8 octants, to index of non empty branch
       integer,dimension(8) :: octant2leaves    !< Idem for singleton/leaves
       real(ReKi) :: max_x,max_y,max_z !< for domain dimension
       real(ReKi) :: min_x,min_y,min_z !< for domain dimension
-      nodeGeomCenter = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value
-      nodeBaryCenter = 0.0_ReKi
+      GeomC = node%center ! NOTE: we rely on the fact that our parent has set this to the Geometric value
+      VortC = 0.0_ReKi
       wTot = 0.0_ReKi
       ! --- Barycenter of vorticity of the node
-      !write(*,*) Seg%SConnct
       do i = 1,node%nPart
          P1 = Seg%SP(1:3,Seg%SConnct(1,node%iPart(i)))
          P2 = Seg%SP(1:3,Seg%SConnct(2,node%iPart(i)))
-         SegCenter      = 0.5_ReKi*(P1+P2)
-         nodeBaryCenter = nodeBaryCenter + abs(Seg%SGamma(node%iPart(i)))*SegCenter                                   ! Sum coordinates weighted by vorticity
-         wTot           = wTot + abs(Seg%SGamma(node%iPart(i)))                                                     ! Total vorticity
+         SegCenter = 0.5_ReKi*(P1+P2)
+         VortC = VortC + abs(Seg%SGamma(node%iPart(i)))*SegCenter  ! Sum coordinates weighted by vorticity
+         wTot   = wTot + abs(Seg%SGamma(node%iPart(i)))            ! Total vorticity
       end do
       ! There is no vorticity, we make it a empty node and we exit
       if(EqualRealNos(abs(wTot),0.0_ReKi)) then
@@ -1031,11 +1035,10 @@ contains
          if (associated(node%iPart)) deallocate(node%iPart)
          return ! NOTE: we exit
       endif
-      nodeBaryCenter = nodeBaryCenter/wTot ! barycenter of vorticity
-      node%center   = nodeBaryCenter  ! updating
+      VortC = VortC/wTot ! barycenter of vorticity
+      node%center   = VortC  ! updating
 
-      ! --- Calculation of moments about nodeBaryCenter
-      !write(*,*) 'node%nPart', node%nPart
+      ! --- Calculation of moments about VortC
       do i = 1,node%nPart
          P1 = Seg%SP(1:3,Seg%SConnct(1,node%iPart(i)))
          P2 = Seg%SP(1:3,Seg%SConnct(2,node%iPart(i)))
@@ -1043,30 +1046,30 @@ contains
          SegGammaVec = Seg%SGamma(node%iPart(i))*DP            !Vorticity vector
          ! Order 0
          node%Moments(1:3,M0_000) = node%Moments(1:3,M0_000) + SegGammaVec
-         !write(*,*) 'M0_000', node%Moments(1:3,M0_000)        ! 1st order
-         node%Moments(1:3,M1_100) = node%Moments(1:3,M1_100) + SegGammaVec*(0.5_ReKi*(P1(1)+P2(1))-nodeBaryCenter(1)) ! 100
-         node%Moments(1:3,M1_010) = node%Moments(1:3,M1_010) + SegGammaVec*(0.5_ReKi*(P1(2)+P2(2))-nodeBaryCenter(2)) ! 010
-         node%Moments(1:3,M1_001) = node%Moments(1:3,M1_001) + SegGammaVec*(0.5_ReKi*(P1(3)+P2(3))-nodeBaryCenter(3)) ! 001
-        ! write(*,*) 'M1_100', node%Moments(1:3,M1_100)        ! 1st order
-        ! write(*,*) 'M1_010', node%Moments(1:3,M1_010)        ! 1st order
-        ! write(*,*) 'M1_001', node%Moments(1:3,M1_001)        ! 1st order
+         node%Moments(1:3,M1_100) = node%Moments(1:3,M1_100) + SegGammaVec*(0.5_ReKi*(P1(1)+P2(1))-VortC(1)) ! 100
+         node%Moments(1:3,M1_010) = node%Moments(1:3,M1_010) + SegGammaVec*(0.5_ReKi*(P1(2)+P2(2))-VortC(2)) ! 010
+         node%Moments(1:3,M1_001) = node%Moments(1:3,M1_001) + SegGammaVec*(0.5_ReKi*(P1(3)+P2(3))-VortC(3)) ! 001
          ! 2nd order
-         do j=1,3
-            do k=1,j
-               if (j==k) then
-                 node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/3.0_ReKi*(3*nodeBaryCenter(j)**2 &
-                                               -3*nodeBaryCenter(j)*(P1(j)+P2(j))+P1(j)**2+P1(j)*P2(j)+P2(j)**2)
+         ! KEEP ME
+         !do j=1,3
+         !   do k=1,j
+         !      if (j==k) then
+         !        node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/3.0_ReKi*(3*VortC(j)**2 -3*VortC(j)*(P1(j)+P2(j))+P1(j)**2+P1(j)*P2(j)+P2(j)**2)
 
-               else
-                 node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/6.0_ReKi*( &
-                                               6*nodeBaryCenter(j)*nodeBaryCenter(k) &
-                                               -3*nodeBaryCenter(j)*(P1(k)+P2(k)) &
-                                               +P1(j)*(-3*nodeBaryCenter(k)+2*P1(k)+P2(k)) &
-                                               +P2(j)*(-3*nodeBaryCenter(k)+P1(k)+2*P2(k)))
-               end if
-         !       write(*,*) 'M2', (3+j+k+j/3), node%Moments(1:3,3+j+k+j/3)
-            end do
-         end do
+         !      else
+         !        node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/6.0_ReKi*( 6*VortC(j)*VortC(k) -3*VortC(j)*(P1(k)+P2(k)) +P1(j)*(-3*VortC(k)+2*P1(k)+P2(k)) +P2(j)*(-3*VortC(k)+P1(k)+2*P2(k)))
+         !      end if
+         !   end do
+         !end do
+
+         !node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/3.0_ReKi*(3*VortC(j)**2 -3*VortC(j)*(P1(j)+P2(j))+P1(j)**2+P1(j)*P2(j)+P2(j)**2)
+         node%Moments(1:3,   5     ) = node%Moments(1:3,   5     ) + SegGammaVec*1/3.0_ReKi*(3*VortC(1)**2 -3*VortC(1)*(P1(1)+P2(1))+P1(1)**2+P1(1)*P2(1)+P2(1)**2) !j=1,k=1
+         node%Moments(1:3,   7     ) = node%Moments(1:3,   7     ) + SegGammaVec*1/3.0_ReKi*(3*VortC(2)**2 -3*VortC(2)*(P1(2)+P2(2))+P1(2)**2+P1(2)*P2(2)+P2(2)**2) !j=2,k=2
+         node%Moments(1:3,   10    ) = node%Moments(1:3,   10    ) + SegGammaVec*1/3.0_ReKi*(3*VortC(3)**2 -3*VortC(3)*(P1(3)+P2(3))+P1(3)**2+P1(3)*P2(3)+P2(3)**2) !j=3,k=3
+         !node%Moments(1:3,3+j+k+j/3) = node%Moments(1:3,3+j+k+j/3) + SegGammaVec*1/6.0_ReKi*( 6*VortC(j)*VortC(k)  -3*VortC(j)*(P1(k)+P2(k))  +P1(j)*(-3*VortC(k)+2*P1(k)+P2(k))  +P2(j)*(-3*VortC(k)+P1(k)+2*P2(k)))
+         node%Moments(1:3,   6     ) = node%Moments(1:3,   6     ) + SegGammaVec*1/6.0_ReKi*( 6*VortC(2)*VortC(1)  -3*VortC(2)*(P1(1)+P2(1))  +P1(2)*(-3*VortC(1)+2*P1(1)+P2(1))  +P2(2)*(-3*VortC(1)+P1(1)+2*P2(1))) !j=2, k=1
+         node%Moments(1:3,   8     ) = node%Moments(1:3,   8     ) + SegGammaVec*1/6.0_ReKi*( 6*VortC(3)*VortC(1)  -3*VortC(3)*(P1(1)+P2(1))  +P1(3)*(-3*VortC(1)+2*P1(1)+P2(1))  +P2(3)*(-3*VortC(1)+P1(1)+2*P2(1))) !j=3, k=1
+         node%Moments(1:3,   9     ) = node%Moments(1:3,   9     ) + SegGammaVec*1/6.0_ReKi*( 6*VortC(3)*VortC(2)  -3*VortC(3)*(P1(2)+P2(2))  +P1(3)*(-3*VortC(2)+2*P1(2)+P2(2))  +P2(3)*(-3*VortC(2)+P1(2)+2*P2(2))) !j=3, k=2
       end do
 
       ! --- Distributing particles to the 8 octants (based on the geometric center!)
@@ -1078,9 +1081,9 @@ contains
          SegCenter      = 0.5_ReKi*(P1+P2)
          ! index corresponding to which octant the particle falls into
          iPartOctant = int(1,IK1)
-         if (SegCenter(1) > nodeGeomCenter(1)) iPartOctant = iPartOctant + int(1,IK1)
-         if (SegCenter(2) > nodeGeomCenter(2)) iPartOctant = iPartOctant + int(2,IK1)
-         if (SegCenter(3) > nodeGeomCenter(3)) iPartOctant = iPartOctant + int(4,IK1)
+         if (SegCenter(1) > GeomC(1)) iPartOctant = iPartOctant + int(1,IK1)
+         if (SegCenter(2) > GeomC(2)) iPartOctant = iPartOctant + int(2,IK1)
+         if (SegCenter(3) > GeomC(3)) iPartOctant = iPartOctant + int(4,IK1)
          npart_per_octant(iPartOctant) = npart_per_octant(iPartOctant) + 1 ! Counter of particles per octant
          PartOctant(i)=iPartOctant ! Store in which octant particle i is
       end do
@@ -1144,7 +1147,7 @@ contains
             allocate(node%branches(iBranch)%iPart(1:npart_per_octant(iOctant)))
             node%branches(iBranch)%nPart=npart_per_octant(iOctant)
             ! NOTE: this is geometric center not barycenter
-            locCenter = nodeGeomCenter + 0.5*halfSize*(/ (-1)**(iOctant), (-1)**floor(0.5*real(iOctant-1)+1), (-1)**floor(0.25*real(iOctant-1)+1) /)
+            locCenter = GeomC + 0.5*halfSize*(/ (-1)**(iOctant), (-1)**floor(0.5*real(iOctant-1)+1), (-1)**floor(0.25*real(iOctant-1)+1) /)
             ! Init of branches
             node%branches(iBranch)%radius  = halfSize  !
             node%branches(iBranch)%center  = locCenter ! NOTE: this is the geometric center
@@ -1423,7 +1426,7 @@ contains
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
    subroutine ui_tree_part(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-      use FVW_BiotSavart, only: fourpi_inv, ui_part_nograd_11
+      use FVW_BiotSavart, only: ui_part_nograd_11
       type(T_Tree), target,          intent(inout) :: Tree            !< 
       integer,                       intent(in   ) :: icp_end         !< 
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
@@ -1458,10 +1461,14 @@ contains
          real(ReKi), dimension(3), intent(in   ) :: CP
          real(ReKi), dimension(3), intent(inout) :: Uind  !< Velocity at control point, with side effect
          type(T_Node), intent(inout) :: node
-         real(ReKi) :: distDirect, coeff, coeff3, coeff5, coeff7, coeff7ij
-         real(ReKi),dimension(3) :: DeltaP, phi, Uloc
-         real(ReKi) :: x,y,z,mx,my,mz,r
-         integer :: i,j,ieqj
+         real(ReKi) :: distDirect
+         real(ReKi),dimension(3) :: DeltaP, Uloc
+         real(ReKi) :: r
+         real(ReKi) :: coeff, coeff3, coeff5, coeff7, coeff7ij
+         real(ReKi) :: x, y, z
+         real(ReKi),dimension(3) :: phi
+         integer :: ieqj, j
+         integer :: i
          integer :: iPart
          if (node%nPart<=0) then
             ! We skip the dead leaf
@@ -1498,18 +1505,19 @@ contains
                endif
 
             else 
-               ! We are far enough, use branch node quadrupole 
+               ! We are far enough, use branch node quadrupole
+               !call ui_expansion_order2(r, DeltaP, node%node%Moments, Uloc) 
+               !! NOTE all of this is common between particle and segment
                coeff3 =  fourpi_inv/r**3
                x=DeltaP(1)
                y=DeltaP(2)
                z=DeltaP(3)
-               phi = node%Moments(1:3,M0)*coeff3
-
                ! Speed, order 0
+               phi = node%Moments(1:3,M0)*coeff3
                Uloc(1) = phi(2)*z - phi(3)*y
                Uloc(2) = phi(3)*x - phi(1)*z
                Uloc(3) = phi(1)*y - phi(2)*x
-               Uind = Uind+Uloc
+               Uind = Uind + Uloc
 
                ! Speed, order 1
                Uloc=0.0_ReKi
@@ -1536,18 +1544,19 @@ contains
 
                ! Speed, order 2
                Uloc =0.0_ReKi
-               coeff = coeff5*0.5_ReKi
+               coeff = coeff5*0.5_ReKi ! 3/2 * 1/(4 pi r**5)
                coeff7= -7.5_ReKi*fourpi_inv/r**7
-               ! TODO unroll this
+               ! TODO: BAR_OLAF test fails (very slightly) with unrolled version...
+               !! NOTE: KEEP ME
                do i =1,3
                   Uloc(1) = Uloc(1) + coeff* (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
                   Uloc(2) = Uloc(2) + coeff* (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
                   Uloc(3) = Uloc(3) + coeff* (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
                   do j=1,i
                      if (i==j) then
-                        ieqj = 1
+                        ieqj = 1.0_ReKi
                      else
-                        ieqj = 2 
+                        ieqj = 2.0_ReKi
                      end if
                      coeff7ij = DeltaP(i)*DeltaP(j)*coeff7
                      Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
@@ -1555,21 +1564,73 @@ contains
                      Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
                   end do
                end do
-               Uloc(1) = Uloc(1) + coeff5* ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
-               Uloc(2) = Uloc(2) + coeff5* ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
-               Uloc(3) = Uloc(3) + coeff5* ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
+               !! r5 terms, unrolled version
+               !!    Uloc(1) = Uloc(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
+               !!    Uloc(2) = Uloc(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
+               !!    Uloc(3) = Uloc(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
+               ! i=1
+               !Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,5) - z*node%Moments(2,5))
+               !Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,5) - x*node%Moments(3,5))
+               !Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,5) - y*node%Moments(1,5))
+               !! i=2
+               !Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,7) - z*node%Moments(2,7))
+               !Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,7) - x*node%Moments(3,7))
+               !Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,7) - y*node%Moments(1,7))
+               !! i=3
+               !Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,8) - z*node%Moments(2,8))
+               !Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,8) - x*node%Moments(3,8))
+               !Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,8) - y*node%Moments(1,8))
+               !! r7 terms, unrolled version
+               !!    coeff7ij = DeltaP(i)*DeltaP(j)*coeff7 * (1 or 2 depdening if i=j)
+               !!    Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
+               !!    Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
+               !!    Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
+               !! i=1, j=1
+               !coeff7ij = DeltaP(1)*DeltaP(1)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,5) - z*node%Moments(2,5))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,5) - x*node%Moments(3,5))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,5) - y*node%Moments(1,5))
+               !! i=2, j=1
+               !coeff7ij = 2.0_ReKi* DeltaP(2)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,6) - z*node%Moments(2,6))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,6) - x*node%Moments(3,6))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,6) - y*node%Moments(1,6))
+               !! i=2, j=2
+               !coeff7ij = DeltaP(2)*DeltaP(2)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,7) - z*node%Moments(2,7))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,7) - x*node%Moments(3,7))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,7) - y*node%Moments(1,7))
+               !! i=3, j=1
+               !coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,8) - z*node%Moments(2,8))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,8) - x*node%Moments(3,8))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,8) - y*node%Moments(1,8))
+               !! i=3, j=2
+               !coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(2)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,9) - z*node%Moments(2,9))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,9) - x*node%Moments(3,9))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,9) - y*node%Moments(1,9))
+               !! i=3, j=3
+               !coeff7ij = DeltaP(3)*DeltaP(3)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               !Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,10) - z*node%Moments(2,10))
+               !Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,10) - x*node%Moments(3,10))
+               !Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,10) - y*node%Moments(1,10))
 
-               Uloc(1) = Uloc(1) + coeff5* (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
-               Uloc(2) = Uloc(2) + coeff5* (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
-               Uloc(3) = Uloc(3) + coeff5* (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
-               Uind(1:3) = Uind(1:3) + Uloc
+               ! r5 terms 2
+               Uloc(1) = Uloc(1) + coeff5 * (y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33))
+               Uloc(2) = Uloc(2) + coeff5 * (z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11))
+               Uloc(3) = Uloc(3) + coeff5 * (x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22))
+               Uloc(1) = Uloc(1) + coeff5 * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
+               Uloc(2) = Uloc(2) + coeff5 * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
+               Uloc(3) = Uloc(3) + coeff5 * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
+               Uind = Uind + Uloc
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_part_11
    end subroutine  ui_tree_part
 
    subroutine ui_tree_segment(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-      use FVW_BiotSavart, only: fourpi_inv, ui_seg_11
+      use FVW_BiotSavart, only: ui_seg_11
       type(T_Tree), target,          intent(inout) :: Tree            !<
       integer,                       intent(in   ) :: icp_end         !<
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
@@ -1602,10 +1663,13 @@ contains
          real(ReKi), dimension(3), intent(in   ) :: CP
          real(ReKi), dimension(3), intent(inout) :: Uind  !< Velocity at control point, with side effect
          type(T_Node), intent(inout) :: node
-         real(ReKi) :: distDirect, coeff
-         real(ReKi),dimension(3) :: DeltaP, DeltaPa, DeltaPb, phi, Uloc
-         real(ReKi) :: x,y,z,mx,my,mz,r
-         integer :: i,j,ieqj
+         real(ReKi) :: distDirect
+         real(ReKi),dimension(3) :: DeltaP, DeltaPa, DeltaPb, Uloc
+         real(ReKi) :: r
+         real(ReKi) :: coeff, coeff3, coeff5, coeff7, coeff7ij
+         real(ReKi) :: x, y, z
+         real(ReKi),dimension(3) :: phi
+         integer :: i
          integer :: iPart
          if (node%nPart<=0) then
             ! We skip the dead leaf
@@ -1645,71 +1709,262 @@ contains
 
             else
                ! We are far enough, use branch node quadrupole
+               !call ui_expansion_order2(r, DeltaP, node%node%Moments, Uloc) 
+               !! NOTE all of this is common between particle and segment
+               coeff3 =  fourpi_inv/r**3
                x=DeltaP(1)
                y=DeltaP(2)
                z=DeltaP(3)
-               phi = node%Moments(1:3,M0)/r**3*fourpi_inv
-
                ! Speed, order 0
+               phi = node%Moments(1:3,M0)*coeff3
                Uloc(1) = phi(2)*z - phi(3)*y
                Uloc(2) = phi(3)*x - phi(1)*z
                Uloc(3) = phi(1)*y - phi(2)*x
-               Uind = Uind+Uloc
+               Uind = Uind + Uloc
 
                ! Speed, order 1
                Uloc=0.0_ReKi
-               coeff = 3.0_ReKi*x*fourpi_inv/r**5
+               coeff5 = 3.0_ReKi*fourpi_inv/r**5
+               coeff = coeff5*x
                Uloc(1) = Uloc(1)- coeff*(node%Moments(3,M1_1)*y-node%Moments(2,M1_1)*z)
                Uloc(2) = Uloc(2)- coeff*(node%Moments(1,M1_1)*z-node%Moments(3,M1_1)*x)
                Uloc(3) = Uloc(3)- coeff*(node%Moments(2,M1_1)*x-node%Moments(1,M1_1)*y)
 
-               coeff = 3.0_ReKi*y*fourpi_inv/r**5
+               coeff = coeff5*y
                Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_2)*y-node%Moments(2,M1_2)*z)
                Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_2)*z-node%Moments(3,M1_2)*x)
                Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_2)*x-node%Moments(1,M1_2)*y)
 
-               coeff = 3.0_ReKi*z*fourpi_inv/r**5
+               coeff = coeff5*z
                Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_3)*y-node%Moments(2,M1_3)*z)
                Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_3)*z-node%Moments(3,M1_3)*x)
                Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_3)*x-node%Moments(1,M1_3)*y)
 
-               coeff =   fourpi_inv/r**3
-               Uloc(1) = Uloc(1) + coeff*node%Moments(3,M1_2) - coeff*node%Moments(2,M1_3)
-               Uloc(2) = Uloc(2) + coeff*node%Moments(1,M1_3) - coeff*node%Moments(3,M1_1)
-               Uloc(3) = Uloc(3) + coeff*node%Moments(2,M1_1) - coeff*node%Moments(1,M1_2)
+               Uloc(1) = Uloc(1) + coeff3*node%Moments(3,M1_2) - coeff3*node%Moments(2,M1_3)
+               Uloc(2) = Uloc(2) + coeff3*node%Moments(1,M1_3) - coeff3*node%Moments(3,M1_1)
+               Uloc(3) = Uloc(3) + coeff3*node%Moments(2,M1_1) - coeff3*node%Moments(1,M1_2)
                Uind=Uind+Uloc
-               Uloc =0.0_ReKi
-               do i =1,3
-                  coeff = 1.5_ReKi*fourpi_inv/r**5
-                  Uloc(1) = Uloc(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
-                  Uloc(2) = Uloc(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
-                  Uloc(3) = Uloc(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
-                  do j=1,i
-                     if (i==j) then
-                        ieqj = 1
-                     else
-                        ieqj = 2
-                     end if
-                     coeff = -7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
-                     Uloc(1) = Uloc(1) + ieqj * coeff * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
-                     Uloc(2) = Uloc(2) + ieqj * coeff * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
-                     Uloc(3) = Uloc(3) + ieqj * coeff * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
-                  end do
-               end do
-               coeff = 3.0_ReKi*fourpi_inv/r**5
-               Uloc(1) = Uloc(1) + coeff * ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
-               Uloc(2) = Uloc(2) + coeff * ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
-               Uloc(3) = Uloc(3) + coeff * ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
 
-               coeff = 3.0_ReKi*fourpi_inv/r**5
-               Uloc(1) = Uloc(1) + coeff * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
-               Uloc(2) = Uloc(2) + coeff * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
-               Uloc(3) = Uloc(3) + coeff * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
-               Uind(1:3) = Uind(1:3) + Uloc
+               ! Speed, order 2
+               Uloc =0.0_ReKi
+               coeff = coeff5*0.5_ReKi ! 3/2 * 1/(4 pi r**5)
+               coeff7= -7.5_ReKi*fourpi_inv/r**7
+               !! NOTE: KEEP ME
+               !do i =1,3
+               !   Uloc(1) = Uloc(1) + coeff* (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
+               !   Uloc(2) = Uloc(2) + coeff* (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
+               !   Uloc(3) = Uloc(3) + coeff* (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
+               !   do j=1,i
+               !      if (i==j) then
+               !         ieqj = 1.0_ReKi
+               !      else
+               !         ieqj = 2.0_ReKi
+               !      end if
+               !      coeff7ij = DeltaP(i)*DeltaP(j)*coeff7
+               !      Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
+               !      Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
+               !      Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
+               !   end do
+               !end do
+               !! r5 terms, unrolled version
+               !!    Uloc(1) = Uloc(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
+               !!    Uloc(2) = Uloc(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
+               !!    Uloc(3) = Uloc(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
+               ! i=1
+               Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,5) - z*node%Moments(2,5))
+               Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,5) - x*node%Moments(3,5))
+               Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,5) - y*node%Moments(1,5))
+               ! i=2
+               Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,7) - z*node%Moments(2,7))
+               Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,7) - x*node%Moments(3,7))
+               Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,7) - y*node%Moments(1,7))
+               ! i=3
+               Uloc(1) = Uloc(1) + coeff    * (y*node%Moments(3,8) - z*node%Moments(2,8))
+               Uloc(2) = Uloc(2) + coeff    * (z*node%Moments(1,8) - x*node%Moments(3,8))
+               Uloc(3) = Uloc(3) + coeff    * (x*node%Moments(2,8) - y*node%Moments(1,8))
+               ! r7 terms, unrolled version
+               !    coeff7ij = DeltaP(i)*DeltaP(j)*coeff7 * (1 or 2 depdening if i=j)
+               !    Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
+               !    Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
+               !    Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
+               ! i=1, j=1
+               coeff7ij = DeltaP(1)*DeltaP(1)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,5) - z*node%Moments(2,5))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,5) - x*node%Moments(3,5))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,5) - y*node%Moments(1,5))
+               ! i=2, j=1
+               coeff7ij = 2.0_ReKi* DeltaP(2)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,6) - z*node%Moments(2,6))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,6) - x*node%Moments(3,6))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,6) - y*node%Moments(1,6))
+               ! i=2, j=2
+               coeff7ij = DeltaP(2)*DeltaP(2)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,7) - z*node%Moments(2,7))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,7) - x*node%Moments(3,7))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,7) - y*node%Moments(1,7))
+               ! i=3, j=1
+               coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,8) - z*node%Moments(2,8))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,8) - x*node%Moments(3,8))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,8) - y*node%Moments(1,8))
+               ! i=3, j=2
+               coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(2)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,9) - z*node%Moments(2,9))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,9) - x*node%Moments(3,9))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,9) - y*node%Moments(1,9))
+               ! i=3, j=3
+               coeff7ij = DeltaP(3)*DeltaP(3)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+               Uloc(1) = Uloc(1) + coeff7ij * (y*node%Moments(3,10) - z*node%Moments(2,10))
+               Uloc(2) = Uloc(2) + coeff7ij * (z*node%Moments(1,10) - x*node%Moments(3,10))
+               Uloc(3) = Uloc(3) + coeff7ij * (x*node%Moments(2,10) - y*node%Moments(1,10))
+
+               ! r5 terms 2
+               Uloc(1) = Uloc(1) + coeff5 * (y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33))
+               Uloc(2) = Uloc(2) + coeff5 * (z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11))
+               Uloc(3) = Uloc(3) + coeff5 * (x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22))
+               Uloc(1) = Uloc(1) + coeff5 * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
+               Uloc(2) = Uloc(2) + coeff5 * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
+               Uloc(3) = Uloc(3) + coeff5 * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
+               Uind = Uind + Uloc
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_segment_11
    end subroutine  ui_tree_segment
+
+
+   !> Compute second order expansion of velocity for a given point based on moment up to order 2 (quadrupole)
+   !! TODO: might be sensitive to numerics since r,x,y,z might be large
+   pure subroutine ui_expansion_order2(r, DeltaP, Moments, Uind) 
+      real(ReKi),                  intent(in   ) :: r      !< Norm of DeltaP
+      real(ReKi), dimension(3),    intent(in   ) :: DeltaP !< ControlPoint - Vorticity Center
+      real(ReKi), dimension(3,10), intent(in   ) :: Moments!< Moments from Taylor expansion
+      real(ReKi), dimension(3),    intent(  out) :: Uind   !< Velocity
+      real(ReKi) :: coeff, coeff3, coeff5, coeff7, coeff7ij
+      real(ReKi) :: x, y, z
+      real(ReKi),dimension(3) :: phi
+      real(ReKi),dimension(3) :: Uloc
+      !integer :: i,j
+      !real(ReKi) :: ieqj
+      Uind=0.0_ReKi
+
+      !! NOTE all of this is common between particle and segment
+      coeff3 =  fourpi_inv/r**3
+      x=DeltaP(1)
+      y=DeltaP(2)
+      z=DeltaP(3)
+      ! Speed, order 0
+      phi = Moments(1:3,M0)*coeff3
+      Uloc(1) = phi(2)*z - phi(3)*y
+      Uloc(2) = phi(3)*x - phi(1)*z
+      Uloc(3) = phi(1)*y - phi(2)*x
+      Uind = Uind + Uloc
+
+      ! Speed, order 1
+      Uloc=0.0_ReKi
+      coeff5 = 3.0_ReKi*fourpi_inv/r**5
+      coeff = coeff5*x
+      Uloc(1) = Uloc(1)- coeff*(Moments(3,M1_1)*y-Moments(2,M1_1)*z)
+      Uloc(2) = Uloc(2)- coeff*(Moments(1,M1_1)*z-Moments(3,M1_1)*x)
+      Uloc(3) = Uloc(3)- coeff*(Moments(2,M1_1)*x-Moments(1,M1_1)*y)
+
+      coeff = coeff5*y
+      Uloc(1) = Uloc(1) - coeff*(Moments(3,M1_2)*y-Moments(2,M1_2)*z)
+      Uloc(2) = Uloc(2) - coeff*(Moments(1,M1_2)*z-Moments(3,M1_2)*x)
+      Uloc(3) = Uloc(3) - coeff*(Moments(2,M1_2)*x-Moments(1,M1_2)*y)
+
+      coeff = coeff5*z
+      Uloc(1) = Uloc(1) - coeff*(Moments(3,M1_3)*y-Moments(2,M1_3)*z)
+      Uloc(2) = Uloc(2) - coeff*(Moments(1,M1_3)*z-Moments(3,M1_3)*x)
+      Uloc(3) = Uloc(3) - coeff*(Moments(2,M1_3)*x-Moments(1,M1_3)*y)
+
+      Uloc(1) = Uloc(1) + coeff3*Moments(3,M1_2) - coeff3*Moments(2,M1_3)
+      Uloc(2) = Uloc(2) + coeff3*Moments(1,M1_3) - coeff3*Moments(3,M1_1)
+      Uloc(3) = Uloc(3) + coeff3*Moments(2,M1_1) - coeff3*Moments(1,M1_2)
+      Uind=Uind+Uloc
+
+      ! Speed, order 2
+      Uloc =0.0_ReKi
+      coeff = coeff5*0.5_ReKi ! 3/2 * 1/(4 pi r**5)
+      coeff7= -7.5_ReKi*fourpi_inv/r**7
+      !! NOTE: KEEP ME
+      !do i =1,3
+      !   Uloc(1) = Uloc(1) + coeff* (y*Moments(3,5+2*(i/2)+3*(i/3)) - z*Moments(2,5+2*(i/2)+3*(i/3)))
+      !   Uloc(2) = Uloc(2) + coeff* (z*Moments(1,5+2*(i/2)+3*(i/3)) - x*Moments(3,5+2*(i/2)+3*(i/3)))
+      !   Uloc(3) = Uloc(3) + coeff* (x*Moments(2,5+2*(i/2)+3*(i/3)) - y*Moments(1,5+2*(i/2)+3*(i/3)))
+      !   do j=1,i
+      !      if (i==j) then
+      !         ieqj = 1.0_ReKi
+      !      else
+      !         ieqj = 2.0_ReKi
+      !      end if
+      !      coeff7ij = DeltaP(i)*DeltaP(j)*coeff7
+      !      Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*Moments(3,3+i+j+i/3) - z*Moments(2,3+i+j+i/3))
+      !      Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*Moments(1,3+i+j+i/3) - x*Moments(3,3+i+j+i/3))
+      !      Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*Moments(2,3+i+j+i/3) - y*Moments(1,3+i+j+i/3))
+      !   end do
+      !end do
+      !! r5 terms, unrolled version
+      !!    Uloc(1) = Uloc(1) + coeff * (y*Moments(3,5+2*(i/2)+3*(i/3)) - z*Moments(2,5+2*(i/2)+3*(i/3)))
+      !!    Uloc(2) = Uloc(2) + coeff * (z*Moments(1,5+2*(i/2)+3*(i/3)) - x*Moments(3,5+2*(i/2)+3*(i/3)))
+      !!    Uloc(3) = Uloc(3) + coeff * (x*Moments(2,5+2*(i/2)+3*(i/3)) - y*Moments(1,5+2*(i/2)+3*(i/3)))
+      ! i=1
+      Uloc(1) = Uloc(1) + coeff    * (y*Moments(3,5) - z*Moments(2,5))
+      Uloc(2) = Uloc(2) + coeff    * (z*Moments(1,5) - x*Moments(3,5))
+      Uloc(3) = Uloc(3) + coeff    * (x*Moments(2,5) - y*Moments(1,5))
+      ! i=2
+      Uloc(1) = Uloc(1) + coeff    * (y*Moments(3,7) - z*Moments(2,7))
+      Uloc(2) = Uloc(2) + coeff    * (z*Moments(1,7) - x*Moments(3,7))
+      Uloc(3) = Uloc(3) + coeff    * (x*Moments(2,7) - y*Moments(1,7))
+      ! i=3
+      Uloc(1) = Uloc(1) + coeff    * (y*Moments(3,8) - z*Moments(2,8))
+      Uloc(2) = Uloc(2) + coeff    * (z*Moments(1,8) - x*Moments(3,8))
+      Uloc(3) = Uloc(3) + coeff    * (x*Moments(2,8) - y*Moments(1,8))
+      ! r7 terms, unrolled version
+      !    coeff7ij = DeltaP(i)*DeltaP(j)*coeff7 * (1 or 2 depdening if i=j)
+      !    Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*Moments(3,3+i+j+i/3) - z*Moments(2,3+i+j+i/3))
+      !    Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*Moments(1,3+i+j+i/3) - x*Moments(3,3+i+j+i/3))
+      !    Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*Moments(2,3+i+j+i/3) - y*Moments(1,3+i+j+i/3))
+      ! i=1, j=1
+      coeff7ij = DeltaP(1)*DeltaP(1)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,5) - z*Moments(2,5))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,5) - x*Moments(3,5))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,5) - y*Moments(1,5))
+      ! i=2, j=1
+      coeff7ij = 2.0_ReKi* DeltaP(2)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,6) - z*Moments(2,6))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,6) - x*Moments(3,6))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,6) - y*Moments(1,6))
+      ! i=2, j=2
+      coeff7ij = DeltaP(2)*DeltaP(2)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,7) - z*Moments(2,7))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,7) - x*Moments(3,7))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,7) - y*Moments(1,7))
+      ! i=3, j=1
+      coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(1)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,8) - z*Moments(2,8))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,8) - x*Moments(3,8))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,8) - y*Moments(1,8))
+      ! i=3, j=2
+      coeff7ij = 2.0_ReKi*DeltaP(3)*DeltaP(2)*coeff7 !=-15_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,9) - z*Moments(2,9))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,9) - x*Moments(3,9))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,9) - y*Moments(1,9))
+      ! i=3, j=3
+      coeff7ij = DeltaP(3)*DeltaP(3)*coeff7 !=-7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
+      Uloc(1) = Uloc(1) + coeff7ij * (y*Moments(3,10) - z*Moments(2,10))
+      Uloc(2) = Uloc(2) + coeff7ij * (z*Moments(1,10) - x*Moments(3,10))
+      Uloc(3) = Uloc(3) + coeff7ij * (x*Moments(2,10) - y*Moments(1,10))
+
+      ! r5 terms 2
+      Uloc(1) = Uloc(1) + coeff5 * (y*Moments(3,M2_22) - z*Moments(2,M2_33))
+      Uloc(2) = Uloc(2) + coeff5 * (z*Moments(1,M2_33) - x*Moments(3,M2_11))
+      Uloc(3) = Uloc(3) + coeff5 * (x*Moments(2,M2_11) - y*Moments(1,M2_22))
+      Uloc(1) = Uloc(1) + coeff5 * (z*Moments(3,M2_32) + x*Moments(3,M2_21) - x*Moments(2,M2_31) - y*Moments(2,M2_32))
+      Uloc(2) = Uloc(2) + coeff5 * (x*Moments(1,M2_31) + y*Moments(1,M2_32) - y*Moments(3,M2_21) - z*Moments(3,M2_31))
+      Uloc(3) = Uloc(3) + coeff5 * (y*Moments(2,M2_21) + z*Moments(2,M2_31) - z*Moments(1,M2_32) - x*Moments(1,M2_21))
+      Uind = Uind + Uloc
+   end subroutine ui_expansion_order2
+
 
    ! --------------------------------------------------------------------------------
    ! --- Vector analysis tools 

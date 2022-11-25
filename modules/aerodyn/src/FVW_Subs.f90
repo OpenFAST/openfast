@@ -1476,27 +1476,28 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
 
       ! --- Compute
       !if (nSeg<1000) then
+      if (.True.) then
          ! NOTE: We keep this to avoid the "grow_tree" cost.
          ! Also, this helps for EllipticWingInf_OLAF. Using an infinite make the DistanceDirect criteria fail (probably because based on cell center, and not cell extent)
-         call tic('ui_seg')
+         !call tic('ui_seg')
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
+         !call toc()
+      else
+         ! --- Compute maximum wing length
+         MaxWingLength = 0.0_ReKi
+         do iW=1,p%nWings
+            MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
+         enddo
+         DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
+         call tic('ui_tree_seg')
+         call tic('grow tree')
+         call grow_tree_segment(Tree, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
          call toc()
-      !else
-      !   ! --- Compute maximum wing length
-      !   MaxWingLength = 0.0_ReKi
-      !   do iW=1,p%nWings
-      !      MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
-      !   enddo
-      !   DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
-      !   call tic('ui_tree_seg')
-      !   call tic('grow tree')
-      !   call grow_tree_segment(Tree, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
-      !   call toc()
-      !   call tic('tree calc')
-      !   call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-      !   call toc()
-      !   call toc()
-      !endif
+         call tic('tree calc')
+         call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+         call toc()
+         call toc()
+      endif
 
       ! --- Unpack
       call UnPackLiftingLineVelocities()
