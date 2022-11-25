@@ -14,6 +14,7 @@ module FVW
    use FVW_IO
    use FVW_Wings
    use FVW_BiotSavart
+   use FVW_VortexTools, only: tic, toc
    use FVW_Tests
    use AirFoilInfo
 
@@ -548,6 +549,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   call tic('FVW_UpdateStates')
+
    ! --- Handling of time step, and time compared to previous call
    m%iStep = n
    ! OverCycling DTfvw> DTaero
@@ -580,12 +583,14 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'-',nNWEff-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
+   call tic('FVW_Eval t')
    ! Inputs at t
    call FVW_CopyInput( u(2), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return ! needed at t=0 if wing moved after init
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call toc()
 
    ! Compute UA inputs at t
    if (m%UA_Flag) then
@@ -594,6 +599,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
    ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
+      call tic('FVW_WakeInduced')
 
       ! TODO TODO: this should be in CCSD, but memory is changing between time steps, so for now we have to use u(1)..
       ! inputs: V_wind, output: set m%W%Vwnd_NW, m%W%Vwnd_FW
@@ -653,36 +659,47 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          !call Map_LL_NW(p, m, z, m%x2, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
          !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
       endif
+      call toc()
    endif
 
    ! --- Integration between t and t+DTaero if DTaero/=DTfvw
    if (bOverCycling) then
+      call tic('OverCycle')
       ! Linear interpolation of states between t and dtaero
       call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, m, x, ErrStat2, ErrMsg2); if(Failed()) return
+      call toc()
    endif
 
    ! Inputs at t+DTaero (Wings Panelling updates CP, and VstW(iW)%r_LL) 
+   call tic('Extrap inp')
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTaero, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   call toc()
 
    ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
    ! Changes: x only
+   call tic('Map')
    ShedScale = (t+p%DTaero - m%OldWakeTime)/p%DTfvw
    call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call toc()
    !call print_x_NW_FW(p, m, x,'Map2')
 
    ! --- Solve for quasi steady circulation at t+p%DTaero
+   call tic('Circ Solv')
    ! Returns: z%W(iW)%Gamma_LL (at t+p%DTaero)
    allocate(z_guess%W(p%nWings))
    do iW=1,p%nWings 
       z_guess%W(iW)%Gamma_LL = z%W(iW)%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
    enddo
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
+   call toc()
    ! Updating circulation of near wake panel (need to be set for UA, Uind on LL) (and position but irrelevant)
+   call tic('Map')
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+   call toc()
    ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
    if (m%UA_Flag) then
       call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -699,11 +716,13 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
 
 
 
+   call tic('Misc end')
    ! --- Fake handling of ground effect (ensure vorticies above ground)
    call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
 
    ! set the wind points required for t+p%DTaero timestep
    CALL SetRequestedWindPoints(m%r_wind, x, p, m)
+   call toc()
 
    if (m%FirstCall) then
       m%FirstCall=.False.
@@ -716,6 +735,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       endif
    endif
 
+   call toc()
 contains
    subroutine PrepareNextTimeStep()
       ! --- Increase wake length if maximum not reached
@@ -1356,7 +1376,9 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, ErrStat, ErrMsg)
 !       CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
 ! 
 !       ! Control points location and structural velocity
+   call tic('Panelling')
    call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call toc()
 ! 
 !    ! if we are on a correction step, CalcOutput may be called again with different inputs
 !    ! Compute m%W(iW)%Gamma_LL
@@ -1366,7 +1388,9 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, ErrStat, ErrMsg)
    ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
    ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
    if (p%Induction) then
+      call tic('LLUi')
       call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call toc()
       ! Transfer to output
       do iW=1,p%nWings
           y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
@@ -1402,6 +1426,8 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
    logical :: bOverCycling
 
+   call tic('FVW_CalcOutput')
+
    ErrStat = ErrID_None
    ErrMsg  = ""
    if (DEV_VERSION) then
@@ -1412,8 +1438,10 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    bOverCycling = p%DTfvw > p%DTaero
 
    ! Compute induced velocity at AD nodes
+   call tic('Output for AD')
    call CalcOutputForAD(t,u,p,x,y,m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call toc()
 
    ! Write some info to screen when major milestone achieved
    if (m%iStep == p%nNWFree) then
@@ -1427,6 +1455,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    endif
    
    ! Export to VTK
+   call tic('VTK')
    if (m%VTKStep==-1) then 
       m%VTKStep = 0 ! Has never been called, special handling for init
    else
@@ -1434,6 +1463,9 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    endif
    call WriteVTKOutputs(t, .False., u, p, x, z, y, m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call toc()
+
+   call toc()
 
 end subroutine FVW_CalcOutput
 

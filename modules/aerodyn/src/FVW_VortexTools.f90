@@ -1,11 +1,13 @@
 module FVW_VortexTools
    ! Contains Typical Tools  for vortex methods
-
+   ! 
    ! Should be *independent* of the Framework and any derived type 
+   !    apart from the types defined here: Tree, Seg and Part
+   !
+   ! Only low-to-mid level functions!
 
-   ! Only low level functions !
-
-   use NWTC_LIBRARY
+   use NWTC_LIBRARY, only: ReKi, IntKi, num2lstr, ErrID_Fatal, ErrID_None, EqualRealNos !< Not desired
+   use NWTC_LIBRARY, only: InterpArray
 
    implicit none
 
@@ -65,6 +67,22 @@ module FVW_VortexTools
    interface cut_tree_segment
       module procedure cut_tree_segment_parallel ; ! to switch between parallel and rec easily
    end interface
+
+   ! --- TIC TOC MODULE
+   ! Parameters
+   logical, parameter    :: bSilentTicToc =.false.   !< If set to true, will only show times bigger than SmartTicTocVal
+   logical, parameter    :: bSmartTicToc =.true.     !< If set to true, will only show times bigger than SmartTicTocVal
+   integer, parameter    :: nmax_store=40            !< maximum number of storage in tic toc stack
+   integer, parameter    :: nmax_label=46            !< maximum length of label
+   real(ReKi), parameter :: SmartTicTocVal=0.05_ReKi !< duration below this value will not be displayed (if bSmartTicToc is True)
+   ! Reals
+   real(ReKi), save :: start_time,finish_time
+   ! Tic toc stack arrays
+   integer, save                                          :: npos = 0    ! < position on the stack
+   integer, dimension(8), save                            :: time_array
+   integer, dimension(nmax_store,8), save                 :: start_arrays = 0
+   character(len=nmax_label), dimension(nmax_store), save :: labels
+   ! --- END TIC TOC MODULE
 
 contains
 
@@ -526,7 +544,7 @@ contains
    ! --------------------------------------------------------------------------------}
    ! --- Tree -Grow 
    ! --------------------------------------------------------------------------------{
-   subroutine grow_tree(Tree, PartP, PartAlpha, PartRegFunction, PartRegParam, iStep)
+   subroutine grow_tree_part(Tree, PartP, PartAlpha, PartRegFunction, PartRegParam, iStep)
       type(T_Tree),               intent(inout), target :: Tree            !< 
       real(ReKi), dimension(:,:), intent(in   ), target :: PartP           !< 
       real(ReKi), dimension(:,:), intent(in   ), target :: PartAlpha       !< 
@@ -599,30 +617,31 @@ contains
          node%branches=>null()
          node%leaves=>null()
          ! --- Calling grow function on subbranches
-         call grow_tree_parallel(Tree%root, Tree%Part)
+         call grow_tree_part_parallel(Tree%root, Tree%Part)
 !          call grow_tree_rec(Tree%root, Tree%Part)
       endif
       Tree%iStep  = iStep
       Tree%bGrown = .true.
-   end subroutine grow_tree
+      Tree%DistanceDirect = 2*sum(PartRegParam)/size(PartRegParam) ! 2*mean(eps), below that distance eps has a strong effect
+   end subroutine grow_tree_part
 
    !> Recursive function to grow/setup a tree. 
    !! Note, needed preliminary calc are done by grow_tree before
-   recursive subroutine grow_tree_rec(node, Part)
+   recursive subroutine grow_tree_part_rec(node, Part)
       type(T_Node), target     :: node !<
       type(T_Part), intent(in) :: Part !<
       integer :: i
       !  Sub Step:
       !   -  compute moments and center for the current node
       !   -  allocate branches and leaves
-      call grow_tree_substep(node, Part)
+      call grow_tree_part_substep(node, Part)
       ! Call grow_tree on branches
       if(associated(node%branches)) then
          do i = 1,size(node%branches)
-            call grow_tree_rec(node%branches(i), Part)
+            call grow_tree_part_rec(node%branches(i), Part)
          end do
       endif
-   end subroutine  grow_tree_rec
+   end subroutine  grow_tree_part_rec
 
    !> Perform a substep of tree growth, growing sub branches from a given node/cell
    !! Parent has already setup node%iPart, indices of the particle in this cell
@@ -631,7 +650,7 @@ contains
    !!   - Compute node moments
    !!   - Distribute particles in each 8 octants. Branches are not created for empty octant
    !!   - Allocate branches and leaves and distribute particles to them
-   subroutine grow_tree_substep(node, Part)
+   subroutine grow_tree_part_substep(node, Part)
       type(T_Node), intent(inout) :: node !< Current node we are growing from
       type(T_Part), intent(in)    :: Part !< All particles info
       integer(IK1) :: iPartOctant                                     !< Index corresponding to which octant the particle falls into
@@ -795,11 +814,11 @@ contains
       endif
       if (associated(node%iPart)) deallocate(node%iPart) ! Freeing memory
       if (allocated(PartOctant)) deallocate(PartOctant)
-   end subroutine grow_tree_substep
+   end subroutine grow_tree_part_substep
 
    !> Grow a tree in "parallel", since recursive calls cannot be parallized easily, we unroll the different layer calls
    !! Note, needed preliminary calc are done by grow_tree before!
-   subroutine grow_tree_parallel(Root, Part)
+   subroutine grow_tree_part_parallel(Root, Part)
       type(T_Node), intent(inout) :: Root
       type(T_Part), intent(in) :: Part
       integer :: i, nBranches
@@ -810,7 +829,7 @@ contains
       !  Sub Step:
       !   -  compute moments and center for the current node
       !   -  allocate branches and leaves
-      call grow_tree_substep(Root, Part)
+      call grow_tree_part_substep(Root, Part)
 
       if(.not. associated(Root%branches)) then
          nBranches=0
@@ -828,7 +847,7 @@ contains
             !$OMP do private(i) schedule(runtime)
             do i = 1,nBranches ! maximum 8 branches
                if(Root%branches(i)%nPart>1) then ! I dont think this test is needed
-                  call grow_tree_substep(Root%branches(i), Part)
+                  call grow_tree_part_substep(Root%branches(i), Part)
                endif
             end do
             !$OMP end do
@@ -840,7 +859,7 @@ contains
                i2=mod(i-1,8)+1;
                if(associated(Root%branches(i1)%branches)) then
                   if (i2<=size(Root%branches(i1)%branches)) then
-                     call grow_tree_rec(Root%branches(i1)%branches(i2), Part)
+                     call grow_tree_part_rec(Root%branches(i1)%branches(i2), Part)
                   endif
                endif
             enddo
@@ -849,7 +868,7 @@ contains
             !$OMP END PARALLEL
          endif
       endif
-   end subroutine grow_tree_parallel
+   end subroutine grow_tree_part_parallel
    ! --------------------------------------------------------------------------------}
    ! --- Tree -Grow for vortex lines
    ! --------------------------------------------------------------------------------{
@@ -882,7 +901,6 @@ contains
       Tree_Seg%Seg%RegParam    => SegRegParam
       Tree_Seg%Seg%RegFunction = SegRegFunction
       Tree_Seg%Seg%n           = size(SegConnct,2)
-
 
       ! --- Handle special case for root node
       node => Tree_Seg%Root
@@ -944,6 +962,7 @@ contains
       endif
       Tree_Seg%iStep  = iStep
       Tree_Seg%bGrown = .true.
+      Tree_Seg%DistanceDirect = 2*sum(SegRegParam)/size(SegRegParam) ! 2*mean(eps), below that distance eps has a strong effect ! TODO REMOVE
    end subroutine grow_tree_segment
 
    !> Recursive function to grow/setup a tree.
@@ -1419,6 +1438,8 @@ contains
       real(ReKi), dimension(3) :: CP       !< Current CP
       integer :: icp
       type(T_Part), pointer :: Part ! Alias
+      ErrStat = ErrID_None
+      ErrMsg = ''
       Part => Tree%Part
       if(.not. associated(Part%P)) then
          ErrMsg='Ui Part Tree called but tree particles not associated'; ErrStat=ErrID_Fatal; return
@@ -1854,5 +1875,101 @@ contains
       !   rotf(2,:,:,:)=0.0_ReKi
       !endif
    end subroutine curl_regular_grid
+
+
+
+   ! --- TIC TOC MODULE
+   !> Simpler version of matlab tic
+   subroutine tic(label)
+      character(len=*),intent(in),optional ::label !< Optional label will be displayed when calling toc
+      character(len=nmax_label)::lbl
+      integer :: i
+      if (npos<nmax_store ) then
+         if (present(label)) then
+            do i=1,nmax_label
+               if(i<=npos) then
+                  lbl(i:i)='.'
+               else
+                  if(i-npos<=len_trim(label).and. i-npos>0)  then
+                     lbl(i:i)=label((i-npos):(i-npos))
+                  else
+                     lbl(i:i)=' '
+                  endif
+               endif
+            enddo
+         else
+            lbl=''
+         endif
+         !
+         npos=npos+1
+         call date_and_time(values=time_array)
+         start_arrays(npos,1:8) = time_array(1:8) !< we store the whole array
+         labels(npos)=lbl
+      else
+         write(*,*) 'TicToc: stack full'
+      endif
+
+   end subroutine tic
+
+   !> Simpler version of matlab toc. Computes elapsed wallclock after a call to tic()
+   subroutine toc(delta_t_out)
+      real(ReKi), intent(out), optional ::  delta_t_out
+      real(ReKi) ::  delta_t
+      integer, dimension(8) :: v_dt
+      integer :: iunit
+      if (npos<=nmax_store.and.npos>0 ) then
+         call date_and_time(values=time_array)
+         v_dt=time_array-start_arrays(npos,1:8)
+         if (v_dt(4)<0. ) then
+            v_dt(6)=v_dt(6)+30 ! approximate month change
+         endif
+         delta_t= v_dt(4)*86400+v_dt(5)*3600+v_dt(6)*60 +v_dt(7)+0.001*v_dt(8)
+         if (.not. bSilentTicToc) then 
+            if((bSmartTicToc .and. delta_t>SmartTicTocVal) .or.(.not.bSmartTicToc)) then
+               write (6, '(A,A,A,A)') 'Time:    ',labels(npos),'- Time: ', pretty_time(delta_t)
+            endif
+         endif
+         npos=npos-1
+      else
+         write(*,*) 'TicToc: stack error'
+         delta_t=0
+      endif
+      if(present(delta_t_out)) then
+         delta_t_out=delta_t
+      endif
+   end subroutine toc
+
+   function pretty_time(t) 
+      character(len=6) :: pretty_time
+      real(ReKi), intent(in) :: t
+      integer :: d,m,h,s,c
+      if(t<0) then
+         write(pretty_time,'(A)') '------'
+      elseif(t<1) then
+         !c=int(t*1000)
+         !write(pretty_time,'(A,I3.3)')  '00.',c
+         c=int(t*100)
+         write(pretty_time,'(A,I2.2,A)') ' 0.',c,'s'
+      elseif(t<60) then
+         s=int(t)
+         c=int((t-s)*100)
+         write(pretty_time,'(I2,A,I2.2,A)') s,'.',c,'s'
+      elseif(t<3600) then
+         m=int(t/60)
+         s=mod(int(t),60)
+         write(pretty_time,'(I2,A,I2.2,A)') m,'m',s,'s'
+      elseif(t<86400) then
+         h=int(t/3600);
+         m=int(mod(int(t),3600)/60);
+         write(pretty_time,'(I2,A,I2.2,A)') h,'h',m,'m'
+      elseif(t<8553600) then
+         d=int(t/86400);
+         h=int(mod(int(t),86400)/3600);
+         write(pretty_time,'(I2,A,I2.2,A)') d,'d',h,'h'
+      else
+         pretty_time='+3mon.'
+      endif
+   end function pretty_time
+   ! --- END TIC TOC MODULE
 
 end module FVW_VortexTools

@@ -41,11 +41,11 @@ module FVW_SUBS
    integer(IntKi), parameter :: idShearMirror = 1
    integer(IntKi), parameter, dimension(2) :: idShearVALID         = (/idShearNone, idShearMirror /)
    ! Velocity calculation method
-   integer(IntKi), parameter :: idVelocityBasic = 1
-   integer(IntKi), parameter :: idVelocityTree  = 2
-   integer(IntKi), parameter :: idVelocityPart  = 3
+   integer(IntKi), parameter :: idVelocityBasic    = 1
+   integer(IntKi), parameter :: idVelocityTreePart = 2
+   integer(IntKi), parameter :: idVelocityPart     = 3
    integer(IntKi), parameter :: idVelocityTreeSeg  = 4
-   integer(IntKi), parameter, dimension(4) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTree, idVelocityPart,&
+   integer(IntKi), parameter, dimension(4) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTreePart, idVelocityPart,&
                                                                        idVelocityTreeSeg/)
 
    real(ReKi), parameter :: CoreSpreadAlpha = 1.25643
@@ -1100,6 +1100,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
 end subroutine FVW_InitRegularization
 
 
+
 !> Compute induced velocities from all vortex elements onto nPoints
 !! In : x, x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
 !! Out: Vind
@@ -1156,12 +1157,39 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    iHeadP=1
    call DeflateValues(Uind, g%uGrid, iHeadP)
 
-   deallocate(CPs , stat=ErrStat)
-   deallocate(Uind, stat=ErrStat)
+   if(allocated(CPs )) deallocate(CPs , stat=ErrStat)
+   if(allocated(Uind)) deallocate(Uind, stat=ErrStat)
 
 end subroutine InducedVelocitiesAll_OnGrid
 
-
+!> Wrapper to setup part from set of segments
+subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part)
+   type(T_Sgmt),                    intent(in   ) :: Sgmt  !< Segments
+   integer(IntKi),                  intent(in   ) :: nSeg  !< Number of segments to use (might not use all of them)
+   integer(IntKi),                  intent(in   ) :: PartPerSegment !< Number of particles per segment
+   integer(IntKi),                  intent(in   ) :: RegFunction    !< Regularization function
+   type(T_Part),                    intent(inout) :: Part  !< Particles
+   integer(IntKi) :: iHeadP
+   integer(IntKi) :: nPart
+   iHeadP=1
+   nPart = PartPerSegment * nSeg
+   allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart)) ! NOTE: remember to deallocate
+   Part%Alpha(:,:)  = -99999.99_ReKi
+   Part%P(:,:)      = -99999.99_ReKi
+   Part%RegParam(:) = -99999.99_ReKi
+   call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
+   if (RegFunction/=idRegNone) then
+      Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
+   endif
+   if (DEV_VERSION) then
+      call find_nan_2D(Part%P    , 'SegmentsToPartWrap Part%P')
+      call find_nan_2D(Part%Alpha, 'SegmentsToPartWrap Part%Alpha')
+      if (any(Part%RegParam(:)<-9999.99_ReKi)) then
+         print*,'Error in Segment to part conversion'
+         STOP
+      endif
+   endif
+end subroutine SegmentsToPartWrap
 
 !> Perform initialization steps before requesting induced velocities from All vortex elements
 !! In : x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
@@ -1176,9 +1204,8 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi) :: iHeadP, nSeg, nSegP
+   integer(IntKi) :: nSeg, nSegP
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
-   integer(IntKi) :: nPart
    ErrStat= ErrID_None
    ErrMsg =''
 
@@ -1190,38 +1217,17 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
 
-   ! --- Converting to particles
-   if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
-      iHeadP=1
-      nPart = p%PartPerSegment * nSeg
-      allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart))
-      Part%Alpha(:,:)  = -99999.99_ReKi
-      Part%P(:,:)      = -99999.99_ReKi
-      Part%RegParam(:) = -99999.99_ReKi
-      call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, p%PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
-      if (p%RegFunction/=idRegNone) then
-         Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
-      endif
-      if (DEV_VERSION) then
-         call find_nan_2D(Part%P    , 'InducedVelocitiesAll_Init Part%P')
-         call find_nan_2D(Part%Alpha, 'InducedVelocitiesAll_Init Part%Alpha')
-
-         if (any(Part%RegParam(:)<-9999.99_ReKi)) then
-            print*,'Error in Segment to part conversion'
-            STOP
-         endif
-      endif
+   ! --- Convert to particles if needed
+   if ((p%VelocityMethod==idVelocityTreePart) .or. (p%VelocityMethod==idVelocityPart)) then
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment, p%RegFunction, Part)
    endif
 
-   ! Grow tree if needed
-   if (p%VelocityMethod==idVelocityTree) then
-      Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
-      call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+   ! --- Grow tree if needed
+   if (p%VelocityMethod==idVelocityTreePart) then
+      call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
 
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
-      Tree%DistanceDirect = 2*sum(Sgmt%Epsilon)/size(Sgmt%Epsilon) ! 2*mean(eps), below that distance eps has a strong effect
-      call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg),Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
-
+      call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
    endif
 
 end subroutine InducedVelocitiesAll_Init
@@ -1244,7 +1250,7 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
    if (p%VelocityMethod==idVelocityBasic) then
       call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
 
-   elseif (p%VelocityMethod==idVelocityTree) then
+   elseif (p%VelocityMethod==idVelocityTreePart) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
       call ui_tree_part(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
@@ -1274,14 +1280,15 @@ subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
    if (p%VelocityMethod==idVelocityBasic) then
       ! Nothing
 
-   elseif (p%VelocityMethod==idVelocityTree) then
+   elseif (p%VelocityMethod==idVelocityTreePart) then
       call cut_tree(Tree)
       deallocate(Part%P, Part%Alpha, Part%RegParam)
 
    elseif (p%VelocityMethod==idVelocityPart) then
       deallocate(Part%P, Part%Alpha, Part%RegParam)
+
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
-   call cut_tree(Tree)
+      call cut_tree(Tree)
    endif
 
 end subroutine InducedVelocitiesAll_End
@@ -1309,6 +1316,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
 
    nFWEff = min(m%nFW, p%nFWFree)
    nNWEff = min(m%nNW, p%nNWFree)
+   call tic('WakeInduced Init')
 
    ! --- Pack control points
    call PackConvectingPoints() ! m%CPs
@@ -1318,9 +1326,14 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
    m%Uind(:,nCPs+1:)=1000.0_ReKi ! TODO For debugging only
    call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call toc()
+   call tic('WakeInduced Calc')
    call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
+   call toc()
+   call tic('WakeInduced End')
    call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
    call UnPackInducedVelocity()
+   call toc()
 
    if (DEV_VERSION) then
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',m%Sgmt%nAct,' - nSegP:',m%Sgmt%nActP, ' - nCPs:',nCPs
@@ -1455,6 +1468,12 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
       call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
+
+      !call ui_tree_segment(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+
+
+
+
       call UnPackLiftingLineVelocities()
 
       deallocate(Uind)

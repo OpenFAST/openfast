@@ -334,6 +334,9 @@ contains
       integer(IntKi)           :: ErrStat2
       character(ErrMsgLen)     :: ErrMsg2
 
+      call tic('GammaPolar')
+      call tic('GammaPolar 1 ')
+
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -375,12 +378,15 @@ contains
       ! Vrel_ll_cst = U_u0 - U_body 
       call AllocAry(Vvar,  3, nCP_tot, 'Vvar',  ErrStat2, ErrMsg2);  if(Failed()) return;
       call AllocAry(Vcst,  3, nCP_tot, 'Vcst',  ErrStat2, ErrMsg2);  if(Failed()) return;
+      call toc()
 
       !--- Induction on the lifting line control point or nodes
       ! Set induced velocity from Known wake only (after iNWStart+1)
       ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
       ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+      call tic('LLUI')
       call LiftingLineInducedVelocities(p, x, p%InductionAtCP, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      call toc()
 
       kCP=0
       do iW=1,p%nWings
@@ -406,6 +412,7 @@ contains
       endif
 
       ! --- Convergence loop until near wake gives induction coherent with circulation
+      call tic('Convergence loop')
       bConverged=.false.
       iIter=0
       do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
@@ -457,6 +464,8 @@ contains
           bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
 
       end do ! convergence loop
+      call toc()
+      call tic('GammaPolar end')
       if (iIter==p%CircSolvMaxIter) then
          if (DEV_VERSION) then
             print'(A,I0,A,I0,A)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter, ' <<< Max reached'
@@ -496,6 +505,8 @@ contains
          m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
       enddo
       call CleanUp()
+      call toc()
+      call toc()
    contains
 
       logical function Failed()
