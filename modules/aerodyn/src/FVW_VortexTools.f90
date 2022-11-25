@@ -1322,12 +1322,12 @@ contains
          integer :: i
          ! Test if there are enough particles on the node to build new branchess
          ! The case of only one particle should be handled upstream by allocating one leaf to the parent node
-         print'(A)'      ,trim(preffix)//':nPart       = '//Num2LStr(node%nPart)
-         print'(A,3F12.3)',trim(preffix)//':center      =',node%center
-         print'(A,1F12.3)',trim(preffix)//':radius      =',node%radius
+         print'(A, I0)'   ,trim(preffix)//':nPart       = ', node%nPart
+         print'(A,3F12.3)',trim(preffix)//':center      =', node%center
+         print'(A,1F12.3)',trim(preffix)//':radius      =', node%radius
          if(associated(node%leaves)) then
             do i = 1,size(node%leaves)
-               print'(A)',trim(preffix)//':leaf'//trim(Num2LStr(i))//'='//trim(Num2LStr(node%leaves(i)))
+               print'(A, I0, A, I0)',trim(preffix)//':leaf', i,'=', node%leaves(i)
             end do
          endif
          if(associated(node%branches)) then
@@ -1403,7 +1403,7 @@ contains
    ! --------------------------------------------------------------------------------
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
-   subroutine ui_tree(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+   subroutine ui_tree_part(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: fourpi_inv, ui_part_nograd_11
       type(T_Tree), target,          intent(inout) :: Tree            !< 
       integer,                       intent(in   ) :: ioff            !< 
@@ -1417,32 +1417,29 @@ contains
       character(*),                  intent(  out) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
       real(ReKi), dimension(3) :: Uind_tmp !< 
       real(ReKi), dimension(3) :: CP       !< Current CP
-      integer :: icp, nDirect, nQuad
+      integer :: icp
       type(T_Part), pointer :: Part ! Alias
       Part => Tree%Part
       if(.not. associated(Part%P)) then
          ErrMsg='Ui Part Tree called but tree particles not associated'; ErrStat=ErrID_Fatal; return
       endif
       !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(icp,CP,Uind_tmp,nDirect,nQuad) schedule(runtime)
+      !$OMP DO PRIVATE(icp,CP,Uind_tmp) schedule(runtime)
       do icp=icp_beg,icp_end
          CP = CPs(1:3,icp)
          Uind_tmp(1:3) = 0.0_ReKi
-         nDirect =0
-         nQuad =0
-         call ui_tree_11(Tree%root, CP, Uind_tmp, nDirect, nQuad) !< SIDE EFFECTS
-         !print*,'Number of direct calls, and quad calls',nDirect, nQuad
+         call ui_tree_part_11(Tree%root, CP, Uind_tmp) !< SIDE EFFECTS
+         !print*,'Number of direct calls, and quad calls'
          Uind(1:3,ioff+icp-icp_beg+1) = Uind(1:3,ioff+icp-icp_beg+1) + Uind_tmp(1:3)
       enddo
       !$OMP END DO 
       !$OMP END PARALLEL
    contains
       !> Velocity at one control point from the entire tree
-      recursive subroutine ui_tree_11(node, CP, Uind, nDirect, nQuad)
+      recursive subroutine ui_tree_part_11(node, CP, Uind)
          real(ReKi),dimension(3),intent(inout) :: CP, Uind  !< Velocity at control point, with side effect
-         integer, intent(inout) :: nDirect,nQuad
          type(T_Node), intent(inout) :: node
-         real(ReKi) :: distDirect, coeff
+         real(ReKi) :: distDirect, coeff, coeff3, coeff5, coeff7, coeff7ij
          real(ReKi),dimension(3) :: DeltaP, phi, Uloc
          real(ReKi) :: x,y,z,mx,my,mz,r
          integer :: i,j,ieqj
@@ -1456,7 +1453,6 @@ contains
                   iPart=node%leaves(i)
                   DeltaP = CP(1:3) - Part%P(1:3,iPart)
                   call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
-                  nDirect=nDirect+1
                   Uind(1:3) = Uind(1:3) + Uloc
                enddo
             endif
@@ -1472,23 +1468,23 @@ contains
                      iPart=node%leaves(i)
                      DeltaP = CP(1:3) - Part%P(1:3,iPart)
                      call  ui_part_nograd_11(DeltaP, Part%Alpha(1:3,iPart), Part%RegFunction, Part%RegParam(iPart), Uloc)
-                     nDirect=nDirect+1
                      Uind(1:3) = Uind(1:3) + Uloc
                   enddo
                endif
                if(associated(node%branches)) then
                   ! TODO: consider implementing a recursive method for that: direct call on all children
                   do i =1,size(node%branches)
-                     call ui_tree_11(node%branches(i), CP, Uind, nDirect, nQuad)
+                     call ui_tree_part_11(node%branches(i), CP, Uind)
                   end do
                endif
 
             else 
                ! We are far enough, use branch node quadrupole 
+               coeff3 =  fourpi_inv/r**3
                x=DeltaP(1)
                y=DeltaP(2)
                z=DeltaP(3)
-               phi = node%Moments(1:3,M0)/r**3*fourpi_inv
+               phi = node%Moments(1:3,M0)*coeff3
 
                ! Speed, order 0
                Uloc(1) = phi(2)*z - phi(3)*y
@@ -1498,59 +1494,60 @@ contains
 
                ! Speed, order 1
                Uloc=0.0_ReKi
-               coeff = 3.0_ReKi*x*fourpi_inv/r**5
+               coeff5 = 3.0_ReKi*fourpi_inv/r**5
+               coeff = coeff5*x
                Uloc(1) = Uloc(1)- coeff*(node%Moments(3,M1_1)*y-node%Moments(2,M1_1)*z)
                Uloc(2) = Uloc(2)- coeff*(node%Moments(1,M1_1)*z-node%Moments(3,M1_1)*x)
                Uloc(3) = Uloc(3)- coeff*(node%Moments(2,M1_1)*x-node%Moments(1,M1_1)*y)
 
-               coeff = 3.0_ReKi*y*fourpi_inv/r**5
+               coeff = coeff5*y
                Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_2)*y-node%Moments(2,M1_2)*z)
                Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_2)*z-node%Moments(3,M1_2)*x)
                Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_2)*x-node%Moments(1,M1_2)*y)
 
-               coeff = 3.0_ReKi*z*fourpi_inv/r**5
+               coeff = coeff5*z
                Uloc(1) = Uloc(1) - coeff*(node%Moments(3,M1_3)*y-node%Moments(2,M1_3)*z)
                Uloc(2) = Uloc(2) - coeff*(node%Moments(1,M1_3)*z-node%Moments(3,M1_3)*x)
                Uloc(3) = Uloc(3) - coeff*(node%Moments(2,M1_3)*x-node%Moments(1,M1_3)*y)
 
-               coeff =   fourpi_inv/r**3
-               Uloc(1) = Uloc(1) + coeff*node%Moments(3,M1_2) - coeff*node%Moments(2,M1_3)
-               Uloc(2) = Uloc(2) + coeff*node%Moments(1,M1_3) - coeff*node%Moments(3,M1_1)
-               Uloc(3) = Uloc(3) + coeff*node%Moments(2,M1_1) - coeff*node%Moments(1,M1_2)
+               Uloc(1) = Uloc(1) + coeff3*node%Moments(3,M1_2) - coeff3*node%Moments(2,M1_3)
+               Uloc(2) = Uloc(2) + coeff3*node%Moments(1,M1_3) - coeff3*node%Moments(3,M1_1)
+               Uloc(3) = Uloc(3) + coeff3*node%Moments(2,M1_1) - coeff3*node%Moments(1,M1_2)
                Uind=Uind+Uloc
+
+               ! Speed, order 2
                Uloc =0.0_ReKi
+               coeff = coeff5*0.5_ReKi
+               coeff7= -7.5_ReKi*fourpi_inv/r**7
+               ! TODO unroll this
                do i =1,3
-                  coeff = 1.5_ReKi*fourpi_inv/r**5
-                  Uloc(1) = Uloc(1) + coeff * (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
-                  Uloc(2) = Uloc(2) + coeff * (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
-                  Uloc(3) = Uloc(3) + coeff * (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
+                  Uloc(1) = Uloc(1) + coeff* (y*node%Moments(3,5+2*(i/2)+3*(i/3)) - z*node%Moments(2,5+2*(i/2)+3*(i/3)))
+                  Uloc(2) = Uloc(2) + coeff* (z*node%Moments(1,5+2*(i/2)+3*(i/3)) - x*node%Moments(3,5+2*(i/2)+3*(i/3)))
+                  Uloc(3) = Uloc(3) + coeff* (x*node%Moments(2,5+2*(i/2)+3*(i/3)) - y*node%Moments(1,5+2*(i/2)+3*(i/3)))
                   do j=1,i
                      if (i==j) then
                         ieqj = 1
                      else
                         ieqj = 2 
                      end if
-                     coeff = -7.5_ReKi*DeltaP(i)*DeltaP(j)*fourpi_inv/r**7
-                     Uloc(1) = Uloc(1) + ieqj * coeff * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
-                     Uloc(2) = Uloc(2) + ieqj * coeff * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
-                     Uloc(3) = Uloc(3) + ieqj * coeff * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
+                     coeff7ij = DeltaP(i)*DeltaP(j)*coeff7
+                     Uloc(1) = Uloc(1) + ieqj * coeff7ij * ( y*node%Moments(3,3+i+j+i/3) - z*node%Moments(2,3+i+j+i/3))
+                     Uloc(2) = Uloc(2) + ieqj * coeff7ij * ( z*node%Moments(1,3+i+j+i/3) - x*node%Moments(3,3+i+j+i/3))
+                     Uloc(3) = Uloc(3) + ieqj * coeff7ij * ( x*node%Moments(2,3+i+j+i/3) - y*node%Moments(1,3+i+j+i/3))
                   end do
                end do
-               coeff = 3.0_ReKi*fourpi_inv/r**5
-               Uloc(1) = Uloc(1) + coeff * ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
-               Uloc(2) = Uloc(2) + coeff * ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
-               Uloc(3) = Uloc(3) + coeff * ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
+               Uloc(1) = Uloc(1) + coeff5* ( y*node%Moments(3,M2_22) - z*node%Moments(2,M2_33) )
+               Uloc(2) = Uloc(2) + coeff5* ( z*node%Moments(1,M2_33) - x*node%Moments(3,M2_11) )
+               Uloc(3) = Uloc(3) + coeff5* ( x*node%Moments(2,M2_11) - y*node%Moments(1,M2_22) )
 
-               coeff = 3.0_ReKi*fourpi_inv/r**5 
-               Uloc(1) = Uloc(1) + coeff * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
-               Uloc(2) = Uloc(2) + coeff * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
-               Uloc(3) = Uloc(3) + coeff * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
+               Uloc(1) = Uloc(1) + coeff5* (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
+               Uloc(2) = Uloc(2) + coeff5* (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
+               Uloc(3) = Uloc(3) + coeff5* (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
                Uind(1:3) = Uind(1:3) + Uloc
-               nQuad=nQuad+1
             end if ! Far enough
          end if ! had more than 1 particles
-      end subroutine ui_tree_11
-   end subroutine  ui_tree
+      end subroutine ui_tree_part_11
+   end subroutine  ui_tree_part
 
    subroutine ui_tree_segment(Tree, CPs, ioff, icp_beg, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: fourpi_inv, ui_seg_11
@@ -1566,30 +1563,27 @@ contains
       character(*),                  intent(  out) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
       real(ReKi), dimension(3) :: Uind_tmp !<
       real(ReKi), dimension(3) :: CP       !< Current CP
-      integer :: icp, nDirect, nQuad
+      integer :: icp
       type(T_Seg), pointer :: Seg ! Alias
       Seg => Tree%Seg
       if(.not. associated(Seg%SP)) then
          ErrMsg='Ui Part Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return
       endif
       !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(icp,CP,Uind_tmp,nDirect,nQuad) schedule(runtime)
+      !$OMP DO PRIVATE(icp,CP,Uind_tmp) schedule(runtime)
       do icp=icp_beg,icp_end
          CP = CPs(1:3,icp)
          Uind_tmp(1:3) = 0.0_ReKi
-         nDirect =0
-         nQuad =0
-         call ui_tree_segment_11(Tree%root, CP, Uind_tmp, nDirect, nQuad) !< SIDE EFFECTS
-         !print*,' Segment Number of direct calls, and quad calls',nDirect, nQuad
+         call ui_tree_segment_11(Tree%root, CP, Uind_tmp) !< SIDE EFFECTS
+         !print*,' Segment Number of direct calls, and quad calls'
          Uind(1:3,ioff+icp-icp_beg+1) = Uind(1:3,ioff+icp-icp_beg+1) + Uind_tmp(1:3)
       enddo
       !$OMP END DO
       !$OMP END PARALLEL
    contains
       !> Velocity at one control point from the entire tree
-      recursive subroutine ui_tree_segment_11(node, CP, Uind, nDirect, nQuad)
+      recursive subroutine ui_tree_segment_11(node, CP, Uind)
          real(ReKi),dimension(3),intent(inout) :: CP, Uind  !< Velocity at control point, with side effect
-         integer, intent(inout) :: nDirect,nQuad
          type(T_Node), intent(inout) :: node
          real(ReKi) :: distDirect, coeff
          real(ReKi),dimension(3) :: DeltaP, DeltaPa, DeltaPb, phi, Uloc
@@ -1606,7 +1600,6 @@ contains
                   DeltaPa = CP(1:3) - Seg%SP(1:3,Seg%SConnct(1,iPart))
                   DeltaPb = CP(1:3) - Seg%SP(1:3,Seg%SConnct(2,iPart))
                   call ui_seg_11(DeltaPa, DeltaPb, Seg%SGamma(iPart), Seg%RegFunction, Seg%RegParam(iPart), Uloc)
-                  nDirect=nDirect+1
                   Uind(1:3) = Uind(1:3) + Uloc
                enddo
             endif
@@ -1623,14 +1616,13 @@ contains
                      DeltaPa = CP(1:3) - Seg%SP(1:3,Seg%SConnct(1,iPart))
                      DeltaPb = CP(1:3) - Seg%SP(1:3,Seg%SConnct(2,iPart))
                      call ui_seg_11(DeltaPa, DeltaPb, Seg%SGamma(iPart), Seg%RegFunction, Seg%RegParam(iPart), Uloc)
-                     nDirect=nDirect+1
                      Uind(1:3) = Uind(1:3) + Uloc
                   enddo
                endif
                if(associated(node%branches)) then
                   ! TODO: consider implementing a recursive method for that: direct call on all children
                   do i =1,size(node%branches)
-                     call ui_tree_segment_11(node%branches(i), CP, Uind, nDirect, nQuad)
+                     call ui_tree_segment_11(node%branches(i), CP, Uind)
                   end do
                endif
 
@@ -1697,7 +1689,6 @@ contains
                Uloc(2) = Uloc(2) + coeff * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
                Uloc(3) = Uloc(3) + coeff * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
                Uind(1:3) = Uind(1:3) + Uloc
-               nQuad=nQuad+1
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_segment_11

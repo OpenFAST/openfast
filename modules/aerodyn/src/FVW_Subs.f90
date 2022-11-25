@@ -1247,10 +1247,11 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
    elseif (p%VelocityMethod==idVelocityTree) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
 
    elseif (p%VelocityMethod==idVelocityPart) then
       call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
+
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
       call ui_tree_segment(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
    endif

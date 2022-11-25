@@ -408,7 +408,7 @@ contains
       U_ref =0.0_ReKi
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
       call test_almost_equal(testname,'Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
@@ -424,7 +424,7 @@ contains
       U_ref =0.0_ReKi
       call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
       ! Test
       call test_almost_equal(testname,'Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
@@ -457,7 +457,7 @@ contains
       do iCP=1,4
          CPs(:,1) = CPs_test(:,icp)
          Uind2=0.0_ReKi; Uind1=0.0_ReKi
-         call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+         call ui_tree_part(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
          call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
          !print*,'Uind',Uind1, Uind2
          ! Test
@@ -465,7 +465,7 @@ contains
       enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
       call test_equal(testname,'Err. stat tree cut',ErrStat,ErrID_Fatal)
       call dealloc()
 
