@@ -60,7 +60,7 @@ module FVW_VortexTools
    !> The node type is recursive and is used to make a chained-list of nodes for the tree
    type T_Node
       real(ReKi)                         :: radius !< Typical dimension of a cell (max of x,y,z extent)
-      real(ReKi),dimension(3)            :: center
+      real(ReKi),dimension(3)            :: center !< Used to store first the geometric center, then the vorticity center
       real(ReKi),dimension(3,10)         :: Moments
       integer,dimension(:),pointer       :: iPart=>null()  !< indexes of particles stored in this node
       integer,dimension(:),pointer       :: leaves=>null()  ! NOTE: leaves are introduced to save memory
@@ -688,7 +688,7 @@ contains
          return ! NOTE: we exit 
       endif
       VortC = VortC/wTot ! barycenter of vorticity
-      node%center   = VortC  ! updating
+      node%center  = VortC ! updating center, it's now the vorticity center, geomCenter will be use to divide cell though
 
       ! --- Calculation of moments about VortC
       do i = 1,node%nPart
@@ -701,7 +701,7 @@ contains
          node%Moments(1:3,M1_100) = node%Moments(1:3,M1_100) + PartAlpha*DeltaP(1) ! 100
          node%Moments(1:3,M1_010) = node%Moments(1:3,M1_010) + PartAlpha*DeltaP(2) ! 010
          node%Moments(1:3,M1_001) = node%Moments(1:3,M1_001) + PartAlpha*DeltaP(3) ! 001
-         ! 2nd order                                                                  j         k
+         ! 2nd order
          ! KEEP ME:
          !   do j=1,3
          !      do k=1,j
@@ -1036,7 +1036,7 @@ contains
          return ! NOTE: we exit
       endif
       VortC = VortC/wTot ! barycenter of vorticity
-      node%center   = VortC  ! updating
+      node%center  = VortC ! updating center, it's now the vorticity center, geomCenter will be use to divide cell though
 
       ! --- Calculation of moments about VortC
       do i = 1,node%nPart
@@ -1078,7 +1078,7 @@ contains
       do i = 1,node%nPart
          P1 = Seg%SP(1:3,Seg%SConnct(1,node%iPart(i)))
          P2 = Seg%SP(1:3,Seg%SConnct(2,node%iPart(i)))
-         SegCenter      = 0.5_ReKi*(P1+P2)
+         SegCenter = 0.5_ReKi*(P1+P2) ! We use the segment center. We could consider looking at point 1 and 2 separately 
          ! index corresponding to which octant the particle falls into
          iPartOctant = int(1,IK1)
          if (SegCenter(1) > GeomC(1)) iPartOctant = iPartOctant + int(1,IK1)
@@ -1267,9 +1267,24 @@ contains
    end subroutine cut_substep
    
    !> Cut a tree and all its sub-branches, unrolled to use parallelization for the first 3 levels
-   subroutine cut_tree_parallel(Tree)
+   subroutine cut_tree_parallel(Tree, deallocPart, deallocSgmt)
       type(T_Tree), intent(inout) :: Tree
-      integer :: i,i1,i2,nBranches
+      logical, optional, intent(in)  :: deallocPart
+      logical, optional, intent(in)  :: deallocSgmt
+      integer :: i,i1,i2,nBranches,istat
+      ! --- Deallocating data we are pointing to, only if user requests it
+      if (present(deallocPart)) then
+         if (deallocPart) then
+            deallocate(Tree%Part%P        , stat=istat)
+            deallocate(Tree%Part%AlphA    , stat=istat)
+            deallocate(Tree%Part%RegParam , stat=istat)
+         endif
+      endif
+      if (present(deallocSgmt)) then
+         if (deallocSgmt) then
+            deallocate(Tree%Seg%SP, Tree%Seg%SConnct, Tree%Seg%SGamma, Tree%Seg%RegParam, stat=istat)
+         endif
+      endif
       ! --- Unlinking particles 
       nullify(Tree%Part%P)
       nullify(Tree%Part%Alpha)
@@ -1425,10 +1440,10 @@ contains
    ! --------------------------------------------------------------------------------
    ! --- Velocity computation 
    ! --------------------------------------------------------------------------------
-   subroutine ui_tree_part(Tree, CPs, icp_end, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
+   subroutine ui_tree_part(Tree, icp_end, CPs, BranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
       use FVW_BiotSavart, only: ui_part_nograd_11
       type(T_Tree), target,          intent(inout) :: Tree            !< 
-      integer,                       intent(in   ) :: icp_end         !< 
+      integer,                       intent(in   ) :: icp_end         !< Number of CPs to use <size(CPs,2)
       real(ReKi),                    intent(in   ) :: BranchFactor    !<
       real(ReKi),                    intent(in   ) :: DistanceDirect  !< Distance under which direct evaluation should be done no matter what the tree cell size is
       real(ReKi), dimension(:,:),    intent(in   ) :: CPs             !< Control Points  (3 x nCPs)
@@ -1648,7 +1663,7 @@ contains
          ErrMsg='Ui Sgmt Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return
       endif
       !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(icp,CP,Uind_tmp) schedule(runtime)
+      !$OMP DO PRIVATE(icp, CP, Uind_tmp) schedule(runtime)
       do icp=1,icp_end
          CP = CPs(1:3,icp)
          Uind_tmp(1:3) = 0.0_ReKi
@@ -1665,6 +1680,7 @@ contains
          type(T_Node), intent(inout) :: node
          real(ReKi) :: distDirect
          real(ReKi),dimension(3) :: DeltaP, DeltaPa, DeltaPb, Uloc
+         real(ReKi),dimension(3) :: Uquad
          real(ReKi) :: r
          real(ReKi) :: coeff, coeff3, coeff5, coeff7, coeff7ij
          real(ReKi) :: x, y, z
@@ -1720,7 +1736,7 @@ contains
                Uloc(1) = phi(2)*z - phi(3)*y
                Uloc(2) = phi(3)*x - phi(1)*z
                Uloc(3) = phi(1)*y - phi(2)*x
-               Uind = Uind + Uloc
+               Uquad = Uloc
 
                ! Speed, order 1
                Uloc=0.0_ReKi
@@ -1743,7 +1759,7 @@ contains
                Uloc(1) = Uloc(1) + coeff3*node%Moments(3,M1_2) - coeff3*node%Moments(2,M1_3)
                Uloc(2) = Uloc(2) + coeff3*node%Moments(1,M1_3) - coeff3*node%Moments(3,M1_1)
                Uloc(3) = Uloc(3) + coeff3*node%Moments(2,M1_1) - coeff3*node%Moments(1,M1_2)
-               Uind=Uind+Uloc
+               Uquad = Uquad + Uloc
 
                ! Speed, order 2
                Uloc =0.0_ReKi
@@ -1825,7 +1841,9 @@ contains
                Uloc(1) = Uloc(1) + coeff5 * (z*node%Moments(3,M2_32) + x*node%Moments(3,M2_21) - x*node%Moments(2,M2_31) - y*node%Moments(2,M2_32))
                Uloc(2) = Uloc(2) + coeff5 * (x*node%Moments(1,M2_31) + y*node%Moments(1,M2_32) - y*node%Moments(3,M2_21) - z*node%Moments(3,M2_31))
                Uloc(3) = Uloc(3) + coeff5 * (y*node%Moments(2,M2_21) + z*node%Moments(2,M2_31) - z*node%Moments(1,M2_32) - x*node%Moments(1,M2_21))
-               Uind = Uind + Uloc
+               Uquad = Uquad + Uloc
+
+               Uind = Uind + Uquad
             end if ! Far enough
          end if ! had more than 1 particles
       end subroutine ui_tree_segment_11

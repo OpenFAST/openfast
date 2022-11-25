@@ -943,7 +943,7 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
             print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
-         if (any(SegPoints(3,:)<-99._ReKi)) then
+         if (any(SegPoints(3,:)<-999._ReKi)) then
             print*,'PackPanelsToSegments: some segments are NAN'
             STOP ! Keep me. The check will be removed once the code is well established
          endif
@@ -1171,12 +1171,20 @@ subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part)
    type(T_Part),                    intent(inout) :: Part  !< Particles
    integer(IntKi) :: iHeadP
    integer(IntKi) :: nPart
+   logical, parameter :: alloc  =.true.  !< Should we allocate the particles?
    iHeadP=1
    nPart = PartPerSegment * nSeg
-   allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart)) ! NOTE: remember to deallocate
+   ! --- Allocate
+   if (alloc)  then
+      if (associated(Part%P))        deallocate(Part%P)
+      if (associated(Part%Alpha))    deallocate(Part%Alpha)
+      if (associated(Part%RegParam)) deallocate(Part%RegParam)
+      allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart)) ! NOTE: remember to deallocate
+   endif
    Part%Alpha(:,:)  = -99999.99_ReKi
    Part%P(:,:)      = -99999.99_ReKi
    Part%RegParam(:) = -99999.99_ReKi
+
    call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
    if (RegFunction/=idRegNone) then
       Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
@@ -1227,7 +1235,7 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
       call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
 
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
-      call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma, p%RegFunction, Sgmt%Epsilon, 0)
+      call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma(1:nSeg), p%RegFunction, Sgmt%Epsilon(1:nSeg), 0)
    endif
 
 end subroutine InducedVelocitiesAll_Init
@@ -1253,10 +1261,10 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
    elseif (p%VelocityMethod==idVelocityTreePart) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree_part(Tree, CPs, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
 
    elseif (p%VelocityMethod==idVelocityPart) then
-      call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
+      call ui_part_nograd(nCPs, CPs, size(Part%P,2), Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind)
 
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
       call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
@@ -1281,14 +1289,13 @@ subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
       ! Nothing
 
    elseif (p%VelocityMethod==idVelocityTreePart) then
-      call cut_tree(Tree)
-      deallocate(Part%P, Part%Alpha, Part%RegParam)
+      call cut_tree(Tree, deallocPart=.true.)
 
    elseif (p%VelocityMethod==idVelocityPart) then
       deallocate(Part%P, Part%Alpha, Part%RegParam)
 
    elseif (p%VelocityMethod==idVelocityTreeSeg) then
-      call cut_tree(Tree)
+      call cut_tree(Tree) ! We do not deallocate segment
    endif
 
 end subroutine InducedVelocitiesAll_End
@@ -1427,6 +1434,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    type(T_Tree) :: Tree !< Tree of particles/segment if needed
+   !type(T_Part) :: Part  !< Particle storage if needed
    logical      :: bMirror
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1483,7 +1491,8 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
          !call toc()
       else
-         ! --- Compute maximum wing length
+
+         !! --- Compute maximum wing length
          MaxWingLength = 0.0_ReKi
          do iW=1,p%nWings
             MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
@@ -1497,6 +1506,15 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
          call toc()
          call toc()
+
+         !! --- Alternative, particle
+         !call tic('ui_part')
+         !call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment*10, p%RegFunction, Part)
+         !call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+         !call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+         !call cut_tree(Tree, deallocPart=.true.)
+         !call toc()
+
       endif
 
       ! --- Unpack

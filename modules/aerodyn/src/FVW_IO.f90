@@ -111,7 +111,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    if(ErrStat2==ErrID_None) then
       call WrScr(' - Reading advanced options for OLAF:')
       do while(ErrStat2==ErrID_None)
-         read(UnIn, '(A)',iostat=ErrStat2) sDummy
+         read(UnIn, '(A)', iostat=ErrStat2) sDummy
+         if (ErrStat2/=ErrID_None) exit
          call Conv2UC(sDummy)  ! to uppercase
          if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
             ! pass comment lines

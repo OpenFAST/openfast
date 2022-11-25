@@ -361,7 +361,7 @@ contains
             RegFunction = idRegPartVALID(i1)
             ! Method 1
             Uind_out =0.0_ReKi
-            call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind_out, nCPs, nPart)
+            call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_part_nograd_11(CP-P1, PartAlpha1, RegFunction, RegParam1, U1)
             ! Test
@@ -408,8 +408,8 @@ contains
       U_ref =0.0_ReKi
       call grow_tree_part(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree_part(Tree, CPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
       ! Test
       call test_almost_equal(testname,'Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
@@ -424,8 +424,8 @@ contains
       U_ref =0.0_ReKi
       call grow_tree_part(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree_part(Tree, CPs, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
       ! Test
       call test_almost_equal(testname,'Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
@@ -457,15 +457,15 @@ contains
       do iCP=1,4
          CPs(:,1) = CPs_test(:,icp)
          Uind2=0.0_ReKi; Uind1=0.0_ReKi
-         call ui_tree_part(Tree, CPs, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
-         call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+         call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+         call ui_part_nograd(nCPs, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
          !print*,'Uind',Uind1, Uind2
          ! Test
          call test_almost_equal(testname,'Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
       enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
-      call ui_tree_part(Tree, CPs, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
       call test_equal(testname,'Err. stat tree cut',ErrStat,ErrID_Fatal)
       call dealloc()
 
@@ -543,7 +543,7 @@ contains
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
       call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_part_nograd(nCPSTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       call test_almost_equal(testname,'Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
       call dealloc()
 
@@ -559,7 +559,7 @@ contains
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
       call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_part_nograd(nCPsTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       call test_almost_equal(testname,'Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
       call dealloc()
 
@@ -577,7 +577,7 @@ contains
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
       call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_part_nograd(nCPSTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       !print'(A,10F7.3)','Uind1',Uind1(1,:)
       !print'(A,10F7.3)','Uind2',Uind2(1,:)
       !print'(A,10F7.3)','Uind1',Uind1(2,:)
@@ -790,7 +790,7 @@ contains
             do k=1,size(x%W(iW)%r_NW,3); 
                x%W(iW)%r_NW(1,j,k) = real(k, ReKi)/p%nNWMax*(nR*R)
                x%W(iW)%r_NW(2,j,k) = real(j, ReKi)/nSpan*R*cos(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5)
-               x%W(iW)%r_NW(3,j,k) = real(j, ReKi)/nSpan*R*sin(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5)
+               x%W(iW)%r_NW(3,j,k) = real(j, ReKi)/nSpan*R*sin(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5) + 1.5*R
             enddo
          enddo
          do j=1,size(x%W(iW)%r_NW,2)-1 
