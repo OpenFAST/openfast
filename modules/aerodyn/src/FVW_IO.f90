@@ -106,10 +106,6 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! --- Advanced Options
    ! NOTE: no error handling since this is for debug
    ! Default options are typically "true"
-   p%InductionAtCP = .true.  ! Compute the induced velocities at Control Points, otherwise, at nodes
-   p%WakeAtTE      = .true.  ! The wake starts at the trailing edge, otherwise, directly at the lifting line
-   p%Induction     = .true.  ! Compute induced velocities, otherwise 0 induced velocities on the lifting line!
-   p%DStallOnWake  = .false.
    CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
    CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
    if(ErrStat2==ErrID_None) then
@@ -117,20 +113,28 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
       do while(ErrStat2==ErrID_None)
          read(UnIn, '(A)',iostat=ErrStat2) sDummy
          call Conv2UC(sDummy)  ! to uppercase
-         if (index(sDummy, 'INDUCTIONATCP')>1) then
+         if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
+            ! pass comment lines
+         elseif (index(sDummy, 'INDUCTIONATCP')>1) then
             read(sDummy, '(L1)') p%InductionAtCP
-            print*,'   >>> InductionAtCP',p%InductionAtCP
+            print*,'   >>> InductionAtCP  ',p%InductionAtCP
          elseif (index(sDummy, 'WAKEATTE')>1) then
             read(sDummy, '(L1)') p%WakeAtTE
-            print*,'   >>> WakeAtTE     ',p%WakeAtTE
+            print*,'   >>> WakeAtTE       ',p%WakeAtTE
          elseif (index(sDummy, 'DSTALLONWAKE')>1) then
             read(sDummy, '(L1)') p%DStallOnWake
-            print*,'   >>> DStallOnWake ',p%DStallOnWake
+            print*,'   >>> DStallOnWake   ',p%DStallOnWake
          elseif (index(sDummy, 'INDUCTION')>1) then
             read(sDummy, '(L1)') p%Induction
-            print*,'   >>> Induction    ',p%Induction
+            print*,'   >>> Induction      ',p%Induction
+         elseif (index(sDummy, 'KFROZENNWEND')>1) then
+            read(sDummy, *) p%kFrozenNWEnd
+            print*,'   >>> kFrozenNWEnd   ',p%kFrozenNWEnd
+         elseif (index(sDummy, 'KFROZENNWSTART')>1) then
+            read(sDummy, *) p%kFrozenNWStart
+            print*,'   >>> kFrozenNWStart ',p%kFrozenNWStart
          else
-            print*,'   >>> Line ignored, starting with'//trim(sDummy)
+            print*,'[WARN] Line ignored: '//trim(sDummy)
          endif
       enddo
    endif
@@ -161,7 +165,6 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
       call WrScr('nNWPanelsFree < nNWPanels is a beta feature for simulation speed up.')
       call WrScr('The frozen near-wake convection might slightly change in the future.')
       call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-      if (Check( Inp%nFWPanels>0     , 'Number of far wake panels must be 0 when using a fixed NW')) return
       if (Check( Inp%nFWPanelsFree>0 , 'Number of free wake panels must be 0 when using a fixed NW')) return
    endif
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return
@@ -177,6 +180,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! Still we force the user to be responsible.
    if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<30, '`FWShedVorticity` should be true if `nNWPanels`<30. Alternatively, use a larger number of NWPanels  ')) return
 
+   if (Check(p%kFrozenNWEnd>p%kFrozenNWStart , 'kFrozenNWEnd should be smaller than kFrozenNWStart')) return
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
    !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return

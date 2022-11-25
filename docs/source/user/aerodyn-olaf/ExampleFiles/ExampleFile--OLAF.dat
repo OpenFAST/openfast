@@ -14,9 +14,10 @@ default CircSolvMaxIter    Maximum number of iterations for circulation solving 
 ===============================================================================================
 --------------------------- WAKE OPTIONS ------------------------------------------------------
 ------------------- WAKE EXTENT AND DISCRETIZATION --------------------------------------------
-150     nNWPanel           Number of near-wake panels (-)
-400     nFWPanel           Number of far-wake panels (-)
-default nFWPanelFree       Number of free far-wake panels (-) {default: nFWPanel}
+150     nNWPanels          Number of near-wake panels (-)
+default nNWPanelsFree      Number of free near-wake panels (-) {default: nNWPanels}
+400     nFWPanels          Number of far-wake panels (-)
+default nFWPanelsFree      Number of free far-wake panels (-) {default: nNWPanels}
 False   FWShedVorticity    Include shed vorticity in the far wake {default: false}
 ------------------- WAKE REGULARIZATIONS AND DIFFUSION -----------------------------------------
 0       DiffusionMethod    Diffusion method to account for viscous effects {0: None, 1: Core Spreading, "default": 0}         

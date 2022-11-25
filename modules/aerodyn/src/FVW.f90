@@ -82,16 +82,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    call getcwd(DirName)
    call WrScr(' - Directory:         '//trim(DirName))
    call WrScr(' - RootName:          '//trim(InitInp%RootName))
-#ifdef _OPENMP   
-   call WrScr(' - Compiled with OpenMP')
-   !$OMP PARALLEL default(shared)
-   if (omp_get_thread_num()==0) then
-        call WrScr('   Number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
-   endif
-   !$OMP END PARALLEL 
-#else
-   call WrScr(' - No OpenMP support')
-#endif
    if (DEV_VERSION) then
       CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
    endif
@@ -403,6 +393,8 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
       nBldPerRot(p%W(iW)%iRotor) = nBldPerRot(p%W(iW)%iRotor)+1
       p%Bld2Wings(p%W(iW)%iRotor, nBldPerRot(p%W(iW)%iRotor)) = iW
    enddo
+
+   if (allocated(nBldPerRot)) deallocate(nBldPerRot)
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
@@ -774,11 +766,13 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
    integer(IntKi)       :: nNWEff ! Number of nearwake panels that are free at current time step
+   integer(IntKi)       :: nNWEffEnd ! End the number of free nearwake panels
    integer(IntKi)       :: j,k,iW,nP
    real(ReKi)           :: visc_fact  ! Viscosity factor for diffusion of reg param
+   real(ReKi)           :: UiScale  ! Scale induced velocity from full to 0 in frozen wake
    real(ReKi), dimension(3) :: VmeanFWFree, VmeanNW, VmeanNWFree ! Mean velocity of the near wake and far wake
    real(ReKi), dimension(3) :: VmeanNWFixed
-
+   integer(IntKi), parameter :: nNWFreeAvg=20 ! Number of parameters used to compute velocity for frozen wake
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -802,6 +796,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    if ((t>= p%FreeWakeStart)) then
       nNWEff = min(m%nNW, p%nNWFree)
       nFWEff = min(m%nFW, p%nFWFree)
+      nNWEffEnd = max(nNWEff-nNWFreeAvg, 2) ! start for frozen convection average
 
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
       ! (expensive N^2 call)
@@ -809,22 +804,28 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! Out:  m%W(iW)%Vind_NW, m%Vind_FW 
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-      ! --- Mean induced velocity over the free near wake (NW) TODO, store per wing
+      ! --- Mean induced velocity over end of the free near wake (NW)
       VmeanNWFree(1:3)=0
       if (nNWEff >0) then
          nP=0;
-         do iW=1,size(m%W); do j=2,nNWEff+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+         do iW=1,size(m%W); do j=nNWEffEnd,nNWEff+1; do k=1,size(m%W(iW)%Vind_NW,2); 
             VmeanNWFree(1:3) = VmeanNWFree(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
             nP=nP+1;
          enddo; enddo; enddo; 
          VmeanNWFree(1:3) = VmeanNWFree(1:3) / nP
       endif
-      ! --- Convecting non-free NW with a constant induced velocity (and free stream)
-      ! TODO consider using a velocity more local
+      ! --- Convecting non-free NW based on an average (decaying) induced velocity (and free stream)
       do iW=1,p%nWings
-         m%W(iW)%Vind_NW(1, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(1) !
-         m%W(iW)%Vind_NW(2, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(2) !
-         m%W(iW)%Vind_NW(3, :, p%nNWFree+2:p%nNWMax+1) = VmeanNWFree(3) !
+         do j=p%nNWFree+2,p%nNWMax+1
+            ! Scale so that induced velocity scale goes from s=kFrozenNWStart to e=kFrozenNWEnd in frozen Wake
+            ! Uiscale = [ (e-s)*j + b*s - a*e ]/(b-a)  b=(p%nNWMax+1) , a=(p%nNWFree+2)
+            UiScale =  ( (p%kFrozenNWEnd-p%kFrozenNWStart)*j + (p%nNWMax+1)*p%kFrozenNWStart - (p%nNWFree+2)*p%kFrozenNWEnd)/(p%nNWMax+1-(p%nNWFree+2))
+            do k=1,size(m%W(iW)%Vind_NW,2);
+               m%W(iW)%Vind_NW(1, k, j) = VmeanNWFree(1)*UiScale !
+               m%W(iW)%Vind_NW(2, k, j) = VmeanNWFree(2)*UiScale !
+               m%W(iW)%Vind_NW(3, k, j) = VmeanNWFree(3)*UiScale !
+            enddo
+         enddo
       enddo
 
       ! --- Mean induced velocity over the full near wake (NW) TODO, store per wing
@@ -857,7 +858,11 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
          enddo; enddo; enddo; 
          VmeanFWFree(1:3) = VmeanFWFree(1:3) / nP
       else
-         VmeanFWFree=VmeanNW
+         if (p%nNWMax==p%nNWFree) then ! No frozen near wake
+            VmeanFWFree=VmeanNW
+         else ! a frozen near wake is present, frozen far wake we convect at same end velocity as end of frozen near wake
+            VmeanFWFree=VmeanNWFree*p%kFrozenNWEnd
+         endif
          ! Since we convect the first FW point, we need a reasonable velocity there 
          ! NOTE: mostly needed for sub-cycling and when no FW
          do iW=1,p%nWings
@@ -1409,6 +1414,17 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    ! Compute induced velocity at AD nodes
    call CalcOutputForAD(t,u,p,x,y,m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   ! Write some info to screen when major milestone achieved
+   if (m%iStep == p%nNWFree) then
+      call WrScr(NewLine//'[INFO] OLAF free near wake is at full extent at time: '//trim(num2lstr(t)))
+   endif
+   if (m%iStep == p%nNWMax) then
+      call WrScr(NewLine//'[INFO] OLAF near wake is at full extent at time: '//trim(num2lstr(t)))
+   endif
+   if (p%nFWMax>0 .and. m%iStep== p%nNWMax+p%nFWMax) then
+      call WrScr(NewLine//'[INFO] OLAF far wake is at full extent at time: '//trim(num2lstr(t)))
+   endif
    
    ! Export to VTK
    if (m%VTKStep==-1) then 

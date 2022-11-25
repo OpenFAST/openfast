@@ -56,27 +56,27 @@ value is :math:`0`.
 Circulation Specifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**CircSolvMethod** [switch] specifies which circulation method is used. There
+**CircSolvingMethod** [switch] specifies which circulation method is used. There
 are three options: 1) :math:`C_l`-based iterative procedure *[1]*, 2) no-flow
 through *[2]*, and 3) prescribed *[3]*. The default option is *[1]*. These
 methods are described in :numref:`sec:circ`.
 
 **CircSolvConvCrit** [-] specifies the dimensionless convergence criteria used
 for solving the circulation. This variable is only used if
-*CircSolvMethod* = *[1]*. The default value is
+*CircSolvingMethod* = *[1]*. The default value is
 :math:`0.001`, corresponding to :math:`0.1\%` error in the circulation between
 two iterations.
 
 **CircSolvRelaxation** [-] specifies the relaxation factor used to solve the
-circulation.  This variable is only used if *CircSolvMethod* =
+circulation.  This variable is only used if *CircSolvingMethod* =
 *[1]*. The default value is :math:`0.1`.
 
 **CircSolvMaxIter** [-] specifies the maximum number of iterations used to solve
-the circulation. This variable is only used if *CircSolvMethod* = *[1]*. The
+the circulation. This variable is only used if *CircSolvingMethod* = *[1]*. The
 default value is :math:`30`.
 
 **PrescribedCircFile** [quoted string] specifies the file containing the
-prescribed blade circulation. This option is only used if *CircSolvMethod* =
+prescribed blade circulation. This option is only used if *CircSolvingMethod* =
 *[3]*.  The circulation file format is a delimited file with one header line and
 two columns. The first column is the dimensionless radial position [r/R]; the
 second column is the bound circulation value in [m\ :math:`^2`/s].  The radial
@@ -89,20 +89,35 @@ Wake Extent and Discretization Options
 
 
 
-**nNWPanel** [-] specifies the number of near-wake (NW) panels (i.e. FVW time steps, **DTfvw**) used for the extent of the near-wake lattice.
+**nNWPanels** [-] specifies the number of near-wake (NW) panels (i.e. FVW time steps, **DTfvw**) used for the extent of the near-wake lattice.
 See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
 
-**nFWPanel** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
+**nNWPanelsFree** [-] specifies the number of near-wake panels (in FVW time steps), for which the
+wake is convected as "free." 
+If *nNWPanelsFree* is equal to than
+*nNWPanels*, then the entire near wake is free. Otherwise, the Lagrangian markers
+located within the buffer zone ("frozen near wake") delimited by *nNWPanelsFree* and *nNWsPanel*
+are all convected with a common and decaying induced velocity but with a varying free-stream.  
+Currently, the induced velocity for the frozen near wake is determined as the average over 
+the last 20 panels of the free near wake. The decay is such that the induced velocity is about 50% at the end of the frozen near wake.
+If a "frozen" near-wake region is used then the "free" far-wake region needs to be of zero length (**nFWPanelsFree=0**)
+By default, this variable is set to **nNWPanels** (no frozen wake).
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
+
+**nFWPanels** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
 See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
  
 
-**nFWPanelFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
+**nFWPanelsFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
 wake is convected as "free." 
-If *nFWPanelFree* is greater than
-*nFWPanel*, then the entire far-wake is free. Otherwise, the Lagrangian markers
-located within the buffer zone delimited by *nNWPanelFree* and *nNWPanel*
-are convected with the average velocity.  
-By default, this variable is set to **nFWPanel**.
+If *nFWPanelsFree* is greater than
+*nFWPanels*, then the entire far-wake is free. Otherwise, the Lagrangian markers
+located within the buffer zone ("frozen far wake") delimited by *nNWPanelsFree* and *nNWPanels*
+are all convected with a common induced velocity but with a varying free-stream.  
+Currently, the induced velocity for the frozen far wake is determined as the average over 
+free far-wake when **nNWPanelsFree=nNWPanels** (i.e. no frozen near wake), and using the 
+same average convection as the frozen near wake otherwise.
+By default, this variable is set to **nFWPanels**.
 See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 
@@ -118,7 +133,7 @@ Wake Regularization and Diffusion Options
 for viscous diffusion. There are two options: 1) no diffusion *[0]* and 2) the
 core-spreading method *[1]*. The default option is *[0]*.
 
-**RegDetMethod** [switch] specifies which method is used to determine the
+**RegDeterMethod** [switch] specifies which method is used to determine the
 regularization parameters. There are four options: 1) constant *[0]* and 2)
 optimized *[1]*, 3) chord *[2]*, and 4) span *[3]*. 
 The optimized option determines all the parameters in this section for the user.
@@ -133,7 +148,7 @@ The default and recomment option is *[3]*.
    ,\quad
    r_{c,\text{blade}}(r) = \text{WingRegParam} 
 
-When **RegDetMethod==2**, the regularization parameters is set according to the local chord:
+When **RegDeterMethod==2**, the regularization parameters is set according to the local chord:
 
 .. math::
 
@@ -141,7 +156,7 @@ When **RegDetMethod==2**, the regularization parameters is set according to the 
    ,\quad
    r_{c,,\text{blade}}(r) = \text{WingRegParam} \cdot c(r)
 
-When **RegDetMethod==3**, the regularization parameters is set according to the spanwise discretization:
+When **RegDeterMethod==3**, the regularization parameters is set according to the spanwise discretization:
 
 .. math::
 

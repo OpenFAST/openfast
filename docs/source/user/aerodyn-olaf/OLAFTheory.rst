@@ -175,7 +175,7 @@ and normal (:math:`\vec{N}`) to the panel are defined as:
 
 The area of the panel is obtained as :math:`dA =
 |(\vec{x}_6-\vec{x}_8)\times(\vec{x}_{7}-\vec{x}_5)|`. For
-**CircSolvMethod=[1]**, the control points are located on the lifting-line at
+**CircSolvingMethod=[1]**, the control points are located on the lifting-line at
 the location :math:`\vec{x}_9+\eta_j \vec{dl}`. The factor :math:`\eta_j` is
 determined based on the full-cosine approximation of van Garrel. This is based
 on the spanwise widths of the current panel, :math:`w_j`, and the neighboring
@@ -201,7 +201,7 @@ Circulation Solving Methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Three methods are implemented to determine the bound circulation strength. They
-are selected using the input **CircSolvMethod**, and are presented in the
+are selected using the input **CircSolvingMethod**, and are presented in the
 following sections.
 
 Cl-Based Iterative Method
@@ -213,7 +213,7 @@ control point located on the lifting line. The algorithm ensures that
 the lift obtained using the angle of attack and the polar data matches
 the lift obtained with the Kutta-Joukowski theorem. At present, it is
 the preferred method to compute the circulation along the blade span. It is
-selected with **CircSolvMethod=[1]**. The method is described in the work from
+selected with **CircSolvingMethod=[1]**. The method is described in the work from
 van Garrel (:cite:`olaf-Garrel03_1`). The algorithm is implemented in at iterative
 approach using the following steps:
 
@@ -282,14 +282,14 @@ A Weissinger-L-based representation (:cite:`olaf-Weissinger47_1`)
 of the lifting surface is also
 available (:cite:`olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`). In this
 method, the circulation is solved by satisfying a no-flow through
-condition at the 1/4-chord points.  It is selected with **CircSolvMethod=[2]**.
+condition at the 1/4-chord points.  It is selected with **CircSolvingMethod=[2]**.
 
 Prescribed Circulation
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The final available method prescribes a constant circulation. A user
 specified spanwise distribution of circulation is prescribed onto the
-blades. It is selected with **CircSolvMethod=[3]**.
+blades. It is selected with **CircSolvingMethod=[3]**.
 
 
 .. _sec:vortconv:
@@ -341,6 +341,30 @@ where :math:`d\psi/dt=\Omega` and
 :math:`d\psi=d\zeta` (:cite:`olaf-Leishman02_1`). Here,
 :math:`\vec{r}(\psi,\zeta)` is the position vector of a Lagrangian
 marker, and :math:`\vec{V}[\vec{r}(\psi,\zeta)]` is the velocity.
+
+
+Frozen Vorticity Convection
+---------------------------
+
+For computational efficiency, the user can define a "frozen" near wake and far wake zone.
+In these zones, the Lagrangian markers are convected using an average induced velocity
+which is independent of the location of the marker. 
+The convection equation of the Lagrangian markers in the frozen zone is:
+
+.. math::
+   \frac{d\vec{r}_\zeta}{dt}=\vec{V}_0(\vec{r}_\zeta,t) + \vec{V}_\text{avg}(t)*k(\zeta)
+
+where :math:`\vec{V}_\text{avg}(t)` is an average induced velocity computed based on the average velocity of a subset of the "free" markers.
+:math:`k(\zeta)` is a decay factor between 1 and 0 based on the wake age :math:`\zeta`.
+Typical values would be such that the decay factor is 1 at the beginning of the frozen wake, and
+0.5 at the end of the frozen wake.
+The choice of which average velocity to use and it decays are tuning parameters that might change in future release. 
+Convecting the whole "frozen" wake with a unique induced velocity introduce a certain error.
+The advantage of having a "frozen" far-wake region, is that it mitigates the impact of wake truncation which is an erroneous boundary condition (vortex lines cannot end in the fluid). If the wake is truncated while still being "free", then the vorticity will rollup on itself in this region. 
+Another advantage is that in the absence of diffusion, the wake tends to become excessively distorted downstream, reaching limit on the validity of the vortex filament representation. 
+
+
+
 
 
 Induced Velocity and Velocity Field
@@ -446,10 +470,10 @@ The regularization parameter is both a function of the physics being modeled
 (blade boundary layer and wake) and the choice of discretization. Contributing
 factors are the chord length, the boundary layer height, and the volume that
 each vortex filament is approximating.  Currently the choice is left to the user
-(**RegDetMethod=[0]**).  Empirical results for a rotating blade are found in the
+(**RegDeterMethod=[0]**).  Empirical results for a rotating blade are found in the
 work of Gupta (:cite:`olaf-Gupta06_1`). As a guideline, the regularization parameter
 may be chosen as twice the average spanwise discretization of the blade. This
-guideline is implemented when the user chooses **RegDetMethod=[1]**. Further
+guideline is implemented when the user chooses **RegDeterMethod=[1]**. Further
 refinement of this option will be considered in the future.
 
 .. _sec:RegularizationFunction:

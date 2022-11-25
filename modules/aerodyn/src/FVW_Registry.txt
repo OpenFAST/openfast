@@ -97,10 +97,12 @@ typedef     ^                   ^               CHARACTER(1024)                 
 typedef     ^                   ^               CHARACTER(1024)                  VTK_OutFileBase - - - "Basename for writing VTK files"	-
 typedef     ^                   ^               IntKi                            nGridOut      -  - -    "Number of VTK grid to output" -
 # Parameters advanced options
-typedef     ^                   ^               Logical                          InductionAtCP - - -  "Compute induced velocities at nodes or CP" 
-typedef     ^                   ^               Logical                          WakeAtTE      - - -  "Start the wake at the trailing edge, or at the LL" 
-typedef     ^                   ^               Logical                          DStallOnWake  - - -  "Dynamic stall has influence on wake" 
-typedef     ^                   ^               Logical                          Induction     - - -  "Compute induction" 
+typedef     ^                   ^               Logical                          InductionAtCP - .true.  -  "Compute induced velocities at nodes or CP" 
+typedef     ^                   ^               Logical                          WakeAtTE      - .true.  -  "Start the wake at the trailing edge, or at the LL" 
+typedef     ^                   ^               Logical                          DStallOnWake  - .false. -  "Dynamic stall has influence on wake" 
+typedef     ^                   ^               Logical                          Induction     - .true.  -  "Compute induction" 
+typedef     ^                   ^               ReKi                             kFrozenNWStart - 0.75   -  "Fraction of wake induced velocity at start of frozen wake. 1 seems too strong." 
+typedef     ^                   ^               ReKi                             kFrozenNWEnd   - 0.5    -  "Fraction of wake induced velocity at end of frozen wake" 
 
 #.......... ContinuousStateType ......
 typedef FVW/FVW            Wng_ContinuousStateType   ReKi                        Gamma_NW     ::  -  -  "Circulation of the near wake panels (    nSpan     x nNW  )" -

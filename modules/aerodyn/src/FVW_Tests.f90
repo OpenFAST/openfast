@@ -833,6 +833,12 @@ contains
 
       call test_almost_equal(RoutineName,'Uind nNW/nNWFree', V1, V2, 1e-6_ReKi, .true.,.true.)
 
+      deallocate(V1)
+      deallocate(V2)
+      call FVW_DestroyParam(p, ErrStat2, ErrMsg2)
+      call FVW_DestroyContState(x, ErrStat2, ErrMsg2)
+      call FVW_DestroyMisc(m, ErrStat2, ErrMsg2)
+
    end subroutine FVW_Test_WakeInducedVelocities
 
    !> Main test function 
