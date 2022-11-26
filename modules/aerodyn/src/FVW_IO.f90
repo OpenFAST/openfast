@@ -72,8 +72,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod(1)  ,'VelocityMethod'    ,'',idVelocityTreePart, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor(1),'TreeBranchFactor'  ,'',1.5_ReKi        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegment(1)  ,'PartPerSegment'    ,'',  1             , ErrStat2,ErrMsg2); if(Failed())return
-   Inp%PartPerSegment(2)   = 2
-   Inp%TreeBranchFactor(2) = 5.0_ReKi
+   Inp%PartPerSegment(2)   = 1
+   Inp%TreeBranchFactor(2) = 2.0_ReKi
    Inp%VelocityMethod(2)   = idVelocityBasic
    !CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod,   2,'VelocityMethod'    ,'',(/idVelocityTreePart, idVelocityTreeSeg/) , ErrStat2,ErrMsg2); if(Failed())return
    !CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor, 2,'TreeBranchFactor'  ,'',(/1.5_ReKi, 5.0_ReKi/)                    , ErrStat2,ErrMsg2); if(Failed())return
