@@ -39,23 +39,23 @@ module FVW_VortexTools
    integer,parameter :: M1_001 = 4
 
    !> 
-   type T_Part
+   type T_VPart
       real(ReKi), dimension(:,:), pointer :: P           =>null() 
       real(ReKi), dimension(:,:), pointer :: Alpha       =>null() 
       real(ReKi), dimension(:),   pointer :: RegParam    =>null() 
       integer(IntKi)                      :: RegFunction =-1
       integer(IntKi)                      :: n =-1
-   end type T_Part
+   end type T_VPart
 
    !>
-   type T_Seg
+   type T_VSgmt
       real(ReKi), dimension(:,:), pointer :: SP           =>null()
       integer(IntKi), dimension(:,:), pointer :: SConnct      =>null()
       real(ReKi), dimension(:), pointer :: SGamma       =>null()
       real(ReKi), dimension(:),   pointer :: RegParam    =>null()
       integer(IntKi)                      :: RegFunction =-1
       integer(IntKi)                      :: n =-1
-   end type T_Seg
+   end type T_VSgmt
 
    !> The node type is recursive and is used to make a chained-list of nodes for the tree
    type T_Node
@@ -70,8 +70,8 @@ module FVW_VortexTools
 
    !> The type tree contains some basic data, a chained-list of nodes, and a pointer to the Particle data that were used
    type T_Tree
-      type(T_Part)  :: Part            !< Storage for all particles
-      type(T_Seg)   :: Seg             !< Storage for all segments
+      type(T_VPart)  :: Part            !< Storage for all particles
+      type(T_VSgmt)   :: Seg             !< Storage for all segments
       integer       :: iStep =-1       !< Time step at which the tree was built
       logical       :: bGrown =.false. !< Is the tree build
       real(ReKi)    :: DistanceDirect
@@ -545,15 +545,16 @@ contains
    ! --------------------------------------------------------------------------------}
    ! --- Tree -Grow 
    ! --------------------------------------------------------------------------------{
-   subroutine grow_tree_part(Tree, PartP, PartAlpha, PartRegFunction, PartRegParam, iStep)
+   subroutine grow_tree_part(Tree, nPart, PartP, PartAlpha, PartRegFunction, PartRegParam, iStep)
       type(T_Tree),               intent(inout), target :: Tree            !< 
+      integer(IntKi),             intent(in   )         :: nPart           !< 
       real(ReKi), dimension(:,:), intent(in   ), target :: PartP           !< 
       real(ReKi), dimension(:,:), intent(in   ), target :: PartAlpha       !< 
       integer(IntKi),             intent(in   )         :: PartRegFunction !< 
       real(ReKi), dimension(:),   intent(in   ), target :: PartRegParam    !< 
       integer(IntKi),             intent(in   )         :: iStep           !< 
       type(T_Node), pointer :: node !< Alias
-      type(T_Part), pointer :: Part !< Alias
+      type(T_VPart), pointer :: Part !< Alias
       real(ReKi) :: max_x,max_y,max_z !< for domain dimension
       real(ReKi) :: min_x,min_y,min_z !< for domain dimension
       integer(IntKi) :: i
@@ -566,11 +567,11 @@ contains
       nullify(Tree%Part%P)
       nullify(Tree%Part%Alpha)
       nullify(Tree%Part%RegParam)
-      Tree%Part%P           => PartP
-      Tree%Part%Alpha       => PartAlpha
-      Tree%Part%RegParam    => PartRegParam
+      Tree%Part%P           => PartP(:,1:nPart)
+      Tree%Part%Alpha       => PartAlpha(:,1:nPart)
+      Tree%Part%RegParam    => PartRegParam(1:nPart)
       Tree%Part%RegFunction = PartRegFunction
-      Tree%Part%n           = size(PartP,2)
+      Tree%Part%n           = nPart
 
       ! --- Handle special case for root node
       node => Tree%Root
@@ -630,7 +631,7 @@ contains
    !! Note, needed preliminary calc are done by grow_tree before
    recursive subroutine grow_tree_part_rec(node, Part)
       type(T_Node), target     :: node !<
-      type(T_Part), intent(in) :: Part !<
+      type(T_VPart), intent(in) :: Part !<
       integer :: i
       !  Sub Step:
       !   -  compute moments and center for the current node
@@ -653,7 +654,7 @@ contains
    !!   - Allocate branches and leaves and distribute particles to them
    subroutine grow_tree_part_substep(node, Part)
       type(T_Node), intent(inout) :: node !< Current node we are growing from
-      type(T_Part), intent(in)    :: Part !< All particles info
+      type(T_VPart), intent(in)    :: Part !< All particles info
       integer(IK1) :: iPartOctant                                     !< Index corresponding to which octant the particle falls into
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
@@ -828,7 +829,7 @@ contains
    !! Note, needed preliminary calc are done by grow_tree before!
    subroutine grow_tree_part_parallel(Root, Part)
       type(T_Node), intent(inout) :: Root
-      type(T_Part), intent(in) :: Part
+      type(T_VPart), intent(in) :: Part
       integer :: i, nBranches
       integer :: i1
       integer :: i2
@@ -880,8 +881,9 @@ contains
    ! --------------------------------------------------------------------------------}
    ! --- Tree -Grow for vortex lines
    ! --------------------------------------------------------------------------------{
-   subroutine grow_tree_segment(Tree_Seg, SegPoints, SegConnct, SegGamma, SegRegFunction, SegRegParam, iStep)
+   subroutine grow_tree_segment(Tree_Seg, nSeg, SegPoints, SegConnct, SegGamma, SegRegFunction, SegRegParam, iStep)
       type(T_Tree),               intent(inout), target :: Tree_Seg           !<
+      integer(IntKi),                 intent(in   )         :: nSeg           !<
       real(ReKi), dimension(:,:),     intent(in   ), target :: SegPoints      !<
       integer(IntKi), dimension(:,:), intent(in   ), target :: SegConnct  !<
       real(ReKi), dimension(:),       intent(in   ), target :: SegGamma       !<
@@ -889,7 +891,7 @@ contains
       real(ReKi), dimension(:),       intent(in   ), target :: SegRegParam    !<
       integer(IntKi),                 intent(in   )         :: iStep          !<
       type(T_Node), pointer :: node !< Alias
-      type(T_Seg), pointer :: Seg !< Alias
+      type(T_VSgmt), pointer :: Seg !< Alias
       real(ReKi) :: max_x,max_y,max_z !< for domain dimension
       real(ReKi) :: min_x,min_y,min_z !< for domain dimension
       integer(IntKi) :: i
@@ -904,11 +906,11 @@ contains
       nullify(Tree_Seg%Seg%SGamma)
       nullify(Tree_Seg%Seg%RegParam)
       Tree_Seg%Seg%SP          => SegPoints
-      Tree_Seg%Seg%SConnct     => SegConnct
-      Tree_Seg%Seg%SGamma      => SegGamma
-      Tree_Seg%Seg%RegParam    => SegRegParam
+      Tree_Seg%Seg%SConnct     => SegConnct(:,1:nSeg)
+      Tree_Seg%Seg%SGamma      => SegGamma(1:nSeg)
+      Tree_Seg%Seg%RegParam    => SegRegParam(1:nSeg)
       Tree_Seg%Seg%RegFunction = SegRegFunction
-      Tree_Seg%Seg%n           = size(SegConnct,2)
+      Tree_Seg%Seg%n           = nSeg
 
       ! --- Handle special case for root node
       node => Tree_Seg%Root
@@ -977,7 +979,7 @@ contains
    !! Note, needed preliminary calc are done by grow_tree before
    recursive subroutine grow_tree_segment_rec(node, Seg)
       type(T_Node), target     :: node !<
-      type(T_Seg), intent(in) :: Seg !<
+      type(T_VSgmt), intent(in) :: Seg !<
       integer :: i
       !  Sub Step:
       !   -  compute moments and center for the current node
@@ -1000,7 +1002,7 @@ contains
    !!   - Allocate branches and leaves and distribute particles to them
    subroutine grow_tree_segment_substep(node, Seg)
       type(T_Node), intent(inout) :: node !< Current node we are growing from
-      type(T_Seg), intent(in)    :: Seg !< All particles info
+      type(T_VSgmt), intent(in)    :: Seg !< All particles info
       integer(IK1) :: iPartOctant                                     !< Index corresponding to which octant the particle falls into
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
@@ -1182,7 +1184,7 @@ contains
    !! Note, needed preliminary calc are done by grow_tree before!
    subroutine grow_tree_segment_parallel(Root, Seg)
       type(T_Node), intent(inout) :: Root
-      type(T_Seg), intent(in) :: Seg
+      type(T_VSgmt), intent(in) :: Seg
       integer :: i, nBranches
       integer :: i1
       integer :: i2
@@ -1453,7 +1455,7 @@ contains
       real(ReKi), dimension(3) :: Uind_tmp !< 
       real(ReKi), dimension(3) :: CP       !< Current CP
       integer :: icp
-      type(T_Part), pointer :: Part ! Alias
+      type(T_VPart), pointer :: Part ! Alias
       ErrStat = ErrID_None
       ErrMsg = ''
       Part => Tree%Part
@@ -1657,7 +1659,7 @@ contains
       real(ReKi), dimension(3) :: Uind_tmp !<
       real(ReKi), dimension(3) :: CP       !< Current CP
       integer :: icp
-      type(T_Seg), pointer :: Seg ! Alias
+      type(T_VSgmt), pointer :: Seg ! Alias
       Seg => Tree%Seg
       if(.not. associated(Seg%SP)) then
          ErrMsg='Ui Sgmt Tree called but tree segments not associated'; ErrStat=ErrID_Fatal; return

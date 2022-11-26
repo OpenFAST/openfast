@@ -406,7 +406,7 @@ contains
       Uind1 =0.0_ReKi
       Uind2 =0.0_ReKi
       U_ref =0.0_ReKi
-      call grow_tree_part(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
       call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
@@ -422,7 +422,7 @@ contains
       CPs(:,1) = (/0.0,0.0,0.0/)
       PartPoints(1:3,1) = (/1.0,0.0,0.0/)
       U_ref =0.0_ReKi
-      call grow_tree_part(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
       call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
       call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
@@ -452,7 +452,7 @@ contains
       CPs_test(:,4) = (/ 2.0, 2.0, 2.0 /)  ! Starts to be far from most points
       CPs_test(:,5) = (/ 10., 10., 10.0  /) ! Far from all
 
-      call grow_tree_part(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
       do iCP=1,4
          CPs(:,1) = CPs_test(:,icp)

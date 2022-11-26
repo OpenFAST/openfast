@@ -37,7 +37,13 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            nAct          -  -  -  "Number of active segments"          -
 typedef     ^                   ^               IntKi                            nActP         -  -  -  "Number of active segment points"          -
-# TODO add tree, and part
+# TODO add tree
+#####################  Particles        ###############
+typedef  FVW/FVW           T_Part               ReKi                             P          ::    -  -  "Particle Points" - 
+typedef     ^                   ^               ReKi                             Alpha      ::    -  -  "Particle intensity 3 x nP" - 
+typedef     ^                   ^               ReKi                             RegParam   :     -  -  "Particle regularization parameter" - 
+typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            nAct          -  -  -  "Number of active particles <=nP"          -
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............
@@ -193,8 +199,9 @@ typedef     ^                   ^               FVW_ContinuousStateType         
 typedef     ^                   ^               DbKi                             t1            -  -  -   "Time of x1 (for overcycling) "        -
 typedef     ^                   ^               DbKi                             t2            -  -  -   "Time of x2 t+DTFVW (for overcycling)"        -
 typedef     ^                   ^               LOGICAL                          UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        -
-# Segment storage (buffer)
+# Element storage (buffers)
 typedef     ^                   ^               T_Sgmt                           Sgmt           -   -  -  "Segments storage" -
+typedef     ^                   ^               T_Part                           Part           -   -  -  "Particle storage" -
 # Wake rollup storage (buffer)
 typedef     ^                   ^               ReKi                             CPs           ::    -  -  "Control points used for wake rollup computation" - 
 typedef     ^                   ^               ReKi                             Uind          ::    -  -  "Induced velocities obtained at control points" -
