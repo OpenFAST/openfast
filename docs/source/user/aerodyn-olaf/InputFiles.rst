@@ -56,27 +56,27 @@ value is :math:`0`.
 Circulation Specifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**CircSolvingMethod** [switch] specifies which circulation method is used. There
+**CircSolvMethod** [switch] specifies which circulation method is used. There
 are three options: 1) :math:`C_l`-based iterative procedure *[1]*, 2) no-flow
 through *[2]*, and 3) prescribed *[3]*. The default option is *[1]*. These
 methods are described in :numref:`sec:circ`.
 
 **CircSolvConvCrit** [-] specifies the dimensionless convergence criteria used
 for solving the circulation. This variable is only used if
-*CircSolvingMethod* = *[1]*. The default value is
+*CircSolvMethod* = *[1]*. The default value is
 :math:`0.001`, corresponding to :math:`0.1\%` error in the circulation between
 two iterations.
 
 **CircSolvRelaxation** [-] specifies the relaxation factor used to solve the
-circulation.  This variable is only used if *CircSolvingMethod* =
+circulation.  This variable is only used if *CircSolvMethod* =
 *[1]*. The default value is :math:`0.1`.
 
 **CircSolvMaxIter** [-] specifies the maximum number of iterations used to solve
-the circulation. This variable is only used if *CircSolvingMethod* = *[1]*. The
+the circulation. This variable is only used if *CircSolvMethod* = *[1]*. The
 default value is :math:`30`.
 
 **PrescribedCircFile** [quoted string] specifies the file containing the
-prescribed blade circulation. This option is only used if *CircSolvingMethod* =
+prescribed blade circulation. This option is only used if *CircSolvMethod* =
 *[3]*.  The circulation file format is a delimited file with one header line and
 two columns. The first column is the dimensionless radial position [r/R]; the
 second column is the bound circulation value in [m\ :math:`^2`/s].  The radial
@@ -106,6 +106,7 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 **nFWPanels** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
 See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
+Default value: 0.
  
 
 **nFWPanelsFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
@@ -232,13 +233,14 @@ significant speedup, and this option does not require the specification of *Part
 
 
 **TreeBranchFactor** [-] specifies the dimensionless distance, in branch radius,
-above which a multipole calculation is used instead of a direct evaluation. This
-option is only used in conjunction with the tree code
-(*VelocityMethod* = *[2]*).
+above which a multipole calculation is used instead of a direct evaluation. 
+Only used when *VelocityMethod* = *[2,3,4]*.
+Default value: 1.5.
 
 **PartPerSegment** [-] specifies the number of particles that are used when a
-vortex segment is represented by vortex particles. The default value is
-:math:`1`.
+vortex segment is represented by vortex particles. 
+The default value is :math:`1`.
+Only used when *VelocityMethod* = *[2,3]*).
 
 Output Options
 ~~~~~~~~~~~~~~
@@ -252,19 +254,23 @@ used with `VTK_fps=0` to output only at the end of the simulation).
 The outputs are written in the
 folder, ``vtk_fvw.``   The parameters *WrVTK*, *VTKCoord*, and *VTK_fps* are
 independent of the glue code VTK output options.
+Default value: 0.
 
 
 **VTKBlades** [-] specifies how many blade VTK files are to be written out.
 *VTKBlades* :math:`= n` outputs VTK files for :math:`n` blades, with :math:`0`
-being an acceptable value. The default value is :math:`1`.
+being an acceptable value.
+The default value is :math:`0`.
 
 **VTKCoord** [switch] specifies in which coordinate system the VTK files are
 written.  There are two options: 1) global coordinate system *[1]* and 2) hub
-coordinate system *[2]*. The default option is *[1]*.
+coordinate system *[2]*. 
+The default option is *[1]*.
 
 **VTK_fps** [:math:`1`/sec] specifies the output frequency of the VTK files. The
 provided value is rounded to the nearest allowable multiple of the time step.
-The default value is :math:`1/dt_\text{fvw}`. Specifying *VTK_fps* = *[all]*,
+The default value is :math:`1/dt_\text{fvw}`.
+Specifying *VTK_fps* = *[all]*,
 is equivalent to using the value :math:`1/dt_\text{aero}`. If *VTK_fps<0*, then 
 no outputs are created, except if *WrVTK=2*.
 

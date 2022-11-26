@@ -277,7 +277,7 @@ The following python script computes the parameters according to these guideline
            myprint('')
            myprint('OLAF INPUT FILE:')
            myprint('----------------------- GENERAL OPTIONS ---------------------')
-           myprint('{:15.6f} DT_FVW       (delta psi = {:5.1f}deg)'.format(dt_fvw, deltaPsiDeg))
+           myprint('{:15.6f} DTFVW        (delta psi = {:5.1f}deg)'.format(dt_fvw, deltaPsiDeg))
            myprint('--------------- WAKE EXTENT AND DISCRETIZATION --------------')
            myprint('{:15d} nNWPanels     ({:5.1f} rot, {:5.1f}D)'.format(nNWPanels    , n2R(nNWPanels    ), n2L(nNWPanels    )))
            myprint('{:15d} nNWPanelsFree ({:5.1f} rot, {:5.1f}D)'.format(nNWPanelsFree, n2R(nNWPanelsFree), n2L(nNWPanelsFree)))

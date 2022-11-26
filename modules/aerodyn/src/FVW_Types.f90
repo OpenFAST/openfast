@@ -94,8 +94,8 @@ IMPLICIT NONE
     LOGICAL  :: FWShedVorticity      !< Include shed vorticity in the far wake [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
-    REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
-    INTEGER(IntKi)  :: CirculationMethod      !< Method to determine the circulation [-]
+    REAL(ReKi)  :: FullCircStart      !< Time when the circulation is full [s]
+    INTEGER(IntKi)  :: CircSolvMethod      !< Method to determine the circulation [-]
     INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
     REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
     REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
@@ -109,9 +109,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegParam      !< Regularization parameter of the wing [-]
     INTEGER(IntKi)  :: ShearModel      !< Option for shear modelling [-]
     LOGICAL  :: TwrShadowOnWake      !< Include tower shadow effects on wake [-]
-    INTEGER(IntKi)  :: VelocityMethod      !< Velocity calculation method [-]
-    REAL(ReKi)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough [-]
-    INTEGER(IntKi)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: VelocityMethod      !< Velocity calculation method for Full Wake and for LiftingLine [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough, for full wake and lifting line [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method, for full wake and lifting line [-]
     REAL(DbKi)  :: DTaero      !< Time interval for calls calculations [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
@@ -251,7 +251,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FVW_DiscreteStateType  =======
   TYPE, PUBLIC :: FVW_DiscreteStateType
-    REAL(ReKi)  :: NULL      !< Empty to satisfy framework [-]
+    REAL(ReKi)  :: Dummy      !< Empty to satisfy framework [-]
     TYPE(UA_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: UA      !< states for UnsteadyAero for each Wing [-]
   END TYPE FVW_DiscreteStateType
 ! =======================
@@ -268,7 +268,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FVW_OtherStateType  =======
   TYPE, PUBLIC :: FVW_OtherStateType
-    INTEGER(IntKi)  :: NULL      !< Number of active near wake panels [-]
+    INTEGER(IntKi)  :: Dummy      !< Empty to satisfy framework [-]
     TYPE(UA_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: UA      !< other states for UnsteadyAero for each wing [-]
   END TYPE FVW_OtherStateType
 ! =======================
@@ -300,7 +300,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FVW_InputFile  =======
   TYPE, PUBLIC :: FVW_InputFile
-    INTEGER(IntKi)  :: CirculationMethod      !< Method to determine the circulation [-]
+    INTEGER(IntKi)  :: CircSolvMethod      !< Method to determine the circulation [-]
     CHARACTER(1024)  :: CirculationFile      !< Prescribed circulation file [-]
     INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
     REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
@@ -308,7 +308,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1, 7=Corrector/Predictor) [-]
     LOGICAL  :: FreeWake      !< Disable roll up, wake convects with wind only (flag) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
-    REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
+    REAL(ReKi)  :: FullCircStart      !< Time when the circulation is full [s]
     REAL(DbKi)  :: DTfvw      !< Time interval for calculating wake induced velocities [s]
     INTEGER(IntKi)  :: CircSolvPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
@@ -325,9 +325,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegParam      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: ShearModel      !< Option for shear modelling [-]
     LOGICAL  :: TwrShadowOnWake      !< Include tower shadow effects on wake [-]
-    INTEGER(IntKi)  :: VelocityMethod      !< Velocity calculation method [-]
-    REAL(ReKi)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough [-]
-    INTEGER(IntKi)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: VelocityMethod      !< Velocity calculation method for Full Wake and for LiftingLine [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: TreeBranchFactor      !< Factor used to determine if a point is far enough, for full wake and lifting line [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: PartPerSegment      !< Number of particles per segment, e.g. for tree method, for full wake and lifting line [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk      !< Requested timestep between VTK outputs (calculated from the VTK_fps read in) [s]
@@ -336,7 +336,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  FVW_InitOutputType  =======
   TYPE, PUBLIC :: FVW_InitOutputType
-    INTEGER(IntKi)  :: Null      !< Empty parameter to satisfy framework [-]
+    INTEGER(IntKi)  :: Dummy      !< Empty parameter to satisfy framework [-]
   END TYPE FVW_InitOutputType
 ! =======================
 CONTAINS
@@ -1673,8 +1673,8 @@ ENDIF
     DstParamData%FWShedVorticity = SrcParamData%FWShedVorticity
     DstParamData%IntMethod = SrcParamData%IntMethod
     DstParamData%FreeWakeStart = SrcParamData%FreeWakeStart
-    DstParamData%FullCirculationStart = SrcParamData%FullCirculationStart
-    DstParamData%CirculationMethod = SrcParamData%CirculationMethod
+    DstParamData%FullCircStart = SrcParamData%FullCircStart
+    DstParamData%CircSolvMethod = SrcParamData%CircSolvMethod
     DstParamData%CircSolvMaxIter = SrcParamData%CircSolvMaxIter
     DstParamData%CircSolvConvCrit = SrcParamData%CircSolvConvCrit
     DstParamData%CircSolvRelaxation = SrcParamData%CircSolvRelaxation
@@ -1817,8 +1817,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FWShedVorticity
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
-      Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
-      Int_BufSz  = Int_BufSz  + 1  ! CirculationMethod
+      Re_BufSz   = Re_BufSz   + 1  ! FullCircStart
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvMethod
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
@@ -1832,9 +1832,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegParam
       Int_BufSz  = Int_BufSz  + 1  ! ShearModel
       Int_BufSz  = Int_BufSz  + 1  ! TwrShadowOnWake
-      Int_BufSz  = Int_BufSz  + 1  ! VelocityMethod
-      Re_BufSz   = Re_BufSz   + 1  ! TreeBranchFactor
-      Int_BufSz  = Int_BufSz  + 1  ! PartPerSegment
+      Int_BufSz  = Int_BufSz  + SIZE(InData%VelocityMethod)  ! VelocityMethod
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TreeBranchFactor)  ! TreeBranchFactor
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PartPerSegment)  ! PartPerSegment
       Db_BufSz   = Db_BufSz   + 1  ! DTaero
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
@@ -1960,9 +1960,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FreeWakeStart
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FullCirculationStart
+    ReKiBuf(Re_Xferred) = InData%FullCircStart
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%CirculationMethod
+    IntKiBuf(Int_Xferred) = InData%CircSolvMethod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%CircSolvMaxIter
     Int_Xferred = Int_Xferred + 1
@@ -1990,12 +1990,18 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TwrShadowOnWake, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%VelocityMethod
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TreeBranchFactor
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%PartPerSegment
-    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%VelocityMethod,1), UBOUND(InData%VelocityMethod,1)
+      IntKiBuf(Int_Xferred) = InData%VelocityMethod(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%TreeBranchFactor,1), UBOUND(InData%TreeBranchFactor,1)
+      ReKiBuf(Re_Xferred) = InData%TreeBranchFactor(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%PartPerSegment,1), UBOUND(InData%PartPerSegment,1)
+      IntKiBuf(Int_Xferred) = InData%PartPerSegment(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     DbKiBuf(Db_Xferred) = InData%DTaero
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DTfvw
@@ -2165,9 +2171,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%FreeWakeStart = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%FullCirculationStart = ReKiBuf(Re_Xferred)
+    OutData%FullCircStart = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%CirculationMethod = IntKiBuf(Int_Xferred)
+    OutData%CircSolvMethod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%CircSolvMaxIter = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -2195,12 +2201,24 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%TwrShadowOnWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%TwrShadowOnWake)
     Int_Xferred = Int_Xferred + 1
-    OutData%VelocityMethod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%TreeBranchFactor = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PartPerSegment = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%VelocityMethod,1)
+    i1_u = UBOUND(OutData%VelocityMethod,1)
+    DO i1 = LBOUND(OutData%VelocityMethod,1), UBOUND(OutData%VelocityMethod,1)
+      OutData%VelocityMethod(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TreeBranchFactor,1)
+    i1_u = UBOUND(OutData%TreeBranchFactor,1)
+    DO i1 = LBOUND(OutData%TreeBranchFactor,1), UBOUND(OutData%TreeBranchFactor,1)
+      OutData%TreeBranchFactor(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%PartPerSegment,1)
+    i1_u = UBOUND(OutData%PartPerSegment,1)
+    DO i1 = LBOUND(OutData%PartPerSegment,1), UBOUND(OutData%PartPerSegment,1)
+      OutData%PartPerSegment(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     OutData%DTaero = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%DTfvw = DbKiBuf(Db_Xferred)
@@ -8692,7 +8710,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstDiscStateData%NULL = SrcDiscStateData%NULL
+    DstDiscStateData%Dummy = SrcDiscStateData%Dummy
 IF (ALLOCATED(SrcDiscStateData%UA)) THEN
   i1_l = LBOUND(SrcDiscStateData%UA,1)
   i1_u = UBOUND(SrcDiscStateData%UA,1)
@@ -8776,7 +8794,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! NULL
+      Re_BufSz   = Re_BufSz   + 1  ! Dummy
   Int_BufSz   = Int_BufSz   + 1     ! UA allocated yes/no
   IF ( ALLOCATED(InData%UA) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! UA upper/lower bounds for each dimension
@@ -8828,7 +8846,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%NULL
+    ReKiBuf(Re_Xferred) = InData%Dummy
     Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%UA) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8900,7 +8918,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%NULL = ReKiBuf(Re_Xferred)
+    OutData%Dummy = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UA not allocated
     Int_Xferred = Int_Xferred + 1
@@ -9444,7 +9462,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstOtherStateData%NULL = SrcOtherStateData%NULL
+    DstOtherStateData%Dummy = SrcOtherStateData%Dummy
 IF (ALLOCATED(SrcOtherStateData%UA)) THEN
   i1_l = LBOUND(SrcOtherStateData%UA,1)
   i1_u = UBOUND(SrcOtherStateData%UA,1)
@@ -9528,7 +9546,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NULL
+      Int_BufSz  = Int_BufSz  + 1  ! Dummy
   Int_BufSz   = Int_BufSz   + 1     ! UA allocated yes/no
   IF ( ALLOCATED(InData%UA) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! UA upper/lower bounds for each dimension
@@ -9580,7 +9598,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%NULL
+    IntKiBuf(Int_Xferred) = InData%Dummy
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%UA) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -9652,7 +9670,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%NULL = IntKiBuf(Int_Xferred)
+    OutData%Dummy = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UA not allocated
     Int_Xferred = Int_Xferred + 1
@@ -10532,13 +10550,14 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_CopyInputFile'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInputFileData%CirculationMethod = SrcInputFileData%CirculationMethod
+    DstInputFileData%CircSolvMethod = SrcInputFileData%CircSolvMethod
     DstInputFileData%CirculationFile = SrcInputFileData%CirculationFile
     DstInputFileData%CircSolvMaxIter = SrcInputFileData%CircSolvMaxIter
     DstInputFileData%CircSolvConvCrit = SrcInputFileData%CircSolvConvCrit
@@ -10546,7 +10565,7 @@ ENDIF
     DstInputFileData%IntMethod = SrcInputFileData%IntMethod
     DstInputFileData%FreeWake = SrcInputFileData%FreeWake
     DstInputFileData%FreeWakeStart = SrcInputFileData%FreeWakeStart
-    DstInputFileData%FullCirculationStart = SrcInputFileData%FullCirculationStart
+    DstInputFileData%FullCircStart = SrcInputFileData%FullCircStart
     DstInputFileData%DTfvw = SrcInputFileData%DTfvw
     DstInputFileData%CircSolvPolar = SrcInputFileData%CircSolvPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
@@ -10630,7 +10649,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! CirculationMethod
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvMethod
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%CirculationFile)  ! CirculationFile
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
@@ -10638,7 +10657,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Int_BufSz  = Int_BufSz  + 1  ! FreeWake
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
-      Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
+      Re_BufSz   = Re_BufSz   + 1  ! FullCircStart
       Db_BufSz   = Db_BufSz   + 1  ! DTfvw
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
@@ -10655,9 +10674,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegParam
       Int_BufSz  = Int_BufSz  + 1  ! ShearModel
       Int_BufSz  = Int_BufSz  + 1  ! TwrShadowOnWake
-      Int_BufSz  = Int_BufSz  + 1  ! VelocityMethod
-      Re_BufSz   = Re_BufSz   + 1  ! TreeBranchFactor
-      Int_BufSz  = Int_BufSz  + 1  ! PartPerSegment
+      Int_BufSz  = Int_BufSz  + SIZE(InData%VelocityMethod)  ! VelocityMethod
+      Re_BufSz   = Re_BufSz   + SIZE(InData%TreeBranchFactor)  ! TreeBranchFactor
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PartPerSegment)  ! PartPerSegment
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Db_BufSz   = Db_BufSz   + 1  ! DTvtk
@@ -10689,7 +10708,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%CirculationMethod
+    IntKiBuf(Int_Xferred) = InData%CircSolvMethod
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%CirculationFile)
       IntKiBuf(Int_Xferred) = ICHAR(InData%CirculationFile(I:I), IntKi)
@@ -10707,7 +10726,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FreeWakeStart
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%FullCirculationStart
+    ReKiBuf(Re_Xferred) = InData%FullCircStart
     Re_Xferred = Re_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DTfvw
     Db_Xferred = Db_Xferred + 1
@@ -10741,12 +10760,18 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TwrShadowOnWake, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%VelocityMethod
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%TreeBranchFactor
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%PartPerSegment
-    Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%VelocityMethod,1), UBOUND(InData%VelocityMethod,1)
+      IntKiBuf(Int_Xferred) = InData%VelocityMethod(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%TreeBranchFactor,1), UBOUND(InData%TreeBranchFactor,1)
+      ReKiBuf(Re_Xferred) = InData%TreeBranchFactor(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%PartPerSegment,1), UBOUND(InData%PartPerSegment,1)
+      IntKiBuf(Int_Xferred) = InData%PartPerSegment(i1)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = InData%WrVTK
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%VTKBlades
@@ -10770,6 +10795,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_UnPackInputFile'
@@ -10783,7 +10809,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%CirculationMethod = IntKiBuf(Int_Xferred)
+    OutData%CircSolvMethod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%CirculationFile)
       OutData%CirculationFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
@@ -10801,7 +10827,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%FreeWakeStart = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%FullCirculationStart = ReKiBuf(Re_Xferred)
+    OutData%FullCircStart = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%DTfvw = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -10835,12 +10861,24 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%TwrShadowOnWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%TwrShadowOnWake)
     Int_Xferred = Int_Xferred + 1
-    OutData%VelocityMethod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%TreeBranchFactor = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PartPerSegment = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%VelocityMethod,1)
+    i1_u = UBOUND(OutData%VelocityMethod,1)
+    DO i1 = LBOUND(OutData%VelocityMethod,1), UBOUND(OutData%VelocityMethod,1)
+      OutData%VelocityMethod(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%TreeBranchFactor,1)
+    i1_u = UBOUND(OutData%TreeBranchFactor,1)
+    DO i1 = LBOUND(OutData%TreeBranchFactor,1), UBOUND(OutData%TreeBranchFactor,1)
+      OutData%TreeBranchFactor(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%PartPerSegment,1)
+    i1_u = UBOUND(OutData%PartPerSegment,1)
+    DO i1 = LBOUND(OutData%PartPerSegment,1), UBOUND(OutData%PartPerSegment,1)
+      OutData%PartPerSegment(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
+    END DO
     OutData%WrVTK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%VTKBlades = IntKiBuf(Int_Xferred)
@@ -10865,7 +10903,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInitOutputData%Null = SrcInitOutputData%Null
+    DstInitOutputData%Dummy = SrcInitOutputData%Dummy
  END SUBROUTINE FVW_CopyInitOutput
 
  SUBROUTINE FVW_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -10926,7 +10964,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! Null
+      Int_BufSz  = Int_BufSz  + 1  ! Dummy
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -10954,7 +10992,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%Null
+    IntKiBuf(Int_Xferred) = InData%Dummy
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_PackInitOutput
 
@@ -10984,7 +11022,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%Null = IntKiBuf(Int_Xferred)
+    OutData%Dummy = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInitOutput
 

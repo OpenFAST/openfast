@@ -175,7 +175,7 @@ and normal (:math:`\vec{N}`) to the panel are defined as:
 
 The area of the panel is obtained as :math:`dA =
 |(\vec{x}_6-\vec{x}_8)\times(\vec{x}_{7}-\vec{x}_5)|`. For
-**CircSolvingMethod=[1]**, the control points are located on the lifting-line at
+**CircSolvMethod=[1]**, the control points are located on the lifting-line at
 the location :math:`\vec{x}_9+\eta_j \vec{dl}`. The factor :math:`\eta_j` is
 determined based on the full-cosine approximation of van Garrel. This is based
 on the spanwise widths of the current panel, :math:`w_j`, and the neighboring
@@ -201,7 +201,7 @@ Circulation Solving Methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Three methods are implemented to determine the bound circulation strength. They
-are selected using the input **CircSolvingMethod**, and are presented in the
+are selected using the input **CircSolvMethod**, and are presented in the
 following sections.
 
 Cl-Based Iterative Method
@@ -213,7 +213,7 @@ control point located on the lifting line. The algorithm ensures that
 the lift obtained using the angle of attack and the polar data matches
 the lift obtained with the Kutta-Joukowski theorem. At present, it is
 the preferred method to compute the circulation along the blade span. It is
-selected with **CircSolvingMethod=[1]**. The method is described in the work from
+selected with **CircSolvMethod=[1]**. The method is described in the work from
 van Garrel (:cite:`olaf-Garrel03_1`). The algorithm is implemented in at iterative
 approach using the following steps:
 
@@ -282,14 +282,14 @@ A Weissinger-L-based representation (:cite:`olaf-Weissinger47_1`)
 of the lifting surface is also
 available (:cite:`olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`). In this
 method, the circulation is solved by satisfying a no-flow through
-condition at the 1/4-chord points.  It is selected with **CircSolvingMethod=[2]**.
+condition at the 1/4-chord points.  It is selected with **CircSolvMethod=[2]**.
 
 Prescribed Circulation
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The final available method prescribes a constant circulation. A user
 specified spanwise distribution of circulation is prescribed onto the
-blades. It is selected with **CircSolvingMethod=[3]**.
+blades. It is selected with **CircSolvMethod=[3]**.
 
 
 .. _sec:vortconv:

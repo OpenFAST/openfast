@@ -53,6 +53,7 @@ module FVW_SUBS
    ! Implementation
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
    logical       , parameter :: DEV_VERSION=.False.
+   logical       , parameter :: OLAF_PROFILING=.False.
 contains
 
 !==========================================================================
@@ -296,7 +297,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          do iW=1,p%nWings
             allocate(Gamma_t(p%W(iW)%nSpan+1)) ! TODO TODO TODO, store as misc
             allocate(sCoord(p%W(iW)%nSpan))
-            if (p%FullCirculationStart>0 .and. m%nFW<3) then
+            if (p%FullCircStart>0 .and. m%nFW<3) then
                ! we might run into the issue that the circulation is 0
                m%W(iW)%iTip =-1
                m%W(iW)%iRoot=-1
@@ -497,6 +498,7 @@ logical function have_nan(p, m, x, z, u, label)
          have_nan=.True.
       endif
    enddo
+   if(.false.)print*,m%iStep ! unused var
 endfunction
 subroutine find_nan_1D(array, varname)
    real(ReKi), dimension(:), intent(in) :: array
@@ -1151,7 +1153,7 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    ! Convert Panels to segments, segments to particles, particles to tree
    call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
    call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, Tree, Part, ErrStat, ErrMsg)
 
    ! --- Unpacking induced velocity points
    iHeadP=1
@@ -1211,6 +1213,7 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    type(T_Tree),                    intent(out)   :: Tree    !< Tree of particles if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   integer, parameter :: iVel = 1
    ! Local variables
    integer(IntKi) :: nSeg, nSegP
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
@@ -1226,15 +1229,15 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    Sgmt%nActP = nSegP
 
    ! --- Convert to particles if needed
-   if ((p%VelocityMethod==idVelocityTreePart) .or. (p%VelocityMethod==idVelocityPart)) then
-      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment, p%RegFunction, Part)
+   if ((p%VelocityMethod(iVel)==idVelocityTreePart) .or. (p%VelocityMethod(iVel)==idVelocityPart)) then
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part)
    endif
 
    ! --- Grow tree if needed
-   if (p%VelocityMethod==idVelocityTreePart) then
+   if (p%VelocityMethod(iVel)==idVelocityTreePart) then
       call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
 
-   elseif (p%VelocityMethod==idVelocityTreeSeg) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
       call grow_tree_segment(Tree, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma(1:nSeg), p%RegFunction, Sgmt%Epsilon(1:nSeg), 0)
    endif
 
@@ -1251,50 +1254,51 @@ subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrSt
    type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   integer, parameter :: iVel = 1
    ! Local variables
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod==idVelocityBasic) then
+   if (p%VelocityMethod(iVel)==idVelocityBasic) then
       call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
 
-   elseif (p%VelocityMethod==idVelocityTreePart) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
 
-   elseif (p%VelocityMethod==idVelocityPart) then
+   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
       call ui_part_nograd(nCPs, CPs, size(Part%P,2), Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind)
 
-   elseif (p%VelocityMethod==idVelocityTreeSeg) then
-      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
    endif
 end subroutine InducedVelocitiesAll_Calc
 
 
 !> Perform termination steps after velocity was requested from all vortex elements
 !! InOut: Tree, Part, m
-subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+subroutine InducedVelocitiesAll_End(p, Tree, Part, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
    type(T_Part),                    intent(inout) :: Part    !< Particle storage if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   integer, parameter :: iVel = 1
    ! Local variables
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod==idVelocityBasic) then
+   if (p%VelocityMethod(iVel)==idVelocityBasic) then
       ! Nothing
 
-   elseif (p%VelocityMethod==idVelocityTreePart) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
       call cut_tree(Tree, deallocPart=.true.)
 
-   elseif (p%VelocityMethod==idVelocityPart) then
+   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
       deallocate(Part%P, Part%Alpha, Part%RegParam)
 
-   elseif (p%VelocityMethod==idVelocityTreeSeg) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
       call cut_tree(Tree) ! We do not deallocate segment
    endif
 
@@ -1318,12 +1322,12 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    integer(IntKi) :: nNWEff  ! Number of nearwake panels that are free at current time step
    type(T_Tree)   :: Tree
    type(T_Part)   :: Part
+   if (OLAF_PROFILING) call tic('WakeInduced Calc')
    ErrStat= ErrID_None
    ErrMsg =''
 
    nFWEff = min(m%nFW, p%nFWFree)
    nNWEff = min(m%nNW, p%nNWFree)
-   call tic('WakeInduced Init')
 
    ! --- Pack control points
    call PackConvectingPoints() ! m%CPs
@@ -1333,18 +1337,14 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
    m%Uind(:,nCPs+1:)=1000.0_ReKi ! TODO For debugging only
    call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call toc()
-   call tic('WakeInduced Calc')
    call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call toc()
-   call tic('WakeInduced End')
-   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, Tree, Part, ErrStat, ErrMsg)
    call UnPackInducedVelocity()
-   call toc()
 
    if (DEV_VERSION) then
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',m%Sgmt%nAct,' - nSegP:',m%Sgmt%nActP, ' - nCPs:',nCPs
    endif
+   if (OLAF_PROFILING) call toc()
 contains
    !> Pack all the points that convect
    subroutine PackConvectingPoints()
@@ -1434,10 +1434,13 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    type(T_Tree) :: Tree !< Tree of particles/segment if needed
-   !type(T_Part) :: Part  !< Particle storage if needed
+   type(T_Part) :: Part  !< Particle storage if needed
+   integer, parameter :: iVel = 2
    logical      :: bMirror
+   if (OLAF_PROFILING) call tic('LiftingLine UI Calc')
    ErrStat = ErrID_None
    ErrMsg  = ""
+
    do iW=1,p%nWings
       m%W(iW)%Vind_CP = -9999._ReKi !< Safety
       m%W(iW)%Vind_LL = -9999._ReKi !< Safety
@@ -1482,39 +1485,32 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
 
+      !! --- Compute maximum wing length
+      MaxWingLength = 0.0_ReKi
+      do iW=1,p%nWings
+         MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
+      enddo
+      DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
+
       ! --- Compute
-      !if (nSeg<1000) then
-      if (.True.) then
-         ! NOTE: We keep this to avoid the "grow_tree" cost.
-         ! Also, this helps for EllipticWingInf_OLAF. Using an infinite make the DistanceDirect criteria fail (probably because based on cell center, and not cell extent)
-         !call tic('ui_seg')
+      ! TreeSeg is faster but introduce some noise, so we keep this open for the user to choose
+      if (p%VelocityMethod(iVel) == idVelocityBasic) then 
          call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
-         !call toc()
-      else
 
-         !! --- Compute maximum wing length
-         MaxWingLength = 0.0_ReKi
-         do iW=1,p%nWings
-            MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
-         enddo
-         DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
-         call tic('ui_tree_seg')
-         call tic('grow tree')
+      else if (p%VelocityMethod(iVel) == idVelocityPart) then 
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part)
+         call ui_part_nograd(nCPs, CPs, size(Part%P,2), Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind)
+         deallocate(Part%P, Part%Alpha, Part%RegParam)
+
+      else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then 
          call grow_tree_segment(Tree, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
-         call toc()
-         call tic('tree calc')
-         call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor, DistanceDirect, Uind, ErrStat, ErrMsg)
-         call toc()
-         call toc()
+         call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
 
-         !! --- Alternative, particle
-         !call tic('ui_part')
-         !call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment*10, p%RegFunction, Part)
-         !call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
-         !call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
-         !call cut_tree(Tree, deallocPart=.true.)
-         !call toc()
-
+      else if (p%VelocityMethod(iVel) == idVelocityTreePart) then 
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part)
+         call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+         call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
+         call cut_tree(Tree, deallocPart=.true.)
       endif
 
       ! --- Unpack
@@ -1523,6 +1519,7 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
       deallocate(Uind)
       deallocate(CPs)
    endif
+   if (OLAF_PROFILING) call toc()
 contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()

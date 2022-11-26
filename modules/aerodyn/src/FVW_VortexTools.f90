@@ -658,7 +658,7 @@ contains
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
       integer      :: nPerBranchAcc(8) !< Accumulated counter on number of particles per branch
-      integer      :: i,j,k
+      integer      :: i !,j,k
       real(ReKi)   :: wTot, wLoc ! Total and local vorticity strength
       real(ReKi)   :: halfSize ! TODO remove me
       real(ReKi),dimension(3) :: locCenter, DeltaP,PartPos,PartAlpha
@@ -1005,7 +1005,7 @@ contains
       integer      :: nLeaves, nBranches
       integer      :: iLeaf, iOctant, iBranch
       integer      :: nPerBranchAcc(8) !< Accumulated counter on number of particles per branch
-      integer      :: i,j,k
+      integer      :: i!,j,k
       real(ReKi)   :: wTot ! Total vorticity strength
       real(ReKi)   :: halfSize ! TODO remove me
       real(ReKi),dimension(3) :: locCenter, SegCenter,DP, SegGammaVec
@@ -1482,8 +1482,8 @@ contains
          real(ReKi) :: coeff, coeff3, coeff5, coeff7, coeff7ij
          real(ReKi) :: x, y, z
          real(ReKi),dimension(3) :: phi
-         integer :: ieqj, j
-         integer :: i
+         real(ReKi) :: ieqj
+         integer :: i,j
          integer :: iPart
          if (node%nPart<=0) then
             ! We skip the dead leaf
@@ -2185,7 +2185,6 @@ contains
       real(ReKi), intent(out), optional ::  delta_t_out
       real(ReKi) ::  delta_t
       integer, dimension(8) :: v_dt
-      integer :: iunit
       if (npos<=nmax_store.and.npos>0 ) then
          call date_and_time(values=time_array)
          v_dt=time_array-start_arrays(npos,1:8)
