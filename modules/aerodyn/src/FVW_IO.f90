@@ -69,7 +69,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
 
    CALL ReadCom        (UnIn,FileName,                        '--- Speed up header      '             , ErrStat2,ErrMsg2); if(Failed()) return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod(1)  ,'VelocityMethod'    ,'',idVelocityBasic , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod(1)  ,'VelocityMethod'    ,'',idVelocityTreePart, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor(1),'TreeBranchFactor'  ,'',1.5_ReKi        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegment(1)  ,'PartPerSegment'    ,'',  1             , ErrStat2,ErrMsg2); if(Failed())return
    Inp%PartPerSegment(2)   = 2
@@ -120,29 +120,28 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
             ! pass comment lines
          elseif (index(sDummy, 'INDUCTIONATCP')>1) then
             read(sDummy, '(L1)') p%InductionAtCP
-            print*,'   >>> InductionAtCP  ',p%InductionAtCP
+            print*,'   >>> InductionAtCP      ',p%InductionAtCP
          elseif (index(sDummy, 'WAKEATTE')>1) then
             read(sDummy, '(L1)') p%WakeAtTE
-            print*,'   >>> WakeAtTE       ',p%WakeAtTE
+            print*,'   >>> WakeAtTE           ',p%WakeAtTE
          elseif (index(sDummy, 'DSTALLONWAKE')>1) then
             read(sDummy, '(L1)') p%DStallOnWake
-            print*,'   >>> DStallOnWake   ',p%DStallOnWake
+            print*,'   >>> DStallOnWake       ',p%DStallOnWake
          elseif (index(sDummy, 'INDUCTION')>1) then
             read(sDummy, '(L1)') p%Induction
-            print*,'   >>> Induction      ',p%Induction
+            print*,'   >>> Induction          ',p%Induction
          elseif (index(sDummy, 'KFROZENNWEND')>1) then
             read(sDummy, *) p%kFrozenNWEnd
-            print*,'   >>> kFrozenNWEnd   ',p%kFrozenNWEnd
+            print*,'   >>> kFrozenNWEnd       ',p%kFrozenNWEnd
          elseif (index(sDummy, 'KFROZENNWSTART')>1) then
             read(sDummy, *) p%kFrozenNWStart
-            print*,'   >>> kFrozenNWStart ',p%kFrozenNWStart
+            print*,'   >>> kFrozenNWStart     ',p%kFrozenNWStart
          elseif (index(sDummy, 'VELOCITYMETHODLL')>1) then
             read(sDummy, *) Inp%VelocityMethod(2)
-            print*,'   >>> VelocityMethodLL ',Inp%VelocityMethod(2)
-            print*,'>>>> VELOCITY METHOD',Inp%VelocityMethod
+            print*,'   >>> VelocityMethod     ',Inp%VelocityMethod
          elseif (index(sDummy, 'TREEBRANCHFACTORLL')>1) then
             read(sDummy, *) Inp%TreeBranchFactor(2)
-            print*,'   >>> TreeBranchFactorLL ',Inp%TreeBranchFactor(2)
+            print*,'   >>> TreeBranchFactor   ',Inp%TreeBranchFactor
          else
             print*,'[WARN] Line ignored: '//trim(sDummy)
          endif

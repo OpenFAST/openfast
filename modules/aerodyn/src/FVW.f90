@@ -1413,7 +1413,7 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! Write some info to screen when major milestone achieved
-   if (m%iStep == p%nNWFree) then
+   if (m%iStep == p%nNWFree .and. p%nNWFree<p%nNWMax) then
       call WrScr(NewLine//'[INFO] OLAF free near wake is at full extent at time: '//trim(num2lstr(t)))
    endif
    if (m%iStep == p%nNWMax) then

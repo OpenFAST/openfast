@@ -174,14 +174,15 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 the singularity of the vortex elements, as specified in
 :numref:`sec:vortconv`. There are five options: 1) no correction *[0]*,
 2) the Rankine method *[1]*, 3) the Lamb-Oseen method *[2]*, 4) the Vatistas
-method *[3]*, and 5) the denominator offset method *[4]*. The functions are
-given in . The default option is *[3]*.
+method *[3]*, and 5) the denominator offset method *[4]*. 
+The functions are given in :numref:`sec:RegularizationFunction`. 
+The default option is *[3]*.
 
 **WakeRegMethod** [switch] specifies the method of determining viscous core
 radius (i.e., the regularization parameter). There are three options: 1)
 constant *[1]*, 2) stretching *[2]*, and 3) age *[3]*. The methods are
-described in :numref:`sec:corerad`. The default option is *[1]*.
-The recommended option is *[3]*.
+described in :numref:`sec:corerad`. 
+The default option is *[3]*.
 
 **WakeRegFactor** [m, or -] specifies the wake regularization parameter, which is the
 regularization value used at the initialization of a vortex element. If the
@@ -197,7 +198,8 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 :math:`\delta`.  The parameter is used for the core-spreading method
 (*DiffusionMethod* = *[1]*) and the regularization method with age
 (*WakeRegMethod* = *[3]*). The variable :math:`\delta` is described in
-:numref:`sec:corerad`. The default value is :math:`100`.
+:numref:`sec:corerad`. 
+The default value is :math:`100`.
 
 Wake Treatment Options
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -226,21 +228,21 @@ There are four options:
 2) Particle-Tree formulation *[2]*, 
 3) :math:`N^2` Biot-Savart computation using a particle representation,
 4) Segment-Tree formulation. 
-The default option is *[1]*.
 Option *[2]* and *[3]* requires the specification of *PartPerSegment* (see below). 
 Option *[4]* is expected to give results close to option *[1]* while offering
 significant speedup, and this option does not require the specification of *PartPerSegment*.
+The default option is *[2]*.
 
 
 **TreeBranchFactor** [-] specifies the dimensionless distance, in branch radius,
 above which a multipole calculation is used instead of a direct evaluation. 
-Only used when *VelocityMethod* = *[2,3,4]*.
+Only used when *VelocityMethod* = *[2,4]*.
 Default value: 1.5.
 
 **PartPerSegment** [-] specifies the number of particles that are used when a
 vortex segment is represented by vortex particles. 
-The default value is :math:`1`.
 Only used when *VelocityMethod* = *[2,3]*).
+The default value is :math:`1`.
 
 Output Options
 ~~~~~~~~~~~~~~
@@ -257,8 +259,8 @@ independent of the glue code VTK output options.
 Default value: 0.
 
 
-**VTKBlades** [-] specifies how many blade VTK files are to be written out.
-*VTKBlades* :math:`= n` outputs VTK files for :math:`n` blades, with :math:`0`
+**nVTKBlades** [-] specifies how many blade VTK files are to be written out.
+*nVTKBlades* :math:`= n` outputs VTK files for :math:`n` blades, with :math:`0`
 being an acceptable value.
 The default value is :math:`0`.
 

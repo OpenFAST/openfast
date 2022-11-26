@@ -1293,7 +1293,8 @@ subroutine InducedVelocitiesAll_End(p, Tree, Part, ErrStat, ErrMsg)
       ! Nothing
 
    elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
-      call cut_tree(Tree, deallocPart=.true.)
+      deallocate(Part%P, Part%Alpha, Part%RegParam)
+      call cut_tree(Tree)
 
    elseif (p%VelocityMethod(iVel)==idVelocityPart) then
       deallocate(Part%P, Part%Alpha, Part%RegParam)
@@ -1505,12 +1506,14 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
       else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then 
          call grow_tree_segment(Tree, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
          call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
+         call cut_tree(Tree)
 
       else if (p%VelocityMethod(iVel) == idVelocityTreePart) then 
          call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part)
          call grow_tree_part(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
          call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
-         call cut_tree(Tree, deallocPart=.true.)
+         deallocate(Part%P, Part%Alpha, Part%RegParam)
+         call cut_tree(Tree)
       endif
 
       ! --- Unpack
