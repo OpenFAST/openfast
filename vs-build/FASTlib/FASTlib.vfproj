@@ -2256,6 +2256,7 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
@@ -2273,7 +2274,6 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90">
 			<FileConfiguration Name="Debug_Matlab|x64" ExcludedFromBuild="true"/>
@@ -2291,6 +2291,7 @@
 			<FileConfiguration Name="Release_OpenMP|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/>
             <FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<Filter Name="OpenFOAM Integration">
 		<Filter Name="RegistryFiles">

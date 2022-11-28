@@ -28,6 +28,7 @@ module JSON
    interface json_write_array
       module procedure json_write_array2R4  ! Two dimension array of SiKi
       module procedure json_write_array2I   ! Two dimension array of IntKi
+      module procedure json_write_array2R8  ! Two dimension array of R8Ki
       module procedure json_write_array2R16 ! Two dimension array of QuKi
    end interface
 
@@ -41,16 +42,13 @@ contains
 ! --------------------------------------------------------------------------------}
 ! --- Write Array 2D 
 ! --------------------------------------------------------------------------------{
-subroutine json_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, label)
+subroutine json_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    integer(IntKi), dimension(:,:), intent(in   ) :: A   !< Array
    character(len=*),           intent(in   ) :: VarFmt  !< Format for printing real numbers  
    integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
-   logical,          optional, intent(in   ) :: label   !< If present, add a index label at end of line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    character(256)     :: Fmt
    ErrStat = ErrID_None   
@@ -85,15 +83,13 @@ subroutine json_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
 
 end subroutine json_write_array2I
 
-subroutine json_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
+subroutine json_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(SiKi), dimension(:,:), intent(in   ) :: A       !< Array
    character(len=*),           intent(in   ) :: VarFmt  !< Format for printing real numbers  
    integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
    character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    character(256)     :: Fmt
@@ -131,15 +127,13 @@ subroutine json_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
 
 end subroutine json_write_array2R4
 
-subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
+subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(R8Ki), dimension(:,:), intent(in   ) :: A       !< Array
    character(len=*),           intent(in   ) :: VarFmt  !< Format for printing real numbers  
    integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
    character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    character(256)     :: Fmt
@@ -177,15 +171,13 @@ subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
 
 end subroutine json_write_array2R8
 
-subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
+subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
    real(QuKi), dimension(:,:), intent(in   ) :: A       !< Array
    character(len=*),           intent(in   ) :: VarFmt  !< Format for printing real numbers  
    integer,                    intent(  out) :: ErrStat !< A non-zero value indicates an error occurred
    character(len=*),           intent(  out) :: ErrMsg  !< Error message if errstat /= errid_none
-   integer(IntKi),   optional, intent(in   ) :: level   !< indentation level
-   character(len=*), optional, intent(in   ) :: comment !< 
    character(len=*), optional, intent(in   ) :: AllFmt  !< Format for printing a line
    integer            :: nr, nc, i  ! size (rows and columns) of A
    character(256)     :: Fmt

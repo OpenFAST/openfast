@@ -1,0 +1,12 @@
+# File extensions
+*.u2d
+*.user
+
+# Folders Created during build
+Debug*
+Release*
+x64
+.vs/
+
+# Generated Files
+gitVersionInfo.h
