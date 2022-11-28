@@ -10,7 +10,7 @@ MODULE UserWaves
    PUBLIC :: UserWaves_Init
    PUBLIC :: UserWaveElevations_Init
    PUBLIC :: UserWaveComponents_Init
-   PUBLIC :: Alloc_InitOut_Arrays
+   PUBLIC :: Initial_InitOut_Arrays
 
 
    ! Data type for reading in wave elevation data from a file.
@@ -37,8 +37,9 @@ MODULE UserWaves
    CONTAINS
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Alloc_InitOut_Arrays(InitOut, WaveDT, ErrStat, ErrMsg)
+SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization output data
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Initialization input data
    REAL(DbKi),                      INTENT(IN   )  :: WaveDT      ! Value of wave dt, used for filling WaveTime
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -46,19 +47,27 @@ SUBROUTINE Alloc_InitOut_Arrays(InitOut, WaveDT, ErrStat, ErrMsg)
    INTEGER(IntKi)                                  :: i           ! loop counter
    INTEGER(IntKi)                                  :: ErrStat2    ! Temporary error status
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
-   character(*), parameter                         :: RoutineName = 'Alloc_InitOut_Arrays'
+   character(*), parameter                         :: RoutineName = 'Initial_InitOut_Arrays'
    
    
       ErrStat = ErrID_None
       ErrMsg = ""
 
       ! Allocatable arrays:
-      ALLOCATE ( InitOut%WaveElev0  (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.', ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveElev0  (   0:InitOut%NStepWave                                       ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',  ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveElevC  (2, 0:InitOut%NStepWave2, InitInp%NGrid(1)*InitInp%NGrid(2)   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC.',  ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%nodeInWater(   0:InitOut%NStepWave,  InitInp%NWaveKinGrid                ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',ErrStat,ErrMsg,RoutineName)
    
       ! Pointers:
       ALLOCATE ( InitOut%WaveTime   (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat, ErrMsg, RoutineName)
       ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat, ErrMsg, RoutineName)
    
+      ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)                   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.', ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
+      
+      
       if (ErrStat >= AbortErrLev) return
       
       !----------------------------------------
@@ -72,10 +81,18 @@ SUBROUTINE Alloc_InitOut_Arrays(InitOut, WaveDT, ErrStat, ErrMsg)
          InitOut%WaveTime(I) = I * WaveDT
       END DO                ! I - All time steps
       
-      InitOut%WaveElev0 = 0.0
-      InitOut%WaveElevC0 = 0.0
+      InitOut%WaveElev0  = 0.0
+      InitOut%WaveElevC  = 0.0
       
-END SUBROUTINE Alloc_InitOut_Arrays
+      InitOut%WaveElevC0 = 0.0
+      InitOut%WaveElev   = 0.0
+      InitOut%WaveDynP   = 0.0
+      InitOut%WaveVel    = 0.0
+      InitOut%WaveAcc    = 0.0
+      
+      InitOut%nodeInWater = 1
+      
+END SUBROUTINE Initial_InitOut_Arrays
 
 !----------------------------------------------------------------------------------------------------------------------!
 !                                                                                                                      !
@@ -313,8 +330,8 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveTMax   = InitOut%NStepWave*InitInp%WaveDT                                     ! Update the value of WaveTMax   based on the value needed for NStepWave.
    InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax                                               ! Compute the frequency step for incident wave calculations.
    
-   ! >>> Allocate InitOut%WaveTime, InitOut%WaveElev0, and InitOut%WaveElevC0 and initialize them
-   call Alloc_InitOut_Arrays(InitOut, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+   ! >>> Allocate and initialize (set to 0) InitOut arrays
+   call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    
    
@@ -446,35 +463,20 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveTMax   = InitInp%WaveTMax  ! bjj added this
    InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax ! bjj added this
    
-   ! >>> Allocate InitOut%WaveTime, InitOut%WaveElev0, and InitOut%WaveElevC0 and initialize them
-   call Alloc_InitOut_Arrays(InitOut, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+   ! >>> Allocate and initialize (set to 0) InitOut arrays
+   call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
          
    ALLOCATE ( WaveDataStr  ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDataStr.',  ErrStat,ErrMsg,RoutineName)
    
-   ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
    
-   ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2) ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
-   
-   ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
       
       ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
    END IF
-   InitOut%WaveElev    = 0.0_SiKi
-   InitOut%nodeInWater = 1
 
    
    ! Even though for OpenFAST data, NStepWave time increment data equals the 0 time increment data, 
@@ -921,8 +923,8 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       CALL WrScr1 (' Setting WaveDT to ' // TRIM(Num2Lstr(InitInp%WaveDt)) // ' sec.')
 
       
-      ! >>> Allocate and initialize InitOut%WaveTime, InitOut%WaveElev0, and InitOut%WaveElevC0 
-      call Alloc_InitOut_Arrays(InitOut, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+      ! >>> Allocate and initialize (set to 0) InitOut arrays
+      call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
       !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  
       

@@ -545,7 +545,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
             CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
@@ -908,7 +908,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(2) + 1
             CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
