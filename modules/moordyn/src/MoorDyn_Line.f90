@@ -354,7 +354,8 @@ CONTAINS
 
       ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
 
-          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
+          !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
+          print *, "  Catenary solve of Line ", Line%IdNum, " unsuccessful. Initializing as linear."
 
 !          print *, "Node positions: "
 
@@ -583,8 +584,8 @@ CONTAINS
 
             IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
                ErrStat = ErrID_Warn
-               ErrMsg =  ' Unstretched mooring line length too large. '// &
-                            ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+               !ErrMsg =  ' Unstretched mooring line length too large. '// &
+               !             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
                return
             END IF
 

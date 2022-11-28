@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a27', '2022-07-20' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a30', '2022-11-28' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -163,7 +163,7 @@ CONTAINS
       CALL DispNVD( MD_ProgDesc )
       InitOut%Ver = MD_ProgDesc
 
-      CALL WrScr('   This is an alpha version of MoorDyn-F v2, with significant input file changes from v1.')  
+      CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')  
       CALL WrScr('   Copyright: (C) 2021 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
