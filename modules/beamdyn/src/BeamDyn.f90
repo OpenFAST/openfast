@@ -6711,7 +6711,7 @@ END SUBROUTINE BD_GetOP
 
 
 SUBROUTINE BD_WriteMassStiff( p, m, ErrStat, ErrMsg )
-   use Yaml, only: yaml_write_array
+   use YAML, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
    INTEGER(IntKi),                      INTENT(  OUT) :: ErrStat     !< Error status of the operation
@@ -6741,7 +6741,7 @@ END SUBROUTINE BD_WriteMassStiff
 
 
 SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
-   use Yaml, only: yaml_write_array
+   use YAML, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_ContinuousStateType),        INTENT(IN   ) :: x           !< Continuous states at t
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
