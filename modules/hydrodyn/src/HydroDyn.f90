@@ -627,8 +627,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
          InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
          
-!         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
-
          InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or

@@ -1974,7 +1974,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call AllocateNodeLoadVariables(InitInp, p, m, p%NNodes, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
-   call MOVE_ALLOC( InitInp%nodeInWater, p%nodeInWater )   
    
    ! Create the input and output meshes associated with loads at the nodes     
    CALL MeshCreate( BlankMesh      = u%Mesh          &

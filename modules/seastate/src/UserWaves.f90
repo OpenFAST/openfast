@@ -56,7 +56,7 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       ! Allocatable arrays:
       ALLOCATE ( InitOut%WaveElev0  (   0:InitOut%NStepWave                                       ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',  ErrStat, ErrMsg, RoutineName)
       ALLOCATE ( InitOut%WaveElevC  (2, 0:InitOut%NStepWave2, InitInp%NGrid(1)*InitInp%NGrid(2)   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC.',  ErrStat,ErrMsg,RoutineName)
-      ALLOCATE ( InitOut%nodeInWater(   0:InitOut%NStepWave,  InitInp%NWaveKinGrid                ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',ErrStat,ErrMsg,RoutineName)
+!     ALLOCATE ( InitOut%nodeInWater(   0:InitOut%NStepWave,  InitInp%NWaveKinGrid                ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',ErrStat,ErrMsg,RoutineName)
    
       ! Pointers:
       ALLOCATE ( InitOut%WaveTime   (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat, ErrMsg, RoutineName)
@@ -90,7 +90,14 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       InitOut%WaveVel    = 0.0
       InitOut%WaveAcc    = 0.0
       
-      InitOut%nodeInWater = 1
+      !DO I = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
+      !      ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+      !   IF (    InitInp%WaveKinGridzi(i) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(i) <= 0 )  THEN
+      !      InitOut%nodeInWater(:, i) = 1
+      !   ELSE
+      !      InitOut%nodeInWater(:, i) = 0
+      !   END IF
+      !END DO
       
 END SUBROUTINE Initial_InitOut_Arrays
 
@@ -519,10 +526,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             
                   isNumeric = is_numeric(WaveDataStr(i), WaveData)
                   IF (.NOT. isNumeric ) THEN
-                     InitOut%nodeInWater(m,icount) = 0
                      WaveData            = 0.0
-                  ELSE              
-                     InitOut%nodeInWater(m,icount) = 1
                   END IF
                   
                   SELECT CASE (iFile)

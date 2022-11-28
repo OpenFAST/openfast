@@ -601,11 +601,6 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                count = count + 1
                InitOut%WaveVel(:,i,j,k,1) =  InitInp%CurrVxi(count)  ! xi-direction
                InitOut%WaveVel(:,i,j,k,2) =  InitInp%CurrVyi(count)  ! yi-direction
-               IF (    InitInp%WaveKinGridzi(count) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(count) <= 0 )  THEN
-                  InitOut%nodeInWater(:,count) = 1
-               ELSE
-                  InitOut%nodeInWater(:, count) = 0
-               END IF
             end do
          end do
       end do
@@ -1044,19 +1039,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF
-
-      ! We now need to establish the nodeInWater flag values for all the simulation node for all timesteps, this is an extension which is needed to
-      ! support user input wave data.  TODO:  THIS ASSUMES NO WAVE STRETCHING!!!!!!!! GJH 18 Mar 2015
-      DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-            ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
-         IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
-
-            InitOut%nodeInWater(:, J) = 1
-         ELSE
-            InitOut%nodeInWater(:, J) = 0
-         END IF
-
-      END DO ! J - All points where the incident wave kinematics will be computed without stretching
 
       !FIXME: Is this piece still needed?  If so, why is it commented out?
       ! Calculate the factors needed by the discrete time inverse Fourier

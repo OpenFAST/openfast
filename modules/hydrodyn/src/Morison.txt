@@ -270,7 +270,6 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         "(points to SeaState module data)"    -
 typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
@@ -376,7 +375,6 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
 typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
 typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                         {:}        -         -         ""        -

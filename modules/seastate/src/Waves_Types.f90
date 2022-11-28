@@ -105,7 +105,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined [(sec)]
     REAL(DbKi)  :: WaveTMax      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: nodeInWater      !< Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated [-]
     REAL(SiKi)  :: RhoXg      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
@@ -1147,20 +1146,6 @@ IF (ASSOCIATED(SrcInitOutputData%WaveTime)) THEN
     DstInitOutputData%WaveTime = SrcInitOutputData%WaveTime
 ENDIF
     DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
-IF (ALLOCATED(SrcInitOutputData%nodeInWater)) THEN
-  i1_l = LBOUND(SrcInitOutputData%nodeInWater,1)
-  i1_u = UBOUND(SrcInitOutputData%nodeInWater,1)
-  i2_l = LBOUND(SrcInitOutputData%nodeInWater,2)
-  i2_u = UBOUND(SrcInitOutputData%nodeInWater,2)
-  IF (.NOT. ALLOCATED(DstInitOutputData%nodeInWater)) THEN 
-    ALLOCATE(DstInitOutputData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%nodeInWater = SrcInitOutputData%nodeInWater
-ENDIF
     DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
     DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
     DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -1255,9 +1240,6 @@ IF (ASSOCIATED(InitOutputData%WaveTime)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveTime)
   InitOutputData%WaveTime => NULL()
-ENDIF
-IF (ALLOCATED(InitOutputData%nodeInWater)) THEN
-  DEALLOCATE(InitOutputData%nodeInWater)
 ENDIF
  END SUBROUTINE Waves_DestroyInitOutput
 
@@ -1376,11 +1358,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveTime)  ! WaveTime
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! WaveTMax
-  Int_BufSz   = Int_BufSz   + 1     ! nodeInWater allocated yes/no
-  IF ( ALLOCATED(InData%nodeInWater) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! nodeInWater upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nodeInWater)  ! nodeInWater
-  END IF
       Re_BufSz   = Re_BufSz   + 1  ! RhoXg
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
@@ -1801,26 +1778,6 @@ ENDIF
   END IF
     DbKiBuf(Db_Xferred) = InData%WaveTMax
     Db_Xferred = Db_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%nodeInWater) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%nodeInWater,2), UBOUND(InData%nodeInWater,2)
-        DO i1 = LBOUND(InData%nodeInWater,1), UBOUND(InData%nodeInWater,1)
-          IntKiBuf(Int_Xferred) = InData%nodeInWater(i1,i2)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     ReKiBuf(Re_Xferred) = InData%RhoXg
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NStepWave
@@ -2295,29 +2252,6 @@ ENDIF
   END IF
     OutData%WaveTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nodeInWater not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%nodeInWater)) DEALLOCATE(OutData%nodeInWater)
-    ALLOCATE(OutData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%nodeInWater,2), UBOUND(OutData%nodeInWater,2)
-        DO i1 = LBOUND(OutData%nodeInWater,1), UBOUND(OutData%nodeInWater,1)
-          OutData%nodeInWater(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     OutData%RhoXg = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
     OutData%NStepWave = IntKiBuf(Int_Xferred)
