@@ -15,6 +15,7 @@
 #
 
 set(NWTCLIBS_SOURCES
+  src/JSON.f90
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
   src/ModMesh_Types.f90
@@ -26,7 +27,7 @@ set(NWTCLIBS_SOURCES
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
   src/VTK.f90
-  src/Yaml.f90
+  src/YAML.f90
 
   # RanLux sources
   src/ranlux/RANLUX.f90
