@@ -61,7 +61,7 @@ target_link_libraries(hydrodynlib nwtclibs)
 
 # c-bindings interface library
 add_library(hydrodyn_c_binding SHARED src/HydroDyn_C_Binding.f90)
-target_link_libraries(hydrodyn_c_binding hydrodynlib)
+target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()
