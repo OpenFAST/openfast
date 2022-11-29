@@ -236,15 +236,10 @@ subroutine yaml_write_listI(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment
    ErrMsg  = ""
    nc = size(A,1)
 
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
    if (present(comment)) then
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), 1, nc, trim(comment)
-
    else
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key), 1, nc
    end if
@@ -282,11 +277,8 @@ subroutine yaml_write_listR4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, commen
    ErrMsg  = ""
    nc = size(A,1)
 
-   if (present(level)) then
-      Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
 
    if (nc==0) then
       if (present(comment)) then
@@ -323,13 +315,8 @@ subroutine yaml_write_listR8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, commen
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
    if (nc==0) then
       if (present(comment)) then
          write(fid, '('//trim(Fmt)//'A,": []",1X,"#",1X,A)', iostat=ErrStat) trim(key), trim(comment)
@@ -365,13 +352,8 @@ subroutine yaml_write_listR16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr((level)*INDENT_SPACES))//'X,'
    if (nc==0) then
       if (present(comment)) then
          write(fid, '('//trim(Fmt)//'A,": []",1X,"#",1X,A)', iostat=ErrStat) trim(key), trim(comment)
@@ -410,26 +392,18 @@ subroutine yaml_write_array1I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
    if (present(comment)) then
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), 1, nc, trim(comment)
-
    else
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key), 1, nc
    end if
-
    if (present(level)) then
       Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
    else
       Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
    endif
-
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
@@ -456,26 +430,18 @@ subroutine yaml_write_array1R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
    if (present(comment)) then
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), 1, nc, trim(comment)
-
    else
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key),1,nc
    end if
-
    if (present(level)) then
       Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
    else
       Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
    endif
-
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
@@ -502,25 +468,18 @@ subroutine yaml_write_array1R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
    if (present(comment)) then
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), 1, nc, trim(comment)
    else
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key), 1, nc
    end if
-
    if (present(level)) then
       Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
    else
       Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
    endif
-
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
@@ -547,26 +506,18 @@ subroutine yaml_write_array1R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    ErrStat = ErrID_None   
    ErrMsg  = ""
    nc = size(A,1)
-
-   if (present(level)) then
-      Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
-   else
-      Fmt = ''
-   endif
-
+   Fmt = ''
+   if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
    if (present(comment)) then
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0,1X,A)', iostat=ErrStat ) trim(key), 1, nc, trim(comment)
-
    else
       write(fid, '('//trim(Fmt)//'A,": # ",I0," x ",I0)'     , iostat=ErrStat ) trim(key),1,nc
    end if
-
    if (present(level)) then
       Fmt = trim(Num2LStr((level+1)*INDENT_SPACES))//'X,'
    else
       Fmt = trim(Num2LStr(INDENT_SPACES))//'X,'
    endif
-
    if (nc==0) then
       write(fid, '('//trim(Fmt)//'"- [ ]")', iostat=ErrStat) 
    else
@@ -600,6 +551,7 @@ subroutine yaml_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
    ErrMsg  = ""
    nr = size(A,1)
    nc = size(A,2)
+   Fmt=''
 
    ! Indent and Key
    if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
@@ -662,6 +614,7 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ErrMsg  = ""
    nr = size(A,1)
    nc = size(A,2)
+   Fmt=''
 
    ! Indent and Key
    if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
@@ -714,6 +667,7 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    ErrMsg  = ""
    nr = size(A,1)
    nc = size(A,2)
+   Fmt=''
 
    ! Indent and Key
    if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'
@@ -766,6 +720,7 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
    ErrMsg  = ""
    nr = size(A,1)
    nc = size(A,2)
+   Fmt=''
 
    ! Indent and Key
    if (present(level)) Fmt = trim(Num2LStr(level*INDENT_SPACES))//'X,'

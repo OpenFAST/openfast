@@ -3487,7 +3487,7 @@ END SUBROUTINE WriteJSONCommon
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
 SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
-   use Yaml
+   use YAML, only: yaml_write_var, yaml_write_list, yaml_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc
