@@ -301,6 +301,10 @@ program UnsteadyAero_Driver
    logical, parameter :: OscillationAtMidChord=.true.  ! for legacy, use false
    logical, parameter :: VelocityAt34         =.true.  ! for legacy, use false
 
+      ! Initialize error handling variables
+      ErrMsg  = ''
+      ErrStat = ErrID_None
+
       u%UserProp = 0
       u%Re       = dvrInitInp%Re
    
@@ -336,7 +340,7 @@ program UnsteadyAero_Driver
 
       else
          ! check optional variables and allocation status
-         if (any( (/ allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr) /) )) then
+         if (all( (/ allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr) /) )) then
              
             indx = min(n,size(timeArr))
             indx = max(1, indx) ! use constant data at initialization
@@ -354,7 +358,7 @@ program UnsteadyAero_Driver
             u%v_ac(1) = sin(u%alpha)*u%U
             u%v_ac(2) = cos(u%alpha)*u%U
          else
-            errStat = -1
+            errStat = ErrID_Fatal
             errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
          end if
              
