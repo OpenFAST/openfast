@@ -185,7 +185,7 @@ program UnsteadyAero_Driver
 !   call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName)
    
    
-    ! Initialize UnsteadyAero (after AFI)
+      ! Initialize UnsteadyAero (after AFI)
    call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, AFI_Params, AFIndx, InitOutData, errStat, errMsg ) 
       call checkError()
 
@@ -202,7 +202,8 @@ program UnsteadyAero_Driver
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
 
    DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
+      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
+         call checkError()
    END DO
    
       ! Set inputs which do not vary with node or time
@@ -220,8 +221,9 @@ program UnsteadyAero_Driver
       END DO
   
       ! first value of uTimes/u contain inputs at t+dt
-      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr)
-
+      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
+         call checkError()
+        
       t = uTimes(2)
 
          ! Use existing states to compute the outputs
@@ -276,26 +278,32 @@ program UnsteadyAero_Driver
       
    end subroutine checkError
    !----------------------------------------------------------------------------------------------------  
-   subroutine setUAinputs(n,u,t,dt,dvrInitInp,timeArr,AOAarr,Uarr,OmegaArr)
+   subroutine setUAinputs(n,u,t,dt,dvrInitInp,timeArr,AOAarr,Uarr,OmegaArr,errStat,errMsg)
    
-   integer,                intent(in)           :: n
-   type(UA_InputType),     intent(inout)        :: u            ! System inputs
-   real(DbKi),             intent(  out)        :: t
-   real(DbKi),             intent(in)           :: dt
-   TYPE(UA_Dvr_InitInput), intent(in)           :: dvrInitInp           ! Initialization data for the driver program
-   real(DbKi),             intent(in)           :: timeArr(:)
-   real(ReKi),             intent(in)           :: AOAarr(:)
-   real(ReKi),             intent(in)           :: Uarr(:)
-   real(ReKi),             intent(in)           :: OmegaArr(:)
-   integer                                      :: indx
-   real(ReKi)                                   :: phase
-   real(ReKi)                                   :: d_ref2AC
-   real(ReKi)                                   :: alpha_ref
-   real(ReKi)                                   :: U_ref
-   real(ReKi)                                   :: v_ref(2)
-   real(ReKi)                                   :: v_34(2)
+   integer,                intent(in)              :: n
+   type(UA_InputType),     intent(inout)           :: u            ! System inputs
+   real(DbKi),             intent(  out)           :: t
+   real(DbKi),             intent(in)              :: dt
+   TYPE(UA_Dvr_InitInput), intent(in)              :: dvrInitInp           ! Initialization data for the driver program
+   real(DbKi),             intent(in), allocatable :: timeArr(:)
+   real(ReKi),             intent(in), allocatable :: AOAarr(:)
+   real(ReKi),             intent(in), allocatable :: Uarr(:)
+   real(ReKi),             intent(in), allocatable :: OmegaArr(:)
+   integer,                intent(out)             :: errStat
+   character(len=*),       intent(out)             :: errMsg
+   integer                                         :: indx
+   real(ReKi)                                      :: phase
+   real(ReKi)                                      :: d_ref2AC
+   real(ReKi)                                      :: alpha_ref
+   real(ReKi)                                      :: U_ref
+   real(ReKi)                                      :: v_ref(2)
+   real(ReKi)                                      :: v_34(2)
    logical, parameter :: OscillationAtMidChord=.true.  ! for legacy, use false
    logical, parameter :: VelocityAt34         =.true.  ! for legacy, use false
+
+      ! Initialize error handling variables
+      ErrMsg  = ''
+      ErrStat = ErrID_None
 
       u%UserProp = 0
       u%Re       = dvrInitInp%Re
@@ -331,21 +339,29 @@ program UnsteadyAero_Driver
 
 
       else
-         indx = min(n,size(timeArr))
-         indx = max(1, indx) ! use constant data at initialization
+         ! check optional variables and allocation status
+         if (all( (/ allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr) /) )) then
+             
+            indx = min(n,size(timeArr))
+            indx = max(1, indx) ! use constant data at initialization
          
-         ! Load timestep data from the time-series inputs which were previous read from input file
-         t       = timeArr(indx)
-         u%alpha = AOAarr(indx)*pi/180.0   ! This needs to be in radians
-         u%omega = OmegaArr(indx)
-         u%U     = Uarr(indx)
-         if (n> size(timeArr)) then
-            t = t + dt*(n - size(timeArr) ) ! update for NumInp>1;
-         elseif (n < 1) then
-            t = (n-1)*dt
+            ! Load timestep data from the time-series inputs which were previous read from input file
+            t       = timeArr(indx)
+            u%alpha = AOAarr(indx)*pi/180.0   ! This needs to be in radians
+            u%omega = OmegaArr(indx)
+            u%U     = Uarr(indx)
+            if (n> size(timeArr)) then
+              t = t + dt*(n - size(timeArr) ) ! update for NumInp>1;
+            elseif (n < 1) then
+              t = (n-1)*dt
+            end if
+            u%v_ac(1) = sin(u%alpha)*u%U
+            u%v_ac(2) = cos(u%alpha)*u%U
+         else
+            errStat = ErrID_Fatal
+            errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
          end if
-         u%v_ac(1) = sin(u%alpha)*u%U
-         u%v_ac(2) = cos(u%alpha)*u%U
+             
       end if
    
    end subroutine setUAinputs
