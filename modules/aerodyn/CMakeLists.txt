@@ -100,7 +100,7 @@ target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacousti
 
 # ADI lib
 add_library(adilib ${ADI_LIB_SOURCES})
-target_link_libraries(adilib aerodynlib ifwlib nwtclibs)
+target_link_libraries(adilib aerodynlib ifwlib nwtclibs versioninfolib)
 
 # AeroDyn driver
 set(AD_DRIVER_SOURCES
@@ -127,7 +127,7 @@ set(ADI_C_SOURCES
   src/AeroDyn_Inflow_C_Binding.f90
 )
 add_library(aerodyn_inflow_c_binding SHARED ${ADI_C_SOURCES})
-target_link_libraries(aerodyn_inflow_c_binding adilib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_inflow_c_binding adilib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()

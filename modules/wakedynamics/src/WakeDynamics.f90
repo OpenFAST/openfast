@@ -1610,16 +1610,16 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
              dx(3) = p%dr
              call vtk_dataset_structured_points((/xd%p_plane(1,i),-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
              call vtk_point_data_init(mvtk)
-             call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-             call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-             call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
-             call vtk_point_data_scalar_2D(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
-             call vtk_point_data_scalar_2D(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
-             call vtk_point_data_scalar_2D(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 
+             call vtk_point_data_scalar(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
+             call vtk_point_data_scalar(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
+             call vtk_point_data_scalar(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+             call vtk_point_data_scalar(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
+             call vtk_point_data_scalar(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
+             call vtk_point_data_scalar(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 
 
              if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-                call vtk_point_data_scalar_2D(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
-                call vtk_point_data_scalar_2D(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
+                call vtk_point_data_scalar(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
+                call vtk_point_data_scalar(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
              endif
              
              call vtk_close_file(mvtk)

@@ -581,9 +581,11 @@ The wake will adopt a "curled" shape in skewed inflow.
 This corresponds to model 2 with curled-wake vortices of zero intensities, leading to an axi-symmetric wake.
 Swirl effects can be included in this formulation.
 
+Because the Curl and Cartesian implementations rely on a first-order forward sheme, the implementation is less robust that the Polar implementation. 
+An approximate stability criterion for the curled-wake model is given in Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__). This criterion was adapted to provide the guidelines on **dr** and **DT_Low** given in :numref:`FF:ModGuidance`.
 
-The curled-wake model implementation is described in the following reference:
-`<https://onlinelibrary.wiley.com/doi/10.1002/we.2785>`__
+
+The curled-wake model implementation is described in the following `reference <https://onlinelibrary.wiley.com/doi/10.1002/we.2785>`__.
 
 **The rest of this documentation concerns the Polar fomulation**.
 
