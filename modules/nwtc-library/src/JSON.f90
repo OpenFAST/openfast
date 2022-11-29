@@ -2,7 +2,7 @@
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
-!    This file is part of SubDyn.
+!    This file is part of NWTC_Library.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -77,10 +77,9 @@ subroutine json_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg)
       write(fid, '("]")', iostat=ErrStat, advance='no') 
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to JSON file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to JSON file'
    end if
-
 end subroutine json_write_array2I
 
 subroutine json_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
@@ -121,10 +120,9 @@ subroutine json_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
       write(fid, '("]")', iostat=ErrStat, advance='no') 
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to JSON file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to JSON file'
    end if
-
 end subroutine json_write_array2R4
 
 subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
@@ -165,10 +163,9 @@ subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
       write(fid, '("]")', iostat=ErrStat, advance='no') 
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to JSON file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to JSON file'
    end if
-
 end subroutine json_write_array2R8
 
 subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
@@ -209,8 +206,8 @@ subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
       write(fid, '("]")', iostat=ErrStat, advance='no') 
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to JSON file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to JSON file'
    end if
 end subroutine json_write_array2R16
 

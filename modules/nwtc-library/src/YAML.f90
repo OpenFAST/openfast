@@ -2,7 +2,7 @@
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
-!    This file is part of SubDyn.
+!    This file is part of NWTC_Library.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ subroutine yaml_write_comm(fid, comment, ErrStat, ErrMsg)
    ErrMsg  = ""
    write(fid, '("#",A)', iostat=ErrStat) comment
    if (ErrStat /= 0) then
-      ErrMsg='Error writing comment `'//trim(comment)//'` to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing comment `'//trim(comment)//'` to YAML file'
    endif
 end subroutine yaml_write_comm
 ! --------------------------------------------------------------------------------
@@ -103,8 +103,8 @@ subroutine yaml_write_varC(fid, key, val, VarFmt, ErrStat, ErrMsg, level, commen
       write(fid, Fmt, iostat=ErrStat) key, val
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing variable '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varC
 
@@ -130,8 +130,8 @@ subroutine yaml_write_varI(fid, key, val, VarFmt, ErrStat, ErrMsg, level, commen
       write(fid, Fmt, iostat=ErrStat) key, val
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing variable '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varI
 
@@ -157,8 +157,8 @@ subroutine yaml_write_varR4(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comme
       write(fid, Fmt, iostat=ErrStat) key, val
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing variable '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varR4
 
@@ -184,8 +184,8 @@ subroutine yaml_write_varR8(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comme
       write(fid, Fmt, iostat=ErrStat) key, val
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing variable '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varR8
 
@@ -211,8 +211,8 @@ subroutine yaml_write_varR16(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comm
       write(fid, Fmt, iostat=ErrStat) key, val
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing variable '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varR16
 
@@ -261,8 +261,8 @@ subroutine yaml_write_listI(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment
       Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
-         ErrMsg='Error writing list '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing list '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_listI
@@ -303,8 +303,8 @@ subroutine yaml_write_listR4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, commen
          write(fid, Fmt, iostat=ErrStat)trim(key), A(:)
       endif
       if (ErrStat /= 0) then
-         ErrMsg='Error writing list '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing list '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_listR4
@@ -345,8 +345,8 @@ subroutine yaml_write_listR8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, commen
          write(fid, Fmt, iostat=ErrStat)trim(key), A(:)
       endif
       if (ErrStat /= 0) then
-         ErrMsg='Error writing list '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing list '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_listR8
@@ -387,8 +387,8 @@ subroutine yaml_write_listR16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
          write(fid, Fmt, iostat=ErrStat)trim(key), A(:)
       endif
       if (ErrStat /= 0) then
-         ErrMsg='Error writing list '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing list '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_listR16
@@ -436,8 +436,8 @@ subroutine yaml_write_array1I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
       Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
-         ErrMsg='Error writing array '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_array1I
@@ -482,8 +482,8 @@ subroutine yaml_write_array1R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
       Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
-         ErrMsg='Error writing array '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_array1R4
@@ -527,8 +527,8 @@ subroutine yaml_write_array1R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
       Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
-         ErrMsg='Error writing array '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_array1R8
@@ -573,8 +573,8 @@ subroutine yaml_write_array1R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
       Fmt = '('//trim(Fmt)//'"- [",'//trim(Num2LStr(nc))//'('//VarFmt//',","),"]")'   
       write(fid, Fmt, iostat=ErrStat) A(:)
       if (ErrStat /= 0) then
-         ErrMsg='Error writing array '//trim(key)//' to YAML file'
-         return
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
       end if
    endif
 end subroutine yaml_write_array1R16
@@ -641,10 +641,9 @@ subroutine yaml_write_array2I(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
       end do
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
-
 end subroutine yaml_write_array2I
 
 subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
@@ -694,10 +693,9 @@ subroutine yaml_write_array2R4(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
       end do
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
-
 end subroutine yaml_write_array2R4
 
 subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
@@ -747,10 +745,9 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
       end do
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
-
 end subroutine yaml_write_array2R8
 
 subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
@@ -800,8 +797,8 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
       end do
    endif
    if (ErrStat /= 0) then
-      ErrMsg='Error writing array '//trim(key)//' to YAML file'
-      return
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
 end subroutine yaml_write_array2R16
 
