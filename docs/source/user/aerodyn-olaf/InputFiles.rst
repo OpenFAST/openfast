@@ -94,12 +94,19 @@ See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
 
 **nNWPanelsFree** [-] specifies the number of near-wake panels (in FVW time steps), for which the
 wake is convected as "free." 
-If *nNWPanelsFree* is equal to than
-*nNWPanels*, then the entire near wake is free. Otherwise, the Lagrangian markers
+If *nNWPanelsFree* is equal to 
+*nNWPanels*, then the entire near wake is free. 
+Otherwise, the Lagrangian markers
 located within the buffer zone ("frozen near wake") delimited by *nNWPanelsFree* and *nNWsPanel*
 are all convected with a common and decaying induced velocity but with a varying free-stream.  
-Currently, the induced velocity for the frozen near wake is determined as the average over 
-the last 20 panels of the free near wake. The decay is such that the induced velocity is about 50% at the end of the frozen near wake.
+(see :numref:`sec:vortconvfrozen:`).
+This option can be used to speed up the simulation and stabilize the end of the "near-wake" region.
+It can potentially remove the need for the far wake region.
+Currently, the induced velocity of the frozen near wake is arbitrarily determined as the average over 
+the last 20 panels of the free near wake. 
+The decay of the convection velocity is such that the induced velocity is about 50% at the end of the frozen near wake.
+The convection velocity of the frozen wake requires additional verification and validation, and  
+might change in future releases.
 If a "frozen" near-wake region is used then the "free" far-wake region needs to be of zero length (**nFWPanelsFree=0**)
 By default, this variable is set to **nNWPanels** (no frozen wake).
 See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
@@ -111,13 +118,13 @@ Default value: 0.
 
 **nFWPanelsFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
 wake is convected as "free." 
-If *nFWPanelsFree* is greater than
+If *nFWPanelsFree* is equal to
 *nFWPanels*, then the entire far-wake is free. Otherwise, the Lagrangian markers
 located within the buffer zone ("frozen far wake") delimited by *nNWPanelsFree* and *nNWPanels*
 are all convected with a common induced velocity but with a varying free-stream.  
-Currently, the induced velocity for the frozen far wake is determined as the average over 
-free far-wake when **nNWPanelsFree=nNWPanels** (i.e. no frozen near wake), and using the 
-same average convection as the frozen near wake otherwise.
+Currently, the induced velocity for the frozen far wake is determined as 
+the average over the free far-wake when **nNWPanelsFree=nNWPanels** (i.e. no frozen near wake), 
+or, using the same convection as the end of the frozen near wake otherwise.
 By default, this variable is set to **nFWPanels**.
 See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
