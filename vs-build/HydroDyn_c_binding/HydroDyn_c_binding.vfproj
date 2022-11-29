@@ -313,7 +313,7 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_RandomNumber.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
-        <File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
-        <File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

@@ -437,6 +437,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration></File>
-          <File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

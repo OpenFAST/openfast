@@ -2290,7 +2290,7 @@
 			<FileConfiguration Name="Debug_Double|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_OpenMP|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/>
-            <FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/></File>
+			<FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<Filter Name="OpenFOAM Integration">

@@ -36,7 +36,6 @@ _build*/
 install/
 vs-build/
 
-
 # OS and IDE specific files
 .DS_Store
 .vscode

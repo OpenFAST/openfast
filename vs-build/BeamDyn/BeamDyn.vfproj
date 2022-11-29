@@ -291,7 +291,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-        <File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
-        <File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
