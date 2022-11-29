@@ -34,6 +34,7 @@
 !! mesh definition, initialization of fields, accessing field data, updating field data, copying, deallocating, and destroying meshes. 
 !! See https://nwtc.nrel.gov/FAST-Developers and https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf
 MODULE ModMesh
+   use VTK, only: WrVTK_header, WrVTK_footer
 
    USE ModMesh_Types
    IMPLICIT NONE

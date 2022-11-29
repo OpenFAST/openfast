@@ -1408,7 +1408,7 @@ end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
-   use FVW_VTK, only: set_vtk_coordinate_transform
+   use VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t

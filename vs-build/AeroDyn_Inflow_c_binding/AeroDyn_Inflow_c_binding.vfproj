@@ -434,9 +434,6 @@
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_VortexTools.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\aerodyn\src\FVW_VTK.f90">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\aerodyn\src\FVW_Wings.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
@@ -1190,7 +1187,8 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
 		<Filter Name="UnsteadyAero">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Registry.txt">
