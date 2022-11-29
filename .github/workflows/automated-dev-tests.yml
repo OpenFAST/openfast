@@ -60,10 +60,10 @@ jobs:
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DGENERATE_TYPES=ON \
-            -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
+            #-DVARIABLE_TRACKING=OFF \
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
