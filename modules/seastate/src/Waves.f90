@@ -578,20 +578,10 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       call Initial_InitOut_Arrays(InitOut, InitInp, 1.0_DbKi, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
       !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-
-      ALLOCATE ( InitOut%WaveDirArr (0:InitOut%NStepWave2                   ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
-
-
       IF ( ErrStat >= AbortErrLev ) RETURN
-
-      InitOut%WaveDirArr = 0.0
-
 
 
       ! Add the current velocities to the wave velocities:
-
-
       count = 0
 
       !DO J = 1,InitInp%NWaveKinGrid      ! Loop through all points where the incident wave kinematics will be computed
@@ -1007,12 +997,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 ! END TODO SECTION
 
-
-      IF ( InitInp%WaveMod /= 7) THEN    ! For WaveMod == 7, these are allocated and populated in UserWaveComponents_Init
-         ! Wave direction associated with each frequency
-         ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
-      END IF
 
       ! Arrays for the Sin and Cos of the wave direction for each frequency.  Used in calculating wave elevation, velocity, acceleration etc.
       ALLOCATE ( CosWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )

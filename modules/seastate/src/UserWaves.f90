@@ -61,12 +61,13 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       ! Pointers:
       ALLOCATE ( InitOut%WaveTime   (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat, ErrMsg, RoutineName)
       ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveDirArr (   0:InitOut%NStepWave2                ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat, ErrMsg, RoutineName)
    
       ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)                   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.', ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
       ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
-      
+
       
       if (ErrStat >= AbortErrLev) return
       
@@ -89,6 +90,7 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       InitOut%WaveDynP   = 0.0
       InitOut%WaveVel    = 0.0
       InitOut%WaveAcc    = 0.0
+      InitOut%WaveDirArr = 0.0
       
       !DO I = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
       !      ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
@@ -98,6 +100,11 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       !      InitOut%nodeInWater(:, i) = 0
       !   END IF
       !END DO
+      
+         ! scalars
+      InitOut%WaveDirMin   = 0.0
+      InitOut%WaveDirMax   = 0.0
+      
       
 END SUBROUTINE Initial_InitOut_Arrays
 
@@ -931,12 +938,6 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
       !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  
-      
-      
-      ! Allocate frequency array for the wave elevation information in frequency space      
-      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2    ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
-      
       ALLOCATE ( IsSpecified( 0:InitOut%NStepWave2           ), STAT = ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array IsSpecified.',ErrStat,ErrMsg,RoutineName)
       
@@ -947,7 +948,6 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
 
       ! Set the values
-      InitOut%WaveDirArr(:)   =  0.0_SiKi
       IsSpecified(:) = .FALSE.
 
       ! Copy the wave frequency component information to the InitOut%WaveElevC0 array
