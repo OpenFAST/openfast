@@ -8,7 +8,7 @@ module FVW_Tests
    use FVW_Wings
    use FVW_IO
    use FVW_BiotSavart
-   use FVW_VTK, only : FVW_VTK_Misc
+   use VTK, only : VTK_Misc
 
    implicit none
 
@@ -602,7 +602,7 @@ contains
 
    !>
    subroutine Test_LatticeToSegment(mvtk,iStat)
-      type(FVW_VTK_Misc),intent(inout) :: mvtk       !< miscvars for VTK output
+      type(VTK_Misc),intent(inout) :: mvtk       !< miscvars for VTK output
       integer(IntKi), intent(  out)  :: iStat !< Status for test
       ! Local
       integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity

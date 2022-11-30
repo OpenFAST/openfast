@@ -135,6 +135,7 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\JSON.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
@@ -152,7 +153,9 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\Yaml.f90"/></Filter>
 		<Filter Name="SubDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Registry.txt">
@@ -174,7 +177,6 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\modules\subdyn\src\SubDyn_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\subdyn\src\FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\IntegerList.f90"/>
-		<File RelativePath="..\..\modules\subdyn\src\Yaml.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SD_FEM.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn.f90"/>
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Driver.f90"/>
