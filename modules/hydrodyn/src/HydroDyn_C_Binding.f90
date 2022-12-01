@@ -19,10 +19,11 @@
 !**********************************************************************************************************************************
 MODULE HydroDyn_C_BINDING
 
-    USE ISO_C_BINDING
-    USE HydroDyn
-    USE HydroDyn_Types
-    USE NWTC_Library
+   USE ISO_C_BINDING
+   USE HydroDyn
+   USE HydroDyn_Types
+   USE NWTC_Library
+   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -38,6 +39,10 @@ MODULE HydroDyn_C_BINDING
    !     to correctly handle different lengths of the strings
    integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
    integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
+
+   !------------------------------------------------------------------------------------
+   !  Version info for display
+   type(ProgDesc), parameter              :: version   = ProgDesc( 'HydroDyn library', '', '' )
 
    !------------------------------------------------------------------------------------
    !  Potential issues
@@ -222,6 +227,10 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLen
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
 
    ! Sanity checks on values passed
    InterpOrder = int(InterpOrder_C, IntKi)

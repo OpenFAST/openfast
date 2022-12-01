@@ -19,17 +19,21 @@
 !**********************************************************************************************************************************
 MODULE InflowWind_C_BINDING
 
-    USE ISO_C_BINDING
-    USE InflowWind
-    USE InflowWind_Subs, only: MaxOutPts
-    USE InflowWind_Types
-    USE NWTC_Library
+   USE ISO_C_BINDING
+   USE InflowWind
+   USE InflowWind_Subs, only: MaxOutPts
+   USE InflowWind_Types
+   USE NWTC_Library
+   USE VersionInfo
 
    IMPLICIT NONE
 
    PUBLIC :: IfW_C_Init
    PUBLIC :: IfW_C_CalcOutput
    PUBLIC :: IfW_C_End
+
+   !  Version info for display
+   type(ProgDesc), parameter              :: version   = ProgDesc( 'InflowWind library', '', '' )
 
    ! Accessible to all routines inside module
    TYPE(InflowWind_InputType)             , SAVE :: InputData         !< Inputs to InflowWind
@@ -48,6 +52,8 @@ MODULE InflowWind_C_BINDING
    !  in the NWTC Library, ErrMsgLen_C (and the equivalent value in the Python interface) can be updated 
    !  to be equivalent to ErrMsgLen + 1, but the logic exists to correctly handle different lengths of the strings
    integer(IntKi),   parameter            :: ErrMsgLen_C=1025  ! Numerical equivalent of ErrMsgLen + 1
+
+
 
 CONTAINS
 
@@ -105,6 +111,10 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
    CALL C_F_pointer(InputFileString_C, InputFileString)

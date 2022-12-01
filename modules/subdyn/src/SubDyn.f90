@@ -3247,7 +3247,7 @@ END SUBROUTINE GetExtForceOnInterfaceDOF
 !------------------------------------------------------------------------------------------------------
 !> Output the modes to file file    
 SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
-   use YAML
+   use JSON, only: json_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc
@@ -3401,7 +3401,7 @@ contains
       if (maxAmplitude>1e-5) then
          NodesDisp(:,:) = NodesDisp(:,:)*maxDisp/maxAmplitude
       endif
-      call yaml_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2, json=.true.);  
+      call json_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2);  
       write(UnSum, '(A)', advance='no')'}'
       if (iMode<nModes) write(UnSum, '(A)', advance='no')','//NewLine 
    END SUBROUTINE WriteOneMode
@@ -3428,7 +3428,7 @@ END SUBROUTINE OutModes
 
 !> Write the common part of the JSON file (Nodes, Connectivity, Element prop)
 SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, ErrStat, ErrMsg)
-   use YAML
+   use JSON, only: json_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           !< Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              !< Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              !< Misc
@@ -3463,11 +3463,11 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
       Connectivity(i,1) = p%Elems(i,2)-1 ! Node 1
       Connectivity(i,2) = p%Elems(i,3)-1 ! Node 2
    enddo
-   call yaml_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2, json=.true.); write(UnSum, '(A)', advance='no')','//NewLine 
+   call json_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2); write(UnSum, '(A)', advance='no')','//NewLine 
    if(allocated(Connectivity)) deallocate(Connectivity)
 
    ! --- Nodes
-   call yaml_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2, json=.true.);  write(UnSum, '(A)', advance='no')','//NewLine 
+   call json_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2);  write(UnSum, '(A)', advance='no')','//NewLine 
 
    ! --- Elem props
    write(UnSum, '(A)') '"ElemProps": ['
@@ -3487,7 +3487,7 @@ END SUBROUTINE WriteJSONCommon
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
 SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
-   use Yaml
+   use YAML, only: yaml_write_var, yaml_write_list, yaml_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc

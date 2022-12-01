@@ -24,6 +24,7 @@
 MODULE AWAE_IO
  
    use NWTC_Library
+   use VTK
    use AWAE_Types
 
    
