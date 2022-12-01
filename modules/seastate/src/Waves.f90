@@ -670,25 +670,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                      :: I_WaveTp                                        ! The index of the frequency component nearest to WaveTp
    INTEGER                      :: J                                               ! Generic index
    INTEGER                      :: K                                               ! Generic index
-   INTEGER                      :: LastInd                                         ! Index into the arrays saved from the last call as a starting point for this call
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
    integer                      :: primeCount                                      ! Counter for locations before applying stretching
    COMPLEX(SiKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    COMPLEX(SiKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use.
    TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
-
-   ! Variables for mult-direction waves
-   INTEGER(IntKi)               :: WaveNDirMax                                     !< Maximum value we can change WaveNDir to (relative to original value passed in). Used in finding new WaveNDir value.
-   INTEGER(IntKi)               :: WvSpreadNDir                                    !< Number of wave spreading directions for intermediate calculations.  Set later to be MAX(15*InitOut%WaveNDir,1000)
-   INTEGER(IntKi)               :: WvSpreadFreqPerDir                              !< Number of wave frequencies per direction
-   REAL(SiKi),    ALLOCATABLE   :: WvSpreadCos2SArr(:)                             !< Wave spreading function results array.  Used in equal energy wave spreading function.
-   REAL(SiKi)                   :: WvSpreadCos2SConst                              !< Normalization constant for wave spreading function.
-   REAL(SiKi),    ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
-   REAL(SiKi)                   :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
-   REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
-   REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions
-   REAL(SiKi),    ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
-   REAL(SiKi)                   :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
 
    ! Variables for constrained wave
    REAL(SiKi)                   :: WaveElevC0ReSum                                 !< Sum of the wave DFT amplitudes (real part) across all frequencies (m)
@@ -733,18 +719,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Variables for error handling
    INTEGER(IntKi)               :: ErrStatTmp                                      !< Temporary error status
    CHARACTER(ErrMsgLen)         :: ErrMsgTmp                                       !< Temporary error message
-   CHARACTER(ErrMsgLen)         :: ErrMsgTmp2                                      !< Another temporary error message
    character(*), parameter      :: RoutineName = 'VariousWaves_Init'
 
       ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-      !  Set the WaveNDir information (number of wave directions).
-      !     -> Since this must be adjusted later, put it in InitOut first and adjust that later in the code.
-   InitOut%WaveNDir  = InitInp%WaveNDir
-   WaveNDirMax       = CEILING(InitOut%WaveNDir*1.25_SiKi)     ! Value we allow WaveNDir to reach before aborting
 
       ! Tell our users what is about to happen that may take a while:
       CALL WrScr ( ' Generating incident wave kinematics and current time history.' )
@@ -1024,276 +1004,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 
-      !FIXME: Is this piece still needed?  If so, why is it commented out?
-      ! Calculate the factors needed by the discrete time inverse Fourier
-      !   transform in the calculations of the White Gaussian Noise (WGN) and
-      !   the two-sided power spectral density of the wave spectrum per unit time:
-
-      ! This factor is needed by the discrete time inverse Fourier transform to ensure that the time series WGN
-      ! process has unit variance
-      !  WGNC_Fact = SQRT( Pi/(InitOut%WaveDOmega*InitInp%WaveDT) )
-
-      !--------------------------------------------------------------------------------
-      !> #  Multi Directional Waves
-      !> ## Adjust WaveNDir
-      !!
-      !! If multi-directional waves will be used, the value of WaveNDir may need to be adjusted.  The reason is that
-      !! for the equal energy approach used here, the following condition must be met:
-      !!
-      !!       CONDITION:  (NStepWave2) / WaveNDir    must be an integer
-      !!
-      !! If this is true, then an equal number of frequencies is assigned to each of the WaveNDir directions which
-      !! gives the proper wave direction distribution function.  Otherwise, the energy distribution by direction
-      !! will not be correct.
-      !!
-      !! _WaveNDir_ could not be adjusted before _NStepWave2_ was finalized above.
-      !!
-      !! @note    Use the value of WaveNDir stored in InitOut since InitInp cannot be changed.
-      !!
-      !! @note    Originally, the criteria had been that (NStepWave2 - 1) / WaveNDir is an integer.  This criteria
-      !!          was relaxed by setting the direction for Omega = 0 (which has no amplitude) since it was found that
-      !!          (NStepWave2 - 1) is often a prime number due to how NStepWave is calculated above to be a product
-      !!          of smallish numbers.
-
-      IF ( InitInp%WaveMultiDir  .AND. InitInp%WaveMod /= 7 ) THEN    ! Multi-directional waves in use
-
-            ! Check that the number of wave directions is a positive odd number.  In theory this has been
-            ! done before the Waves module was called.  We repeat it here in the event that the Waves module
-            ! gets used in some other code.
-            !  -> If it is less than 0, error out.
-            !  -> If it is even, we will increment it by 1.
-         IF ( InitOut%WaveNDir <= 0_IntKi ) THEN
-            ErrMsgTmp   = 'WaveNDir must be an odd number greater than 0.'
-            ErrStatTmp  = ErrID_Fatal
-            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-         IF ( MODULO( InitOut%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
-            InitOut%WaveNDir  = InitOut%WaveNDir + 1
-            ErrMsgTmp = 'WaveNDir must be odd.  Changing the value to '//TRIM(Num2LStr(InitOut%WaveNDir))
-            CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Now adjust WaveNDir as necessary so that (NStepWave2) / WaveNDir is integer
-         IF ( .NOT. EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
-                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
-            DO WHILE ( InitOut%WaveNDir <= WaveNDirMax )
-
-               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_SiKi
-               IF ( EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
-                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
-                  ErrMsgTmp   =  'Changed WaveNDir from '//TRIM(Num2LStr(InitInp%WaveNDir))//' to '//  &
-                                 TRIM(Num2LStr(InitOut%WaveNDir))//' so that an equal number of frequencies are assigned to '// &
-                                 'each direction.'
-                  CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-                  EXIT
-               END IF
-            END DO
-         END IF
-
-            ! If we exited because we hit a limit (in which case the condition is not satisfied), then we cannot continue.
-            ! We warn the user that a value for WaveNDir was not found, and that they should try a different value, or try
-            ! a different value for WaveTMax.  The reason for suggesting the latter is that NStepWave is derived from
-            ! WaveTMax and adjusted until it is a product of smallish numbers (most likely even, but not necessarily so).
-            ! So, there is a very small possibility then that NStepWave2 is a prime number, in which case we won't find a
-            ! value for WaveNDir, so we suggest that the user change WaveTMax.  To make this a little easier for the user,
-            ! we will report the first 5 possible values for WaveNDir between their requested value and 1/4 of NStepWave2,
-            ! if there are any.
-         IF ( .NOT.  EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
-                                      ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
-            ErrMsgTmp   = 'Could not find value for WaveNDir between '//TRIM(Num2LStr(InitInp%WaveNDir))//' and '// &
-                           TRIM(Num2LStr(WaveNDirMax))//' such that an equal number of frequencies are assigned to each '// &
-                           'direction.'
-            ErrStatTmp  = ErrID_Fatal
-
-            ! Now check for the possible values of WaveNDir so that we can tell the user about it.  The variable 'I' contains
-            ! the count of the number of values of WaveNDir found.
-            I = 0
-            ErrMsgTmp2 = 'The next values of WaveNDir that work with the selected values for WaveTMax and WaveDT:'
-            DO WHILE ( InitOut%WaveNDir <= INT(InitOut%NStepWave2/4.0) )
-               IF ( EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
-                                     ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
-                  ErrMsgTmp2  = TRIM(ErrMsgTmp2)//"  "//TRIM(Num2LStr(InitOut%WaveNDir))
-                  I = I + 1
-               END IF
-
-               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_SiKi
-
-               IF ( I >= 5 ) EXIT
-
-            END DO
-
-            ! If there were no additional values for WaveNDir found, I will be 0, so we rewrite the error message.
-            IF ( I == 0 ) THEN
-               ErrMsgTmp2  =  'There are no values for WaveNDir between '//TRIM(Num2LStr(WaveNDirMax))//' and '// &
-                              TRIM(Num2LStr(INT(InitOut%NStepWave2/4.0)))//' (4 frequencies per wave direction)'// &
-                              ' that will work with the selected values for WaveTMax ('//TRIM(Num2Lstr(InitOut%WaveTMax))// &
-                              ') and WaveDT ('//TRIM(Num2LStr(InitInp%WaveDT))//').  Change either'// &
-                              ' WaveTMax or WaveDT.'
-            ELSE
-               ErrMsgTmp2  = TRIM(ErrMsgTmp2)//'.'
-            ENDIF
-
-            ! Append the message about the possible values for WaveNDir (if any were found) and set the error status before
-            ! returning to the calling program.
-            ErrMsgTmp   =  TRIM(ErrMsgTmp)//NewLine//' '//TRIM(ErrMsgTmp2)
-
-            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-            ! Save the number of frequencies per direction so that we can use it later in assigning the directios.
-         WvSpreadFreqPerDir   =  (InitOut%NStepWave2)/InitOut%WaveNDir
-
-
-         !> ## Calculate the wave directions based on an equal energy approach.
-         !!
-         !! All the angles are supplied in degrees and are converted as needed.  For the cosine function,
-         !! we could convert degrees to radians, but the conversion constant cancels out.
-         !!
-         !! |  Variable          |  Fortran Name         |  Location |  Units       |   Description                                          |
-         !! | :----------------: | :-------------------: | :-------: | :--------:   | :----------------------------------------------------- |
-         !! | \f$\bar\theta\f$   | _WaveDir_             | _InitInp_ |  (degrees)   |  Mean direction heading (_WaveDir_)                    |
-         !! | \f$\Theta\f$       | _WaveNDir_            | _InitOut_ |  (-)         |  Number of wave directions                             |
-         !! | \f$\delta\theta\f$ | _WaveDirRange_        | _InitInp_ |  (degrees)   |  Full range of spreading function                      |
-         !! | \f$S\f$            | _WaveDirSpread_       | _InitInp_ |  (-)         |  The spreading coefficient                             |
-         !! |                    | _WvSpreadNDir_        |  local    |  (-)         |  Number of angles discretizing the spreading function  |
-         !! | \f$C\f$            | _WvSpreadCos2SConst_  |  local    |  (1/degrees) |  The normalization coefficient                         |
-         !! |                    | _WvTheta_             |  local    |  (degrees)   |  The interpolated wave directions to assign to         |
-         !! | \f$\theta_i\f$     | _WvSpreadThetas_      |  local    |  (degrees)   |  Array of wave directions associated with _WvSpreadIntegral_ |
-         !! |                    | _D2R_                 |  global   | (rad/degree) |  Constant from library to convert degrees to radians   |
-         !!
-         !! The equal energy approach is used to set the wave directions such that each direction has the same
-         !! number of frequencies.  To ensure that direction spreading function (Cosine^2S in this case) has
-         !! the correct overal energy distribution shape, the wave directions are adjusted.  The spacing between
-         !! directions is closer near the central direction than in the tails of the spreading function.  The
-         !! method distributes the wave directions so that the energy integral between wave directions is kept
-         !! constant.  The following steps are taken:
-         !!
-         !! 1. Discretize the spreading function over the range _InitInp%WaveDirRange_ into _WvSpreadNDir_.
-         !!
-         !! 2. Calculate the spreading function, _WvSpreadCos2SArr_, in the range.\n
-         !!          \f$ D(\theta) = C \left| \cos\left(\frac{\pi (\theta-\bar\theta)}{\delta\theta}\right)\right|^{2S} \f$\n
-         !!       where\n
-         !!          \f$ C = \frac{\sqrt{\pi} \: \Gamma(S+1)}{\delta\theta \: \Gamma(S+1/2)} \f$,
-         !!       and
-         !!          \f$ \Gamma \f$ is the gamma function.
-         !!
-         !! 3. Calculate the integral of WvSpreadCos2SArr up to the current angle, and save it as
-         !!       WvSpreadIntegral. The integral can be written as:\n
-         !!          \f$P(\theta) = \int\limits^{\theta}_{\bar\theta - \delta\theta/2} D(\theta') \: \mathrm{d}\theta'\f$
-         !!
-         !! 4. Do a sanity check on the result of \f$P(\theta)\f$ over the range.
-         !!
-         !! 5. Divide the integrated area of _WvSpreadCos2SArr_ into _InitOut%WaveNDir_ directions (the final number
-         !!       of wave directions that was solved for above).  To do this, simply find the _1/WaveNDir_ values
-         !!       of the integral and interpolate to find the values of the _WvSpreadThetas_ that match.  These are the
-         !!       new wave directions to use.  These results are stored in the array _WvTheta_.
-         !!
-         !! 6. Cleanup
-         !!
-
-         !> ### Code Implementation order
-         !! 1. Discretize the spreading function range and calculate the values of the wave spreading function
-
-            ! Now that we have the value for _WaveNDir_ found above, we set the value of _WvSpreadNDir_ to be 15x as
-            ! large, or 1000 (whichever is larger).  WvSpreadNDir is used only in discretization for later
-            ! interpolation of actual wave directions.
-         WvSpreadNDir   = MAX(15*InitOut%WaveNDir,1000)
-         WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,SiKi)
-
-            ! Calculate the normalization constant for the wave spreading.
-         IF ( InitInp%WaveDirSpread < 25.0_SiKi ) THEN ! Use exact expression
-            WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_SiKi))/               &
-                                   (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_SiKi))
-         ELSE ! Use asymptotic approximation for large argument
-            WvSpreadCos2SConst   = sqrt(Pi*InitInp%WaveDirSpread)*(1.0_SiKi+0.125_SiKi/InitInp%WaveDirSpread)/InitInp%WaveDirRange
-         ENDIF
-
-            ! Allocate arrays to use for storing the intermediate values
-         ALLOCATE( WvSpreadCos2SArr(0:WvSpreadNDir),  STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadCos2SArr.',  ErrStat,ErrMsg,RoutineName)
-
-         ALLOCATE( WvSpreadIntegral(0:WvSpreadNDir),  STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadIntegral.',  ErrStat,ErrMsg,RoutineName)
-
-         ALLOCATE( WvSpreadThetas(0:WvSpreadNDir),    STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetas.',    ErrStat,ErrMsg,RoutineName)
-
-         ALLOCATE( WvTheta(1:InitOut%WaveNDir),       STAT=ErrStatTmp )    ! Dealocate this at very end of routine.
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvTheta.',           ErrStat,ErrMsg,RoutineName)
-
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-            !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
-         DO I=0,WvSpreadNDir
-               ! The current angle as we step through the range
-            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
-
-               ! Calculate the wave spreading for the current value of WvSpreadThetas
-            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) &
-                                                            **(2*InitInp%WaveDirSpread)
-
-            !> 3. Calculate the integral of the spreading function up to the current angle and save it.
-            !     Remember that the first element can't refer to one before it.
-            IF (I == 0) THEN
-               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta
-            ELSE
-               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta + WvSpreadIntegral(I-1)
-            END IF
-         ENDDO
-
-
-            !> 4. Perform a quick sanity check.  The last value of the integral table should be 1.0 exactly.
-            !!    We will allow for a 1% deviation.  If for some reason an error occurs, it may be due to the
-            !!    GAMMA function calculation for the normalization constant, _WvSpreadCos2SConst_.
-         IF ( WvSpreadIntegral(WvSpreadNDir) < 0.99_SiKi .OR. WvSpreadIntegral(WvSpreadNDir) > 1.01_SiKi ) THEN
-            CALL SetErrStat(ErrID_Fatal,' Something went wrong in evaluating the multidirectional wave spreading function.  '// &
-                           'Integral is '//TRIM(Num2LStr(WvSpreadIntegral(WvSpreadNDir))),ErrStat,ErrMsg,RoutineName)
-            RETURN
-         END IF
-
-
-            !> 5. Set the wave directions using the results from the integral.
-            !  We will use the variable LastInd as a simple index for figuring out where in the array we are.  First set to 0
-         LastInd  =  0_IntKi
-         DO I=1,InitOut%WaveNDir
-            WvSpreadIntegralTmp  = (REAL(I)-0.5_SiKi)/REAL(InitOut%WaveNDir)
-            WvTheta(I)    =  InterpStp( WvSpreadIntegralTmp, WvSpreadIntegral, WvSpreadThetas, LastInd, WvSpreadNDir )
-         ENDDO       ! I=1,InitOut%WaveNDir
-
-            ! Store the minimum and maximum wave directions
-         InitOut%WaveDirMin   = MINVAL(WvTheta)
-         InitOut%WaveDirMax   = MAXVAL(WvTheta)
-
-            !> 6. Done with equal energy wavedirection calculations.  Deallocate the arrays used during calculations.
-         IF(ALLOCATED( WvSpreadCos2SArr ))      DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadCos2SArr.',  ErrStat,ErrMsg,RoutineName)
-         IF(ALLOCATED( WvSpreadIntegral ))      DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadIntegral.',  ErrStat,ErrMsg,RoutineName)
-         IF(ALLOCATED( WvSpreadThetas   ))      DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp   )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot deallocate array WvSpreadThetas.',  ErrStat,ErrMsg,RoutineName)
-
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-      ELSE IF (InitInp%WaveMod == 7) THEN
-         
-         InitOut%WaveDirMin   = MINVAL(InitOut%WaveDirArr)
-         InitOut%WaveDirMax   = MAXVAL(InitOut%WaveDirArr)
-
-      ELSE     ! Multi-directional waves not used
-
-         InitOut%WaveDirMin   = InitInp%WaveDir
-         InitOut%WaveDirMax   = InitInp%WaveDir
-
-      ENDIF    ! Multi-directional waves in use (InitInp%WaveMultiDir == .TRUE.)
 
 
 
@@ -1415,93 +1125,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          ENDIF
 
       END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
-
-      !--------------------------------------------------------------------------------
-      !=== Multi-Directional Waves ===
-      !> ## Assign Wave directions
-      !!  For the equal energy approach to the multi-directional waves, we need to use the random number generator to
-      !!  select which direction each wave frequency is assigned to.  We also require that the phase and amplitudes
-      !!  assigned to each frequency are the same regardless of whether or not multiple directions are used, we must
-      !!  first finish assigning all the amplitudes and phases before using the random number generator again.  For this
-      !!  reason, the above do loop is completed, the multiple wave directions are computed, and then we run through the
-      !!  all wave frequencies again to set up the remaining pieces.  If we did not do this, we would change the seed
-      !!  used by the random number generator before selecting the next amplitude and phase pair.
-      !!
-      !!  The wave directions are assigned in groups of _WaveNDir_ frequencies such that each frequency is assigned to
-      !!  one of the _WaveNDir_ unique wave directions.  Each wave direction is used only once within each group of
-      !!  frequencies.
-      !!
-      !!  When complete, we deallocate the _WvSpreadThetas_ array that was used to store the assigned directions.
-
-      IF ( InitInp%WaveMultiDir .AND. InitInp%WaveNDir > 1 .AND. InitInp%WaveMod /= 7)   THEN     ! Multi-directional waves in use
-
-
-            ! Allocate the index array for each group of frequencies.  This array is used to randomize the directions
-            ! within each WaveNDir sized group of frequencies.  This is a REAL array used to hold the random numbers.
-         ALLOCATE( WvSpreadThetaIdx(1:InitOut%WaveNDir), STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetaIdx while assigning '//  &
-                                                          'wave directions.',ErrStat,ErrMsg,RoutineName)
+      
+      !> #  Multi Directional Waves
+      call CalculateWaveDirection(InitInp, InitOut, ErrStatTmp, ErrMsgTmp)
+         call SetErrStat(ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF
-
-
-            ! Reset the K so that we can use it to count the frequency index.
-            ! It should be exactly NStepWave2 when done assigning directions. The the Omega = 0 has
-            ! no amplitude, but gets a direction anyhow (to simplify the calculation of WaveNDir).
-         K  = 0
-
-
-            ! Work through the frequencies in groups of directions.
-         DO I = 1,WvSpreadFreqPerDir
-
-               ! Populate the array with random numbers
-            CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
-
-            DO J = 1, InitOut%WaveNDir
-
-                  ! Find the index lowest value in the WvSpreadThetaIdx array.  This is the index to
-                  ! use for this wave direction.
-               LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
-
-                  ! Assign the direction for this frequency piece to the LastInd value.
-               InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
-
-                  ! Now make that element in the WvSpreadThetaIdx really big so we don't pick it again
-               WvSpreadThetaIdx( LastInd )   = HUGE(1.0_SiKi)
-
-               K  = K + 1     ! Increment the frequency index
-
-            ENDDO
-         ENDDO
-         ! Filling last value since it is not reached by the loop above
-         CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
-         LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
-         InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
-
-            ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
-            ! K = NStepWave2 (K is incrimented afterwards).
-         IF ( K /= (InitOut%NStepWave2 ) )    CALL SetErrStat(ErrID_Fatal,  &
-                     'Something went wrong while assigning wave directions.',ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-            !  We are done with the indexing array, so deallocate it
-         IF(ALLOCATED( WvSpreadThetaIdx ))   DEALLOCATE( WvSpreadThetaIdx )
-
-            !  This had been allocated above (calculation section of equal energy portion of multidirectional waves).
-            !  Deallocate it here after we have completed all the calculations involving it.
-         IF(ALLOCATED( WvTheta ))            DEALLOCATE( WvTheta )
-
-      ELSE IF (InitInp%WaveMod /= 7) THEN     ! Not really multi-directional waves
-
-            ! Since we do not have multi-directional waves, we must set the wave direction array to the single wave heading.
-         InitOut%WaveDirArr   = InitInp%WaveDir
-      ENDIF    ! Multi-directional waves in use.
-
+         
+         ! Store the minimum and maximum wave directions
+      InitOut%WaveDirMin   = MINVAL(InitOut%WaveDirArr)
+      InitOut%WaveDirMax   = MAXVAL(InitOut%WaveDirArr)
+         
 
       ! Set the CosWaveDir and SinWaveDir arrays
       CosWaveDir=COS(D2R*InitOut%WaveDirArr)
@@ -2130,18 +1766,12 @@ CONTAINS
       WaveElevAtXY(InitOut%NStepWave) = WaveElevAtXY(0)
 
    END SUBROUTINE WaveElevTimeSeriesAtXY
-!--------------------------------------------------------------------------------
-   SUBROUTINE AllocateLocalArrays()
-   
-   END SUBROUTINE AllocateLocalArrays
+
 !--------------------------------------------------------------------------------
    SUBROUTINE CleanUp( )
 
       IF (ALLOCATED( WaveKinPrimeMap ))   DEALLOCATE( WaveKinPrimeMap,  STAT=ErrStatTmp)
       IF (ALLOCATED( WaveKinzi0Prime ))   DEALLOCATE( WaveKinzi0Prime,  STAT=ErrStatTmp)
-      IF (ALLOCATED( WvSpreadCos2SArr ))  DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp)
-      IF (ALLOCATED( WvSpreadIntegral ))  DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp)
-      IF (ALLOCATED( WvSpreadThetas ))    DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveAcc ))         DEALLOCATE( GHWaveAcc,        STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
       IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
@@ -2174,7 +1804,6 @@ CONTAINS
       IF (ALLOCATED( WaveVelC0Hxi ))      DEALLOCATE( WaveVelC0Hxi,     STAT=ErrStatTmp)
       IF (ALLOCATED( WaveVelC0Hyi ))      DEALLOCATE( WaveVelC0Hyi,     STAT=ErrStatTmp)
       IF (ALLOCATED( WaveVelC0V ))        DEALLOCATE( WaveVelC0V,       STAT=ErrStatTmp)
-      IF (ALLOCATED( WvSpreadThetaIdx ))  DEALLOCATE( WvSpreadThetaIdx, STAT=ErrStatTmp)
       IF (ALLOCATED( tmpComplexArr ))     DEALLOCATE( tmpComplexArr,    STAT=ErrStatTmp)
 
       IF (ALLOCATED( WaveS1SddArr ))      DEALLOCATE( WaveS1SddArr,     STAT=ErrStatTmp)
@@ -2248,10 +1877,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%RhoXg         = InitInp%WtrDens*InitInp%Gravity
 
 
-         ! Set the minimum and maximum wave directions to WaveDir.  These are reset in the
-         ! subroutine calls as necessary.
-      InitOut%WaveDirMin   = InitInp%WaveDir
-      InitOut%WaveDirMax   = InitInp%WaveDir
 
 
             ! Initialize the variables associated with the incident wave:
@@ -2393,5 +2018,429 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
    RETURN
 END FUNCTION WheelerStretching
 
+!------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE CalculateWaveNDir(InitInp, InitOut, ErrStat, ErrMsg)
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Output data
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                                  :: I           ! loop counter
+   INTEGER(IntKi)                                  :: WaveNDirMax !< Maximum value we can change WaveNDir to (relative to original value passed in). Used in finding new WaveNDir value.
+   
+   INTEGER(IntKi)                                  :: ErrStatTmp  !< Temporary error status
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp   !< Temporary error message
+   character(*), parameter                         :: RoutineName = 'CalculateWaveNDir'
+
+   
+         ! Initialize ErrStat
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+   
+
+      WaveNDirMax      = CEILING(InitInp%WaveNDir*1.25_SiKi)     ! Value we allow WaveNDir to reach before aborting
+      InitOut%WaveNDir = InitInp%WaveNDir
+
+         ! Check that the number of wave directions is a positive odd number.  In theory this has been
+         ! done before the Waves module was called.  We repeat it here in the event that the Waves module
+         ! gets used in some other code.
+         !  -> If it is less than 0, error out.
+         !  -> If it is even, we will increment it by 1.
+      IF ( InitOut%WaveNDir <= 0_IntKi ) THEN
+         CALL SetErrStat(ErrID_Fatal,'WaveNDir must be an odd number greater than 0.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
+
+      IF ( MODULO( InitOut%WaveNDir, 2_IntKi) == 0_IntKi ) THEN
+         InitOut%WaveNDir  = InitOut%WaveNDir + 1
+         CALL SetErrStat(ErrID_Warn,'WaveNDir must be odd.  Changing the value to '//TRIM(Num2LStr(InitOut%WaveNDir)),ErrStat,ErrMsg,RoutineName)
+      END IF
+
+         
+      ErrStatTmp = ErrID_None
+      ErrMsgTmp = ""
+
+      DO WHILE ( .NOT. EqualRealNos( REAL(InitOut%NStepWave2/InitOut%WaveNDir), REAL(InitOut%NStepWave2)/REAL(InitOut%WaveNDir) ))
+                                  
+         IF (InitOut%WaveNDir > WaveNDirMax ) THEN
+            ErrMsgTmp   = 'Could not find value for WaveNDir between '//TRIM(Num2LStr(InitInp%WaveNDir))//' and '// &
+                           TRIM(Num2LStr(WaveNDirMax))//' such that an equal number of frequencies are assigned to each direction.'
+            ErrStatTmp  = ErrID_Fatal
+            EXIT
+         ELSE
+            InitOut%WaveNDir = InitOut%WaveNDir + 2
+            ErrMsgTmp   =  'Changed WaveNDir from '//TRIM(Num2LStr(InitInp%WaveNDir))//' to '// TRIM(Num2LStr(InitOut%WaveNDir))//  &
+                           ' so that an equal number of frequencies are assigned to each direction.'
+            ErrStatTmp  = ErrID_Warn
+         END IF
+               
+      END DO
+         
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+
+
+      IF (ErrStat == ErrID_Fatal) THEN
+
+         ! If we exited because we hit a limit (in which case the condition is not satisfied), then we cannot continue.
+         ! We warn the user that a value for WaveNDir was not found, and that they should try a different value, or try
+         ! a different value for WaveTMax.  The reason for suggesting the latter is that NStepWave is derived from
+         ! WaveTMax and adjusted until it is a product of smallish numbers (most likely even, but not necessarily so).
+         ! So, there is a very small possibility then that NStepWave2 is a prime number, in which case we won't find a
+         ! value for WaveNDir, so we suggest that the user change WaveTMax.  To make this a little easier for the user,
+         ! we will report the first 5 possible values for WaveNDir between their requested value and 1/4 of NStepWave2,
+         ! if there are any.
+         
+         
+         ! Now check for the possible values of WaveNDir (up to I=5) so that we can tell the user about it.
+         I = 0
+         ErrMsgTmp = 'The next values of WaveNDir that work with the selected values for WaveTMax and WaveDT:'
+         DO WHILE ( InitOut%WaveNDir <= INT(InitOut%NStepWave2/4.0) )
+            IF ( EqualRealNos(REAL(InitOut%NStepWave2/InitOut%WaveNDir), &
+                              REAL(InitOut%NStepWave2)/REAL(InitOut%WaveNDir) )) THEN
+               ErrMsgTmp  = TRIM(ErrMsgTmp)//"  "//TRIM(Num2LStr(InitOut%WaveNDir))
+               I = I + 1
+               IF (I >= 5) EXIT ! limit the number of choices for WaveNDir that are printed
+            END IF
+
+            InitOut%WaveNDir = InitOut%WaveNDir + 2
+         END DO
+
+         ! If there were no additional values for WaveNDir found, I will be 0, so we rewrite the error message.
+         IF ( I == 0 ) THEN
+            ErrMsgTmp  =  'There are no values for WaveNDir between '//TRIM(Num2LStr(WaveNDirMax))//' and '// &
+                           TRIM(Num2LStr(INT(InitOut%NStepWave2/4.0)))//' (4 frequencies per wave direction)'// &
+                           ' that will work with the selected values for WaveTMax ('//TRIM(Num2Lstr(InitOut%WaveTMax))// &
+                           ') and WaveDT ('//TRIM(Num2LStr(InitInp%WaveDT))//').  Change either WaveTMax or WaveDT.'
+         ELSE
+            ErrMsgTmp  = TRIM(ErrMsgTmp)//'.'
+         ENDIF
+
+         ! Append the message about the possible values for WaveNDir (if any were found) and set the error status before
+         ! returning to the calling program.
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
+
+END SUBROUTINE CalculateWaveNDir
+!------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE CalculateWaveDirection(InitInp, InitOut, ErrStat, ErrMsg )
+! Compute the wave direction array, InitOut%WaveDirArr
+!----------------------------------------------------------------------------------------------------------------------------------
+
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Output data
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   ! Local Variables
+   REAL(SiKi),                       ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
+   REAL(SiKi),                       ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions
+   INTEGER(IntKi)                                  :: WvSpreadFreqPerDir                              !< Number of wave frequencies per direction
+   INTEGER                                         :: I                                               ! Generic index
+   INTEGER                                         :: J                                               ! Generic index
+   INTEGER                                         :: K                                               ! Generic index
+   INTEGER                                         :: LastInd                                         ! Index into the arrays saved from the last call as a starting point for this call
+
+   ! Variables for error handling
+   INTEGER(IntKi)                                  :: ErrStatTmp                                      !< Temporary error status
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                       !< Temporary error message
+   character(*), parameter                         :: RoutineName = 'CalculateWaveDirection'
+
+   
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+      IF (InitInp%WaveMod == 7) THEN ! wavemod 0 and 6 aren't called from this routine, but they fall into this case, too
+
+         RETURN
+         !InitOut%WaveDirArr set in UserWaveComponents_Init for WaveMod 7
+         !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6
+
+      ELSEIF(.not. InitInp%WaveMultiDir .or. InitOut%WaveNDir <= 1) THEN ! we have a single wave direction
+      
+         InitOut%WaveDirArr = InitInp%WaveDir
+         
+      ELSE ! multi directional waves
+         
+         !--------------------------------------------------------------------------------
+         !> #  Multi Directional Waves
+         !> ## Adjust WaveNDir
+         !!
+         !! If multi-directional waves will be used, the value of WaveNDir may need to be adjusted.  The reason is that
+         !! for the equal energy approach used here, the following condition must be met:
+         !!
+         !!       CONDITION:  (NStepWave2) / WaveNDir    must be an integer
+         !!
+         !! If this is true, then an equal number of frequencies is assigned to each of the WaveNDir directions which
+         !! gives the proper wave direction distribution function.  Otherwise, the energy distribution by direction
+         !! will not be correct.
+         !!
+         !! _WaveNDir_ could not be adjusted before _NStepWave2_ was finalized above.
+         !!
+         !! @note    Use the value of WaveNDir stored in InitOut since InitInp cannot be changed.
+         !!
+         !! @note    Originally, the criteria had been that (NStepWave2 - 1) / WaveNDir is an integer.  This criteria
+         !!          was relaxed by setting the direction for Omega = 0 (which has no amplitude) since it was found that
+         !!          (NStepWave2 - 1) is often a prime number due to how NStepWave is calculated above to be a product
+         !!          of smallish numbers.
+
+            ! this sets InitOut%WaveNDir:
+         call CalculateWaveNDir(InitInp, InitOut, ErrStatTmp, ErrMsgTmp)
+            call SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+            end if
+            
+
+            ! This allocates and sets WvTheta:
+         call CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStatTmp, ErrMsgTmp)
+            call SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+            end if
+
+
+         !> ## Assign Wave directions
+         !!  For the equal energy approach to the multi-directional waves, we need to use the random number generator to
+         !!  select which direction each wave frequency is assigned to.  We also require that the phase and amplitudes
+         !!  assigned to each frequency are the same regardless of whether or not multiple directions are used, we must
+         !!  first finish assigning all the amplitudes and phases before using the random number generator again.  For this
+         !!  reason, the above do loop is completed, the multiple wave directions are computed, and then we run through the
+         !!  all wave frequencies again to set up the remaining pieces.  If we did not do this, we would change the seed
+         !!  used by the random number generator before selecting the next amplitude and phase pair.
+         !!
+         !!  The wave directions are assigned in groups of _WaveNDir_ frequencies such that each frequency is assigned to
+         !!  one of the _WaveNDir_ unique wave directions.  Each wave direction is used only once within each group of
+         !!  frequencies.
+         !!
+
+
+            ! Allocate the index array for each group of frequencies.  This array is used to randomize the directions
+            ! within each WaveNDir sized group of frequencies.  This is a REAL array used to hold the random numbers.
+         ALLOCATE( WvSpreadThetaIdx(1:InitOut%WaveNDir), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetaIdx while assigning wave directions.',ErrStat,ErrMsg,RoutineName)
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+            ! K should be exactly NStepWave2 when done assigning directions. The the Omega = 0 has
+            ! no amplitude, but gets a direction anyhow (to simplify the calculation of WaveNDir).
+         WvSpreadFreqPerDir   =  (InitOut%NStepWave2)/InitOut%WaveNDir
+         K  = 0
+            ! Work through the frequencies in groups of directions.
+         DO I = 1,WvSpreadFreqPerDir
+
+               ! Populate the array with random numbers
+            CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
+
+            DO J = 1, InitOut%WaveNDir
+
+                  ! Find the index lowest value in the WvSpreadThetaIdx array.  This is the index to
+                  ! use for this wave direction.
+               LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
+
+                  ! Assign the direction for this frequency piece to the LastInd value.
+               InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
+
+                  ! Now make that element in the WvSpreadThetaIdx really big so we don't pick it again
+               WvSpreadThetaIdx( LastInd )   = HUGE(1.0_SiKi)
+
+               K  = K + 1     ! Increment the frequency index
+
+            ENDDO
+         ENDDO
+         
+         ! Filling last value since it is not reached by the loop above
+         CALL UniformRandomNumbers(InitInp%RNG%pRNG, WvSpreadThetaIdx)
+         LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
+         InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
+
+            ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
+            ! K = NStepWave2 (K is incrimented afterwards).
+         IF ( K /= (InitOut%NStepWave2 ) ) THEN
+            CALL SetErrStat(ErrID_Fatal, 'Something went wrong while assigning wave directions.',ErrStat,ErrMsg,RoutineName)
+            CALL CleanUp()
+            RETURN
+         END IF
+
+      ENDIF    ! Multi-directional waves in use.
+      
+      
+      CALL Cleanup()
+      
+CONTAINS
+   SUBROUTINE Cleanup()
+   
+      IF(ALLOCATED( WvSpreadThetaIdx ))   DEALLOCATE( WvSpreadThetaIdx )
+      IF(ALLOCATED( WvTheta ))            DEALLOCATE( WvTheta )
+   
+   END SUBROUTINE Cleanup
+
+END SUBROUTINE CalculateWaveDirection
+!------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStat, ErrMsg )
+! Compute the wave direction array
+!----------------------------------------------------------------------------------------------------------------------------------
+
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     !< Output data
+   REAL(SiKi),         ALLOCATABLE, INTENT(  OUT)  :: WvTheta(:)  !< Final set of wave directions (degrees)
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                                  :: i                                               !< loop counter
+   INTEGER(IntKi)                                  :: LastInd                                         !< last index found (for faster finding of next index)
+   INTEGER(IntKi)                                  :: WvSpreadNDir                                    !< Number of wave spreading directions for intermediate calculations.  Set later to be MAX(15*InitOut%WaveNDir,1000)
+   REAL(SiKi),                       ALLOCATABLE   :: WvSpreadCos2SArr(:)                             !< Wave spreading function results array.  Used in equal energy wave spreading function.
+   REAL(SiKi)                                      :: WvSpreadCos2SConst                              !< Normalization constant for wave spreading function.
+   REAL(SiKi),                       ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
+   REAL(SiKi)                                      :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
+   REAL(SiKi),                       ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
+   REAL(SiKi)                                      :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
+   
+   ! Variables for error handling
+   INTEGER(IntKi)                                  :: ErrStatTmp                                      !< Temporary error status
+   character(*), parameter                         :: RoutineName = 'CalculateWaveSpreading'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+         !> ## Calculate the wave directions based on an equal energy approach.
+         !!
+         !! All the angles are supplied in degrees and are converted as needed.  For the cosine function,
+         !! we could convert degrees to radians, but the conversion constant cancels out.
+         !!
+         !! |  Variable          |  Fortran Name         |  Location |  Units       |   Description                                          |
+         !! | :----------------: | :-------------------: | :-------: | :--------:   | :----------------------------------------------------- |
+         !! | \f$\bar\theta\f$   | _WaveDir_             | _InitInp_ |  (degrees)   |  Mean direction heading (_WaveDir_)                    |
+         !! | \f$\Theta\f$       | _WaveNDir_            | _InitOut_ |  (-)         |  Number of wave directions                             |
+         !! | \f$\delta\theta\f$ | _WaveDirRange_        | _InitInp_ |  (degrees)   |  Full range of spreading function                      |
+         !! | \f$S\f$            | _WaveDirSpread_       | _InitInp_ |  (-)         |  The spreading coefficient                             |
+         !! |                    | _WvSpreadNDir_        |  local    |  (-)         |  Number of angles discretizing the spreading function  |
+         !! | \f$C\f$            | _WvSpreadCos2SConst_  |  local    |  (1/degrees) |  The normalization coefficient                         |
+         !! |                    | _WvTheta_             |  local    |  (degrees)   |  The interpolated wave directions to assign to         |
+         !! | \f$\theta_i\f$     | _WvSpreadThetas_      |  local    |  (degrees)   |  Array of wave directions associated with _WvSpreadIntegral_ |
+         !! |                    | _D2R_                 |  global   | (rad/degree) |  Constant from library to convert degrees to radians   |
+         !!
+         !! The equal energy approach is used to set the wave directions such that each direction has the same
+         !! number of frequencies.  To ensure that direction spreading function (Cosine^2S in this case) has
+         !! the correct overal energy distribution shape, the wave directions are adjusted.  The spacing between
+         !! directions is closer near the central direction than in the tails of the spreading function.  The
+         !! method distributes the wave directions so that the energy integral between wave directions is kept
+         !! constant.  The following steps are taken:
+         !!
+         !! 1. Discretize the spreading function over the range _InitInp%WaveDirRange_ into _WvSpreadNDir_.
+         !!
+         !! 2. Calculate the spreading function, _WvSpreadCos2SArr_, in the range.\n
+         !!          \f$ D(\theta) = C \left| \cos\left(\frac{\pi (\theta-\bar\theta)}{\delta\theta}\right)\right|^{2S} \f$\n
+         !!       where\n
+         !!          \f$ C = \frac{\sqrt{\pi} \: \Gamma(S+1)}{\delta\theta \: \Gamma(S+1/2)} \f$,
+         !!       and
+         !!          \f$ \Gamma \f$ is the gamma function.
+         !!
+         !! 3. Calculate the integral of WvSpreadCos2SArr up to the current angle, and save it as
+         !!       WvSpreadIntegral. The integral can be written as:\n
+         !!          \f$P(\theta) = \int\limits^{\theta}_{\bar\theta - \delta\theta/2} D(\theta') \: \mathrm{d}\theta'\f$
+         !!
+         !! 4. Do a sanity check on the result of \f$P(\theta)\f$ over the range.
+         !!
+         !! 5. Divide the integrated area of _WvSpreadCos2SArr_ into _InitOut%WaveNDir_ directions (the final number
+         !!       of wave directions that was solved for above).  To do this, simply find the _1/WaveNDir_ values
+         !!       of the integral and interpolate to find the values of the _WvSpreadThetas_ that match.  These are the
+         !!       new wave directions to use.  These results are stored in the array _WvTheta_.
+         !!
+         !! 6. Cleanup
+         !!
+
+         !> ### Code Implementation order
+         !! 1. Discretize the spreading function range and calculate the values of the wave spreading function
+
+            ! Now that we have the value for _WaveNDir_ found above, we set the value of _WvSpreadNDir_ to be 15x as
+            ! large, or 1000 (whichever is larger).  WvSpreadNDir is used only in discretization for later
+            ! interpolation of actual wave directions.
+         WvSpreadNDir   = MAX(15*InitOut%WaveNDir,1000)
+         WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,SiKi)
+
+            ! Calculate the normalization constant for the wave spreading.
+         IF ( InitInp%WaveDirSpread < 25.0_SiKi ) THEN ! Use exact expression
+            WvSpreadCos2SConst   = sqrt(Pi) * (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_SiKi))/(InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_SiKi))
+         ELSE ! Use asymptotic approximation for large argument
+            WvSpreadCos2SConst   = sqrt(Pi*InitInp%WaveDirSpread)*(1.0_SiKi+0.125_SiKi/InitInp%WaveDirSpread)/InitInp%WaveDirRange
+         ENDIF
+
+            ! Allocate arrays to use for storing the intermediate values
+         ALLOCATE( WvSpreadCos2SArr(0:WvSpreadNDir),  STAT=ErrStatTmp ); IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadCos2SArr.',  ErrStat,ErrMsg,RoutineName)
+         ALLOCATE( WvSpreadIntegral(0:WvSpreadNDir),  STAT=ErrStatTmp ); IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadIntegral.',  ErrStat,ErrMsg,RoutineName)
+         ALLOCATE( WvSpreadThetas(  0:WvSpreadNDir),  STAT=ErrStatTmp ); IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvSpreadThetas.',    ErrStat,ErrMsg,RoutineName)
+         ALLOCATE( WvTheta(1:InitOut%WaveNDir),       STAT=ErrStatTmp ); IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WvTheta.',           ErrStat,ErrMsg,RoutineName)
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+            !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
+         DO I=0,WvSpreadNDir
+               ! The current angle as we step through the range
+            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
+
+               ! Calculate the wave spreading for the current value of WvSpreadThetas
+            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) **(2*InitInp%WaveDirSpread)
+
+            !> 3. Calculate the integral of the spreading function up to the current angle and save it.
+            !     Remember that the first element can't refer to one before it.
+            IF (I == 0) THEN
+               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta
+            ELSE
+               WvSpreadIntegral(I)  =  WvSpreadCos2SArr(I) * WvSpreadDTheta + WvSpreadIntegral(I-1)
+            END IF
+         ENDDO
+
+
+            !> 4. Perform a quick sanity check.  The last value of the integral table should be 1.0 exactly.
+            !!    We will allow for a 1% deviation.  If for some reason an error occurs, it may be due to the
+            !!    GAMMA function calculation for the normalization constant, _WvSpreadCos2SConst_.
+         IF ( WvSpreadIntegral(WvSpreadNDir) < 0.99_SiKi .OR. WvSpreadIntegral(WvSpreadNDir) > 1.01_SiKi ) THEN
+            CALL SetErrStat(ErrID_Fatal,' Something went wrong in evaluating the multidirectional wave spreading function.  '// &
+                           'Integral is '//TRIM(Num2LStr(WvSpreadIntegral(WvSpreadNDir))),ErrStat,ErrMsg,RoutineName)
+            call Cleanup()
+            RETURN
+         END IF
+
+
+            !> 5. Set the wave directions using the results from the integral.
+            !  We will use the variable LastInd as a simple index for figuring out where in the array we are.  First set to 0
+         LastInd  =  0_IntKi
+         DO I=1,InitOut%WaveNDir
+            WvSpreadIntegralTmp  = (REAL(I)-0.5_SiKi)/REAL(InitOut%WaveNDir)
+            WvTheta(I)    =  InterpStp( WvSpreadIntegralTmp, WvSpreadIntegral, WvSpreadThetas, LastInd, WvSpreadNDir )
+         ENDDO       ! I=1,InitOut%WaveNDir
+
+
+            !> 6. Done with equal energy wavedirection calculations.  Deallocate the arrays used during calculations.
+
+         CALL CleanUp()
+
+
+contains
+   subroutine Cleanup()
+      IF(ALLOCATED( WvSpreadCos2SArr ))      DEALLOCATE( WvSpreadCos2SArr, STAT=ErrStatTmp )
+      IF(ALLOCATED( WvSpreadIntegral ))      DEALLOCATE( WvSpreadIntegral, STAT=ErrStatTmp )
+      IF(ALLOCATED( WvSpreadThetas   ))      DEALLOCATE( WvSpreadThetas,   STAT=ErrStatTmp )
+   end subroutine Cleanup
+   
+END SUBROUTINE CalculateWaveSpreading
+!------------------------------------------------------------------------------------------------------------------------
+
+!------------------------------------------------------------------------------------------------------------------------
 END MODULE Waves
 !**********************************************************************************************************************************

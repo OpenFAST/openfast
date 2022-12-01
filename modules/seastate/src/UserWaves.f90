@@ -46,7 +46,7 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
    ! Local Variables
    INTEGER(IntKi)                                  :: i           ! loop counter
    INTEGER(IntKi)                                  :: ErrStat2    ! Temporary error status
-   CHARACTER(ErrMsgLen)                            :: ErrMsg2
+!   CHARACTER(ErrMsgLen)                            :: ErrMsg2
    character(*), parameter                         :: RoutineName = 'Initial_InitOut_Arrays'
    
    
@@ -101,10 +101,10 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
       !   END IF
       !END DO
       
-         ! scalars
+         ! scalars (adjusted later, if necessary)
       InitOut%WaveDirMin   = 0.0
       InitOut%WaveDirMax   = 0.0
-      
+      InitOut%WaveNDir     = 1
       
 END SUBROUTINE Initial_InitOut_Arrays
 
@@ -136,7 +136,6 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
 
 
    ! Variables for reading in the wave elevation
-   CHARACTER(1024)                                 :: FileName             !< Name of the file we are reading
    REAL(SiKi)                                      :: TmpWaveElevRow(2)    !< row read in from the wave elevation input file
  
    ! Local Variables
@@ -669,7 +668,6 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
 
 
    ! Variables for reading in the wave components
-   CHARACTER(1024)                                 :: FileName             !< Name of the file we are reading
    REAL(SiKi)                                      :: TmpWaveCompRow(4)    !< row read in from the wave component input file
    REAL(SiKi)                                      :: WaveAngFreq
  
