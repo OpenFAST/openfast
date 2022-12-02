@@ -1496,7 +1496,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    ! Check if members with the MacCamy-Fuchs diffraction model and not modeled by potential flow satisfy the necessary criteria.
    IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
       ! Check if surface piercing
-      IF ( (Za-MSL2SWL)*(Zb-MSL2SWL) > 0 ) THEN ! Two end joints of the member on the same side of the SWL
+      IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
          CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
          RETURN
       END IF
