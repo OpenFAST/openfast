@@ -351,7 +351,7 @@ jobs:
         with:
           name: rtest-uadriver
           path: |
-            ${{runner.workspace}}/openfast/build/reg_tests/modules/unsteadyaero # TODO
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/unsteadyaero
 
 
 
