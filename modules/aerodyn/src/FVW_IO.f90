@@ -349,7 +349,7 @@ end function is_int
 !> Export FVW variables to VTK
 !! NOTE: when entering this function nNW and nFW has been incremented by 1
 subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, HubOrientation, HubPosition)
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
    type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
    type(FVW_ConstraintStateType),  intent(in   ) :: z !< Constraints
@@ -373,7 +373,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    real(Reki), dimension(:,:,:), allocatable :: Arr3D !<
    real(Reki), dimension(:,:), allocatable :: Arr2D !<
 
-   type(FVW_VTK_Misc)   :: mvtk
+   type(VTK_Misc)   :: mvtk
 
    call vtk_misc_init(mvtk)
 
@@ -473,7 +473,7 @@ end subroutine WrVTK_FVW
 !> Export Grid velocity field to VTK
 subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, HubOrientation, HubPosition)
    use FVW_VortexTools, only: curl_regular_grid
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
    type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
    type(FVW_ConstraintStateType),  intent(in   ) :: z !< Constraints
@@ -490,7 +490,7 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
    character(Twidth) :: Tstr     ! string for current VTK write-out step (padded with zeros)
    real(ReKi), dimension(3) :: dx
    type(GridOutType), pointer :: g
-   type(FVW_VTK_Misc)   :: mvtk
+   type(VTK_Misc)   :: mvtk
 
    call vtk_misc_init(mvtk)
    call set_vtk_binary_format(.false.,mvtk) ! TODO binary fails
@@ -524,9 +524,9 @@ end subroutine WrVTK_FVW_Grid
 
 
 subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
-   use FVW_VTK
+   use VTK
    character(len=*),intent(in)                 :: filename
-   type(FVW_VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
+   type(VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
    real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !< 
    integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !< 
    real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !< 
@@ -545,9 +545,9 @@ subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEps
 end subroutine
 
 subroutine WrVTK_Lattice(filename, mvtk, LatticePoints, LatticeGamma, LatticeData3d, bladeFrame)
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    character(len=*), intent(in)                         :: filename
-   type(FVW_VTK_Misc),           intent(inout)          :: mvtk          !< miscvars for VTK output
+   type(VTK_Misc),           intent(inout)          :: mvtk          !< miscvars for VTK output
    real(Reki), dimension(:,:,:), intent(in  )           :: LatticePoints !< Array of points 3 x nSpan x nDepth
    real(Reki), dimension(:,:), intent(in  )             :: LatticeGamma  !< Array of            nSpan x nDepth
    real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME
