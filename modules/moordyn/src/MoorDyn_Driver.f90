@@ -190,9 +190,9 @@ PROGRAM MoorDyn_Driver
       MD_InitInp%PtfmInit(1,J)      = drvrInitInp%FarmPositions(3,J)
       MD_InitInp%PtfmInit(2,J)      = drvrInitInp%FarmPositions(4,J)
       MD_InitInp%PtfmInit(3,J)      = drvrInitInp%FarmPositions(5,J)
-      MD_InitInp%PtfmInit(4,J)      = drvrInitInp%FarmPositions(6,J)*3.14159265/180.0
-      MD_InitInp%PtfmInit(5,J)      = drvrInitInp%FarmPositions(7,J)*3.14159265/180.0
-      MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*3.14159265/180.0
+      MD_InitInp%PtfmInit(4,J)      = drvrInitInp%FarmPositions(6,J)*D2R   !3.14159265/180.0
+      MD_InitInp%PtfmInit(5,J)      = drvrInitInp%FarmPositions(7,J)*D2R   !3.14159265/180.0
+      MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*D2R   !3.14159265/180.0
    end do
    
    MD_interp_order = 1
@@ -229,8 +229,8 @@ PROGRAM MoorDyn_Driver
    END DO
    
    ! open driver output file >>> not yet used <<<
-   CALL GetNewUnit( Un )
-   OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
+   !CALL GetNewUnit( Un )
+   !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
    CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat, ErrMsg2 ); call AbortIfFailed()
@@ -484,6 +484,66 @@ PROGRAM MoorDyn_Driver
 
    ! get output at initialization (before time stepping)
    t = 0
+   ! First, set correct inputs for initialization (errors occur otherwise) 
+   if (drvrInitInp%InputsMod == 1 ) then
+       
+      DO iTurb = 1, MD_p%nTurbines
+         i = 1  ! read first timestep data 
+         K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
+         J = 1  ! the starting index of the relevant DOFs in the input array
+         ! any coupled bodies (type -1)
+         DO l = 1,MD_p%nCpldBodies(iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
+         
+            K = K + 1
+            J = J + 6            
+         END DO
+         
+         ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
+         DO l = 1,MD_p%nCpldRods(iTurb)
+         
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
+         
+            K = K + 1
+            J = J + 6            
+         END DO
+         
+         ! any coupled points (type -1)
+         DO l = 1, MD_p%nCpldCons(iTurb)
+            
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
+            
+            !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
+            !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+            
+            K = K + 1
+            J = J + 3
+         END DO
+         
+      end do  ! iTurb
+      
+      ! also provide any active tensioning commands
+      if (allocated(MD_u(1)%DeltaL)) then
+         do l = 1, size(MD_u(1)%DeltaL) 
+            MD_u(1)%DeltaL(   l) = 0.0_DbKi ! r_in(i, J)
+            MD_u(1)%DeltaLdot(l) = 0.0_DbKi !rd_in(i, J)
+            J = J + 1         
+         end do
+      endif
+   
+   end if   ! InputsMod == 1 
    CALL MD_CalcOutput(  t, MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
   
@@ -581,7 +641,7 @@ PROGRAM MoorDyn_Driver
       CALL MD_UpdateStates( t, nt, MD_u, MD_uTimes, MD_p, MD_x, MD_xd, MD_xc, MD_xo, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
       
   
-      ! update the global time step by one delta t               <<<< ??? why?
+      ! update the global time step by one delta t               <<<< ??? why?  ADP: UpdateStates updtes from t -> t+dt.  Need to calculate outputs at this final time.
       t = t + dtC
      
       ! --------------------------------- calculate outputs ---------------------------------
