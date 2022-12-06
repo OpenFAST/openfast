@@ -81,3 +81,9 @@ def runInflowwindDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
+
+def runMoordynDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+

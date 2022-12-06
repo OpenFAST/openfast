@@ -329,12 +329,20 @@ jobs:
           test-target: regression
       - name: Run HydroDyn tests
         uses: ./.github/actions/tests-module-hydrodyn
+        with:
+          test-target: regression
       - name: Run InflowWind tests
         uses: ./.github/actions/tests-module-inflowwind
         with:
           test-target: regression
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
+        with:
+          test-target: regression
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
+        with:
+          test-target: regression
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
@@ -383,6 +391,8 @@ jobs:
         uses: ./.github/actions/tests-module-hydrodyn
       - name: Run InflowWind tests
         uses: ./.github/actions/tests-module-inflowwind
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
       - name: Run NWTC Library tests
         uses: ./.github/actions/tests-module-nwtclibrary
       - name: Run SubDyn tests
