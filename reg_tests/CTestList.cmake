@@ -218,6 +218,15 @@ function(md_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(md_regression)
 
+# py_moordyn c-bindings interface
+function(py_md_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynPyRegressionCase.py")
+  set(MOORDYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(py_md_regression)
+
 # # Python-based OpenFAST Library tests
 # function(py_openfast_library_regression TESTNAME LABEL)
 #   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
@@ -359,6 +368,7 @@ py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")
+py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
 # the following tests are excessively slow in double precision, so skip these in normal testing
 #md_regression("md_Node_Check_N20"                             "moordyn")
 #md_regression("md_Node_Check_N40"                             "moordyn")
