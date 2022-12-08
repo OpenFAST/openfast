@@ -99,7 +99,7 @@ If *nNWPanelsFree* is equal to
 Otherwise, the Lagrangian markers
 located within the buffer zone ("frozen near wake") delimited by *nNWPanelsFree* and *nNWsPanel*
 are all convected with a common and decaying induced velocity but with a varying free-stream.  
-(see :numref:`sec:vortconvfrozen:`).
+(see :numref:`sec:vortconvfrozen`).
 This option can be used to speed up the simulation and stabilize the end of the "near-wake" region.
 It can potentially remove the need for the far wake region.
 Currently, the induced velocity of the frozen near wake is arbitrarily determined as the average over 
