@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a30', '2022-11-28' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2022-12-08' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -164,7 +164,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')  
-      CALL WrScr('   Copyright: (C) 2021 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL WrScr('   Copyright: (C) 2022 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
       !---------------------------------------------------------------------------------------------
@@ -1457,10 +1457,8 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
-               IF (wordy > 0) print *, "   Reading failure conditions: (not implemented yet) ";
+               CALL WrScr("   Warning: Failure capabilities are not yet implemented in MoorDyn.")
                
-               ! TODO: add stuff <<<<<<<<
-
                ! skip following two lines (label line and unit line)
                Line = NextLine(i)
                Line = NextLine(i)
@@ -1471,9 +1469,9 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
                   
-                  
-                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
-                        m%LineList(l)%N, tempString2, tempString3, LineOutString
+                  ! TODO: Failure capabilities still need to be completed
+                  READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
+                       m%LineList(l)%N, tempString2, tempString3, LineOutString
                   
                END DO
                
