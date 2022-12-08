@@ -53,6 +53,9 @@ set(CTEST_FASTFARM_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast-farm/FAST.Far
 # Set the AeroDyn executable configuration option and default
 set(CTEST_AERODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/aerodyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the AeroDyn driver executable to use in testing.")
 
+# Set the UADriver executable configuration option and default
+set(CTEST_UADRIVER_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodyn/unsteadyaero_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the UADriver executable to use in testing.")
+
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
 
