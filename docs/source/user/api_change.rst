@@ -41,11 +41,19 @@ AeroDyn 15                                         TwrCb             1.0        
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
+OLAF                                          18   nNWPanelFree      180       nNWPanelFree       - Number of free near-wake panels (-) {default: nNWPanels}
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
 \$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
+**New Default Values**:
+The following default value were changed 
+
+- OLAF *VelocityMethod* is now 2 (particle tree), previous value 1 (n^2 BiotSavart law on segments). 
+- OLAF *WakeRegMethod* is now 3 (increasing with wake age), previous value was 1 (constant).
+- OLAF *nVTKBlades* is now 0 (no wake panels output), previous value was 1 (wake panels output for blade 1)
 
 
 OpenFAST v3.2.0 to OpenFAST v3.3.0
