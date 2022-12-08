@@ -89,20 +89,43 @@ Wake Extent and Discretization Options
 
 
 
-**nNWPanel** [-] specifies the number of near-wake (NW) panels (i.e. FVW time steps, **DTfvw**) used for the extent of the near-wake lattice.
+**nNWPanels** [-] specifies the number of near-wake (NW) panels (i.e. FVW time steps, **DTfvw**) used for the extent of the near-wake lattice.
 See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
 
-**nFWPanel** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
+**nNWPanelsFree** [-] specifies the number of near-wake panels (in FVW time steps), for which the
+wake is convected as "free." 
+If *nNWPanelsFree* is equal to 
+*nNWPanels*, then the entire near wake is free. 
+Otherwise, the Lagrangian markers
+located within the buffer zone ("frozen near wake") delimited by *nNWPanelsFree* and *nNWsPanel*
+are all convected with a common and decaying induced velocity but with a varying free-stream.  
+(see :numref:`sec:vortconvfrozen:`).
+This option can be used to speed up the simulation and stabilize the end of the "near-wake" region.
+It can potentially remove the need for the far wake region.
+Currently, the induced velocity of the frozen near wake is arbitrarily determined as the average over 
+the last 20 panels of the free near wake. 
+The decay of the convection velocity is such that the induced velocity is about 50% at the end of the frozen near wake.
+The convection velocity of the frozen wake requires additional verification and validation, and  
+might change in future releases.
+If a "frozen" near-wake region is used then the "free" far-wake region needs to be of zero length (**nFWPanelsFree=0**)
+By default, this variable is set to **nNWPanels** (no frozen wake).
+See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
+
+**nFWPanels** [-] specifies the number of panels (FVW time steps) used for the far wake (where the tip and root vortex are rolled-up to speed up computational time).
 See :numref:`Guidelines-OLAF` for recommendations on setting this parameter.
+Default value: 0.
  
 
-**nFWPanelFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
+**nFWPanelsFree** [-] specifies the number of far-wake panels (in FVW time steps), for which the
 wake is convected as "free." 
-If *nFWPanelFree* is greater than
-*nFWPanel*, then the entire far-wake is free. Otherwise, the Lagrangian markers
-located within the buffer zone delimited by *nNWPanelFree* and *nNWPanel*
-are convected with the average velocity.  
-By default, this variable is set to **nFWPanel**.
+If *nFWPanelsFree* is equal to
+*nFWPanels*, then the entire far-wake is free. Otherwise, the Lagrangian markers
+located within the buffer zone ("frozen far wake") delimited by *nNWPanelsFree* and *nNWPanels*
+are all convected with a common induced velocity but with a varying free-stream.  
+Currently, the induced velocity for the frozen far wake is determined as 
+the average over the free far-wake when **nNWPanelsFree=nNWPanels** (i.e. no frozen near wake), 
+or, using the same convection as the end of the frozen near wake otherwise.
+By default, this variable is set to **nFWPanels**.
 See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 
 
@@ -118,7 +141,7 @@ Wake Regularization and Diffusion Options
 for viscous diffusion. There are two options: 1) no diffusion *[0]* and 2) the
 core-spreading method *[1]*. The default option is *[0]*.
 
-**RegDetMethod** [switch] specifies which method is used to determine the
+**RegDeterMethod** [switch] specifies which method is used to determine the
 regularization parameters. There are four options: 1) constant *[0]* and 2)
 optimized *[1]*, 3) chord *[2]*, and 4) span *[3]*. 
 The optimized option determines all the parameters in this section for the user.
@@ -133,7 +156,7 @@ The default and recomment option is *[3]*.
    ,\quad
    r_{c,\text{blade}}(r) = \text{WingRegParam} 
 
-When **RegDetMethod==2**, the regularization parameters is set according to the local chord:
+When **RegDeterMethod==2**, the regularization parameters is set according to the local chord:
 
 .. math::
 
@@ -141,7 +164,7 @@ When **RegDetMethod==2**, the regularization parameters is set according to the 
    ,\quad
    r_{c,,\text{blade}}(r) = \text{WingRegParam} \cdot c(r)
 
-When **RegDetMethod==3**, the regularization parameters is set according to the spanwise discretization:
+When **RegDeterMethod==3**, the regularization parameters is set according to the spanwise discretization:
 
 .. math::
 
@@ -158,14 +181,15 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 the singularity of the vortex elements, as specified in
 :numref:`sec:vortconv`. There are five options: 1) no correction *[0]*,
 2) the Rankine method *[1]*, 3) the Lamb-Oseen method *[2]*, 4) the Vatistas
-method *[3]*, and 5) the denominator offset method *[4]*. The functions are
-given in . The default option is *[3]*.
+method *[3]*, and 5) the denominator offset method *[4]*. 
+The functions are given in :numref:`sec:RegularizationFunction`. 
+The default option is *[3]*.
 
 **WakeRegMethod** [switch] specifies the method of determining viscous core
 radius (i.e., the regularization parameter). There are three options: 1)
 constant *[1]*, 2) stretching *[2]*, and 3) age *[3]*. The methods are
-described in :numref:`sec:corerad`. The default option is *[1]*.
-The recommended option is *[3]*.
+described in :numref:`sec:corerad`. 
+The default option is *[3]*.
 
 **WakeRegFactor** [m, or -] specifies the wake regularization parameter, which is the
 regularization value used at the initialization of a vortex element. If the
@@ -181,7 +205,8 @@ See :numref:`Guidelines-OLAF` for recommendations on setting up this parameter.
 :math:`\delta`.  The parameter is used for the core-spreading method
 (*DiffusionMethod* = *[1]*) and the regularization method with age
 (*WakeRegMethod* = *[3]*). The variable :math:`\delta` is described in
-:numref:`sec:corerad`. The default value is :math:`100`.
+:numref:`sec:corerad`. 
+The default value is :math:`100`.
 
 Wake Treatment Options
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -210,20 +235,21 @@ There are four options:
 2) Particle-Tree formulation *[2]*, 
 3) :math:`N^2` Biot-Savart computation using a particle representation,
 4) Segment-Tree formulation. 
-The default option is *[1]*.
 Option *[2]* and *[3]* requires the specification of *PartPerSegment* (see below). 
 Option *[4]* is expected to give results close to option *[1]* while offering
 significant speedup, and this option does not require the specification of *PartPerSegment*.
+The default option is *[2]*.
 
 
 **TreeBranchFactor** [-] specifies the dimensionless distance, in branch radius,
-above which a multipole calculation is used instead of a direct evaluation. This
-option is only used in conjunction with the tree code
-(*VelocityMethod* = *[2]*).
+above which a multipole calculation is used instead of a direct evaluation. 
+Only used when *VelocityMethod* = *[2,4]*.
+Default value: 1.5.
 
 **PartPerSegment** [-] specifies the number of particles that are used when a
-vortex segment is represented by vortex particles. The default value is
-:math:`1`.
+vortex segment is represented by vortex particles. 
+Only used when *VelocityMethod* = *[2,3]*).
+The default value is :math:`1`.
 
 Output Options
 ~~~~~~~~~~~~~~
@@ -237,19 +263,23 @@ used with `VTK_fps=0` to output only at the end of the simulation).
 The outputs are written in the
 folder, ``vtk_fvw.``   The parameters *WrVTK*, *VTKCoord*, and *VTK_fps* are
 independent of the glue code VTK output options.
+Default value: 0.
 
 
-**VTKBlades** [-] specifies how many blade VTK files are to be written out.
-*VTKBlades* :math:`= n` outputs VTK files for :math:`n` blades, with :math:`0`
-being an acceptable value. The default value is :math:`1`.
+**nVTKBlades** [-] specifies how many blade VTK files are to be written out.
+*nVTKBlades* :math:`= n` outputs VTK files for :math:`n` blades, with :math:`0`
+being an acceptable value.
+The default value is :math:`0`.
 
 **VTKCoord** [switch] specifies in which coordinate system the VTK files are
 written.  There are two options: 1) global coordinate system *[1]* and 2) hub
-coordinate system *[2]*. The default option is *[1]*.
+coordinate system *[2]*. 
+The default option is *[1]*.
 
 **VTK_fps** [:math:`1`/sec] specifies the output frequency of the VTK files. The
 provided value is rounded to the nearest allowable multiple of the time step.
-The default value is :math:`1/dt_\text{fvw}`. Specifying *VTK_fps* = *[all]*,
+The default value is :math:`1/dt_\text{fvw}`.
+Specifying *VTK_fps* = *[all]*,
 is equivalent to using the value :math:`1/dt_\text{aero}`. If *VTK_fps<0*, then 
 no outputs are created, except if *WrVTK=2*.
 

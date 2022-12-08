@@ -189,6 +189,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
       MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
       MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
+      MODULE PROCEDURE ReadIAryWDefault
    END INTERFACE
    
       !> \copydoc nwtc_io::readcary
@@ -196,6 +197,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadCAry
       MODULE PROCEDURE ReadCAryFromStr
       MODULE PROCEDURE ReadIAry
+      MODULE PROCEDURE ReadIAryFromStr
       MODULE PROCEDURE ReadLAry
       MODULE PROCEDURE ReadR4Ary  ! read array of 4-byte reals
       MODULE PROCEDURE ReadR4AryFromStr
@@ -5864,6 +5866,48 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadIAry
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadIAryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   INTEGER,    INTENT(INOUT)    :: Ary(AryLen)                                     !< Integer array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=0.0
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReAryFrmt)  TRIM( AryName ), AryDescr, ( Ary(Ind), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadIAryFromStr
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
@@ -7084,6 +7128,33 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR16VarWDefault
+!=======================================================================
+!> \copydoc nwtc_io::readr4varwdefault
+   SUBROUTINE ReadIAryWDefault ( UnIn, Fil, Var, AryLen, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+      ! Argument declarations:
+   INTEGER,                            INTENT(IN ) :: AryLen                                  !< Length of the array.
+   INTEGER(IntKi), dimension(AryLen),  INTENT(OUT) :: Var                                     !< Variable being read
+   INTEGER(IntKi), dimension(AryLen),  INTENT(IN ) :: VarDefault                              !< Default value for variable being read
+   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          !< Error message
+   INTEGER,       INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   CHARACTER( *), INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+      ! Local declarations:
+   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(1024)                    :: sVar                                            ! String to hold the value of the variable
+   ! Read full content of variable as one string, should it be "default", or an array
+   CALL ReadVar (UnIn, Fil, sVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc)
+   IF ( ErrStat >= AbortErrLev) RETURN  
+   CALL Conv2UC( sVar )
+   IF ( INDEX(sVar, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      call ReadIAryFromStr (sVar, Var, AryLen, VarName, VarDescr, ErrStat, ErrMsg)
+   ELSE
+      Var = VarDefault
+   END IF   
+   END SUBROUTINE ReadIAryWDefault
 !=======================================================================
 !> This routine reads a string from the next line of the input file.
    SUBROUTINE ReadStr ( UnIn, Fil, CharVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
