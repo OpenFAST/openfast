@@ -69,6 +69,7 @@ program UnsteadyAero_Driver
    real(ReKi), allocatable                       :: AOAarr(:)
    real(ReKi), allocatable                       :: Uarr(:)
    real(ReKi), allocatable                       :: OmegaArr(:)
+   logical                                       :: UA_f_cn ! Should the separation function be computed using Cn or Cl
    
    CHARACTER(200)                                :: git_commit
    TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'UnsteadyAero Driver', '', '' )  ! The version number of this program.
@@ -157,7 +158,7 @@ program UnsteadyAero_Driver
    end if
    InitInData%OutRootName = dvrInitInp%OutRootName
    
-   InitInData%WrSum = .true. ! write all the AFI data
+   InitInData%WrSum = dvrInitInp%SumPrint ! write all the AFI data
 
    
    if ( dvrInitInp%SimMod == 1 ) then
@@ -179,10 +180,13 @@ program UnsteadyAero_Driver
       ! Initialize the Airfoil Info Params
    afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
    AFIndx(1,1) = 1
-   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
+   UA_f_cn  = (InitInData%UAMod /= UA_HGM).and.(InitInData%UAMod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
+   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, UA_f_cn, AFI_Params, errStat, errMsg )
       call checkError()
 
-!   call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName)
+   if (dvrInitInp%WrAFITables) then
+      call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName, dvrInitInp%UseCm, UA_f_cn)
+   endif
    
    
       ! Initialize UnsteadyAero (after AFI)

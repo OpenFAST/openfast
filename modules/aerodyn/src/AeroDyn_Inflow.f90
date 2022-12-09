@@ -436,7 +436,7 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
    logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer :: K, node, iWT
+   integer :: node, iWT
    errStat = ErrID_None
    errMsg  = ''
    node=0
