@@ -189,6 +189,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
       MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
       MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
+      MODULE PROCEDURE ReadIAryWDefault
    END INTERFACE
    
       !> \copydoc nwtc_io::readcary
@@ -196,6 +197,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadCAry
       MODULE PROCEDURE ReadCAryFromStr
       MODULE PROCEDURE ReadIAry
+      MODULE PROCEDURE ReadIAryFromStr
       MODULE PROCEDURE ReadLAry
       MODULE PROCEDURE ReadR4Ary  ! read array of 4-byte reals
       MODULE PROCEDURE ReadR4AryFromStr
@@ -5864,6 +5866,48 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadIAry
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadIAryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   INTEGER,    INTENT(INOUT)    :: Ary(AryLen)                                     !< Integer array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=0.0
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' value from string:`'//trim(Str)//'`'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReAryFrmt)  TRIM( AryName ), AryDescr, ( Ary(Ind), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadIAryFromStr
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
@@ -7084,6 +7128,33 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR16VarWDefault
+!=======================================================================
+!> \copydoc nwtc_io::readr4varwdefault
+   SUBROUTINE ReadIAryWDefault ( UnIn, Fil, Var, AryLen, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+      ! Argument declarations:
+   INTEGER,                            INTENT(IN ) :: AryLen                                  !< Length of the array.
+   INTEGER(IntKi), dimension(AryLen),  INTENT(OUT) :: Var                                     !< Variable being read
+   INTEGER(IntKi), dimension(AryLen),  INTENT(IN ) :: VarDefault                              !< Default value for variable being read
+   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          !< Error message
+   INTEGER,       INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   CHARACTER( *), INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+      ! Local declarations:
+   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(1024)                    :: sVar                                            ! String to hold the value of the variable
+   ! Read full content of variable as one string, should it be "default", or an array
+   CALL ReadVar (UnIn, Fil, sVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc)
+   IF ( ErrStat >= AbortErrLev) RETURN  
+   CALL Conv2UC( sVar )
+   IF ( INDEX(sVar, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      call ReadIAryFromStr (sVar, Var, AryLen, VarName, VarDescr, ErrStat, ErrMsg)
+   ELSE
+      Var = VarDefault
+   END IF   
+   END SUBROUTINE ReadIAryWDefault
 !=======================================================================
 !> This routine reads a string from the next line of the input file.
    SUBROUTINE ReadStr ( UnIn, Fil, CharVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
@@ -8555,330 +8626,6 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE WrScr1
-!=======================================================================
-!> This routine writes out the heading for an vtk xml file (associated footer generated in
-!! nwtc_io::wrvtk_footer). It tries to open a text file for writing and returns the Unit number of the opened file.
-   SUBROUTINE WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat, ErrMsg ) 
-   
-      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file
-      INTEGER(IntKi)  , INTENT(IN   )        :: NumberOfPoints       !< Number of points in this VTK file
-      INTEGER(IntKi)  , INTENT(IN   )        :: NumberOfLines        !< Number of lines in this VTK file
-      INTEGER(IntKi)  , INTENT(IN   )        :: NumberOfPolys        !< Number of polygons in this VTK file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-   
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
-      CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev) return
-      
-      ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
-      ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
-      WRITE(Un,'(A)')         '<?xml version="1.0"?>'
-      WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">' ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
-      WRITE(Un,'(A)')         '  <PolyData>'
-      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', NumberOfPoints, '" NumberOfVerts="  0" NumberOfLines="', NumberOfLines, '"'
-      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  NumberOfPolys, '">'
-   
-      RETURN
-   END SUBROUTINE WrVTK_header
-!=======================================================================
-!> This routine writes out the footer for an vtk xml file (associated header generated  
-!! in nwtc_io::wrvtk_header). It closes the file Un.
-   SUBROUTINE WrVTK_footer( Un ) 
-   
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of opened file
-         
-      WRITE(Un,'(A)')         '    </Piece>'
-      WRITE(Un,'(A)')         '  </PolyData>'
-      WRITE(Un,'(A)')         '</VTKFile>'
-      CLOSE(Un)         
-   
-      RETURN
-   END SUBROUTINE WrVTK_footer                
-   
-!=======================================================================
-!> This routine reads the header for a vtk, ascii, structured_points dataset file,
-!! including all the information about the structured points.  It tries to open a 
-!! text file for reading and returns the Unit number of the opened file.
-!! The caller is responsible for closing the file unit unless caller set Un = -1!
-   SUBROUTINE ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
-   
-      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
-      CHARACTER(1024) , INTENT(  OUT)        :: descr                !< Line describing the contents of the file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(  OUT)        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
-      REAL(ReKi)      , INTENT(  OUT)        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      CHARACTER(1024) , INTENT(  OUT)        :: vecLabel
-      INTEGER(IntKi)  , INTENT(INOUT)        :: Un                   !< unit number of opened file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-   
-      INTEGER(IntKi)              :: ErrStat2              ! local error level/status of OpenFOutFile operation
-      CHARACTER(ErrMsgLen)        :: ErrMsg2               ! local message when error occurs
-      CHARACTER(1024)             :: Dummy1, Dummy2
-      CHARACTER(1024)             :: Line                  ! one line of the file
-      CHARACTER(1024)             :: formatLbl
-      CHARACTER(*), PARAMETER     :: RoutineName = 'ReadVTK_SP_info'
-      INTEGER(IntKi)              :: sz, nPts, nArr, nums(2)
-      LOGICAL                     :: closeOnReturn
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      
-      IF (Un == -1 ) THEN
-         closeOnReturn = .TRUE.
-      ELSE
-         closeOnReturn = .FALSE.
-      END IF
-      
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
-      CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev) return
-      
-       CALL ReadCom( Un, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, 0 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      CALL ReadStr( Un, FileName, descr, 'descr', 'File Description line', ErrStat2, ErrMsg2, 0 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      formatLbl = ""   
-      CALL ReadStr( Un, FileName, formatLbl, 'formatLbl', 'ASCII label', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      call Conv2UC(formatLbl)
-      if (INDEX(formatLbl, "ASCII" ) /= 1 ) THEN ! If this line doesn't contain the word ASCII, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find ASCII label', ErrStat, ErrMsg, RoutineName )
-      end if  
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "dataset", "DATASET STRUCTURED_POINTS", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DATASET" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-        CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find DATASET label', ErrStat, ErrMsg, RoutineName )
-      END IF 
-      IF ( INDEX(Line, "STRUCTURED_POINTS" ) == 0 ) THEN ! If this line doesn't also contain the word structured_points, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find STRUCTURED_POINTS label', ErrStat, ErrMsg, RoutineName )
-      end if
-        
-         ! Dimensions
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "Dimensions", "DIMENSIONS data", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      Line = trim(Line)
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DIMENSIONS" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find DIMENSIONS label', ErrStat, ErrMsg, RoutineName )
-      ELSE
-         sz = len(Line)
-         Line = Line(12:sz)
-         READ(Line,*, IOSTAT=ErrStat2)  dims
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Error reading "dims".', ErrStat, ErrMsg, RoutineName )
-         end if
-      END IF 
-      
-         ! Origin
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "Origin", "ORIGIN data", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      Line = trim(Line)
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "ORIGIN" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find ORIGIN label', ErrStat, ErrMsg, RoutineName )
-      ELSE
-         sz = len(Line)
-         Line = Line(8:sz)
-         READ(Line,*, IOSTAT=ErrStat2)  origin
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Error reading "origin".', ErrStat, ErrMsg, RoutineName )
-         end if
-
-      END IF 
-      
-         ! Spacing      
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "gridSpacing", "SPACING data", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      Line = trim(Line)
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "SPACING" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find SPACING label', ErrStat, ErrMsg, RoutineName )
-      ELSE
-         sz = len(Line)
-         Line = Line(9:sz)
-         READ(Line,*,IOSTAT=ErrStat2)  gridSpacing
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Error reading "gridSpacing".', ErrStat, ErrMsg, RoutineName )
-         end if
-         
-      END IF 
-      
-         ! Point Data
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "Point_Data", "POINT_DATA", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      Line = trim(Line)
-      CALL Conv2UC( Line )
-      IF ( INDEX(Line, "POINT_DATA" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find POINT_DATA label', ErrStat, ErrMsg, RoutineName )
-      ELSE
-         sz = len(Line)
-         Line = Line(12:sz)
-         READ(Line,*,IOSTAT=ErrStat2)  nPts
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Error reading "nPts".', ErrStat, ErrMsg, RoutineName )
-         end if
-         IF ( nPts /= ( dims(1)*dims(2)*dims(3) ) ) THEN ! Abort if DIMENSIONS AND POINT_DATA don't agree
-            CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: POINT_DATA does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
-         END IF
-      END IF 
-      
-         ! VECTOR or FIELD Label
-      Line = ""
-      CALL ReadStr( Un, FileName, Line, "VECTORS or FIELD", "VECTORS or FIELD label", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      Line = trim(Line)
-      CALL Conv2UC( Line )
-      IF ( ( INDEX(Line, "VECTORS" ) /= 1 ) .AND. ( INDEX(Line, "FIELD" ) /= 1 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
-      ELSE
-         IF ( INDEX(Line, "FIELD" ) == 1 ) THEN ! Must be FIELD
-            READ(Line,*,IOSTAT=ErrStat2) Dummy1, Dummy2, nArr
-            if (ErrStat2 /= 0) then
-                CALL SetErrStat( ErrID_Fatal, 'Error reading "nArr".', ErrStat, ErrMsg, RoutineName )
-            ELSE IF ( nArr /= 1_IntKi ) THEN
-                CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD label must have only 1 array', ErrStat, ErrMsg, RoutineName )
-            END IF
-            
-            Line = ""
-            CALL ReadStr( Un, FileName, Line, "Array", "Array definition", ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-            Line = trim(Line)
-            Call Conv2UC( Line )
-            sz = INDEX(Line, "FLOAT" )
-            IF ( sz == 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
-            ELSE        
-               READ(Line,*,IOSTAT=ErrStat2) Dummy1, nums
-               if (ErrStat2 /= 0) then
-                  CALL SetErrStat( ErrID_Fatal, 'Error reading "nums".', ErrStat, ErrMsg, RoutineName )
-               ELSEIF ( nums(1) /= 3_IntKi ) THEN                         ! Abort if we don't have 3-element vectors
-                  CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  FIELD array must have 3 elements.', ErrStat, ErrMsg, RoutineName )
-               ELSEIF ( nums(2) /= ( dims(1)*dims(2)*dims(3) ) ) THEN ! Abort if DIMENSIONS AND FIELD data don't agree
-                  CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD array does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
-               END IF
-            END IF
-         ELSE                                    ! Must be VECTORS
-            sz = INDEX(Line, "FLOAT" )
-            IF ( sz == 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
-            ELSE        
-               vecLabel = Line(9:sz-2)
-            END IF
-         END IF
-      END IF
-      
-      IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
-         close(Un)
-         Un = -1
-         RETURN
-      END IF
-      
-      RETURN
-   END SUBROUTINE ReadVTK_SP_info
-   
-!=======================================================================
-!> This routine reads the vector data for a vtk, ascii, structured_points dataset file,
-!! The Unit number of the  file is already assumed to be valid via a previous call to
-!! ReadVTK_SP_info.  
-   SUBROUTINE ReadVTK_SP_vectors( FileName, Un, dims, gridVals, ErrStat, ErrMsg ) 
-   
-      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file    
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of opened file
-      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(SiKi)      , INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 4D array of data, size (3,nX,nY,nZ), must be pre-allocated
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-      
-      INTEGER                                :: ErrStat2
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      
-      READ(Un,*, IOSTAT=ErrStat2)  gridVals(1:3,1:dims(1),1:dims(2),1:dims(3))
-      
-      close(Un)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk file: '//trim(FileName)//'.', ErrStat, ErrMsg, 'ReadVTK_SP_vectors' )
-      end if
-      
-   END SUBROUTINE ReadVTK_SP_vectors
-   
-!=======================================================================
-!> This routine writes out the heading for an vtk, ascii, structured_points dataset file .
-!! It tries to open a text file for writing and returns the Unit number of the opened file.
-   SUBROUTINE WrVTK_SP_header( FileName, descr, Un, ErrStat, ErrMsg ) 
-   
-      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
-      CHARACTER(*)    , INTENT(IN   )        :: descr                !< Line describing the contents of the file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
-   
-      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
-      CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev) return
-      
-      WRITE(Un,'(A)')  '# vtk DataFile Version 3.0'
-      WRITE(Un,'(A)')  trim(descr)
-      WRITE(Un,'(A)')  'ASCII'
-      WRITE(Un,'(A)')  'DATASET STRUCTURED_POINTS'
-      
-      RETURN
-   END SUBROUTINE WrVTK_SP_header
-   
-   
-   SUBROUTINE WrVTK_SP_vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
-   
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
-      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
-      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(IN   )        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
-      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      REAL(SiKi)      , INTENT(IN   )        :: gridVals(:,:,:,:)      !< 3D array of data, size (nX,nY,nZ)
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
- 
-      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
-      
-      if ( .not. (Un > 0) ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
-         return
-      end if
-   
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      nPts    = dims(1)*dims(2)*dims(3)
-      
-      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
-      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,1X))')   gridVals
-      close(Un)
-      RETURN
-      
-   END SUBROUTINE WrVTK_SP_vectors3D
 
       
 END MODULE NWTC_IO

@@ -28,6 +28,8 @@ module UA_Dvr_Subs
       real(ReKi)      :: Mean            
       integer         :: Phase           
       character(1024) :: InputsFile      
+      logical         :: SumPrint         
+      logical         :: WrAFITables
    end type UA_Dvr_InitInput
    
    contains
@@ -365,28 +367,42 @@ module UA_Dvr_Subs
             return
          end if
          
+
+      !-------------------------------------------------------------------------------------------------
+      ! OUTPUT section
+      !-------------------------------------------------------------------------------------------------
+      call ReadCom( UnIn, FileName, 'Output conditions header', errStat2, errMsg2, UnEchoLocal ); if(Failed()) return
+      call ReadVar( UnIn, FileName, InitInp%SumPrint, 'SumPrint', 'Write unsteady aerodynamic summary file', errStat2, errMsg2, UnEchoLocal ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call ReadVar( UnIn, FileName, InitInp%WrAFITables,  'WrAFITables', 'Write airfoil coefficients used by Airfoil Info', errStat2, errMsg2, UnEchoLocal ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         ! Temporarily allowing backward compatibility..
+         call WrScr('')
+         call WrScr('[WARN] An error occured when reading the output section of the UA Driver input file.')
+         call WrScr('       Make sure it is at the latest version. See error message below:')
+         call WrScr(trim(ErrMsg))
+         call WrScr('')
+         call WrScr('[INFO] Continuing using default output options.')
+         call WrScr('')
+         InitInp%SumPrint    = .True.
+         InitInp%WrAFITables = .True.
+         ErrStat = ErrID_None
+         ErrMsg  = ''
+      endif
+
       call Cleanup()
-      
-   
    contains
-      !====================================================================================================
+      logical function Failed()
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+         if (Failed)    call Cleanup()
+      end function Failed
       subroutine Cleanup()
-      !     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
-      !     any existing echo information
-      !----------------------------------------------------------------------------------------------------  
-      !   logical,                       intent( in    )   :: EchoFlag             ! local version of echo flag
-      !   integer,                       intent( in    )   :: UnEcho               !  echo unit number
-   
-            ! Close this module's echo file    
+         ! Close this module's echo file    
          if ( InitInp%Echo ) then
             close(UnEchoLocal)
          end if
-         
          close( UnIn )
-         
       end subroutine Cleanup
-      
-
    end subroutine ReadDriverInputFile
    
    subroutine ReadTimeSeriesData( inputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, ErrStat, ErrMsg )
@@ -519,17 +535,17 @@ module UA_Dvr_Subs
       end subroutine Cleanup
    end subroutine ReadTimeSeriesData
 !--------------------------------------------------------------------------------------------------------------
-   subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, AFI_Params, ErrStat, ErrMsg)
+   subroutine Init_AFI(UAMod, NumAFfiles, afNames, UseCm, UA_f_cn, AFI_Params, ErrStat, ErrMsg)
 
    integer,             intent(in   )  :: UAMod
    integer,             intent(in   )  :: NumAFfiles
    CHARACTER(1024),     intent(in   )  :: afNames(NumAFfiles)
    logical,             intent(in   )  :: UseCm
+   logical,             intent(in   )  :: UA_f_cn
    type(AFI_ParameterType), intent(  out)  :: AFI_Params(NumAFfiles)
    integer(IntKi),      intent(  out)  :: ErrStat                       ! Error status.
    character(*),        intent(  out)  :: ErrMsg                        ! Error message.
 
-   
    type(AFI_InitInputType)  :: AFI_InitInputs
    integer                  :: UnEc
    integer                  :: i
@@ -561,8 +577,8 @@ module UA_Dvr_Subs
    end if
    
    AFI_InitInputs%InCol_Cpmin = 0
-   AFI_InitInputs%AFTabMod = AFITable_1 ! 1D-interpolation (on AoA only)
-   AFI_InitInputs%UA_f_cn  = UAMod /= UA_HGM ! HGM needs the separation function based on cl instead of cn
+   AFI_InitInputs%AFTabMod    = AFITable_1 ! 1D-interpolation (on AoA only)
+   AFI_InitInputs%UA_f_cn     = UA_f_cn
    
    do i=1,NumAFfiles
       AFI_InitInputs%FileName = afNames(i) !InitInp%AF_File(i)
@@ -597,46 +613,108 @@ module UA_Dvr_Subs
    end subroutine Init_AFI  
    
    
-   subroutine WriteAFITables(AFI_Params,OutRootName)
+   subroutine WriteAFITables(AFI_Params, OutRootName, UseCm, UA_f_cn)
    
-      type(AFI_ParameterType), intent(in)          :: AFI_Params
-      character(ErrMsgLen)   , intent(in)          :: OutRootName
+      type(AFI_ParameterType), intent(in), target  :: AFI_Params
+      character(len=*)       , intent(in)          :: OutRootName
+      logical                , intent(in)          :: UseCm
+      logical                , intent(in)          :: UA_f_cn
       
       integer(IntKi)                               :: unOutFile
-      integer(IntKi)                               :: row
       integer(IntKi)                               :: ErrStat
       character(ErrMsgLen)                         :: ErrMsg
       
-      Real(ReKi)                                   :: cl_smooth(AFI_Params%Table(1)%NumAlf)
-      Real(ReKi)                                   :: cn_smooth(AFI_Params%Table(1)%NumAlf)
-      Real(ReKi)                                   :: cn(AFI_Params%Table(1)%NumAlf)
+      Real(ReKi), allocatable  :: cl_smooth(:)
+      Real(ReKi), allocatable  :: cn_smooth(:)
+      Real(ReKi), allocatable  :: cn(:)
+      Real(ReKi), allocatable  :: cl_lin(:)
+      Real(ReKi), allocatable  :: cn_lin(:)
+      character(len=3) :: Prefix
+      character(len=11) :: sFullyAtt
+      character(len=8) :: sCm
+      integer :: iTab, iRow, iStartUA
+      type(AFI_Table_Type), pointer :: tab !< Alias
+
+      if (UA_f_cn) then
+         Prefix='Cn_'
+         sFullyAtt='Cn_FullyAtt'
+      else
+         Prefix='Cl_'
+         sFullyAtt='Dummy'
+      endif
+      if (UseCm) then
+         sCm='Cm'
+      else
+         sCm='Cm_Dummy'
+      endif
+
+
+      ! Loop on tables, write a different file for each table.
+      do iTab = 1, size(AFI_Params%Table)
+         tab => AFI_Params%Table(iTab)
+
+         ! Compute derived parameters from cl and cd, and UA_BL
+         if(allocated(cl_smooth)) deallocate(cl_smooth)
+         if(allocated(cn_smooth)) deallocate(cn_smooth)
+         if(allocated(cn       )) deallocate(cn       )
+         if(allocated(cl_lin   )) deallocate(cl_lin   )
+         if(allocated(cn_lin   )) deallocate(cn_lin   )
+         allocate(cl_smooth(tab%NumAlf))
+         allocate(cn_smooth(tab%NumAlf))
+         allocate(cn       (tab%NumAlf))
+         allocate(cl_lin   (tab%NumAlf))
+         allocate(cn_lin   (tab%NumAlf))
+
       
-      cn = AFI_Params%Table(1)%Coefs(:,AFI_Params%ColCl) * cos(AFI_Params%Table(1)%alpha) + (AFI_Params%Table(1)%Coefs(:,AFI_Params%ColCd) - AFI_Params%Table(1)%UA_BL%Cd0) * sin(AFI_Params%Table(1)%alpha);
+         cn     = tab%Coefs(:,AFI_Params%ColCl) * cos(tab%alpha) + (tab%Coefs(:,AFI_Params%ColCd) - tab%UA_BL%Cd0) * sin(tab%alpha);
+         cn_lin = tab%UA_BL%C_nalpha * (tab%alpha - tab%UA_BL%alpha0)
+         cl_lin = tab%UA_BL%C_lalpha * (tab%alpha - tab%UA_BL%alpha0)
 
-      call kernelSmoothing(AFI_Params%Table(1)%alpha, cn, kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cn_smooth)
-      call kernelSmoothing(AFI_Params%Table(1)%alpha, AFI_Params%Table(1)%Coefs(:,AFI_Params%ColCl), kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cl_smooth)
+         do iRow = 1, tab%NumAlf
+            if ((tab%alpha(iRow)<tab%UA_BL%alphaLowerWrap).or. tab%alpha(iRow)>tab%UA_BL%alphaUpperWrap) then
+               cl_lin(iRow) =0.0_ReKi
+               cn_lin(iRow) =0.0_ReKi
+            endif
+         enddo
 
-      CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
+         ! Smoothing (used priot to compute slope in CalculateUACoeffs)
+         call kernelSmoothing(tab%alpha, cn                           , kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cn_smooth)
+         call kernelSmoothing(tab%alpha, tab%Coefs(:,AFI_Params%ColCl), kernelType_TRIWEIGHT, 2.0_ReKi*D2R, cl_smooth)
 
-      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.out', ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev) then
-            call WrScr(Trim(ErrMsg))
-            return
-         end if
+         ! Write to file
 
-   
-      WRITE (unOutFile,'(/,A/)') 'These predictions were generated by UnsteadyAero Driver on '//CurDate()//' at '//CurTime()//'.'
-      WRITE (unOutFile,'(/,A/)')  ' '
-         ! note that this header assumes we have Cm and unsteady aero coefficients
-      WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl',  'Cd',  'Cm', 'f_st', 'FullySeparate', 'FullyAttached', 'smoothed_Cl', 'smoothed_Cn'
-      WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)',   '(-)', '(-)', '(-)'
+         CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) RETURN
 
-      do row=1,size(AFI_Params%Table(1)%Alpha)
-         WRITE(unOutFile, '(20(F20.6,1x))') AFI_Params%Table(1)%Alpha(row)*R2D, AFI_Params%Table(1)%Coefs(row,:), cl_smooth(Row), cn_smooth(Row)
-      end do
+         CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.UA.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
+            if (ErrStat >= AbortErrLev) then
+               call WrScr(Trim(ErrMsg))
+               return
+            end if
       
-      CLOSE(unOutFile)
+         WRITE (unOutFile,'(/,A/)') 'These predictions were generated by UnsteadyAero Driver on '//CurDate()//' at '//CurTime()//'.'
+         WRITE (unOutFile,'(/,A/)')  ' '
+
+         WRITE(unOutFile, '(20(A20,1x))') 'Alpha', 'Cl',  'Cd',  sCm,  'Cn', 'f_st', Prefix//'FullySep', sFullyAtt , 'Cl_lin','Cn_lin','Cl_smooth', 'Cn_smooth'
+         WRITE(unOutFile, '(20(A20,1x))') '(deg)', '(-)', '(-)', '(-)', '(-)', '(-)', '(-)'             , '(-)'     ,  '(-)'  , '(-)'  , '(-)'    ,'(-)'
+
+         ! TODO, we could do something with ColCpmim and ColUAf
+         if (UseCm) then
+            iStartUA = 4
+            do iRow=1,size(tab%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') tab%Alpha(iRow)*R2D, tab%Coefs(iRow,AFI_Params%ColCl), tab%Coefs(iRow,AFI_Params%ColCd), tab%Coefs(iRow,AFI_Params%ColCm), &
+                                              cn(iRow),  tab%Coefs(iRow,iStartUA:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         else
+            iStartUA = 3
+            do iRow=1,size(tab%Alpha)
+               WRITE(unOutFile, '(20(F20.6,1x))') tab%Alpha(iRow)*R2D, tab%Coefs(iRow,AFI_Params%ColCl), tab%Coefs(iRow,AFI_Params%ColCd), 0.0_ReKi, &
+                                              cn(iRow), tab%Coefs(iRow,iStartUA:), cl_lin(iRow), cn_lin(iRow), cl_smooth(iRow), cn_smooth(iRow)
+            end do
+         endif
+         
+         CLOSE(unOutFile)
+      enddo
       
    end subroutine WriteAFITables
    

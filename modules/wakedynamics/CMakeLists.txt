@@ -24,7 +24,7 @@ set(WD_LIBS_SOURCES
   )
 
 add_library(wdlib ${WD_LIBS_SOURCES})
-target_link_libraries(wdlib aerodynlib nwtclibs) # TEMPORARY FOR VTK
+target_link_libraries(wdlib nwtclibs)
 
  
 

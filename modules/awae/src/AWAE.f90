@@ -1458,6 +1458,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
 
+   use VTK
    real(DbKi),                     intent(in   )  :: t           !< Current simulation time in seconds
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
    type(AWAE_ParameterType),       intent(in   )  :: p           !< Parameters
