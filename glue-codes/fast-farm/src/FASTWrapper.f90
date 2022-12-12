@@ -665,6 +665,46 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          end do
      end if
             
+      ! --- Variables needed to orient wake planes in "skew" coordinate system
+      ! chi_skew and psi_skew
+      y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
+   
+      ! TODO place me in an AeroDyn Function like Calc_Chi0
+      ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+      yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
+      yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
+      ! Construct z_hat
+      zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
+      zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
+      zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
+      zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
+   
+   !~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
+   
+      ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
+      xSkew = y%xHat_Disk 
+      ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
+      denom = TwoNorm(ySkew)
+      if (EqualRealNos(denom, 0.0_ReKi)) then
+         ! There is no skew
+         ySkew = yHat_plane
+         zSkew = zHat_plane
+      else
+         ySkew = ySkew / denom
+         zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
+         zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
+         zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
+      endif
+      zHat_Disk = zSkew
+   
+      tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
+      tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
+      if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
+         y%psi_skew = 0.0_ReKi
+      else
+         y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
+      end if
+     
    elseif (m%Turbine%p_FAST%CompAero == MODULE_ADsk) then
       ! ....... outputs from AeroDisk ...............
      ! Orientation of rotor centerline, normal to disk:
@@ -713,46 +753,6 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
 
    endif
       
-   ! --- Variables needed to orient wake planes in "skew" coordinate system
-   ! chi_skew and psi_skew
-   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
-
-   ! TODO place me in an AeroDyn Function like Calc_Chi0
-   ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
-   yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
-   yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
-   ! Construct z_hat
-   zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
-   zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
-   zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
-   zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
-
-!~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
-
-   ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
-   xSkew = y%xHat_Disk 
-   ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
-   denom = TwoNorm(ySkew)
-   if (EqualRealNos(denom, 0.0_ReKi)) then
-      ! There is no skew
-      ySkew = yHat_plane
-      zSkew = zHat_plane
-   else
-      ySkew = ySkew / denom
-      zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
-      zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
-      zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
-   endif
-   zHat_Disk = zSkew
-
-   tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
-   tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
-   if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
-      y%psi_skew = 0.0_ReKi
-   else
-      y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
-   end if
-  
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST
