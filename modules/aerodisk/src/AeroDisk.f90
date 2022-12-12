@@ -198,6 +198,7 @@ contains
       character(*),     intent(  out)  :: ErrMsg3
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
+      x%DummyContState           = 0.0_ReKi
       xd%DummyDiscreteState      = 0.0_ReKi
       z%DummyConstrState         = 0.0_ReKi
       OtherState%DummyOtherState = 0_IntKi
@@ -217,8 +218,8 @@ contains
       integer(IntKi),   intent(  out)  :: ErrStat3
       character(*),     intent(  out)  :: ErrMsg3
       integer(IntKi)                   :: i
-      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return;
-      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return;
+      call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
+      call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',Errstat3,ErrMsg3);  if (ErrStat3 >= AbortErrLev) return
       do i=1,p%NumOuts
          InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
          InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
