@@ -3,29 +3,35 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31613.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "MoorDynDriver", "MoorDynDriver.vfproj", "{815C302F-A93D-4C22-9329-717B085113C0}"
+Project("{A1373E92-2C9A-4B4D-BE47-0B46E317E1A8}") = "MoorDynDriver", "MoorDynDriver.vfproj", "{E91DED35-18F8-415F-9719-59DFBA79CB2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_Double|Win32 = Debug_Double|Win32
+		Debug_Double|x64 = Debug_Double|x64
+		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
+		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{815C302F-A93D-4C22-9329-717B085113C0}.Debug|x64.ActiveCfg = Debug|x64
-		{815C302F-A93D-4C22-9329-717B085113C0}.Debug|x64.Build.0 = Debug|x64
-		{815C302F-A93D-4C22-9329-717B085113C0}.Debug|x86.ActiveCfg = Debug|Win32
-		{815C302F-A93D-4C22-9329-717B085113C0}.Debug|x86.Build.0 = Debug|Win32
-		{815C302F-A93D-4C22-9329-717B085113C0}.Release|x64.ActiveCfg = Release|x64
-		{815C302F-A93D-4C22-9329-717B085113C0}.Release|x64.Build.0 = Release|x64
-		{815C302F-A93D-4C22-9329-717B085113C0}.Release|x86.ActiveCfg = Release|Win32
-		{815C302F-A93D-4C22-9329-717B085113C0}.Release|x86.Build.0 = Release|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug_Double|Win32.ActiveCfg = Debug_Double|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug_Double|Win32.Build.0 = Debug_Double|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug_Double|x64.ActiveCfg = Debug_Double|x64
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug_Double|x64.Build.0 = Debug_Double|x64
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug|Win32.Build.0 = Debug|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug|x64.ActiveCfg = Debug|x64
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Debug|x64.Build.0 = Debug|x64
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Release|Win32.ActiveCfg = Release|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Release|Win32.Build.0 = Release|Win32
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Release|x64.ActiveCfg = Release|x64
+		{E91DED35-18F8-415F-9719-59DFBA79CB2C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {8141B2B8-9857-455F-978C-8B086DDB3E6A}
+		SolutionGuid = {3BDEA0AD-7777-4CFC-8533-3247B1C17E90}
 	EndGlobalSection
 EndGlobal

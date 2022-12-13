@@ -355,7 +355,7 @@ CONTAINS
       ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
 
           !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
-          print *, "  Catenary solve of Line ", Line%IdNum, " unsuccessful. Initializing as linear."
+          call WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
 
 !          print *, "Node positions: "
 

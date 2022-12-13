@@ -68,6 +68,9 @@ set(CTEST_SUBDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/subdyn/subdyn_driver${C
 # Set the InflowWind executable configuration option and default
 set(CTEST_INFLOWWIND_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/inflowwind/inflowwind_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the InflowWind driver executable to use in testing.")
 
+# Set the MoorDyn executable configuration option and default
+set(CTEST_MOORDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/moordyn/moordyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the MoorDyn driver executable to use in testing.")
+
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
   find_program(PYTHON_EXECUTABLE NAMES python3 python py)
@@ -85,7 +88,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/subdyn)
+foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modules/beamdyn modules/hydrodyn modules/inflowwind modules/moordyn modules/subdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
@@ -191,5 +194,6 @@ add_custom_target(
     beamdyn_driver
     hydrodyn_driver
     inflowwind_driver
+    moordyn_driver
     subdyn_driver
 )

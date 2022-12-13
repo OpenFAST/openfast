@@ -30,7 +30,15 @@ set(MOORDYN_LIBS_SOURCES
 )
 
 add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
-target_link_libraries(moordynlib nwtclibs versioninfolib)
+target_link_libraries(moordynlib nwtclibs)
+
+# c-bindings interface library
+add_library(moordyn_c_binding SHARED src/MoorDyn_C_Binding.f90)
+target_link_libraries(moordyn_c_binding moordynlib versioninfolib ${CMAKE_DL_LIBS})
+if(APPLE OR UNIX)
+   target_compile_definitions(moordyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+endif()
+
 
 install(TARGETS moordynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
@@ -40,7 +48,7 @@ install(TARGETS moordynlib
 
 set(MD_DRIVER_SOURCES src/MoorDyn_Driver.f90)
 add_executable(moordyn_driver ${MD_DRIVER_SOURCES})
-target_link_libraries(moordyn_driver moordynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(moordyn_driver moordynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 install(TARGETS moordyn_driver
   RUNTIME DESTINATION bin
