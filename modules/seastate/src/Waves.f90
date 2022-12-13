@@ -1608,7 +1608,7 @@ CONTAINS
       REAL(SiKi),       INTENT(IN   )                 :: Ycoord
       REAL(SiKi),       INTENT(  OUT)                 :: WaveElevAtXY(0:InitOut%NStepWave)
       real(SiKi),       INTENT(  OUT)                 :: WaveElevCAtXY(2,0:InitOut%NStepWave2)
-      COMPLEX(SiKi),    INTENT(INOUT)                 :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use.
+      COMPLEX(SiKi),    INTENT(INOUT)                 :: tmpComplexArr(0:InitOut%NStepWave2)            ! A temporary array (0:NStepWave2-1) for FFT use.
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
       
