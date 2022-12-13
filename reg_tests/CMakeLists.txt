@@ -181,14 +181,14 @@ add_custom_target(
 )
 
 add_custom_target(
-  regression_tests
+  regression_tests ALL
   DEPENDS
     openfast
     regression_test_controllers
 )
 
 add_custom_target(
-  regression_test_module_drivers
+  regression_test_module_drivers ALL
   DEPENDS
     aerodyn_driver
     beamdyn_driver
