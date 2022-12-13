@@ -738,7 +738,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
          NWaveKin0Prime = 0
          DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
            END IF
@@ -763,7 +763,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          I = 1
 
          DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
             IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
                WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
@@ -985,15 +985,16 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( SinWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array SinWaveDir.',        ErrStat,ErrMsg,RoutineName)
 
+      ALLOCATE ( OmegaArr( 0:InitOut%NStepWave2                            ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array OmegaArr.',   ErrStat,ErrMsg,RoutineName)
+
+      
       ! Arrays for the constrained wave
       ALLOCATE ( WaveS1SddArr( 0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveS1SddArr.',   ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( WaveElevC0Re( 0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Re.',   ErrStat,ErrMsg,RoutineName)
-
-      ALLOCATE ( OmegaArr( 0:InitOut%NStepWave2                            ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array OmegaArr.',   ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( tmpArr( 0:InitOut%NStepWave2                              ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpArr.',   ErrStat,ErrMsg,RoutineName)
@@ -1005,11 +1006,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
 
 
-
-
-      ! JASON: IMPLEMENT EQUATIONS (2.12 - 2.13) IN MY DISSERTATION SO THAT ONE CAN READ IN EXTERNAL WAVE
-      !        DATA?<--BETTER YET, IMPLEMENT WaveElevC0 = DFT(WaveElev) WHERE WaveElev CAN BE READ IN AS
-      !        GH BLADED WAVE DATA.  THAT IS, ADD AN OPTION TO READ IN WAVE DATA FOR FLOATERS!
 
       ! Compute the positive-frequency components (including zero) of the discrete
       !   Fourier transforms of the wave kinematics:
@@ -1543,7 +1539,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !   WaveAcc0, at the desired locations from the wave kinematics at
       !   alternative locations, WaveDynP0B, WaveVel0Hxi, WaveVel0Hyi, WaveVel0V,
       !   WaveAcc0Hxi, WaveAcc0Hyi, WaveAcc0V, if the elevation of the point defined by
-      !   WaveKinzi(J) lies between the seabed and the instantaneous free
+      !   WaveKinGridzi(J) lies between the seabed and the instantaneous free
       !   surface, else set WaveDynP0, WaveVel0, and WaveAcc0 to zero.  This
       !   depends on which incident wave kinematics stretching method is being
       !   used:
@@ -1573,15 +1569,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
              !  kk = (count-1) / (InitInp%NGrid(1)*InitInp%NGrid(2)) + 1
 
                IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
-                  ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
-                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+                  ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
+                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
 
                   InitOut%WaveDynP(:,i,j,k  )  = 0.0
                   InitOut%WaveVel (:,i,j,k,:)  = 0.0
                   InitOut%WaveAcc (:,i,j,k,:)  = 0.0
 
                ELSE
-                  ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
+                  ! The elevation of the point defined by WaveKinGridzi(J) must lie between the seabed and the mean sea level (inclusive)
 
                   InitOut%WaveDynP(0:InitOut%NStepWave-1,i,j,k  ) = WaveDynP0B( 0:InitOut%NStepWave-1,primeCount)
                   InitOut%WaveVel (0:InitOut%NStepWave-1,i,j,k,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,primeCount)
@@ -1605,11 +1601,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             do j = 1, InitInp%NGrid(2)
                do i = 1, InitInp%NGrid(1)
                   IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
-                     ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
-                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+                     ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
+                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
                      InitOut%WaveAccMCF(:,i,j,k,:)  = 0.0
                   ELSE
-                     ! The elevation of the point defined by WaveKinzi(J) must lie between the seabed and the mean sea level (inclusive)
+                     ! The elevation of the point defined by WaveKinGridzi(J) must lie between the seabed and the mean sea level (inclusive)
                      InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,1) = WaveAcc0HxiMCF(0:InitOut%NStepWave-1,primeCount)
                      InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,2) = WaveAcc0HyiMCF(0:InitOut%NStepWave-1,primeCount)
                      InitOut%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,3) = WaveAcc0VMCF(  0:InitOut%NStepWave-1,primeCount)
@@ -1693,7 +1689,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !   instantaneous wave elevation--these new elevations are stored in the
       !   WaveKinzi0St(:) array.  Next, we interpolate the wave kinematics
       !   computed without stretching to the desired elevations (defined in the
-      !   WaveKinzi(:) array) using the WaveKinzi0St(:) array:
+      !   WaveKinGridzi(:) array) using the WaveKinzi0St(:) array:
 
 
 
@@ -1841,7 +1837,7 @@ END SUBROUTINE VariousWaves_Init
 SUBROUTINE Waves_Init( InitInp, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !NOTE: We are making this INOUT so that we can overwrite the WaveKinzi with zeros for wave stretching calculations
+      TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !NOTE: We are making this INOUT because UserWaveComponents_Init changes the value of InitInp%WaveDT
       TYPE(Waves_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None

@@ -92,7 +92,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction. [(degrees)]
     INTEGER(IntKi)  :: WaveNDir      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
     REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean see level [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAccMCF => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
@@ -945,18 +944,6 @@ ENDIF
     DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
     DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
     DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
-IF (ALLOCATED(SrcInitOutputData%WaveKinzi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WaveKinzi,1)
-  i1_u = UBOUND(SrcInitOutputData%WaveKinzi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WaveKinzi)) THEN 
-    ALLOCATE(DstInitOutputData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WaveKinzi = SrcInitOutputData%WaveKinzi
-ENDIF
 IF (ASSOCIATED(SrcInitOutputData%WaveDynP)) THEN
   i1_l = LBOUND(SrcInitOutputData%WaveDynP,1)
   i1_u = UBOUND(SrcInitOutputData%WaveDynP,1)
@@ -1185,9 +1172,6 @@ IF (ASSOCIATED(InitOutputData%WaveDirArr)) THEN
   DEALLOCATE(InitOutputData%WaveDirArr)
   InitOutputData%WaveDirArr => NULL()
 ENDIF
-IF (ALLOCATED(InitOutputData%WaveKinzi)) THEN
-  DEALLOCATE(InitOutputData%WaveKinzi)
-ENDIF
 IF (ASSOCIATED(InitOutputData%WaveDynP)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveDynP)
@@ -1297,11 +1281,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMax
       Int_BufSz  = Int_BufSz  + 1  ! WaveNDir
       Re_BufSz   = Re_BufSz   + 1  ! WaveDOmega
-  Int_BufSz   = Int_BufSz   + 1     ! WaveKinzi allocated yes/no
-  IF ( ALLOCATED(InData%WaveKinzi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveKinzi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveKinzi)  ! WaveKinzi
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! WaveDynP allocated yes/no
   IF ( ASSOCIATED(InData%WaveDynP) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! WaveDynP upper/lower bounds for each dimension
@@ -1456,21 +1435,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDOmega
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveKinzi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveKinzi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveKinzi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveKinzi,1), UBOUND(InData%WaveKinzi,1)
-        ReKiBuf(Re_Xferred) = InData%WaveKinzi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( .NOT. ASSOCIATED(InData%WaveDynP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1894,24 +1858,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%WaveDOmega = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveKinzi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveKinzi)) DEALLOCATE(OutData%WaveKinzi)
-    ALLOCATE(OutData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveKinzi,1), UBOUND(OutData%WaveKinzi,1)
-        OutData%WaveKinzi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveDynP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
