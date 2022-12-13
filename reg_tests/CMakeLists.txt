@@ -181,7 +181,7 @@ add_custom_target(
 )
 
 add_custom_target(
-  regression_tests
+  regression_tests ALL
   DEPENDS
     openfast
     regression_test_controllers
