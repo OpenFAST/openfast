@@ -629,7 +629,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
    COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
    COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-   COMPLEX(SiKi)                :: WGNC                                            ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
 
    REAL(SiKi), ALLOCATABLE      :: CosWaveDir(:)                                   ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
    REAL(SiKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
@@ -637,8 +636,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    REAL(SiKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
    REAL(SiKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
-
-   REAL(SiKi)                   :: Omega                                           ! Wave frequency (rad/s)
 
    REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:,:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
    REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:,:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
@@ -648,7 +645,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(SiKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:,:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
    REAL(SiKi), ALLOCATABLE      :: PWaveVel0VPz0  (:,:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
 
-   REAL(SiKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
    REAL(SiKi), ALLOCATABLE      :: SinWaveDir     (:)                              ! SIN( WaveDirArr(I) )
    REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hxi (:,:)                               ! Instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
    REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hyi (:,:)                               ! Instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
@@ -661,13 +657,10 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    REAL(SiKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
    REAL(SiKi)                   :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
-   REAL(SiKi)                   :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
-   REAL(SiKi)                   :: WaveS2Sdd                                       ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)                            ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
    REAL(SiKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)                            ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
    REAL(SiKi), ALLOCATABLE      :: WaveVel0V (:,:)                                 ! Instantaneous vertical     velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
    INTEGER                      :: I,count                                               ! Generic index
-   INTEGER                      :: I_WaveTp                                        ! The index of the frequency component nearest to WaveTp
    INTEGER                      :: J                                               ! Generic index
    INTEGER                      :: K                                               ! Generic index
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
@@ -693,6 +686,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER(IntKi)               :: MaxCrestIter = 20                               !< Maximum number of iterations when trying to meet the prescribed crest height (-)
    REAL(SiKi), ALLOCATABLE      :: WaveS1SddArr(:)                                 !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
    REAL(SiKi), ALLOCATABLE      :: WaveElevC0Re(:)                                 !< Real part of the partially modified wave DFT amplitude (m)
+   
    REAL(SiKi), ALLOCATABLE      :: OmegaArr(:)                                     !< Array of all non-negative angular frequencies (rad/s)
    REAL(SiKi), ALLOCATABLE      :: tmpArr(:)                                       !< A temporary array of real numbers of constrained wave (-)
    
@@ -818,9 +812,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ENDIF
       !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       
-      
-      SQRTNStepWave2          = SQRT( REAL( InitOut%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
-      I_WaveTp                = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp.
 
       ! Allocate all the arrays we need.
       ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
@@ -1009,118 +1000,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Compute the positive-frequency components (including zero) of the discrete
       !   Fourier transforms of the wave kinematics:
-
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+          OmegaArr(I) = I*InitOut%WaveDOmega
+      END DO
 
+      call Get_1Spsd_and_WaveElevC0(InitInp, InitOut, OmegaArr, WaveS1SddArr)
 
-      ! Compute the frequency of this component and its imaginary value:
-
-             Omega = I*       InitOut%WaveDOmega
-         ImagOmega = ImagNmbr*Omega
-
-
-
-      ! Compute the discrete Fourier transform of the realization of a White
-      !   Gaussian Noise (WGN) time series process with unit variance:
-      !
-      ! NOTE: For the time series process to be real with zero mean, the values at
-      !       Omega == 0.0 and Omega == NStepWave2*WaveDOmega (= WaveOmegaMax)
-      !       must be zero.
-
-         IF ( ( I == 0 ) .OR. ( I == InitOut%NStepWave2 ) )  THEN   ! .TRUE. if ( Omega == 0.0 ) or ( Omega == NStepWave2*WaveDOmega (= WaveOmegaMax) )
-            WGNC = (0.0,0.0)
-         ELSEIF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
-            WGNC = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp, InitInp%WavePhase )
-               ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
-               ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
-               ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
-               !
-               ! NOTE: the denominator here will never equal zero since U1 cannot equal 1.0, and thus, C1 cannot be
-               !       0.0 in the Box-Muller method.
-            IF (  ( I == I_WaveTp ) )  WGNC = WGNC*( SQRT(2.0)/ABS(WGNC) )
-         ELSE                                               ! All other Omega
-            WGNC = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp )
-               ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
-               ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
-               ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
-               !
-               ! NOTE: the denominator here will never equal zero since U1 cannot equal 1.0, and thus, C1 cannot be
-               !       0.0 in the Box-Muller method.
-            IF ( ( InitInp%WaveMod == 1 ) .AND. ( I == I_WaveTp ) )  WGNC = WGNC*( SQRT(2.0)/ABS(WGNC) )
-         END IF
-
-
-      ! Compute the one-sided power spectral density of the wave spectrum per unit
-      !   time; zero-out the wave spectrum above the cut-off frequency:
-
-         SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
-
-         CASE ( 1, 10 )          ! Plane progressive (regular) wave; the wave spectrum is an impulse function centered on frequency component closest to WaveTp.
-            IF ( I == I_WaveTp )  THEN       ! .TRUE. if we are at the Omega closest to WaveTp.
-               WaveS1Sdd = 0.5*(InitInp%WaveHs/2.0)*(InitInp%WaveHs/2.0)/InitOut%WaveDOmega
-            ELSE                             ! All other Omega
-               WaveS1Sdd = 0.0
-            END IF
-
-         CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
-               !  Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to
-               !  void nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter
-               !  (high frequency) do not contribute to the net force because regions of positive and negative
-               !  velocity/acceleration are experienced by the platform at the same time and cancel out.
-               !
-               !  JASON: OTHER FREQUENCY CUT-OFF CONDITIONS ARE USED THROUGHOUT THE INDUSTRY.  SHOULD YOU USE ONE OF
-               !         THEM INSTEAD?  SEE, FOR EXAMPLE, MY E-MAIL EXCHANGES WITH PAUL SCLAVOUNOS DATED 5/26/2006 OR:
-               !         "GH Bladed Thoery Manual" OR: Trumars, Jenny M. V.; Tarp-Johansen, Niels Jacob; Krogh, Thomas;
-               !         "The Effect of Wave Modelling on Offshore Wind Turbine Fatigue Loads," 2005 Copenhagen Offshore
-               !         Wind Conference and Exhibition, 26-28 October 2005, Copenhagen, Denmark [CD-ROM].
-            IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
-               WaveS1Sdd = 0.0
-            ELSE ! All other Omega
-               WaveS1Sdd = JONSWAP ( Omega, InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
-            END IF
-            ! Save Omega and WaveS1Sdd for constrained wave
-            OmegaArr(I)     = Omega
-            WaveS1SddArr(I) = WaveS1Sdd
-         CASE ( 3 )              ! White-noise
-            IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
-               WaveS1Sdd = 0.0
-            ELSE
-               WaveS1Sdd =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
-            END IF
-         CASE ( 4 )              ! User-defined spectrum (irregular) wave.
-            IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN ! .TRUE. if Omega is above or below the cut-off frequency
-               WaveS1Sdd = 0.0
-            ELSE
-               CALL UserWaveSpctrm ( Omega, InitInp%WaveDir, InitInp%DirRoot, WaveS1Sdd )
-            END IF
-
-         ENDSELECT
-
-
-         IF ( InitInp%WaveMod == 5 .OR. InitInp%WaveMod == 7) THEN    ! Wave elevation or frequency component data read in
-
-            ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
-            IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN
-               InitOut%WaveElevC0(:,I) = 0.0_SiKi
-            ENDIF
-
-         ELSE  ! All other wave cases
-
-               ! Compute the two-sided power spectral density of the wave spectrum per unit
-               !   time:
-
-            WaveS2Sdd  = 0.5*WaveS1Sdd
-
-
-               ! Compute the discrete Fourier transform of the instantaneous elevation of
-               !   incident waves at the WAMIT reference point:
-            tmpComplex                   = SQRTNStepWave2*WGNC*SQRT( TwoPi*WaveS2Sdd/REAL(InitInp%WaveDT,SiKi) )
-            InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
-            InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
-
-         ENDIF
-
-      END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
       
       !> #  Multi Directional Waves
       call CalculateWaveDirection(InitInp, InitOut, ErrStatTmp, ErrMsgTmp)
@@ -1212,11 +1097,10 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
         ENDIF
         ! Modify the wave phase so that the crest shows up at the right place and the right time
         DO I = 1,InitOut%NStepWave2-1
-          Omega = I * InitOut%WaveDOmega
-          WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+          WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
           ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
                                      SinWaveDir(I)*InitInp%CrestYi) - &
-                                     Omega*InitInp%CrestTime
+                                     OmegaArr(I)*InitInp%CrestTime
           tmpComplex = CMPLX( InitOut%WaveElevC0(1,I) , InitOut%WaveElevC0(2,I)  )
           tmpComplex = tmpComplex * CMPLX( cos(ConstWavePhase), sin(ConstWavePhase)  )
           InitOut%WaveElevC0(1,I) = REAL(tmpComplex)
@@ -1240,8 +1124,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             tmpComplex  = CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))
             
             ! some redundant calculations with later, but insignificant
-            Omega      = I*InitOut%WaveDOmega
-            WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+            WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
             
             ! apply the phase shift
             tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
@@ -1270,12 +1153,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Compute the frequency of this component and its imaginary value:
 
-             Omega = I*       InitOut%WaveDOmega
-         ImagOmega = ImagNmbr*Omega
+         ImagOmega = ImagNmbr*OmegaArr(I)
 
       ! Compute the wavenumber:
 
-         WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
       MCFC = 0.0_ReKi
@@ -1298,8 +1180,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
             WaveDynPC0 (I,J)     = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
-            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*Omega*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
 
             WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
             WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
@@ -1323,8 +1205,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                                                             InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
                PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
-               PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
-               PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*Omega*tmpComplex*WaveElevxiPrime0*WaveNmbr
+               PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
+               PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
             
                IF (I == 0_IntKi) THEN ! Zero frequency component - Need to avoid division by zero.
                  PWaveVelC0VPz0  (I,J) =         0.0_ReKi
@@ -1731,7 +1613,6 @@ CONTAINS
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
       
       integer                                         :: i
-      REAL(SiKi)                                      :: Omega                                           ! Wave frequency (rad/s)
       REAL(SiKi)                                      :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
       INTEGER(IntKi)                                  :: ErrStatLcl2
 
@@ -1745,8 +1626,7 @@ CONTAINS
          ! Loop through the positive frequency components (including zero).
       DO I = 0,InitOut%NStepWave2
 
-         Omega             = I*       InitOut%WaveDOmega
-         WaveNmbr          = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
          tmpComplexArr(I)  =  CMPLX(  InitOut%WaveElevC0(1,I),   InitOut%WaveElevC0(2,I))   *          &
                                       EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
                                                                  Ycoord*SinWaveDir(I) )   )
@@ -2180,7 +2060,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, ErrStat, ErrMsg )
          !! @note    Use the value of WaveNDir stored in InitOut since InitInp cannot be changed.
          !!
          !! @note    Originally, the criteria had been that (NStepWave2 - 1) / WaveNDir is an integer.  This criteria
-         !!          was relaxed by setting the direction for Omega = 0 (which has no amplitude) since it was found that
+         !!          was relaxed by setting the direction for OmegaArr(I) = 0 (which has no amplitude) since it was found that
          !!          (NStepWave2 - 1) is often a prime number due to how NStepWave is calculated above to be a product
          !!          of smallish numbers.
 
@@ -2436,7 +2316,142 @@ contains
    
 END SUBROUTINE CalculateWaveSpreading
 !------------------------------------------------------------------------------------------------------------------------
+!> sets WaveS1SddArr(:) and InitOut%WaveElevC0
+SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, OmegaArr, WaveS1SddArr)
 
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut                                       ! Output data
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:InitOut%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
+   REAL(SiKi),                      INTENT(  OUT)  :: WaveS1SddArr(0:InitOut%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
+
+   COMPLEX(SiKi)                                   :: WGNC(0:InitOut%NStepWave2)                    ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+   INTEGER                                         :: I                                             ! Loop counter
+   INTEGER                                         :: I_WaveTp                                      ! The index of the frequency component nearest to WaveTp
+   REAL(SiKi)                                      :: SQRTNStepWave2                                ! SQRT( NStepWave/2 )
+   COMPLEX(SiKi)                                   :: tmpComplex                                    ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
+   REAL(SiKi)                                      :: WaveS2Sdd                                     ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
+   
+   
+      IF ( InitInp%WaveMod == 5 .OR. InitInp%WaveMod == 7) THEN    ! Wave elevation or frequency component data read in
+   
+         DO I = 0,InitOut%NStepWave2
+         
+            ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
+            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN
+               InitOut%WaveElevC0(:,I) = 0.0_SiKi
+            ENDIF
+            
+         END DO
+      
+         WaveS1SddArr = 0 ! unused here
+         RETURN
+      
+      END IF
+   
+   
+      I_WaveTp  = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp. Note, we don't check if it's a valid index into the arrays
+   
+      ! Compute the discrete Fourier transform of the realization of a White
+      !   Gaussian Noise (WGN) time series process with unit variance:
+
+      ! ---------------------------------
+      ! Set White Gaussian Noise with unit variance
+      !
+      ! NOTE: For the time series process to be real with zero mean, the values at
+      !       OmegaArr(I) == 0.0 and OmegaArr(I) == NStepWave2*WaveDOmega (= WaveOmegaMax)
+      !       must be zero.
+      !---------------------------------
+      ! I == 1 or InitOut%NStepWave2 if ( OmegaArr(I) == 0.0 ) or ( OmegaArr(I) == NStepWave2*WaveDOmega (= WaveOmegaMax) )
+      WGNC(1)                  = (0.0,0.0)
+      WGNC(InitOut%NStepWave2) = (0.0,0.0)
+      
+      IF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
+         DO I = 0,InitOut%NStepWave2-1                       ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+            IF (I==1) CYCLE
+            
+            WGNC(I) = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp, InitInp%WavePhase )
+         END DO
+      ELSE                                               ! All other OmegaArr(I)
+         DO I = 0,InitOut%NStepWave2-1  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+            IF (I==1) CYCLE
+            
+            WGNC(I) = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp )
+         END DO
+      END IF
+      
+      !------------------------------------
+      ! For (WaveMod=1 plane progressive (regular); and WaveMod=10 plane progressive (regular) waves with a specified phase)
+      ! adjust WGNC and set PSD at specified frequency
+      !------------------------------------
+      IF (InitInp%WaveMod == 10 .or. InitInp%WaveMod == 1) THEN
+         WaveS1SddArr = 0.0
+         
+         IF (I_WaveTp < InitOut%NStepWave2 .and. (I_WaveTp > 1 .or. I_WaveTp == 0) ) THEN
+             
+               ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
+               ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
+               ! ensure that the time series WGN process has unit variance (i.e. sinusoidal with amplitude SQRT(2.0)).
+               !
+               ! NOTE: the denominator here will never equal zero since U1 cannot equal 1.0, and thus, C1 cannot be 0.0 in the Box-Muller method.
+             
+              WGNC(I_WaveTp)         = WGNC(I_WaveTp) * ( SQRT(2.0_SiKi) / ABS(WGNC(I_WaveTp)) )
+              
+               ! Plane progressive (regular) wave; the wave spectrum is an impulse function centered on frequency component closest to WaveTp.              
+              WaveS1SddArr(I_WaveTp) = 0.5_SiKi * (InitInp%WaveHs/2.0_SiKi)**2 / InitOut%WaveDOmega
+              
+         END IF
+      ELSE
+      
+         DO I = 0,InitOut%NStepWave2
+
+            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN ! .TRUE. if OmegaArr(I) is above or below the cut-off frequency
+               !  Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to
+               !  void nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter
+               !  (high frequency) do not contribute to the net force because regions of positive and negative
+               !  velocity/acceleration are experienced by the platform at the same time and cancel out.
+            
+               WaveS1SddArr(I) = 0.0
+               
+            ELSE
+            
+               SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
+                  CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
+                        WaveS1SddArr(I) = JONSWAP ( OmegaArr(I), InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
+                  CASE ( 3 )              ! White-noise
+                        WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
+                  CASE ( 4 )              ! User-defined spectrum (irregular) wave.
+                        CALL UserWaveSpctrm ( OmegaArr(I), InitInp%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
+               ENDSELECT
+         
+            END IF
+            
+         END DO
+      
+      
+      END IF
+
+      
+      ! ---------------------------------
+      ! Compute the one-sided power spectral density of the wave spectrum per unit
+      !   time; zero-out the wave spectrum above the cut-off frequency:
+      !---------------------------------
+      SQRTNStepWave2 = SQRT( REAL( InitOut%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
+      
+      DO I = 0,InitOut%NStepWave2
+            ! Compute the two-sided power spectral density of the wave spectrum per unit
+            !   time:
+
+         WaveS2Sdd = 0.5_SiKi*WaveS1SddArr(I)
+
+            ! Compute the discrete Fourier transform of the instantaneous elevation of
+            !   incident waves at the WAMIT reference point:
+         tmpComplex                   = SQRTNStepWave2 * WGNC(I) *SQRT( TwoPi_R4 * WaveS2Sdd / REAL(InitInp%WaveDT,SiKi) )
+         InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
+         InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
+
+      END DO   ! I - The positive frequency components (including zero) of the discrete Fourier transforms
+      
+END SUBROUTINE Get_1Spsd_and_WaveElevC0
 !------------------------------------------------------------------------------------------------------------------------
 END MODULE Waves
 !**********************************************************************************************************************************
