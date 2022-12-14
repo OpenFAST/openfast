@@ -749,7 +749,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          y%AzimAvg_Cq(1) = 0.0_ReKi
          do j=2,p%nr
             if (p%r(j) <= m%Turbine%ADsk%p%RotorRad) then
-               y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * p%r(p%nr) / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
+               y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * m%Turbine%ADsk%p%RotorRad / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
             endif
          enddo
       endif
