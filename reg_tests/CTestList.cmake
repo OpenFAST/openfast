@@ -322,6 +322,7 @@ if(BUILD_FASTFARM)
   ff_regression("LESinflow"  "fastfarm")
 #   ff_regression("Uninflow_curl"  "fastfarm")
   ff_regression("TSinflow_curl"  "fastfarm")
+  ff_regression("TSinflowADskSED"  "fastfarm;aerodisk;simple-elastodyn")
 endif()
 
 # AeroDyn regression tests
