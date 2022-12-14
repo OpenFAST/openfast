@@ -668,7 +668,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
       ! --- Variables needed to orient wake planes in "skew" coordinate system
       ! chi_skew and psi_skew
       y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
-   
+
       ! TODO place me in an AeroDyn Function like Calc_Chi0
       ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
       yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
@@ -676,14 +676,14 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
       ! Construct z_hat
       zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
       zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
-      zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
+      zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2)
       zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
-   
-   !~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
-   
+
+!~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
+
       ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
-      xSkew = y%xHat_Disk 
-      ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
+      xSkew = y%xHat_Disk
+      ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg
       denom = TwoNorm(ySkew)
       if (EqualRealNos(denom, 0.0_ReKi)) then
          ! There is no skew
@@ -696,7 +696,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
       endif
       zHat_Disk = zSkew
-   
+
       tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
       tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
       if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
@@ -704,37 +704,42 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
       else
          y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
       end if
-     
+
    elseif (m%Turbine%p_FAST%CompAero == MODULE_ADsk) then
       ! ....... outputs from AeroDisk ...............
-     ! Orientation of rotor centerline, normal to disk:
-     y%xHat_Disk = m%Turbine%ADsk%Input(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
+      ! Orientation of rotor centerline, normal to disk:
+      y%xHat_Disk = m%Turbine%ADsk%Input(1)%HubMotion%Orientation(1,:,1) !actually also x_hat_disk and x_hat_hub
 
-     ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind 
-     ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
-     ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
-     ! the nacelle-yaw error is undefined (this is handled inside of AeroDisk)
-     y%YawErr = m%Turbine%ADsk%y%YawErr
+      ! Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind
+      ! velocity (ambients + deficits + motion), both projected onto the horizontal plane, rad
+      ! if the orientation of the rotor centerline or rotor-disk-averaged relative wind speed is directed vertically upward or downward (+/-Z^)
+      ! the nacelle-yaw error is undefined (this is handled inside of AeroDisk)
+      y%YawErr = m%Turbine%ADsk%y%YawErr
 
-     ! Center position of hub, m
-     p0 = m%Turbine%ADsk%Input(1)%HubMotion%Position(:,1) + m%Turbine%ADsk%Input(1)%HubMotion%TranslationDisp(:,1) 
-     y%p_hub = p%p_ref_Turbine + p0     
+      ! Center position of hub, m
+      p0 = m%Turbine%ADsk%Input(1)%HubMotion%Position(:,1) + m%Turbine%ADsk%Input(1)%HubMotion%TranslationDisp(:,1)
+      y%p_hub = p%p_ref_Turbine + p0
 
-     ! Rotor diameter, m
-     y%D_rotor = m%Turbine%ADsk%p%RotorRad
+      ! Rotor diameter, m
+      y%D_rotor = 2.0_ReKi * m%Turbine%ADsk%p%RotorRad
 
-     if ( y%D_rotor > p%r(p%nr) ) then
-        call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName) 
-     end if
+      if ( y%D_rotor > p%r(p%nr) ) then
+         call SetErrStat(ErrID_Fatal,"The radius of the wake planes is not large relative to the rotor diameter.", ErrStat,ErrMsg,RoutineName)
+      end if
 
-     ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
-     y%DiskAvg_Vx_Rel = m%Turbine%ADsk%y%VRel
+      ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+      y%DiskAvg_Vx_Rel = m%Turbine%ADsk%y%VRel
 
       ! Thrust coefficients
       if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
          y%AzimAvg_Ct = 0.0_ReKi
       else
-         y%AzimAvg_Ct(1:p%nr) = m%Turbine%ADsk%y%Ct
+         y%AzimAvg_Ct = 0.0_ReKi
+         do j=1,p%nr
+            if (p%r(j) <= m%Turbine%ADsk%p%RotorRad) then
+               y%AzimAvg_Ct(1:j) = m%Turbine%ADsk%y%Ct
+            endif
+         enddo
       endif
 
       ! Torque coefficients
@@ -743,7 +748,9 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
       else
          y%AzimAvg_Cq(1) = 0.0_ReKi
          do j=2,p%nr
-            y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * p%r(p%nr) / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
+            if (p%r(j) <= m%Turbine%ADsk%p%RotorRad) then
+               y%AzimAvg_Cq(j) = m%Turbine%ADsk%y%Cq * p%r(p%nr) / p%r(j)  ! \f$ C_q(r) = C_Q \frac{R}{r} \f$
+            endif
          enddo
       endif
 
