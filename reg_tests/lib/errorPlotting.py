@@ -136,8 +136,8 @@ def plotOpenfastError(testSolution, baselineSolution, attribute, RTOL_MAGNITUDE,
     xlabel = 'Time (s)'
 
     timevec = dict1[:, 0]
-    y1series = np.array(dict1[:, channel], dtype = np.float)
-    y2series = np.array(dict2[:, channel], dtype = np.float)
+    y1series = np.array(dict1[:, channel], dtype = float)
+    y2series = np.array(dict2[:, channel], dtype = float)
     script, div = _plotError(timevec, y1series, y2series, xlabel, title1, title2, RTOL_MAGNITUDE, ATOL_MAGNITUDE)
 
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
