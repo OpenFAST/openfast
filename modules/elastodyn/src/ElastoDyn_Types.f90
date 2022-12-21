@@ -651,6 +651,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: TwrSSSF      !< Tower side-to-side shape functions [-]
     INTEGER(IntKi)  :: TTopNode      !< Index of the additional node located at the tower-top = TwrNodes + 1 [-]
     INTEGER(IntKi)  :: TwrNodes      !< Number of tower nodes used in the analysis [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InerTFA      !< Interpolated tower fore-aft (about yt-axis) mass inertia per unit length [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InerTSS      !< Interpolated tower side-to-side (about xt-axis) mass inertia per unit length [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: StiffTGJ      !< Interpolated tower torsional stiffness [-]
@@ -16714,6 +16715,7 @@ IF (ALLOCATED(SrcParamData%TwrSSSF)) THEN
 ENDIF
     DstParamData%TTopNode = SrcParamData%TTopNode
     DstParamData%TwrNodes = SrcParamData%TwrNodes
+    DstParamData%MHK = SrcParamData%MHK
 IF (ALLOCATED(SrcParamData%InerTFA)) THEN
   i1_l = LBOUND(SrcParamData%InerTFA,1)
   i1_u = UBOUND(SrcParamData%InerTFA,1)
@@ -18089,6 +18091,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! TTopNode
       Int_BufSz  = Int_BufSz  + 1  ! TwrNodes
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
   Int_BufSz   = Int_BufSz   + 1     ! InerTFA allocated yes/no
   IF ( ALLOCATED(InData%InerTFA) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! InerTFA upper/lower bounds for each dimension
@@ -19034,6 +19037,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%TTopNode
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TwrNodes
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%InerTFA) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -21000,6 +21005,8 @@ ENDIF
     OutData%TTopNode = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%TwrNodes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! InerTFA not allocated
     Int_Xferred = Int_Xferred + 1

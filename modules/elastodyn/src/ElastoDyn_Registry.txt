@@ -643,6 +643,7 @@ typedef	^	ParameterType	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible por
 typedef	^	ParameterType	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
 typedef	^	ParameterType	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
 typedef	^	ParameterType	IntKi	TwrNodes	-	-	-	"Number of tower nodes used in the analysis"
+typedef	^	ParameterType	IntKi   MHK         -   -   -   "MHK turbine type switch"   -
 typedef	^	ParameterType	ReKi	InerTFA	{:}	-	-	"Interpolated tower fore-aft (about yt-axis) mass inertia per unit length"
 typedef	^	ParameterType	ReKi	InerTSS	{:}	-	-	"Interpolated tower side-to-side (about xt-axis) mass inertia per unit length"
 typedef	^	ParameterType	ReKi	StiffTGJ	{:}	-	-	"Interpolated tower torsional stiffness"
