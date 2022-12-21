@@ -52,8 +52,7 @@ SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SED_Loc%" -I^
  "%SrvD_Loc%" -I "%AD14_Loc%" -I "%AD_Loc%" -I "%ADsk_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
  "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
- "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%OpFM_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%" -I^
- "%ADsk_Loc%"
+ "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%OpFM_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%"
 
 
 SET ModuleName=%1

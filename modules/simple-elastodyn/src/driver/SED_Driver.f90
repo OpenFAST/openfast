@@ -352,6 +352,8 @@ PROGRAM SED_Driver
 
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( 'After End: '//ErrMsg )
+   ELSE
+      call WrSCr( 'Simple-ElastoDyn completed' )
    END IF
 
 CONTAINS

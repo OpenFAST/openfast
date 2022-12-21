@@ -330,8 +330,12 @@ PROGRAM AeroDisk_Driver
    CALL ADsk_End( u(1), p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( 'After End: '//ErrMsg )
+      CALL WrScr( 'ErrorsAfter End: '//ErrMsg )
+   ELSE
+      call WrSCr( 'AeroDisk completed' )
    END IF
+
+
 
 CONTAINS
    subroutine CheckErr(Text)
