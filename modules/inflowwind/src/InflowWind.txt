@@ -7,6 +7,7 @@
 # keyword <InflowWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################
 
+usefrom FlowField.txt
 usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
 usefrom IfW_FFWind_Base.txt
@@ -111,6 +112,7 @@ typedef  ^                       ^                 CHARACTER(1024)   RootName   
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
 typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
 typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
+typedef  ^                       ^                 LOGICAL           CalcAccel        -     .FALSE.     -      "Flag to calculate acceleration."                                    -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
@@ -148,6 +150,7 @@ typedef  ^                       ^                 ReKi              ReferenceHe
 typedef  ^                       ^                 ReKi              RefPosition       3     -     -     "Reference position (point where box is rotated)"        meters
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
+typedef  ^                       ^                 FlowFieldType     FlowField                -     -     -     "Parameters from Full-Field"  -
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
 typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
 typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
@@ -173,6 +176,7 @@ typedef  ^                       ^                 ReKi              HubOrientat
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
+typedef  ^                    OutputType           ReKi              AccelUVW          ::    -     -     "Array holding the U,V,W acceleration for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
 typedef  ^                       ^                 ReKi              HubVel            {3}   -     -     "Vector holding the U,V,W velocity at the hub"  meters/sec

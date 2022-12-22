@@ -44,6 +44,8 @@ MODULE InflowWind
    USE                              InflowWind_Types
    USE                              NWTC_Library
    USE                              InflowWind_Subs
+   USE                              IfW_FlowField_Types
+   USE                              IfW_FlowField
 
    USE                              Lidar                      ! module for obtaining sensor data
    
@@ -130,6 +132,9 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          ! Local variables
 
       TYPE(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
+ 
+      TYPE(IfW_FlowField_InitInputType)                     :: FlowField_InitData     !< initialization info
+      TYPE(IfW_FlowField_InitOutputType)                    :: Interp_InitOutData  !< initialization output info
 
       TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData     !< initialization info
       TYPE(IfW_UniformWind_InitOutputType)                  :: Uniform_InitOutData  !< initialization output info
@@ -295,6 +300,81 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
       
       InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
+
+      ! General
+      FlowField_InitData%WindType = InputFileData%WindType
+      FlowField_InitData%SumFileUnit = SumFileUnit
+      FlowField_InitData%PropagationDir = InputFileData%PropagationDir
+      FlowField_InitData%VFlowAngle = InputFileData%VFlowAngle
+      FlowField_InitData%CalcAccel = InitInp%CalcAccel
+
+      select case(FlowField_InitData%WindType)
+
+      case (Steady_WindNumber)
+         FlowField_InitData%Steady%HWindSpeed = InputFileData%Steady_HWindSpeed
+         FlowField_InitData%Steady%RefHt = InputFileData%Steady_RefHt
+         FlowField_InitData%Steady%PLExp = InputFileData%Steady_PLexp
+
+      case (Uniform_WindNumber)
+         FlowField_InitData%Uniform%WindFileName = InputFileData%Uniform_FileName
+         FlowField_InitData%Uniform%RefHt = InputFileData%Uniform_RefHt
+         FlowField_InitData%Uniform%RefLength = InputFileData%Uniform_RefLength
+         FlowField_InitData%Uniform%PropagationDir = InputFileData%PropagationDir
+         FlowField_InitData%Uniform%UseInputFile = InitInp%WindType2UseInputFile
+         FlowField_InitData%Uniform%PassedFileData = InitInp%WindType2Data
+
+      case (TSFF_WindNumber)
+         FlowField_InitData%TurbSim%WindFileName = InputFileData%TSFF_FileName
+
+      case (BladedFF_WindNumber, BladedFF_Shr_WindNumber)
+         FlowField_InitData%Bladed%TurbineID = InitInp%TurbineID
+         if (InputFileData%WindType /= BladedFF_Shr_WindNumber) then  
+            IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+               IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+                  InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
+               ELSE                                   ! FAST.Farm high-resolution domain(s)
+                  InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
+               ENDIF
+            ENDIF
+            FlowField_InitData%Bladed%WindFileName       = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
+            FlowField_InitData%Bladed%TowerFileExist     =  InputFileData%BladedFF_TowerFile
+            FlowField_InitData%Bladed%NativeBladedFmt    = .false.
+         else
+            FlowField_InitData%Bladed%WindFileName       =  InputFileData%BladedFF_FileName
+            FlowField_InitData%Bladed%TowerFileExist     = .false.
+            FlowField_InitData%Bladed%NativeBladedFmt    = .true.
+         end if
+
+      case (HAWC_WindNumber)
+         FlowField_InitData%HAWC%WindFileName(1) = InputFileData%HAWC_FileName_u
+         FlowField_InitData%HAWC%WindFileName(2) = InputFileData%HAWC_FileName_v
+         FlowField_InitData%HAWC%WindFileName(3) = InputFileData%HAWC_FileName_w
+         FlowField_InitData%HAWC%nx = InputFileData%HAWC_nx
+         FlowField_InitData%HAWC%ny = InputFileData%HAWC_ny
+         FlowField_InitData%HAWC%nz = InputFileData%HAWC_nz
+         FlowField_InitData%HAWC%dx = InputFileData%HAWC_dx
+         FlowField_InitData%HAWC%dy = InputFileData%HAWC_dy
+         FlowField_InitData%HAWC%dz = InputFileData%HAWC_dz
+         FlowField_InitData%HAWC%RefHt = InputFileData%FF%RefHt
+         FlowField_InitData%HAWC%ScaleMethod = InputFileData%FF%ScaleMethod
+         FlowField_InitData%HAWC%SF = InputFileData%FF%SF
+         FlowField_InitData%HAWC%SigmaF = InputFileData%FF%SigmaF
+         FlowField_InitData%HAWC%URef = InputFileData%FF%URef
+         FlowField_InitData%HAWC%WindProfileType = InputFileData%FF%WindProfileType
+         FlowField_InitData%HAWC%PLExp = InputFileData%FF%PLExp
+         FlowField_InitData%HAWC%Z0 = InputFileData%FF%Z0
+         FlowField_InitData%HAWC%XOffset = InputFileData%FF%XOffset
+
+      case (User_WindNumber)
+         ! Add user wind initialization data here
+         
+      case default  
+         call SetErrStat(ErrID_Fatal, ' Undefined wind type.', ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+
+      call IfW_FlowField_Init(FlowField_InitData, p%FlowField, Interp_InitOutData, TmpErrStat, TmpErrMsg)
+
 
       SELECT CASE ( InputFileData%WindType )
 
