@@ -155,6 +155,17 @@ function(py_ad_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_ad_regression)
 
+
+# UnsteadyAero driver
+function(ua_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeUnsteadyAeroRegressionCase.py")
+  set(AERODYN_EXECUTABLE "${CTEST_UADRIVER_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/unsteadyaero")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(ua_regression)
+
+
 # beamdyn
 function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
@@ -208,6 +219,24 @@ function(py_ifw_regression TESTNAME LABEL)
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_ifw_regression)
+
+# moordyn
+function(md_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynRegressionCase.py")
+  set(MOORDYN_EXECUTABLE "${CTEST_MOORDYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(md_regression)
+
+# py_moordyn c-bindings interface
+function(py_md_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynPyRegressionCase.py")
+  set(MOORDYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(py_md_regression)
 
 # # Python-based OpenFAST Library tests
 # function(py_openfast_library_regression TESTNAME LABEL)
@@ -308,6 +337,9 @@ ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
 py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
 
+# UnsteadyAero
+ua_regression("ua_redfreq"                  "unsteadyaero")
+
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"              "beamdyn;dynamic")
 bd_regression("bd_5MW_dynamic_gravity_Az00" "beamdyn;dynamic")
@@ -347,3 +379,11 @@ ifw_regression("ifw_turbsimff"                                "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
+
+# MoorDyn regression tests
+md_regression("md_5MW_OC4Semi"                                "moordyn")
+py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
+# the following tests are excessively slow in double precision, so skip these in normal testing
+#md_regression("md_Node_Check_N20"                             "moordyn")
+#md_regression("md_Node_Check_N40"                             "moordyn")
+#md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")

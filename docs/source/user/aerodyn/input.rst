@@ -595,6 +595,9 @@ or calculating it based on the polar coefficient data in the airfoil table:
 -  ``C_nalpha`` is the slope of the 2D normal force coefficient curve
    in the linear region;
 
+-  ``C_lalpha`` is the slope of the 2D normal lift coefficient curve
+   in the linear region; Used for ``UAMod=4,6``.
+
 -  ``T_f0`` is the initial value of the time constant associated with
    *Df* in the expressions of *Df* and *f’*; if the keyword ``DEFAULT`` is
    entered in place of a numerical value, ``T_f0`` is set to 3.0;

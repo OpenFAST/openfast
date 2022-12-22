@@ -10,7 +10,7 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.3.0 to OpenFAST `dev`
+OpenFAST v3.3.0 to OpenFAST v3.4.0 
 ----------------------------------
 
 ============================================= ==== ================= ========================================================================================================================================================================================================
@@ -18,6 +18,7 @@ Added in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
 FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
 FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
 FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]
@@ -41,11 +42,32 @@ AeroDyn 15                                         TwrCb             1.0        
 AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
 AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
+OLAF                                          18   nNWPanelFree      180       nNWPanelFree       - Number of free near-wake panels (-) {default: nNWPanels}
+OLAF                                          19   nFWPanels         900       nFWPanels          - Number of far-wake panels (-) {default: 0}
+OLAF                                          20   nFWPanelsFree     0         nFWPanelsFree      - Number of free far-wake panels (-) {default: nFWPanels}
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
 
 \$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
+**New Default Values**:
+The following default value were changed 
+
+- OLAF *VelocityMethod* is now 2 (particle tree), previous value 1 (n^2 BiotSavart law on segments). 
+- OLAF *WakeRegMethod* is now 3 (increasing with wake age), previous value was 1 (constant).
+- OLAF *nVTKBlades* is now 0 (no wake panels output), previous value was 1 (wake panels output for blade 1)
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.4.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+OLAF                                          18   WakeLength      900     WakeLength         Total wake distance [integer] (number of time steps)
+OLAF                                          19   FreeWakeLength  0       FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
+============================================= ==== =============== ========================================================================================================================================================================================================
+
 
 
 OpenFAST v3.2.0 to OpenFAST v3.3.0
