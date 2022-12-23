@@ -7876,42 +7876,42 @@ DO K = 1,p%NumBl ! Loop through all blades
 !.....................................
    
    DO J=1,p%TwrNodes
-      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/p%DHNodes(J) &
+      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/p%DHNodes(J) &
+                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   )
-      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/p%DHNodes(J) &
+      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/p%DHNodes(J) &
+                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Y ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
@@ -7961,19 +7961,19 @@ DO K = 1,p%NumBl ! Loop through all blades
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
+         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J)) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
          TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                 ! The portion of PMomX0Trb associated with tower element J
-         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J)             ! The added moment applied at tower element J
+         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J))             ! The added moment applied at tower element J
 
          RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) + TmpVec1
          RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) + TmpVec2 + TmpVec3
 
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
       TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                                 ! The portion of MomX0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)                                      ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))                                      ! The external moment applied to tower element J
 
       RtHSdat%FrcT0Trbt = RtHSdat%FrcT0Trbt + TmpVec1
 
@@ -8241,16 +8241,16 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
             AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L)) = AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L))  &
                                                   + p%TElmntMass(J)   *DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PLinVelET(J,p%DOFs%PTTE(L),0,:) ) &   ! [C(q,t)]T + [C(q,t)]HydroT
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PFTHydro (:,J,p%DOFs%PTTE(L)  ) ) &
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PMFHydro (:,J,p%DOFs%PTTE(L)  ) )
          ENDDO                 ! I - All active (enabled) tower DOFs greater than or equal to L
       ENDDO                    ! L - All active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)             ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))             ! The external moment applied to tower element J
       DO I = 1,p%DOFs%NPTTE    ! Loop through all active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
             AugMat(p%DOFs%PTTE(I),        p%NAug) = AugMat(p%DOFs%PTTE(I),   p%NAug)                         &                 ! {-f(qd,q,t)}T + {-f(qd,q,t)}GravT + {-f(qd,q,t)}AeroT + {-f(qd,q,t)}HydroT
                                                   +  DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:), TmpVec1        ) &  ! NOTE: TmpVec1 is still the portion of FrcT0Trbt associated with tower element J
