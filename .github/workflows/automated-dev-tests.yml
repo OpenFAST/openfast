@@ -224,6 +224,7 @@ jobs:
           cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
           cmake --build . --target aerodyn_inflow_c_binding -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target moordyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
           cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
@@ -391,6 +392,8 @@ jobs:
         uses: ./.github/actions/tests-module-inflowwind
         with:
           test-target: regression
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Failing test artifacts
@@ -441,6 +444,8 @@ jobs:
         uses: ./.github/actions/tests-module-hydrodyn
       - name: Run InflowWind tests
         uses: ./.github/actions/tests-module-inflowwind
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
       - name: Run NWTC Library tests
         uses: ./.github/actions/tests-module-nwtclibrary
       - name: Run SubDyn tests
@@ -490,6 +495,7 @@ jobs:
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
             ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/moordyn
             ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
             ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline

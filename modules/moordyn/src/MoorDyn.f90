@@ -163,7 +163,7 @@ CONTAINS
       CALL DispNVD( MD_ProgDesc )
       InitOut%Ver = MD_ProgDesc
 
-      CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')  
+      CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
       CALL WrScr('   Copyright: (C) 2022 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
@@ -2000,7 +2000,7 @@ CONTAINS
 
       ! --------------------------------------------------------------------
       !          open output file(s) and write header lines
-      CALL MDIO_OpenOutput( p, m, InitOut, ErrStat2, ErrMsg2 )
+      CALL MDIO_OpenOutput( MD_ProgDesc, p, m, InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       ! --------------------------------------------------------------------

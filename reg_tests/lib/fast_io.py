@@ -63,7 +63,7 @@ def load_ascii_output(filename):
         info['description'] = header[4].strip()
         info['attribute_names'] = header[6].split()
         info['attribute_units'] = [unit[1:-1] for unit in header[7].split()]  #removing "()"
-        data = np.array([line.split() for line in f.readlines()], dtype=np.float)
+        data = np.array([line.split() for line in f.readlines()], dtype=float)
         return data, info
 
 def load_binary_output(filename):

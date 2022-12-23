@@ -73,7 +73,11 @@ PROGRAM MoorDyn_Driver
 
    TYPE (MD_OutputType)                  :: MD_y        ! Output file identifier
 
-   INTEGER(IntKi)                        :: UnPtfmMotIn      ! platform motion input file identifier
+   ! Motion file parsing
+   type(FileInfoType)                    :: FileInfo_PrescribeMtn  !< The derived type for holding the prescribed forces input file for parsing -- we may pass this in the future
+   integer(IntKi)                        :: CurLine          !< current entry in FileInfo_In%Lines array
+   real(ReKi), ALLOCATABLE               :: TmpRe(:)         !< temporary number array for reading values in
+
    CHARACTER(100)                        :: Line             ! String to temporarially hold value of read line
    REAL(ReKi), ALLOCATABLE               :: PtfmMotIn(:,:)   ! Variable for storing time, and DOF time series from driver input file
    REAL(ReKi), ALLOCATABLE               :: r_in(:,:)        ! Variable for storing interpolated DOF time series from driver input file
@@ -110,10 +114,9 @@ PROGRAM MoorDyn_Driver
 
   
    CHARACTER(20)                         :: FlagArg              ! flag argument from command line
-   !CHARACTER(1024)                       :: drvrInitInp%%InputsFile
    CHARACTER(200)                        :: git_commit    ! String containing the current git commit hash
    TYPE(ProgDesc), PARAMETER             :: version = ProgDesc( 'MoorDyn Driver', '', '' )
-  
+
   
   
    ErrMsg  = ""
@@ -187,9 +190,9 @@ PROGRAM MoorDyn_Driver
       MD_InitInp%PtfmInit(1,J)      = drvrInitInp%FarmPositions(3,J)
       MD_InitInp%PtfmInit(2,J)      = drvrInitInp%FarmPositions(4,J)
       MD_InitInp%PtfmInit(3,J)      = drvrInitInp%FarmPositions(5,J)
-      MD_InitInp%PtfmInit(4,J)      = drvrInitInp%FarmPositions(6,J)*3.14159265/180.0
-      MD_InitInp%PtfmInit(5,J)      = drvrInitInp%FarmPositions(7,J)*3.14159265/180.0
-      MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*3.14159265/180.0
+      MD_InitInp%PtfmInit(4,J)      = drvrInitInp%FarmPositions(6,J)*D2R   !3.14159265/180.0
+      MD_InitInp%PtfmInit(5,J)      = drvrInitInp%FarmPositions(7,J)*D2R   !3.14159265/180.0
+      MD_InitInp%PtfmInit(6,J)      = drvrInitInp%FarmPositions(8,J)*D2R   !3.14159265/180.0
    end do
    
    MD_interp_order = 1
@@ -226,8 +229,8 @@ PROGRAM MoorDyn_Driver
    END DO
    
    ! open driver output file >>> not yet used <<<
-   CALL GetNewUnit( Un )
-   OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
+   !CALL GetNewUnit( Un )
+   !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
    CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat, ErrMsg2 ); call AbortIfFailed()
@@ -239,13 +242,17 @@ PROGRAM MoorDyn_Driver
    
    
    ! determine number of input channels expected from driver input file time series (DOFs including active tensioning channels)
-   ncIn = size(MD_u(1)%DeltaL) 
+   if (allocated(MD_u(1)%DeltaL)) then
+      ncIn = size(MD_u(1)%DeltaL)      ! if unallocated, size will return garbage for some compilers
+   else
+      ncIn = 0
+   endif
    
    do iTurb = 1, MD_p%nTurbines
       ncIn = ncIn + MD_p%nCpldBodies(iTurb)*6 + MD_p%nCpldRods(iTurb)*6 + MD_p%nCpldCons(iTurb)*3
    end do
 
-   print *, 'MoorDyn has '//trim(num2lstr(ncIn))//' coupled DOFs and/or active-tensioned inputs.'
+   call WrScr('MoorDyn has '//trim(num2lstr(ncIn))//' coupled DOFs and/or active-tensioned inputs.')
 
    
    
@@ -253,61 +260,37 @@ PROGRAM MoorDyn_Driver
 
       if ( LEN( TRIM(drvrInitInp%InputsFile) ) < 1 ) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 2.'
+         ErrMsg  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 1.'
          CALL AbortIfFailed()
       end if
    
-      CALL GetNewUnit( UnPtfmMotIn ) 
-   
-      CALL OpenFInpFile ( UnPtfmMotIn, drvrInitInp%InputsFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
-     
-      print *, 'Reading platform motion input data from ', trim(drvrInitInp%InputsFile)
-      print *, 'MD driver is expecting '//trim(num2lstr(ncIn))//' columns of input data, plus time, in motion input file.'
+      call WrScr('Reading platform motion input data from '//trim(drvrInitInp%InputsFile))
+      call WrScr('  MD driver is expecting '//trim(num2lstr(ncIn))//' columns of input data, plus time, in motion input file.')
 
-      ! Read through length of file to find its length
-      i = 1  ! start counter
-      DO
-         READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat2) Line     !read into a line         
-         
-         IF (ErrStat2 /= 0) EXIT      ! break out of the loop if it couldn't read the line (i.e. if at end of file)
-         !print *, TRIM(Line)
-         i = i+1
-      END DO
+      ! Parse the motion file and store in the FileInfoType structure.  This will strip out the header
+      ! and leave just the table.  PrescribeMtn%NumLines is the number of timesteps.
+      call ProcessComFile( drvrInitInp%InputsFile, FileInfo_PrescribeMtn, ErrStat2, ErrMsg2 )
+      call AbortIfFailed()
 
-      ! rewind to start of input file to re-read things now that we know how long it is
-      REWIND(UnPtfmMotIn)      
-      
-      ErrStat2 = 0   ! reset the error state after it may be used to exit the loop above
-      
-      ntIn = i-3     ! save number of lines of file
-      
-
-      ! allocate space for input motion array (including time column)
-      ALLOCATE ( PtfmMotIn(ntIn, ncIn+1), STAT=ErrStat2)
-      IF ( ErrStat2 /= ErrID_None ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = '  Error allocating space for PtfmMotIn array.'
+      ! number of lines in table (number of timesteps)
+      ntIn = FileInfo_PrescribeMtn%NumLines
+ 
+      ! Allocate the array (include time column)
+      call AllocAry( PtfmMotIn, ntIn, ncIn+1, "Array of motion data", ErrStat2, ErrMsg2 ); call AbortIfFailed()
+      call AllocAry( TmpRe, ncIn+1, "TempRe", ErrStat2, ErrMsg2 ); call AbortIfFailed()
+ 
+      ! Loop over all table lines.  Expecting ncIn+1 colunns
+      CurLine=1
+      do i=1,ntIn
+         call ParseAry ( FileInfo_PrescribeMtn, CurLine, 'motions', TmpRe, ncIn+1, ErrStat2, ErrMsg2, UnEcho )
+         ErrMsg2='Error reading the input time-series file. Expecting '//TRIM(Int2LStr(ncIn))//' channels plus time.'//NewLine//trim(ErrMsg2)
          call AbortIfFailed()
-      END IF
+         PtfmMotIn(i,1:ncIn+1) = TmpRe
+      enddo
 
-      ! read the data in from the file
-      READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat2) Line     !read into a line
-      READ(UnPtfmMotIn,'(A)',IOSTAT=ErrStat2) Line     !read into a line
-      
-      DO i = 1, ntIn
-         READ (UnPtfmMotIn, *, IOSTAT=ErrStat2) (PtfmMotIn (i,J), J=1,ncIn+1)
-            
-         IF ( ErrStat2 /= 0 ) THEN
-            ErrStat = ErrID_Fatal
-            ErrMsg = ' Error reading the input time-series file. Expecting '//TRIM(Int2LStr(ncIn))//' channels plus time.'
-            call AbortIfFailed()
-         END IF 
-      END DO  
+      deallocate(TmpRe)
 
-      ! Close the inputs file 
-      CLOSE ( UnPtfmMotIn ) 
-      
-      print *, "Read ", ntIn, " time steps from input file."
+      call WrScr("Read "//trim(Num2LStr(ntIn))//" time steps from input file.")
       !print *, PtfmMotIn
 
       ! trim simulation duration to length of input file if needed
@@ -339,7 +322,7 @@ PROGRAM MoorDyn_Driver
          DO iIn = 1,ntIn-1      
             IF (PtfmMotIn(iIn+1, 1) > t) THEN   ! find the right two points to interpolate between (remember that the first column of PtfmMotIn is time)
                frac = (t - PtfmMotIn(iIn, 1) )/( PtfmMotIn(iIn+1, 1) - PtfmMotIn(iIn, 1) )  ! interpolation fraction (0-1) between two interpolation points
-               
+
                DO J=1,ncIn
                   ! get interpolated position of coupling point
                   r_in(i, J) = PtfmMotIn(iIn, J+1) + frac*(PtfmMotIn(iIn+1, J+1) - PtfmMotIn(iIn, J+1))
@@ -469,7 +452,7 @@ PROGRAM MoorDyn_Driver
    end if   
    
    CALL WrScr(" ")
-   print *, "Tmax - ", tMax, " and nt=", nt
+   call WrScr("Tmax - "//trim(Num2LStr(tMax))//" and nt="//trim(Num2LStr(nt)))
    CALL WrScr(" ")
    
    
@@ -478,8 +461,10 @@ PROGRAM MoorDyn_Driver
    ! ---------------------------------------------------------------
       
    ! zero the tension commands
-   MD_u(1)%DeltaL = 0.0_ReKi
-   MD_u(1)%DeltaLdot = 0.0_ReKi
+   if (allocated(MD_u(1)%DeltaL)) then
+      MD_u(1)%DeltaL = 0.0_ReKi
+      MD_u(1)%DeltaLdot = 0.0_ReKi
+   endif
    
 !   ! zero water inputs (if passing wave info in from glue code)
 !   MD_u(1)%U    = 0.0  
@@ -499,6 +484,66 @@ PROGRAM MoorDyn_Driver
 
    ! get output at initialization (before time stepping)
    t = 0
+   ! First, set correct inputs for initialization (errors occur otherwise) 
+   if (drvrInitInp%InputsMod == 1 ) then
+       
+      DO iTurb = 1, MD_p%nTurbines
+         i = 1  ! read first timestep data 
+         K = 1  ! the index of the coupling points in the input mesh CoupledKinematics
+         J = 1  ! the starting index of the relevant DOFs in the input array
+         ! any coupled bodies (type -1)
+         DO l = 1,MD_p%nCpldBodies(iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) ) ! full Euler angle approach
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
+         
+            K = K + 1
+            J = J + 6            
+         END DO
+         
+         ! any coupled rods (type -1 or -2)    >>> need to make rotations ignored if it's a pinned rod <<<
+         DO l = 1,MD_p%nCpldRods(iTurb)
+         
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%Orientation(  :,:,K) = EulerConstruct( r_in(i, J+3:J+5) )
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationVel(    :,K) = rd_in(i, J+3:J+5)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = rdd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%RotationAcc(    :,K) = rdd_in(i, J+3:J+5)
+         
+            K = K + 1
+            J = J + 6            
+         END DO
+         
+         ! any coupled points (type -1)
+         DO l = 1, MD_p%nCpldCons(iTurb)
+            
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
+            MD_u(1)%CoupledKinematics(iTurb)%TranslationAcc( :,K) = 0.0_DbKi !rdd_in(i, J:J+2)
+            
+            !print *, u%PtFairleadDisplacement%Position(:,l) + u%PtFairleadDisplacement%TranslationDisp(:,l)
+            !print *, u%PtFairleadDisplacement%TranslationVel(:,l)
+            
+            K = K + 1
+            J = J + 3
+         END DO
+         
+      end do  ! iTurb
+      
+      ! also provide any active tensioning commands
+      if (allocated(MD_u(1)%DeltaL)) then
+         do l = 1, size(MD_u(1)%DeltaL) 
+            MD_u(1)%DeltaL(   l) = 0.0_DbKi ! r_in(i, J)
+            MD_u(1)%DeltaLdot(l) = 0.0_DbKi !rd_in(i, J)
+            J = J + 1         
+         end do
+      endif
+   
+   end if   ! InputsMod == 1 
    CALL MD_CalcOutput(  t, MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
 
   
@@ -507,7 +552,7 @@ PROGRAM MoorDyn_Driver
   ! BEGIN time marching 
   ! -------------------------------------------------------------------------
   
-   print *,"Doing time marching now..."
+   call WrScr("Doing time marching now...")
    
    CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, tMax )
 
@@ -579,13 +624,13 @@ PROGRAM MoorDyn_Driver
          end do  ! iTurb
          
          ! also provide any active tensioning commands
-         do l = 1, size(MD_u(1)%DeltaL) 
-         
-            MD_u(1)%DeltaL(   l) = 0.0_DbKi ! r_in(i, J)
-            MD_u(1)%DeltaLdot(l) = 0.0_DbKi !rd_in(i, J)
-
-            J = J + 1         
-         end do
+         if (allocated(MD_u(1)%DeltaL)) then
+            do l = 1, size(MD_u(1)%DeltaL) 
+               MD_u(1)%DeltaL(   l) = 0.0_DbKi ! r_in(i, J)
+               MD_u(1)%DeltaLdot(l) = 0.0_DbKi !rd_in(i, J)
+               J = J + 1         
+            end do
+         endif
       
       end if   ! InputsMod == 1 
       
@@ -596,7 +641,7 @@ PROGRAM MoorDyn_Driver
       CALL MD_UpdateStates( t, nt, MD_u, MD_uTimes, MD_p, MD_x, MD_xd, MD_xc, MD_xo, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
       
   
-      ! update the global time step by one delta t               <<<< ??? why?
+      ! update the global time step by one delta t               <<<< ??? why?  ADP: UpdateStates updtes from t -> t+dt.  Need to calculate outputs at this final time.
       t = t + dtC
      
       ! --------------------------------- calculate outputs ---------------------------------
@@ -640,10 +685,8 @@ CONTAINS
    SUBROUTINE AbortIfFailed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver') 
         IF ( ErrStat /= ErrID_None ) THEN
-           CALL WrScr( ErrMsg2 )
-           CALL WrScr( 'hi1')
-           CALL WrScr( ErrMsg )
-           CALL WrScr( 'hi1')
+           CALL WrScr( "Local error: "//ErrMsg2 )
+           CALL WrScr( "Full error messages: "//ErrMsg )
         END IF
         if (ErrStat >= AbortErrLev) then
            call CleanUp()
@@ -752,6 +795,5 @@ CONTAINS
        print '(a)', ''
    end subroutine print_help
 !----------------------------------------------------------------------------------------------------------------------------------
-
 
 END PROGRAM

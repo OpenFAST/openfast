@@ -220,6 +220,24 @@ function(py_ifw_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_ifw_regression)
 
+# moordyn
+function(md_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynRegressionCase.py")
+  set(MOORDYN_EXECUTABLE "${CTEST_MOORDYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(md_regression)
+
+# py_moordyn c-bindings interface
+function(py_md_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynPyRegressionCase.py")
+  set(MOORDYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(py_md_regression)
+
 # aerodisk
 function(adsk_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodiskRegressionCase.py")
@@ -383,6 +401,14 @@ ifw_regression("ifw_turbsimff"                                "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
+
+# MoorDyn regression tests
+md_regression("md_5MW_OC4Semi"                                "moordyn")
+py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python")
+# the following tests are excessively slow in double precision, so skip these in normal testing
+#md_regression("md_Node_Check_N20"                             "moordyn")
+#md_regression("md_Node_Check_N40"                             "moordyn")
+#md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
 
 # AeroDisk regression tests
 adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")
