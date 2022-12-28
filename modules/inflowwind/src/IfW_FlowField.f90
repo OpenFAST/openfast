@@ -27,17 +27,13 @@ module IfW_FlowField
 
 use NWTC_Library
 use IfW_FlowField_Types
+use FlowField
 
 implicit none
 private
 public :: IfW_FlowField_Init
 
 type(ProgDesc), parameter :: IfW_FlowField_Ver = ProgDesc('IfW_FlowField', '', '')
-
-integer(IntKi), parameter :: WindProfileType_None = -1, &      !< don't add wind profile; already included in input
-                             WindProfileType_Constant = 0, &   !< constant wind
-                             WindProfileType_Log = 1, &        !< logarithmic
-                             WindProfileType_PL = 2            !< power law
 
 integer(IntKi), parameter :: ScaleMethod_None = 0, &           !< no scaling
                              ScaleMethod_Direct = 1, &         !< direct scaling factors
@@ -101,25 +97,51 @@ subroutine IfW_FlowField_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
    case (4) ! Binary Bladed-Style FF
       FF%FieldType = Grid_FieldType
       ! call Read_Bladed_Binary(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
+      TmpErrStat = ErrID_Fatal
+      TmpErrMsg = "Binary Bladed Wind is not implemented"
    case (5) ! HAWC
       FF%FieldType = Grid_FieldType
       call HAWC_Init(InitInp%HAWC, InitInp%SumFileUnit, FF%Grid, InitOut%FileDat, TmpErrStat, TmpErrMsg)
    case (6) ! User Defined
       FF%FieldType = Grid_FieldType
-
+      TmpErrStat = ErrID_Fatal
+      TmpErrMsg = "User Wind is not implemented"
    case (7) ! Native Bladed FF
       FF%FieldType = Grid_FieldType
       ! call Read_Bladed_Native(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
+      TmpErrStat = ErrID_Fatal
+      TmpErrMsg = "Native Bladed Wind is not implemented"
    end select
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
+   ! Field Type Initialization
+   !----------------------------------------------------------------------------
+
+   select case (FF%FieldType)
+   case (Uniform_FieldType)
+      if (InitInp%CalcAccel) then
+         call UniformField_CalcAccel(FF%Uniform, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end if
+
+   case (Grid_FieldType)
+      if (InitInp%CalcAccel) then
+         call GridField_CalcAccel(FF%Grid, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end if
+   end select
+
+   !----------------------------------------------------------------------------
    ! Setup the coordinate transforms for rotating the wind field.
    !----------------------------------------------------------------------------
 
-   ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
-   ! Included in this rotation is the wind upflow (inclination) angle (rotation about Y axis)
+   ! Create the rotation matrices
+   ! rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
+   ! Includes the wind upflow (inclination) angle (rotation about Y axis)
    FF%RotToWind(1, :) = [cos(-FF%VFlowAngle)*cos(-FF%PropagationDir), &
                          cos(-FF%VFlowAngle)*sin(-FF%PropagationDir), &
                          -sin(-FF%VFlowAngle)]
@@ -1057,46 +1079,16 @@ subroutine User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-end subroutine
+   character(*), parameter                :: RoutineName = "User_Init"
 
-subroutine GridField_CalcAccel(GF, ErrStat, ErrMsg)
-   type(GridFieldType), intent(in)  :: GF
-   integer(IntKi), intent(out)      :: ErrStat
-   character(*), intent(out)        :: ErrMsg
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
-   character(*), parameter          :: RoutineName = "GridField_CalcAccel"
-   integer(IntKi)                   :: TmpErrStat
-   character(ErrMsgLen)             :: TmpErrMsg
-   integer(IntKi)                   :: iy, iz, it
-   real(ReKi), allocatable          :: time(:)
-   real(ReKi), allocatable          :: vel(:)
+   UF%Dummy = 1
 
-   ! Allocate storage for time
-   call AllocAry(time, GF%NSteps, "storage for grid time", TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-   ! Allocate storage for velocity
-   call AllocAry(vel, GF%NSteps, "storage for grid time", TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-   ! Allocate storage for acceleration grid
-   call AllocAry(GF%Acc, GF%NComp, GF%NYGrids, GF%NZGrids, GF%NSteps, &
-                 'grid-field velocity data', TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! If grid field includes tower grids, allocate storage for acceleration
-   if (GF%NTGrids > 0) then
-      call AllocAry(GF%VelTower, GF%NComp, GF%NTGrids, GF%NSteps, &
-                    'tower wind velocity data.', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+   if (SumFileUnit > 0) then
+      write (SumFileUnit, '(A)') InitInp%Dummy
    end if
-
-   ! Generate time
-   do it = 1, GF%NSteps
-      ! time(i) =
-   end do
 
 end subroutine
 
