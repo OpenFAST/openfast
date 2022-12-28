@@ -25,15 +25,12 @@ use FlowField_Types
 implicit none
 
 public FlowField_GetVelAcc
+public UniformField_CalcAccel, GridField_CalcAccel
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
 integer(IntKi), parameter  :: WindProfileType_Constant = 0  !< constant wind
 integer(IntKi), parameter  :: WindProfileType_Log = 1       !< logarithmic
 integer(IntKi), parameter  :: WindProfileType_PL = 2        !< power law
-
-integer(IntKi), parameter  :: ScaleMethod_None = 0          !< no scaling
-integer(IntKi), parameter  :: ScaleMethod_Direct = 1        !< direct scaling factors
-integer(IntKi), parameter  :: ScaleMethod_StdDev = 2        !< requested standard deviation
 
 real(ReKi), parameter      :: GridTol = 1.0E-3              ! Tolerance for determining if position is within grid
 
@@ -56,7 +53,6 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
    integer(IntKi)                                  :: NumPoints
    real(ReKi), dimension(3)                        :: PositionPrime
    type(UniformField_Interp)                       :: UFop
-   type(UniformField_Interp)                       :: UFopdt
    real(ReKi)                                      :: DY, DZ, DT
    real(ReKi), dimension(3, 8)                     :: P
    logical                                         :: Interp3D
@@ -70,7 +66,6 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
    NumPoints = size(PositionXYZ, dim=2)
 
    !TODO: Check that position, velocity, and acceleration are all the same shape
-
 
    !----------------------------------------------------------------------------
    !  Wind speed coordinate transforms from Wind file coordinates to global
@@ -95,19 +90,11 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
       ! Uniform Flow Field
       !-------------------------------------------------------------------------
 
-      ! Get uniform flow operating point values at current time
-      UFop = UniformField_GetOP(FF%Uniform, Time)
-
-      ! If getting accel, get change in operating point values wrt time
+      ! If accel allocated
       if (allocated(AccelUVW)) then
-         UFopdt%VelH = (FF%Uniform%VelH(Ufop%IData) - FF%Uniform%VelH(Ufop%IData - 1))/Ufop%dt
-         UFopdt%AngleH = (FF%Uniform%AngleH(Ufop%IData) - FF%Uniform%AngleH(Ufop%IData - 1))/Ufop%dt
-         UFopdt%AngleV = (FF%Uniform%AngleV(Ufop%IData) - FF%Uniform%AngleV(Ufop%IData - 1))/Ufop%dt
-         UFopdt%VelV = (FF%Uniform%VelV(Ufop%IData) - FF%Uniform%VelV(Ufop%IData - 1))/Ufop%dt
-         UFopdt%ShrH = (FF%Uniform%ShrH(Ufop%IData) - FF%Uniform%ShrH(Ufop%IData - 1))/Ufop%dt
-         UFopdt%ShrV = (FF%Uniform%ShrV(Ufop%IData) - FF%Uniform%ShrV(Ufop%IData - 1))/Ufop%dt
-         UFopdt%LinShrV = (FF%Uniform%LinShrV(Ufop%IData) - FF%Uniform%LinShrV(Ufop%IData - 1))/Ufop%dt
-         UFopdt%VelGust = (FF%Uniform%VelGust(Ufop%IData) - FF%Uniform%VelGust(Ufop%IData - 1))/Ufop%dt
+         UFop = UniformField_GetSmoothOP(FF%Uniform, Time)
+      else
+         UFop = UniformField_GetOP(FF%Uniform, Time)
       end if
 
       if (.not. FF%RotateWindBox) then
@@ -120,7 +107,7 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
             ! Velocity and acceleration
             do i = 1, NumPoints
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFop, PositionXYZ(:, i))
-               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFop, UFopdt, PositionXYZ(:, i))
+               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFop, PositionXYZ(:, i))
             end do
          end if
 
@@ -137,7 +124,7 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
             do i = 1, NumPoints
                PositionPrime = GetPrimePosition(PositionXYZ(:, i))
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFop, PositionPrime)
-               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFop, UFopdt, PositionPrime)
+               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFop, PositionPrime)
             end do
          end if
 
@@ -284,9 +271,7 @@ pure function UniformField_GetVel(UF, op, Position) result(Velocity)
       VZ_rotate = op%SinAngleV*V1 + op%CosAngleV*op%VelV
 
       ! Apply wind direction
-      Velocity(1) = V1_rotate*op%CosAngleH
-      Velocity(2) = -V1_rotate*op%SinAngleH
-      Velocity(3) = VZ_rotate
+      Velocity = [V1_rotate*op%CosAngleH, -V1_rotate*op%SinAngleH, VZ_rotate]
 
    else
 
@@ -298,56 +283,43 @@ pure function UniformField_GetVel(UF, op, Position) result(Velocity)
 
 end function
 
-function UniformField_GetAcc(UF, op, opdt, Position) result(Accel)
+function UniformField_GetAcc(UF, op, Position) result(Accel)
    type(UniformFieldType), intent(in)     :: UF
    type(UniformField_Interp), intent(in)  :: op
-   type(UniformField_Interp), intent(in)  :: opdt
    real(ReKi), dimension(3), intent(in)   :: Position
    real(ReKi), dimension(3)               :: Accel
 
    character(*), parameter                :: RoutineName = "UniformField_GetAcc"
    real(ReKi)                             :: C1, C2, C3, C4, C5
 
-   ! If only one data point or time is outside data range, acceleration is zero
-   if (op%IData == 1 .or. op%IData > UF%DataSize .or. Position(3) <= 0.0_Reki) then
-      Accel = 0.0_ReKi
-   else
+   C1 = (Position(3)/UF%RefHeight)**op%ShrV + &
+        (op%LinShrV*(Position(3) - UF%RefHeight) + &
+         op%ShrH*(Position(1)*op%SinAngleH + &
+                  Position(2)*op%CosAngleH))/UF%RefLength
 
-      ! If change in time is negative or near zero, acceleration is zero
-      if (op%dt < 0.0_ReKi .or. EqualRealNos(op%dt, 0.0_ReKi)) then
-         Accel = 0.0_ReKi
-         return
-      end if
+   C2 = op%CosAngleV*(op%VelGust + op%VelH*(C1))
 
-      C1 = (Position(3)/UF%RefHeight)**op%ShrV + &
-           (op%LinShrV*(Position(3) - UF%RefHeight) + &
-            op%ShrH*(Position(1)*op%SinAngleH + &
-                     Position(2)*op%CosAngleH))/UF%RefLength
+   C3 = op%AngleVDot*op%SinAngleV*(op%VelGust + op%VelH*(C1))
 
-      C2 = op%CosAngleV*(op%VelGust + op%VelH*(C1))
+   C4 = op%LinShrVDot*(Position(3) - UF%RefHeight) + &
+        op%ShrHDot*(Position(1)*op%SinAngleH + Position(2)*op%CosAngleH) + &
+        op%ShrH*(Position(1)*op%AngleHDot*op%CosAngleH - &
+                 Position(2)*op%AngleHDot*op%SinAngleH)
 
-      C3 = opdt%AngleV*op%SinAngleV*(op%VelGust + op%VelH*(C1))
+   C5 = op%VelGustDot + op%VelHDot*C1 + &
+        op%VelH*(op%ShrVDot*(Position(3)/UF%RefHeight)**op%ShrV* &
+                 log(Position(3)/UF%RefHeight) + C4/UF%RefLength)
 
-      C4 = opdt%LinShrV*(Position(3) - UF%RefHeight) + &
-           opdt%ShrH*(Position(1)*op%SinAngleH + Position(2)*op%CosAngleH) + &
-           op%ShrH*(Position(1)*opdt%AngleH*op%CosAngleH - &
-                    Position(2)*opdt%AngleH*op%SinAngleH)
+   Accel(1) = -op%AngleHDot*op%SinAngleH*(C2 - op%SinAngleV*op%VelV) + &
+              op%CosAngleH*(-op%AngleVDot*op%CosAngleV*op%VelV - C3 - &
+                            op%VelVDot*op%SinAngleV + op%CosAngleV*C5)
 
-      C5 = opdt%VelGust + opdt%VelH*C1 + &
-           op%VelH*(opdt%ShrV*(Position(3)/UF%RefHeight)**op%ShrV* &
-                    log(Position(3)/UF%RefHeight) + C4/UF%RefLength)
+   Accel(2) = op%AngleHDot*op%CosAngleH*(-C2 + op%SinAngleV*op%VelV) + &
+              op%SinAngleH*(op%AngleVDot*op%CosAngleV*op%VelV + C3 + &
+                            op%VelVDot*op%SinAngleV - op%CosAngleV*C5)
 
-      Accel(1) = -opdt%AngleH*op%SinAngleH*(C2 - op%SinAngleV*op%VelV) + &
-                 op%CosAngleH*(-opdt%AngleV*op%CosAngleV*op%VelV - C3 - &
-                               opdt%VelV*op%SinAngleV + op%CosAngleV*C5)
-
-      Accel(2) = opdt%AngleH*op%CosAngleH*(-C2 + op%SinAngleV*op%VelV) + &
-                 op%SinAngleH*(opdt%AngleV*op%CosAngleV*op%VelV + C3 + &
-                               opdt%VelV*op%SinAngleV - op%CosAngleV*C5)
-
-      Accel(3) = opdt%AngleV*C2 - opdt%AngleV*op%SinAngleV*op%VelV + &
-                 opdt%VelV*op%CosAngleV + op%SinAngleV*C5
-   end if
+   Accel(3) = op%AngleVDot*C2 - op%AngleVDot*op%SinAngleV*op%VelV + &
+              op%VelVDot*op%CosAngleV + op%SinAngleV*C5
 
 end function
 
@@ -357,16 +329,11 @@ pure function UniformField_GetOP(UF, Time) result(op)
    real(DbKi), intent(in)              :: Time
    type(UniformField_Interp)           :: op
    integer(IntKi)                      :: i
-   real(ReKi)                          :: alpha, OMalpha
-
-   ! Save the time in operating point
-   op%Time = real(Time, ReKi)
+   real(ReKi)                          :: dt, alpha, OMalpha
 
    ! If only one data point or time is at or below first time, use first sample
    if (UF%DataSize == 1 .or. Time < UF%Time(1)) then
 
-      op%IData = 1
-      op%dt = 0.0_ReKi
       op%VelH = UF%VelH(1)
       op%AngleH = UF%AngleH(1)
       op%AngleV = UF%AngleV(1)
@@ -379,8 +346,6 @@ pure function UniformField_GetOP(UF, Time) result(op)
       ! If time is after end time, use last data point
    else if (Time >= UF%Time(UF%DataSize)) then
 
-      op%IData = UF%DataSize + 1
-      op%dt = 0.0_ReKi
       op%VelH = UF%VelH(UF%DataSize)
       op%AngleH = UF%AngleH(UF%DataSize)
       op%AngleV = UF%AngleV(UF%DataSize)
@@ -397,13 +362,11 @@ pure function UniformField_GetOP(UF, Time) result(op)
          if (Time < UF%Time(i)) exit
       end do
 
-      op%IData = i
-
       ! Calculate interval delta time
-      op%dt = UF%Time(i) - UF%Time(i - 1)
+      dt = UF%Time(i) - UF%Time(i - 1)
 
       ! Calculate interpolation coefficient [0,1]
-      alpha = real((Time - UF%Time(i - 1))/op%dt, ReKi)
+      alpha = real((Time - UF%Time(i - 1))/dt, ReKi)
       OMalpha = 1.0_ReKi - alpha
 
       ! Blend states before and after time based on alpha
@@ -425,20 +388,235 @@ pure function UniformField_GetOP(UF, Time) result(op)
 
 end function
 
-pure function UniformField_AD_DiskVel(op) result(DiskVel)
-   type(UniformField_Interp), intent(in)   :: op
-   real(ReKi), dimension(3)               :: DiskVel
+pure function UniformField_GetSmoothOP(UF, Time) result(op)
 
-   real(ReKi)                             :: V1_rotate, Vz_rotate
+   type(UniformFieldType), intent(in)  :: UF
+   real(DbKi), intent(in)              :: Time
+   type(UniformField_Interp)           :: op
 
-   V1_rotate = op%CosAngleV*op%VelH - op%SinAngleV*op%VelV
-   Vz_rotate = op%SinAngleV*op%VelH + op%CosAngleV*op%VelV
+   integer(IntKi)                      :: i
+   real(ReKi)                          :: C1, C2, C3, C4, h, t
 
-   DiskVel(1) = V1_rotate*op%CosAngleH
-   DiskVel(2) = -V1_rotate*op%SinAngleH
-   DiskVel(3) = Vz_rotate
+   ! Initialize data index
+   i = 0
+
+   ! If time is outside of array
+   if (UF%DataSize == 1 .or. Time < UF%Time(1)) then
+      ! One data point or time is at or below first time, use first sample
+      i = 1
+   else if (Time >= UF%Time(UF%DataSize)) then
+      ! Time is after end time, use last data point
+      i = UF%DataSize
+   end if
+
+   ! If time was inside data array
+   if (i == 0) then
+
+      ! Find first index where current time is less than Time(i)
+      do i = 2, UF%DataSize
+         if (Time < UF%Time(i)) exit
+      end do
+
+      h = UF%Time(i) - UF%Time(i - 1)
+      t = real((Time - UF%Time(i - 1))/h, ReKi)
+
+      C1 = 2.0_ReKi*t*t*t - 3.0_ReKi*t*t + 1.0_ReKi
+      C2 = (t*t*t - 2.0_ReKi*t*t + t)*h
+      C3 = -2.0_ReKi*t*t*t + 3.0_ReKi*t*t
+      C4 = (t*t*t - t*t)*h
+
+      op%VelH = C1*UF%VelH(i - 1) + C2*UF%VelHDot(i - 1) + C3*UF%VelH(i) + C4*UF%VelHDot(i)
+      op%AngleH = C1*UF%AngleH(i - 1) + C2*UF%AngleHDot(i - 1) + C3*UF%AngleH(i) + C4*UF%AngleHDot(i)
+      op%AngleV = C1*UF%AngleV(i - 1) + C2*UF%AngleVDot(i - 1) + C3*UF%AngleV(i) + C4*UF%AngleVDot(i)
+      op%VelV = C1*UF%VelV(i - 1) + C2*UF%VelVDot(i - 1) + C3*UF%VelV(i) + C4*UF%VelVDot(i)
+      op%ShrH = C1*UF%ShrH(i - 1) + C2*UF%ShrHDot(i - 1) + C3*UF%ShrH(i) + C4*UF%ShrHDot(i)
+      op%ShrV = C1*UF%ShrV(i - 1) + C2*UF%ShrVDot(i - 1) + C3*UF%ShrV(i) + C4*UF%ShrVDot(i)
+      op%LinShrV = C1*UF%LinShrV(i - 1) + C2*UF%LinShrVDot(i - 1) + C3*UF%LinShrV(i) + C4*UF%LinShrVDot(i)
+      op%VelGust = C1*UF%VelGust(i - 1) + C2*UF%VelGustDot(i - 1) + C3*UF%VelGust(i) + C4*UF%VelGustDot(i)
+
+      C1 = (6.0_ReKi*t*t - 6.0_ReKi*t)/h
+      C2 = (3.0_ReKi*t*t - 4.0_ReKi*t + 1.0_ReKi)
+      C3 = -C1
+      C4 = (3.0_ReKi*t*t - 2.0_ReKi*t)
+
+      op%VelHDot = C1*UF%VelH(i - 1) + C2*UF%VelHDot(i - 1) + C3*UF%VelH(i) + C4*UF%VelHDot(i)
+      op%AngleHDot = C1*UF%AngleH(i - 1) + C2*UF%AngleHDot(i - 1) + C3*UF%AngleH(i) + C4*UF%AngleHDot(i)
+      op%AngleVDot = C1*UF%AngleV(i - 1) + C2*UF%AngleVDot(i - 1) + C3*UF%AngleV(i) + C4*UF%AngleVDot(i)
+      op%VelVDot = C1*UF%VelV(i - 1) + C2*UF%VelVDot(i - 1) + C3*UF%VelV(i) + C4*UF%VelVDot(i)
+      op%ShrHDot = C1*UF%ShrH(i - 1) + C2*UF%ShrHDot(i - 1) + C3*UF%ShrH(i) + C4*UF%ShrHDot(i)
+      op%ShrVDot = C1*UF%ShrV(i - 1) + C2*UF%ShrVDot(i - 1) + C3*UF%ShrV(i) + C4*UF%ShrVDot(i)
+      op%LinShrVDot = C1*UF%LinShrV(i - 1) + C2*UF%LinShrVDot(i - 1) + C3*UF%LinShrV(i) + C4*UF%LinShrVDot(i)
+      op%VelGustDot = C1*UF%VelGust(i - 1) + C2*UF%VelGustDot(i - 1) + C3*UF%VelGust(i) + C4*UF%VelGustDot(i)
+
+   else
+
+      ! Set values based on first/last index
+      op%VelH = UF%VelH(i)
+      op%AngleH = UF%AngleH(i)
+      op%AngleV = UF%AngleV(i)
+      op%VelV = UF%VelV(i)
+      op%ShrH = UF%ShrH(i)
+      op%ShrV = UF%ShrV(i)
+      op%LinShrV = UF%LinShrV(i)
+      op%VelGust = UF%VelGust(i)
+
+      op%VelHDot = 0.0_ReKi
+      op%AngleHDot = 0.0_ReKi
+      op%AngleVDot = 0.0_ReKi
+      op%VelVDot = 0.0_ReKi
+      op%ShrHDot = 0.0_ReKi
+      op%ShrVDot = 0.0_ReKi
+      op%LinShrVDot = 0.0_ReKi
+      op%VelGustDot = 0.0_ReKi
+
+   end if
+
+   op%CosAngleH = cos(op%AngleH)
+   op%SinAngleH = sin(op%AngleH)
+   op%CosAngleV = cos(op%AngleV)
+   op%SinAngleV = sin(op%AngleV)
 
 end function
+
+subroutine UniformField_CalcAccel(UF, ErrStat, ErrMsg)
+   type(UniformFieldType), intent(inout)  :: UF
+   integer(IntKi), intent(out)         :: ErrStat
+   character(*), intent(out)           :: ErrMsg
+
+   character(*), parameter             :: RoutineName = "UniformField_CalcAccel"
+   integer(IntKi)                      :: TmpErrStat
+   character(ErrMsgLen)                :: TmpErrMsg
+   real(ReKi), allocatable             :: b(:), u(:), dy2(:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   !----------------------------------------------------------------------------
+   ! Storage for spline fit arrays
+   !----------------------------------------------------------------------------
+
+   call AllocAry(B, UF%DataSize, "storage for B", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   call AllocAry(U, UF%DataSize, "storage for U", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   call AllocAry(dy2, UF%DataSize, "storage for dy2", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   !----------------------------------------------------------------------------
+   ! Storage for derivative arrays
+   !----------------------------------------------------------------------------
+
+   call AllocAry(UF%VelHDot, UF%DataSize, 'Uniform wind horizontal wind speed derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%AngleHDot, UF%DataSize, 'Uniform wind direction derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%AngleVDot, UF%DataSize, 'Uniform wind upflow angle derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%VelVDot, UF%DataSize, 'Uniform vertical wind speed derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%ShrHDot, UF%DataSize, 'Uniform horizontal linear shear derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%ShrVDot, UF%DataSize, 'Uniform vertical power-law shear exponent derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%LinShrVDot, UF%DataSize, 'Uniform vertical linear shear derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   call AllocAry(UF%VelGustDot, UF%DataSize, 'Uniform gust velocity derivative', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat > AbortErrLev) return
+
+   !----------------------------------------------------------------------------
+   ! Calculate derivatives
+   !----------------------------------------------------------------------------
+
+   call CalcCubicSplineDeriv(UF%Time, UF%VelH, UF%VelHDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%AngleH, UF%AngleHDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%AngleV, UF%AngleVDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%VelV, UF%VelVDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%ShrH, UF%ShrHDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%ShrV, UF%ShrVDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%LinShrV, UF%LinShrVDot)
+   call CalcCubicSplineDeriv(UF%Time, UF%VelGust, UF%VelGustDot)
+
+contains
+
+   !> CalcCubicSplineDeriv fits a cubic spline through the y array with points
+   !! at x locations. It then calculates the corresponding derivative of y
+   !! with respect to x at the same x values and returns it in the dy array.
+   subroutine CalcCubicSplineDeriv(x, y, dy)
+      real(ReKi), intent(in)        :: x(:)
+      real(ReKi), intent(in)        :: y(:)
+      real(ReKi), intent(out)       :: dy(:)
+
+      integer(IntKi)                :: i, n
+      real(ReKi)                    :: p, sig, un
+
+      ! Get size of arrays
+      n = size(x)
+
+      ! If 1 or 2 points, set derivatives to zero and return
+      if (n < 3) then
+         do i = 1, n
+            dy(i) = 0.0_ReKi
+         end do
+         return
+      end if
+
+      ! Natural lower and upper boundaries (second derivative = 0)
+      ! u(1) = 0.0_ReKi
+      ! dy2(1) = 0.0_ReKi
+      ! dy2(n) = 0.0_ReKi
+
+      ! First derivative is zero at lower boundary condition
+      dy2(1) = -0.5_ReKi
+      u(1) = 3.0_ReKi*(y(2) - y(1))/(x(2) - x(1))**2
+
+      ! Calculate slopes
+      do i = 1, n - 1
+         b(i) = (y(i + 1) - y(i))/(x(i + 1) - x(i))
+      end do
+
+      ! Decomposition
+      do i = 2, n - 1
+         sig = (x(i) - x(i - 1))/(x(i + 1) - x(i - 1))
+         p = sig*dy2(i - 1) + 2.0_ReKi
+         dy2(i) = (sig - 1.0_ReKi)/p
+         u(i) = (6.*((y(i + 1) - y(i))/(x(i + 1) - x(i)) - (y(i) - y(i - 1))/(x(i) - x(i - 1)))/ &
+                 (x(i + 1) - x(i - 1)) - sig*u(i - 1))/p
+      end do
+
+      ! First derviative is zero at upper boundary condition
+      un = -3.0_ReKi*(y(n) - y(n - 1))/(x(n) - x(n - 1))**2
+      dy2(n) = (un - 0.5_ReKi*u(n - 1))/(0.5_ReKi*dy2(n - 1) + 1.0_ReKi)
+
+      ! Back substitution and derivative calculation
+      do i = n - 1, 1, -1
+         dy2(i) = dy2(i)*dy2(i + 1) + u(i)
+         dy(i) = real(b(i) - (x(i + 1) - x(i))*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
+      end do
+      dy(n) = real(b(n - 1) + (x(n) - x(n - 1))*(dy2(n - 1)/6.0_ReKi + dy2(n)/3.0_ReKi), SiKi)
+
+   end subroutine
+
+end subroutine
 
 function GridField_GetVel(GF, Position, DY, DZ, DT, P, Interp3D) result(Velocity)
 
@@ -726,7 +904,6 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
 
    integer(IntKi)                      :: stat
    real(ReKi)                          :: Z_GRID
-   real(ReKi)                          :: Z_twr(3)
 
    ! Calculate position on Z grid
    Z_GRID = (PosZ - GF%GridBase)*GF%InvDZ + 1
@@ -859,5 +1036,124 @@ function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) res
    end if
 
 end function
+
+subroutine GridField_CalcAccel(GF, ErrStat, ErrMsg)
+   type(GridFieldType), intent(inout)  :: GF
+   integer(IntKi), intent(out)         :: ErrStat
+   character(*), intent(out)           :: ErrMsg
+
+   character(*), parameter             :: RoutineName = "GridField_CalcAccel"
+   integer(IntKi)                      :: TmpErrStat
+   character(ErrMsgLen)                :: TmpErrMsg
+   integer(IntKi)                      :: ic, iy, iz
+   real(ReKi), allocatable             :: b(:), u(:), dy2(:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Allocate storage for acceleration grid
+   call AllocAry(GF%Acc, size(GF%Vel, dim=1), size(GF%Vel, dim=2), &
+                 size(GF%Vel, dim=3), size(GF%Vel, dim=4), &
+                 'grid-field velocity data', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Allocate storage for B used in cubic spline derivative calc
+   call AllocAry(B, GF%NSteps, "storage for B", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Allocate storage for U used in cubic spline derivative calc
+   call AllocAry(U, GF%NSteps, "storage for U", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Allocate storage for V used in cubic spline derivative calc
+   call AllocAry(dy2, GF%NSteps, "storage for V", TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Calculate acceleration at each grid point
+   do iz = 1, GF%NZGrids
+      do iy = 1, GF%NYGrids
+         do ic = 1, GF%NComp
+            call CalcCubicSplineDeriv(GF%DTime, GF%Vel(ic, iy, iz, :), GF%Acc(ic, iy, iz, :))
+         end do
+      end do
+   end do
+
+   ! If grid field includes tower grids
+   if (GF%NTGrids > 0) then
+
+      ! Allocate storage for tower acceleration
+      call AllocAry(GF%AccTower, size(GF%VelTower, dim=1), &
+                    size(GF%VelTower, dim=2), size(GF%VelTower, dim=3), &
+                    'tower wind acceleration data.', TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+      ! Loop through tower grid and calculate acceleration
+      do iz = 1, GF%NTGrids
+         do ic = 1, GF%NComp
+            call CalcCubicSplineDeriv(GF%DTime, GF%VelTower(ic, iz, :), GF%AccTower(ic, iz, :))
+         end do
+      end do
+   end if
+
+contains
+
+   !> CalcCubicSplineDeriv fits a cubic spline through the y array with points
+   !! spaced a constant 'h' apart. It then calculates the corresponding
+   !! derivative of y with respect to x at the same x values and returns it
+   !! in the dy array.
+   subroutine CalcCubicSplineDeriv(h, y, dy)
+      real(ReKi), intent(in)        :: h
+      real(SiKi), intent(in)        :: y(:)
+      real(SiKi), intent(out)       :: dy(:)
+
+      integer(IntKi)                :: i, n
+      real(ReKi)                    :: p, un
+
+      ! Get size of arrays
+      n = size(y)
+
+      ! If 1 or 2 points, set derivatives to zero and return
+      if (n < 3) then
+         do i = 1, n
+            dy(i) = 0.0_ReKi
+         end do
+         return
+      end if
+
+      ! First derivative is zero at lower boundary condition
+      dy2(1) = -0.5_ReKi
+      u(1) = 3.0_ReKi*(y(2) - y(1))/h**2
+
+      ! Calculate slopes
+      do i = 1, n - 1
+         b(i) = (y(i + 1) - y(i))/h
+      end do
+
+      ! Decomposition
+      do i = 2, n - 1
+         p = 0.5_ReKi*dy2(i - 1) + 2.0_ReKi
+         dy2(i) = -0.5_ReKi/p
+         u(i) = (6.*((y(i + 1) - y(i))/h - (y(i) - y(i - 1))/h)/(2.0_ReKi*h) - 0.5_ReKi*u(i - 1))/p
+      end do
+
+      ! First derviative is zero at upper boundary condition
+      un = -3.0_ReKi*(y(n) - y(n - 1))/h**2
+      dy2(n) = (un - 0.5_ReKi*u(n - 1))/(0.5_ReKi*dy2(n - 1) + 1.0_ReKi)
+
+      ! Back substitution and derivative calculation
+      do i = n - 1, 1, -1
+         dy2(i) = dy2(i)*dy2(i + 1) + u(i)
+         dy(i) = real(b(i) - h*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
+      end do
+      dy(n) = real(b(n - 1) + h*(dy2(n - 1)/6.0_ReKi + dy2(n)/3.0_ReKi), SiKi)
+
+   end subroutine
+
+end subroutine
 
 end module

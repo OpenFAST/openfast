@@ -45,28 +45,41 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DataSize      !< size of data in HH file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Time      !< HH time array [seconds]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelH      !< HH horizontal wind speed [meters/sec]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelHDot      !< Derivative of HH horizontal wind speed wrt time [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelV      !< HH vertical wind speed, including tower shadow [meters/sec]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelVDot      !< Derivative of HH vertical wind speed wrt time [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelGust      !< HH wind gust speed [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelGustDot      !< Derivative of HH wind gust speed wrt time [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AngleH      !< HH wind direction angle [degrees]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AngleHDot      !< Derivative of HH wind direction angle wrt time [degrees]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AngleV      !< HH upflow angle [degrees]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AngleVDot      !< Derivative of HH upflow angle wrt time [degrees]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ShrH      !< HH horizontal linear shear [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ShrHDot      !< Derivative of HH horizontal linear shear wrt time [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ShrV      !< HH vertical shear exponent [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ShrVDot      !< Derivative of HH vertical shear exponent wrt time [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LinShrV      !< HH vertical linear shear [seconds]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LinShrVDot      !< Derivative of HH vertical linear shear wrt time [seconds]
   END TYPE UniformFieldType
 ! =======================
 ! =========  UniformField_Interp  =======
   TYPE, PUBLIC :: UniformField_Interp
-    INTEGER(IntKi)  :: IData      !< Data index high [-]
-    REAL(ReKi)  :: dt      !< interval delta time [seconds]
-    REAL(ReKi)  :: Time      !< HH time [seconds]
     REAL(ReKi)  :: VelH      !< HH horizontal wind speed [meters/sec]
+    REAL(ReKi)  :: VelHDot      !< derivative of HH horizontal wind speed wrt Time [meters/sec]
     REAL(ReKi)  :: VelV      !< HH vertical wind speed, including tower shadow [meters/sec]
+    REAL(ReKi)  :: VelVDot      !< derivative of HH vertical wind speed wrt Time [meters/sec]
     REAL(ReKi)  :: VelGust      !< HH wind gust speed [-]
+    REAL(ReKi)  :: VelGustDot      !< derivative of HH wind gust speed wrt Time [-]
     REAL(ReKi)  :: AngleH      !< HH wind direction angle [degrees]
+    REAL(ReKi)  :: AngleHDot      !< derivative of HH wind direction angle wrt Time [degrees]
     REAL(ReKi)  :: AngleV      !< HH upflow angle [degrees]
+    REAL(ReKi)  :: AngleVDot      !< derivative of HH upflow angle wrt Time [degrees]
     REAL(ReKi)  :: ShrH      !< HH horizontal linear shear [-]
+    REAL(ReKi)  :: ShrHDot      !< derivative of HH horizontal linear shear wrt Time [-]
     REAL(ReKi)  :: ShrV      !< HH vertical shear exponent [-]
+    REAL(ReKi)  :: ShrVDot      !< derivative of HH vertical shear exponent wrt Time [-]
     REAL(ReKi)  :: LinShrV      !< HH vertical linear shear [seconds]
+    REAL(ReKi)  :: LinShrVDot      !< derivative of HH vertical linear shear wrt Time [seconds]
     REAL(ReKi)  :: CosAngleH      !< Horizontal angle components [-]
     REAL(ReKi)  :: SinAngleH      !< Horizontal angle components [-]
     REAL(ReKi)  :: CosAngleV      !< Vertical angle components [-]
@@ -176,6 +189,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%VelH)) THEN
   END IF
     DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
 ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%VelHDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%VelHDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%VelHDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelHDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%VelHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelHDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
+ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%VelV)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%VelV,1)
   i1_u = UBOUND(SrcUniformFieldTypeData%VelV,1)
@@ -187,6 +212,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%VelV)) THEN
     END IF
   END IF
     DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
+ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%VelVDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%VelVDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%VelVDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelVDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%VelVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelVDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
 ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%VelGust)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%VelGust,1)
@@ -200,6 +237,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%VelGust)) THEN
   END IF
     DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
 ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%VelGustDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%VelGustDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%VelGustDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelGustDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%VelGustDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGustDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
+ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%AngleH)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%AngleH,1)
   i1_u = UBOUND(SrcUniformFieldTypeData%AngleH,1)
@@ -211,6 +260,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%AngleH)) THEN
     END IF
   END IF
     DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
+ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%AngleHDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%AngleHDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%AngleHDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleHDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%AngleHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleHDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
 ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%AngleV)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%AngleV,1)
@@ -224,6 +285,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%AngleV)) THEN
   END IF
     DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
 ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%AngleVDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%AngleVDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%AngleVDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleVDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%AngleVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleVDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
+ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%ShrH)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%ShrH,1)
   i1_u = UBOUND(SrcUniformFieldTypeData%ShrH,1)
@@ -235,6 +308,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%ShrH)) THEN
     END IF
   END IF
     DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
+ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%ShrHDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%ShrHDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%ShrHDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrHDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%ShrHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrHDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
 ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%ShrV)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%ShrV,1)
@@ -248,6 +333,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%ShrV)) THEN
   END IF
     DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
 ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%ShrVDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%ShrVDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%ShrVDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrVDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%ShrVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrVDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
+ENDIF
 IF (ALLOCATED(SrcUniformFieldTypeData%LinShrV)) THEN
   i1_l = LBOUND(SrcUniformFieldTypeData%LinShrV,1)
   i1_u = UBOUND(SrcUniformFieldTypeData%LinShrV,1)
@@ -259,6 +356,18 @@ IF (ALLOCATED(SrcUniformFieldTypeData%LinShrV)) THEN
     END IF
   END IF
     DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
+ENDIF
+IF (ALLOCATED(SrcUniformFieldTypeData%LinShrVDot)) THEN
+  i1_l = LBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
+  i1_u = UBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
+  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%LinShrVDot)) THEN 
+    ALLOCATE(DstUniformFieldTypeData%LinShrVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrVDot.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
 ENDIF
  END SUBROUTINE FlowField_CopyUniformFieldType
 
@@ -289,26 +398,50 @@ ENDIF
 IF (ALLOCATED(UniformFieldTypeData%VelH)) THEN
   DEALLOCATE(UniformFieldTypeData%VelH)
 ENDIF
+IF (ALLOCATED(UniformFieldTypeData%VelHDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%VelHDot)
+ENDIF
 IF (ALLOCATED(UniformFieldTypeData%VelV)) THEN
   DEALLOCATE(UniformFieldTypeData%VelV)
+ENDIF
+IF (ALLOCATED(UniformFieldTypeData%VelVDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%VelVDot)
 ENDIF
 IF (ALLOCATED(UniformFieldTypeData%VelGust)) THEN
   DEALLOCATE(UniformFieldTypeData%VelGust)
 ENDIF
+IF (ALLOCATED(UniformFieldTypeData%VelGustDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%VelGustDot)
+ENDIF
 IF (ALLOCATED(UniformFieldTypeData%AngleH)) THEN
   DEALLOCATE(UniformFieldTypeData%AngleH)
+ENDIF
+IF (ALLOCATED(UniformFieldTypeData%AngleHDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%AngleHDot)
 ENDIF
 IF (ALLOCATED(UniformFieldTypeData%AngleV)) THEN
   DEALLOCATE(UniformFieldTypeData%AngleV)
 ENDIF
+IF (ALLOCATED(UniformFieldTypeData%AngleVDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%AngleVDot)
+ENDIF
 IF (ALLOCATED(UniformFieldTypeData%ShrH)) THEN
   DEALLOCATE(UniformFieldTypeData%ShrH)
+ENDIF
+IF (ALLOCATED(UniformFieldTypeData%ShrHDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%ShrHDot)
 ENDIF
 IF (ALLOCATED(UniformFieldTypeData%ShrV)) THEN
   DEALLOCATE(UniformFieldTypeData%ShrV)
 ENDIF
+IF (ALLOCATED(UniformFieldTypeData%ShrVDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%ShrVDot)
+ENDIF
 IF (ALLOCATED(UniformFieldTypeData%LinShrV)) THEN
   DEALLOCATE(UniformFieldTypeData%LinShrV)
+ENDIF
+IF (ALLOCATED(UniformFieldTypeData%LinShrVDot)) THEN
+  DEALLOCATE(UniformFieldTypeData%LinShrVDot)
 ENDIF
  END SUBROUTINE FlowField_DestroyUniformFieldType
 
@@ -360,40 +493,80 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! VelH upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%VelH)  ! VelH
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! VelHDot allocated yes/no
+  IF ( ALLOCATED(InData%VelHDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! VelHDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%VelHDot)  ! VelHDot
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! VelV allocated yes/no
   IF ( ALLOCATED(InData%VelV) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! VelV upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%VelV)  ! VelV
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! VelVDot allocated yes/no
+  IF ( ALLOCATED(InData%VelVDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! VelVDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%VelVDot)  ! VelVDot
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! VelGust allocated yes/no
   IF ( ALLOCATED(InData%VelGust) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! VelGust upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%VelGust)  ! VelGust
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! VelGustDot allocated yes/no
+  IF ( ALLOCATED(InData%VelGustDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! VelGustDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%VelGustDot)  ! VelGustDot
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! AngleH allocated yes/no
   IF ( ALLOCATED(InData%AngleH) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! AngleH upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngleH)  ! AngleH
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AngleHDot allocated yes/no
+  IF ( ALLOCATED(InData%AngleHDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AngleHDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleHDot)  ! AngleHDot
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! AngleV allocated yes/no
   IF ( ALLOCATED(InData%AngleV) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! AngleV upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AngleV)  ! AngleV
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AngleVDot allocated yes/no
+  IF ( ALLOCATED(InData%AngleVDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AngleVDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AngleVDot)  ! AngleVDot
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! ShrH allocated yes/no
   IF ( ALLOCATED(InData%ShrH) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ShrH upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%ShrH)  ! ShrH
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ShrHDot allocated yes/no
+  IF ( ALLOCATED(InData%ShrHDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ShrHDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrHDot)  ! ShrHDot
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ShrV allocated yes/no
   IF ( ALLOCATED(InData%ShrV) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ShrV upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%ShrV)  ! ShrV
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ShrVDot allocated yes/no
+  IF ( ALLOCATED(InData%ShrVDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ShrVDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ShrVDot)  ! ShrVDot
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! LinShrV allocated yes/no
   IF ( ALLOCATED(InData%LinShrV) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LinShrV upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%LinShrV)  ! LinShrV
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LinShrVDot allocated yes/no
+  IF ( ALLOCATED(InData%LinShrVDot) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LinShrVDot upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LinShrVDot)  ! LinShrVDot
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -458,6 +631,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%VelHDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelHDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelHDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%VelHDot,1), UBOUND(InData%VelHDot,1)
+        ReKiBuf(Re_Xferred) = InData%VelHDot(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%VelV) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -470,6 +658,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%VelV,1), UBOUND(InData%VelV,1)
         ReKiBuf(Re_Xferred) = InData%VelV(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%VelVDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelVDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelVDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%VelVDot,1), UBOUND(InData%VelVDot,1)
+        ReKiBuf(Re_Xferred) = InData%VelVDot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -488,6 +691,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%VelGustDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelGustDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelGustDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%VelGustDot,1), UBOUND(InData%VelGustDot,1)
+        ReKiBuf(Re_Xferred) = InData%VelGustDot(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%AngleH) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -500,6 +718,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%AngleH,1), UBOUND(InData%AngleH,1)
         ReKiBuf(Re_Xferred) = InData%AngleH(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AngleHDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleHDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleHDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%AngleHDot,1), UBOUND(InData%AngleHDot,1)
+        ReKiBuf(Re_Xferred) = InData%AngleHDot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -518,6 +751,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%AngleVDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AngleVDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AngleVDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%AngleVDot,1), UBOUND(InData%AngleVDot,1)
+        ReKiBuf(Re_Xferred) = InData%AngleVDot(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%ShrH) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -530,6 +778,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%ShrH,1), UBOUND(InData%ShrH,1)
         ReKiBuf(Re_Xferred) = InData%ShrH(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ShrHDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrHDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrHDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ShrHDot,1), UBOUND(InData%ShrHDot,1)
+        ReKiBuf(Re_Xferred) = InData%ShrHDot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -548,6 +811,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%ShrVDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ShrVDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ShrVDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ShrVDot,1), UBOUND(InData%ShrVDot,1)
+        ReKiBuf(Re_Xferred) = InData%ShrVDot(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%LinShrV) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -560,6 +838,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%LinShrV,1), UBOUND(InData%LinShrV,1)
         ReKiBuf(Re_Xferred) = InData%LinShrV(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LinShrVDot) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LinShrVDot,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LinShrVDot,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LinShrVDot,1), UBOUND(InData%LinShrVDot,1)
+        ReKiBuf(Re_Xferred) = InData%LinShrVDot(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -637,6 +930,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelHDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VelHDot)) DEALLOCATE(OutData%VelHDot)
+    ALLOCATE(OutData%VelHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelHDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%VelHDot,1), UBOUND(OutData%VelHDot,1)
+        OutData%VelHDot(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelV not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -652,6 +963,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%VelV,1), UBOUND(OutData%VelV,1)
         OutData%VelV(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelVDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VelVDot)) DEALLOCATE(OutData%VelVDot)
+    ALLOCATE(OutData%VelVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelVDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%VelVDot,1), UBOUND(OutData%VelVDot,1)
+        OutData%VelVDot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -673,6 +1002,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelGustDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VelGustDot)) DEALLOCATE(OutData%VelGustDot)
+    ALLOCATE(OutData%VelGustDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelGustDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%VelGustDot,1), UBOUND(OutData%VelGustDot,1)
+        OutData%VelGustDot(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleH not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -688,6 +1035,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%AngleH,1), UBOUND(OutData%AngleH,1)
         OutData%AngleH(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleHDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AngleHDot)) DEALLOCATE(OutData%AngleHDot)
+    ALLOCATE(OutData%AngleHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleHDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%AngleHDot,1), UBOUND(OutData%AngleHDot,1)
+        OutData%AngleHDot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -709,6 +1074,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AngleVDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AngleVDot)) DEALLOCATE(OutData%AngleVDot)
+    ALLOCATE(OutData%AngleVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AngleVDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%AngleVDot,1), UBOUND(OutData%AngleVDot,1)
+        OutData%AngleVDot(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrH not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -724,6 +1107,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%ShrH,1), UBOUND(OutData%ShrH,1)
         OutData%ShrH(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrHDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ShrHDot)) DEALLOCATE(OutData%ShrHDot)
+    ALLOCATE(OutData%ShrHDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrHDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ShrHDot,1), UBOUND(OutData%ShrHDot,1)
+        OutData%ShrHDot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -745,6 +1146,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ShrVDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ShrVDot)) DEALLOCATE(OutData%ShrVDot)
+    ALLOCATE(OutData%ShrVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ShrVDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ShrVDot,1), UBOUND(OutData%ShrVDot,1)
+        OutData%ShrVDot(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinShrV not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -760,6 +1179,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%LinShrV,1), UBOUND(OutData%LinShrV,1)
         OutData%LinShrV(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinShrVDot not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LinShrVDot)) DEALLOCATE(OutData%LinShrVDot)
+    ALLOCATE(OutData%LinShrVDot(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinShrVDot.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LinShrVDot,1), UBOUND(OutData%LinShrVDot,1)
+        OutData%LinShrVDot(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -779,17 +1216,22 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstUniformField_InterpData%IData = SrcUniformField_InterpData%IData
-    DstUniformField_InterpData%dt = SrcUniformField_InterpData%dt
-    DstUniformField_InterpData%Time = SrcUniformField_InterpData%Time
     DstUniformField_InterpData%VelH = SrcUniformField_InterpData%VelH
+    DstUniformField_InterpData%VelHDot = SrcUniformField_InterpData%VelHDot
     DstUniformField_InterpData%VelV = SrcUniformField_InterpData%VelV
+    DstUniformField_InterpData%VelVDot = SrcUniformField_InterpData%VelVDot
     DstUniformField_InterpData%VelGust = SrcUniformField_InterpData%VelGust
+    DstUniformField_InterpData%VelGustDot = SrcUniformField_InterpData%VelGustDot
     DstUniformField_InterpData%AngleH = SrcUniformField_InterpData%AngleH
+    DstUniformField_InterpData%AngleHDot = SrcUniformField_InterpData%AngleHDot
     DstUniformField_InterpData%AngleV = SrcUniformField_InterpData%AngleV
+    DstUniformField_InterpData%AngleVDot = SrcUniformField_InterpData%AngleVDot
     DstUniformField_InterpData%ShrH = SrcUniformField_InterpData%ShrH
+    DstUniformField_InterpData%ShrHDot = SrcUniformField_InterpData%ShrHDot
     DstUniformField_InterpData%ShrV = SrcUniformField_InterpData%ShrV
+    DstUniformField_InterpData%ShrVDot = SrcUniformField_InterpData%ShrVDot
     DstUniformField_InterpData%LinShrV = SrcUniformField_InterpData%LinShrV
+    DstUniformField_InterpData%LinShrVDot = SrcUniformField_InterpData%LinShrVDot
     DstUniformField_InterpData%CosAngleH = SrcUniformField_InterpData%CosAngleH
     DstUniformField_InterpData%SinAngleH = SrcUniformField_InterpData%SinAngleH
     DstUniformField_InterpData%CosAngleV = SrcUniformField_InterpData%CosAngleV
@@ -854,17 +1296,22 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! IData
-      Re_BufSz   = Re_BufSz   + 1  ! dt
-      Re_BufSz   = Re_BufSz   + 1  ! Time
       Re_BufSz   = Re_BufSz   + 1  ! VelH
+      Re_BufSz   = Re_BufSz   + 1  ! VelHDot
       Re_BufSz   = Re_BufSz   + 1  ! VelV
+      Re_BufSz   = Re_BufSz   + 1  ! VelVDot
       Re_BufSz   = Re_BufSz   + 1  ! VelGust
+      Re_BufSz   = Re_BufSz   + 1  ! VelGustDot
       Re_BufSz   = Re_BufSz   + 1  ! AngleH
+      Re_BufSz   = Re_BufSz   + 1  ! AngleHDot
       Re_BufSz   = Re_BufSz   + 1  ! AngleV
+      Re_BufSz   = Re_BufSz   + 1  ! AngleVDot
       Re_BufSz   = Re_BufSz   + 1  ! ShrH
+      Re_BufSz   = Re_BufSz   + 1  ! ShrHDot
       Re_BufSz   = Re_BufSz   + 1  ! ShrV
+      Re_BufSz   = Re_BufSz   + 1  ! ShrVDot
       Re_BufSz   = Re_BufSz   + 1  ! LinShrV
+      Re_BufSz   = Re_BufSz   + 1  ! LinShrVDot
       Re_BufSz   = Re_BufSz   + 1  ! CosAngleH
       Re_BufSz   = Re_BufSz   + 1  ! SinAngleH
       Re_BufSz   = Re_BufSz   + 1  ! CosAngleV
@@ -896,27 +1343,37 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%IData
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%dt
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Time
-    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VelH
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VelHDot
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VelV
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VelVDot
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VelGust
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VelGustDot
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AngleH
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AngleHDot
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AngleV
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%AngleVDot
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ShrH
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%ShrHDot
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%ShrV
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%ShrVDot
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%LinShrV
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%LinShrVDot
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%CosAngleH
     Re_Xferred = Re_Xferred + 1
@@ -954,27 +1411,37 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%IData = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%dt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Time = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
     OutData%VelH = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VelHDot = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%VelV = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%VelVDot = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%VelGust = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VelGustDot = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%AngleH = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%AngleHDot = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%AngleV = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%AngleVDot = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%ShrH = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%ShrHDot = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%ShrV = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%ShrVDot = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%LinShrV = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%LinShrVDot = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%CosAngleH = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

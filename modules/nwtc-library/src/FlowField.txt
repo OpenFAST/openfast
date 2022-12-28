@@ -16,25 +16,38 @@ typedef  ^           ^                      ReKi                RefLength       
 typedef  ^           ^                      IntKi               DataSize            -     -         -     "size of data in HH file"       
 typedef  ^           ^                      ReKi                Time                :     -         -     "HH time array"                                               seconds
 typedef  ^           ^                      ReKi                VelH                :     -         -     "HH horizontal wind speed"                                    meters/sec
+typedef  ^           ^                      ReKi                VelHDot             :     -         -     "Derivative of HH horizontal wind speed wrt time"             meters/sec
 typedef  ^           ^                      ReKi                VelV                :     -         -     "HH vertical wind speed, including tower shadow"              meters/sec
+typedef  ^           ^                      ReKi                VelVDot             :     -         -     "Derivative of HH vertical wind speed wrt time"               meters/sec
 typedef  ^           ^                      ReKi                VelGust             :     -         -     "HH wind gust speed"                                          -
+typedef  ^           ^                      ReKi                VelGustDot          :     -         -     "Derivative of HH wind gust speed wrt time"                   -
 typedef  ^           ^                      ReKi                AngleH              :     -         -     "HH wind direction angle"                                     degrees
+typedef  ^           ^                      ReKi                AngleHDot           :     -         -     "Derivative of HH wind direction angle wrt time"              degrees
 typedef  ^           ^                      ReKi                AngleV              :     -         -     "HH upflow angle"                                             degrees
+typedef  ^           ^                      ReKi                AngleVDot           :     -         -     "Derivative of HH upflow angle wrt time"                      degrees
 typedef  ^           ^                      ReKi                ShrH                :     -         -     "HH horizontal linear shear"                                  -
+typedef  ^           ^                      ReKi                ShrHDot             :     -         -     "Derivative of HH horizontal linear shear wrt time"           -
 typedef  ^           ^                      ReKi                ShrV                :     -         -     "HH vertical shear exponent"                                  -
+typedef  ^           ^                      ReKi                ShrVDot             :     -         -     "Derivative of HH vertical shear exponent wrt time"           -
 typedef  ^           ^                      ReKi                LinShrV             :     -         -     "HH vertical linear shear"                                    seconds
+typedef  ^           ^                      ReKi                LinShrVDot          :     -         -     "Derivative of HH vertical linear shear wrt time"             seconds
 
-typedef  ^           UniformField_Interp    IntKi               IData               -     -         -     "Data index high"
-typedef  ^           ^                      ReKi                dt                  -     -         -     "interval delta time"                                         seconds
-typedef  ^           ^                      ReKi                Time                -     -         -     "HH time"                                                     seconds
-typedef  ^           ^                      ReKi                VelH                -     -         -     "HH horizontal wind speed"                                    meters/sec
+typedef  ^           UniformField_Interp    ReKi                VelH                -     -         -     "HH horizontal wind speed"                                    meters/sec
+typedef  ^           ^                      ReKi                VelHDot             -     -         -     "derivative of HH horizontal wind speed wrt Time"                      meters/sec
 typedef  ^           ^                      ReKi                VelV                -     -         -     "HH vertical wind speed, including tower shadow"              meters/sec
+typedef  ^           ^                      ReKi                VelVDot             -     -         -     "derivative of HH vertical wind speed wrt Time"               meters/sec
 typedef  ^           ^                      ReKi                VelGust             -     -         -     "HH wind gust speed"                                          -
+typedef  ^           ^                      ReKi                VelGustDot          -     -         -     "derivative of HH wind gust speed wrt Time"                            -
 typedef  ^           ^                      ReKi                AngleH              -     -         -     "HH wind direction angle"                                     degrees
+typedef  ^           ^                      ReKi                AngleHDot           -     -         -     "derivative of HH wind direction angle wrt Time"                       degrees
 typedef  ^           ^                      ReKi                AngleV              -     -         -     "HH upflow angle"                                             degrees
+typedef  ^           ^                      ReKi                AngleVDot           -     -         -     "derivative of HH upflow angle wrt Time"                               degrees
 typedef  ^           ^                      ReKi                ShrH                -     -         -     "HH horizontal linear shear"                                  -
+typedef  ^           ^                      ReKi                ShrHDot             -     -         -     "derivative of HH horizontal linear shear wrt Time"                    -
 typedef  ^           ^                      ReKi                ShrV                -     -         -     "HH vertical shear exponent"                                  -
+typedef  ^           ^                      ReKi                ShrVDot             -     -         -     "derivative of HH vertical shear exponent wrt Time"                    -
 typedef  ^           ^                      ReKi                LinShrV             -     -         -     "HH vertical linear shear"                                    seconds
+typedef  ^           ^                      ReKi                LinShrVDot          -     -         -     "derivative of HH vertical linear shear wrt Time"                      seconds
 typedef  ^           ^                      ReKi                CosAngleH           -     -         -     "Horizontal angle components"                                 -
 typedef  ^           ^                      ReKi                SinAngleH           -     -         -     "Horizontal angle components"                                 -
 typedef  ^           ^                      ReKi                CosAngleV           -     -         -     "Vertical angle components"                                   -
