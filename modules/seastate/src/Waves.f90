@@ -2397,7 +2397,7 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, OmegaArr, WaveS1SddArr, CosWave
    COMPLEX(SiKi)                                   :: tmpComplex                                    ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    
    INTEGER(IntKi)                                  :: ErrStatTmp                                    !< error level/status
-   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                     !< error message
+!   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                     !< error message
    CHARACTER(*), PARAMETER                         :: RoutineName = 'ConstrainedNewWaves'
    
    
