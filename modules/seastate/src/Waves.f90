@@ -669,26 +669,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    COMPLEX(SiKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use.
    TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
 
-   ! Variables for constrained wave
-   REAL(SiKi)                   :: WaveElevC0ReSum                                 !< Sum of the wave DFT amplitudes (real part) across all frequencies (m)
-   REAL(SiKi)                   :: WaveElevC0ImOmegaSum                            !< Sum of the wave DFT amplitudes (imaginary part) times the angular frequency across all frequencies (m(rad/s))
-   REAL(SiKi)                   :: Crest                                           !< Crest elevation measured from SWL (m)
-   REAL(SiKi)                   :: CrestHeight                                     !< Crest height measured from the crest to the preceding or following trough (m)
-   REAL(SiKi)                   :: CrestHeight1                                    !< Crest height with purturbed crest elevation (m)
-   REAL(SiKi)                   :: CrestHeightError                                !< Error in crest height relative to the specified crest height (m)
-   REAL(SiKi)                   :: ConstWavePhase                                  !< Phase adjustment to wave DFT amplitudes due to constrained wave (m)
-   REAL(SiKi)                   :: Trough                                          !< The trough preceding or following the crest, whichever is lower (m)
-   REAL(SiKi)                   :: m0                                              !< Zeroth spectral moment of the wave spectrum (m^2)
-   REAL(SiKi)                   :: m2                                              !< First spectral moment of the wave spectrum (m^2(rad/s)^2)
-   REAL(SiKi)                   :: CrestHeightTol = 1.0E-3                         !< Relative tolerance for the crest height when ConstWaveMod = 2
-   INTEGER(IntKi)               :: NStepTp                                         !< Number of time steps per peak period when waveMod = 2 (-)
-   INTEGER(IntKi)               :: Iter                                            !< Number of iterations when trying to meet the prescribed crest height (-)
-   INTEGER(IntKi)               :: MaxCrestIter = 20                               !< Maximum number of iterations when trying to meet the prescribed crest height (-)
    REAL(SiKi), ALLOCATABLE      :: WaveS1SddArr(:)                                 !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
-   REAL(SiKi), ALLOCATABLE      :: WaveElevC0Re(:)                                 !< Real part of the partially modified wave DFT amplitude (m)
-   
    REAL(SiKi), ALLOCATABLE      :: OmegaArr(:)                                     !< Array of all non-negative angular frequencies (rad/s)
-   REAL(SiKi), ALLOCATABLE      :: tmpArr(:)                                       !< A temporary array of real numbers of constrained wave (-)
    
    ! Variables for MacCamy-Fuchs model
    REAL(SiKi)                   :: ka
@@ -984,12 +966,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( WaveS1SddArr( 0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveS1SddArr.',   ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveElevC0Re( 0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElevC0Re.',   ErrStat,ErrMsg,RoutineName)
-
-      ALLOCATE ( tmpArr( 0:InitOut%NStepWave2                              ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpArr.',   ErrStat,ErrMsg,RoutineName)
-
       ! Now check if all the allocations worked properly
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -1024,88 +1000,27 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       CosWaveDir=COS(D2R*InitOut%WaveDirArr)
       SinWaveDir=SIN(D2R*InitOut%WaveDirArr)
 
+      
+      ! make sure this is called before calling ConstrainedNewWaves
+      CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
+         CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+      
       !--------------------------------------------------------------------------------
       !=== Constrained New Waves ===
       ! Modify the wave components to implement the constrained wave
       ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod > 0
       IF ( InitInp%WaveMod == 2 .AND. InitInp%ConstWaveMod > 0) THEN
-        ! Compute the relevant sums
-        m0                   = InitOut%WaveDOmega * SUM(WaveS1SddArr)
-        m2                   = InitOut%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
-        WaveElevC0ReSum      = SUM(InitOut%WaveElevC0(1,:))/m0
-        WaveElevC0ImOmegaSum = SUM(InitOut%WaveElevC0(2,:) * OmegaArr)/m2
-        ! Apply the part of the modification that is independent from the crest elevation
-        InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * InitOut%WaveDOmega
-        InitOut%WaveElevC0(2,:) = InitOut%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * InitOut%WaveDOmega
-
-        Crest = 0.5_SiKi * InitInp%CrestHmax ! Set crest elevation to half of crest height
-        tmpArr = InitOut%NStepWave2/m0 * InitOut%WaveDOmega * WaveS1SddArr
-        IF (InitInp%ConstWaveMod == 1) THEN  ! Crest elevation prescribed
-          ! Apply the remaining part of the modification proportional to crest elevation
-          InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) + Crest * tmpArr
-        ELSE IF (InitInp%ConstWaveMod == 2) THEN ! Crest height prescribed - Need to interate
-          NStepTp = CEILING(InitInp%WaveTp/InitInp%WaveDT)
-
-          CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-          CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
-          IF ( ErrStat >= AbortErrLev ) THEN
-             CALL CleanUp()
-             RETURN
-          END IF
-
-          Iter = 0
-          CrestHeightError = InitInp%CrestHmax
-          DO WHILE(CrestHeightError>CrestHeightTol .AND. Iter<=MaxCrestIter)
-            Iter = Iter + 1
-
-            ! Compute the crest height based on the current guess of crest elevation
-            tmpComplexArr = CMPLX(  InitOut%WaveElevC0(1,:) + Crest * tmpArr, &
-                                    InitOut%WaveElevC0(2,:))
-            CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-            ! Find the preceding or following trough, whichever is lower
-            Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                         MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
-            CrestHeight = Crest-Trough
-            CrestHeightError = ABS(CrestHeight - InitInp%CrestHmax)
-            ! print *, CrestHeight
-
-            If (CrestHeightError>CrestHeightTol) THEN ! If crest height tolerance is not satisfied
-              ! Compute the crest height based on a slightly nudged crest elevation
-              tmpComplexArr = CMPLX(  InitOut%WaveElevC0(1,:) + (Crest+CrestHeightTol) * tmpArr, &
-                                      InitOut%WaveElevC0(2,:))
-              CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
-              CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
-              IF ( ErrStat >= AbortErrLev ) THEN
-                 CALL CleanUp()
-                 RETURN
-              END IF
-              ! Find the preceding or following trough, whichever is lower
-              Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                           MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
-              CrestHeight1 = Crest+CrestHeightTol-Trough
-              ! Update crest elevation with Newton-Raphson Method
-              Crest = Crest - (CrestHeight-InitInp%CrestHmax)*CrestHeightTol/(CrestHeight1-CrestHeight)
-            ENDIF
-          END DO
-          ! Apply the remaining part of the modification based on the final crest elevation
-          InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) + Crest * tmpArr
-        ENDIF
-        ! Modify the wave phase so that the crest shows up at the right place and the right time
-        DO I = 1,InitOut%NStepWave2-1
-          WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
-          ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
-                                     SinWaveDir(I)*InitInp%CrestYi) - &
-                                     OmegaArr(I)*InitInp%CrestTime
-          tmpComplex = CMPLX( InitOut%WaveElevC0(1,I) , InitOut%WaveElevC0(2,I)  )
-          tmpComplex = tmpComplex * CMPLX( cos(ConstWavePhase), sin(ConstWavePhase)  )
-          InitOut%WaveElevC0(1,I) = REAL(tmpComplex)
-          InitOut%WaveElevC0(2,I) = AIMAG(tmpComplex)
-        END DO
+         ! adjust InitOut%WaveElevC0 for constrained wave:
+         call ConstrainedNewWaves(InitInp, InitOut, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStatTmp, ErrMsgTmp)
+            call SetErrStat(ErrStatTmp,ErrMsgTmp, ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               call cleanup()
+               return
+            end if
       ENDIF
       ! End of Constrained Wave
 
@@ -1245,14 +1160,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Compute the inverse discrete Fourier transforms to find the time-domain
       !   representations of the wave kinematics without stretcing:
-
-      CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
 
       CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
@@ -1683,9 +1590,7 @@ CONTAINS
       IF (ALLOCATED( tmpComplexArr ))     DEALLOCATE( tmpComplexArr,    STAT=ErrStatTmp)
 
       IF (ALLOCATED( WaveS1SddArr ))      DEALLOCATE( WaveS1SddArr,     STAT=ErrStatTmp)
-      IF (ALLOCATED( WaveElevC0Re ))      DEALLOCATE( WaveElevC0Re,     STAT=ErrStatTmp)
       IF (ALLOCATED( OmegaArr ))          DEALLOCATE( OmegaArr,         STAT=ErrStatTmp)
-      IF (ALLOCATED( tmpArr ))            DEALLOCATE( tmpArr,           STAT=ErrStatTmp)
 
       IF (ALLOCATED( WaveAccC0HxiMCF ))     DEALLOCATE( WaveAccC0HxiMCF,     STAT=ErrStatTmp)
       IF (ALLOCATED( WaveAccC0HyiMCF ))     DEALLOCATE( WaveAccC0HyiMCF,     STAT=ErrStatTmp)
@@ -2452,6 +2357,131 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, OmegaArr, WaveS1SddArr)
       END DO   ! I - The positive frequency components (including zero) of the discrete Fourier transforms
       
 END SUBROUTINE Get_1Spsd_and_WaveElevC0
+!------------------------------------------------------------------------------------------------------------------------
+!> update InitOut%WaveElevC0; call InitFFT before calling this routine!
+SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStat, ErrMsg)
+
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut                                       ! Output data
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:InitOut%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
+   REAL(SiKi),                      INTENT(IN   )  :: WaveS1SddArr(0:InitOut%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
+   REAL(SiKi),                      INTENT(IN   )  :: CosWaveDir(0:InitOut%NStepWave2)              !< COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
+   REAL(SiKi),                      INTENT(IN   )  :: SinWaveDir(0:InitOut%NStepWave2)              !< SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
+   TYPE(FFT_DataType),              INTENT(IN   )  :: FFT_Data                                      !< data for FFT computations, already initialized
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat                                       !< error level/status
+   CHARACTER(ErrMsgLen),            INTENT(  OUT)  :: ErrMsg                                        !< error message
+
+   
+   REAL(SiKi)                                      :: WaveNmbr                                      ! Wavenumber of the current frequency component (1/meter)
+   INTEGER                                         :: I                                             ! Generic index
+   
+   ! Variables for constrained wave
+   REAL(SiKi)                                      :: WaveElevC0ReSum                               !< Sum of the wave DFT amplitudes (real part) across all frequencies (m)
+   REAL(SiKi)                                      :: WaveElevC0ImOmegaSum                          !< Sum of the wave DFT amplitudes (imaginary part) times the angular frequency across all frequencies (m(rad/s))
+   REAL(SiKi)                                      :: Crest                                         !< Crest elevation measured from SWL (m)
+   REAL(SiKi)                                      :: CrestHeight                                   !< Crest height measured from the crest to the preceding or following trough (m)
+   REAL(SiKi)                                      :: CrestHeight1                                  !< Crest height with purturbed crest elevation (m)
+   REAL(SiKi)                                      :: CrestHeightError                              !< Error in crest height relative to the specified crest height (m)
+   REAL(SiKi)                                      :: ConstWavePhase                                !< Phase adjustment to wave DFT amplitudes due to constrained wave (m)
+   REAL(SiKi)                                      :: Trough                                        !< The trough preceding or following the crest, whichever is lower (m)
+   REAL(SiKi)                                      :: m0                                            !< Zeroth spectral moment of the wave spectrum (m^2)
+   REAL(SiKi)                                      :: m2                                            !< First spectral moment of the wave spectrum (m^2(rad/s)^2)
+   REAL(SiKi)                                      :: CrestHeightTol = 1.0E-3                       !< Relative tolerance for the crest height when ConstWaveMod = 2
+   INTEGER(IntKi)                                  :: NStepTp                                       !< Number of time steps per peak period when waveMod = 2 (-)
+   INTEGER(IntKi)                                  :: Iter                                          !< Number of iterations when trying to meet the prescribed crest height (-)
+   INTEGER(IntKi)                                  :: MaxCrestIter = 20                             !< Maximum number of iterations when trying to meet the prescribed crest height (-)
+   
+   REAL(SiKi)                                      :: tmpArr(0:InitOut%NStepWave2)                  !< A temporary array of real numbers of constrained wave (-)
+   COMPLEX(SiKi)                                   :: tmpComplexArr(0:InitOut%NStepWave2)           !< A temporary array for FFT use
+   
+   COMPLEX(SiKi)                                   :: tmpComplex                                    ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
+   
+   INTEGER(IntKi)                                  :: ErrStatTmp                                    !< error level/status
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp                                     !< error message
+   CHARACTER(*), PARAMETER                         :: RoutineName = 'ConstrainedNewWaves'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+      !=== Constrained New Waves ===
+      ! Modify the wave components to implement the constrained wave
+   
+      ! Compute the relevant sums
+      m0                   = InitOut%WaveDOmega * SUM(WaveS1SddArr)
+      m2                   = InitOut%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
+      WaveElevC0ReSum      = SUM(InitOut%WaveElevC0(1,:))/m0
+      WaveElevC0ImOmegaSum = SUM(InitOut%WaveElevC0(2,:) * OmegaArr)/m2
+      ! Apply the part of the modification that is independent from the crest elevation
+      InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * InitOut%WaveDOmega
+      InitOut%WaveElevC0(2,:) = InitOut%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * InitOut%WaveDOmega
+
+      Crest = 0.5_SiKi * InitInp%CrestHmax ! Set crest elevation to half of crest height
+      tmpArr = InitOut%NStepWave2/m0 * InitOut%WaveDOmega * WaveS1SddArr
+        
+      IF (InitInp%ConstWaveMod == 1) THEN  ! Crest elevation prescribed
+      
+         ! Apply the remaining part of the modification proportional to crest elevation
+         InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) + Crest * tmpArr
+         
+      ELSE IF (InitInp%ConstWaveMod == 2) THEN ! Crest height prescribed - Need to interate
+      
+         NStepTp = CEILING(InitInp%WaveTp/InitInp%WaveDT)
+
+         Iter = 0
+         CrestHeightError = InitInp%CrestHmax
+         DO WHILE(CrestHeightError>CrestHeightTol .AND. Iter<=MaxCrestIter)
+            Iter = Iter + 1
+
+            ! Compute the crest height based on the current guess of crest elevation
+            tmpComplexArr = CMPLX(  InitOut%WaveElevC0(1,:) + Crest * tmpArr, &
+                                    InitOut%WaveElevC0(2,:))
+            CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+            ! Find the preceding or following trough, whichever is lower
+            Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
+                         MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+            CrestHeight = Crest-Trough
+            CrestHeightError = ABS(CrestHeight - InitInp%CrestHmax)
+            ! print *, CrestHeight
+
+            If (CrestHeightError>CrestHeightTol) THEN ! If crest height tolerance is not satisfied
+               ! Compute the crest height based on a slightly nudged crest elevation
+               tmpComplexArr = CMPLX(  InitOut%WaveElevC0(1,:) + (Crest+CrestHeightTol) * tmpArr, &
+                                       InitOut%WaveElevC0(2,:))
+               CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) RETURN
+
+               
+               ! Find the preceding or following trough, whichever is lower
+               Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
+                           MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+               CrestHeight1 = Crest+CrestHeightTol-Trough
+               ! Update crest elevation with Newton-Raphson Method
+               Crest = Crest - (CrestHeight-InitInp%CrestHmax)*CrestHeightTol/(CrestHeight1-CrestHeight)
+            ENDIF
+         END DO
+         
+         ! Apply the remaining part of the modification based on the final crest elevation
+         InitOut%WaveElevC0(1,:) = InitOut%WaveElevC0(1,:) + Crest * tmpArr
+      ENDIF
+      
+      ! Modify the wave phase so that the crest shows up at the right place and the right time
+      DO I = 1,InitOut%NStepWave2-1
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
+                                    SinWaveDir(I)*InitInp%CrestYi) - &
+                                    OmegaArr(I)*InitInp%CrestTime
+         tmpComplex = CMPLX( InitOut%WaveElevC0(1,I) , InitOut%WaveElevC0(2,I)  )
+         tmpComplex = tmpComplex * CMPLX( cos(ConstWavePhase), sin(ConstWavePhase)  )
+         InitOut%WaveElevC0(1,I) = REAL(tmpComplex)
+         InitOut%WaveElevC0(2,I) = AIMAG(tmpComplex)
+      END DO
+
+END SUBROUTINE ConstrainedNewWaves
 !------------------------------------------------------------------------------------------------------------------------
 END MODULE Waves
 !**********************************************************************************************************************************
