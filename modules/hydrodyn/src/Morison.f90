@@ -2554,7 +2554,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 !   REAL(ReKi)                                        :: F_DP(6)
    REAL(ReKi)                                        :: vmag, vmagf
    INTEGER                                           :: I, J, K
-   REAL(ReKi)                                        :: AllOuts(MaxOutPts)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
 
 
