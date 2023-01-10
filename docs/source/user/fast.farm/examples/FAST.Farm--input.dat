@@ -15,8 +15,9 @@ False         UseSC                 - Use a super controller? (flag)
 0.04	      DT_Mooring            - Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
 --- AMBIENT WIND: PRECURSOR IN VTK FORMAT --- [used only for Mod_AmbWind=1]
 2.0           DT_Low-VTK            - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]
-0.5           DT_High-VTK           - Time step for high-resolution wind data input files (s) [>0.0] "/AmbWind/steady" WindFilePath Path name to wind data files from precursor (string)
-False         ChkWndFiles           - Check all the ambient wind files for data consistency (flag)
+0.5           DT_High-VTK           - Time step for high-resolution wind data input files (s) [>0.0]
+"unused"           WindFilePath       - Path name to VTK wind data files from precursor (string)
+False         ChkWndFiles           - Check all the ambient wind files for data consistency? (flag)
 --- AMBIENT WIND: INFLOWWIND MODULE --- [used only for Mod_AmbWind=2 or 3]
 2.0           DT_Low                - Time step for low-resolution wind data interpolation; will be used as the global FAST.Farm time step (s) [>0.0]
 0.5           DT_High               - Time step for high-resolution wind data interpolation (s) [>0.0]
