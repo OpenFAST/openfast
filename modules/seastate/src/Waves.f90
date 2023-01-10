@@ -1941,10 +1941,10 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, ErrStat, ErrMsg )
          !InitOut%WaveDirArr set in UserWaveComponents_Init for WaveMod 7
          !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6
 
-      ELSEIF(.not. InitInp%WaveMultiDir .or. InitOut%WaveNDir <= 1) THEN ! we have a single wave direction
+      ELSEIF(.not. InitInp%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
       
          InitOut%WaveDirArr = InitInp%WaveDir
-         
+
       ELSE ! multi directional waves
          
          !--------------------------------------------------------------------------------
