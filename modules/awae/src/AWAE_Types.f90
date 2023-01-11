@@ -86,6 +86,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Y0_low      !< Y-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Z0_low      !< Z-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WT_Position      !< X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number [meters]
+    INTEGER(IntKi)  :: Mod_Projection      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
   END TYPE AWAE_InputFileType
 ! =======================
 ! =========  AWAE_InitInputType  =======
@@ -144,9 +145,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vamb_low      !< UVW components of ambient wind across the low-resolution domain throughout the farm [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vamb_lowpol      !< UVW components of disturbed wind (ambient + wakes) at points in the polar grid for each wake plane for each turbine [m/s]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vdist_low      !< UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm [m/s]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vdist_low_full      !< UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm, for outputs [m/s]
     TYPE(AWAE_HighWindGrid) , DIMENSION(:), ALLOCATABLE  :: Vamb_High      !< UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step [m/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rhat_plane      !<  [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: parallelFlag      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_s      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_e      !<  [-]
@@ -154,8 +154,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_e      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_cs      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !<  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vx_wake      !<  [m/s]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Vr_wake      !<  [m/s]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane 
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane 
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane 
@@ -172,7 +170,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumTurbines      !< Number of wind turbines in the farm [>=1] [-]
     INTEGER(IntKi)  :: NumRadii      !< Number of radii in the radial finite-difference grid  [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes      !< Number of wake planes downwind of the rotor where the wake is propagated [>=2] [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r      !< Discretization of radial finite-difference grid [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: y      !< Horizontal discretization of the wake planes [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: z      !< Vertical discretization of the wake planes [m]
     INTEGER(IntKi)  :: Mod_AmbWind      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
     INTEGER(IntKi)  :: nX_low      !< Number of low-resolution spatial nodes in X direction [-]
     INTEGER(IntKi)  :: nY_low      !< Number of low-resolution spatial nodes in Y direction [-]
@@ -206,6 +205,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_Meander      !< Spatial filter model for wake meandering [-]
     REAL(ReKi)  :: C_Meander      !< Calibrated parameter for wake meandering [-]
     REAL(ReKi)  :: C_ScaleDiam      !< Normalized wake volume radius for wake meandering (normalized by the wake diameter) [-]
+    INTEGER(IntKi)  :: Mod_Projection      !< Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] [-]
     TYPE(InflowWind_ParameterType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module parameters [-]
     INTEGER(IntKi)  :: WrDisSkp1      !< Number of time steps to skip plus one [-]
     LOGICAL  :: WrDisWind      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
@@ -232,8 +232,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AWAE_InputType
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: xhat_plane      !< Orientations of wake planes, normal to wake planes, for each turbine [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: p_plane      !< Center positions of wake planes for each turbine [m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vx_wake      !< Axial wake velocity deficit at wake planes, distributed radially, for each turbine [m/s]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vr_wake      !< Radial wake velocity deficit at wake planes, distributed radially, for each turbine [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vx_wake      !< Axial wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vy_wake      !< Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vz_wake      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes for each turbine [m]
   END TYPE AWAE_InputType
 ! =======================
@@ -647,6 +648,7 @@ IF (ALLOCATED(SrcInputFileTypeData%WT_Position)) THEN
   END IF
     DstInputFileTypeData%WT_Position = SrcInputFileTypeData%WT_Position
 ENDIF
+    DstInputFileTypeData%Mod_Projection = SrcInputFileTypeData%Mod_Projection
  END SUBROUTINE AWAE_CopyInputFileType
 
  SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -816,6 +818,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! WT_Position upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WT_Position)  ! WT_Position
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! Mod_Projection
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1060,6 +1063,8 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%Mod_Projection
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_PackInputFileType
 
  SUBROUTINE AWAE_UnPackInputFileType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1337,6 +1342,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%Mod_Projection = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AWAE_UnPackInputFileType
 
  SUBROUTINE AWAE_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -3373,6 +3380,24 @@ IF (ALLOCATED(SrcMiscData%Vdist_low)) THEN
   END IF
     DstMiscData%Vdist_low = SrcMiscData%Vdist_low
 ENDIF
+IF (ALLOCATED(SrcMiscData%Vdist_low_full)) THEN
+  i1_l = LBOUND(SrcMiscData%Vdist_low_full,1)
+  i1_u = UBOUND(SrcMiscData%Vdist_low_full,1)
+  i2_l = LBOUND(SrcMiscData%Vdist_low_full,2)
+  i2_u = UBOUND(SrcMiscData%Vdist_low_full,2)
+  i3_l = LBOUND(SrcMiscData%Vdist_low_full,3)
+  i3_u = UBOUND(SrcMiscData%Vdist_low_full,3)
+  i4_l = LBOUND(SrcMiscData%Vdist_low_full,4)
+  i4_u = UBOUND(SrcMiscData%Vdist_low_full,4)
+  IF (.NOT. ALLOCATED(DstMiscData%Vdist_low_full)) THEN 
+    ALLOCATE(DstMiscData%Vdist_low_full(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vdist_low_full.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Vdist_low_full = SrcMiscData%Vdist_low_full
+ENDIF
 IF (ALLOCATED(SrcMiscData%Vamb_High)) THEN
   i1_l = LBOUND(SrcMiscData%Vamb_High,1)
   i1_u = UBOUND(SrcMiscData%Vamb_High,1)
@@ -3388,34 +3413,6 @@ IF (ALLOCATED(SrcMiscData%Vamb_High)) THEN
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%xhat_plane)) THEN
-  i1_l = LBOUND(SrcMiscData%xhat_plane,1)
-  i1_u = UBOUND(SrcMiscData%xhat_plane,1)
-  i2_l = LBOUND(SrcMiscData%xhat_plane,2)
-  i2_u = UBOUND(SrcMiscData%xhat_plane,2)
-  IF (.NOT. ALLOCATED(DstMiscData%xhat_plane)) THEN 
-    ALLOCATE(DstMiscData%xhat_plane(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%xhat_plane.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%xhat_plane = SrcMiscData%xhat_plane
-ENDIF
-IF (ALLOCATED(SrcMiscData%rhat_plane)) THEN
-  i1_l = LBOUND(SrcMiscData%rhat_plane,1)
-  i1_u = UBOUND(SrcMiscData%rhat_plane,1)
-  i2_l = LBOUND(SrcMiscData%rhat_plane,2)
-  i2_u = UBOUND(SrcMiscData%rhat_plane,2)
-  IF (.NOT. ALLOCATED(DstMiscData%rhat_plane)) THEN 
-    ALLOCATE(DstMiscData%rhat_plane(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%rhat_plane.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%rhat_plane = SrcMiscData%rhat_plane
 ENDIF
 IF (ALLOCATED(SrcMiscData%parallelFlag)) THEN
   i1_l = LBOUND(SrcMiscData%parallelFlag,1)
@@ -3522,30 +3519,6 @@ IF (ALLOCATED(SrcMiscData%pvec_ce)) THEN
     END IF
   END IF
     DstMiscData%pvec_ce = SrcMiscData%pvec_ce
-ENDIF
-IF (ALLOCATED(SrcMiscData%Vx_wake)) THEN
-  i1_l = LBOUND(SrcMiscData%Vx_wake,1)
-  i1_u = UBOUND(SrcMiscData%Vx_wake,1)
-  IF (.NOT. ALLOCATED(DstMiscData%Vx_wake)) THEN 
-    ALLOCATE(DstMiscData%Vx_wake(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vx_wake.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%Vx_wake = SrcMiscData%Vx_wake
-ENDIF
-IF (ALLOCATED(SrcMiscData%Vr_wake)) THEN
-  i1_l = LBOUND(SrcMiscData%Vr_wake,1)
-  i1_u = UBOUND(SrcMiscData%Vr_wake,1)
-  IF (.NOT. ALLOCATED(DstMiscData%Vr_wake)) THEN 
-    ALLOCATE(DstMiscData%Vr_wake(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vr_wake.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%Vr_wake = SrcMiscData%Vr_wake
 ENDIF
 IF (ALLOCATED(SrcMiscData%outVizXYPlane)) THEN
   i1_l = LBOUND(SrcMiscData%outVizXYPlane,1)
@@ -3661,18 +3634,15 @@ ENDIF
 IF (ALLOCATED(MiscData%Vdist_low)) THEN
   DEALLOCATE(MiscData%Vdist_low)
 ENDIF
+IF (ALLOCATED(MiscData%Vdist_low_full)) THEN
+  DEALLOCATE(MiscData%Vdist_low_full)
+ENDIF
 IF (ALLOCATED(MiscData%Vamb_High)) THEN
 DO i1 = LBOUND(MiscData%Vamb_High,1), UBOUND(MiscData%Vamb_High,1)
   CALL AWAE_Destroyhighwindgrid( MiscData%Vamb_High(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Vamb_High)
-ENDIF
-IF (ALLOCATED(MiscData%xhat_plane)) THEN
-  DEALLOCATE(MiscData%xhat_plane)
-ENDIF
-IF (ALLOCATED(MiscData%rhat_plane)) THEN
-  DEALLOCATE(MiscData%rhat_plane)
 ENDIF
 IF (ALLOCATED(MiscData%parallelFlag)) THEN
   DEALLOCATE(MiscData%parallelFlag)
@@ -3694,12 +3664,6 @@ IF (ALLOCATED(MiscData%pvec_cs)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%pvec_ce)) THEN
   DEALLOCATE(MiscData%pvec_ce)
-ENDIF
-IF (ALLOCATED(MiscData%Vx_wake)) THEN
-  DEALLOCATE(MiscData%Vx_wake)
-ENDIF
-IF (ALLOCATED(MiscData%Vr_wake)) THEN
-  DEALLOCATE(MiscData%Vr_wake)
 ENDIF
 IF (ALLOCATED(MiscData%outVizXYPlane)) THEN
   DEALLOCATE(MiscData%outVizXYPlane)
@@ -3777,6 +3741,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*4  ! Vdist_low upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vdist_low)  ! Vdist_low
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vdist_low_full allocated yes/no
+  IF ( ALLOCATED(InData%Vdist_low_full) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! Vdist_low_full upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vdist_low_full)  ! Vdist_low_full
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vamb_High allocated yes/no
   IF ( ALLOCATED(InData%Vamb_High) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Vamb_High upper/lower bounds for each dimension
@@ -3800,16 +3769,6 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! xhat_plane allocated yes/no
-  IF ( ALLOCATED(InData%xhat_plane) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! xhat_plane upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%xhat_plane)  ! xhat_plane
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! rhat_plane allocated yes/no
-  IF ( ALLOCATED(InData%rhat_plane) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! rhat_plane upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%rhat_plane)  ! rhat_plane
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! parallelFlag allocated yes/no
   IF ( ALLOCATED(InData%parallelFlag) ) THEN
@@ -3845,16 +3804,6 @@ ENDIF
   IF ( ALLOCATED(InData%pvec_ce) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! pvec_ce upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%pvec_ce)  ! pvec_ce
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vx_wake allocated yes/no
-  IF ( ALLOCATED(InData%Vx_wake) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Vx_wake upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_wake)  ! Vx_wake
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vr_wake allocated yes/no
-  IF ( ALLOCATED(InData%Vr_wake) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Vr_wake upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vr_wake)  ! Vr_wake
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! outVizXYPlane allocated yes/no
   IF ( ALLOCATED(InData%outVizXYPlane) ) THEN
@@ -4069,6 +4018,36 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%Vdist_low_full) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_low_full,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_low_full,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%Vdist_low_full,4), UBOUND(InData%Vdist_low_full,4)
+        DO i3 = LBOUND(InData%Vdist_low_full,3), UBOUND(InData%Vdist_low_full,3)
+          DO i2 = LBOUND(InData%Vdist_low_full,2), UBOUND(InData%Vdist_low_full,2)
+            DO i1 = LBOUND(InData%Vdist_low_full,1), UBOUND(InData%Vdist_low_full,1)
+              ReKiBuf(Re_Xferred) = InData%Vdist_low_full(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%Vamb_High) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4109,46 +4088,6 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%xhat_plane) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%xhat_plane,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%xhat_plane,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%xhat_plane,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%xhat_plane,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%xhat_plane,2), UBOUND(InData%xhat_plane,2)
-        DO i1 = LBOUND(InData%xhat_plane,1), UBOUND(InData%xhat_plane,1)
-          ReKiBuf(Re_Xferred) = InData%xhat_plane(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%rhat_plane) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rhat_plane,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rhat_plane,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rhat_plane,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rhat_plane,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%rhat_plane,2), UBOUND(InData%rhat_plane,2)
-        DO i1 = LBOUND(InData%rhat_plane,1), UBOUND(InData%rhat_plane,1)
-          ReKiBuf(Re_Xferred) = InData%rhat_plane(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%parallelFlag) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4308,36 +4247,6 @@ ENDIF
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Vx_wake) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_wake,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_wake,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%Vx_wake,1), UBOUND(InData%Vx_wake,1)
-        ReKiBuf(Re_Xferred) = InData%Vx_wake(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%Vr_wake) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vr_wake,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vr_wake,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%Vr_wake,1), UBOUND(InData%Vr_wake,1)
-        ReKiBuf(Re_Xferred) = InData%Vr_wake(i1)
-        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%outVizXYPlane) ) THEN
@@ -4704,6 +4613,39 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vdist_low_full not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vdist_low_full)) DEALLOCATE(OutData%Vdist_low_full)
+    ALLOCATE(OutData%Vdist_low_full(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vdist_low_full.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%Vdist_low_full,4), UBOUND(OutData%Vdist_low_full,4)
+        DO i3 = LBOUND(OutData%Vdist_low_full,3), UBOUND(OutData%Vdist_low_full,3)
+          DO i2 = LBOUND(OutData%Vdist_low_full,2), UBOUND(OutData%Vdist_low_full,2)
+            DO i1 = LBOUND(OutData%Vdist_low_full,1), UBOUND(OutData%Vdist_low_full,1)
+              OutData%Vdist_low_full(i1,i2,i3,i4) = REAL(ReKiBuf(Re_Xferred), SiKi)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vamb_High not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4759,52 +4701,6 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! xhat_plane not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%xhat_plane)) DEALLOCATE(OutData%xhat_plane)
-    ALLOCATE(OutData%xhat_plane(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%xhat_plane.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%xhat_plane,2), UBOUND(OutData%xhat_plane,2)
-        DO i1 = LBOUND(OutData%xhat_plane,1), UBOUND(OutData%xhat_plane,1)
-          OutData%xhat_plane(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rhat_plane not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%rhat_plane)) DEALLOCATE(OutData%rhat_plane)
-    ALLOCATE(OutData%rhat_plane(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%rhat_plane.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%rhat_plane,2), UBOUND(OutData%rhat_plane,2)
-        DO i1 = LBOUND(OutData%rhat_plane,1), UBOUND(OutData%rhat_plane,1)
-          OutData%rhat_plane(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! parallelFlag not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4985,42 +4881,6 @@ ENDIF
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vx_wake not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vx_wake)) DEALLOCATE(OutData%Vx_wake)
-    ALLOCATE(OutData%Vx_wake(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vx_wake.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%Vx_wake,1), UBOUND(OutData%Vx_wake,1)
-        OutData%Vx_wake(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vr_wake not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vr_wake)) DEALLOCATE(OutData%Vr_wake)
-    ALLOCATE(OutData%Vr_wake(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vr_wake.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%Vr_wake,1), UBOUND(OutData%Vr_wake,1)
-        OutData%Vr_wake(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! outVizXYPlane not allocated
@@ -5361,17 +5221,29 @@ ENDIF
     DstParamData%NumTurbines = SrcParamData%NumTurbines
     DstParamData%NumRadii = SrcParamData%NumRadii
     DstParamData%NumPlanes = SrcParamData%NumPlanes
-IF (ALLOCATED(SrcParamData%r)) THEN
-  i1_l = LBOUND(SrcParamData%r,1)
-  i1_u = UBOUND(SrcParamData%r,1)
-  IF (.NOT. ALLOCATED(DstParamData%r)) THEN 
-    ALLOCATE(DstParamData%r(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcParamData%y)) THEN
+  i1_l = LBOUND(SrcParamData%y,1)
+  i1_u = UBOUND(SrcParamData%y,1)
+  IF (.NOT. ALLOCATED(DstParamData%y)) THEN 
+    ALLOCATE(DstParamData%y(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%r.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%y.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstParamData%r = SrcParamData%r
+    DstParamData%y = SrcParamData%y
+ENDIF
+IF (ALLOCATED(SrcParamData%z)) THEN
+  i1_l = LBOUND(SrcParamData%z,1)
+  i1_u = UBOUND(SrcParamData%z,1)
+  IF (.NOT. ALLOCATED(DstParamData%z)) THEN 
+    ALLOCATE(DstParamData%z(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%z.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%z = SrcParamData%z
 ENDIF
     DstParamData%Mod_AmbWind = SrcParamData%Mod_AmbWind
     DstParamData%nX_low = SrcParamData%nX_low
@@ -5513,6 +5385,7 @@ ENDIF
     DstParamData%Mod_Meander = SrcParamData%Mod_Meander
     DstParamData%C_Meander = SrcParamData%C_Meander
     DstParamData%C_ScaleDiam = SrcParamData%C_ScaleDiam
+    DstParamData%Mod_Projection = SrcParamData%Mod_Projection
 IF (ALLOCATED(SrcParamData%IfW)) THEN
   i1_l = LBOUND(SrcParamData%IfW,1)
   i1_u = UBOUND(SrcParamData%IfW,1)
@@ -5596,8 +5469,11 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-IF (ALLOCATED(ParamData%r)) THEN
-  DEALLOCATE(ParamData%r)
+IF (ALLOCATED(ParamData%y)) THEN
+  DEALLOCATE(ParamData%y)
+ENDIF
+IF (ALLOCATED(ParamData%z)) THEN
+  DEALLOCATE(ParamData%z)
 ENDIF
 IF (ALLOCATED(ParamData%X0_high)) THEN
   DEALLOCATE(ParamData%X0_high)
@@ -5683,10 +5559,15 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumTurbines
       Int_BufSz  = Int_BufSz  + 1  ! NumRadii
       Int_BufSz  = Int_BufSz  + 1  ! NumPlanes
-  Int_BufSz   = Int_BufSz   + 1     ! r allocated yes/no
-  IF ( ALLOCATED(InData%r) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! r upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r)  ! r
+  Int_BufSz   = Int_BufSz   + 1     ! y allocated yes/no
+  IF ( ALLOCATED(InData%y) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! y upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%y)  ! y
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! z allocated yes/no
+  IF ( ALLOCATED(InData%z) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! z upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%z)  ! z
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_AmbWind
       Int_BufSz  = Int_BufSz  + 1  ! nX_low
@@ -5757,6 +5638,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Mod_Meander
       Re_BufSz   = Re_BufSz   + 1  ! C_Meander
       Re_BufSz   = Re_BufSz   + 1  ! C_ScaleDiam
+      Int_BufSz  = Int_BufSz  + 1  ! Mod_Projection
   Int_BufSz   = Int_BufSz   + 1     ! IfW allocated yes/no
   IF ( ALLOCATED(InData%IfW) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! IfW upper/lower bounds for each dimension
@@ -5841,18 +5723,33 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumPlanes
     Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%r) ) THEN
+  IF ( .NOT. ALLOCATED(InData%y) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%r,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%r,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%y,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%y,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%r,1), UBOUND(InData%r,1)
-        ReKiBuf(Re_Xferred) = InData%r(i1)
+      DO i1 = LBOUND(InData%y,1), UBOUND(InData%y,1)
+        ReKiBuf(Re_Xferred) = InData%y(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%z) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%z,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%z,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%z,1), UBOUND(InData%z,1)
+        ReKiBuf(Re_Xferred) = InData%z(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -6061,6 +5958,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%C_ScaleDiam
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%Mod_Projection
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%IfW) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -6208,21 +6107,39 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumPlanes = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! y not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%r)) DEALLOCATE(OutData%r)
-    ALLOCATE(OutData%r(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%y)) DEALLOCATE(OutData%y)
+    ALLOCATE(OutData%y(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%r.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%y.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%r,1), UBOUND(OutData%r,1)
-        OutData%r(i1) = ReKiBuf(Re_Xferred)
+      DO i1 = LBOUND(OutData%y,1), UBOUND(OutData%y,1)
+        OutData%y(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! z not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%z)) DEALLOCATE(OutData%z)
+    ALLOCATE(OutData%z(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%z.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%z,1), UBOUND(OutData%z,1)
+        OutData%z(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -6460,6 +6377,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%C_ScaleDiam = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%Mod_Projection = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! IfW not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -7067,6 +6986,7 @@ ENDIF
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_CopyInput'
@@ -7112,8 +7032,10 @@ IF (ALLOCATED(SrcInputData%Vx_wake)) THEN
   i2_u = UBOUND(SrcInputData%Vx_wake,2)
   i3_l = LBOUND(SrcInputData%Vx_wake,3)
   i3_u = UBOUND(SrcInputData%Vx_wake,3)
+  i4_l = LBOUND(SrcInputData%Vx_wake,4)
+  i4_u = UBOUND(SrcInputData%Vx_wake,4)
   IF (.NOT. ALLOCATED(DstInputData%Vx_wake)) THEN 
-    ALLOCATE(DstInputData%Vx_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    ALLOCATE(DstInputData%Vx_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vx_wake.', ErrStat, ErrMsg,RoutineName)
       RETURN
@@ -7121,21 +7043,41 @@ IF (ALLOCATED(SrcInputData%Vx_wake)) THEN
   END IF
     DstInputData%Vx_wake = SrcInputData%Vx_wake
 ENDIF
-IF (ALLOCATED(SrcInputData%Vr_wake)) THEN
-  i1_l = LBOUND(SrcInputData%Vr_wake,1)
-  i1_u = UBOUND(SrcInputData%Vr_wake,1)
-  i2_l = LBOUND(SrcInputData%Vr_wake,2)
-  i2_u = UBOUND(SrcInputData%Vr_wake,2)
-  i3_l = LBOUND(SrcInputData%Vr_wake,3)
-  i3_u = UBOUND(SrcInputData%Vr_wake,3)
-  IF (.NOT. ALLOCATED(DstInputData%Vr_wake)) THEN 
-    ALLOCATE(DstInputData%Vr_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%Vy_wake)) THEN
+  i1_l = LBOUND(SrcInputData%Vy_wake,1)
+  i1_u = UBOUND(SrcInputData%Vy_wake,1)
+  i2_l = LBOUND(SrcInputData%Vy_wake,2)
+  i2_u = UBOUND(SrcInputData%Vy_wake,2)
+  i3_l = LBOUND(SrcInputData%Vy_wake,3)
+  i3_u = UBOUND(SrcInputData%Vy_wake,3)
+  i4_l = LBOUND(SrcInputData%Vy_wake,4)
+  i4_u = UBOUND(SrcInputData%Vy_wake,4)
+  IF (.NOT. ALLOCATED(DstInputData%Vy_wake)) THEN 
+    ALLOCATE(DstInputData%Vy_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vr_wake.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vy_wake.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%Vr_wake = SrcInputData%Vr_wake
+    DstInputData%Vy_wake = SrcInputData%Vy_wake
+ENDIF
+IF (ALLOCATED(SrcInputData%Vz_wake)) THEN
+  i1_l = LBOUND(SrcInputData%Vz_wake,1)
+  i1_u = UBOUND(SrcInputData%Vz_wake,1)
+  i2_l = LBOUND(SrcInputData%Vz_wake,2)
+  i2_u = UBOUND(SrcInputData%Vz_wake,2)
+  i3_l = LBOUND(SrcInputData%Vz_wake,3)
+  i3_u = UBOUND(SrcInputData%Vz_wake,3)
+  i4_l = LBOUND(SrcInputData%Vz_wake,4)
+  i4_u = UBOUND(SrcInputData%Vz_wake,4)
+  IF (.NOT. ALLOCATED(DstInputData%Vz_wake)) THEN 
+    ALLOCATE(DstInputData%Vz_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vz_wake.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%Vz_wake = SrcInputData%Vz_wake
 ENDIF
 IF (ALLOCATED(SrcInputData%D_wake)) THEN
   i1_l = LBOUND(SrcInputData%D_wake,1)
@@ -7183,8 +7125,11 @@ ENDIF
 IF (ALLOCATED(InputData%Vx_wake)) THEN
   DEALLOCATE(InputData%Vx_wake)
 ENDIF
-IF (ALLOCATED(InputData%Vr_wake)) THEN
-  DEALLOCATE(InputData%Vr_wake)
+IF (ALLOCATED(InputData%Vy_wake)) THEN
+  DEALLOCATE(InputData%Vy_wake)
+ENDIF
+IF (ALLOCATED(InputData%Vz_wake)) THEN
+  DEALLOCATE(InputData%Vz_wake)
 ENDIF
 IF (ALLOCATED(InputData%D_wake)) THEN
   DEALLOCATE(InputData%D_wake)
@@ -7238,13 +7183,18 @@ ENDIF
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Vx_wake allocated yes/no
   IF ( ALLOCATED(InData%Vx_wake) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! Vx_wake upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*4  ! Vx_wake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vx_wake)  ! Vx_wake
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vr_wake allocated yes/no
-  IF ( ALLOCATED(InData%Vr_wake) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! Vr_wake upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vr_wake)  ! Vr_wake
+  Int_BufSz   = Int_BufSz   + 1     ! Vy_wake allocated yes/no
+  IF ( ALLOCATED(InData%Vy_wake) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! Vy_wake upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vy_wake)  ! Vy_wake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Vz_wake allocated yes/no
+  IF ( ALLOCATED(InData%Vz_wake) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! Vz_wake upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Vz_wake)  ! Vz_wake
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! D_wake allocated yes/no
   IF ( ALLOCATED(InData%D_wake) ) THEN
@@ -7343,37 +7293,77 @@ ENDIF
     IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_wake,3)
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_wake,3)
     Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vx_wake,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vx_wake,4)
+    Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%Vx_wake,3), UBOUND(InData%Vx_wake,3)
-        DO i2 = LBOUND(InData%Vx_wake,2), UBOUND(InData%Vx_wake,2)
-          DO i1 = LBOUND(InData%Vx_wake,1), UBOUND(InData%Vx_wake,1)
-            ReKiBuf(Re_Xferred) = InData%Vx_wake(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
+      DO i4 = LBOUND(InData%Vx_wake,4), UBOUND(InData%Vx_wake,4)
+        DO i3 = LBOUND(InData%Vx_wake,3), UBOUND(InData%Vx_wake,3)
+          DO i2 = LBOUND(InData%Vx_wake,2), UBOUND(InData%Vx_wake,2)
+            DO i1 = LBOUND(InData%Vx_wake,1), UBOUND(InData%Vx_wake,1)
+              ReKiBuf(Re_Xferred) = InData%Vx_wake(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
           END DO
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vr_wake) ) THEN
+  IF ( .NOT. ALLOCATED(InData%Vy_wake) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vr_wake,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vr_wake,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_wake,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_wake,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vr_wake,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vr_wake,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_wake,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_wake,2)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vr_wake,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vr_wake,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_wake,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_wake,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vy_wake,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vy_wake,4)
     Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%Vr_wake,3), UBOUND(InData%Vr_wake,3)
-        DO i2 = LBOUND(InData%Vr_wake,2), UBOUND(InData%Vr_wake,2)
-          DO i1 = LBOUND(InData%Vr_wake,1), UBOUND(InData%Vr_wake,1)
-            ReKiBuf(Re_Xferred) = InData%Vr_wake(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
+      DO i4 = LBOUND(InData%Vy_wake,4), UBOUND(InData%Vy_wake,4)
+        DO i3 = LBOUND(InData%Vy_wake,3), UBOUND(InData%Vy_wake,3)
+          DO i2 = LBOUND(InData%Vy_wake,2), UBOUND(InData%Vy_wake,2)
+            DO i1 = LBOUND(InData%Vy_wake,1), UBOUND(InData%Vy_wake,1)
+              ReKiBuf(Re_Xferred) = InData%Vy_wake(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Vz_wake) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vz_wake,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vz_wake,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vz_wake,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vz_wake,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vz_wake,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vz_wake,3)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vz_wake,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vz_wake,4)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i4 = LBOUND(InData%Vz_wake,4), UBOUND(InData%Vz_wake,4)
+        DO i3 = LBOUND(InData%Vz_wake,3), UBOUND(InData%Vz_wake,3)
+          DO i2 = LBOUND(InData%Vz_wake,2), UBOUND(InData%Vz_wake,2)
+            DO i1 = LBOUND(InData%Vz_wake,1), UBOUND(InData%Vz_wake,1)
+              ReKiBuf(Re_Xferred) = InData%Vz_wake(i1,i2,i3,i4)
+              Re_Xferred = Re_Xferred + 1
+            END DO
           END DO
         END DO
       END DO
@@ -7416,6 +7406,7 @@ ENDIF
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_UnPackInput'
@@ -7498,22 +7489,27 @@ ENDIF
     i3_l = IntKiBuf( Int_Xferred    )
     i3_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
     IF (ALLOCATED(OutData%Vx_wake)) DEALLOCATE(OutData%Vx_wake)
-    ALLOCATE(OutData%Vx_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    ALLOCATE(OutData%Vx_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vx_wake.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%Vx_wake,3), UBOUND(OutData%Vx_wake,3)
-        DO i2 = LBOUND(OutData%Vx_wake,2), UBOUND(OutData%Vx_wake,2)
-          DO i1 = LBOUND(OutData%Vx_wake,1), UBOUND(OutData%Vx_wake,1)
-            OutData%Vx_wake(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
+      DO i4 = LBOUND(OutData%Vx_wake,4), UBOUND(OutData%Vx_wake,4)
+        DO i3 = LBOUND(OutData%Vx_wake,3), UBOUND(OutData%Vx_wake,3)
+          DO i2 = LBOUND(OutData%Vx_wake,2), UBOUND(OutData%Vx_wake,2)
+            DO i1 = LBOUND(OutData%Vx_wake,1), UBOUND(OutData%Vx_wake,1)
+              OutData%Vx_wake(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              Re_Xferred = Re_Xferred + 1
+            END DO
           END DO
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vr_wake not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vy_wake not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -7526,17 +7522,55 @@ ENDIF
     i3_l = IntKiBuf( Int_Xferred    )
     i3_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vr_wake)) DEALLOCATE(OutData%Vr_wake)
-    ALLOCATE(OutData%Vr_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vy_wake)) DEALLOCATE(OutData%Vy_wake)
+    ALLOCATE(OutData%Vy_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vr_wake.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vy_wake.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%Vr_wake,3), UBOUND(OutData%Vr_wake,3)
-        DO i2 = LBOUND(OutData%Vr_wake,2), UBOUND(OutData%Vr_wake,2)
-          DO i1 = LBOUND(OutData%Vr_wake,1), UBOUND(OutData%Vr_wake,1)
-            OutData%Vr_wake(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
+      DO i4 = LBOUND(OutData%Vy_wake,4), UBOUND(OutData%Vy_wake,4)
+        DO i3 = LBOUND(OutData%Vy_wake,3), UBOUND(OutData%Vy_wake,3)
+          DO i2 = LBOUND(OutData%Vy_wake,2), UBOUND(OutData%Vy_wake,2)
+            DO i1 = LBOUND(OutData%Vy_wake,1), UBOUND(OutData%Vy_wake,1)
+              OutData%Vy_wake(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              Re_Xferred = Re_Xferred + 1
+            END DO
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vz_wake not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i4_l = IntKiBuf( Int_Xferred    )
+    i4_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vz_wake)) DEALLOCATE(OutData%Vz_wake)
+    ALLOCATE(OutData%Vz_wake(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vz_wake.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i4 = LBOUND(OutData%Vz_wake,4), UBOUND(OutData%Vz_wake,4)
+        DO i3 = LBOUND(OutData%Vz_wake,3), UBOUND(OutData%Vz_wake,3)
+          DO i2 = LBOUND(OutData%Vz_wake,2), UBOUND(OutData%Vz_wake,2)
+            DO i1 = LBOUND(OutData%Vz_wake,1), UBOUND(OutData%Vz_wake,1)
+              OutData%Vz_wake(i1,i2,i3,i4) = ReKiBuf(Re_Xferred)
+              Re_Xferred = Re_Xferred + 1
+            END DO
           END DO
         END DO
       END DO

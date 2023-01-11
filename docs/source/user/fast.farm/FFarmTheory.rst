@@ -552,11 +552,43 @@ overwritten by the user of FAST.Farm.
 The wake-deficit evolution is solved in discrete time on an axisymmetric
 finite-difference grid consisting of a fixed number of wake planes,
 :math:`N_p` (with :math:`n_p` the wake-plane counter such that
-:math:`0\le n_p\le N_p-1`), each with a fixed radial grid of nodes.
-Because the wake deficit is assumed to be axisymmetric, the radial
-finite-difference grid can be considered a plane. A wake plane can be
+:math:`0\le n_p\le N_p-1`).
+A wake plane can be
 thought of as a cross section of the wake wherein the wake deficit is
 calculated.
+
+
+Three wake formulations are available forthe evolution of the wake planes.
+The parameter **Mod_Wake** is used to switch between wake formulations.
+There are three options available:
+
+1) Polar [**Mod_Wake=1**] (default). 
+The wake is axi-symmetric, defined on a polar grid, 
+solved using an implicit Crank-Nicolson scheme,
+satisfying both the momentum and mass conservation laws under a shear layer approximation.
+Each plane has a fixed radial grid of nodes.
+Because the wake deficit is assumed to be axisymmetric, the radial
+finite-difference grid can be considered a plane.
+
+2) Curled-wake model [**Mod_Wake=2**]. 
+The wake is defined on a Cartesian grid, 
+the effect of curled wake vorticies in skewed inflow is accounted for by introducing cross-flow velocities, the momentum conservation is solved using a first-order forward Euler scheme, 
+mass conservation is not enforced, the effect of wake swirl may be accounted for.
+Each plane has a fixed number of nodes in the y and z direction (of the meandering frame).
+The wake will adopt a "curled" shape in skewed inflow.
+
+3) Cartesian [**Mod_Wake=3**]
+This corresponds to model 2 with curled-wake vortices of zero intensities, leading to an axi-symmetric wake.
+Swirl effects can be included in this formulation.
+
+Because the Curl and Cartesian implementations rely on a first-order forward sheme, the implementation is less robust that the Polar implementation. 
+An approximate stability criterion for the curled-wake model is given in Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__). This criterion was adapted to provide the guidelines on **dr** and **DT_Low** given in :numref:`FF:ModGuidance`.
+
+
+The curled-wake model implementation is described in the following `reference <https://onlinelibrary.wiley.com/doi/10.1002/we.2785>`__.
+
+**The rest of this documentation concerns the Polar fomulation**.
+
 
 Inputs to the *WD* module include :math:`\hat{x}^\text{Disk}`,
 :math:`\vec{p}^\text{Hub}`, :math:`D^\text{Rotor}`,

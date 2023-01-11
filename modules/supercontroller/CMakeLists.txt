@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+if(APPLE OR UNIX)
+  add_definitions(-DIMPLICIT_DLLEXPORT)
+endif()
+
 if (GENERATE_TYPES)
   generate_f90_types(src/SuperController_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SuperController_Types.f90 -ccode)
   generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
@@ -36,7 +40,10 @@ add_library(scfastlib
   src/SuperController.f90)
 target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
 
-install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib
+add_library(sclib SHARED
+  src/SC_DLL.F90)
+
+install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib sclib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

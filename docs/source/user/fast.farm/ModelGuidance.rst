@@ -513,6 +513,12 @@ frequency of wake meandering should be resolved by at least :math:`10`
 time steps. Note that :math:`D^\text{Wake}` can be approximated as
 :math:`D^\text{Rotor}` in this calculation.
 
+When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the time step with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
+
+   .. math::
+      \textbf{DT_Low}  \lessapprox \frac{\textbf{dr}}{2 V_\text{Hub}}
+
+
 Spatial discretization convergence was assessed in the same manner as
 temporal discretization. Minimal sensitivity to spatial discretization
 was found for the low-resolution domain in the range of spatial
@@ -812,6 +818,13 @@ parameters:
    .. math::
       \textbf{dr} \le c_\text{max}
 
+When **Wake_Mod=2,3**, for numerical stability, it is recommended to set the spacing with a value that (approximately) satisfies the following guideline (see Equation 20 of the following `paper <https://doi.org/10.5194/wes-6-555-2021>`__):
+
+   .. math::
+      \textbf{dr}  \ltrapprox \frac{D}{10}
+
+
+
 -  **NumRadii** -- To ensure the wake deficits are accurately computed by
    FAST.Farm, **NumRadii** should be set so that the diameter of each
    wake plane, 2(**NumRadii**\ -1)\ **dr**, is large relative to the rotor
@@ -819,6 +832,8 @@ parameters:
 
    .. math::
       \textbf{NumRadii} \ge \frac{3D^{Rotor}}{2\ \textbf{dr}}+1
+
+
 
 -  **NumPlanes** -- To ensure the wake deficits are accurately captured by
    FAST.Farm, **NumPlanes** should be set so that the wake planes

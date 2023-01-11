@@ -10,7 +10,7 @@ for a complete list of possible output parameters.
 
 This section follows the `END` statement from normal Outputs section described
 above, and includes a separator description line followed by the following
-optinos.
+options.
 
 **BldNd_BladesOut** specifies the number of blades to output. Possible values
 are 0 through the number of blades AeroDyn is modeling. If the value is set to

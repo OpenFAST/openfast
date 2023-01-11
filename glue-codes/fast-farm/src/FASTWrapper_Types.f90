@@ -116,10 +116,13 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< Turbine-dependent commands to the super controller [(various units)]
     REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk      !< Orientation of rotor centerline, normal to disk [-]
     REAL(ReKi)  :: YawErr      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
+    REAL(ReKi)  :: psi_skew      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
+    REAL(ReKi)  :: chi_skew      !< Inflow skew angle [rad]
     REAL(ReKi) , DIMENSION(1:3)  :: p_hub      !< Center position of hub [m]
     REAL(ReKi)  :: D_rotor      !< Rotor diameter [m]
     REAL(ReKi)  :: DiskAvg_Vx_Rel      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Ct      !< Azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Cq      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE FWrap_OutputType
 ! =======================
 CONTAINS
@@ -189,15 +192,27 @@ IF (ALLOCATED(SrcInitInputData%fromSC)) THEN
 ENDIF
  END SUBROUTINE FWrap_CopyInitInput
 
- SUBROUTINE FWrap_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%fromSCGlob)) THEN
   DEALLOCATE(InitInputData%fromSCGlob)
 ENDIF
@@ -525,16 +540,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE FWrap_CopyInitOutput
 
- SUBROUTINE FWrap_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE FWrap_DestroyInitOutput
 
  SUBROUTINE FWrap_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -744,15 +772,27 @@ ENDIF
     DstContStateData%dummy = SrcContStateData%dummy
  END SUBROUTINE FWrap_CopyContState
 
- SUBROUTINE FWrap_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FWrap_DestroyContState
 
  SUBROUTINE FWrap_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -869,15 +909,27 @@ ENDIF
     DstDiscStateData%dummy = SrcDiscStateData%dummy
  END SUBROUTINE FWrap_CopyDiscState
 
- SUBROUTINE FWrap_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FWrap_DestroyDiscState
 
  SUBROUTINE FWrap_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -994,15 +1046,27 @@ ENDIF
     DstConstrStateData%dummy = SrcConstrStateData%dummy
  END SUBROUTINE FWrap_CopyConstrState
 
- SUBROUTINE FWrap_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FWrap_DestroyConstrState
 
  SUBROUTINE FWrap_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1119,15 +1183,27 @@ ENDIF
     DstOtherStateData%dummy = SrcOtherStateData%dummy
  END SUBROUTINE FWrap_CopyOtherState
 
- SUBROUTINE FWrap_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE FWrap_DestroyOtherState
 
  SUBROUTINE FWrap_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1311,37 +1387,54 @@ IF (ALLOCATED(SrcMiscData%AD_L2L)) THEN
 ENDIF
  END SUBROUTINE FWrap_CopyMisc
 
- SUBROUTINE FWrap_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL FAST_Destroyturbinetype( MiscData%Turbine, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL FAST_Destroyturbinetype( MiscData%Turbine, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%TempDisp)) THEN
 DO i1 = LBOUND(MiscData%TempDisp,1), UBOUND(MiscData%TempDisp,1)
-  CALL MeshDestroy( MiscData%TempDisp(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%TempDisp(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%TempDisp)
 ENDIF
 IF (ALLOCATED(MiscData%TempLoads)) THEN
 DO i1 = LBOUND(MiscData%TempLoads,1), UBOUND(MiscData%TempLoads,1)
-  CALL MeshDestroy( MiscData%TempLoads(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%TempLoads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%TempLoads)
 ENDIF
 IF (ALLOCATED(MiscData%ADRotorDisk)) THEN
 DO i1 = LBOUND(MiscData%ADRotorDisk,1), UBOUND(MiscData%ADRotorDisk,1)
-  CALL MeshDestroy( MiscData%ADRotorDisk(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( MiscData%ADRotorDisk(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%ADRotorDisk)
 ENDIF
 IF (ALLOCATED(MiscData%AD_L2L)) THEN
 DO i1 = LBOUND(MiscData%AD_L2L,1), UBOUND(MiscData%AD_L2L,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%AD_L2L(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%AD_L2L(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%AD_L2L)
 ENDIF
@@ -2038,15 +2131,27 @@ ENDIF
     DstParamData%p_ref_Turbine = SrcParamData%p_ref_Turbine
  END SUBROUTINE FWrap_CopyParam
 
- SUBROUTINE FWrap_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%r)) THEN
   DEALLOCATE(ParamData%r)
 ENDIF
@@ -2269,15 +2374,27 @@ IF (ALLOCATED(SrcInputData%Vdist_High)) THEN
 ENDIF
  END SUBROUTINE FWrap_CopyInput
 
- SUBROUTINE FWrap_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%fromSCglob)) THEN
   DEALLOCATE(InputData%fromSCglob)
 ENDIF
@@ -2569,6 +2686,8 @@ IF (ALLOCATED(SrcOutputData%toSC)) THEN
 ENDIF
     DstOutputData%xHat_Disk = SrcOutputData%xHat_Disk
     DstOutputData%YawErr = SrcOutputData%YawErr
+    DstOutputData%psi_skew = SrcOutputData%psi_skew
+    DstOutputData%chi_skew = SrcOutputData%chi_skew
     DstOutputData%p_hub = SrcOutputData%p_hub
     DstOutputData%D_rotor = SrcOutputData%D_rotor
     DstOutputData%DiskAvg_Vx_Rel = SrcOutputData%DiskAvg_Vx_Rel
@@ -2584,22 +2703,49 @@ IF (ALLOCATED(SrcOutputData%AzimAvg_Ct)) THEN
   END IF
     DstOutputData%AzimAvg_Ct = SrcOutputData%AzimAvg_Ct
 ENDIF
+IF (ALLOCATED(SrcOutputData%AzimAvg_Cq)) THEN
+  i1_l = LBOUND(SrcOutputData%AzimAvg_Cq,1)
+  i1_u = UBOUND(SrcOutputData%AzimAvg_Cq,1)
+  IF (.NOT. ALLOCATED(DstOutputData%AzimAvg_Cq)) THEN 
+    ALLOCATE(DstOutputData%AzimAvg_Cq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%AzimAvg_Cq.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputData%AzimAvg_Cq = SrcOutputData%AzimAvg_Cq
+ENDIF
  END SUBROUTINE FWrap_CopyOutput
 
- SUBROUTINE FWrap_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE FWrap_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(FWrap_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FWrap_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%toSC)) THEN
   DEALLOCATE(OutputData%toSC)
 ENDIF
 IF (ALLOCATED(OutputData%AzimAvg_Ct)) THEN
   DEALLOCATE(OutputData%AzimAvg_Ct)
+ENDIF
+IF (ALLOCATED(OutputData%AzimAvg_Cq)) THEN
+  DEALLOCATE(OutputData%AzimAvg_Cq)
 ENDIF
  END SUBROUTINE FWrap_DestroyOutput
 
@@ -2645,6 +2791,8 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%xHat_Disk)  ! xHat_Disk
       Re_BufSz   = Re_BufSz   + 1  ! YawErr
+      Re_BufSz   = Re_BufSz   + 1  ! psi_skew
+      Re_BufSz   = Re_BufSz   + 1  ! chi_skew
       Re_BufSz   = Re_BufSz   + SIZE(InData%p_hub)  ! p_hub
       Re_BufSz   = Re_BufSz   + 1  ! D_rotor
       Re_BufSz   = Re_BufSz   + 1  ! DiskAvg_Vx_Rel
@@ -2652,6 +2800,11 @@ ENDIF
   IF ( ALLOCATED(InData%AzimAvg_Ct) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! AzimAvg_Ct upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AzimAvg_Ct)  ! AzimAvg_Ct
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AzimAvg_Cq allocated yes/no
+  IF ( ALLOCATED(InData%AzimAvg_Cq) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! AzimAvg_Cq upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AzimAvg_Cq)  ! AzimAvg_Cq
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2701,6 +2854,10 @@ ENDIF
     END DO
     ReKiBuf(Re_Xferred) = InData%YawErr
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%psi_skew
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%chi_skew
+    Re_Xferred = Re_Xferred + 1
     DO i1 = LBOUND(InData%p_hub,1), UBOUND(InData%p_hub,1)
       ReKiBuf(Re_Xferred) = InData%p_hub(i1)
       Re_Xferred = Re_Xferred + 1
@@ -2721,6 +2878,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%AzimAvg_Ct,1), UBOUND(InData%AzimAvg_Ct,1)
         ReKiBuf(Re_Xferred) = InData%AzimAvg_Ct(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AzimAvg_Cq) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AzimAvg_Cq,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AzimAvg_Cq,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%AzimAvg_Cq,1), UBOUND(InData%AzimAvg_Cq,1)
+        ReKiBuf(Re_Xferred) = InData%AzimAvg_Cq(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -2779,6 +2951,10 @@ ENDIF
     END DO
     OutData%YawErr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%psi_skew = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%chi_skew = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%p_hub,1)
     i1_u = UBOUND(OutData%p_hub,1)
     DO i1 = LBOUND(OutData%p_hub,1), UBOUND(OutData%p_hub,1)
@@ -2804,6 +2980,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%AzimAvg_Ct,1), UBOUND(OutData%AzimAvg_Ct,1)
         OutData%AzimAvg_Ct(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AzimAvg_Cq not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AzimAvg_Cq)) DEALLOCATE(OutData%AzimAvg_Cq)
+    ALLOCATE(OutData%AzimAvg_Cq(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AzimAvg_Cq.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%AzimAvg_Cq,1), UBOUND(OutData%AzimAvg_Cq,1)
+        OutData%AzimAvg_Cq(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF

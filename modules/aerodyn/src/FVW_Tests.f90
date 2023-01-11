@@ -8,7 +8,7 @@ module FVW_Tests
    use FVW_Wings
    use FVW_IO
    use FVW_BiotSavart
-   use FVW_VTK, only : FVW_VTK_Misc
+   use VTK, only : VTK_Misc
 
    implicit none
 
@@ -266,7 +266,7 @@ contains
             ! Method 1
             Uind_out =0.0_ReKi
             call ui_seg(1, 1, CPs, &
-                  1, 1, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+                  1, 1, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_seg_11(CP-P1, CP-P2, SegGamma1, RegFunction, RegParam1, U1)
@@ -306,7 +306,7 @@ contains
             ! Method 1
             Uind_out =0.0_ReKi
             call ui_seg(1, 1, CPs, &
-                  1, 2, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+                  1, 2, SegPoints, SegConnct, SegGamma,  &
                   RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_seg_11(CP-P1, CP-P2, SegGamma1, RegFunction, RegParam1, U1)
@@ -361,7 +361,7 @@ contains
             RegFunction = idRegPartVALID(i1)
             ! Method 1
             Uind_out =0.0_ReKi
-            call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind_out, nCPs, nPart)
+            call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind_out)
             ! Method 2
             call ui_part_nograd_11(CP-P1, PartAlpha1, RegFunction, RegParam1, U1)
             ! Test
@@ -406,10 +406,10 @@ contains
       Uind1 =0.0_ReKi
       Uind2 =0.0_ReKi
       U_ref =0.0_ReKi
-      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
       ! Test
       call test_almost_equal(testname,'Uind tree 0 part', U_ref, Uind2(:,1), 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
@@ -422,10 +422,10 @@ contains
       CPs(:,1) = (/0.0,0.0,0.0/)
       PartPoints(1:3,1) = (/1.0,0.0,0.0/)
       U_ref =0.0_ReKi
-      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall,  Uind2, ErrStat, ErrMsg)
+      call ui_part_nograd(nCPS, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
       ! Test
       call test_almost_equal(testname,'Uind tree 1 part', Uind1, Uind2, 1e-4_ReKi, .true.,.true.)
       call cut_tree(Tree)
@@ -452,20 +452,20 @@ contains
       CPs_test(:,4) = (/ 2.0, 2.0, 2.0 /)  ! Starts to be far from most points
       CPs_test(:,5) = (/ 10., 10., 10.0  /) ! Far from all
 
-      call grow_tree(Tree, PartPoints, PartAlpha, RegFunction, RegParam, 0)
+      call grow_tree_part(Tree, nPart, PartPoints, PartAlpha, RegFunction, RegParam, 0)
       !call print_tree(Tree)
       do iCP=1,4
          CPs(:,1) = CPs_test(:,icp)
          Uind2=0.0_ReKi; Uind1=0.0_ReKi
-         call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
-         call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunction, RegParam, Uind1, nCPs, nPart)
+         call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+         call ui_part_nograd(nCPs, CPs, nPart, PartPoints, PartAlpha, RegFunction, RegParam, Uind1)
          !print*,'Uind',Uind1, Uind2
          ! Test
          call test_almost_equal(testname,'Uind tree 81 part', Uind1, Uind2, 1e-2_ReKi, .true.,.true.)
       enddo
       call cut_tree(Tree)
       ! --- Test that tree ui cannot be called after tree has been cut
-      call ui_tree(Tree, CPs, 0, 1, nCPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, BranchFactor, BranchSmall, Uind2, ErrStat, ErrMsg)
       call test_equal(testname,'Err. stat tree cut',ErrStat,ErrID_Fatal)
       call dealloc()
 
@@ -542,8 +542,8 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(nCPSTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       call test_almost_equal(testname,'Uind 10 part/sgmt no reg', Uind1, Uind2, 1e-3_ReKi, .true.,.true.)
       call dealloc()
 
@@ -558,8 +558,8 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(nCPsTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       call test_almost_equal(testname,'Uind 2 part/sgmt noreg', Uind1, Uind2, 3e-1_ReKi, .true.,.true.)
       call dealloc()
 
@@ -576,8 +576,8 @@ contains
       call SegmentsToPart(SegPoints, SegConnct, SegGamma, SegEpsilon, 1, nSegTot, nPartPerSeg, PartPoints, PartAlpha, PartEpsilon, iHeadP)
 
       Uind1 =0.0_ReKi; Uind2 =0.0_ReKi;
-      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
-      call ui_part_nograd(CPs,PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2, nCPsTot, nPart)
+      call ui_seg(1, nCPsTot, CPs, 1, nSegTot, SegPoints, SegConnct, SegGamma, RegFunctionSeg, SegEpsilon, Uind1)
+      call ui_part_nograd(nCPSTot, CPs, nPart, PartPoints, PartAlpha, RegFunctionPart, PartEpsilon, Uind2)
       !print'(A,10F7.3)','Uind1',Uind1(1,:)
       !print'(A,10F7.3)','Uind2',Uind2(1,:)
       !print'(A,10F7.3)','Uind1',Uind1(2,:)
@@ -602,7 +602,7 @@ contains
 
    !>
    subroutine Test_LatticeToSegment(mvtk,iStat)
-      type(FVW_VTK_Misc),intent(inout) :: mvtk       !< miscvars for VTK output
+      type(VTK_Misc),intent(inout) :: mvtk       !< miscvars for VTK output
       integer(IntKi), intent(  out)  :: iStat !< Status for test
       ! Local
       integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
@@ -681,7 +681,7 @@ contains
       SegEpsilon=100.0_ReKi
       SmoothModel=0 ! No smooth
       CALL ui_seg(1, 1, CPs, &
-      1, nC1, nC1, nP1, SegPoints, SegConnct, SegGamma,   &
+      1, nC1, SegPoints, SegConnct, SegGamma,   &
       SmoothModel, SegEpsilon, Uind)
       !print*,'Uind',Uind
 
@@ -745,6 +745,102 @@ contains
       endsubroutine 
    endsubroutine Test_LatticeToSegment
 
+   !> Test Wake Induced velocity calcualtion when using nNWMax or nNWFree
+   !! A dummy helical wake is created. The induced velocity is computed on 
+   !! either the full wake, or just the "free" wake (which should be way faster)
+   subroutine FVW_Test_WakeInducedVelocities(ErrStat, ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
+      character(ErrMsgLen), intent(out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+      type(FVW_ParameterType)       :: p !< Parameters
+      type(FVW_ContinuousStateType) :: x !< States
+      type(FVW_MiscVarType)         :: m !< Initial misc/optimization variables
+      !type(FVW_VTK_Misc)   :: mvtk
+      integer :: iW, j, k, nSpan
+      integer(IntKi)       :: ErrStat2
+      character(ErrMsgLen) :: ErrMsg2
+      character(*), parameter  :: RoutineName = 'FVW_Test_CPUTime'
+      integer(ReKi), parameter :: nR          = 20
+      real(ReKi), parameter    :: R           = 100
+      real(ReKi), parameter    :: G           = 100
+      real(ReKi), allocatable, dimension(:,:) :: V1
+      real(ReKi), allocatable, dimension(:,:) :: V2
+      real(ReKi) :: t1,t2 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      ! --- Create a helical wake TODO, put me into FVW_*
+      p%nWings  = 3
+      p%nNWMax           = 1600
+      nSpan              = 50
+      m%nNW              = p%nNWMax
+      m%nFW              = 0
+      p%nFWMax           = 0
+      p%nFWFree          = 0
+      p%ShearModel       = idShearNone
+      p%RegFunction      = idRegVatistas
+      p%VelocityMethod   = idVelocityTreePart
+      p%FWShedVorticity  = .false.
+      p%TreeBranchFactor = 1.5_ReKi
+      p%PartPerSegment   = 1
+      allocate(p%W(p%nWings))
+      p%W(:)%nSpan       = nSpan
+      call FVW_InitStates( x, p, ErrStat, ErrMsg )
+      do iW=1,size(x%W); 
+         do j=1,size(x%W(iW)%r_NW,2); 
+            do k=1,size(x%W(iW)%r_NW,3); 
+               x%W(iW)%r_NW(1,j,k) = real(k, ReKi)/p%nNWMax*(nR*R)
+               x%W(iW)%r_NW(2,j,k) = real(j, ReKi)/nSpan*R*cos(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5)
+               x%W(iW)%r_NW(3,j,k) = real(j, ReKi)/nSpan*R*sin(iW*TwoPi/p%nWings + x%W(iW)%r_NW(1,j,k)/R*0.5) + 1.5*R
+            enddo
+         enddo
+         do j=1,size(x%W(iW)%r_NW,2)-1 
+            do k=1,size(x%W(iW)%r_NW,3)-1
+               x%W(iW)%Gamma_NW(j,k) = G*4.0_ReKi*(real((j-1),ReKi)/nSpan -0.5)**2
+               x%W(iW)%Eps_NW(:,j,k) = 0.03*R*(real(k,ReKi)/p%nNWMax)
+            enddo
+         enddo
+      enddo
+      allocate(m%W(p%nWings))
+      do iW = 1,p%nWings
+         call AllocAry( m%W(iW)%Vind_NW , 3   ,  nSpan+1  ,p%nNWMax+1, 'Vind on NW ', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); m%W(iW)%Vind_NW= -999_ReKi;
+         call AllocAry( m%W(iW)%Vind_FW , 3   ,  FWnSpan+1,p%nFWMax+1, 'Vind on FW ', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName); m%W(iW)%Vind_FW= -999_ReKi;
+      enddo
+      call FVW_InitMiscVarsPostParam( p, m, ErrStat2, ErrMsg2) ! Alloc Sgmt, CPs, Uind
+
+      ! --- Compute induced velocity on full wake
+      allocate(V1(3,nSpan+1))
+      p%nNWFree=p%nNWMax
+      call cpu_time(t1)
+      call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); 
+      call cpu_time(t2)
+      print*,'Ellapsed time',t2-t1
+      V1 = m%W(1)%Vind_NW(:,:,1)
+
+      ! --- Compute induced velocity on free wake only
+      allocate(V2(3,nSpan+1))
+      p%nNWFree=int(p%nNWMax/5)
+      call cpu_time(t1)
+      call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); 
+      call cpu_time(t2)
+      print*,'Ellapsed time',t2-t1
+      V2 = m%W(1)%Vind_NW(:,:,1)
+      !print*,'>>>Vx mean ',sum(abs((V1(1,:))))/nSpan
+      !print*,'>>>Vx mean ',sum(abs((V2(1,:))))/nSpan
+      !print*,'>>> Vx error',sum(abs(V1(1,:)-V2(1,:)))/nSpan
+      !print*,'>>> Vy error',sum(abs(V1(2,:)-V2(2,:)))/nSpan
+      !print*,'>>> Vz error',sum(abs(V1(3,:)-V2(3,:)))/nSpan
+      !call WrVTK_Segments('_TEST.vtk', mvtk, m%Sgmt%Points(:,:), m%Sgmt%Connct(:,:), m%Sgmt%Gamma(:), m%Sgmt%Epsilon(:), .false.) 
+
+      call test_almost_equal(RoutineName,'Uind nNW/nNWFree', V1, V2, 1e-6_ReKi, .true.,.true.)
+
+      deallocate(V1)
+      deallocate(V2)
+      call FVW_DestroyParam(p, ErrStat2, ErrMsg2)
+      call FVW_DestroyContState(x, ErrStat2, ErrMsg2)
+      call FVW_DestroyMisc(m, ErrStat2, ErrMsg2)
+
+   end subroutine FVW_Test_WakeInducedVelocities
+
    !> Main test function 
    subroutine FVW_RunTests(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat !< Error status of the operation
@@ -760,6 +856,7 @@ contains
       call Test_BiotSavart_Part(testname, ErrStat2, ErrMsg2)
       call Test_BiotSavart_PartTree(testname, ErrStat2, ErrMsg2)
       call Test_SegmentsToPart(testname, ErrStat2, ErrMsg2)
+      call FVW_Test_WakeInducedVelocities(ErrStat2, ErrMsg2)
    end subroutine FVW_RunTests
 
 end module FVW_Tests

@@ -51,6 +51,7 @@ MODULE InflowWind
    PRIVATE
 
    TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', '', '' )
+   integer,        parameter            :: NumExtendedInputs = 3 !: V, VShr, PropDir
 
 
 
@@ -64,6 +65,7 @@ MODULE InflowWind
    PUBLIC :: InflowWind_Convert2HAWC               !< An extension of the FAST framework, this routine converts an InflowWind data structure to HAWC format wind files
    PUBLIC :: InflowWind_Convert2Bladed             !< An extension of the FAST framework, this routine converts an InflowWind data structure to Bladed format wind files (with shear already included)
    PUBLIC :: InflowWind_Convert2VTK                !< An extension of the FAST framework, this routine converts an InflowWind data structure to VTK format wind files
+   PUBLIC :: InflowWind_Convert2Uniform            !< An extension of the FAST framework, this routine converts an InflowWind data structure to Uniform Wind formatted text files
 
 
       ! These routines satisfy the framework, but do nothing at present.
@@ -157,6 +159,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
          ! Local Variables
       INTEGER(IntKi)                                        :: I, j              !< Generic counter
+      INTEGER(IntKi)                                        :: Lin_indx          !< Generic counter
       INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
       CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
       CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
@@ -270,18 +273,19 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
 
       ! Allocate the arrays for passing points in and velocities out
-      CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, &
-                  "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
+      CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          
-      CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, &
-                  "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
+      CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat>= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
          ENDIF
       InputGuess%PositionXYZ = 0.0_ReKi
+      InputGuess%HubPosition = 0.0_ReKi
+      CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)
+      
       y%VelocityUVW = 0.0_ReKi
 
 
@@ -305,10 +309,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Set the Otherstates information
             p%UniformWind%NumDataLines     =  1_IntKi
-            p%UniformWind%RefHt            =  InputFileData%Steady_RefHt
-            p%UniformWind%RefLength        =  1.0_ReKi    ! This is not used since no shear gusts are used.  Set to 1.0 so calculations don't bomb. 
-            m%UniformWind%TimeIndex =  1           ! Used in UniformWind as a check if initialization was done.
-
 
             CALL AllocAry( p%UniformWind%Tdata, p%UniformWind%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
                CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -354,9 +354,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             p%UniformWind%VGust(  :)       = 0.0_ReKi
 
 
-
                ! Now we have in effect initialized the IfW_UniformWind module, so set the parameters
-            p%UniformWind%RefLength        =  1.0_ReKi       ! This is done so that 0.0*(some stuff)/RefLength doesn't blow up.
+            p%UniformWind%RefLength        =  max(1.0_ReKi, InputFileData%Uniform_RefLength)    ! This is not used since no shear gusts are used.  Set to 1.0 so calculations don't bomb. 
             p%UniformWind%RefHt            =  InputFileData%Steady_RefHt
             m%UniformWind%TimeIndex        =  1_IntKi
 
@@ -615,7 +614,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
 
 
-         END SELECT
+      END SELECT
                   
 
       !IF ( InputFileData%CTTS_Flag ) THEN
@@ -696,16 +695,16 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
       ! allocate and fill variables for linearization:
       if (InitInp%Linearize) then
-         
-         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + 3, 'LinNames_u', TmpErrStat, TmpErrMsg)
+         ! also need to add InputGuess%HubOrientation to the u%Linear items
+         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + 3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + 3, 'IsLoad_u', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3+p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -716,15 +715,30 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             do j=1,3
                InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
                InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
-            end do            
+            end do
          end do
 
-         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
-         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 2) = 'Extended input: vertical power-law shear exponent, -'
-         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 3) = 'Extended input: propagation direction, rad'         
+         ! hub position
+         Lin_Indx = InitInp%NumWindPoints*3
+         do j=1,3
+            InitOutData%LinNames_y(Lin_Indx+j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
+            InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//'-component position of moving hub, m'
+         end do
+         Lin_Indx = Lin_Indx + 3
+         
+         ! hub orientation angles
+         do j=1,3
+            InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//' orientation of moving hub, rad'
+         end do
+         Lin_Indx = Lin_Indx + 3
+         
+         
+         InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
+         InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
+         InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'         
          
          do i=1,p%NumOuts
-            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints+size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
          end do
 
          ! IfW inputs and outputs are in the global, not rotating frame
@@ -877,15 +891,26 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    ENDIF
 
    !-----------------------------
-   ! Outputs: OutputData%VelocityUVW and OutputData%DiskVel
+   ! Outputs: OutputData%VelocityUVW
    !-----------------------------
-      
-
-   CALL CalculateOutput( Time, InputData, p, &
-                     ContStates, DiscStates, ConstrStates, & 
+   CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
                      OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
+   !-----------------------------
+   ! Output: OutputData%DiskVel
+   !-----------------------------
+   CALL InflowWind_GetSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+                     OtherStates, m, OutputData%DiskVel, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      
+   !-----------------------------
+   ! Output: OutputData%HubVel
+   !-----------------------------
+   CALL InflowWind_GetHubValues( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+                     OtherStates, m, OutputData%HubVel, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      
    !-----------------------------
    ! Outputs: OutputData%lidar%LidSpeed and OutputData%lidar%WtTrunc
    !-----------------------------
@@ -1167,10 +1192,15 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
    CHARACTER(*), PARAMETER                                        :: RoutineName = 'InflowWind_JacobianPInput'
       
-   REAL(R8Ki)                                                     :: local_dYdu(3,6)
+   
+   REAL(R8Ki)                                                     :: local_dYdu(3,3+NumExtendedInputs)
    integer                                                        :: i, n
    integer                                                        :: i_start, i_end  ! indices for input/output start and end
    integer                                                        :: node, comp
+   integer                                                        :: n_inputs
+   integer                                                        :: n_outputs
+   integer                                                        :: i_ExtendedInput_start
+   integer                                                        :: i_WriteOutput
    
       
       ! Initialize ErrStat
@@ -1181,12 +1211,17 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 
    IF ( PRESENT( dYdu ) ) THEN
 
+      n_outputs = SIZE(u%PositionXYZ)+p%NumOuts + size(y%DiskVel)
+      n_inputs  = SIZE(u%PositionXYZ)+size(u%HubPosition) + 3 + NumExtendedInputs ! need to add 3 for u%HubOrientation
+      i_ExtendedInput_start = n_inputs - NumExtendedInputs + 1 ! index for extended inputs starts 2 from end (encompasses 3 values: V, VShr, PropDir)
+      i_WriteOutput         = n_outputs - p%NumOuts ! index for where write outputs begin is i_WriteOutput + 1
+      
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
          
          ! outputs are all velocities at all positions plus the WriteOutput values
          !
       if (.not. ALLOCATED(dYdu)) then
-         CALL AllocAry( dYdu, SIZE(u%PositionXYZ)+p%NumOuts, SIZE(u%PositionXYZ)+3, 'dYdu', ErrStat2, ErrMsg2 )
+         CALL AllocAry( dYdu, n_outputs, n_inputs, 'dYdu', ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
          
@@ -1212,29 +1247,56 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             
             dYdu(i_start:i_end,i_start:i_end) = local_dYdu(:,1:3)
             
-            dYdu(i_start:i_end,n*3+1:) = local_dYdu(:,4:6) ! extended inputs
+            dYdu(i_start:i_end, i_ExtendedInput_start:) = local_dYdu(:,4:6) ! extended inputs
             
-         end do            
+         end do
+         
+         
+         ! see InflowWind_GetSpatialAverage():
+         
+         ! location of y%DiskAvg
+         i_start = 3*n + 1
+         i_end   = i_start + 2
+         
+         dYdu(i_start:i_end,:) = 0.0_R8Ki ! initialize because we're going to create averages
+         
+         do i=1,IfW_NumPtsAvg
+            m%u_Avg%PositionXYZ(:,i) = matmul(u%HubOrientation,p%PositionAvg(:,i)) + u%HubPosition
+!!!FIX ME with the propagation values!!!!         
+            call IfW_UniformWind_JacobianPInput( t, m%u_Avg%PositionXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
+         
+            ! y%DiskAvg has the same index as u%HubPosition
+            ! Also note that partial_(m%u_Avg%PositionXYZ) / partial_(u%HubPosition) is identity, so we can skip that part of the chain rule for these derivatives:
+            dYdu(i_start:i_end,i_start:i_end)           = dYdu(i_start:i_end, i_start:i_end)          + local_dYdu(:,1:3)
+            dYdu(i_start:i_end, i_ExtendedInput_start:) = dYdu(i_start:i_end, i_ExtendedInput_start:) + local_dYdu(:,4:6) ! extended inputs
+         end do
+         dYdu(i_start:i_end,i_start:i_end)           = dYdu(i_start:i_end, i_start:i_end)          / REAL(IfW_NumPtsAvg,R8Ki)
+         dYdu(i_start:i_end,i_ExtendedInput_start:)  = dYdu(i_start:i_end, i_ExtendedInput_start:) / REAL(IfW_NumPtsAvg,R8Ki)
+!FIX ME:
+         ! need to calculate dXYZdHubOrient = partial_(m%u_Avg%PositionXYZ) / partial_(u%HubOrientation)
+         !dYdu(i_start:i_end,(i_start+3):(i_end+3)) = matmul( dYdu(i_start:i_end,i_start:i_end), dXYZdHubOrient )
+
 
             ! these are the InflowWind WriteOutput velocities (and note that we may not have all of the components of each point) 
          ! they do not depend on the inputs, so the derivatives w.r.t. X, Y, Z are all zero
-         do i=1, p%NumOuts               
+         do i=1, p%NumOuts
             node  = p%OutParamLinIndx(1,i) ! output node
             comp  = p%OutParamLinIndx(2,i) ! component of output node
 
             if (node > 0) then
 !!!FIX ME with the propagation values!!!!         
-               call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )                                                                                       
+               call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
             else
                local_dYdu = 0.0_R8Ki
-            end if            
+               comp = 1
+            end if
             
-            dYdu(3*n+i, 3*n+1:) = p%OutParam(i)%SignM * local_dYdu( comp , 4:6)
-         end do            
+            dYdu(i_WriteOutput+i, i_ExtendedInput_start:) = p%OutParam(i)%SignM * local_dYdu( comp , 4:6)
+         end do
 
       CASE DEFAULT
 
-      END SELECT         
+      END SELECT
                   
    END IF
 
@@ -1511,7 +1573,7 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
 
    IF ( PRESENT( u_op ) ) THEN
       if (.not. allocated(u_op)) then
-         call AllocAry(u_op, size(u%PositionXYZ)+3, 'u_op', ErrStat2, ErrMsg2)
+         call AllocAry(u_op, size(u%PositionXYZ) + size(u%HubPosition) + 3 + NumExtendedInputs, 'u_op', ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
@@ -1525,6 +1587,14 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
          end do            
       end do  
       
+      do i=1,3
+         index = index + 1
+         u_op(index) = u%HubPosition(i)
+      end do
+      
+      u_op((index+1):(index+3)) = EulerExtract(u%HubOrientation)
+      index = index + 3
+      
       call IfW_UniformWind_GetOP( t, p%UniformWind, m%UniformWind, u_op(index+1:index+2) )
       u_op(index + 3) = p%PropagationDir
       
@@ -1532,7 +1602,7 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
 
    IF ( PRESENT( y_op ) ) THEN
       if (.not. allocated(y_op)) then
-         call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts, 'y_op', ErrStat2, ErrMsg2)
+         call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts+3, 'y_op', ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
@@ -1542,12 +1612,17 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
          do j=1,size(u%PositionXYZ,1)
             index = index + 1 !(i-1)*size(u%PositionXYZ,1)+j
             y_op(index) = y%VelocityUVW(j,i)
-         end do            
+         end do
       end do
          
-      do i=1,p%NumOuts         
+      do j=1,size(y%DiskVel)
+         index = index + 1
+         y_op(index) = y%DiskVel(j)
+      end do
+      
+      do i=1,p%NumOuts
          y_op(i+index) = y%WriteOutput( i )
-      end do      
+      end do
          
    END IF
 
@@ -1600,7 +1675,7 @@ SUBROUTINE InflowWind_Convert2HAWC( FileRootName, p, m, ErrStat, ErrMsg )
          
    CASE (Steady_WindNumber, Uniform_WindNumber)
 
-      CALL Uniform_to_FF(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
+      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
       IF (ErrStat < AbortErrLev) THEN
@@ -1663,7 +1738,7 @@ SUBROUTINE InflowWind_Convert2Bladed( FileRootName, p, m, ErrStat, ErrMsg )
          
    CASE (Steady_WindNumber, Uniform_WindNumber)
 
-      CALL Uniform_to_FF(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
+      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
       IF (ErrStat < AbortErrLev) THEN
@@ -1693,6 +1768,65 @@ SUBROUTINE InflowWind_Convert2Bladed( FileRootName, p, m, ErrStat, ErrMsg )
    END SELECT
    
 END SUBROUTINE InflowWind_Convert2Bladed
+
+!====================================================================================================
+SUBROUTINE InflowWind_Convert2Uniform( FileRootName, p, m, ErrStat, ErrMsg )
+
+   USE IfW_FFWind_Base
+   IMPLICIT NONE
+
+   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_Convert2Uniform"
+
+      ! Subroutine arguments
+
+   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p                 !< Parameters
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc/optimization variables
+   CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files
+
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                                           :: ErrStat2
+   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+
+      ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
+   SELECT CASE ( p%WindType )
+         
+   CASE (Steady_WindNumber, Uniform_WindNumber)
+       ! no need to convert anything here
+   
+   CASE (TSFF_WindNumber)
+      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%TSFFWind%FF, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   CASE (BladedFF_WindNumber)
+      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%BladedFFWind%FF, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   CASE ( HAWC_WindNumber )
+
+      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%HAWCWind%FF, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   CASE DEFAULT ! User_WindNumber
+
+      ErrStat = ErrID_Warn
+      ErrMsg  = RoutineName//': Wind type '//TRIM(Num2LStr(p%WindType))//' cannot be converted to UniformWind format.'
+      RETURN
+      
+   END SELECT
+   IF (ErrStat >= AbortErrLev) RETURN
+   
+   CALL WrUniformWind(FileRootName, p%UniformWind, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+END SUBROUTINE InflowWind_Convert2Uniform
 
 !====================================================================================================
 SUBROUTINE InflowWind_Convert2VTK( FileRootName, p, m, ErrStat, ErrMsg )
@@ -1726,7 +1860,7 @@ SUBROUTINE InflowWind_Convert2VTK( FileRootName, p, m, ErrStat, ErrMsg )
          
    CASE (Steady_WindNumber, Uniform_WindNumber)
 
-      CALL Uniform_to_FF(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
+      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
       IF (ErrStat < AbortErrLev) THEN
