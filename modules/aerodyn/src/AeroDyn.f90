@@ -1429,7 +1429,7 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
       end do ! j = nodes
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
-         p%TwrDL(j) = InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j) ! element j undisplaced length
+         p%TwrDL(j) = abs(InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j)) ! element j undisplaced length
          p%TwrTaper(j) = ( p%TwrRad(j+1) - p%TwrRad(j) ) / p%TwrDL(j) ! element j taper
          if ( p%TwrRad(j) == 0.0_ReKi .and. p%TwrRad(j+1) == 0.0_ReKi ) then
             p%TwrAxCent(j) = 0.0_ReKi ! Trap NaN case and set to zero
@@ -1681,6 +1681,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%Buoyancy ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
       end if
    end do  
 
@@ -1988,6 +1990,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             ! Check that blade nodes do not go beneath the seabed or pierce the free surface
          if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= -p%WtrDpth ) &
             call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            if ( ErrStat >= AbortErrLev ) return
 
       end do ! j = nodes
 
@@ -2103,6 +2106,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
             ! Check that tower nodes do not go beneath the seabed or pierce the free surface
          if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < -p%WtrDpth ) &
             call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            if ( ErrStat >= AbortErrLev ) return
       end do
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
@@ -2192,6 +2196,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Check that hub node does not go beneath the seabed or pierce the free surface
       if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
          call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         if ( ErrStat >= AbortErrLev ) return
 
          ! Global position of hub node
       HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
@@ -2244,6 +2249,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
       if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
          call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         if ( ErrStat >= AbortErrLev ) return
 
          ! Global position of nacelle node
       NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
@@ -3412,7 +3418,10 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InitInp%MHK == 0 .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 0 .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
-
+   do iR = 1,size(NumBl)
+      if (InitInp%MHK == 1 .and. InputFileData%rotors(iR)%TFinAero .or. InitInp%MHK == 2 .and. InputFileData%rotors(iR)%TFinAero) call SetErrStat ( ErrID_Fatal, 'A tail fin cannot be modeled for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
+   enddo
+   
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The density of the working fluid must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )

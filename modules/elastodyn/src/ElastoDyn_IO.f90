@@ -3162,7 +3162,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       END IF
       
       ! PtfmCMyt - Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMzt", "Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMyt", "Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
