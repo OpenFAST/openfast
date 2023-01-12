@@ -7,7 +7,7 @@ Command-line syntax for InflowWind driver:
 
 ::
 
-    InlowWind_Driver <filename> [options]
+    InflowWind_Driver <filename> [options]
 
           where:  <filename>     --   Name of driver input file to use
         options:  /ifw           --   treat <filename> as name of InflowWind input file (no driver input file)
@@ -27,6 +27,7 @@ Command-line syntax for InflowWind driver:
                   /vv            --   very verbose output
                   /hawc          --   convert wind file specified in InflowWind to HAWC format
                   /bladed        --   convert wind file specified in InflowWind to Bladed format
+                  /uniform       --   convert wind file specified in InflowWind to Uniform-wind format
                   /vtk           --   convert wind file specified in InflowWind to VTK format
                   /help          --   print this help menu and exit
 
@@ -89,6 +90,15 @@ vtk file for each time in the full-field data structure, and the entire
 Y-Z grid is printed in each file. This format can be used to visualize
 the wind field using a viewer such as ParaView.
 
+Uniform Wind
+~~~~~~~~~~~~
+
+This format generates a text file in the uniform wind format. Converting to this format will 
+generally lose information in the file because it specifies the wind speed and direction
+at only one point and approximates the shear as a power-law exponent.
+   
+
+
 Converting uniform wind to full-field wind format
 -------------------------------------------------
 
@@ -113,3 +123,18 @@ full-field wind files, equal to the time it takes to travel the distance
 of half the grid width. When using the resulting full-field files, care
 must be taken that the aeroelastic code does not treat it as periodic.
 
+
+Converting from a full-field wind format to uniform wind format
+---------------------------------------------------------------
+
+When converting from a full-field wind format to a uniform wind file, the following assumptions are used:
+
+- The gust speed, horizontal shear, and vertical linear shear are all 0.
+- The Uniform Wind reference height is on a full-field grid point.
+- The upflow is calculated using the mean upflow value at the reference point.
+- The mean wind direction and upflow are removed from the reference grid point before writing the velocities to the Uniform Wind file.
+- The wind direction in the file is the sum of the mean wind direction and the instantaneous direction calculated between instantaneous U and V wind components.
+- The power law exponent is either
+  
+  1. The power-law exponent specified in InflowWind (if a power law wind profile is used to add to the turbulence with native-Bladed or HAWC2 files), or
+  2. Calculated by using the mean wind speeds at two points: the reference (hub) height and the uppermost height on the grid.

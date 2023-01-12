@@ -34,6 +34,8 @@ sections:
 
 -  Super Controller
 
+-  Shared Moorings
+
 -  Ambient Wind
 
 -  Wind Turbines
@@ -95,6 +97,15 @@ ambient wind data as defined by the FAST.Farm interface to the
 **[Mod_AmbWind=3]**. The distinct Ambient Wind subsections below pertain
 to each option.
 
+**Mod_WaveField** [switch] indicates how the wave field should be treated.  The
+two options are: 1) use individual HydroDyn inputs at each turbine without
+adjustment, 2) adjust wave phases based on turbine offsets from wind farm
+origin.
+
+**Mod_SharedMooring** [switch] indicates if a farm level mooring line system
+interconnects turbines.  There are presently two options: 0) No shared moorings,
+3) MoorDyn.
+
 Super Controller
 ~~~~~~~~~~~~~~~~
 
@@ -107,6 +118,25 @@ path. The super controller is used in conjunction with individual wind
 turbine controllers defined in the style of the DISCON dynamic library
 of the DNV GL’s Bladed wind turbine software package, with minor
 modification. See :numref:`FF:sec:SupCon` for more information.
+
+Shared Moorings
+~~~~~~~~~~~~~~~
+
+Shared mooring lines running between platforms introduce a coupling between the
+platforms that operates on the same time scales as a platform's interaction with
+a regular mooring system (typically resolved at a time step of 10--30 ms in
+OpenFAST simulations).  See :numref:`MoorDyn` for more information.
+
+**SharedMoorFile** [quoted string] sets the name and location of the MoorDyn
+input file for the mooring lines in the wind farm. It is only used if
+**Mod_SharedMooring** = 3.  **The file name must be in quotations** and can
+contain an absolute or a relative path.  The mooring lines then connect to each
+of the wind turbines in the farm.  See `MoorDyn with FAST.Farm
+<https://moordyn.readthedocs.io/en/latest/usage.html#moordyn-with-fast-farm>`_
+documentation for details on the input file at the farm level.
+
+**DT_Mooring** (sec) sets the timestep for the shared mooring connections with
+MoorDyn. 
 
 .. _FF:Input:VTK:
 
@@ -213,6 +243,11 @@ low-resolution ambient wind calculation, as well as the global
 called every **DT_Low** seconds, although OpenFAST and its modules may
 choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
+When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
+of **dr** and **DT_Low**.
+(typically  :math:`\textbf{DT_Low}  \lessapprox \textbf{dr}/(2V_\text{Hub})`, 
+see :numref:`FF:ModGuidance`)
+
 
 **DT_High** [sec] sets the time step of the high-resolution ambient wind
 data calculation and must be an integer multiple smaller than or equal
@@ -354,16 +389,43 @@ grid, as shown in :numref:`FF:RadialFD`.
    number and size of the wake planes are shown smaller than they should
    be.
 
-These planes are defined by the following parameters:
+
+Three wake formulations are available (see :numref:`FF:Theory` for more details):
+
+**Mod_Wake** [switch] is used to switch between wake formulations.
+There are three options available:
+1) Polar [**Mod_Wake=1**] (default); 
+the wake is axi-symmetric, defined on a polar grid, 
+solved using an implicit Crank-Nicolson scheme,
+satisfying both the momentum and mass conservation laws under a shear layer approximation.
+2) Curled-wake model [**Mod_Wake=2**];
+the wake is defined on a Cartesian grid, 
+the effect of curled wake vorticies in skewed inflow is accounted for by introducing cross-flow velocities, the momentum conservation is solved using a first-order forward Euler scheme, 
+mass conservation is not enforced, the effect of wake swirl may be accounted for.
+The wake will adopt a "curled" shape in skewed inflow.
+3) Cartesian [**Mod_Wake=3**]; corresponds to model 2 with curled-wake vortices of zero intensities, leading to an axi-symmetric wake.
+
+When Wake_Mod=2,3, the stability of the algorithm will depend on the choice of **dr** and **DT_Low** (see the guidelines (see the guidelines given in :numref:`FF:ModGuidance`).
+
+
+
+
+The wake planes are defined by the following parameters:
 
 -  **dr** [m] sets the radial increment. To ensure the wake deficits are
    accurately computed by FAST.Farm, **dr** should be set so that
    FAST.Farm sufficiently resolves the wake deficit within each plane.
+   When a cartesian grid is used (**Mod_Wake=2 or 2**), **dr** represents the 
+   spacing in the y and z direction of the plane.
+   When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
+   of **dr** and **DT_Low** (see the guidelines given in :numref:`FF:ModGuidance`).
 
 -  **NumRadii** [integer] (:math:`N_r`) sets the number of radii. To
    ensure the wake deficits are accurately computed by FAST.Farm,
    **NumRadii** should be set so that the diameter of each wake plane,
    2(**NumRadii**-1)\ **dr**, is large relative to the rotor diameter.
+   When a Cartesian grid is used, the y and z coordinates extend from
+   (-NumRaddi+1)*dr to  (NumRadii-1)*dr.
 
 -  **NumPlanes** [integer] (:math:`N_p`) sets the number of wake planes.
    To ensure the wake deficits are accurately captured by FAST.Farm,
@@ -382,8 +444,23 @@ user.
 
 **f_c** [Hz] (:math:`f_c`) is the cutoff (corner) frequency of the
 low-pass time filter for the wake advection, deflection, and meandering
-model and must be greater than zero. If the DEFAULT keyword is specified
-in place of a numerical value, **f_c** is set to :math:`0.0007`.
+model and must be greater than zero. 
+Preferably the filter constant should be set as follows:
+
+.. math::  :label: fffc
+
+     \tau_1=\frac{1.1}{1-1.3 \operatorname{min}(a_\text{avg}, 0.5)} \frac{R}{U_\infty} , \qquad f_c = \frac{2.4}{\tau_1}
+
+where 
+:math:`\tau_1` is a time scale similar to the one used in the Oye dynamic inflow model and 
+:math:`a_\text{avg}` is the average axial induction factor across the rotor disk.
+If the DEFAULT keyword is specified in place of a numerical value, **f_c** is set to :math:`12.5/R_\text{est}` Hz
+which corresponds to :math:`U=10` m/s, :math:`a=1/3` in the equation above, and 
+where the estimated rotor radius is obtained as: :math:`R_\text{est} = (dr * NumRadii) / 3`.
+Changing the grid resolution will change the estimated radius, therefore it is recommended to set a numerical 
+value for **f_c** directly instead of using DEFAULT. 
+If numerical issues occur, you may attempt to lower the value of **f_c** to introduce more filtering of high frequencies.
+In previous release, the default value was excessively small, set to :math:`0.0007` Hz.
 
 **C_HWkDfl_O** [m] (:math:`C_{HWkDfl}^{O}`) is the calibrated parameter
 for the wake deflection correction defining the horizontal offset at the
@@ -393,8 +470,9 @@ value, **C_HWkDfl_O** is set to :math:`0.0`.
 **C_HWkDfl_OY** [m/deg] (:math:`C_{HWkDfl}^{OY}`) is the calibrated
 parameter for the wake deflection correction defining the horizontal
 offset at the rotor scaled with yaw error. If the DEFAULT keyword is
-specified in place of a numerical value, **C_HWkDfl_OY** is set to
-:math:`0.3`.
+specified in place of a numerical value, 
+**C_HWkDfl_OY** is set to :math:`0` when **Mod_Wake=2**
+**C_HWkDfl_OY** is set to :math:`0.3` otherwise.
 
 **C_HWkDfl_x** [-] (:math:`C_{HWkDfl}^{x}`) is the calibrated parameter
 for the wake deflection correction defining the horizontal offset scaled
@@ -404,8 +482,9 @@ of a numerical value, **C_HWkDfl_x** is set to :math:`0.0`.
 **C_HWkDfl_xY** [1/deg] (:math:`C_{HWkDfl}^{xY}`) is the calibrated
 parameter for the wake deflection correction defining the horizontal
 offset scaled with downstream distance and yaw error. If the DEFAULT
-keyword is specified in place of a numerical value, **C_HWkDfl_xY** is
-set to :math:`-0.004`.
+keyword is specified in place of a numerical value, 
+**C_HWkDfl_xY** is set to :math:`0.0` when **Mod_Wake=2**.
+**C_HWkDfl_xY** is set to :math:`-0.004` otherwise.
 
 **C_NearWake** (:math:`C_{NearWake}`) [-] is the calibrated parameter
 for the near-wake correction and must be greater than one. If the
@@ -499,6 +578,56 @@ the DEFAULT keyword is specified in place of a numerical value,
 the wake meandering and must be greater than or equal to one. If the
 DEFAULT keyword is specified in place of a numerical value,
 **C_Meander** is set to :math:`1.9`.
+
+*----------------Curled wake parameters------------------*
+
+
+
+**Swirl** [switch] 
+Include swirl velocities in wake [only used if [**Mod_Wake=2**]
+or [**Mod_Wake=3**].
+
+**k_VortexDecay** [-] This constant specifies the decay rate of the 
+spanwise velocity components from the curled wake model. 
+DEFAULT is 0.01.
+
+**NumVortices** [-] The number of vortices in the curled wake model. 
+DEFAULT is 100.
+
+**sigma_D** [-] The width of the vortex core in the curled wake model 
+non-dimesionalized by rotor diameter.  If the DEFAULT keyword is 
+specified in place of a numerical value, **sigma_D** is set to 
+:math:`0.2`.
+
+**FilterInit** [switch] The number of grid points (in the `y` and `z` directions)
+used to filter the initial wake plane deficit in the curled wake model.
+A value of zero corresponds to no filter. The filter is used to remove strong gradients  
+in the wake, and stabilize the solution.
+DEFAULT is 1.
+
+**k_vCurl** [-] Calibrated parameter for scaling the eddy viscosity in the 
+curled-wake model. 
+This value is a tuning parameters to increase or decrease the diffusion in the curled wake model.
+We have found that this value may be a function of the thrust coefficient, with higher values recommended for higher thrust coefficients.
+The following guidelines are suggested: 
+:math:`k_v=0.9` for :math:`C_T=0.4`,
+:math:`k_v=2.0` for :math:`C_T=0.7`,
+:math:`k_v=3.0` for :math:`C_T=0.9`.
+These guidelines may change in the future.
+The DEFAULT value is 2.0.
+
+**Mod_Projection** [switch] Select how the wake plane velocity is 
+projected in AWAE. There are two options:
+1) keep all components 
+2) project against plane normal.
+If DEFAULT is used, then **Mod_Projection=2** when **Mod_Wake=2**, 
+and **Mod_Projection=1** otherwise.
+
+
+
+**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+Note: this option requires intensive writing to disk and will drastically slow down the simulation.
+DEFAULT is False.
 
 Visualize
 ~~~~~~~~~

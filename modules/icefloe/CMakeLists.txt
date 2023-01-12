@@ -41,7 +41,7 @@ add_library(icefloelib_obj OBJECT ${ICEFLOE_LIBS_SOURCES})
 target_link_libraries(icefloelib_obj nwtclibs_obj)
 
 add_library(icefloelib $<TARGET_OBJECTS:icefloelib_obj>)
-target_link_libraries(icefloelib nwtclibs)
+target_link_libraries(icefloelib nwtclibs versioninfolib)
 
 install(TARGETS icefloelib icefloelib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

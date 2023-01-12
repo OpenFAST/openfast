@@ -20,7 +20,12 @@ endif()
 
 set(MOORDYN_LIBS_SOURCES
   src/MoorDyn.f90
+  src/MoorDyn_Body.f90
   src/MoorDyn_IO.f90
+  src/MoorDyn_Line.f90
+  src/MoorDyn_Misc.f90
+  src/MoorDyn_Point.f90
+  src/MoorDyn_Rod.f90
   src/MoorDyn_Types.f90
 )
 
@@ -29,6 +34,14 @@ target_link_libraries(moordynlib_obj nwtclibs_obj)
 
 add_library(moordynlib $<TARGET_OBJECTS:moordynlib_obj>)
 target_link_libraries(moordynlib nwtclibs)
+
+# c-bindings interface library
+add_library(moordyn_c_binding SHARED src/MoorDyn_C_Binding.f90)
+target_link_libraries(moordyn_c_binding moordynlib versioninfolib ${CMAKE_DL_LIBS})
+if(APPLE OR UNIX)
+   target_compile_definitions(moordyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+endif()
+
 
 install(TARGETS moordynlib moordynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
@@ -44,3 +57,4 @@ install(TARGETS moordyn_driver
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+

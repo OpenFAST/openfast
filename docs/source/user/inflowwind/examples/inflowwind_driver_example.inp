@@ -7,6 +7,7 @@ InflowWind driver input file.
  false         WrHAWC         -- Convert all data to HAWC2 format? (flag)
  false         WrBladed       -- Convert all data to Bladed format? (flag)
  false         WrVTK          -- Convert all data to VTK format? (flag)
+ false         WrUniform      -- Convert data to Uniform wind format? (flag)
 =====================  Tests of Interpolation Options =========================
    DEFAULT     NumTSteps      -- number of timesteps to run (DEFAULT for all) (-)
    0.0         TStart         -- Start time (s)

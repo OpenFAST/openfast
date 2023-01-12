@@ -159,6 +159,8 @@ if (USE_LOCAL_STATIC_LAPACK)
   add_dependencies(openfastlib lapack)
 endif()
 
+set_property(TARGET openfastlib PROPERTY LINKER_LANGUAGE Fortran)
+
 if(BUILD_OPENFAST_SIMULINK_API)
 
   find_package(Matlab REQUIRED)
@@ -218,10 +220,11 @@ endif(BUILD_OPENFAST_SIMULINK_API)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 string(TOUPPER ${CMAKE_BUILD_TYPE} _build_type)
-if (${_compiler_id} STREQUAL "GNU" AND ${_build_type} STREQUAL "RELEASE")
+if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   # With variable tracking enabled, the compile step frequently aborts on large modules and
-  # restarts with this option off. Disabling in Release mode avoids this problem when compiling with
-  # full optimizations, but leaves it enabled for RelWithDebInfo which adds both -O2 and -g flags.
+  # restarts with this option off. Disabling avoids this problem when compiling with
+  # full optimizations. However, variable tracking should be enabled when actively debugging
+  # for better runtime debugging output.
   # https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
   set_source_files_properties(
     src/FAST_Subs.f90 src/FAST_Types.f90 src/FAST_Library.f90

@@ -39,7 +39,7 @@ add_library(servodynlib $<TARGET_OBJECTS:servodynlib_obj>)
 target_link_libraries(servodynlib nwtclibs)
 
 add_executable(servodyn_driver src/ServoDyn_Driver.f90)
-target_link_libraries(servodyn_driver servodynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(servodyn_driver servodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 # The Structural Control driver is currently not functional, so commenting this temporarily
 # add_executable(strucctrl_driver src/StrucCtrl_Driver.f90)

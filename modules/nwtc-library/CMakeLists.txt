@@ -15,6 +15,7 @@
 #
 
 set(NWTCLIBS_SOURCES
+  src/JSON.f90
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
   src/ModMesh_Types.f90
@@ -25,10 +26,15 @@ set(NWTCLIBS_SOURCES
   src/NWTC_RandomNumber.f90
 
   src/NWTC_Library_Types.f90
+  src/VTK.f90
+  src/YAML.f90
 
   # RanLux sources
   src/ranlux/RANLUX.f90
 
+  # Public Domain Aeronautical Software (PDAS) Polynomial Root Finder
+  src/Polynomial/quartic.f90
+  
   # NetLib sources
   src/NetLib/fftpack/fftpack4.1.f
   src/NetLib/scalapack/dlasrt2.f
@@ -144,6 +150,7 @@ if(BUILD_OPENFAST_SIMULINK_API)
 
   # Append the matlab mex libraries to the target
   find_package(Matlab REQUIRED)
+
   message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
 
   add_library(nwtcsyslib_matlab_obj OBJECT ${NWTC_SYS_FILE_MATLAB})

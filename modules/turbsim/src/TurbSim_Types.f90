@@ -3,7 +3,7 @@ MODULE TurbSim_Types
 
 use NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', '', '' )
+   TYPE(ProgDesc)            :: TurbSim_Ver = ProgDesc( 'TurbSim', '', '' )
 
    LOGICAL,        PARAMETER :: MVK         = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
    LOGICAL,        PARAMETER :: PeriodicY   = .FALSE. !.TRUE.
@@ -54,7 +54,8 @@ use NWTC_Library
    INTEGER(IntKi), PARAMETER :: FileExt_UVW       =  6  ! .u, .v, .w files  : formatted FF data (Traditional SNLWIND-3D format) [WrFMTFF]
    INTEGER(IntKi), PARAMETER :: FileExt_CTS       =  7  ! .cts file         : coherent turbulence
    INTEGER(IntKi), PARAMETER :: FileExt_TWR       =  8  ! .twr file         : AeroDyn tower data (binary)
-   INTEGER(IntKi), PARAMETER :: NumFileFmt        =  8  ! TOTAL number of output file formats (used to dimension array)
+   INTEGER(IntKi), PARAMETER :: FileExt_HAWC      =  9  ! -u.bin, -v.bin, -w.bin .hawc files: binary HAWC FF data [WrHAWCFF]
+   INTEGER(IntKi), PARAMETER :: NumFileFmt        =  9  ! TOTAL number of output file formats (used to dimension array)
    
       ! other parameters:
    REAL(ReKi),     PARAMETER :: ZJetMax_UB        = 490.0_ReKi    ! upper bound on height where jet maximum occurs
@@ -136,7 +137,6 @@ use NWTC_Library
       INTEGER(IntKi)               :: NumOutSteps                              ! Number of output time steps.
                   
       LOGICAL                      :: Periodic                                 ! Flag to indicate that output files must contain exactly one full (time) period
-      LOGICAL                      :: Clockwise                                ! Flag to indicate clockwise rotation when looking downwind.
       
    end type Grid_ParameterType
    

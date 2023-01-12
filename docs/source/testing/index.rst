@@ -29,8 +29,6 @@ GitHub users and is highly recommended as part of the development
 workflow. After enabling GitHub Actions in an OpenFAST repository, simply
 pushing new commits will trigger the tests.
 
-Test specific documentation
----------------------------
 .. toctree::
    :maxdepth: 1
 

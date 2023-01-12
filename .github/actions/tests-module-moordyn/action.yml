@@ -1,0 +1,21 @@
+name: 'MoorDyn module tests'
+description: 'Run tests specific to the MoorDyn module'
+author: 'Andy Platt https://github.com/andrew-platt'
+
+
+inputs:
+  test-target:
+    description: 'Which tests to run: unit | regression | all'
+    default: 'all'
+
+runs:
+  using: "composite"
+  steps: 
+    - run: |
+
+        if [[ ${{ inputs.test-target }} == "regression" ]] || [[ ${{ inputs.test-target }} == "all" ]]; then
+          ctest -VV -j7 -R md_ -LE python
+        fi
+
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

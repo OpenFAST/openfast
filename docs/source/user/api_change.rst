@@ -10,10 +10,139 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
-OpenFAST v3.0.0 to OpenFAST `dev`
----------------------------------
+OpenFAST v3.3.0 to OpenFAST v3.4.0 
+----------------------------------
 
-No change
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `dev`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
+FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
+FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]
+FAST.Farm                                     70   NumVortices       DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100] [only used if Mod_Wake=2]
+FAST.Farm                                     71   sigma_D           DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimensionalized by rotor diameter (-) [DEFAULT=0.2] [only used if Mod_Wake=2]
+FAST.Farm                                     72   FilterInit        DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] (switch)
+FAST.Farm                                     73   k_vCurl           DEFAULT    k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FAST.Farm                                     74   Mod_Projection    DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] (switch)
+FAST.Farm                                     91   OutAllPlanes      DEFAULT    OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
+AeroDyn 15                                    13   Buoyancy          True       Buoyancy          - Include buoyancy effects? (flag)
+AeroDyn 15                                    65   HubPropsSection   ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    66   VolHub            7.0        VolHub            - Hub volume (m^3)
+AeroDyn 15                                    67   HubCenBx          0.5        HubCenBx          - Hub center of buoyancy x direction offset (m)
+AeroDyn 15                                    68   NacPropsSection   ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    69   VolNac            32.0       VolNac            - Nacelle volume (m^3)
+AeroDyn 15                                    70   NacCenB           0.4,0,0    NacCenB           - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+AeroDyn 15                                    71   TFinPropsSection  ======  Tail fin Aerodynamics ======================================================================== 
+AeroDyn 15                                    72   TFinAero          True      TFinAero            - Calculate tail fin aerodynamics model (flag)
+AeroDyn 15                                    73   TFinFile\$        "AD_Fin.dat"  TFinFile        - Input file for tail fin aerodynamics [used only when TFinAero=True]
+AeroDyn 15                                         TwrCb             1.0        [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
+OLAF                                          18   nNWPanelFree      180       nNWPanelFree       - Number of free near-wake panels (-) {default: nNWPanels}
+OLAF                                          19   nFWPanels         900       nFWPanels          - Number of far-wake panels (-) {default: 0}
+OLAF                                          20   nFWPanelsFree     0         nFWPanelsFree      - Number of free far-wake panels (-) {default: nFWPanels}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+\$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
+**New Default Values**:
+The following default value were changed 
+
+- OLAF *VelocityMethod* is now 2 (particle tree), previous value 1 (n^2 BiotSavart law on segments). 
+- OLAF *WakeRegMethod* is now 3 (increasing with wake age), previous value was 1 (constant).
+- OLAF *nVTKBlades* is now 0 (no wake panels output), previous value was 1 (wake panels output for blade 1)
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.4.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+OLAF                                          18   WakeLength      900     WakeLength         Total wake distance [integer] (number of time steps)
+OLAF                                          19   FreeWakeLength  0       FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v3.2.0 to OpenFAST v3.3.0
+----------------------------------
+
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `3.3.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField     - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile   -  Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring       -  Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    na                Name     Diam      MassDen       EA    BA/-zeta    EI    Cd      Ca     CdAx   CaAx
+MoorDyn\&                                     6    na                (-)       (m)      (kg/m)        (N)    (N-s/-)    (-)   (-)     (-)    (-)    (-)
+MoorDyn\&                                     7    na                main     0.0766    113.35     7.536E8     -1.0      0    2.0     0.8    0.4   0.25
+MoorDyn\&                                     8\*  na                ---------------------- POINTS --------------------------------
+MoorDyn\&                                     9\*  na                ID     Attachment   X          Y         Z      M      V       CdA   CA
+MoorDyn\&                                     10\* na                (-)    (-)         (m)        (m)       (m)    (kg)   (m^3)   (m^2)  (-)
+MoorDyn\&                                     11\* na                1      Fixed     418.8      725.383   -200.0     0      0       0     0
+MoorDyn\&                                     17\* na                ---------------------- LINES --------------------------------------
+MoorDyn\&                                     18\* na                ID      LineType   AttachA   AttachB  UnstrLen  NumSegs   Outputs
+MoorDyn\&                                     19\* na                (-)       (-)       (-)       (-)         (m)      (-)         (-)
+MoorDyn\&                                     20\* na                1         main       1         4        835.35      20          -
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    NTypes            1        NTypes    - number of LineTypes
+MoorDyn\&                                     10\* NConnects         6        NConnects - number of connections including anchors and fairleads
+MoorDyn\&                                     20\* NLines            3        NLines    - number of line objects
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
+
+
+OpenFAST v3.1.0 to OpenFAST v3.2.0
+----------------------------------
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Added in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       13   WrHAWCFF         False      WrHAWCFF          - Output full-field time-series data in HAWC form?  (Generates RootName-u.bin, RootName-v.bin, RootName-w.bin, RootName.hawc)
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.2.0 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+TurbSim                                       14   Clockwise        True           Clockwise       - Clockwise rotation looking downwind? (used only for full-field binary files - not necessary for AeroDyn)
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 
 
@@ -27,16 +156,16 @@ Module                                        Line  Flag Name        Example Val
 ============================================= ==== =============== ========================================================================================================================================================================================================
 ServoDyn                                      60   AeroControlSec  ---------------------- AERODYNAMIC FLOW CONTROL --------------------------------
 ServoDyn                                      61   AfCmode         0             AfCmode      - Airfoil control mode {0: none, 1: cosine wave cycle, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
-ServoDyn                                      61   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
-ServoDyn                                      61   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
+ServoDyn                                      62   AfC_Mean        0             AfC_Mean     - Mean level for cosine cycling or steady value (-) [used only with AfCmode==1]
+ServoDyn                                      63   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
+ServoDyn                                      64   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
 ServoDyn                                      74   CablesSection   ---------------------- CABLE CONTROL -------------------------------------------
-ServoDyn                                      75   CCmode          0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      75   CCmode          0          CCmode            - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
 HydroDyn driver                               7    WtrDpth         200        WtrDpth           - Water depth (m)
 HydroDyn driver                               8    MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
 OpenFAST                                      21   MHK             0          MHK               - MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}
-OpenFAST                                      22   N/A             ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
+OpenFAST                                      22   EnvCondSection  ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
 OpenFAST                                      23   Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 OpenFAST                                      24   AirDens         1.225      AirDens           - Air density (kg/m^3)
 OpenFAST                                      25   WtrDens         1025       WtrDens           - Water density (kg/m^3)
@@ -46,13 +175,24 @@ OpenFAST                                      28   Patm            103500     Pa
 OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
 OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
 OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
-AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AeroDyn 15                                    39   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    40   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 AeroDyn driver                                34   Twr2Shft        3.09343    Twr2Shft          - Vertical distance from the tower-top to the rotor shaft (m)
 AirFoilTables                                 12\* alphaUpper      5.0        alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
 AirFoilTables                                 13\* alphaLower      \-3.0      alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
 AirFoilTables                                 42\* UACutout_delta  "DEFAULT"  UACutout_delta    ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+FASTFarm                                      28   Mod_Wake        1          Mod_Wake          -  Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FASTFarm                                      62   Swirl           False      Swirl             - Switch to include swirl velocities in wake [only used if Mod_Wake=2 or Mod_Wake=3] (-) (switch)
+FASTFarm                                      63   k_VortexDecay   0.         k_VortexDecay     - Vortex decay constant for curl (-)
+FASTFarm                                      64   NumVortices     DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100]
+FASTFarm                                      65   sigma_D         DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimesionalized by rotor diameter (-) [DEFAULT=0.2]
+FASTFarm                                      66   FilterInit      DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] [unused for Mod_Wake=1] (switch)
+FASTFarm                                      67   k_vCurl         20         k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [only used if Mod_Wake=2 or Mod_Wake=3] [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FASTFarm                                      68   Mod_Projection  DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is project
+FASTFarm                                      85   OutAllPlanes    True       OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
+
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
@@ -77,7 +217,7 @@ Removed in OpenFAST v3.1.0
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 AeroDyn                                       21   FluidDepth      0.5        FluidDepth        - Water depth above mid-hub height (m) [used only when CavitCheck=True]
-ElastoDyn                                     7    N/A             ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
+ElastoDyn                                     7    EnvCondSection  ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
 ElastoDyn                                     8    Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
@@ -118,19 +258,32 @@ SubDyn         n+2  OutFEMModes        Output first 30 FEM modes {0: No output, 
 OpenFAST v2.6.0 to OpenFAST v3.0.0
 ----------------------------------
 
--  ServoDyn
+**ServoDyn Changes**
 
-   -  The input file parser is updated to a keyword/value pair based input.
-      Each entry must have a corresponding keyword with the same spelling as
-      expected
-   -  The TMD submodule of ServoDyn is replaced by an updated Structural Control
-      module (StC) with updated capabilities and input file.
+-  The input file parser is updated to a keyword/value pair based input.
+   Each entry must have a corresponding keyword with the same spelling as
+   expected.
+-  The TMD submodule of ServoDyn is replaced by an updated Structural Control
+   module (StC) with updated capabilities and input file.
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- TUNED MASS DAMPER ---------------------------------------
+ServoDyn                                      61   CompNTMD        False         CompNTMD     - Compute nacelle tuned mass damper {true/false} (flag)
+ServoDyn                                      62   NTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    NTMDfile     - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]
+ServoDyn                                      63   CompTTMD        False         CompTTMD     - Compute tower tuned mass damper {true/false} (flag)
+ServoDyn                                      64   TTMDfile        "NRELOffshrBsline5MW_ServoDyn_TMD.dat"    TTMDfile     - Name of the file for tower tuned mass damper (quoted string) [unused when CompTTMD is false]
+============================================= ==== =============== ========================================================================================================================================================================================================
 
 ============================================= ==== =============== ========================================================================================================================================================================================================
 Added in OpenFAST v3.0.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
+ServoDyn                                      60   na              ---------------------- STRUCTURAL CONTROL --------------------------------------
 ServoDyn                                      61   NumBStC            0             NumBStC      - Number of blade structural controllers (integer)
 ServoDyn                                      62   BStCfiles          "unused"      BStCfiles    - Name of the files for blade structural controllers (quoted strings) [unused when NumBStC==0]
 ServoDyn                                      63   NumNStC            0             NumNStC      - Number of nacelle structural controllers (integer)
@@ -269,12 +422,22 @@ Modified in OpenFAST v2.5.0
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                       Line    Flag Name / section                              Example Value
 ============================ ====== ================================================ ====================================================================================
-MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table  .. code-block:: none
-
-                                                                                        Line    LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Outputs  CtrlChan
-                                                                                        (-)       (-)       (m)       (-)       (-)       (-)       (-)      (-)
-                                                                                        1         main     835.35      20        1         4         -        0
+MoorDyn                        na    added CtrlChan column in LINE PROPERTIES table    
 ============================ ====== ================================================ ====================================================================================
+
+============== ====== =============== ============== =============================================================================================================================================================================
+Renamed in OpenFAST v2.5.0
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module          Line   Previous Name   New Name       Example Value
+============== ====== =============== ============== =============================================================================================================================================================================
+InflowWind      17    Filename         FileName_Uni   "Shr11_30.wnd"    FileName_Uni   - Filename of time series data for uniform wind field.      (-)
+InflowWind      18    RefHt            RefHt_Uni      90                RefHt_Uni      - Reference height for horizontal wind speed                (m)
+InflowWind      21    Filename         FileName_BTS   "unused"          FileName_BTS   - Name of the Full field wind file to use (.bts)            (-)
+InflowWind      23    Filename         FileNameRoot   "unused"          FileNameRoot   - WindType=4: Rootname of the full-field wind file to use (.wnd, .sum); WindType=7: name of the intermediate file with wind scaling values
+InflowWind      35    RefHt            RefHt_Hawc     90                RefHt_Hawc     - reference height; the height (in meters) of the vertical center of the grid  (m)
+InflowWind      47    PLExp            PLExp_Hawc     0.2               PLExp_Hawc     - Power law exponent (-) (used for PL wind profile type only)
+InflowWind      49    InitPosition(x)  XOffset        0                 XOffset        - Initial offset in +x direction (shift of wind box)
+============== ====== =============== ============== =============================================================================================================================================================================
 
 
 
@@ -309,11 +472,6 @@ Modified in OpenFAST v2.4.0
  Module        Line  New Flag Name      Example Value                                                                                                                                           Previous Flag Name/Value
 ============== ==== ================== ======================================================================================================================================================= =========================
 AirFoilTables  40\* filtCutOff         "DEFAULT"  filtCutOff   - Reduced frequency cut-off for low-pass filtering the AoA input to UA, as well as the 1st and 2nd deriv (-) [default = 0.5]     [default = 20]
-InflowWind     17   Filename_Uni        "unused"  Filename_Uni - Filename of time series data for uniform wind field.      (-)                                                                  Filename
-InflowWind     18   RefHt_Uni                 90  RefHt_Uni    - Reference height for horizontal wind speed                (m)                                                                  RefHt
-InflowWind     35   RefHt_Hawc                90  RefHt_Hawc   - reference height; the height (in meters) of the vertical center of the grid (m)                                                RefHt
-InflowWind     47   PLExp_Hawc               0.2  PLExp_Hawc   - Power law exponent (-) (used for PL wind profile type only)                                                                    PLExp
-InflowWind     49   XOffset                    0  XOffset      - Initial offset in +x direction (shift of wind box)                                                                             InitPosition(x)
 ============== ==== ================== ======================================================================================================================================================= =========================
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0.

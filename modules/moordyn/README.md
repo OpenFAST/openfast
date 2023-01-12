@@ -3,9 +3,6 @@ This is an externally developed module with further information
 available on the developer's documentation site:
 [Matt Hall](http://www.matt-hall.ca/moordyn.html).
 
-The legacy version of FAST's information regarding this module
-are available at the [NWTC Software Portal](https://nwtc.nrel.gov/MoorDyn/).
-
 ## Overview
 MoorDyn is a lumped-mass mooring line model for simulating the dynamics of
 moorings connected to floating offshore structures. It accounts for internal

@@ -1,7 +1,7 @@
 .. _regression_test:
 
-Regression test
-===============
+Regression tests
+================
 The regression test executes a series of test cases which intend to fully
 describe OpenFAST and its module's capabilities. Jump to one of the following
 sections for instructions on running the regression

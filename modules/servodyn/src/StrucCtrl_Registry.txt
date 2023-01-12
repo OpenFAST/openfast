@@ -113,7 +113,6 @@ typedef  ^  InitOutputType ReKi  RelPosition    {:}{:} - - "StC position relativ
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^		ContinuousStateType	ReKi		StC_x			{:}{:} - -  "Continuous States -- StrucCtrl x" -
-#typedef	^		ContinuousStateType	ReKi		StC_xdot			{:}{:} - -  "Continuous States -- StrucCtrl xdot" -
 # Define discrete (nondifferentiable) states here:
 typedef ^ DiscreteStateType ReKi DummyDiscState - - - "Remove this variable if you have discrete states" -
 # Define constraint states here:

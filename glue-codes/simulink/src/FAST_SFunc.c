@@ -45,10 +45,12 @@
 
 
 static double dt = 0;
+static double dt_out = 0;
 static double TMax = 0;
 static int NumInputs = NumFixedInputs;
 static int NumAddInputs = 0;  // number of additional inputs
 static int NumOutputs = 1;
+static bool EndEarly = false;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static int ErrStat2 = 0;
@@ -83,12 +85,7 @@ checkError(SimStruct *S){
 
     if (ErrStat >= AbortErrLev) {
         ssPrintf("\n");
-        if (ErrStat > ErrID_Fatal) { // in case we've reached a trim solution
-            ssPrintf("%s\n", ErrMsg);
-        }
-        else {
-            ssSetErrorStatus(S, ErrMsg);
-        }
+        ssSetErrorStatus(S, ErrMsg);
         mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
         return 1;
     }
@@ -207,7 +204,7 @@ static void mdlInitializeSizes(SimStruct *S)
        FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
        if (checkError(S)) return;
 
-       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+       FAST_Sizes(&iTurb, InputFileName, &AbortErrLev, &NumOutputs, &dt, &dt_out, &TMax, &ErrStat, ErrMsg, ChannelNames, &TMax, InitInputAry);
        n_t_global = -1;
        if (checkError(S)) return;
 
@@ -430,9 +427,16 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
-    FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+    FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &EndEarly, &ErrStat, ErrMsg);
     n_t_global = n_t_global + 1;
 
+   // For trim solution or any other reason to end early when there is no error
+   if (EndEarly) {
+      mdlTerminate(S);  // terminate after simulation completes (in case Simulink doesn't do so itself)
+      return;
+   }
+
+   // Handle errors
     if (checkError(S)) return;
 
     setOutputs(S, OutputAry);

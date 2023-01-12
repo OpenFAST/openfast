@@ -3,7 +3,7 @@
 
 .. _AD_UA:
 
-Unsteady aerodynamics
+Unsteady Aerodynamics
 =====================
 
 
@@ -197,8 +197,11 @@ Two variants are implemented in the Unsteady Aerodynamic module. These two (comp
 Beddoes-Leishman 4-states model (UAMod=4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The 4-states (incompressible) dynamic stall model from Hansen-Gaunaa-Madsen (HGM) is described in :cite:`ad-Hansen:2004` and enabled using ``UAMod=4``.  The model uses :math:`C_l` as main physical quantity. 
-Linearization of the model will be available in the future.
+The 4-states (incompressible) dynamic stall model as implemented in OpenFAST is described in :cite:`ad-Branlard:2022` (the model differs slithgly from the original formulation from Hansen-Gaunaa-Madsen (HGM) :cite:`ad-Hansen:2004`).
+The model is enabled using ``UAMod=4``.  The model uses :math:`C_l` as main physical quantity. 
+Linearization of the model is available.
+
+NOTE: this model might require smaller time steps until a stiff integrator is implemented in AeroDyn-UA.
 
 
 **State equation:**
@@ -225,6 +228,9 @@ with
     \end{aligned}
 
 
+
+
+
 **Output equation:**
 The unsteady airfoil coefficients
 :math:`C_{l,\text{dyn}}`, :math:`C_{d,\text{dyn}}`,
@@ -233,8 +239,9 @@ The unsteady airfoil coefficients
 .. math::
 
    \begin{aligned}
-       C_{l,\text{dyn}}(t) &= x_4 (\alpha_E-\alpha_0) C_{l,\alpha} +  (1-x_4) C_{l,{fs}}(\alpha_E)+ \pi T_u \omega   \\
-       C_{d,\text{dyn}}(t) &=  C_d(\alpha_E) + (\alpha_{ac}-\alpha_E) C_{l,\text{dyn}} + \left[ C_d(\alpha_E)-C_d(\alpha_0)\right ] \Delta C_{d,f}'' \\
+       C_{l,\text{dyn}}(t) &= C_{l,\text{circ}} + \pi T_u \omega   \\
+   %   C_{d,\text{dyn}}(t) &=  C_d(\alpha_E) + (\alpha_{ac}-\alpha_E) C_{l,\text{dyn}} + \left[ C_d(\alpha_E)-C_d(\alpha_0)\right ] \Delta C_{d,f}'' \\
+      C_{d,\text{dyn}}(t)  &=  C_d(\alpha_E) + \left[(\alpha_{ac}-\alpha_E) +T_u \omega \right]C_{l,\text{circ}} + \left[ C_d(\alpha_E)-C_d(\alpha_0)\right ] \Delta C_{d,f}'' \\
    %     C_{m,\text{dyn}}(t) &=  C_m(\alpha_E) + C_{l,\text{dyn}} \Delta C_{m,f}'' - \frac{\pi}{2} T_u \omega\\
        C_{m,\text{dyn}}(t) &=  C_m(\alpha_E) - \frac{\pi}{2} T_u \omega\\
    \end{aligned}
@@ -245,7 +252,8 @@ with:
    \begin{aligned}
        \Delta C_{d,f}'' &= \frac{\sqrt{f_s^{st}(\alpha_E)}-\sqrt{x_4}}{2} - \frac{f_s^{st}(\alpha_E)-x_4}{4} 
    ,\qquad
-       x_4\ge 0
+       x_4\ge 0  \\
+    C_{l,\text{circ}}&= x_4 (\alpha_E-\alpha_0) C_{l,\alpha} +  (1-x_4) C_{l,{\text{fs}}}(\alpha_E) 
    \end{aligned}
 
 
@@ -258,7 +266,7 @@ Beddoes-Leishman 5-states model (UAMod=5)
 The 5-states (incompressible) dynamic stall model is similar to the Beddoes-Leishman 4-states model (UAMod=4), but 
 adds a 5th state to represent vortex generation. 
 It is enabled using ``UAMod=5``. The model uses :math:`C_n` and :math:`C_c` as main physical quantities.  
-Linearization of the model will be available in the future.
+Linearization of the model is available.
 
 
 
@@ -272,7 +280,7 @@ Oye model (UAMod=6)
 
 Oye's dynamic stall model is a one-state (continuous) model, formulated in :cite:`ad-Oye:1991` and described e.g. in :cite:`ad-Branlard:book`.
 The model attempts to capture trailing edge stall. 
-Linearization of the model will be available in the future.
+Linearization of the model is available.
 
 
 **State equation:**

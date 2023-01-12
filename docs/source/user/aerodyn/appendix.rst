@@ -27,7 +27,7 @@ outside of OpenFAST.
 3) AeroDyn Primary Input File 
 :download:`(primary input file example) <examples/ad_primary_example.dat>`: 
 
-The primary AeroDyn input file defines modeling options, environmental conditions (except freestream flow), airfoils, tower nodal discretization and properties, as well as output file specifications.
+The primary AeroDyn input file defines modeling options, environmental conditions (except freestream flow), airfoils, tower nodal discretization and properties, tower, hub, and nacelle buoyancy properties, as well as output file specifications.
 
 The file is organized into several functional sections.  Each section corresponds to an aspect of the aerodynamics model.  
 
@@ -44,23 +44,23 @@ The airfoil data input files themselves (one for each airfoil) include tables co
 5) Blade Data Input File
 :download:`(blade data input file example) <examples/ad_blade_example.dat>`: 
 
-The blade data input file contains the nodal discretization, geometry, twist, chord, and airfoil identifier for a blade.  Separate files are used for each blade, which permits modeling of aerodynamic imbalances.  
+The blade data input file contains the nodal discretization, geometry, twist, chord, airfoil identifier, and buoyancy properties for a blade.  Separate files are used for each blade, which permits modeling of aerodynamic imbalances.  
 
 .. _ad_output_channels:
 
 AeroDyn List of Output Channels
 -------------------------------
 
-This is a list of all possible output parameters for the AeroDyn module.  The names are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit.  :math:`B \alpha N \beta`, refers to output node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{BlOutNd}` list.  :math:`\textit{TwN}\beta` refers to output node :math:`\beta` of the tower and is in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{TwOutNd}` list.
+This is a list of output parameters for the AeroDyn module.  The names are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit.  :math:`B \alpha N \beta`, refers to output node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{BlOutNd}` list.  :math:`\textit{TwN}\beta` refers to output node :math:`\beta` of the tower and is in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{TwOutNd}` list. A comprehensive, up-to-date list of all possible output parameters is given in the Excel file :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>`.
 
 The local tower coordinate system is shown in :numref:`ad_tower_geom` and the local blade coordinate system is shown in :numref:`ad_blade_local_cs` below.  Figure :numref:`ad_blade_local_cs` also shows the direction of the local angles and force components.
 
 .. _ad_blade_local_cs:
 
-.. figure:: figs/ad_blade_local_cs.png
+.. figure:: figs/aerodyn_blade_local_cs.png
    :width: 80%
    :align: center
-   :alt: ad_blade_local_cs.png
+   :alt: aerodyn_blade_local_cs.png
 
    AeroDyn Local Blade Coordinate System (Looking Toward the Tip, 
    from the Root) – l: Lift, d: Drag, m: Pitching, x: Normal (to Plane), 
@@ -69,9 +69,9 @@ The local tower coordinate system is shown in :numref:`ad_tower_geom` and the lo
 
 .. _ad-output-channel:
 
-.. figure:: figs/ad_output_channel.pdf
+.. figure:: figs/aerodyn_output_channel.pdf
    :width: 500px
    :align: center
-   :alt: ad_output_channel.pdf
+   :alt: aerodyn_output_channel.pdf
 
    AeroDyn Output Channel List
