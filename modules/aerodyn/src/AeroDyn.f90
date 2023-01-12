@@ -4091,6 +4091,8 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
 
       InitInp%numBladeNodes  = p%rotors(iR)%numBlNds ! TODO TODO TODO per wing
       InitInp%KinVisc        = p%rotors(iR)%KinVisc
+      InitInp%MHK            = p%rotors(iR)%MHK
+      InitInp%WtrDpth        = p%rotors(iR)%WtrDpth
       InitInp%RootName       = p%RootName(1:len_trim(p%RootName)-2) ! Removing "AD"
 
       ! Blades/Wings

@@ -353,6 +353,8 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
    p%RootName     = InitInp%RootName        ! Rootname for outputs
+   p%MHK          = InitInp%MHK             ! MHK flag
+   p%WtrDpth      = InitInp%WtrDpth         ! Water depth
    call GetPath( p%RootName, rootDir, baseName ) 
    p%VTK_OutFileRoot = trim(rootDir) // 'vtk_fvw'  ! Directory for VTK outputs
    p%VTK_OutFileBase = trim(rootDir) // 'vtk_fvw' // PathSep // trim(baseName) ! Basename for VTK files
