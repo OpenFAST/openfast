@@ -1,7 +1,0 @@
-{
-  "image": "ubuntu-openfast",
-  "extensions": [
-    "ms-vscode.cpptools"
-  ],
-  "runArgs": ["--privileged"]
-}
