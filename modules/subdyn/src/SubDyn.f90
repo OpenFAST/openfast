@@ -3662,7 +3662,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       DummyArray(i,9) = p%ElemProps(i)%Rho  ! density  kg/m^3
       DummyArray(i,10) = p%ElemProps(i)%YoungE ! Young modulus
       DummyArray(i,11) = p%ElemProps(i)%ShearG ! G
-      DummyArray(i,12) = p%ElemProps(i)%Kappa ! Shear coefficient
+      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear coefficient
       DummyArray(i,13) = p%ElemProps(i)%Ixx   ! Moment of inertia
       DummyArray(i,14) = p%ElemProps(i)%Iyy   ! Moment of inertia
       DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia

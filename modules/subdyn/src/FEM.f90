@@ -1022,8 +1022,8 @@ END SUBROUTINE GetOrthVectors
 !> Element stiffness matrix for classical beam elements
 !! shear is true  -- non-tapered Timoshenko beam 
 !! shear is false -- non-tapered Euler-Bernoulli beam 
-SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
-   REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa
+SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa_x, kappa_y, E, G, DirCos, K)
+   REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa_x, kappa_y
    REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    LOGICAL   , INTENT( IN) :: Shear
    REAL(FEKi), INTENT(OUT) :: K(12, 12) 
@@ -1031,8 +1031,8 @@ SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(FEKi)                            :: Ax, Ay, Kx, Ky
    REAL(FEKi)                            :: DC(12, 12)
    
-   Ax = kappa*A
-   Ay = kappa*A
+   Ax = kappa_x*A
+   Ay = kappa_y*A
    
    K(1:12,1:12) = 0.0_FEKi
    

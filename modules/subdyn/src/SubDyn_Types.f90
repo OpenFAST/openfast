@@ -69,7 +69,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Iyy      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Jzz      !< Moment of inertia of an element [-]
     LOGICAL  :: Shear      !< Use timoshenko (true) E-B (false) [-]
-    REAL(ReKi)  :: Kappa      !< Shear coefficient [-]
+    REAL(ReKi)  :: Kappa_x      !< Shear coefficient [-]
+    REAL(ReKi)  :: Kappa_y      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE      !< Young's modulus [-]
     REAL(ReKi)  :: ShearG      !< Shear modulus [N/m^2]
     REAL(ReKi) , DIMENSION(1:2)  :: D      !< Diameter at node 1 and 2, for visualization only [m]
@@ -1706,7 +1707,7 @@ ENDIF
     DstElemPropTypeData%Iyy = SrcElemPropTypeData%Iyy
     DstElemPropTypeData%Jzz = SrcElemPropTypeData%Jzz
     DstElemPropTypeData%Shear = SrcElemPropTypeData%Shear
-    DstElemPropTypeData%Kappa = SrcElemPropTypeData%Kappa
+    DstElemPropTypeData%Kappa_x = SrcElemPropTypeData%Kappa_x
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
     DstElemPropTypeData%D = SrcElemPropTypeData%D
@@ -1827,7 +1828,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Shear, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Kappa
+    ReKiBuf(Re_Xferred) = InData%Kappa_x
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YoungE
     Re_Xferred = Re_Xferred + 1
@@ -1891,7 +1892,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Shear = TRANSFER(IntKiBuf(Int_Xferred), OutData%Shear)
     Int_Xferred = Int_Xferred + 1
-    OutData%Kappa = ReKiBuf(Re_Xferred)
+    OutData%Kappa_x = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%YoungE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
