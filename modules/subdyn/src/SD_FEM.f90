@@ -402,7 +402,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          ! Test that the two properties match for non-beam 
          if (mType/=idMemberBeam) then
              if (Init%Members(iMem, iMProp)/=Init%Members(iMem, iMProp+1)) then
-                call Fatal('Properties should be the same at each node for non-beam members. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
+                call Fatal('Property IDs should be the same at each joint for members with X section properties. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
                 return
              endif
          endif

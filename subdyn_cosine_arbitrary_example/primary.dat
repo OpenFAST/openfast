@@ -42,17 +42,18 @@ IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
 MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2     MType      COSMID
   (-)         (-)         (-)          (-)           (-)          (-)        (-)
    1          11          12            1             1            1          1
-   2          12          13            1             1            4          -1
+   2          12          13            1             2            4          -1
 ------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table for circular-tubular elements] ------------------------
              1   NPropSets   - Number of structurally unique x-sections (i.e. how many groups of X-sectional properties are utilized throughout all of the members)
 PropSetID     YoungE          ShearG          MatDens          XsecD           XsecT
   (-)         (N/m2)          (N/m2)          (kg/m3)           (m)             (m)
    1           210E9         8.0769E10          7850            0.2             0.02
 ------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below] ------------------------
-             1   NXPropSets  - Number of structurally unique non-circular x-sections (if 0 the following table is ignored)
-PropSetID     YoungE          ShearG          MatDens          XsecA           k_x          k_y          Ixx           Iyy            J
+             2   NXPropSets  - Number of structurally unique non-circular x-sections (if 0 the following table is ignored)
+PropSetID     YoungE          ShearG          MatDens          XsecA           A_x          A_y          Ixx           Iyy            J
   (-)         (N/m2)          (N/m2)          (kg/m3)          (m2)            (-)          (-)          (m4)          (m4)          (m4)
    1           210E9         8.0769E10          7850            0.2            0.53         0.53          1              1             1
+   2           210E9         8.0769E10          7850            0.2            0.53         0.53          1              1             1
 -------------------------- CABLE PROPERTIES  -------------------------------------
              0   NCablePropSets   - Number of cable cable properties
 PropSetID     EA          MatDens        T0         CtrlChannel
