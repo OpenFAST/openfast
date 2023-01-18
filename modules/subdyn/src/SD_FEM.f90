@@ -413,7 +413,10 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       ! Column 6: member type
       p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
       ! Column 7: member type
-      p%Elems(iMem, 7) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem, 7) )
+
+      if (p%Elems(iMem,7)/=-1) then
+         p%Elems(iMem, 7) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem, 7) )
+      endif
 
    END DO !iMem, loop through members
     
@@ -445,7 +448,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
-   INTEGER                       :: mID_original
+   INTEGER                       :: COSM_ind
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: CreateNewProp
    INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam, nMemberSpecial !< Number of memebers per type
@@ -546,7 +549,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Prop1 = TempMembers(I, iMProp  )
           Prop2 = TempMembers(I, iMProp+1)
           eType = TempMembers(I, iMType  )
-          mID_original = TempMembers(I, 7 )
+          COSM_ind = TempMembers(I, 7 )
           
           if (eType/=idMemberBeam) then
              ! --- Cables and rigid links are not subdivided and have same prop at nodes
@@ -554,7 +557,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              Init%MemberNodes(I, 1) = Node1
              Init%MemberNodes(I, 2) = Node2
              kelem = kelem + 1
-             CALL SetNewElem(kelem, Node1, Node2, eType, Prop1, Prop1, p, mID_original)                
+             CALL SetNewElem(kelem, Node1, Node2, eType, Prop1, Prop1, p, COSM_ind)                
              cycle
           endif
 
@@ -597,11 +600,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                !                  k,  E1,                  G1,                  rho1,                d,     t,    
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p, mID_original); if (ErrStat>ErrID_None) return;
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p, COSM_ind); if (ErrStat>ErrID_None) return;
                nprop = kprop
           ELSE
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p, mID_original); if (ErrStat>ErrID_None) return;             
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p, COSM_ind); if (ErrStat>ErrID_None) return;             
                nprop = Prop1 
           ENDIF
           
@@ -618,17 +621,17 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   !                  k,  E1,                  G1,                  rho1,                     d,          t
                   CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p, mID_original); if (ErrStat>ErrID_None) return;
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p, COSM_ind); if (ErrStat>ErrID_None) return;
                   nprop = kprop
              ELSE
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p, mID_original); if (ErrStat>ErrID_None) return;
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p, COSM_ind); if (ErrStat>ErrID_None) return;
              ENDIF
           ENDDO
           
           ! the element connect to Node2
           kelem = kelem + 1
-          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p, mID_original); if (ErrStat>ErrID_None) return;
+          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p, COSM_ind); if (ErrStat>ErrID_None) return;
        ENDDO ! loop over all members
        !
        Init%NPropB = kprop
@@ -699,14 +702,14 @@ CONTAINS
    END SUBROUTINE SetNewNode
    
    !> Set properties of element k
-   SUBROUTINE SetNewElem(k, n1, n2, etype, p1, p2, p, mID_original)
+   SUBROUTINE SetNewElem(k, n1, n2, etype, p1, p2, p, COSM_ind)
       INTEGER,                INTENT(IN   )   :: k
       INTEGER,                INTENT(IN   )   :: n1
       INTEGER,                INTENT(IN   )   :: n2
       INTEGER,                INTENT(IN   )   :: eType
       INTEGER,                INTENT(IN   )   :: p1
       INTEGER,                INTENT(IN   )   :: p2
-      INTEGER,                INTENT(IN   )   :: mID_original
+      INTEGER,                INTENT(IN   )   :: COSM_ind
       TYPE(SD_ParameterType), INTENT(INOUT)   :: p
       if (k>size(p%Elems,1)) then
          call Fatal('Implementation Error. Attempt to add more element than space allocated.');
@@ -718,7 +721,7 @@ CONTAINS
       p%Elems(k, iMProp  ) = p1
       p%Elems(k, iMProp+1) = p2
       p%Elems(k, iMType)   = eType
-      p%Elems(k, 7)   = mID_original
+      p%Elems(k, 7)   = COSM_ind
    END SUBROUTINE SetNewElem
 
    !> Set material properties of element k,  NOTE: this is only for a beam
@@ -782,7 +785,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    INTEGER                  :: I
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
-   INTEGER                  :: mID_original
+   INTEGER                  :: COSM_ind
    REAL(ReKi)               :: D1, D2, t1, t2, E, G, rho ! properties of a section
    REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(FEKi)                       :: Dx_, Dy_, Dz_! distances between nodes
@@ -807,7 +810,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
-      mID_original = p%Elems(I, 7)
+      COSM_ind = p%Elems(I, 7)
 
       ! --- Properties common to all element types: L, DirCos (and Area and rho)
       Point1 = Init%Nodes(N1,2:4)
@@ -815,18 +818,21 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       Dx_=Point2(1)-Point1(1)
       Dy_=Point2(2)-Point1(2)
       Dz_=Point2(3)-Point1(3)
-      L = real(sqrt( Dx_**2 + Dy_**2 + Dz_**2), ReKi)
 
-      !CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
-      DirCos(1, 1) =  Init%COSMs(mID_original, 2)
-      DirCos(1, 2) =  Init%COSMs(mID_original, 3)
-      DirCos(1, 3) =  Init%COSMs(mID_original, 4)
-      DirCos(2, 1) =  Init%COSMs(mID_original, 5)
-      DirCos(2, 2) =  Init%COSMs(mID_original, 6)
-      DirCos(2, 3) =  Init%COSMs(mID_original, 7)
-      DirCos(3, 1) =  Init%COSMs(mID_original, 8)
-      DirCos(3, 2) =  Init%COSMs(mID_original, 9)
-      DirCos(3, 3) =  Init%COSMs(mID_original, 10)
+      if (COSM_ind/=-1) then
+         L = real(sqrt( Dx_**2 + Dy_**2 + Dz_**2), ReKi)
+         DirCos(1, 1) =  Init%COSMs(COSM_ind, 2)
+         DirCos(1, 2) =  Init%COSMs(COSM_ind, 3)
+         DirCos(1, 3) =  Init%COSMs(COSM_ind, 4)
+         DirCos(2, 1) =  Init%COSMs(COSM_ind, 5)
+         DirCos(2, 2) =  Init%COSMs(COSM_ind, 6)
+         DirCos(2, 3) =  Init%COSMs(COSM_ind, 7)
+         DirCos(3, 1) =  Init%COSMs(COSM_ind, 8)
+         DirCos(3, 2) =  Init%COSMs(COSM_ind, 9)
+         DirCos(3, 3) =  Init%COSMs(COSM_ind, 10)
+      else
+         CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
+      endif
 
       p%ElemProps(i)%eType  = eType
       p%ElemProps(i)%Length = L
@@ -894,15 +900,15 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
 
       else if (eType==idMemberSpecial) then
          ! Storing Beam specific properties
-         E   = Init%PropSetsX(P1, 2) ! TODO E2 
-         G   = Init%PropSetsX(P1, 3) ! TODO G2
-         rho = Init%PropSetsX(P1, 4) ! TODO rho2
-         A   = Init%PropSetsX(P1, 5)
-         kappa_x   = Init%PropSetsX(P1, 6)
-         kappa_y   = Init%PropSetsX(P1, 7)
-         Ixx   = Init%PropSetsX(P1, 8)
-         Iyy   = Init%PropSetsX(P1, 9)
-         Jzz   = Init%PropSetsX(P1, 10)
+         E   = (Init%PropSetsX(P1, 2) + Init%PropSetsX(P2, 2)) / 2
+         G   = (Init%PropSetsX(P1, 3) + Init%PropSetsX(P2, 3)) / 2
+         rho = (Init%PropSetsX(P1, 4) + Init%PropSetsX(P2, 4)) / 2
+         A   = (Init%PropSetsX(P1, 5) + Init%PropSetsX(P2, 5)) / 2
+         kappa_x   = (Init%PropSetsX(P1, 6) + Init%PropSetsX(P2, 6)) / 2 / A
+         kappa_y   = (Init%PropSetsX(P1, 7) + Init%PropSetsX(P2, 7)) / 2 / A
+         Ixx   = (Init%PropSetsX(P1, 8) + Init%PropSetsX(P2, 8)) / 2
+         Iyy   = (Init%PropSetsX(P1, 9) + Init%PropSetsX(P2, 9)) / 2
+         Jzz   = (Init%PropSetsX(P1, 10) + Init%PropSetsX(P2, 10)) / 2
 
          p%ElemProps(i)%Ixx    = Ixx
          p%ElemProps(i)%Iyy    = Iyy

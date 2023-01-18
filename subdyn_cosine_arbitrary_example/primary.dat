@@ -1,0 +1,100 @@
+----------- SubDyn v1.01.x MultiMember Support Structure Input File ------------
+Example of pendulum. The first member, defined by joints 1 and 2, it's used as a dummy beam since the revolute joint cannot be connected to the interface joint directly.
+-------------------------- SIMULATION CONTROL  ---------------------------------
+False            Echo        - Echo input data to "<rootname>.SD.ech" (flag)
+"DEFAULT"        SDdeltaT    - Local Integration Step. If "default", the glue-code integration step will be used.
+             4   IntMethod   - Integration Method [1/2/3/4 = RK4/AB4/ABM4/AM2].
+True             SttcSolve   - Solve dynamics about static equilibrium point
+True             GuyanLoadCorrection - Include extra moment from lever arm at interface in interface reactions.
+-------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
+             3   FEMMod      - FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B);  2=Tapered E-B (unavailable);  3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]
+             1  NDiv        - Number of sub-elements per member
+True             CBMod       - [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.
+             5   Nmodes      - Number of internal modes to retain (ignored if CBMod=False). If Nmodes=0 --> Guyan Reduction.
+837, 1, 3.9, 1, 25.24  JDampings   - Damping Ratios for each retained mode (% of critical) If Nmodes>0, list Nmodes structural damping ratios for each retained mode (% of critical), or a single damping ratio to be applied to all retained modes. (last entered value will be used for all remaining modes).
+             0   GuyanDampMod - Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]
+  0.000, 0.003835059  RayleighDamp - Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
+             6   GuyanDampSize - Guyan damping matrix (6x6) [only if GuyanDampMod=2]
+  0.354293E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,  -0.556744E+01,   0.000000E+00
+  0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00
+  0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00
+  0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00
+ -0.556744E+01,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.874879E+02,   0.000000E+00
+  0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00,   0.000000E+00
+---- STRUCTURE JOINTS: joints connect structure members (~Hydrodyn Input File)---
+             3   NJoints     - Number of joints (-)
+JointID          JointXss               JointYss               JointZss JointType JointDirX  JointDirY JointDirZ 	JointStiff 	
+  (-)               (m)                    (m)                    (m)      (-) 		 (-) 		(-) 	  (-) 		  (Nm/rad) 	
+  11              0.00000                0.00000                0.00000  	1 		 0.0 		0.0 	  0.0 			0.0 	
+  12              0.00000                0.00000               -1.00000  	1 		 0.0 		1.0   	  0.0 			0 	
+  13              0.00000                0.00000               -6.00000  	1 		 0.0 		0.0	      0.0 			0.0 	
+------------------- BASE REACTION JOINTS: 1/0 for Locked/Free DOF @ each Reaction Node ---------------------
+             0   NReact      - Number of Joints with reaction forces; be sure to remove all rigid motion DOFs of the structure  (else det([K])=[0])
+RJointID   RctTDXss    RctTDYss    RctTDZss    RctRDXss    RctRDYss    RctRDZss    SSIfile    ![Global Coordinate System]
+  (-)       (flag)      (flag)      (flag)      (flag)      (flag)      (flag)     (string)
+------- INTERFACE JOINTS: 1/0 for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
+             1   NInterf     - Number of interface joints locked to the Transition Piece (TP):  be sure to remove all rigid motion dofs
+IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+  (-)       (flag)      (flag)      (flag)      (flag)      (flag)      (flag)
+  11           1           1           1           1           1           1
+----------------------------------- MEMBERS --------------------------------------
+             2   NMembers    - Number of frame members
+MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2     MType      COSMID
+  (-)         (-)         (-)          (-)           (-)          (-)        (-)
+   1          11          12            1             1            1          -1
+   2          12          13            1             1            4          -1
+------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table for circular-tubular elements] ------------------------
+             1   NPropSets   - Number of structurally unique x-sections (i.e. how many groups of X-sectional properties are utilized throughout all of the members)
+PropSetID     YoungE          ShearG          MatDens          XsecD           XsecT
+  (-)         (N/m2)          (N/m2)          (kg/m3)           (m)             (m)
+   1           210E9         8.0769E10          7850            0.2             0.02
+------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below] ------------------------
+             1   NXPropSets  - Number of structurally unique non-circular x-sections (if 0 the following table is ignored)
+PropSetID     YoungE          ShearG          MatDens          XsecA           k_x          k_y          Ixx           Iyy            J
+  (-)         (N/m2)          (N/m2)          (kg/m3)          (m2)            (-)          (-)          (m4)          (m4)          (m4)
+   1           210E9         8.0769E10          7850            0.2            0.53         0.53          1              1             1
+-------------------------- CABLE PROPERTIES  -------------------------------------
+             0   NCablePropSets   - Number of cable cable properties
+PropSetID     EA          MatDens        T0         CtrlChannel
+  (-)         (N)         (kg/m)        (N)             (-) 
+----------------------- RIGID LINK PROPERTIES ------------------------------------
+             0   NRigidPropSets - Number of rigid link properties
+PropSetID   MatDens   
+  (-)       (kg/m)
+---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
+             2   NCOSMs      - Number of unique cosine matrices (i.e., of unique member alignments including principal axis rotations); ignored if NXPropSets=0   or 9999 in any element below
+COSMID    COSM11    COSM12    COSM13    COSM21    COSM22    COSM23    COSM31    COSM32    COSM33
+ (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)
+   1        1         0         0         0         1         0         0         0         1
+   2        1         0         0         0         1         0         0         0         1
+------------------------ JOINT ADDITIONAL CONCENTRATED MASSES--------------------------
+             0   NCmass      - Number of joints with concentrated masses; Global Coordinate System
+CMJointID       JMass            JMXX             JMYY             JMZZ
+  (-)            (kg)          (kg*m^2)         (kg*m^2)         (kg*m^2)
+---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
+True             SumPrint    - Output a Summary File (flag).It contains: matrices K,M  and C-B reduced M_BB, M-BM, K_BB, K_MM(OMG^2), PHI_R, PHI_L. It can also contain COSMs if requested.
+0                OutCBModes  - Output Guyan and Craig-Bampton modes {0: No output, 1: JSON output}, (flag)
+0                OutFEMModes - Output first 30 FEM modes {0: No output, 1: JSON output} (flag)
+True             OutCOSM     - Output cosine matrices with the selected output member forces (flag)
+False            OutAll      - [T/F] Output all members' end forces 
+             1   OutSwtch    - [1/2/3] Output requested channels to: 1=<rootname>.SD.out;  2=<rootname>.out (generated by FAST);  3=both files.
+True             TabDelim    - Generate a tab-delimited output in the <rootname>.SD.out file
+             1   OutDec      - Decimation of output in the <rootname>.SD.out file
+"ES16.8e2"       OutFmt      - Output format for numerical results in the <rootname>.SD.out file
+"A11"            OutSFmt     - Output format for header strings in the <rootname>.SD.out file
+------------------------- MEMBER OUTPUT LIST ------------------------------------------
+             2   NMOutputs   - Number of members whose forces/displacements/velocities/accelerations will be output (-) [Must be <= 9].
+MemberID   NOutCnt    NodeCnt ![NOutCnt=how many nodes to get output for [< 10]; NodeCnt are local ordinal numbers from the start of the member, and must be >=1 and <= NDiv+1] If NMOutputs=0 leave blank as well.
+  (-)        (-)        (-)
+   1          2          1 2
+   2          2          1 2 
+------------------------- SSOutList: The next line(s) contains a list of output parameters that will be output in <rootname>.SD.out or <rootname>.out. ------ 
+"M1N1TDxss"           - 1st Member, 1st node cnt (node 1 in the system): displacements in inertial frame coordinate system (global system).
+"M2N1TDxss"           - 1st Member, 1st node cnt (node 1 in the system): displacements in inertial frame coordinate system (global system).
+"M2N2TDxss"           -
+"M1N1RDye"           - 
+"M2N1RDye"           - 
+"M2N2RDye"           - 
+"IntfFXss"   - X-displacement at the interface
+"IntfMYss"   - X-displacement at the interface
+END of output channels and end of file. (the word "END" must appear in the first 3 columns of this line)

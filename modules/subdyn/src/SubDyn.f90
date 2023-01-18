@@ -851,7 +851,7 @@ CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold 
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
-LOGICAL                      :: bNumeric
+LOGICAL                      :: bNumeric, bInteger
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
@@ -1152,13 +1152,45 @@ Init%Members(:,:) = 0.0_ReKi
 if (LegacyFormat) then
    nColumns = 5
    Init%Members(:,iMType) = idMemberBeam ! Important, in legacy all members are beams
+   Init%Members(:,7) = -1
 else
    nColumns = MembersCol
 endif
-DO I = 1, p%NMembers
+
+nColumns=MembersCol
+CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
+CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
+if (ErrStat2/=0) then
+   ! We try with 4 columns (legacy format)
+   nColumns = MembersCol-1
+   deallocate(StrArray)
+   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
+   call LegacyWarning('Member table contains 6 columns instead of 7, using default member cosines.')
+   Init%Members(:,7) = -1
+endif
+! Extract fields from first line
+DO I = 1, nColumns
+   bInteger = is_integer(StrArray(I), Init%Members(1,I)) ! Convert from string to float
+   if (.not.bInteger) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+ENDDO
+
+deallocate(StrArray)
+! ! Read remaining lines
+DO I = 2, p%NMembers
    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
-ENDDO   
+   Init%Members(I,1:(nColumns)) = Dummy_IntAry(1:(nColumns))
+ENDDO
+
+! DO I = 1, p%NMembers
+!    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+!    Init%Members(I,1:(nColumns)) = Dummy_IntAry(1:(nColumns))
+! ENDDO   
+
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
 !------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
@@ -4134,6 +4166,19 @@ FUNCTION is_numeric(string, x)
    READ(string,fmt,IOSTAT=e) x
    is_numeric = e == 0
 END FUNCTION is_numeric
+
+FUNCTION is_integer(string, x)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   INTEGER(IntKi), INTENT(OUT) :: x
+   LOGICAL :: is_integer
+   INTEGER :: e, n
+   x = 0
+   n=LEN_TRIM(string)
+   READ(string,*,IOSTAT=e) x
+   is_integer = e == 0
+END FUNCTION is_integer
+
 FUNCTION is_logical(string, b)
    IMPLICIT NONE
    CHARACTER(len=*), INTENT(IN) :: string

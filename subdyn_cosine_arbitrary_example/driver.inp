@@ -1,0 +1,26 @@
+SubDyn Driver file for stand-alone applications 
+Compatible with SubDyn v1.xx.x
+False              Echo           - Echo the input file data (flag). In order to write down the driver used for tracking purposes. The name will be according to OutRootName. For example: SubDyn_outputs.dvr.echo
+---------------------- ENVIRONMENTAL CONDITIONS -------------------------------------------------
+0                  Gravity        - Gravity (m/s^2).
+0                  WtrDpth        - Water Depth (m) positive value.
+---------------------- SubDyn -------------------------------------------------------------------
+"primary.dat"   SDInputFile - It can be an absolute or relative path.  
+"SD_Force"       OutRootName - All the output files will have this name.
+1500             NSteps         - Number of time steps in the simulations (-). Simulation time = Nteps*TimeInterval.
+0.01             TimeInterval   - TimeInterval for the simulation (sec). Time step.
+0   0   0        TP_RefPoint    - Location (x,y,z) of the TP reference point in global coordinates (m)
+0                SubRotateZ     - Rotation angle of the structure geometry in [deg] about the global Z axis. For example to orientate one jacket.   
+---------------------- INPUTS -------------------------------------------------------------------
+0                InputsMod      - Inputs model {0: all inputs are zero for every timestep, 1: steady state inputs, 2: read inputs from a file (InputsFile) to reproduce a time-serie} (switch)
+""               InputsFile     - Name of the inputs file if InputsMod = 2. This file has to be defined as follows: i: No header. ii: It has NSteps+1 rows and each row (i) has in the first column the time: t = (i-1)*TimeInterval. The successive columns define the displacements ([m], [rad]), velocities ([m/s], [rad/s]) and accelerations ([m/s^2], [rad/s^2]).  
+---------------------- STEADY INPUTS (for InputsMod = 1) ----------------------------------------
+0.0   0.0   0.0   0.0   0.0   0.0   uTPInSteady     - input displacements and rotations: ([m], [rad])  
+0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  - input translational and rotational velocities ([m/s], [rad/s])
+0.0   0.0   0.0   0.0   0.0   0.0   uDotTPInSteady  - input translational and rotational accelerations([m/s^2], [rad/s^2])
+---------------------- LOADS --------------------------------------------------------------------
+1    nAppliedLoads  - Number of applied loads at given nodes
+ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
+   (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
+   13        1000    0     0     0       0      0      "Force_TS.dat"
+END of driver input file
