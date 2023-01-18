@@ -41,6 +41,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
   ! Indices in Members table
   INTEGER(IntKi),   PARAMETER  :: iMType= 6 ! Index in Members table where the type is stored
+  INTEGER(IntKi),   PARAMETER  :: iMCOSMID = 7 ! Index in Members table where the type is stored
   INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored
 
   ! Indices in Joints table
@@ -58,7 +59,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idMemberBeam       = 1
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
-  INTEGER(IntKi),   PARAMETER  :: idMemberSpecial    = 4
+  INTEGER(IntKi),   PARAMETER  :: idMemberX    = 4
 
   ! Types of Boundary Conditions
   INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
@@ -390,8 +391,8 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          else if (mType==idMemberRigid) then
             sType='Rigid property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsR(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idMemberSpecial) then
-            sType='Special property'
+         else if (mType==idMemberX) then
+            sType='X property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsX(:,1), Init%Members(iMem, n) )
          else
             ! Should not happen
@@ -414,8 +415,8 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
       ! Column 7: member type
 
-      if (p%Elems(iMem,7)/=-1) then
-         p%Elems(iMem, 7) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem, 7) )
+      if (p%Elems(iMem, iMCOSMID)/=-1) then
+         p%Elems(iMem, iMCOSMID) = FINDLOCI(Init%COSMs(:,1), Init%Members(iMem, iMCOSMID) )
       endif
 
    END DO !iMem, loop through members
@@ -446,12 +447,13 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
    REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempPropsX(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
    INTEGER                       :: COSM_ind
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: CreateNewProp
-   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam, nMemberSpecial !< Number of memebers per type
+   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam, nMemberX !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -469,14 +471,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    nMemberBeam  = count(Init%Members(:,iMType) == idMemberBeam)
    nMemberCable = count(Init%Members(:,iMType) == idMemberCable)
    nMemberRigid = count(Init%Members(:,iMType) == idMemberRigid)
-   nMemberSpecial = count(Init%Members(:,iMType) == idMemberSpecial)
-   Init%NElem = nMemberBeam*Init%NDiv + nMemberCable + nMemberRigid + nMemberSpecial ! NOTE: only Beams are divided
-   IF ( (nMemberBeam+nMemberRigid+nMemberCable+nMemberSpecial) /= size(Init%Members,1)) then
+   nMemberX = count(Init%Members(:,iMType) == idMemberX)
+   Init%NElem = (nMemberBeam + nMemberX)*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
+   IF ( (nMemberBeam+nMemberRigid+nMemberCable+nMemberX) /= size(Init%Members,1)) then
       CALL Fatal(' Member list contains an element which is not a beam, a cable or a rigid link'); return
    ENDIF
 
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*nMemberBeam
+   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeam + nMemberX)
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
@@ -512,6 +514,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              return
           endif
        endif ! is beam
+
+       if (eType==idMemberX) then
+         if  (Prop1 /= Prop2 ) then
+            call Fatal(' Members using X properties must have the same properties at the (See member at position '//trim(num2lstr(I))//' in member list)')
+            return
+         endif
+      endif ! is beam
+
     enddo
 
   
@@ -535,13 +545,16 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        CALL AllocAry(TempMembers, p%NMembers,    MembersCol , 'TempMembers', ErrStat2, ErrMsg2); if(Failed()) return
        CALL AllocAry(TempProps,  MaxNProp,      PropSetsBCol,'TempProps',  ErrStat2, ErrMsg2); if(Failed()) return
        TempProps = -9999.
+       TempProps(1:Init%NPropSetsB, :) = Init%PropSetsB  
        TempMembers                      = p%Elems(1:p%NMembers,:)
-       TempProps(1:Init%NPropSetsB, :) = Init%PropSetsB   
+        
        p%Elems(:,:) = -9999. ! Reinitialized. Elements will be ordered by member subdivisions (see setNewElem)
 
        kelem = 0
        knode = Init%NJoints
+
        kprop = Init%NPropSetsB
+
        DO I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
           ! Member data
           Node1 = TempMembers(I, 2)
@@ -549,9 +562,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Prop1 = TempMembers(I, iMProp  )
           Prop2 = TempMembers(I, iMProp+1)
           eType = TempMembers(I, iMType  )
-          COSM_ind = TempMembers(I, 7 )
+          COSM_ind = TempMembers(I, iMCOSMID)
           
-          if (eType/=idMemberBeam) then
+          if (eType==idMemberRigid .OR. eType==idMemberCable) then
              ! --- Cables and rigid links are not subdivided and have same prop at nodes
              ! No need to create new properties or new nodes
              Init%MemberNodes(I, 1) = Node1
@@ -576,19 +589,28 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           dx = ( x2 - x1 )/Init%NDiv
           dy = ( y2 - y1 )/Init%NDiv
           dz = ( z2 - z1 )/Init%NDiv
-          
-          d1 = TempProps(Prop1, 5)
-          t1 = TempProps(Prop1, 6)
 
-          d2 = TempProps(Prop2, 5)
-          t2 = TempProps(Prop2, 6)
-          
-          dd = ( d2 - d1 )/Init%NDiv
-          dt = ( t2 - t1 )/Init%NDiv
-          
+          if (eType == idMemberBeam) then
+
+            d1 = TempProps(Prop1, 5)
+            t1 = TempProps(Prop1, 6)
+
+            d2 = TempProps(Prop2, 5)
+            t2 = TempProps(Prop2, 6)
+            
+            dd = ( d2 - d1 )/Init%NDiv
+            dt = ( t2 - t1 )/Init%NDiv
+
              ! If both dd and dt are 0, no interpolation is needed, and we can use the same property set for new nodes/elements. otherwise we'll have to create new properties for each new node
-          CreateNewProp = .NOT. ( EqualRealNos( dd , 0.0_ReKi ) .AND.  EqualRealNos( dt , 0.0_ReKi ) )  
-          
+           
+            CreateNewProp = .NOT. ( EqualRealNos( dd , 0.0_ReKi ) .AND.  EqualRealNos( dt , 0.0_ReKi ) ) 
+
+          else
+            
+            CreateNewProp = .FALSE.
+         
+          endif
+
           ! node connect to Node1
           knode = knode + 1
           Init%MemberNodes(I, 2) = knode
@@ -721,7 +743,7 @@ CONTAINS
       p%Elems(k, iMProp  ) = p1
       p%Elems(k, iMProp+1) = p2
       p%Elems(k, iMType)   = eType
-      p%Elems(k, 7)   = COSM_ind
+      p%Elems(k, iMCOSMID)   = COSM_ind
    END SUBROUTINE SetNewElem
 
    !> Set material properties of element k,  NOTE: this is only for a beam
@@ -810,7 +832,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
-      COSM_ind = p%Elems(I, 7)
+      COSM_ind = p%Elems(I, iMCOSMID)
 
       ! --- Properties common to all element types: L, DirCos (and Area and rho)
       Point1 = Init%Nodes(N1,2:4)
@@ -898,7 +920,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Rho    = rho
          p%ElemProps(i)%D      = (/D1, D2/)
 
-      else if (eType==idMemberSpecial) then
+      else if (eType==idMemberX) then
          ! Storing Beam specific properties
          E   = (Init%PropSetsX(P1, 2) + Init%PropSetsX(P2, 2)) / 2
          G   = (Init%PropSetsX(P1, 3) + Init%PropSetsX(P2, 3)) / 2

@@ -8,7 +8,7 @@ True             SttcSolve   - Solve dynamics about static equilibrium point
 True             GuyanLoadCorrection - Include extra moment from lever arm at interface in interface reactions.
 -------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
              3   FEMMod      - FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B);  2=Tapered E-B (unavailable);  3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]
-             1  NDiv        - Number of sub-elements per member
+             2   NDiv        - Number of sub-elements per member
 True             CBMod       - [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.
              5   Nmodes      - Number of internal modes to retain (ignored if CBMod=False). If Nmodes=0 --> Guyan Reduction.
 837, 1, 3.9, 1, 25.24  JDampings   - Damping Ratios for each retained mode (% of critical) If Nmodes>0, list Nmodes structural damping ratios for each retained mode (% of critical), or a single damping ratio to be applied to all retained modes. (last entered value will be used for all remaining modes).
@@ -41,7 +41,7 @@ IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
              2   NMembers    - Number of frame members
 MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2     MType      COSMID
   (-)         (-)         (-)          (-)           (-)          (-)        (-)
-   1          11          12            1             1            1          -1
+   1          11          12            1             1            1          1
    2          12          13            1             1            4          -1
 ------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table for circular-tubular elements] ------------------------
              1   NPropSets   - Number of structurally unique x-sections (i.e. how many groups of X-sectional properties are utilized throughout all of the members)
