@@ -921,6 +921,11 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%D      = (/D1, D2/)
 
       else if (eType==idMemberX) then
+         if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
+            Shear = .false.
+         elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko
+            Shear = .true.
+         endif
          ! Storing Beam specific properties
          E   = (Init%PropSetsX(P1, 2) + Init%PropSetsX(P2, 2)) / 2
          G   = (Init%PropSetsX(P1, 3) + Init%PropSetsX(P2, 3)) / 2

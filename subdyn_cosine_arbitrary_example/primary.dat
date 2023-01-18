@@ -42,7 +42,7 @@ IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
 MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2     MType      COSMID
   (-)         (-)         (-)          (-)           (-)          (-)        (-)
    1          11          12            1             1            1          1
-   2          12          13            1             2            4          -1
+   2          12          13            1             1            4          -1
 ------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table for circular-tubular elements] ------------------------
              1   NPropSets   - Number of structurally unique x-sections (i.e. how many groups of X-sectional properties are utilized throughout all of the members)
 PropSetID     YoungE          ShearG          MatDens          XsecD           XsecT
