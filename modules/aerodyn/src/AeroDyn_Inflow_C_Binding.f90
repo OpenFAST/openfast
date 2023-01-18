@@ -350,7 +350,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    endif
 
    ! Format IfW input file contents
-   !     RootName is set in ADI_Init using AD%RootName
+   !     RootName is set in ADI_Init using InitInp%RootName
+   InitInp%RootName                     = OutRootName
    if (IfWinputFilePassed) then
       InitInp%IW_InitInp%UseInputFile   = .FALSE.           ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
       InitInp%IW_InitInp%InputFile      = "passed_ifw_file" ! not actually used
