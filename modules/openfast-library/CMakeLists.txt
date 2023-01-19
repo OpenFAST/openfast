@@ -85,35 +85,36 @@ add_library(openfast_postlib $<TARGET_OBJECTS:openfast_postlib_obj>)
 target_link_libraries(openfast_postlib openfast_prelib_obj scdataexlib foamfastlib versioninfolib)
 
 add_library(openfastlib_common_obj OBJECT src/FAST_Library.f90)
-target_link_libraries(openfastlib_common_obj openfast_prelib_obj
+target_link_libraries(openfastlib_common_obj 
+openfast_prelib_obj
 maplib_obj
 nwtclibs_obj
 nwtcsyslib_obj
 nwtcbaselib_obj
-ifwlib
-fvwlib
-uaaerolib
-afinfolib
-aeroacoustics
-aerodynlib
-aerodyn14lib
-servodynlib
-elastodynlib
-beamdynlib
-subdynlib
-hydrodynlib
-orcaflexlib
-extptfm_mckflib
-openfoamtypeslib
-foamfastlib
-scdataextypeslib
-scdataexlib
-feamlib
-moordynlib
-icedynlib
-icefloelib
-openfast_postlib
-versioninfolib
+ifwlib_obj
+fvwlib_obj
+uaaerolib_obj
+afinfolib_obj
+aeroacoustics_obj
+aerodynlib_obj
+aerodyn14lib_obj
+servodynlib_obj
+elastodynlib_obj
+beamdynlib_obj
+subdynlib_obj
+hydrodynlib_obj
+orcaflexlib_obj
+extptfm_mckflib_obj
+openfoamtypeslib_obj
+foamfastlib_obj
+scdataextypeslib_obj
+scdataexlib_obj
+feamlib_obj
+moordynlib_obj
+icedynlib_obj
+icefloelib_obj
+openfast_postlib_obj
+versioninfolib_obj
 )
 
 add_library(openfastlib
@@ -237,7 +238,7 @@ if (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND N
   set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
-install(TARGETS openfastlib openfast_prelib openfast_postlib openfast_postlib_obj openfast_prelib_obj
+install(TARGETS openfastlib openfast_prelib openfast_postlib openfast_postlib_obj openfast_prelib_obj openfastlib_common_obj
   EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
