@@ -271,7 +271,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    !Store mapping between controllable elements and control channels, and return guess input
-   CALL ControlCableMapping(Init, u, p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL ControlCableMapping(Init, u, p, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 
@@ -291,8 +291,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Prepare for control cable load, RHS
    if (size(p%CtrlElem2Channel,1)>0) then
       CALL ControlCableForceInit(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      print*,'Controlable cables are present, this feature is not ready at the glue code level.'
-      STOP
    endif
 
    ! --------------------------------------------------------------------------------
@@ -1092,7 +1090,7 @@ Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 do I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading reaction line'; if (Failed()) return
-   call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
+   call ReadIAryFromStrSD(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
    if (nColValid==1 .and. nColNumeric==1) then
       ! Temporary allowing this
       call LegacyWarning('SubDyn reaction line has only 1 column. Please use 7 or 8 values')
@@ -1130,7 +1128,7 @@ p%Nodes_I(:,1) = -1 ! First column is node, initalize to wrong value for safety
 ! Reading interface lines one by one, allowing for 1 or 7 columns (cannot use ReadIAry)
 DO I = 1, p%nNodes_I
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Error reading interface line'; if (Failed()) return
-   call ReadIAryFromStr(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
+   call ReadIAryFromStrSD(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
    if ((nColValid/=nColNumeric).or.((nColNumeric/=1).and.(nColNumeric/=7)) ) then
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 1 or 7 numerical values. Problematic line: "'//trim(Line)//'"')
       return
@@ -1423,7 +1421,7 @@ END SUBROUTINE SD_Input
 !! Example Str="1 2 not_a_int 3" -> IntArray = (/1,2,3/)  StrArrayOut=(/"not_a_int"/)
 !! No need for error handling, the caller will check how many valid inputs were on the line
 !! TODO, place me in NWTC LIb 
-SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrArrayOut)
+SUBROUTINE ReadIAryFromStrSD(Str, IntArray, nColMax, nColValid, nColNumeric, StrArrayOut)
    character(len=*),               intent(in)            :: Str                    !< 
    integer(IntKi), dimension(:),   intent(inout)         :: IntArray               !< NOTE: inout, to allow for init values
    integer(IntKi),                 intent(in)            :: nColMax
@@ -1464,7 +1462,7 @@ SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrAr
       endif
    enddo
    if(allocated(StrArray)) deallocate(StrArray)
-END SUBROUTINE ReadIAryFromStr
+END SUBROUTINE ReadIAryFromStrSD
 
 !> See ReadIAryFromStr, same but for floats
 SUBROUTINE ReadFAryFromStr(Str, FloatArray, nColMax, nColValid, nColNumeric, StrArrayOut)
@@ -2189,7 +2187,7 @@ SUBROUTINE SD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE SD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
    REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
@@ -2207,8 +2205,11 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
+
    ! Local
    INTEGER(IntKi)                                                :: idx, i
+   LOGICAL                                                       :: ReturnTrimOP
    INTEGER(IntKi)                                                :: nu
    INTEGER(IntKi)                                                :: ny
    INTEGER(IntKi)                                                :: ErrStat2
@@ -2234,11 +2235,21 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask)
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
+   
    IF ( PRESENT( y_op ) ) THEN
       ny = p%Jac_ny + y%Y2Mesh%NNodes * 6 + y%Y3Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
+      
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
+      else
+         ReturnTrimOP = .false.
+      end if
+      
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      
       idx = 1
       call PackLoadMesh(y%Y1Mesh, y_op, idx)
       FieldMask = .false.
@@ -2248,13 +2259,14 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask)
-      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)
       end do
    END IF
+   
    IF ( PRESENT( x_op ) ) THEN
       if (.not. allocated(x_op)) then
          call AllocAry(x_op, p%Jac_nx*2,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
@@ -2288,7 +2300,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    call CleanUp()
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
@@ -3107,6 +3119,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    real(ReKi)                    :: CableTension ! Controllable Cable force
+   real(ReKi)                    :: DeltaL ! Change of length
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi)                    :: u_TP(6)
@@ -3116,16 +3129,23 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-   !
-   real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    if (GuyanLoadCorrection) then
       ! Compute node displacements "DU_full" for lever arm
       call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False., U_full=U_full)
    endif
 
+   ! TODO
+   ! Rewrite this function into five steps:
+   !  - Setup loads by simple sum on physial nodes of LMesh, FG and FC_
+   !  - Rotate them if needed
+   !  - Introduce lever arm if needed
+   !  - Spread moment on nodes 
+   !  - Perform reduction using T_red
+   ! This could make things slightly cleaner and avoid the if statement in the do-loop for the moment
+
    ! --- Build vector of external forces (including gravity) (Moment done below)  
-   m%Fext= myNaN
+   m%Fext= 0.0_ReKi
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
@@ -3149,27 +3169,33 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
+         ! DeltaL = DeltaL0 + DeltaL_control = - Le T0/(EA+T0) + DeltaL_control
+         DeltaL = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+         DeltaL = DeltaL + u%CableDeltaL(iChannel) 
          ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
-         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
-         print*,'TODO, Controllable pretension cable needs thinking for moment'
-         STOP
-         !if (RotateLoads) then ! in body coordinate
-         !   m%Fext(IDOF) = m%Fext(IDOF) + matmul(Rg2b,m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0))
-         !else ! in global
-         !   m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
-         !endif
+         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * DeltaL / (p%ElemProps(iElem)%Length + DeltaL)
+         if (RotateLoads) then ! in body coordinate
+            ! We only rotate the loads, moments are rotated below
+            m%Fext(IDOF(1:3))   = m%Fext(IDOF(1:3))   + matmul(Rg2b,m%FC_unit( IDOF(1:3) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(7:9))   = m%Fext(IDOF(7:9))   + matmul(Rg2b,m%FC_unit( IDOF(7:9) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(4:6))   = m%Fext(IDOF(4:6))   +             m%FC_unit( IDOF(4:6) )   * (CableTension - p%ElemProps(iElem)%T0)
+            m%Fext(IDOF(10:12)) = m%Fext(IDOF(10:12)) +             m%FC_unit( IDOF(10:12) ) * (CableTension - p%ElemProps(iElem)%T0)
+         else ! in global
+            m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
+         endif
       enddo
    endif
 
    ! --- Build vector of external moment
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
+      Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
       ! Moment ext + gravity
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
       else
-         Moment(1:3) =              u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
@@ -3186,14 +3212,6 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
       m%Fext( p%NodesDOF(iNode)%List(5::3)) = Moment(2)/nMembers
       m%Fext( p%NodesDOF(iNode)%List(6::3)) = Moment(3)/nMembers
    enddo
-
-   ! TODO: remove test below in the future
-   if (DEV_VERSION) then
-      if (any(m%Fext == myNaN)) then
-         print*,'Error in setting up Fext'
-         STOP
-      endif
-   endif
 
    ! --- Reduced vector of external force
    if (p%reduced) then
@@ -3229,7 +3247,7 @@ END SUBROUTINE GetExtForceOnInterfaceDOF
 !------------------------------------------------------------------------------------------------------
 !> Output the modes to file file    
 SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
-   use YAML
+   use JSON, only: json_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc
@@ -3292,7 +3310,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       FileName = TRIM(Init%RootName)//'.CBmodes.json'
       ! Write Nodes/Connectivity/ElementProperties
       call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
-      write(UnSum, '(A)', advance='no') ','//char(13)//achar(10) 
+      write(UnSum, '(A)', advance='no') ','//NewLine 
       write(UnSum, '(A)') '"Modes": ['
 
       ! --- Guyan Modes
@@ -3313,7 +3331,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       enddo
 
       ! --- CB Modes
-      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//NewLine 
       do i = 1, p%nDOFM
          U_red              = 0.0_ReKi
          U_red(p%ID__L)     = CBparams%PhiL(:,i)
@@ -3340,7 +3358,7 @@ SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, Err
       CALL WrScr('   Exporting FEM modes to JSON')
       FileName = TRIM(Init%RootName)//'.FEMmodes.json'
       call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
-      write(UnSum, '(A)', advance='no') ','//char(13)//achar(10) 
+      write(UnSum, '(A)', advance='no') ','//NewLine
       write(UnSum, '(A)') '"Modes": ['
       nModes = min(size(Modes,2), 30) ! TODO potentially a parameter
       do i = 1, nModes
@@ -3383,9 +3401,9 @@ contains
       if (maxAmplitude>1e-5) then
          NodesDisp(:,:) = NodesDisp(:,:)*maxDisp/maxAmplitude
       endif
-      call yaml_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2, json=.true.);  
+      call json_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2);  
       write(UnSum, '(A)', advance='no')'}'
-      if (iMode<nModes) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (iMode<nModes) write(UnSum, '(A)', advance='no')','//NewLine 
    END SUBROUTINE WriteOneMode
 
    LOGICAL FUNCTION Failed()
@@ -3410,7 +3428,7 @@ END SUBROUTINE OutModes
 
 !> Write the common part of the JSON file (Nodes, Connectivity, Element prop)
 SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, ErrStat, ErrMsg)
-   use YAML
+   use JSON, only: json_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           !< Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              !< Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              !< Misc
@@ -3445,17 +3463,17 @@ SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, Err
       Connectivity(i,1) = p%Elems(i,2)-1 ! Node 1
       Connectivity(i,2) = p%Elems(i,3)-1 ! Node 2
    enddo
-   call yaml_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2, json=.true.); write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   call json_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2); write(UnSum, '(A)', advance='no')','//NewLine 
    if(allocated(Connectivity)) deallocate(Connectivity)
 
    ! --- Nodes
-   call yaml_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2, json=.true.);  write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+   call json_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2);  write(UnSum, '(A)', advance='no')','//NewLine 
 
    ! --- Elem props
    write(UnSum, '(A)') '"ElemProps": ['
    do i = 1, size(p%ElemProps)
       write(UnSum, '(A,I0,A,F8.4,A)', advance='no') '  {"shape": "cylinder", "type": ',p%ElemProps(i)%eType, ', "Diam":',p%ElemProps(i)%D(1),'}'
-      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//achar(13)//achar(10) 
+      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//NewLine 
    enddo
    write(UnSum, '(A)') ']'
 
@@ -3469,7 +3487,7 @@ END SUBROUTINE WriteJSONCommon
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
 SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
-   use Yaml
+   use YAML, only: yaml_write_var, yaml_write_list, yaml_write_array
    TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
    TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
    TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc

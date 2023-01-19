@@ -242,16 +242,16 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+      ! ---------- Read the flag for writing the HAWC FF files. ---------------------------------------
+   CALL ReadVar( UI, InFile, p%WrFile(FileExt_HAWC), "WrHAWCFF", "Output HAWC FF files? [RootName-u.bin, -v.bin, -w.bin, .hawc]",ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing coherent time series files. --------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-      ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
-   CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
@@ -302,7 +302,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! Check if usable time is "ALL" (for periodic files) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
          READ( Line, *, IOSTAT=ErrStat2) p%grid%UsableTime
-   
+
          IF ( ErrStat2 /= 0 ) THEN ! Line didn't contain a number
             CALL Conv2UC( Line )
             IF ( TRIM(Line) == 'ALL' ) THEN
@@ -316,6 +316,9 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
             END IF
          ELSE
             p%grid%Periodic = .FALSE.
+
+            CALL CheckRealVar( p%grid%UsableTime, 'UsableTime', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END IF
       ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< end check for UsableTime = "ALL" (periodic)
 
@@ -1180,6 +1183,8 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
    INTEGER                                        :: U_in                           ! Input unit.
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
+   character(*), parameter                        :: RoutineName = 'GetUSRProfiles'
+   CHARACTER(200)                                 :: TempWarn
    
 !   CHARACTER(200)                                 :: LINE
                                                   
@@ -1201,9 +1206,9 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
    
    U_in = -1
    CALL GetNewUnit( U_in, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL OpenFInpFile( U_in, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(U_in)
@@ -1212,40 +1217,40 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
                
    DO I=1,3
       CALL ReadCom( U_in, FileName, "Header line "//trim(num2lstr(I))//" for user-defined profiles", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END DO
    
    
       ! ---------- Read the size of the arrays --------------------------------------------
    CALL ReadVar( U_in, FileName, p_met%NumUSRz, "NumUSRz", "Number of heights in the user-defined profiles", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    IF ( p_met%NumUSRz < 1 ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'The number of heights specified in the user-defined profiles must be at least 1.', ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL SetErrStat( ErrID_Fatal, 'The number of heights specified in the user-defined profiles must be at least 1.', ErrStat, ErrMsg, RoutineName)
    ENDIF
 
    DO I=1,3
          ! ---------- Read the scaling for the standard deviations --------------------------------------------
       CALL ReadVar( U_in, FileName, p_met%USR_StdScale(I), "USR_StdScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 
       IF ( p_met%USR_StdScale(I) <= 0. ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The scaling value for the user-defined standard deviation profile must be positive.', ErrStat, ErrMsg, 'GetUSRProfiles')
+         CALL SetErrStat( ErrID_Fatal, 'The scaling value for the user-defined standard deviation profile must be positive.', ErrStat, ErrMsg, RoutineName)
       ENDIF
    ENDDO
 
       ! Allocate the data arrays
-   CALL AllocAry(p_met%USR_Z,       p_met%NumUSRz, 'USR_Z (user-defined height)',               ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
-   CALL AllocAry(p_met%USR_U,       p_met%NumUSRz, 'USR_U (user-defined wind speed)',           ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
-   CALL AllocAry(p_met%USR_WindDir, p_met%NumUSRz, 'USR_WindDir (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+   CALL AllocAry(p_met%USR_Z,       p_met%NumUSRz, 'USR_Z (user-defined height)',               ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(p_met%USR_U,       p_met%NumUSRz, 'USR_U (user-defined wind speed)',           ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(p_met%USR_WindDir, p_met%NumUSRz, 'USR_WindDir (user-defined wind direction)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 
    IF ( p_met%TurbModel_ID == SpecModel_USRVKM ) THEN
       ReadSigL = .TRUE.
 
-      CALL AllocAry(p_met%USR_Sigma, p_met%NumUSRz, 'USR_Sigma (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
-      CALL AllocAry(p_met%USR_L,     p_met%NumUSRz, 'USR_L (user-defined length scale)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+      CALL AllocAry(p_met%USR_Sigma, p_met%NumUSRz, 'USR_Sigma (user-defined sigma)',    ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL AllocAry(p_met%USR_L,     p_met%NumUSRz, 'USR_L (user-defined length scale)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrSTat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    ELSE
       ReadSigL = .FALSE.
@@ -1259,7 +1264,7 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
       CALL ReadCom( U_in, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRProfiles')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ENDDO
 
@@ -1272,18 +1277,35 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
       ENDIF
 
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Could not read entire user-defined variable list on line '//Int2LStr(I)//'.', ErrStat, ErrMsg, 'GetUSRProfiles')
+         CALL SetErrStat( ErrID_Fatal, 'Could not read entire user-defined variable list on line '//Int2LStr(I)//'.', ErrStat, ErrMsg, RoutineName)
          CLOSE(U_in)
          RETURN
       ENDIF
 
+      TempWarn = 'Error reading user-defined variable list on line '//Int2LStr(I)
+      CALL CheckRealVar( p_met%USR_Z(I), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL CheckRealVar( p_met%USR_U(I), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL CheckRealVar( p_met%USR_WindDir(I), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( ReadSigL ) THEN
          IF ( p_met%USR_Sigma(I) <= REAL( 0., ReKi ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The standard deviation must be a positive number.', ErrStat, ErrMsg, 'GetUSRProfiles')
+            CALL SetErrStat( ErrID_Fatal, 'The standard deviation must be a positive number.', ErrStat, ErrMsg, RoutineName)
          ELSEIF ( p_met%USR_L(I) <= REAL( 0., ReKi ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The length scale must be a positive number.', ErrStat, ErrMsg, 'GetUSRProfiles')
+            CALL SetErrStat( ErrID_Fatal, 'The length scale must be a positive number.', ErrStat, ErrMsg, RoutineName)
          ENDIF
+         
+         CALL CheckRealVar( p_met%USR_Sigma(I), TempWarn, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         CALL CheckRealVar( p_met%USR_L(I), TempWarn, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       ENDIF
+      if (ErrStat >= AbortErrLev) then
+         CLOSE(U_in)
+         RETURN
+      ENDIF
+
       
       IF ( p_met%USR_WindDir(I) > 360. ) THEN
          J = INT ( p_met%USR_WindDir(I) / 360. )
@@ -1304,7 +1326,7 @@ SUBROUTINE GetUSRProfiles(FileName, p_met, UnEc, ErrStat, ErrMsg)
                Indx = J+1
                EXIT
             ELSEIF ( p_met%USR_Z(I) == p_met%USR_Z(J) ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'User-defined values must contain unique heights.', ErrStat, ErrMsg, 'GetUSRProfiles')
+               CALL SetErrStat( ErrID_Fatal, 'User-defined values must contain unique heights.', ErrStat, ErrMsg, RoutineName)
                CLOSE(U_in)
                RETURN
             ENDIF
@@ -1371,6 +1393,8 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    
    INTEGER(IntKi)                                 :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                          ! Message describing error (local)
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'GetUSRSpec'
+   CHARACTER(200)                                 :: TempWarn
 
    ErrStat = ErrID_None
    ErrMSg  = ""
@@ -1378,10 +1402,10 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
       ! --------- Open the file ---------------
 
    CALL GetNewUnit( USpec, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRSpec')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       
    CALL OpenFInpFile( USpec, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRSpec')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1394,13 +1418,13 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
       ! --------- Read the comment lines at the beginning of the file ---------------
    DO I=1,3
       CALL ReadCom( USpec, FileName, "user-spectra header line #"//TRIM(Num2LStr(I)), ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRSpec')
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ENDDO
 
 
       ! ---------- Read the size of the arrays --------------------------------------------
    CALL ReadVar( USpec, FileName, p%usr%nFreq, "nFreq", "Number of frequencies in the user-defined spectra", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRSpec')
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1410,12 +1434,12 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    DO I=1,3
          ! ---------- Read the scaling for the arrays --------------------------------------------
       CALL ReadVar( USpec, FileName, SpecScale(I), "SpecScale", "Scaling value for user-defined standard deviation profile", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRSpec')
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ENDDO
       
-   IF ( p%usr%nFreq < 3      ) CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, 'GetUSRSpec')
-   IF ( ANY(SpecScale <= 0.) ) CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, 'GetUSRSpec')
+   IF ( p%usr%nFreq < 3      ) CALL SetErrStat(ErrID_Fatal, 'The number of frequencies specified in the user-defined spectra must be at least 3.' , ErrStat, ErrMsg, RoutineName)
+   IF ( ANY(SpecScale <= 0.) ) CALL SetErrStat(ErrID_Fatal, 'The scaling value for the user-defined spectra must be positive.' , ErrStat, ErrMsg, RoutineName)
    
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1423,9 +1447,9 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
    ENDIF   
    
       ! Allocate the data arrays
-   CALL AllocAry( p%usr%f,      p%usr%nFreq,    'f (user-defined frequencies)'  ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSRSpec')
-   CALL AllocAry( p%usr%S,      p%usr%nFreq,1,3,'S (user-defined spectra)'      ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSRSpec')
-   CALL AllocAry( p%usr%pointzi, iPoint        , 'pointzi (user-defined spectra',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'GetUSRSpec')   
+   CALL AllocAry( p%usr%f,      p%usr%nFreq,    'f (user-defined frequencies)'  ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry( p%usr%S,      p%usr%nFreq,1,3,'S (user-defined spectra)'      ,ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry( p%usr%pointzi, iPoint        , 'pointzi (user-defined spectra',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1437,32 +1461,47 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
       ! ---------- Skip 4 lines --------------------------------------------
    DO I=1,4
       CALL ReadCom( USpec, FileName, "Headers for user-defined variables", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'GetUSRSpec')
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ENDDO
 
       ! ---------- Read the data lines --------------------------------------
    DO I=1,p%usr%nFreq
-
+      TempWarn = 'Error reading user-defined spectra line '//Int2LStr(I)
+      
       READ( USpec, *, IOSTAT=ErrStat2 ) p%usr%f(I), p%usr%S(I,iPoint,1), p%usr%S(I,iPoint,2), p%usr%S(I,iPoint,3)
 
       IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' , ErrStat, ErrMsg, 'GetUSRSpec')
+         CALL SetErrStat(ErrID_Fatal, 'Could not read entire user-defined spectra on line '//Int2LStr(I)//'.' , ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       ENDIF
 
       IF ( ANY( p%usr%S(I,iPoint,:) <=  0._ReKi ) ) THEN
 
-         CALL SetErrStat(ErrID_Fatal, 'The spectra must contain positive numbers.' , ErrStat, ErrMsg, 'GetUSRSpec')
+         CALL SetErrStat(ErrID_Fatal, 'The spectra must contain positive numbers.' , ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
          
 !      ELSEIF ( p%usr%f(I) <= 0.0_ReKi ) THEN
-!         CALL SetErrStat(ErrID_Fatal, 'The frequencies must be positive numbers.' , ErrStat, ErrMsg, 'GetUSRSpec')
+!         CALL SetErrStat(ErrID_Fatal, 'The frequencies must be positive numbers.' , ErrStat, ErrMsg, RoutineName)
 !         CALL Cleanup()
 !         RETURN
       ENDIF
 
+      call CheckRealVar( p%usr%f(I), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call CheckRealVar( p%usr%S(I,iPoint,1), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call CheckRealVar( p%usr%S(I,iPoint,2), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call CheckRealVar( p%usr%S(I,iPoint,3), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      IF (ErrStat >= AbortErrLev) then
+         CALL Cleanup()
+         RETURN
+      end if
+      
+      
          ! Scale by the factors earlier in the input file
 
       p%usr%S(I,iPoint,1) = p%usr%S(I,iPoint,1)*SpecScale(1)
@@ -1481,7 +1520,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
                Indx = J+1
                EXIT
             ELSEIF ( EqualRealNos( p%usr%f(I), p%usr%f(J) ) ) THEN
-               CALL SetErrStat(ErrID_Fatal, 'Error: user-defined spectra must contain unique frequencies.' , ErrStat, ErrMsg, 'GetUSRSpec')
+               CALL SetErrStat(ErrID_Fatal, 'Error: user-defined spectra must contain unique frequencies.' , ErrStat, ErrMsg, RoutineName)
                CALL Cleanup()
                RETURN
             ENDIF
@@ -1548,6 +1587,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CHARACTER(*), parameter                        :: RoutineName = 'GetUSRTimeSeries'
    
    CHARACTER(200)                                 :: FormStr          
+   CHARACTER(200)                                 :: TempWarn
    CHARACTER(1)                                   :: tmpChar          
    
    ErrStat = ErrID_None
@@ -1681,12 +1721,29 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
       
    DO i=1,p%usr%nTimes
+      TempWarn = 'Error reading from time series line '//trim(num2lstr(i))
+      
       READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
       IF (ErrStat2 /=0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, RoutineName)
+         CALL SetErrStat( ErrID_Fatal, trim(TempWarn)//'.', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
-      END IF      
+      END IF
+
+      CALL CheckRealVar( p%usr%t(i), TempWarn, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      do iPoint=1,p%usr%nPoints
+         do iVec=1,p%usr%nComp
+            call CheckRealVar( p%usr%v(i,iPoint,iVec), TempWarn, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               if (ErrStat >= AbortErrLev) then
+                  call Cleanup()
+                  return
+               end if
+         end do
+      end do
+            
    END DO   
    
    IF (UnEc > 0 ) THEN
@@ -1838,6 +1895,10 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEc, Def, E
       ! Local declarations:
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+   INTEGER                      :: i
+   INTEGER                      :: ErrStat2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
+   CHARACTER(*), PARAMETER      :: RoutineName = 'ReadRAryDefault'
 
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc)  !Maybe I should read this in explicitly...
@@ -1870,7 +1931,14 @@ SUBROUTINE ReadRAryDefault ( UnIn, Fil, RealAry, VarName, VarDescr, UnEc, Def, E
          READ (CharLine,*,IOSTAT=IOS)  RealAry(1)  ! Try reading only the first element
       ENDIF
 
-      CALL CheckIOS ( IOS, Fil, VarName, NumType )
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      do i=1,size(RealAry)
+         CALL CheckRealVar( RealAry(i), VarName, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+            
       Def = .FALSE.
 
    ENDIF
@@ -1907,7 +1975,9 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
       ! Local declarations:
 
    INTEGER                        :: IOS                                             ! I/O status returned from the read statement.
-
+   INTEGER                        :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'ReadRVarDefault'
 
    CALL ReadVar( UnIn, Fil, CharLine, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
 
@@ -1945,11 +2015,15 @@ SUBROUTINE ReadRVarDefault ( UnIn, Fil, RealVar, VarName, VarDescr, UnEc, Def, E
 
       READ (CharLine,*,IOSTAT=IOS)  RealVar
 
-      CALL CheckIOS ( IOS, Fil, VarName, NumType )
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      CALL CheckRealVar( RealVar, VarName, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       Def = .FALSE.
       
       IF ( PRESENT(IGNORESTR) ) IGNORESTR = .FALSE.
+      
       
    ENDIF
 
@@ -1982,9 +2056,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    REAL(ReKi)                  :: TI(3)                         ! Turbulence intensity for scaling data
    REAL(ReKi)                  :: TmpU                          ! Max value of |V(:,:,1)-UHub|
 
-   INTEGER(B4Ki)               :: CFirst
-   INTEGER(B4Ki)               :: CLast
-   INTEGER(B4Ki)               :: CStep
    INTEGER(B4Ki)               :: II
    INTEGER(B4Ki)               :: IT
    INTEGER(B4Ki)               :: IY
@@ -1998,7 +2069,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    INTEGER                     :: UBFFW                                ! I/O unit for BLADED FF data (*.wnd file).
    INTEGER                     :: UATWR                                ! I/O unit for AeroDyn tower data (*.twr file).
 
-   CHARACTER(200)               :: FormStr                                  ! String used to store format specifiers.
+   CHARACTER(200)              :: FormStr                              ! String used to store format specifiers.
 
    
    ErrStat = ErrID_None
@@ -2009,16 +2080,16 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       ! We need to take into account the shear across the grid in the sigma calculations for scaling the data, 
       ! and ensure that 32.767*Usig >= |V-UHub| so that we don't get values out of the range of our scaling values
       ! in this BLADED-style binary output.  TmpU is |V-UHub|
+   
    TmpU    = MAX( ABS(MAXVAL(V(:,:,1))-p%UHub), ABS(MINVAL(V(:,:,1))-p%UHub) )  !Get the range of wind speed values for scaling in BLADED-format .wnd files         
    NewUSig = MAX(USig,0.05*TmpU)
    
    
       ! Put normalizing factors into the summary file.  The user can use them to
       ! tell a simulation program how to rescale the data.
-
    TI(1)  = MAX(100.0*Tolerance, NewUSig) / p%UHub
-   TI(2)  = MAX(100.0*Tolerance, VSig)    / p%UHub
-   TI(3)  = MAX(100.0*Tolerance, WSig)    / p%UHub
+   TI(2)  = MAX(100.0*Tolerance, VSig, 0.05*ABS(MAXVAL(V(:,:,2))), 0.05*ABS(MINVAL(V(:,:,2))) ) / p%UHub  ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files 
+   TI(3)  = MAX(100.0*Tolerance, WSig, 0.05*ABS(MAXVAL(V(:,:,3))), 0.05*ABS(MINVAL(V(:,:,3))) ) / p%UHub  ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files 
 
    WRITE (p%US,"(//,'Normalizing Parameters for Binary Data (approximate statistics):',/)")
 
@@ -2030,19 +2101,20 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
 
    WRITE (p%US,'()')
    WRITE (p%US,FormStr)  'Height Offset', ( p%grid%HubHt - p%grid%GridHeight / 2.0 - p%grid%Zbottom ),  ' m'
-   WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Zbottom,                                                  ' m'
+   WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Zbottom,                                               ' m'
    
    WRITE (p%US,'()'   )
-   IF ( p%grid%Periodic ) THEN 
-      WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
-   END IF
+IF ( p%grid%Periodic ) THEN 
+   WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
+END IF
+   WRITE (p%US,'( A)' ) 'Creating a BLADED LEFT-HAND RULE output file.'
  
       ! Calculate some numbers for normalizing the data.
 
-   U_C1 = 1000.0/( p%UHub*TI(1) )
-   U_C2 = 1000.0/TI(1)
-   V_C  = 1000.0/( p%UHub*TI(2) )
-   W_C  = 1000.0/( p%UHub*TI(3) )
+   U_C1 =  1000.0/( p%UHub*TI(1) )
+   U_C2 =  1000.0/TI(1)
+   V_C  = -1000.0/( p%UHub*TI(2) )      ! Bladed convention is positive V is pointed along negative Y (IEC turbine coordinate)
+   W_C  =  1000.0/( p%UHub*TI(3) )
 
 
    IF ( p%WrFile(FileExt_WND) )  THEN
@@ -2085,19 +2157,6 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
       WRITE (UBFFW)   INT( 0                                      , B4Ki )     ! the longitudinal length scale of the vertical component, not used
 
 
-         ! Compute parameters for ordering output for FF AeroDyn files. (This is for BLADED compatibility.)
-
-      IF ( p%grid%Clockwise )  THEN
-         CFirst = p%grid%NumGrid_Y
-         CLast  = 1
-         CStep  = -1
-      ELSE
-         CFirst = 1
-         CLast  = p%grid%NumGrid_Y
-         CStep  = 1
-      ENDIF
-
-
          ! Loop through time.
 
       DO IT=1,p%grid%NumOutSteps  !Use only the number of timesteps requested originally
@@ -2105,7 +2164,7 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
             ! Write out grid data in binary form.
          IP = 1
          DO IZ=1,p%grid%NumGrid_Z
-            DO IY=CFirst,CLast,CStep
+            DO IY=1,p%grid%NumGrid_Y
 
                II = ( IZ - 1 )*p%grid%NumGrid_Y + IY
 
@@ -2398,11 +2457,131 @@ SUBROUTINE WrBinTURBSIM(p, V, ErrStat, ErrMsg)
 
 END SUBROUTINE WrBinTURBSIM
 !=======================================================================
+SUBROUTINE WrBinHAWC( p, V, USig, VSig, WSig, ErrStat, ErrMsg)
+      ! passed variables
+   TYPE(TurbSim_ParameterType),     INTENT(IN)     :: p                             !< TurbSim's parameters
+   REAL(ReKi),                      INTENT(IN)     :: V     (:,:,:)                 !< THe wind-speed array, with the mean added and the field rotated. (NumSteps,NPoints,3).
+   REAL(ReKi),                      INTENT(IN)     :: USig                          !< Standard deviation of U
+   REAL(ReKi),                      INTENT(IN)     :: VSig                          !< Standard deviation of V
+   REAL(ReKi),                      INTENT(IN)     :: WSig                          !< Standard deviation of W
+   INTEGER(IntKi),                  intent(  out)  :: ErrStat                       !< Error level
+   CHARACTER(*),                    intent(  out)  :: ErrMsg                        !< Message describing error
+   
+   ! local variables
+   CHARACTER(*),     PARAMETER   :: Comp(3) = (/'u','v','w'/)
+   INTEGER(IntKi)                :: IC, IT, IY, IZ, II, IH, IPoint
+   INTEGER(IntKi)                :: UnWind
+
+
+   REAL(ReKi), ALLOCATABLE       :: TmpV(:,:,:)                ! This array holds velocities with the wind direction added (with zero mean)
+   REAL(ReKi), PARAMETER         :: FileSigmas(3) = (/ 1.0, 0.8, 0.5 /) ! These are the ratios we will use for each file generated for HAWC2
+   REAL(ReKi)                    :: ScaleFactors(3)
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
+   CHARACTER(*), PARAMETER       :: RoutineName = 'WrBinHAWC'
+   CHARACTER(1024)               :: RootWithoutPathName
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   CALL GetNewUnit( UnWind, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      IF (ErrStat >= AbortErrLev) RETURN
+   
+      ! calculate factors (for workaround in HAWC2); factor = Target / actual
+   ScaleFactors = (/ USig, VSig, WSig /)
+   do ic=1,3
+      if (.not. EqualRealNos( ScaleFactors(ic), 0.0_ReKi ) ) then
+         ScaleFactors(ic) = FileSigmas(ic) / ScaleFactors(ic)
+      else
+         ScaleFactors(ic) = 1.0_ReKi
+      end if
+   end do
+      
+   !............................................
+   ! write the summary file
+   !............................................
+   ic = INDEX( p%RootName, '\', BACK=.TRUE. )
+   ic = MAX( ic, INDEX( p%RootName, '/', BACK=.TRUE. ) )
+   RootWithoutPathName = p%RootName((ic+1):)
+
+   CALL OpenFOutFile ( UnWind, trim(p%RootName)//'.hawc', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
+   WRITE (UnWind,"( / '; These full-field turbulence files were generated by ' , A , ' on ' , A , ' at ' , A , '.' )" )  TRIM(GetNVD(TurbSim_Ver)), CurDate(), CurTime()
+   
+   WRITE( UnWind, '()' ) 
+   WRITE( UnWind, '(A)' )  '; the following factor_scaling is required to obtain the original data:'
+   WRITE( UnWind, '(A, 3(1x,F15.5) )' )  '; factor_scaling', 1.0_ReKi / ScaleFactors
+   WRITE( UnWind, '()' ) 
+   WRITE( UnWind, '(A)' )  'begin mann;'
+   
+   DO IC = 1,3
+      WRITE( UnWind, '(2x,A, T30, A, " ;")' ) 'filename_'//Comp(IC), trim(RootWithoutPathName)//'-'//Comp(IC)//'.bin' 
+   END DO
+   WRITE( UnWind, '(2x,A, T30, I8, 1x, F15.5, " ;")' ) 'box_dim_u', p%grid%NumSteps, p%UHub*p%grid%TimeStep    ! Note: these files have to be periodic, so I'm going to output all of the steps.
+   WRITE( UnWind, '(2x,A, T30, I8, 1x, F15.5, " ;")' ) 'box_dim_v', p%grid%NumGrid_Y, p%grid%GridRes_Y
+   WRITE( UnWind, '(2x,A, T30, I8, 1x, F15.5, " ;")' ) 'box_dim_w', p%grid%NumGrid_Z, p%grid%GridRes_Z
+   WRITE( UnWind, '(A)' )  'end mann;'
+   CLOSE ( UnWind )
+   
+   !............................................
+   ! write the binary files for each component
+   !............................................
+   
+      ! temp array to store rotated wind speeds
+   CALL AllocAry( TmpV, p%grid%NumSteps, p%grid%NumGrid_Y*p%grid%NumGrid_Z, 3, 'TmpV', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+
+   ! Create temp file for easier writing (originally added vertical wind component here, first):
+   DO IT = 1,p%grid%NumSteps
+   
+      IH = 1
+      DO IY=p%grid%NumGrid_Y,1,-1
+         DO IZ=1,p%grid%NumGrid_Z
+
+            II = (IZ-1)*p%grid%NumGrid_Y + IY
+            IPoint = p%grid%GridPtIndx(II)
+            
+            TmpV(IT,IH,:) = V(IT,IPoint,:)
+               ! subtract the mean wind speed from the u-component
+            TmpV(IT,IH,1) = TmpV(IT,IH,1) - p%UHub
+            
+            IH = IH+1
+
+         END DO
+      END DO
+      
+   END DO
+
+
+
+   DO IC = 1,3
+      CALL WrScr ( ' Generating HAWC2 binary time-series file "'//trim(p%RootName)//'-'//Comp(ic)//'.bin"' )
+
+      CALL OpenBOutFile ( UnWind, trim(p%RootName)//'-'//Comp(ic)//'.bin', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+         IF (ErrStat >= AbortErrLev) EXIT ! exit this do loop to deallocate array
+
+      DO IT = 1,p%grid%NumSteps
+
+         WRITE( UnWind, IOSTAT=ErrStat2 ) REAL( TmpV(IT,:,IC) * ScaleFactors(IC), SiKi )
+
+      END DO
+
+      CLOSE ( UnWind )
+   END DO
+   
+   IF (ALLOCATED(TmpV)) DEALLOCATE(TmpV)
+
+   END SUBROUTINE WrBinHAWC
+!=======================================================================
 SUBROUTINE WrFormattedFF(RootName, p_grid, UHub, V )
 
    IMPLICIT  NONE
 
-   CHARACTER(*),                    intent(in   ) :: RootName             ! Rootname of output file
+   CHARACTER(*),                    INTENT(IN   ) :: RootName             ! Rootname of output file
    TYPE(Grid_ParameterType),        INTENT(IN)    :: p_grid
    REAL(ReKi),                      INTENT(IN)    :: UHub                 ! The steady hub-height velocity
    REAL(ReKi),                      INTENT(IN)    :: V       (:,:,:)      ! The Velocities to write to a file
@@ -2661,14 +2840,12 @@ ENDIF !  TurbModel  == 'IECKAI', 'IECVKM', or 'MODVKM'
 
 HalfRotDiam = 0.5*p%grid%RotorDiameter
 CALL getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt+HalfRotDiam, U_zt, ErrStat, ErrMsg)   !Velocity at the top of rotor
-CALL getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt-HalfRotDiam, U_zb, ErrStat, ErrMsg)   !Velocity at the bottom of the rotor
       
 IF ( TRIM(p%met%WindProfileType) /= 'PL' .AND. TRIM(p%met%WindProfileType) /= 'IEC' ) THEN
-!SELECT CASE ( TRIM(p%met%WindProfileType) )
-!   CASE ('JET','LOG','H2L','USR','API', 'TS') !i.e., not PL or IEC
-      p%met%PLexp = LOG( U_zt/U_zb ) / LOG( (p%grid%HubHt+HalfRotDiam)/(p%grid%HubHt-HalfRotDiam) )
-!END SELECT
+   CALL getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt            , U_zb, ErrStat, ErrMsg)   !Velocity at hub/reference height
+   p%met%PLexp = LOG( U_zt/U_zb ) / LOG( (p%grid%HubHt+HalfRotDiam)/(p%grid%HubHt) )
 END IF
+CALL getVelocity(p, p%UHub,p%grid%HubHt, p%grid%HubHt-HalfRotDiam, U_zb, ErrStat, ErrMsg)   !Velocity at bottom of the rotor
 
 
 WRITE(p%US,'()')   ! A BLANK LINE
@@ -2681,7 +2858,7 @@ SELECT CASE ( TRIM(p%met%WindProfileType) )
       WRITE (p%US,FormStr)       "Jet height                                      ",  p%met%ZJetMax,            " m"
       WRITE (p%US,FormStr)       "Jet wind speed                                  ",  p%met%UJetMax,            " m/s"
       WRITE (p%US,FormStr)       "Upper limit of observed jet wind speed          ",        UTmp,               " m/s"
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
       
       IF ( UTmp < p%met%UJetMax ) THEN
          CALL SetErrStat( ErrID_Warn, 'The computed jet wind speed is larger than the ' &
@@ -2690,11 +2867,11 @@ SELECT CASE ( TRIM(p%met%WindProfileType) )
                     
    CASE ('LOG')      
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "Logarithmic"      
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
 
    CASE ('H2L')      
       WRITE (p%US,FormStr2)      "Velocity profile type                           ", "Logarithmic (H2L)"      
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
 
    CASE ('PL')
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "Power law"      
@@ -2702,16 +2879,16 @@ SELECT CASE ( TRIM(p%met%WindProfileType) )
       
    CASE ('USR')
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "Linear interpolation of user-defined profile"
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
    
    CASE ('TS')
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "Linear interpolation of user-defined profile generated by time-series data"
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
       
    CASE ('API')
 !bjj : fix me:!!! 
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "API"
-      WRITE (p%US,FormStr)       "Equivalent power law exponent across rotor disk ",  p%met%PLexp,              ""
+      WRITE (p%US,FormStr)       "Equivalent power law exponent (upper rotor disk)",  p%met%PLexp,              ""
       
    CASE DEFAULT                
       WRITE (p%US,FormStr2)      "Wind profile type                               ", "Power law on rotor disk, logarithmic elsewhere"
@@ -3577,9 +3754,9 @@ SUBROUTINE WrSum_EchoInputs(p )
    WRITE (p%US,"( L10 , 2X , 'Output AeroDyn FF files?' )"                  )  p%WrFile(FileExt_BTS)
    WRITE (p%US,"( L10 , 2X , 'Output BLADED FF files?' )"                   )  p%WrFile(FileExt_WND)
    WRITE (p%US,"( L10 , 2X , 'Output tower data?' )"                        )  p%WrFile(FileExt_TWR)
+   WRITE (p%US,"( L10 , 2X , 'Output HAWC FF files?' )"                     )  p%WrFile(FileExt_HAWC)
    WRITE (p%US,"( L10 , 2X , 'Output formatted FF files?' )"                )  p%WrFile(FileExt_UVW)
    WRITE (p%US,"( L10 , 2X , 'Output coherent turbulence time step file?' )")  p%WrFile(FileExt_CTS)
-   WRITE (p%US,"( L10 , 2X , 'Clockwise rotation when looking downwind?' )" )  p%grid%Clockwise   
    
    SELECT CASE ( p%IEC%ScaleIEC )
       CASE (0)
@@ -3949,6 +4126,8 @@ SUBROUTINE ProcessLine_IECturbc(Line, IsIECModel, IECstandard, IECedition, IECed
          NumTurbInp = .TRUE.         
          IECTurbC = ""
 
+         CALL CheckRealVar( PerTurbInt, 'IECTurbC/PerTurbInt', ErrStat, ErrMsg )
+         
       ELSE
 
          ! Let's use one of the standard turbulence values (A or B or C).
@@ -5293,7 +5472,8 @@ TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p                            !< T
          p%met%WindProfileType = 'API'  ! ADDED BY YG
          
       CASE DEFAULT
-         p%met%WindProfileType = 'IEC'
+!         p%met%WindProfileType = 'IEC'
+         p%met%WindProfileType = 'PL'
    END SELECT
 
 

@@ -14,7 +14,7 @@ module FVW_SUBS
    integer(IntKi), parameter :: idCircPrescribed    = 3
    integer(IntKi), parameter, dimension(2) :: idCircVALID = (/idCircPolarData, idCircPrescribed /)
    ! Integration method
-   integer(IntKi), parameter :: idRK4      = 1 
+   integer(IntKi), parameter :: idRK4      = 1
    integer(IntKi), parameter :: idAB4      = 2
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idPredictor= 4
@@ -32,7 +32,7 @@ module FVW_SUBS
    integer(IntKi), parameter, dimension(2) :: idRegMethodVALID      = (/idRegConstant,idRegAge/)
    ! Regularization determination method
    integer(IntKi), parameter :: idRegDeterConstant  = 0
-   integer(IntKi), parameter :: idRegDeterAuto    = 1
+   integer(IntKi), parameter :: idRegDeterAuto      = 1
    integer(IntKi), parameter :: idRegDeterChord     = 2
    integer(IntKi), parameter :: idRegDeterSpan      = 3
    integer(IntKi), parameter, dimension(4) :: idRegDeterVALID      = (/idRegDeterConstant, idRegDeterAuto, idRegDeterChord, idRegDeterSpan /)
@@ -41,16 +41,19 @@ module FVW_SUBS
    integer(IntKi), parameter :: idShearMirror = 1
    integer(IntKi), parameter, dimension(2) :: idShearVALID         = (/idShearNone, idShearMirror /)
    ! Velocity calculation method
-   integer(IntKi), parameter :: idVelocityBasic = 1
-   integer(IntKi), parameter :: idVelocityTree  = 2
-   integer(IntKi), parameter :: idVelocityPart  = 3
-   integer(IntKi), parameter, dimension(3) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTree, idVelocityPart /)
+   integer(IntKi), parameter :: idVelocityBasic    = 1
+   integer(IntKi), parameter :: idVelocityTreePart = 2
+   integer(IntKi), parameter :: idVelocityPart     = 3
+   integer(IntKi), parameter :: idVelocityTreeSeg  = 4
+   integer(IntKi), parameter, dimension(4) :: idVelocityVALID      = (/idVelocityBasic, idVelocityTreePart, idVelocityPart,&
+                                                                       idVelocityTreeSeg/)
 
-   real(ReKi), parameter :: CoreSpreadAlpha = 1.25643 
+   real(ReKi), parameter :: CoreSpreadAlpha = 1.25643
 
-   ! Implementation 
+   ! Implementation
    integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
    logical       , parameter :: DEV_VERSION=.False.
+   logical       , parameter :: OLAF_PROFILING=.False.
 contains
 
 !==========================================================================
@@ -80,7 +83,7 @@ END FUNCTION interpolation_array
 !==========================================================================
 
 ! =====================================================================================
-!> Output blade circulation 
+!> Output blade circulation
 subroutine Output_Gamma(CP, Gamma_LL, iW, iStep, iLabel, iIter)
    real( ReKi ), dimension( :, : ), intent(in   ) :: CP       !< Control Points
    real( ReKi ), dimension( : ),    intent(in   ) :: Gamma_LL !< Circulation on the lifting line
@@ -106,7 +109,7 @@ subroutine Output_Gamma(CP, Gamma_LL, iW, iStep, iLabel, iIter)
 endsubroutine Output_Gamma
 ! =====================================================================================
 !> Read a delimited file  containing a circulation and interpolate it on the requested Control Points
-!! The input file is a delimited file with one line of header. 
+!! The input file is a delimited file with one line of header.
 !! Each following line consists of two columns: r/R_[-] and Gamma_[m^2/s]
 subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrStat, ErrMsg)
    character(len=*),           intent(in   ) :: CirculationFileName !< Input file to read
@@ -127,7 +130,7 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL, ErrS
    real(ReKi), parameter :: ReNaN = huge(1.0_ReKi)
    ErrStat = ErrID_None
    ErrMsg  = ''
-   ! --- 
+   ! ---
    call GetNewUnit(iUnit)
    call OpenFInpFile(iUnit, CirculationFileName, errStat2, errMsg2); if(Failed()) return
    nLines=line_count(iUnit)-1
@@ -164,7 +167,7 @@ contains
    end subroutine
 
    logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadAndInterpGamma') 
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadAndInterpGamma')
       Failed =  ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
@@ -177,7 +180,7 @@ contains
       integer(IntKi), parameter :: nline_max=100000000 ! 100 M
       integer(IntKi) :: i
       line_count=0
-      do i=1,nline_max 
+      do i=1,nline_max
          line=''
          read(iunit,'(A)',END=100)line
          line_count=line_count+1
@@ -195,12 +198,12 @@ endsubroutine ReadAndInterpGamma
 ! =====================================================================================
 
 ! --------------------------------------------------------------------------------
-! --- Mapping functions 
+! --- Mapping functions
 ! --------------------------------------------------------------------------------
 
 !> Make sure the First panel of the NW match the last panel of the Trailing edge
 !!  - Same position of points
-!!  - Same circulation 
+!!  - Same circulation
 subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
@@ -238,7 +241,7 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
       enddo
    endif
 
-   ! Circulations are the same on both side of the TE 
+   ! Circulations are the same on both side of the TE
    if (p%nNWMax>p%iNWStart-1) then
       do iW = 1,p%nWings
          do iSpan = 1,p%W(iW)%nSpan
@@ -247,7 +250,7 @@ subroutine Map_LL_NW(p, m, z, x, ShedScale, ErrStat, ErrMsg )
       enddo
    endif
    ! When subcycling, we make sure the new circulation progressively ramps up from the old one
-   ! NOTE: subcycling needs improvement. 
+   ! NOTE: subcycling needs improvement.
    !       Frequencies are introduced, even for prescribed circulation, when wake roll up is included
    !       If the wake is not free, the convection velocity is constant and there is no issue.
    !       As a test case, the elliptical wing with constant circulation can be used, with roll up
@@ -274,18 +277,18 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)            :: iW, iRoot, iTip, iMax
+   integer(IntKi)            :: iW, iRoot, iTip
    real(ReKi), dimension(p%nWings) :: FWGamma
    real(ReKi), dimension(:),allocatable :: Gamma_t
    real(ReKi), dimension(:),allocatable :: sCoord
 !    real(ReKi), dimension(p%W(iW)%nSpan+1) :: Gamma_t
 !    real(ReKi), dimension(p%W(iW)%nSpan) :: sCoord
    real(ReKi) :: FWEpsTip, FWEpsRoot
-   real(ReKi) :: ltip, rTip, Gamma_max
+
    integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    ! First Panel of Farwake has coordinates of last panel of near wake always
    if (p%nFWMax>0) then
       if (m%nNW==p%nNWMax) then
@@ -294,7 +297,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          do iW=1,p%nWings
             allocate(Gamma_t(p%W(iW)%nSpan+1)) ! TODO TODO TODO, store as misc
             allocate(sCoord(p%W(iW)%nSpan))
-            if (p%FullCirculationStart>0 .and. m%nFW<3) then
+            if (p%FullCircStart>0 .and. m%nFW<3) then
                ! we might run into the issue that the circulation is 0
                m%W(iW)%iTip =-1
                m%W(iW)%iRoot=-1
@@ -334,7 +337,7 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    if (.false.) print*,z%W(iW)%Gamma_LL(1) ! Just to avoid unused var warning
 endsubroutine Map_NW_FW
 
-!> Propagate the positions and circulation one index forward (loop from end to start) 
+!> Propagate the positions and circulation one index forward (loop from end to start)
 subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -348,7 +351,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
 
    ! -- Propagate far wake
       do iW=1,p%nWings
-         do iAge=p%nFWMax+1,2,-1 ! 
+         do iAge=p%nFWMax+1,2,-1 !
             do iSpan=1,FWnSpan+1
                x%W(iW)%r_FW(1:3,iSpan,iAge) = x%W(iW)%r_FW(1:3,iSpan,iAge-1)
             enddo
@@ -391,7 +394,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    ! Temporary hack for sub-cycling since straight after wkae computation, the wake size will increase
    ! So we do a "fake" propagation here
    do iW=1,p%nWings
-      do iAge=p%nFWMax+1,2,-1 ! 
+      do iAge=p%nFWMax+1,2,-1 !
          do iSpan=1,FWnSpan+1
             m%dxdt%W(iW)%r_FW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_FW(1:3,iSpan,iAge-1)
          enddo
@@ -399,7 +402,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
       !m%dxdt_FW(1:3,1:FWnSpan+1,1) = -999999_ReKi ! Important not nullified. The best would be to map the last NW convection velocity for this first row.
    enddo
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,p%iNWStart+1,-1 
+      do iAge=p%nNWMax+1,p%iNWStart+1,-1
          do iSpan=1,p%W(iW)%nSpan+1
             m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge) = m%dxdt%W(iW)%r_NW(1:3,iSpan,iAge-1)
          enddo
@@ -450,49 +453,122 @@ subroutine print_x_NW_FW(p, m, x, label)
 endsubroutine
 
 !> Debug function to figure out if data have nan
-logical function have_nan(p, m, x, u, label)
+logical function have_nan(p, m, x, z, u, label)
    type(FVW_ParameterType),         intent(in) :: p !< Parameters
    type(FVW_MiscVarType),           intent(in) :: m !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in) :: x !< Continuous states
+   type(FVW_ConstraintStateType),   intent(in) :: z !< ConstrStates
    type(FVW_InputType),             intent(in) :: u(:) !< Input states
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
-         print*,trim(label),'NaN in W(iW)%r_NW'
+         print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%r_FW))) then
-         print*,trim(label),'NaN in W(iW)%r_FW'
+         print*,trim(label),'NaN in W(iW)%r_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_NW))) then
-         print*,trim(label),'NaN in G_NW'
+         print*,trim(label),'NaN in G_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Gamma_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in G_FW'
+         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+      if (any(isnan(z%W(iW)%Gamma_LL))) then
+         print*,trim(label),'NaN in G_LL'//trim(num2lstr(iW))
          have_nan=.True.
       endif
    enddo
-   if (any(isnan(u(1)%V_wind))) then
-      print*,trim(label),'NaN in Vwind1'
-      have_nan=.True.
-   endif
-   if (any(isnan(u(2)%V_wind))) then
-      print*,trim(label),'NaN in Vwind2'
-      have_nan=.True.
-   endif
+   do iW=1,size(u)
+      if (any(isnan(u(iW)%V_wind))) then
+         print*,trim(label),'NaN in Vwind'//trim(num2lstr(iW))
+         have_nan=.True.
+      endif
+   enddo
+   if(.false.)print*,m%iStep ! unused var
 endfunction
+subroutine find_nan_1D(array, varname)
+   real(ReKi), dimension(:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (isnan(array(i)))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_2D(array, varname)
+   real(ReKi), dimension(:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, n, tot
+   n = size(array,2)
+   found=.false.
+   tot=0
+   do i =1, n
+      if (any(isnan(array(:,i))))  then
+         if (tot<10) then
+            print*,'Position i',i
+         endif
+         found=.true.
+         tot=tot+1
+      endif
+   enddo
+   if (found) then 
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname),tot,n
+      STOP
+   endif
+end subroutine
+subroutine find_nan_3D(array, varname)
+   real(ReKi), dimension(:,:,:), intent(in) :: array
+   character(len=*), intent(in) :: varname
+   logical :: found
+   integer :: i, j, n,m,tot
+   n = size(array,2)
+   m = size(array,3)
+   found=.false.
+   tot=0
+   do i =1, n
+      do j =1, m
+         if (any(isnan(array(:,i,j))))  then
+            if (tot<10) then
+               print*,'Position i,j',i,j
+            endif
+            found=.true.
+            tot=tot+1
+         endif
+      enddo
+   enddo
+   if (found) then
+      print*,'>>>>>>>>>>>>> NAN ',trim(varname), tot,n*m
+      STOP
+   endif
+end subroutine
 
 
 ! --------------------------------------------------------------------------------
@@ -513,7 +589,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    type(GridOutType), pointer :: g
 
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
-   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not.
    ! NOTE: InflowWind ignores points at (0,0,0)
    !if (DEV_VERSION) then
    !   ! Removing points that don't exist
@@ -523,7 +599,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
-   !   else 
+   !   else
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) = 0.0_ReKi
    !   endif
    !   !call print_x_NW_FW(p,m,x,'wind after')
@@ -584,7 +660,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m)
    !   endif
    !   if ( ((p%nNWMax<=1) .and. (m%nFW==0)) .or. ((m%nFW>0) .and. (m%nFW<=p%nFWMax))) then
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+2:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
-   !   else 
+   !   else
    !      x%W(iW)%r_FW(1:3, 1:FWnSpan+1, m%nFW+1:p%nFWMax+1, 1:p%nWings) =-999999.0_ReKi
    !   endif
    !endif
@@ -600,7 +676,7 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
    !real(ReKi), dimension(:,:,:),    intent(inout) :: Vwnd_LL !< Wind on lifting line
    integer(IntKi) :: iW, iP_start,iP_end   ! Current index of point, start and end of range
    ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
-   ! NOTE: Maximum number of points are passed, whether they "exist" or not. 
+   ! NOTE: Maximum number of points are passed, whether they "exist" or not.
    iP_end=0
    ! --- LL CP
    do iW=1,p%nWings
@@ -618,7 +694,7 @@ subroutine DistributeRequestedWind_LL(V_wind, p, m)
 end subroutine DistributeRequestedWind_LL
 
 !> Distribute wind onto NW and FW
-!! Modifies m%W(:)%Vwind_NW,  m%W(:)%Vwind_FW  
+!! Modifies m%W(:)%Vwind_NW,  m%W(:)%Vwind_FW
 subroutine DistributeRequestedWind_NWFW(V_wind, p, m)
    real(ReKi), dimension(:,:),      intent(in   ) :: V_wind  !< Requested wind, packed
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
@@ -693,6 +769,90 @@ end subroutine DistributeRequestedWind_Grid
 
 
 
+!> Init States
+subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
+   type(FVW_ContinuousStateType),   intent(  out)  :: x              !< States
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+   character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
+   integer :: iW
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   allocate(x%W(p%nWings))
+   do iW=1,p%nWings
+      call AllocAry( x%W(iW)%Gamma_NW,    p%W(iW)%nSpan   , p%nNWMax  , 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
+      call AllocAry( x%W(iW)%Gamma_FW,    FWnSpan   , p%nFWMax  , 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
+      call AllocAry( x%W(iW)%Eps_NW  , 3, p%W(iW)%nSpan   , p%nNWMax  , 'NW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+      call AllocAry( x%W(iW)%Eps_FW  , 3, FWnSpan   , p%nFWMax  , 'FW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+      ! set x%W(iW)%r_NW and x%W(iW)%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
+      call AllocAry( x%W(iW)%r_NW    , 3, p%W(iW)%nSpan+1 , p%nNWMax+1, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+      call AllocAry( x%W(iW)%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
+      if (ErrStat >= AbortErrLev) return
+      x%W(iW)%r_NW     = 0.0_ReKi
+      x%W(iW)%r_FW     = 0.0_ReKi
+      x%W(iW)%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
+      x%W(iW)%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%W(iW)%Gamma_LL at init
+      x%W(iW)%Eps_NW   = 0.001_ReKi 
+      x%W(iW)%Eps_FW   = 0.001_ReKi 
+   enddo
+end subroutine FVW_InitStates
+
+subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+   character(*), parameter :: RoutineName = 'FVW_InitMiscVarsPostParam'
+   integer(IntKi) :: nSeg, nSegP, nSegNW  !< Total number of segments after packing
+   integer(IntKi) :: nPart                !< Total number of particles after packing
+   integer(IntKi) :: nCPs                 !< Total number of control points
+   logical :: bMirror
+   logical :: bLLNeedsPart, bWakeNeedsPart
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! --- Counting maximum number of segments and Control Points expected for the whole simulation
+   call CountSegments(p, p%nNWMax, p%nFWMax, 1, nSeg, nSegP, nSegNW)
+   nCPs = CountCPs(p, p%nNWMax, p%nFWFree)
+
+   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
+   if (bMirror) then
+      nSeg  = nSeg*2
+      nSegP = nSegP*2
+   endif
+   call AllocAry( m%Sgmt%Connct, 4, nSeg , 'SegConnct' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Connct = -999;
+   call AllocAry( m%Sgmt%Points, 3, nSegP, 'SegPoints' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Points = -999999_ReKi;
+   call AllocAry( m%Sgmt%Gamma ,    nSeg,  'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Gamma  = -999999_ReKi;
+   call AllocAry( m%Sgmt%Epsilon,   nSeg,  'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Epsilon= -999999_ReKi;
+   m%Sgmt%nAct        = -1  ! Active segments
+   m%Sgmt%nActP       = -1
+   m%Sgmt%RegFunction = p%RegFunction
+
+   bWakeNeedsPart = p%VelocityMethod(1)==idVelocityPart .or.p%VelocityMethod(1)==idVelocityTreePart
+   bLLNeedsPart   = p%VelocityMethod(2)==idVelocityPart .or. p%VelocityMethod(2)==idVelocityTreePart
+   if (bLLNeedsPart .or. bWakeNeedsPart) then
+      nPart = 0 
+      if (bWakeNeedsPart) nPart = max(nPart, nSeg * p%PartPerSegment(1))
+      if (bLLNeedsPart)   nPart = max(nPart, nSeg * p%PartPerSegment(2))
+      call AllocAry( m%Part%P     , 3, nPart, 'PartP'      , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Part%P = -999999_ReKi;
+      call AllocAry( m%Part%Alpha , 3, nPart, 'PartAlpha'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Part%Alpha  = -999999_ReKi;
+      call AllocAry( m%Part%RegParam,   nPart, 'PartEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Part%RegParam= -999999_ReKi;
+      m%Part%nAct        = -1  ! Active particles
+      m%Part%RegFunction = p%RegFunction
+   endif
+
+   ! TODO Figure out Uind, CPs needed for grid
+   call AllocAry( m%CPs      , 3,  nCPs, 'CPs'       , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%CPs= -999999_ReKi;
+   call AllocAry( m%Uind     , 3,  nCPs, 'Uind'      , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Uind= -999999_ReKi;
+
+end subroutine FVW_InitMiscVarsPostParam
+
 !> Count how many segments are needed to represent the Near wake and far wakes, starting at a given depth
 subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
    type(FVW_ParameterType), intent(in   ) :: p    !< Parameters
@@ -713,7 +873,7 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
    if ((nNW-iDepthStart)>=0) then
       do iW=1,p%nWings
          nSegP  = nSegP +         (  (p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)            )
-         nSegNW = nSegNW +        (2*(p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)-(p%W(iW)%nSpan+1)-(nNW-iDepthStart+1+1))  
+         nSegNW = nSegNW +        (2*(p%W(iW)%nSpan+1)*(nNW-iDepthStart+2)-(p%W(iW)%nSpan+1)-(nNW-iDepthStart+1+1))
          if (.not.LastNWShed) then
             nSegNW =   nSegNW -            (p%W(iW)%nSpan) ! Removing last set of shed segments
          endif
@@ -725,7 +885,7 @@ subroutine CountSegments(p, nNW, nFW, iDepthStart, nSeg, nSegP, nSegNW)
       do iW=1,p%nWings
          nSegP  = nSegP +            (  (FWnSpan+1)*(nFW+1) )
          if (p%FWShedVorticity) then
-            nSeg = nSeg +            (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))  
+            nSeg = nSeg +            (2*(FWnSpan+1)*(nFW+1)-(FWnSpan+1)-(nFW+1))
          else
             nSeg = nSeg +            (  (FWnSpan+1)*(nFW)                    )   ! No Shed vorticity
          endif
@@ -741,7 +901,7 @@ pure integer(IntKi) function CountCPs(p, nNW, nFWEff) result(nCPs)
    integer :: iW
    nCPs=0
    do iW=1,p%nWings
-      nCPs = nCPs + (p%W(iW)%nSpan+1)*(nNW+1) 
+      nCPs = nCPs + (p%W(iW)%nSpan+1)*(nNW+1)
       if (nFWEff>0)  nCPs = nCPs + (FWnSpan+1)*(nFWEff+1)
    enddo
 end function CountCPs
@@ -801,7 +961,7 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
             print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
-         if (any(SegPoints(3,:)<-99._ReKi)) then
+         if (any(SegPoints(3,:)<-999._ReKi)) then
             print*,'PackPanelsToSegments: some segments are NAN'
             STOP ! Keep me. The check will be removed once the code is well established
          endif
@@ -827,6 +987,11 @@ subroutine PackPanelsToSegments(p, x, iDepthStart, bMirror, nNW, nFW, SegConnct,
          nSeg  = nSeg*2
          nSegP = nSegP*2
       endif
+
+      if (DEV_VERSION) then
+         call find_nan_2D(SegPoints(:,1:nSegP), 'PackPanelsToSegments SegPoints')
+      endif
+
    else
       nSeg  = 0
       nSegP = 0
@@ -847,7 +1012,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    real(ReKi) :: c_min, c_max, c_mean !< min,max and mean of chord
    real(ReKi) :: d_min, d_max, d_mean !< min,max and mean of panel diagonal
    real(ReKi) :: RegParam
-   real(ReKi) :: Span !< "Blade span"
+   real(ReKi) :: Span !< Wing "span"/length (taken as curvilinear coordinate)
    integer :: iW, iSpan
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -908,7 +1073,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          write(*,'(A,I0)'   )   'WakeRegMethod     : ', p%WakeRegMethod
          write(*,'(A,I0)'   )   'RegFunction       : ', p%RegFunction
          write(*,'(A,1F8.4)')   'WakeRegParam      : ', p%WakeRegParam
-         write(*,'(A,1F8.4)')   'BladeRegParam     : ', p%WingRegParam
+         write(*,'(A,1F8.4)')   'WingRegParam      : ', p%WingRegParam
          write(*,'(A,1F9.4)')   'CoreSpreadEddyVisc: ', p%CoreSpreadEddyVisc
       ! Set reg param on wing and first NW
       ! NOTE: setting the same in all three directions for now, TODO!
@@ -937,12 +1102,12 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
          enddo
       else ! Should never happen (caught earlier)
          ErrStat = ErrID_Fatal
-         ErrMsg ='Regularization determination method not implemented' 
+         ErrMsg ='Regularization determination method not implemented'
       endif
 
       if (iW==1) then
       call WrScr(' - OLAF regularization parameters (for wing 1):')
-         write(*,'(A,2F8.4)') '    BladeReg (min/max): ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
+         write(*,'(A,2F8.4)') '    WingReg (min/max) : ', minval(x%W(iW)%Eps_NW(:, :, 1)), maxval(x%W(iW)%Eps_NW(:, :, 1))
          if (p%nNWMax>1) then
             write(*,'(A,2F8.4)')    '    WakeReg (min/max) : ', minval(x%W(iW)%Eps_NW(:,:, 2)), maxval(x%W(iW)%Eps_NW(:,:, 2))
          endif
@@ -951,6 +1116,7 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
    enddo ! Loop on wings
 
 end subroutine FVW_InitRegularization
+
 
 
 !> Compute induced velocities from all vortex elements onto nPoints
@@ -969,7 +1135,6 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
    real(ReKi) :: xP,yP,zP,dx,dy,dz
    ! TODO new options
    type(T_Tree)   :: Tree
-   type(T_Part)   :: Part
    real(ReKi), dimension(:,:), allocatable :: CPs  ! TODO get rid of me with dedicated functions
    real(ReKi), dimension(:,:), allocatable :: Uind ! TODO get rid of me with dedicated functions
    ErrStat= ErrID_None
@@ -1001,37 +1166,85 @@ subroutine InducedVelocitiesAll_OnGrid(g, p, x, m, ErrStat, ErrMsg)
 
    ! --- Compute induced velocity
    ! Convert Panels to segments, segments to particles, particles to tree
-   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, ErrStat, ErrMsg, allocPart=.false.)
+   call InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, m%Sgmt, m%Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, Tree, m%Part, ErrStat, ErrMsg, deallocPart=.false.)
 
    ! --- Unpacking induced velocity points
    iHeadP=1
    call DeflateValues(Uind, g%uGrid, iHeadP)
 
-   deallocate(CPs , stat=ErrStat)
-   deallocate(Uind, stat=ErrStat)
+   if(allocated(CPs )) deallocate(CPs , stat=ErrStat)
+   if(allocated(Uind)) deallocate(Uind, stat=ErrStat)
 
 end subroutine InducedVelocitiesAll_OnGrid
 
+!> Wrapper to setup part from set of segments
+subroutine SegmentsToPartWrap(Sgmt, nSeg, PartPerSegment, RegFunction, Part, allocPart)
+   type(T_Sgmt),                    intent(in   ) :: Sgmt  !< Segments
+   integer(IntKi),                  intent(in   ) :: nSeg  !< Number of segments to use (might not use all of them)
+   integer(IntKi),                  intent(in   ) :: PartPerSegment !< Number of particles per segment
+   integer(IntKi),                  intent(in   ) :: RegFunction    !< Regularization function
+   type(T_Part),                    intent(inout) :: Part  !< Particles
+   logical,                         intent(in   ) :: allocPart !< allocate particles
+   integer(IntKi) :: iHeadP
+   integer(IntKi) :: nPart
+   logical, parameter :: alloc  =.true.  !< Should we allocate the particles?
+   iHeadP=1
+   nPart = PartPerSegment * nSeg
+   ! --- Allocate
+   if (allocPart)  then
+      if (allocated(Part%P))        deallocate(Part%P)
+      if (allocated(Part%Alpha))    deallocate(Part%Alpha)
+      if (allocated(Part%RegParam)) deallocate(Part%RegParam)
+      allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart)) ! NOTE: remember to deallocate
+   else
+      ! check that we have enough space
+      if (.not. allocated(Part%P)) then
+          print*,'>>> PartP not allocated'; 
+          STOP
+      endif
+      if (size(Part%P,2)<nPart) then
+           print*,'>>> PartP storage too small';
+           STOP
+      endif
+   endif
+   Part%P(:,:)      = -99999.99_ReKi
+   Part%Alpha(:,:)  = -99999.99_ReKi
+   Part%RegParam(:) = -99999.99_ReKi
+   Part%nAct = nPart ! TODO add iHeadPart  if particles already present
 
+   call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
+   if (RegFunction/=idRegNone) then
+      Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
+   endif
+   if (DEV_VERSION) then
+      call find_nan_2D(Part%P    , 'SegmentsToPartWrap Part%P')
+      call find_nan_2D(Part%Alpha, 'SegmentsToPartWrap Part%Alpha')
+      if (any(Part%RegParam(:)<-9999.99_ReKi)) then
+         print*,'Error in Segment to part conversion'
+         STOP
+      endif
+   endif
+end subroutine SegmentsToPartWrap
 
 !> Perform initialization steps before requesting induced velocities from All vortex elements
 !! In : x%W(iW)%r_NW, x%W(iW)%r_FW, x%W(iW)%Gamma_NW, x%W(iW)%Gamma_FW
 !! Out: Tree, Part, m
-subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg)
+subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg, allocPart)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Misc
    type(T_Sgmt),                    intent(inout) :: Sgmt    !< Segments
-   type(T_Part),                    intent(out)   :: Part    !< Particle storage if needed
+   type(T_Part),                    intent(inout) :: Part    !< Particle storage if needed
    type(T_Tree),                    intent(out)   :: Tree    !< Tree of particles if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   logical,                         intent(in   ) :: allocPart !< allocate particles
+   integer, parameter :: iVel = 1
    ! Local variables
-   integer(IntKi) :: iHeadP, nSeg, nSegP
+   integer(IntKi) :: nSeg, nSegP
    logical        :: bMirror ! True if we mirror the vorticity wrt ground
-   integer(IntKi) :: nPart
    ErrStat= ErrID_None
    ErrMsg =''
 
@@ -1043,85 +1256,80 @@ subroutine InducedVelocitiesAll_Init(p, x, m, Sgmt, Part, Tree,  ErrStat, ErrMsg
    Sgmt%nAct  = nSeg
    Sgmt%nActP = nSegP
 
-   ! --- Converting to particles
-   if ((p%VelocityMethod==idVelocityTree) .or. (p%VelocityMethod==idVelocityPart)) then
-      iHeadP=1
-      nPart = p%PartPerSegment * nSeg 
-      allocate(Part%P(3,nPart), Part%Alpha(3,nPart), Part%RegParam(nPart))
-      Part%Alpha(:,:)  = -99999.99_ReKi
-      Part%P(:,:)      = -99999.99_ReKi
-      Part%RegParam(:) = -99999.99_ReKi
-      call SegmentsToPart(Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%Epsilon, 1, nSeg, p%PartPerSegment, Part%P, Part%Alpha, Part%RegParam, iHeadP)
-      if (p%RegFunction/=idRegNone) then
-         Part%RegFunction = idRegExp ! TODO need to find a good equivalence and potentially adapt Epsilon in SegmentsToPart
-      endif
-      if (DEV_VERSION) then
-         if (any(Part%RegParam(:)<-9999.99_ReKi)) then
-            print*,'Error in Segment to part conversion'
-            STOP
-         endif
-      endif
+   ! --- Convert to particles if needed
+   if ((p%VelocityMethod(iVel)==idVelocityTreePart) .or. (p%VelocityMethod(iVel)==idVelocityPart)) then
+      call SegmentsToPartWrap(Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, Part, allocPart=allocPart)
    endif
 
-   ! Grow tree if needed
-   if (p%VelocityMethod==idVelocityTree) then
-      Tree%DistanceDirect = 2*sum(Part%RegParam)/size(Part%RegParam) ! 2*mean(eps), below that distance eps has a strong effect
-      call grow_tree(Tree, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+   ! --- Grow tree if needed
+   if (p%VelocityMethod(iVel)==idVelocityTreePart) then
+      call grow_tree_part(Tree, Part%nAct, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, 0)
+
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+      call grow_tree_segment(Tree, nSeg, Sgmt%Points, Sgmt%Connct(:,1:nSeg), Sgmt%Gamma(1:nSeg), p%RegFunction, Sgmt%Epsilon(1:nSeg), 0)
    endif
 
 end subroutine InducedVelocitiesAll_Init
 
-!> Compute induced velocity on flat CPs 
+!> Compute induced velocity on flat CPs
 subroutine InducedVelocitiesAll_Calc(CPs, nCPs, Uind, p, Sgmt, Part, Tree, ErrStat, ErrMsg)
    real(ReKi), dimension(:,:),      intent(in)    :: CPs     !< Control points (3 x nCPs++)
    integer(IntKi)                 , intent(in)    :: nCPs    !< Number of control points on which to compute (nCPs <= size(CPs,2))
    real(ReKi), dimension(:,: )    , intent(inout) :: Uind    !< Induced velocity vector - Side effects!!! (3 x nCPs++)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Tree of particles if needed
+   type(T_Sgmt),                    intent(in   ) :: Sgmt    !< Segments
    type(T_Part),                    intent(in   ) :: Part    !< Particle storage if needed
    type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   integer, parameter :: iVel = 1
    ! Local variables
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod==idVelocityBasic) then
-      call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%nAct, Sgmt%nActP, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
+   if (p%VelocityMethod(iVel)==idVelocityBasic) then
+      call ui_seg( 1, nCPs, CPs, 1, Sgmt%nAct, Sgmt%Points, Sgmt%Connct, Sgmt%Gamma, Sgmt%RegFunction, Sgmt%Epsilon, Uind)
 
-   elseif (p%VelocityMethod==idVelocityTree) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
       ! Tree has already been grown with InducedVelocitiesAll_Init
       !call print_tree(Tree)
-      call ui_tree(Tree, CPs, 0, 1, nCPs, p%TreeBranchFactor, Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
+      call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
 
-   elseif (p%VelocityMethod==idVelocityPart) then
-      call ui_part_nograd(CPs ,Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind, nCPs, size(Part%P,2))
+   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
+      call ui_part_nograd(nCPs, CPs, Part%nAct, Part%P, Part%Alpha, Part%RegFunction, Part%RegParam, Uind)
+
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+      call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), Tree%DistanceDirect, Uind, ErrStat, ErrMsg)
    endif
 end subroutine InducedVelocitiesAll_Calc
 
 
 !> Perform termination steps after velocity was requested from all vortex elements
 !! InOut: Tree, Part, m
-subroutine InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+subroutine InducedVelocitiesAll_End(p, Tree, Part, ErrStat, ErrMsg, deallocPart)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
-   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    type(T_Tree),                    intent(inout) :: Tree    !< Tree of particles if needed
    type(T_Part),                    intent(inout) :: Part    !< Particle storage if needed
    integer(IntKi),                  intent(  out) :: ErrStat !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
+   logical,                         intent(in   ) :: deallocPart
+   integer, parameter :: iVel = 1
    ! Local variables
    ErrStat= ErrID_None
    ErrMsg =''
 
-   if (p%VelocityMethod==idVelocityBasic) then
+   if (p%VelocityMethod(iVel)==idVelocityBasic) then
       ! Nothing
 
-   elseif (p%VelocityMethod==idVelocityTree) then
+   elseif (p%VelocityMethod(iVel)==idVelocityTreePart) then
+      if (deallocPart) deallocate(Part%P, Part%Alpha, Part%RegParam)
       call cut_tree(Tree)
-      deallocate(Part%P, Part%Alpha, Part%RegParam)
 
-   elseif (p%VelocityMethod==idVelocityPart) then
-      deallocate(Part%P, Part%Alpha, Part%RegParam)
+   elseif (p%VelocityMethod(iVel)==idVelocityPart) then
+      if (deallocPart) deallocate(Part%P, Part%Alpha, Part%RegParam)
+
+   elseif (p%VelocityMethod(iVel)==idVelocityTreeSeg) then
+      call cut_tree(Tree) ! We do not deallocate segment
    endif
 
 end subroutine InducedVelocitiesAll_End
@@ -1140,13 +1348,15 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iW, nCPs, iHeadP
-   integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current tmie step
+   integer(IntKi) :: nFWEff  ! Number of farwake panels that are free at current time step
+   integer(IntKi) :: nNWEff  ! Number of nearwake panels that are free at current time step
    type(T_Tree)   :: Tree
-   type(T_Part)   :: Part
+   if (OLAF_PROFILING) call tic('WakeInduced Calc')
    ErrStat= ErrID_None
    ErrMsg =''
 
    nFWEff = min(m%nFW, p%nFWFree)
+   nNWEff = min(m%nNW, p%nNWFree)
 
    ! --- Pack control points
    call PackConvectingPoints() ! m%CPs
@@ -1154,24 +1364,26 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    ! --- Compute induced velocity
    ! Convert Panels to segments, segments to particles, particles to tree
    m%Uind=0.0_ReKi ! very important due to side effects of ui_* methods
-   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, Part, Tree, ErrStat, ErrMsg)
-   call InducedVelocitiesAll_End(p, m, Tree, Part, ErrStat, ErrMsg)
+   m%Uind(:,nCPs+1:)=1000.0_ReKi ! TODO For debugging only
+   call InducedVelocitiesAll_Init(p, x, m, m%Sgmt, m%Part, Tree, ErrStat, ErrMsg, allocPart=.false.)
+   call InducedVelocitiesAll_Calc(m%CPs, nCPs, m%Uind, p, m%Sgmt, m%Part, Tree, ErrStat, ErrMsg)
+   call InducedVelocitiesAll_End(p, Tree, m%Part, ErrStat, ErrMsg, deallocPart=.false.)
    call UnPackInducedVelocity()
 
    if (DEV_VERSION) then
       print'(A,I0,A,I0,A,I0)','Convection - nSeg:',m%Sgmt%nAct,' - nSegP:',m%Sgmt%nActP, ' - nCPs:',nCPs
    endif
+   if (OLAF_PROFILING) call toc()
 contains
-   !> Pack all the points that convect 
+   !> Pack all the points that convect
    subroutine PackConvectingPoints()
       ! Counting total number of control points that convects
-      nCPs = CountCPs(p, m%nNW, nFWEff)
+      nCPs = CountCPs(p, nNWEff, nFWEff)
       m%CPs=-999.9_ReKi
       ! Packing
       iHeadP=1
       do iW=1,p%nWings
-         CALL LatticeToPoints(x%W(iW)%r_NW(1:3,:,1:m%nNW+1), 1, m%CPs, iHeadP)
+         CALL LatticeToPoints(x%W(iW)%r_NW(1:3,:,1:nNWEff+1), 1, m%CPs, iHeadP)
       enddo
       if (nFWEff>0) then
          do iW=1,p%nWings
@@ -1184,24 +1396,29 @@ contains
             call print_x_NW_FW(p,m,x,'pack')
             ErrMsg='PackConvectingPoints: Problem in Control points'; ErrStat=ErrID_Fatal; return
          endif
-         if ((iHeadP-1)/=nCPs) then
-            print*,'PackConvectingPoints: Number of points wrongly estimated',nCPs, iHeadP-1
-            STOP ! Keep me. The check will be removed once the code is well established
-            ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+         if (p%nNWMax==p%nNWFree) then
+            ! Number of CP should be number of SegP
+            if ((iHeadP-1)/=nCPs) then
+               print*,'PackConvectingPoints: Number of points wrongly estimated',nCPs, iHeadP-1
+               STOP ! Keep me. The check will be removed once the code is well established
+               ErrMsg='PackConvectingPoints: Number of points wrongly estimated '; ErrStat=ErrID_Fatal; return
+            endif
          endif
+         call find_nan_2D(m%CPs(:,1:nCPs), 'WakeInducedVel CPs')
       endif
    end subroutine
-   !> Distribute the induced velocity to the proper location 
+   !> Distribute the induced velocity to the proper location
    subroutine UnPackInducedVelocity()
       do iW=1,p%nWings
          m%W(iW)%Vind_NW = -9999._ReKi !< Safety
          m%W(iW)%Vind_FW = -9999._ReKi !< Safety
+         m%W(iW)%Vind_NW(:,:,p%nNWFree+1:) = 2222._ReKi !< Safety
       enddo
       iHeadP=1
       do iW=1,p%nWings
-         CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_NW(:,:,1:m%nNW+1), iHeadP)
+         CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_NW(:,:,1:nNWEff+1), iHeadP)
       enddo
-      if (nFWEff>0) then 
+      if (nFWEff>0) then
          do iW=1,p%nWings
             CALL VecToLattice(m%Uind, 1, m%W(iW)%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1), iHeadP)
          enddo
@@ -1214,11 +1431,15 @@ contains
          endif
       endif
       if (DEV_VERSION) then
-         if ((iHeadP-1)/=nCPs) then
-            print*,'UnPackInducedVelocity: Number of points wrongly estimated',nCPs, iHeadP-1
-            STOP ! Keep me. The check will be removed once the code is well established
-            ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+         if (p%nNWMax==p%nNWFree) then
+            ! Number of CP should be number of SegP
+            if ((iHeadP-1)/=nCPs) then
+               print*,'UnPackInducedVelocity: Number of points wrongly estimated',nCPs, iHeadP-1
+               STOP ! Keep me. The check will be removed once the code is well established
+               ErrMsg='UnPackInducedVelocity: Number of points wrongly estimated'; ErrStat=ErrID_Fatal; return
+            endif
          endif
+         call find_nan_2D(m%Uind(:,:), 'WakeInducedVel Uind')
       endif
    end subroutine
 
@@ -1234,16 +1455,20 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
    logical,                         intent(in   ) :: InductionAtCP !< Compute induction at CP or on LL nodes
    integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
-   !real(ReKi), dimension(:,:,:),    intent(  out) :: Vind_CP !< Control points where velocity is to be evaluated
+   integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
    integer(IntKi) :: iW, nSeg, nSegP, nCPs, iHeadP
+   real(ReKi) :: MaxWingLength, DistanceDirect !< Maximum wing length, used to determined distance for direct evaluation of tree
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
-   integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
-   character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   logical ::  bMirror 
+   type(T_Tree) :: Tree !< Tree of particles/segment if needed
+   integer, parameter :: iVel = 2
+   logical      :: bMirror
+   if (OLAF_PROFILING) call tic('LiftingLine UI Calc')
    ErrStat = ErrID_None
    ErrMsg  = ""
+
    do iW=1,p%nWings
       m%W(iW)%Vind_CP = -9999._ReKi !< Safety
       m%W(iW)%Vind_LL = -9999._ReKi !< Safety
@@ -1252,6 +1477,9 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
 
    ! --- Packing all vortex elements into a list of segments
    call PackPanelsToSegments(p, x, iDepthStart, bMirror, m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
+   m%Sgmt%RegFunction=p%RegFunction
+   m%Sgmt%nAct  = nSeg
+   m%Sgmt%nActP = nSegP
 
    ! --- Computing induced velocity
    if (nSegP==0) then
@@ -1274,20 +1502,54 @@ subroutine LiftingLineInducedVelocities(p, x, InductionAtCP, iDepthStart, m, Err
             nCPs = nCPs + p%W(iW)%nSpan+1
          enddo
       endif
-      allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc 
+
+      allocate(CPs (1:3,1:nCPs)) ! NOTE: here we do allocate CPs and Uind insteadof using Misc
       allocate(Uind(1:3,1:nCPs)) !       The size is reasonably small, and m%Uind then stay filled with "rollup velocities" (for export)
       Uind=0.0_ReKi !< important due to side effects of ui_seg
-      ! ---
+
+      ! --- Pack
       call PackLiftingLinePoints()
       if (DEV_VERSION) then
          print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
       endif
-      call ui_seg( 1, nCPs, CPs, 1, nSeg, nSeg, nSegP, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
+
+      ! --- Compute maximum wing length
+      MaxWingLength = 0.0_ReKi
+      do iW=1,p%nWings
+         MaxWingLength = max(MaxWingLength,  p%W(iW)%s_LL(p%W(iW)%nSpan+1)-p%W(iW)%s_LL(1)) ! Using curvilinear variable for length...
+      enddo
+      DistanceDirect = MaxWingLength*2.2_ReKi ! Using ~2*R+margin so that an entire rotor will be part of a direct evaluation
+
+      ! --- Compute velocity on LL
+      ! TreeSeg is faster but introduce some noise, so we keep this open for the user to choose
+      if (p%VelocityMethod(iVel) == idVelocityBasic) then 
+         call ui_seg( 1, nCPs, CPs, 1, nSeg, m%Sgmt%Points, m%Sgmt%Connct, m%Sgmt%Gamma, m%Sgmt%RegFunction, m%Sgmt%Epsilon, Uind)
+
+      else if (p%VelocityMethod(iVel) == idVelocityPart) then 
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
+         call ui_part_nograd(nCPs, CPs, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, Uind)
+         !deallocate(Part%P, Part%Alpha, Part%RegParam)
+
+      else if (p%VelocityMethod(iVel) == idVelocityTreeSeg) then 
+         call grow_tree_segment(Tree, nSeg, m%Sgmt%Points, m%Sgmt%Connct(:,1:nSeg), m%Sgmt%Gamma(1:nSeg), m%Sgmt%RegFunction, m%Sgmt%Epsilon(1:nSeg), 0)
+         call ui_tree_segment(Tree, CPs, nCPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
+         call cut_tree(Tree)
+
+      else if (p%VelocityMethod(iVel) == idVelocityTreePart) then 
+         call SegmentsToPartWrap(m%Sgmt, nSeg, p%PartPerSegment(iVel), p%RegFunction, m%Part, allocPart=.false.)
+         call grow_tree_part(Tree, m%Part%nAct, m%Part%P, m%Part%Alpha, m%Part%RegFunction, m%Part%RegParam, 0)
+         call ui_tree_part(Tree, nCPs, CPs, p%TreeBranchFactor(iVel), DistanceDirect, Uind, ErrStat, ErrMsg)
+         !deallocate(Part%P, Part%Alpha, Part%RegParam)
+         call cut_tree(Tree)
+      endif
+
+      ! --- Unpack
       call UnPackLiftingLineVelocities()
 
       deallocate(Uind)
       deallocate(CPs)
    endif
+   if (OLAF_PROFILING) call toc()
 contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()
@@ -1306,11 +1568,12 @@ contains
             print*,'PackLLPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(CPs, 'LiftingLineInducedVel CPs')
       endif
       nCPs=iHeadP-1
    end subroutine
 
-   !> Distribute the induced velocity to the proper location 
+   !> Distribute the induced velocity to the proper location
    subroutine UnPackLiftingLineVelocities()
       integer :: iSpan
       iHeadP=1
@@ -1340,6 +1603,7 @@ contains
             print*,'UnPackLiftingLineVelocities: Number of points wrongly estimated',size(Uind,2), iHeadP-1
             STOP ! Keep me. The check will be removed once the code is well established
          endif
+         call find_nan_2D(Uind, 'LiftingLineInducedVel Uind')
       endif
    end subroutine
 end subroutine
@@ -1396,7 +1660,7 @@ end subroutine FakeGroundEffect
 !!      - M_sg : from global to section (this is ill-defined), this coordinate is used to define the "axial" and "tangential" inductions
 subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, KinVisc, Chord, &
                          AxInd, TanInd, Vrel_norm, phi, alpha, Re, Urel_s, ErrStat, ErrMsg )
-   real(ReKi),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
+   real(R8Ki),             intent(in   )  :: M_sg(3,3)               ! m%WithoutSweepPitchTwist                               global  coord to "section" coord
    real(R8Ki),             intent(in   )  :: M_ag(3,3)               ! u%BladeMotion(k)%Orientation(1:3,1:3,j)                global  coord to airfoil coord
    real(ReKi),             intent(in   )  :: PitchAndTwist           ! Pitch and twist of section
    real(ReKi),             intent(in   )  :: Vstr_g(3)               ! Structural velocity                                    global  coord
@@ -1429,7 +1693,7 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    !M_sa(1,1:3) = (/  cos(PitchAndTwist*1._DbKi), sin(PitchAndTwist*1._DbKi), 0.0_DbKi /)
    !M_sa(2,1:3) = (/ -sin(PitchAndTwist*1._DbKi), cos(PitchAndTwist*1._DbKi), 0.0_DbKi /)
    !M_sa(3,1:3) = (/                   0.0_DbKi,                  0.0_DbKi, 1.0_DbKi /)
-   !M_sg= matmul(M_sa, M_ag ) 
+   !M_sg= matmul(M_sa, M_ag )
 
    ! --- Airfoil coordinates: used to define alpha, and Vrel, also called "n-t" system
    Vtot_g    = Vwnd_g - Vstr_g + Vind_g
@@ -1442,10 +1706,18 @@ subroutine FVW_AeroOuts( M_sg, M_ag, PitchAndTwist, Vstr_g,  Vind_g, Vwnd_g, Kin
    Vstr_s = matmul(M_sg, Vstr_g)
    Vind_s = matmul(M_sg, Vind_g)
    Vwnd_s = matmul(M_sg, Vwnd_g)
-   Urel_s = Vwnd_s - Vstr_s          ! relative wind 
+   Urel_s = Vwnd_s - Vstr_s          ! relative wind
    Vtot_s = Vwnd_s - Vstr_s + Vind_s
-   AxInd  = -Vind_s(1)/Urel_s(1) 
-   TanInd =  Vind_s(2)/Urel_s(2)
+   if (EqualRealNos(Urel_s(1),0.0_ReKi)) then
+      AxInd = 0.0_ReKi
+   else
+      AxInd  = -Vind_s(1)/Urel_s(1)
+   endif
+   if (EqualRealNos(Urel_s(2),0.0_ReKi)) then
+      TanInd = 0.0_ReKi
+   else
+      TanInd =  Vind_s(2)/Urel_s(2)
+   end if
    phi    = atan2( Vtot_s(1), Vtot_s(2) )        ! flow angle
 
    if(.false.) print*,PitchAndTwist ! just to avoid unused var for now

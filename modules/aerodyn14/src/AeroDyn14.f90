@@ -121,6 +121,15 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    p%DtAero            = Interval            ! set the default DT here; may be overwritten later, when we read the input file in AD14_GetInput()
    p%UseDWM            = InitInp%UseDWM
 
+   ! 2022.09.06 -- ADP
+   !  Recent changes to how the disk average velocity is calculated in InflowWind will likely cause seg-faults in DWM. Therefore
+   !  changes will need to be made to DWM for this to work properly.  Since AD14 and DWM will be removed in the very near future,
+   !  it is not a good use of time to fix this.  Instead I'll leave this comment here for anyone who really wants to use DWM.
+   if (p%UseDWM) then
+      call SetErrStat(ErrID_Fatal, ' DWM is no longer supported and will be deprecated in the near future.  We recommend using FAST.Farm instead.', ErrStat,ErrMess,RoutineName )
+      return
+   endif
+
          ! Define parameters here:
 
    p%WrOptFile   = InitInp%WrSumFile

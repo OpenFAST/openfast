@@ -116,10 +116,12 @@ which may be different from the time step of AeroDyn.  After an optional
 initialization period, the wake is allowed to move and distort, thus changing
 the wake structure as the markers are convected downstream.  To limit
 computational expense, the root and tip vortices are truncated after a specified
-distance (**WakeLength**) downstream from the turbine. The wake truncation
+distance (taken as a number of panels **nNWPanels**) downstream from the turbine. 
+The wake truncation
 violates Helmholtz's first law and hence introduces an erroneous boundary
 condition. To alleviate this, the wake is "frozen" in a buffer zone between a
-specified buffer distance, **FreeWakeLength**, and **WakeLength**. In this
+specified buffer distance, **nFWPanelsFree**, and **nFWPanels**. 
+In this
 buffer zone, the markers convect at the average ambient velocity. In this way,
 truncation error is minimized~(:cite:`olaf-Leishman02_1`). The buffer zone is
 typically chosen as the convected distance over one rotor revolution.

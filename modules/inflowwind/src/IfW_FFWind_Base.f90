@@ -40,14 +40,14 @@ MODULE IfW_FFWind_Base
    IMPLICIT                                     NONE
 
    
-   INTEGER(IntKi), PARAMETER  :: WindProfileType_None     = -1    !< don't add wind profile; already included in input 
-   INTEGER(IntKi), PARAMETER  :: WindProfileType_Constant = 0     !< constant wind
-   INTEGER(IntKi), PARAMETER  :: WindProfileType_Log      = 1     !< logarithmic
-   INTEGER(IntKi), PARAMETER  :: WindProfileType_PL       = 2     !< power law
+   INTEGER(IntKi), PARAMETER  :: WindProfileType_None     = -1     !< don't add a mean wind profile
+   INTEGER(IntKi), PARAMETER  :: WindProfileType_Constant =  0     !< constant wind
+   INTEGER(IntKi), PARAMETER  :: WindProfileType_Log      =  1     !< logarithmic
+   INTEGER(IntKi), PARAMETER  :: WindProfileType_PL       =  2     !< power law
 
-   INTEGER(IntKi), PARAMETER  :: ScaleMethod_None         = 0     !< no scaling
-   INTEGER(IntKi), PARAMETER  :: ScaleMethod_Direct       = 1     !< direct scaling factors
-   INTEGER(IntKi), PARAMETER  :: ScaleMethod_StdDev       = 2     !< requested standard deviation
+   INTEGER(IntKi), PARAMETER  :: ScaleMethod_None         =  0     !< no scaling
+   INTEGER(IntKi), PARAMETER  :: ScaleMethod_Direct       =  1     !< direct scaling factors
+   INTEGER(IntKi), PARAMETER  :: ScaleMethod_StdDev       =  2     !< requested standard deviation
    
 
 CONTAINS
@@ -56,7 +56,7 @@ CONTAINS
 !====================================================================================================
 !> This routine acts as a wrapper for the GetWindSpeed routine. It steps through the array of input
 !! positions and calls the GetWindSpeed routine to calculate the velocities at each point.
-SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrStat, ErrMsg)
+SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -66,7 +66,6 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_FFWind_ParameterType),              INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
-   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
 
       ! Error handling
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
@@ -102,8 +101,8 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
 
 
       ! Step through all the positions and get the velocities
-   !$OMP PARALLEL default(shared) if(PointNum>1000)
-   !$OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
+   !OMP PARALLEL default(shared) if(NumPoints>1000)
+   !OMP do private(PointNum, TmpErrStat, TmpErrMsg ) schedule(runtime)
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
@@ -111,32 +110,26 @@ SUBROUTINE IfW_FFWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, ErrSta
 
          ! Error handling
       IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          ErrStat = ErrID_None
          ErrMsg  = ""
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName//" [position=("//   &
                                                       TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                                                       TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
                                                       TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")  in wind-file coordinates]" )
-         !$OMP END CRITICAL
+         !OMP END CRITICAL
       END IF
 
    ENDDO
-   !$OMP END DO 
-   !$OMP END PARALLEL
+   !OMP END DO 
+   !OMP END PARALLEL
    IF (ErrStat >= AbortErrLev) RETURN ! Return cannot be in parallel loop
 
    IF (p%AddMeanAfterInterp) THEN
       DO PointNum = 1, NumPoints
-         Velocity(1,PointNum) = Velocity(1,PointNum) + CalculateMeanVelocity(p,PositionXYZ(3,PointNum))
+         Velocity(1,PointNum) = Velocity(1,PointNum) + CalculateMeanVelocity(p,PositionXYZ(3,PointNum),PositionXYZ(2,PointNum))
       ENDDO
    END IF
-
-
-      !REMOVE THIS for AeroDyn 15
-      ! Return the average disk velocity values needed by AeroDyn 14.  This is the WindInf_ADhack_diskVel routine.
-   DiskVel(1)   =  p%MeanFFWS
-   DiskVel(2:3) =  0.0_ReKi
 
 
    RETURN
@@ -203,7 +196,7 @@ FUNCTION FFWind_Interp(Time, Position, p, ErrStat, ErrMsg)
    ! Initialize variables
    !-------------------------------------------------------------------------------------------------
 
-   FFWind_Interp(:)     = 0.0_ReKi                         ! the output velocities (in case p%NFFComp /= 3)
+   FFWind_Interp(:)     = 0.0_ReKi                         ! the output velocities (in case p%NFFComp /= 3 or error)
 
    ErrStat              = ErrID_None
    ErrMsg               = ""
@@ -610,19 +603,24 @@ SUBROUTINE ScaleTurbulence(InitInp, FFData, ScaleFactors, ErrStat, ErrMsg)
 END SUBROUTINE ScaleTurbulence   
 !====================================================================================================
 !>  This routine is used to add a mean wind profile to the HAWC format turbulence data.
-SUBROUTINE AddMeanVelocity(InitInp, GridBase, dz, FFData)
+SUBROUTINE AddMeanVelocity(InitInp, GridBase, dz, dy, FFData)
 
       ! Passed Variables
    TYPE(IfW_FFWind_InitInputType),           INTENT(IN   )  :: InitInp           !< Initialization input data passed to the module
    REAL(ReKi),                               INTENT(IN   )  :: GridBase          !< height of the lowest point on the grid
    REAL(ReKi),                               INTENT(IN   )  :: dz                !< distance between two zertically consectutive grid points
+   REAL(ReKi),                               INTENT(IN   )  :: dy                !< distance between two horizontal consectutive grid points
    REAL(SiKi),                               INTENT(INOUT)  :: FFData(:,:,:,:)   !< FF wind-inflow data
    
       ! Local Variables:
    REAL(ReKi)                                               :: Z                 ! height
+   REAL(ReKi)                                               :: Y                 ! distance from centre in horizontal direction
    REAL(ReKi)                                               :: U                 ! mean wind speed
    INTEGER(IntKi)                                           :: iz                ! loop counter
+   INTEGER(IntKi)                                           :: iy                ! loop counter
    INTEGER(IntKi)                                           :: nz                ! number of points in the z direction
+   INTEGER(IntKi)                                           :: ny                ! number of points in the z direction
+   INTEGER(IntKi)                                           :: centre_y          ! index of centre in y direction
          
    
    nz = size(FFData,1)
@@ -648,26 +646,46 @@ SUBROUTINE AddMeanVelocity(InitInp, GridBase, dz, FFData)
 
       CASE ( WindProfileType_Constant )
          
-           U = InitInp%URef
+           U = InitInp%URef            
             
-      CASE DEFAULT ! WindProfileType_None
+      CASE DEFAULT
          
             U = 0.0_ReKi
 
       END SELECT
+      
+      IF (InitInp%VLinShr .NE. 0.0_ReKi) THEN  ! Add vertical linear shear, if has
+        U = U + InitInp%URef * InitInp%VLinShr * (Z - InitInp%RefHt) / InitInp%RefLength
+      ENDIF
 
       FFData( iz, :, 1, : ) = FFData( iz, :, 1, : ) + U
 
    END DO ! iz
    
+   IF (InitInp%HLinShr .NE. 0.0_ReKi) THEN  ! Add horizontal linear shear, if has
+     ny = size(FFData,2)
+        ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
+     centre_y = (ny + 1) / 2 ! integer division
+     DO iy = 1,ny
+     
+        Y = (iy - centre_y) * dy
+        
+        U = InitInp%URef * InitInp%HLinShr * Y / InitInp%RefLength
+     
+        FFData( :, iy, 1, : ) = FFData( :, iy, 1, : ) + U
+     
+     END DO ! iy
+   ENDIF  ! IF InitInp%HLinShr
+   
                
 END SUBROUTINE AddMeanVelocity
 !====================================================================================================
-FUNCTION CalculateMeanVelocity(p,z) RESULT(u)
+FUNCTION CalculateMeanVelocity(p,z,y) RESULT(u)
 
    TYPE(IfW_FFWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi)                    ,           INTENT(IN   )  :: Z                 ! height
-   REAL(ReKi)                                               :: u                 ! mean wind speed at height z
+   REAL(ReKi)                    ,           INTENT(IN   )  :: y                 ! lateral location
+   REAL(ReKi)                                               :: u                 ! mean wind speed at position (y,z)
 
       SELECT CASE ( p%WindProfileType )
 
@@ -692,6 +710,16 @@ FUNCTION CalculateMeanVelocity(p,z) RESULT(u)
             U = 0.0_ReKi
 
       END SELECT
+      
+      
+      IF (p%VLinShr .NE. 0.0_ReKi) THEN  ! Add vertical linear shear, if has
+         U = U + p%MeanFFWS * p%VLinShr * (Z - p%RefHt) / p%RefLength
+      ENDIF
+      
+   
+      IF (p%HLinShr .NE. 0.0_ReKi) THEN  ! Add horizontal linear shear, if has
+         U = U + p%MeanFFWS * p%HLinShr * y / p%RefLength
+      ENDIF
       
 END FUNCTION CalculateMeanVelocity
 !====================================================================================================
@@ -764,12 +792,17 @@ SUBROUTINE FFWind_ValidateInput(InitInp, nffc, ErrStat, ErrMsg)
    if (InitInp%WindProfileType == WindProfileType_Log) then
       if ( InitInp%z0 < 0.0_ReKi .or. EqualRealNos( InitInp%z0, 0.0_ReKi ) ) &
          call SetErrStat( ErrID_Fatal, 'The surface roughness length, Z0, must be greater than zero', ErrStat, ErrMsg, RoutineName )
-   elseif ( InitInp%WindProfileType < WindProfileType_None .or. InitInp%WindProfileType > WindProfileType_PL)  then                              
+   elseif ( InitInp%WindProfileType < WindProfileType_Constant .or. InitInp%WindProfileType > WindProfileType_PL)  then                              
        call SetErrStat( ErrID_Fatal, 'The WindProfile type must be 0 (constant), 1 (logarithmic) or 2 (power law).', ErrStat, ErrMsg, RoutineName )
    end if
 
    IF ( InitInp%URef < 0.0_ReKi ) call SetErrStat( ErrID_Fatal, 'The reference wind speed must not be negative.', ErrStat, ErrMsg, RoutineName )
    
+   IF ( EqualRealNos(InitInp%RefLength, 0.0_ReKi) .or. InitInp%RefLength < 0.0_ReKi ) THEN
+      IF (InitInp%VLinShr /= 0.0_ReKi .OR. InitInp%HLinShr /= 0.0_ReKi) THEN
+         call SetErrStat( ErrID_Fatal, 'The reference length must be a positive number when vertical or horizontal linear shear is used.', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END IF
    
 END SUBROUTINE FFWind_ValidateInput
 !====================================================================================================
@@ -816,7 +849,7 @@ SUBROUTINE ConvertFFWind_to_Bladed(FileRootName, p, ErrStat, ErrMsg)
 
 END SUBROUTINE ConvertFFWind_to_Bladed
 !==================================================================================================================================
-   SUBROUTINE WrBinHAWC(FileRootName, FFWind, delta, ErrStat, ErrMsg)
+SUBROUTINE WrBinHAWC(FileRootName, FFWind, delta, ErrStat, ErrMsg)
    CHARACTER(*),      INTENT(IN) :: FileRootName                     !< Name of the file to write the output in
    REAL(SiKi),        INTENT(IN) :: FFWind(:,:,:,:)                  !< 4D wind speeds: index 1=z (height), 2=y (lateral), 3=dimension(u,v,w), 4=time or x
    REAL(SiKi),        INTENT(IN) :: delta(3)                         !< array containing dx, dy, dz in meters
@@ -908,9 +941,9 @@ END SUBROUTINE ConvertFFWind_to_Bladed
 
    END DO
 
-   END SUBROUTINE WrBinHAWC
+END SUBROUTINE WrBinHAWC
 !==================================================================================================================================
-   SUBROUTINE WrBinBladed(FileRootName, FFWind, delta, MeanFFWS, HubHt, GridBase, Periodic, AddMeanAfterInterp, ErrStat, ErrMsg)
+SUBROUTINE WrBinBladed(FileRootName, FFWind, delta, MeanFFWS, HubHt, GridBase, Periodic, AddMeanAfterInterp, ErrStat, ErrMsg)
    CHARACTER(*),      INTENT(IN) :: FileRootName                     !< Name of the file to write the output in
    REAL(SiKi),        INTENT(IN) :: FFWind(:,:,:,:)                  !< 4D wind speeds: index 1=z (height), 2=y (lateral), 3=dimension(u,v,w), 4=time or x
    REAL(SiKi),        INTENT(IN) :: delta(3)                         !< array containing dx, dy, dz in meters
@@ -1099,7 +1132,7 @@ END SUBROUTINE ConvertFFWind_to_Bladed
    CLOSE( UnWind )
    
    
-   END SUBROUTINE WrBinBladed
+END SUBROUTINE WrBinBladed
 !====================================================================================================
 SUBROUTINE ConvertFFWind_toVTK(FileRootName, p, ErrStat, ErrMsg)
    CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files

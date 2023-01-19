@@ -42,6 +42,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: RefHt = 0      !< Reference (hub) height of the grid [meters]
     REAL(ReKi)  :: URef = 0      !< Mean u-component wind speed at the reference height [meters]
     REAL(ReKi)  :: PLExp = 0      !< Power law exponent (used for PL wind profile type only) [-]
+    REAL(ReKi)  :: VLinShr = 0      !< Vertical linear wind shear coefficient (used for vertical linear wind profile type only) [-]
+    REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
+    REAL(ReKi)  :: RefLength = 1.0_ReKi      !< Reference (rotor) length of the grid (used for horizontal wind profile type only) [-]
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
     REAL(ReKi)  :: XOffset = 0      !< distance offset for FF wind files [m]
   END TYPE IfW_FFWind_InitInputType
@@ -74,6 +77,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WindProfileType = -1      !< Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     REAL(ReKi)  :: PLExp = 0      !< Power law exponent (used for PL wind profile type only) [-]
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
+    REAL(ReKi)  :: VLinShr = 0      !< Vertical linear wind shear coefficient (used for vertical linear wind profile type only) [-]
+    REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
+    REAL(ReKi)  :: RefLength = 1.0_ReKi      !< Reference (rotor) length of the grid (used for horizontal wind profile type only) [-]
   END TYPE IfW_FFWind_ParameterType
 ! =======================
 CONTAINS
@@ -102,19 +108,34 @@ CONTAINS
     DstInitInputData%RefHt = SrcInitInputData%RefHt
     DstInitInputData%URef = SrcInitInputData%URef
     DstInitInputData%PLExp = SrcInitInputData%PLExp
+    DstInitInputData%VLinShr = SrcInitInputData%VLinShr
+    DstInitInputData%HLinShr = SrcInitInputData%HLinShr
+    DstInitInputData%RefLength = SrcInitInputData%RefLength
     DstInitInputData%Z0 = SrcInitInputData%Z0
     DstInitInputData%XOffset = SrcInitInputData%XOffset
  END SUBROUTINE IfW_FFWind_CopyInitInput
 
- SUBROUTINE IfW_FFWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE IfW_FFWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(IfW_FFWind_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FFWind_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FFWind_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE IfW_FFWind_DestroyInitInput
 
  SUBROUTINE IfW_FFWind_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -159,6 +180,9 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! RefHt
       Re_BufSz   = Re_BufSz   + 1  ! URef
       Re_BufSz   = Re_BufSz   + 1  ! PLExp
+      Re_BufSz   = Re_BufSz   + 1  ! VLinShr
+      Re_BufSz   = Re_BufSz   + 1  ! HLinShr
+      Re_BufSz   = Re_BufSz   + 1  ! RefLength
       Re_BufSz   = Re_BufSz   + 1  ! Z0
       Re_BufSz   = Re_BufSz   + 1  ! XOffset
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -205,6 +229,12 @@ CONTAINS
     ReKiBuf(Re_Xferred) = InData%URef
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PLExp
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VLinShr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HLinShr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RefLength
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Z0
     Re_Xferred = Re_Xferred + 1
@@ -263,6 +293,12 @@ CONTAINS
     OutData%URef = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%PLExp = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VLinShr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%HLinShr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%RefLength = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Z0 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -346,17 +382,32 @@ ENDIF
     DstParamData%WindProfileType = SrcParamData%WindProfileType
     DstParamData%PLExp = SrcParamData%PLExp
     DstParamData%Z0 = SrcParamData%Z0
+    DstParamData%VLinShr = SrcParamData%VLinShr
+    DstParamData%HLinShr = SrcParamData%HLinShr
+    DstParamData%RefLength = SrcParamData%RefLength
  END SUBROUTINE IfW_FFWind_CopyParam
 
- SUBROUTINE IfW_FFWind_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE IfW_FFWind_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(IfW_FFWind_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FFWind_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FFWind_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%FFData)) THEN
   DEALLOCATE(ParamData%FFData)
 ENDIF
@@ -434,6 +485,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WindProfileType
       Re_BufSz   = Re_BufSz   + 1  ! PLExp
       Re_BufSz   = Re_BufSz   + 1  ! Z0
+      Re_BufSz   = Re_BufSz   + 1  ! VLinShr
+      Re_BufSz   = Re_BufSz   + 1  ! HLinShr
+      Re_BufSz   = Re_BufSz   + 1  ! RefLength
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -563,6 +617,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%PLExp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Z0
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VLinShr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HLinShr
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RefLength
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FFWind_PackParam
 
@@ -704,6 +764,12 @@ ENDIF
     OutData%PLExp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Z0 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VLinShr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%HLinShr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%RefLength = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FFWind_UnPackParam
 

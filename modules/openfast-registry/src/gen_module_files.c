@@ -146,7 +146,14 @@ gen_copy_f2c(FILE         *fp, // *.f90 file we are writting to
                         fprintf(fp, "       ELSE\n");
                         fprintf(fp, "          %sData%%c_obj%%%s_Len = SIZE(%sData%%%s)\n", nonick, r->name, nonick, r->name);
                         fprintf(fp, "          IF (%sData%%c_obj%%%s_Len > 0) &\n", nonick, r->name);
-                        fprintf(fp, "             %sData%%c_obj%%%s = C_LOC( %sData%%%s( LBOUND(%sData%%%s,1) ) ) \n", nonick, r->name, nonick, r->name, nonick, r->name );
+                        
+                        fprintf(fp, "             %sData%%c_obj%%%s = C_LOC( %sData%%%s(", nonick, r->name, nonick, r->name);
+                        for (int d = 1; d <= r->ndims; d++) {
+                            fprintf(fp, " LBOUND(%sData%%%s,%d)", nonick, r->name, d);
+                            if (d < r->ndims) { fprintf(fp, ","); }
+                        }
+                        fprintf(fp, " ) )\n");
+
                         fprintf(fp, "       END IF\n");
                         fprintf(fp, "    END IF\n");
                     }
@@ -241,7 +248,14 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
              if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
   fprintf(fp,"    Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
   fprintf(fp,"    IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ;
-  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;
+
+  fprintf(fp, "          Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(", nonick, r->name, nonick, r->name);
+  for (d = 1; d <= r->ndims; d++) {
+      fprintf(fp, " i%d_l", d);
+      if (d < r->ndims) { fprintf(fp, ","); }
+  }
+  fprintf(fp, " ) )\n");
+
              }
 
   fprintf(fp,"  END IF\n") ; // end dest allocated/associated
@@ -734,7 +748,14 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         if (sw_ccode && is_pointer(r)) { // bjj: this needs to be updated if we've got multiple dimension arrays
           fprintf(fp, "    OutData%%c_obj%%%s_Len = SIZE(OutData%%%s)\n", r->name, r->name);
           fprintf(fp, "    IF (OutData%%c_obj%%%s_Len > 0) &\n", r->name);
-          fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(i1_l) ) \n", r->name, r->name);
+
+          fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(", r->name,r->name);
+          for (d = 1; d <= r->ndims; d++) {
+              fprintf(fp, " i%d_l", d);
+              if (d < r->ndims) { fprintf(fp, ","); }
+          }
+          fprintf(fp, " ) )\n");
+
         }
         strcpy(mainIndent, "  ");
      }
@@ -945,15 +966,26 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  fprintf(fp, " SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick );
+  fprintf(fp, " SUBROUTINE %s_Destroy%s( %sData, ErrStat, ErrMsg, DEALLOCATEpointers )\n",ModName->nickname,nonick,nonick );
   fprintf(fp, "  TYPE(%s), INTENT(INOUT) :: %sData\n",addnick,nonick) ;
   fprintf(fp, "  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp, "  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n");
-  fprintf(fp, "  CHARACTER(*),    PARAMETER :: RoutineName = '%s_Destroy%s'\n", ModName->nickname, nonick);
+  fprintf(fp, "  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers\n");
+  fprintf(fp, "  \n");
   fprintf(fp, "  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 \n");
-  fprintf(fp,"! \n") ;
-  fprintf(fp,"  ErrStat = ErrID_None\n") ;
-  fprintf(fp, "  ErrMsg  = \"\"\n");
+  fprintf(fp, "  LOGICAL                        :: DEALLOCATEpointers_local\n");
+  fprintf(fp, "  INTEGER(IntKi)                 :: ErrStat2\n");
+  fprintf(fp, "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n");
+  fprintf(fp, "  CHARACTER(*),    PARAMETER :: RoutineName = '%s_Destroy%s'\n\n", ModName->nickname, nonick);
+  fprintf(fp, "  ErrStat = ErrID_None\n");
+  fprintf(fp, "  ErrMsg  = \"\"\n\n");
+  fprintf(fp, "  IF (PRESENT(DEALLOCATEpointers)) THEN\n");
+  fprintf(fp, "     DEALLOCATEpointers_local = DEALLOCATEpointers\n");
+  fprintf(fp, "  ELSE\n");
+  fprintf(fp, "     DEALLOCATEpointers_local = .true.\n");
+  fprintf(fp, "  END IF\n");
+  fprintf(fp,"  \n") ;
+
 
 //  sprintf(tmp,"%s_%s",ModName->nickname,inoutlong) ;
 //  sprintf(tmp,"%s",inoutlong) ;
@@ -979,16 +1011,20 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
 
         if (!strcmp(r->type->name, "meshtype")) {
-           fprintf(fp, "  CALL MeshDestroy( %sData%%%s%s, ErrStat, ErrMsg )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "  CALL MeshDestroy( %sData%%%s%s, ErrStat2, ErrMsg2 )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
         }
         else if (!strcmp(r->type->name, "dll_type")) {
-           fprintf(fp, "  CALL FreeDynamicLib( %sData%%%s%s, ErrStat, ErrMsg )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "  CALL FreeDynamicLib( %sData%%%s%s, ErrStat2, ErrMsg2 )\n", nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
+
         }
         else { //if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {
            char nonick2[NAMELEN];
            remove_nickname(r->type->module->nickname, r->type->name, nonick2);
-           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-              r->type->module->nickname, fast_interface_type_shortname(nonick2), nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "  CALL %s_Destroy%s( %sData%%%s%s, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )\n",
+                r->type->module->nickname, fast_interface_type_shortname(nonick2), nonick, r->name, dimstr(r->ndims));
+           fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
         }
 
         for (d = r->ndims; d >= 1; d--) {
@@ -996,6 +1032,9 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
      }
      if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
+         if (is_pointer(r)) {
+            fprintf(fp, " IF (DEALLOCATEpointers_local) &\n");
+         }
          fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
          if ( is_pointer(r) ) {
             fprintf(fp, "  %sData%%%s => NULL()\n",nonick,r->name) ;
@@ -1559,7 +1598,7 @@ fprintf(fp,"  END IF\n") ;
 #endif
 
 void
-gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
+gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, char * modPrefix, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
 {
    node_t *r;
    int i, j;
@@ -1579,10 +1618,10 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "\n");
 
 
-   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s1    ! %s at t1 > t2\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s2    ! %s at t2 \n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s1    ! %s at t1 > t2\n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s2    ! %s at t2 \n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
    fprintf(fp, " REAL(%s),         INTENT(IN   )          :: tin(2)   ! Times associated with the %ss\n", xtypnm, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", modPrefix, typnmlong, uy, typnm);
    fprintf(fp, " REAL(%s),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to\n", xtypnm);
    fprintf(fp, " INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation\n");
    fprintf(fp, " CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None\n");
@@ -1633,7 +1672,7 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
 }
 
 void
-gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
+gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, char * modPrefix, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
 {
    node_t *r;
    int i, j;
@@ -1654,11 +1693,11 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "!..................................................................................................................................\n");
    fprintf(fp, "\n");
 
-   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s1      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s2      ! %s at t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s3      ! %s at t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s1      ! %s at t1 > t2 > t3\n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s2      ! %s at t2 > t3\n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s3      ! %s at t3\n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
    fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin(3)    ! Times associated with the %ss\n", xtypnm, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out     ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " TYPE(%s%s), INTENT(INOUT)  :: %s_out     ! %s at tin_out\n", modPrefix, typnmlong, uy, typnm);
    fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n", xtypnm);
 
    fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n" );
@@ -1720,10 +1759,10 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
 
 
 void
-gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm)
+gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, const int useModPrefix)
 {
    char nonick[NAMELEN];
-   char *ddtname; char uy[2];
+   char *ddtname; char uy[2]; char modPrefix[NAMELEN + 1];
    node_t *q, *r;
    int max_ndims, max_nrecurs, max_alloc_ndims;
 
@@ -1732,6 +1771,15 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
    }
    else{
       strcpy(uy, "u");
+   }
+
+   if (useModPrefix == 1) {
+       strcpy(modPrefix, ModName->nickname);
+       strcat(modPrefix, "_");
+   }
+   else
+   {
+       strcpy(modPrefix, "");
    }
 
    for (q = ModName->module_ddt_list; q; q = q->next)
@@ -1760,11 +1808,11 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
             fprintf(fp, "\n");
 
 
-            fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s(:) ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+            fprintf(fp, " TYPE(%s%s), INTENT(%s)  :: %s(:) ! %s at t1 > t2 > t3\n", modPrefix, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
             fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: t(:)           ! Times associated with the %ss\n", xtypnm, typnm);
             //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
             //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
-            fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+            fprintf(fp, " TYPE(%s%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", modPrefix, typnmlong, uy, typnm);
             fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to\n", xtypnm);
             fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation\n");
             fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None\n");
@@ -1811,8 +1859,8 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
                calc_extint_order(fp, ModName, r, 0, &max_ndims, &max_nrecurs, &max_alloc_ndims);
             }
 
-            gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, xtypnm, uy, max_ndims, max_nrecurs, max_alloc_ndims, q);
-            gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, xtypnm, uy, max_ndims, max_nrecurs, max_alloc_ndims, q);
+            gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, xtypnm, uy, modPrefix, max_ndims, max_nrecurs, max_alloc_ndims, q);
+            gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, xtypnm, uy, modPrefix, max_ndims, max_nrecurs, max_alloc_ndims, q);
 
          }
       }
@@ -2126,7 +2174,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
                 }
 
               }
-               if ( is_pointer(r) ) {
+               if (sw_ccode && is_pointer(r) ) {
                   fprintf(fp,"    %s ",c_types_binding(r->type->mapsto) ) ;
                } else {
                   fprintf(fp,"    %s ",r->type->mapsto ) ;
@@ -2252,16 +2300,21 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 //    gen_rk4( fp, ModName ) ;
 
     if (strcmp(make_lower_temp(ModName->name), "airfoilinfo") == 0) { // make interpolation routines for AirfoilInfo module
-        gen_ExtrapInterp(fp, ModName, "Output", "OutputType","ReKi");
-        gen_ExtrapInterp(fp, ModName, "UA_BL_Type", "UA_BL_Type", "ReKi");
+        gen_ExtrapInterp(fp, ModName, "Output", "OutputType","ReKi",1);
+        gen_ExtrapInterp(fp, ModName, "UA_BL_Type", "UA_BL_Type", "ReKi",1);
     } else if (!sw_noextrap) {
         if (strcmp(make_lower_temp(ModName->name), "dbemt") == 0) { // make interpolation routines for element-level DBEMT module
-             
-            gen_ExtrapInterp(fp, ModName, "ElementInputType", "ElementInputType", "DbKi");
+            gen_ExtrapInterp(fp, ModName, "ElementInputType", "ElementInputType", "DbKi",1);
         }
+//        else if (strcmp(make_lower_temp(ModName->name), "bemt") == 0) {
+//            gen_ExtrapInterp(fp, ModName, "SkewWake_InputType", "SkewWake_InputType", "DbKi",1);
+//        }
+//        else if (strcmp(make_lower_temp(ModName->name), "aerodyn") == 0) {
+//            gen_ExtrapInterp(fp, ModName, "RotInputType", "RotInputType", "DbKi",0); // don't append "AD_" to the type name!
+//        }
 
-        gen_ExtrapInterp(fp, ModName, "Input", "InputType", "DbKi");
-        gen_ExtrapInterp(fp, ModName, "Output", "OutputType", "DbKi");
+        gen_ExtrapInterp(fp, ModName, "Input", "InputType", "DbKi",1);
+        gen_ExtrapInterp(fp, ModName, "Output", "OutputType", "DbKi",1);
     }
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
@@ -2294,40 +2347,42 @@ gen_module_files ( char * dirname, char * prog_ver )
       if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
       print_warning(fp,fname2, "");
 
-      if ( sw_ccode == 1 ) {
-
-
-        if ( strlen(dirname) > 0 )
-          { sprintf(fname,"%s/%s_Types.h",dirname,p->name) ; }
-        else
-          { sprintf(fname, "%s_Types.h",p->name) ;}
-        sprintf(fname2,"%s_Types.h",p->name) ;
-        if ((fph = fopen( fname , "w" )) == NULL ) return(1) ;
-
-
-        print_warning(fph,fname2, "//") ;
-
-        fprintf(fph,"\n#ifndef _%s_TYPES_H\n",p->name);
-        fprintf(fph,"#define _%s_TYPES_H\n\n",p->name);
-        fprintf(fph,"\n#ifdef _WIN32 //define something for Windows (32-bit)\n");
-        fprintf(fph,"#  include \"stdbool.h\"\n");
-        fprintf(fph,"#  define CALL __declspec( dllexport )\n");
-        fprintf(fph,"#elif _WIN64 //define something for Windows (64-bit)\n");
-        fprintf(fph,"#  include \"stdbool.h\"\n");
-        fprintf(fph,"#  define CALL __declspec( dllexport ) \n");
-        fprintf(fph,"#else\n");
-        fprintf(fph,"#  include <stdbool.h>\n");
-        fprintf(fph,"#  define CALL \n");
-        fprintf(fph,"#endif\n\n\n");
-      }
       gen_module ( fp , p, prog_ver ) ;
       close_the_file( fp, "" ) ;
+
+      // generate .h files for C/C++:
       if ( sw_ccode ) {
-        gen_c_module ( fph , p ) ;
+          if (strlen(dirname) > 0)
+          {
+              sprintf(fname, "%s/%s_Types.h", dirname, p->name);
+          }
+          else
+          {
+              sprintf(fname, "%s_Types.h", p->name);
+          }
+          sprintf(fname2, "%s_Types.h", p->name);
+          fprintf(stderr, "generating %s\n", fname);
 
-        fprintf(fph,"\n#endif // _%s_TYPES_H\n\n\n",p->name);
-        close_the_file( fph,"//") ;
+          if ((fph = fopen(fname, "w")) == NULL) return(1);
+          print_warning(fph, fname2, "//");
 
+          fprintf(fph, "\n#ifndef _%s_TYPES_H\n", p->name);
+          fprintf(fph, "#define _%s_TYPES_H\n\n", p->name);
+          fprintf(fph, "\n#ifdef _WIN32 //define something for Windows (32-bit)\n");
+          fprintf(fph, "#  include \"stdbool.h\"\n");
+          fprintf(fph, "#  define CALL __declspec( dllexport )\n");
+          fprintf(fph, "#elif _WIN64 //define something for Windows (64-bit)\n");
+          fprintf(fph, "#  include \"stdbool.h\"\n");
+          fprintf(fph, "#  define CALL __declspec( dllexport ) \n");
+          fprintf(fph, "#else\n");
+          fprintf(fph, "#  include <stdbool.h>\n");
+          fprintf(fph, "#  define CALL \n");
+          fprintf(fph, "#endif\n\n\n");
+
+          gen_c_module(fph, p);
+
+          fprintf(fph, "\n#endif // _%s_TYPES_H\n\n\n", p->name);
+          close_the_file(fph, "//");
       }
     }
   }

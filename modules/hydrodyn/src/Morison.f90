@@ -541,7 +541,7 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
    INTEGER,                               INTENT (   OUT )  :: errStat             ! returns a non-zero value when an error occurs  
    CHARACTER(*),                          INTENT (   OUT )  :: errMsg              ! Error message if errStat /= ErrID_None
 
-   INTEGER                                     :: I, J
+   INTEGER                                     :: I, J, II
    REAL(ReKi)                                  :: l                   ! length of an element
    LOGICAL                                     :: filledFlag          ! flag indicating if element is filled/flooded
    CHARACTER(2)                                :: strFmt
@@ -811,7 +811,12 @@ SUBROUTINE WriteSummaryFile( UnSum, g, MSL2SWL, WtrDpth, numJoints, numNodes, no
             ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
             pos = nodes(c)%Position
             pos(3) = pos(3) + MSL2SWL
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(i),  members(j)%R(i)-members(j)%Rin(i),  members(j)%tMG(i),  members(j)%MGdensity(i),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(i)+members(j)%m_fb_l(i),  members(j)%Cd(i),  members(j)%Ca(i),  members(j)%Cp(i),  members(j)%AxCd(i),  members(j)%AxCa(i),  members(j)%AxCp(i), '  -  ',  '  -  ',  '  -  '
+            if (members(j)%flipped) then
+               II=members(j)%NElements+2-I
+            else
+               II=I
+            endif
+            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
          end do
       end do
       
@@ -1267,7 +1272,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    
    errStat = ErrID_None
    errMSg  = ''
-   call AllocAry(member%NodeIndx     , member%NElements,   'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -2105,6 +2110,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             END IF
          
          END DO   !J = 1, InitInp%InpJoints(I)%NConnections
+
+         Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
          
          p%An_End(:,i) = An_drag 
          Amag_drag = Dot_Product(An_drag ,An_drag)
@@ -2122,7 +2129,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Constant part of the external hydrodynamic added mass term
          if ( Vmag > 0.0 ) then
             v2D(:,1) = Vn        
-            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(transpose(v2D), v2D) 
+            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(v2D, transpose(v2D))
          end if
          
          ! Constant part of the external hydrodynamic dynamic pressure force
@@ -2240,9 +2247,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-      
-   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-
+   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
+      GetAlpha = 0.0_ReKi
+   else
+      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+   end if
    
 END FUNCTION GetAlpha
 

@@ -625,7 +625,7 @@ of the element writes
 :math:`\boldsymbol{f}_e=\boldsymbol{K}_e\boldsymbol{u}+\boldsymbol{f}_{e,0}`,
 with:
 
-.. math::
+.. math:: :label: StiffnessMatrixCable
 
    \begin{aligned}
      \begin{bmatrix} 
@@ -664,7 +664,7 @@ with:
        0\\
        1\\
      \end{bmatrix} 
-       \label{eq:StiffnessMatrixCable}\end{aligned}
+       \end{aligned}
 
 The relation above is expressed in the element coordinate system. The
 stiffness matrix and force vector are transferred to the global system
@@ -706,26 +706,50 @@ with :math:`L_e` the *undisplaced* length of the element (not
 Controlled pretension cable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The controller updates the value of :math:`\Delta L` at each time step,
-which effectively changes the pretension properties of the cable. The
-quantity :math:`\Delta L` is the change in restlength if the cable had
-no pretension. Since cable extension beyond the element length
-(:math:`L_e`) is not allowed in SubDyn, :math:`\Delta L` is limited to
-negative values. 
-
-At a given time, the restlength of the cable is :math:`L_r(t)` (instead
+The controller changes the rest length of the cable at each time step, effectively changing the pretension properties of the cable.
+At a given time, the restlength of the cable is :math:`L_r(t)=L_e + \Delta L` (instead
 of :math:`L_0`), and the pretension force is :math:`T(t)` (instead of
-:math:`T_0`). The pretension force is then given as:
+:math:`T_0`). The pretension force is given as:
+
+.. math:: :label: tensionUnsteady
+
+   \begin{aligned}
+       T(t)= E A \frac{-\Delta L(t)}{L_r(t)} = E A \frac{-\Delta L(t)}{L_e + \Delta L(t)}
+   \end{aligned}
+
+At :math:`t=0`, when no controller action is present, the pretension force and length are:
+
+.. math:: :label: tensionZero
+
+   \begin{aligned}
+           T(0) =T_0= E A \frac{-\Delta L_0}{L_e + \Delta L_0}
+           ,\quad
+           \Delta L(0) = \Delta L_0 = \frac{-L_e T_0}{EA+T_0}
+   \end{aligned}
+
+
+The quantity :math:`\Delta L` is the change in restlength, and it is given as:
+
+.. math:: :label: DeltaLTot
+
+   \begin{aligned}
+       \Delta L(t) = \Delta L_0 + \Delta L_c(t)
+   \end{aligned}
+
+where :math:`\Delta L_c` is the change of length prescribed by the controller, and :math:`\Delta  L_0` 
+is the change of length attributed to the initial pretension. This choice is such that the controller input is nominally 0. Cable extension beyond the element length
+(:math:`L_e`) is not allowed in SubDyn, therefore :math:`\Delta L` is limited to
+negative values (:math:`L_r=L_e+\Delta L <= L_e`). 
+The tension force at a given time is given by inserting :eq:`DeltaLTot` into :eq:`tensionUnsteady`:
 
 .. math::
 
    \begin{aligned}
-       T(t)= E A \frac{-\Delta L_r(t)}{L_r(t)} = E A \frac{-\Delta L_r(t)}{L_e + \Delta L(t)}
-           ,\quad
-           T(0) =T_0= E A \frac{-\Delta L_0}{L_e + \Delta L_0}
-           ,\quad
-           \Delta L(0) = \Delta L_0\end{aligned}
+       T(t)=- E A \frac{\Delta L_0 + \Delta L_c }{L_e + \Delta L_0 + \Delta L_c}
+   \end{aligned}
 
+
+In the following we provide details on the implementation and the approximation introduced.
 The “equations of motions” for a cable element are written:
 
 .. math::
@@ -733,28 +757,27 @@ The “equations of motions” for a cable element are written:
    \begin{aligned}
        \boldsymbol{M}_e\boldsymbol{\ddot{u}}_e&= \boldsymbol{f}_e\end{aligned}
 
-If the pretension force is constant, equal to :math:`T_0` then the
-element force is:
+If the pretension force is constant (equal to :math:`T_0`), and additional external loads are neglected, then the element force is:
 
-.. math::
+.. math::  :label: CstCableA
 
    \begin{aligned}
    \boldsymbol{f}_e=\boldsymbol{f}_e (t,T_0) &=-\boldsymbol{K}_c(T_0) \boldsymbol{u}_e + \boldsymbol{f}_c(T_0)+ \boldsymbol{f}_g 
-        \label{eq:CableEqMotionT0}\end{aligned}
+        \end{aligned}
 
 where :math:`\boldsymbol{f}_c(T_0)` and :math:`\boldsymbol{K}_c(T_0)`
-are given in . If the pretension force is varying with time
+are given in :eq:`StiffnessMatrixCable`. If the pretension force is varying with time
 (:math:`T=T(t)`), then the force is:
 
-.. math::
+.. math::  :label: VaryingCableA
 
    \begin{aligned}
-    \boldsymbol{f}_e (t) =-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T)+ \boldsymbol{f}_g 
-       \label{eq:VaryingCableA}\end{aligned}
+      \boldsymbol{f}_e (t) =-\boldsymbol{K}_c(T) \boldsymbol{u}_e + \boldsymbol{f}_c(T)+ \boldsymbol{f}_g 
+   \end{aligned}
 
-where is evaluated with :math:`\epsilon=\frac{T}{EA}` and
-:math:`L=\frac{L_e}{1+\epsilon}`. We seek to express , as a correction
-term added to the equation of a constant pretension cable (i.e. , with
+where :eq:`VaryingCableA` is evaluated with :math:`\epsilon=\frac{T}{EA}` and
+:math:`L=\frac{L_e}{1+\epsilon}`. We seek to express :eq:`VaryingCableA`, as a correction
+term added to the equation of a constant pretension cable (i.e. :eq:`CstCableA`, with
 :math:`T(0)=T_0`). We add :math:`\pm\boldsymbol{f}_e(t,T_0)` to ,
 leading to:
 

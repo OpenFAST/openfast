@@ -324,6 +324,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ELSEIF   ( TRIM(ThisArgUC) == "VTK"   )   THEN
             CLFlags%WrVTK        = .TRUE.
             RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "UNIFORM"   )   THEN
+            CLFlags%WrUniform    = .TRUE.
+            RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
                ErrStat,ErrMsg,'ParseArg')
@@ -867,6 +870,10 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName, DvrFlags%WrVTK, 'WrVTK', 'Convert wind data to VTK format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
+      ! WrUniform
+   CALL ReadVar( UnIn, FileName, DvrFlags%WrUniform, 'WrUniform', 'Convert wind data to Uniform Wind format?', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      CALL SetErrStat(ErrStatTmp, ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
@@ -1329,9 +1336,10 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    ErrMsgTmp   =  ''
 
 
-   DvrFlags%WrHAWC   = DvrFlags%WrHAWC   .or. CLFlags%WrHAWC      ! create file if specified in either place
-   DvrFlags%WrBladed = DvrFlags%WrBladed .or. CLFlags%WrBladed    ! create file if specified in either place
-   DvrFlags%WrVTK    = DvrFlags%WrVTK .or. CLFlags%WrVTK          ! create file if specified in either place
+   DvrFlags%WrHAWC    = DvrFlags%WrHAWC    .or. CLFlags%WrHAWC             ! create file if specified in either place
+   DvrFlags%WrBladed  = DvrFlags%WrBladed  .or. CLFlags%WrBladed           ! create file if specified in either place
+   DvrFlags%WrVTK     = DvrFlags%WrVTK     .or. CLFlags%WrVTK              ! create file if specified in either place
+   DvrFlags%WrUniform = DvrFlags%WrUniform .or. CLFlags%WrUniform          ! create file if specified in either place
 
 !      ! Due to the complexity, we are handling overwriting driver input file settings with
 !      ! command line settings and the instance where no driver input file is read separately.
@@ -2343,10 +2351,11 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
    INTEGER(IntKi)                                     :: I                    !< Generic counter
 
-   CHARACTER(61)                                      :: PointsVelFmt         !< Format specifier for the output file for wave elevation series
+   CHARACTER(61)                                      :: NameUnitFmt          !< Format specifier for the output file for channel names and units
+   CHARACTER(61)                                      :: PointsVelFmt         !< Format specifier for the output file for wind point location and velocity
 
-
-   PointsVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
+   NameUnitFmt = "( 7(A16, 3X) )"
+   PointsVelFmt = "( 7(F16.8, 3X) )"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None
@@ -2371,15 +2380,16 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
                                                    TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
                                                    'file '//TRIM(Settings%PointsFileName)//'.'
       WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#        T                X                Y                Z       '//  &
-                                                   '         U                V                W'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#       (s)              (m)              (m)              (m)      '//  &
-                                                   '       (m/s)            (m/s)            (m/s)'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit, NameUnitFmt, IOSTAT=ErrStatTmp  )  'T', 'X', 'Y', 'Z', 'U', 'V', 'W'
+      WRITE (FileUnit, NameUnitFmt, IOSTAT=ErrStatTmp  )  '(s)', '(m)', '(m)', '(m)', '(m/s)', '(m/s)', '(m/s)'
    ELSE
 
       DO I = 1,SIZE(GridXYZ,DIM=2)
 
-         WRITE (FileUnit,PointsVelFmt, IOSTAT=ErrStatTmp )    TIME,GridXYZ(1,I),GridXYZ(2,I),GridXYZ(3,I),GridVel(1,I),GridVel(2,I),GridVel(3,I)
+         WRITE (FileUnit, PointsVelFmt, IOSTAT=ErrStatTmp ) TIME, GridXYZ(1,I), GridXYZ(2,I), GridXYZ(3,I), GridVel(1,I), GridVel(2,I), GridVel(3,I)
 
       ENDDO
 

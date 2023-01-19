@@ -36,15 +36,15 @@ MODULE ModMesh_Mapping
 
    !bjj: these types require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90 (though they are auto_generated with that code):
 
-      !> Type that describes characteristics of the mapping between two meshes
+   !> Type that describes characteristics of the mapping between two meshes
    TYPE, PUBLIC :: MapType
-      INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
-      REAL(R8Ki)     :: distance             !< magnitude of couple_arm
-      REAL(R8Ki)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR)
-      REAL(R8Ki)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
+      INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src [-]
+      REAL(R8Ki)     :: distance             !< magnitude of couple_arm [m]
+      REAL(R8Ki)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR) [m]
+      REAL(R8Ki)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point [-]
    END TYPE MapType
 
-      !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
+   !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapLinearizationType
          ! values for motions:
       REAL(R8Ki),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
@@ -62,21 +62,21 @@ MODULE ModMesh_Mapping
    END TYPE MeshMapLinearizationType
    
    
-      !> data structures to determine full mapping between fields on different meshes
+   !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
-      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping data structure for loads on the mesh
+      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping data structure for loads on the mesh [-]
       TYPE(MapType),  ALLOCATABLE :: MapMotions(:)             !< mapping data structure for motions and/or scalars on the mesh [-]
-      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination
-      TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types
-      TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency
+      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination [-]
+      TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types [-]
+      TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency [-]
 #ifdef MESH_DEBUG     
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
-      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
-      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency)
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
-      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
+      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat [-]
+      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency) [m]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping [-]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element) [-]
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element) [-]
       
       TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
    END TYPE MeshMapType
@@ -2482,7 +2482,7 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    !! IF Src is forces and/or moments, loop over Src Mesh;
    !!    each load in the source mesh needs to be placed somewhere in the destination mesh.
 
-   if ( HasLoadFields(Src) ) then
+   if ( HasLoadFields(Src) .AND. HasLoadFields(Dest)  ) then
             
       !........................
       ! Create mapping
@@ -5763,10 +5763,10 @@ END SUBROUTINE WriteMappingTransferToFile
 !bjj: these routines require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90:
 !STARTOFREGISTRYGENERATEDFILE 'NWTC_Library_Types.f90'
 !
-! WARNING This file is generated automatically by the FAST registry
+! WARNING This file is generated automatically by the FAST registry.
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.02.00, 23-Jul-2016)
+! FAST Registry
 !*********************************************************************************************************************************
  SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MapType), INTENT(IN) :: SrcMapTypeData
@@ -5791,15 +5791,27 @@ END SUBROUTINE WriteMappingTransferToFile
     DstMapTypeData%shape_fn = SrcMapTypeData%shape_fn
  END SUBROUTINE NWTC_Library_CopyMapType
 
- SUBROUTINE NWTC_Library_DestroyMapType( MapTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyMapType( MapTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MapType), INTENT(INOUT) :: MapTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMapType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMapType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE NWTC_Library_DestroyMapType
 
  SUBROUTINE NWTC_Library_PackMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6101,15 +6113,27 @@ IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M_f)) THEN
 ENDIF
  END SUBROUTINE NWTC_Library_CopyMeshMapLinearizationType
 
- SUBROUTINE NWTC_Library_DestroyMeshMapLinearizationType( MeshMapLinearizationTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyMeshMapLinearizationType( MeshMapLinearizationTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MeshMapLinearizationType), INTENT(INOUT) :: MeshMapLinearizationTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMeshMapLinearizationType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMeshMapLinearizationType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MeshMapLinearizationTypeData%mi)) THEN
   DEALLOCATE(MeshMapLinearizationTypeData%mi)
 ENDIF
@@ -6913,35 +6937,52 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE NWTC_Library_CopyMeshMapType
 
- SUBROUTINE NWTC_Library_DestroyMeshMapType( MeshMapTypeData, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_DestroyMeshMapType( MeshMapTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(MeshMapType), INTENT(INOUT) :: MeshMapTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMeshMapType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMeshMapType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MeshMapTypeData%MapLoads)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapLoads,1), UBOUND(MeshMapTypeData%MapLoads,1)
-  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapLoads(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapLoads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MeshMapTypeData%MapLoads)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%MapMotions)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapMotions,1), UBOUND(MeshMapTypeData%MapMotions,1)
-  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapMotions(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapMotions(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MeshMapTypeData%MapMotions)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%MapSrcToAugmt)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapSrcToAugmt,1), UBOUND(MeshMapTypeData%MapSrcToAugmt,1)
-  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapSrcToAugmt(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapSrcToAugmt(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MeshMapTypeData%MapSrcToAugmt)
 ENDIF
-  CALL MeshDestroy( MeshMapTypeData%Augmented_Ln2_Src, ErrStat, ErrMsg )
-  CALL MeshDestroy( MeshMapTypeData%Lumped_Points_Src, ErrStat, ErrMsg )
+  CALL MeshDestroy( MeshMapTypeData%Augmented_Ln2_Src, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( MeshMapTypeData%Lumped_Points_Src, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat_Piv)) THEN
   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat_Piv)
 ENDIF
@@ -6957,7 +6998,8 @@ ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_M)) THEN
   DEALLOCATE(MeshMapTypeData%LoadLn2_M)
 ENDIF
-  CALL NWTC_Library_Destroymeshmaplinearizationtype( MeshMapTypeData%dM, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroymeshmaplinearizationtype( MeshMapTypeData%dM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE NWTC_Library_DestroyMeshMapType
 
  SUBROUTINE NWTC_Library_PackMeshMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

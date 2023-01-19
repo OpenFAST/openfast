@@ -19,8 +19,8 @@ Environmental Conditions
 For air, typical values for ``AirDens``, ``KinVisc``,
 ``SpdSound``, and ``Patm`` are around 1.225 kg/m\ :sup:`3`, 1.460E-5
 m\ :sup:`2`/s, 340.3 m/s, and 101,325 Pa, respectively. For seawater,
-typical values for ``AirDens``, ``KinVisc``, and ``Pvap`` are
-around 1025 kg/m\ :sup:`3`, 1.004E-6 m\ :sup:`2`/s, and 2000 Pa,
+typical values for ``FldDens``, ``KinVisc``, ``SpdSound``, and ``Pvap`` are
+around 1025 kg/m\ :sup:`3`, 1.004E-6 m\ :sup:`2`/s, 1500 m/s, and 2000 Pa,
 respectively.
 
 Temporal and Spatial Discretization
@@ -114,4 +114,6 @@ linearization of the full coupled solution. When induction is enabled
 (``WakeMod = 1``), we recommend to base the linearized solution on the
 frozen-wake assumption, by setting ``FrozenWake = TRUE``. The UA
 models are not set up to support linearization, so, UA must be disabled
-during linearization by setting ``AFAeroMod = 1``.
+during linearization by setting ``AFAeroMod = 1``. Linearization is not 
+currently possible when modeling an MHK turbine, but we will attempt to
+enable it in an upcoming release.

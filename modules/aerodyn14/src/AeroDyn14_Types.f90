@@ -493,15 +493,27 @@ CONTAINS
     DstMarkerData%RotationVel = SrcMarkerData%RotationVel
  END SUBROUTINE AD14_CopyMarker
 
- SUBROUTINE AD14_DestroyMarker( MarkerData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyMarker( MarkerData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Marker), INTENT(INOUT) :: MarkerData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMarker'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMarker'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyMarker
 
  SUBROUTINE AD14_PackMarker( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -704,28 +716,48 @@ ENDIF
     DstAeroConfigData%BladeLength = SrcAeroConfigData%BladeLength
  END SUBROUTINE AD14_CopyAeroConfig
 
- SUBROUTINE AD14_DestroyAeroConfig( AeroConfigData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyAeroConfig( AeroConfigData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AeroConfig), INTENT(INOUT) :: AeroConfigData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAeroConfig'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAeroConfig'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(AeroConfigData%Blade)) THEN
 DO i1 = LBOUND(AeroConfigData%Blade,1), UBOUND(AeroConfigData%Blade,1)
-  CALL AD14_Destroymarker( AeroConfigData%Blade(i1), ErrStat, ErrMsg )
+  CALL AD14_Destroymarker( AeroConfigData%Blade(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(AeroConfigData%Blade)
 ENDIF
-  CALL AD14_Destroymarker( AeroConfigData%Hub, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%RotorFurl, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%Nacelle, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%TailFin, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%Tower, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%SubStructure, ErrStat, ErrMsg )
-  CALL AD14_Destroymarker( AeroConfigData%Foundation, ErrStat, ErrMsg )
+  CALL AD14_Destroymarker( AeroConfigData%Hub, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%RotorFurl, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%Nacelle, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%TailFin, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%Tower, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%SubStructure, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroymarker( AeroConfigData%Foundation, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyAeroConfig
 
  SUBROUTINE AD14_PackAeroConfig( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1625,15 +1657,27 @@ ENDIF
     DstAirFoilData%MulTabLoc = SrcAirFoilData%MulTabLoc
  END SUBROUTINE AD14_CopyAirFoil
 
- SUBROUTINE AD14_DestroyAirFoil( AirFoilData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyAirFoil( AirFoilData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AirFoil), INTENT(INOUT) :: AirFoilData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoil'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoil'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(AirFoilData%AL)) THEN
   DEALLOCATE(AirFoilData%AL)
 ENDIF
@@ -2058,15 +2102,27 @@ IF (ALLOCATED(SrcAirFoilParmsData%FoilNm)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyAirFoilParms
 
- SUBROUTINE AD14_DestroyAirFoilParms( AirFoilParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyAirFoilParms( AirFoilParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AirFoilParms), INTENT(INOUT) :: AirFoilParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoilParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoilParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(AirFoilParmsData%NTables)) THEN
   DEALLOCATE(AirFoilParmsData%NTables)
 ENDIF
@@ -3161,15 +3217,27 @@ ENDIF
     DstBeddoesData%VOR = SrcBeddoesData%VOR
  END SUBROUTINE AD14_CopyBeddoes
 
- SUBROUTINE AD14_DestroyBeddoes( BeddoesData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyBeddoes( BeddoesData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Beddoes), INTENT(INOUT) :: BeddoesData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoes'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoes'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(BeddoesData%ADOT)) THEN
   DEALLOCATE(BeddoesData%ADOT)
 ENDIF
@@ -6025,15 +6093,27 @@ ENDIF
     DstBeddoesParmsData%TVL = SrcBeddoesParmsData%TVL
  END SUBROUTINE AD14_CopyBeddoesParms
 
- SUBROUTINE AD14_DestroyBeddoesParms( BeddoesParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyBeddoesParms( BeddoesParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BeddoesParms), INTENT(INOUT) :: BeddoesParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoesParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoesParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyBeddoesParms
 
  SUBROUTINE AD14_PackBeddoesParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6196,15 +6276,27 @@ ENDIF
     DstBladeParmsData%BladeLength = SrcBladeParmsData%BladeLength
  END SUBROUTINE AD14_CopyBladeParms
 
- SUBROUTINE AD14_DestroyBladeParms( BladeParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyBladeParms( BladeParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BladeParms), INTENT(INOUT) :: BladeParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBladeParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBladeParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(BladeParmsData%C)) THEN
   DEALLOCATE(BladeParmsData%C)
 ENDIF
@@ -6467,15 +6559,27 @@ ENDIF
     DstDynInflowData%GAMMA = SrcDynInflowData%GAMMA
  END SUBROUTINE AD14_CopyDynInflow
 
- SUBROUTINE AD14_DestroyDynInflow( DynInflowData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyDynInflow( DynInflowData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(DynInflow), INTENT(INOUT) :: DynInflowData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflow'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflow'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DynInflowData%RMC_SAVE)) THEN
   DEALLOCATE(DynInflowData%RMC_SAVE)
 ENDIF
@@ -6966,15 +7070,27 @@ ENDIF
     DstDynInflowParmsData%xMinv = SrcDynInflowParmsData%xMinv
  END SUBROUTINE AD14_CopyDynInflowParms
 
- SUBROUTINE AD14_DestroyDynInflowParms( DynInflowParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyDynInflowParms( DynInflowParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(DynInflowParms), INTENT(INOUT) :: DynInflowParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflowParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflowParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyDynInflowParms
 
  SUBROUTINE AD14_PackDynInflowParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -7202,15 +7318,27 @@ IF (ALLOCATED(SrcElementData%PITNOW)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyElement
 
- SUBROUTINE AD14_DestroyElement( ElementData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyElement( ElementData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Element), INTENT(INOUT) :: ElementData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElement'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElement'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ElementData%A)) THEN
   DEALLOCATE(ElementData%A)
 ENDIF
@@ -7730,15 +7858,27 @@ IF (ALLOCATED(SrcElementParmsData%TLCNST)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyElementParms
 
- SUBROUTINE AD14_DestroyElementParms( ElementParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyElementParms( ElementParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(ElementParms), INTENT(INOUT) :: ElementParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElementParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElementParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ElementParmsData%TWIST)) THEN
   DEALLOCATE(ElementParmsData%TWIST)
 ENDIF
@@ -8296,15 +8436,27 @@ ENDIF
     DstElOutParmsData%NumElOut = SrcElOutParmsData%NumElOut
  END SUBROUTINE AD14_CopyElOutParms
 
- SUBROUTINE AD14_DestroyElOutParms( ElOutParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyElOutParms( ElOutParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(ElOutParms), INTENT(INOUT) :: ElOutParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElOutParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElOutParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ElOutParmsData%AAA)) THEN
   DEALLOCATE(ElOutParmsData%AAA)
 ENDIF
@@ -9375,15 +9527,27 @@ ENDIF
     DstInducedVelData%SumInFl = SrcInducedVelData%SumInFl
  END SUBROUTINE AD14_CopyInducedVel
 
- SUBROUTINE AD14_DestroyInducedVel( InducedVelData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyInducedVel( InducedVelData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(InducedVel), INTENT(INOUT) :: InducedVelData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVel'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVel'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyInducedVel
 
  SUBROUTINE AD14_PackInducedVel( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9506,15 +9670,27 @@ ENDIF
     DstInducedVelParmsData%HLoss = SrcInducedVelParmsData%HLoss
  END SUBROUTINE AD14_CopyInducedVelParms
 
- SUBROUTINE AD14_DestroyInducedVelParms( InducedVelParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyInducedVelParms( InducedVelParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(InducedVelParms), INTENT(INOUT) :: InducedVelParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVelParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVelParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyInducedVelParms
 
  SUBROUTINE AD14_PackInducedVelParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9669,15 +9845,27 @@ ENDIF
     DstRotorData%YawVEL = SrcRotorData%YawVEL
  END SUBROUTINE AD14_CopyRotor
 
- SUBROUTINE AD14_DestroyRotor( RotorData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyRotor( RotorData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Rotor), INTENT(INOUT) :: RotorData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotor'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotor'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyRotor
 
  SUBROUTINE AD14_PackRotor( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9834,15 +10022,27 @@ ENDIF
     DstRotorParmsData%HH = SrcRotorParmsData%HH
  END SUBROUTINE AD14_CopyRotorParms
 
- SUBROUTINE AD14_DestroyRotorParms( RotorParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyRotorParms( RotorParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(RotorParms), INTENT(INOUT) :: RotorParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotorParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotorParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyRotorParms
 
  SUBROUTINE AD14_PackRotorParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10050,15 +10250,27 @@ IF (ALLOCATED(SrcTwrPropsParmsData%TwrNodeWidth)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyTwrPropsParms
 
- SUBROUTINE AD14_DestroyTwrPropsParms( TwrPropsParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyTwrPropsParms( TwrPropsParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(TwrPropsParms), INTENT(INOUT) :: TwrPropsParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyTwrPropsParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyTwrPropsParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(TwrPropsParmsData%TwrHtFr)) THEN
   DEALLOCATE(TwrPropsParmsData%TwrHtFr)
 ENDIF
@@ -10523,15 +10735,27 @@ ENDIF
     DstWindData%SDEL = SrcWindData%SDEL
  END SUBROUTINE AD14_CopyWind
 
- SUBROUTINE AD14_DestroyWind( WindData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyWind( WindData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(Wind), INTENT(INOUT) :: WindData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWind'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWind'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyWind
 
  SUBROUTINE AD14_PackWind( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10674,15 +10898,27 @@ ENDIF
     DstWindParmsData%KinVisc = SrcWindParmsData%KinVisc
  END SUBROUTINE AD14_CopyWindParms
 
- SUBROUTINE AD14_DestroyWindParms( WindParmsData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyWindParms( WindParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(WindParms), INTENT(INOUT) :: WindParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWindParms'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWindParms'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyWindParms
 
  SUBROUTINE AD14_PackWindParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10805,15 +11041,27 @@ ENDIF
     DstPositionTypeData%Pos = SrcPositionTypeData%Pos
  END SUBROUTINE AD14_CopyPositionType
 
- SUBROUTINE AD14_DestroyPositionType( PositionTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyPositionType( PositionTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(PositionType), INTENT(INOUT) :: PositionTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyPositionType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyPositionType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyPositionType
 
  SUBROUTINE AD14_PackPositionType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10939,15 +11187,27 @@ ENDIF
     DstOrientationTypeData%Orient = SrcOrientationTypeData%Orient
  END SUBROUTINE AD14_CopyOrientationType
 
- SUBROUTINE AD14_DestroyOrientationType( OrientationTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyOrientationType( OrientationTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(OrientationType), INTENT(INOUT) :: OrientationTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOrientationType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOrientationType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AD14_DestroyOrientationType
 
  SUBROUTINE AD14_PackOrientationType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11109,20 +11369,34 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyInitInput
 
- SUBROUTINE AD14_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AD14_Destroyaeroconfig( InitInputData%TurbineComponents, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AD14_Destroyaeroconfig( InitInputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%TwrNodeLocs)) THEN
   DEALLOCATE(InitInputData%TwrNodeLocs)
 ENDIF
-  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat, ErrMsg )
+  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitInput
 
  SUBROUTINE AD14_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11523,17 +11797,31 @@ ENDIF
     DstInitOutputData%AirDens = SrcInitOutputData%AirDens
  END SUBROUTINE AD14_CopyInitOutput
 
- SUBROUTINE AD14_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
-  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitOutput
 
  SUBROUTINE AD14_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11823,16 +12111,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyContState
 
- SUBROUTINE AD14_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyContState
 
  SUBROUTINE AD14_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -12032,16 +12333,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyDiscState
 
- SUBROUTINE AD14_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyDiscState
 
  SUBROUTINE AD14_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -12241,16 +12555,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyConstrState
 
- SUBROUTINE AD14_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyConstrState
 
  SUBROUTINE AD14_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -12450,16 +12777,29 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyOtherState
 
- SUBROUTINE AD14_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyOtherState
 
  SUBROUTINE AD14_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -12752,29 +13092,52 @@ IF (ALLOCATED(SrcMiscData%StoredMoments)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyMisc
 
- SUBROUTINE AD14_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat, ErrMsg )
-  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat, ErrMsg )
-  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%ElPrNum)) THEN
   DEALLOCATE(MiscData%ElPrNum)
 ENDIF
-  CALL AD14_Destroyairfoil( MiscData%AirFoil, ErrStat, ErrMsg )
-  CALL AD14_Destroybeddoes( MiscData%Beddoes, ErrStat, ErrMsg )
-  CALL AD14_Destroydyninflow( MiscData%DynInflow, ErrStat, ErrMsg )
-  CALL AD14_Destroyelement( MiscData%Element, ErrStat, ErrMsg )
-  CALL AD14_Destroyrotor( MiscData%Rotor, ErrStat, ErrMsg )
-  CALL AD14_Destroywind( MiscData%Wind, ErrStat, ErrMsg )
-  CALL AD14_Destroyinducedvel( MiscData%InducedVel, ErrStat, ErrMsg )
-  CALL AD14_Destroyeloutparms( MiscData%ElOut, ErrStat, ErrMsg )
+  CALL AD14_Destroyairfoil( MiscData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroybeddoes( MiscData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroydyninflow( MiscData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyelement( MiscData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyrotor( MiscData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroywind( MiscData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyinducedvel( MiscData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyeloutparms( MiscData%ElOut, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%StoredForces)) THEN
   DEALLOCATE(MiscData%StoredForces)
 ENDIF
@@ -14119,25 +14482,47 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyParam
 
- SUBROUTINE AD14_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL AD14_Destroyairfoilparms( ParamData%AirFoil, ErrStat, ErrMsg )
-  CALL AD14_Destroybladeparms( ParamData%Blade, ErrStat, ErrMsg )
-  CALL AD14_Destroybeddoesparms( ParamData%Beddoes, ErrStat, ErrMsg )
-  CALL AD14_Destroydyninflowparms( ParamData%DynInflow, ErrStat, ErrMsg )
-  CALL AD14_Destroyelementparms( ParamData%Element, ErrStat, ErrMsg )
-  CALL AD14_Destroytwrpropsparms( ParamData%TwrProps, ErrStat, ErrMsg )
-  CALL AD14_Destroyinducedvelparms( ParamData%InducedVel, ErrStat, ErrMsg )
-  CALL AD14_Destroywindparms( ParamData%Wind, ErrStat, ErrMsg )
-  CALL AD14_Destroyrotorparms( ParamData%Rotor, ErrStat, ErrMsg )
-  CALL DWM_DestroyParam( ParamData%DWM, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL AD14_Destroyairfoilparms( ParamData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroybladeparms( ParamData%Blade, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroybeddoesparms( ParamData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroydyninflowparms( ParamData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyelementparms( ParamData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroytwrpropsparms( ParamData%TwrProps, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyinducedvelparms( ParamData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroywindparms( ParamData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyrotorparms( ParamData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL DWM_DestroyParam( ParamData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyParam
 
  SUBROUTINE AD14_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -15281,23 +15666,38 @@ ENDIF
     DstInputData%AvgInfVel = SrcInputData%AvgInfVel
  END SUBROUTINE AD14_CopyInput
 
- SUBROUTINE AD14_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%InputMarkers)) THEN
 DO i1 = LBOUND(InputData%InputMarkers,1), UBOUND(InputData%InputMarkers,1)
-  CALL MeshDestroy( InputData%InputMarkers(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%InputMarkers(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%InputMarkers)
 ENDIF
-  CALL MeshDestroy( InputData%Twr_InputMarkers, ErrStat, ErrMsg )
-  CALL AD14_Destroyaeroconfig( InputData%TurbineComponents, ErrStat, ErrMsg )
+  CALL MeshDestroy( InputData%Twr_InputMarkers, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL AD14_Destroyaeroconfig( InputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputData%MulTabLoc)) THEN
   DEALLOCATE(InputData%MulTabLoc)
 ENDIF
@@ -15834,22 +16234,36 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyOutput
 
- SUBROUTINE AD14_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE AD14_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AD14_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%OutputLoads)) THEN
 DO i1 = LBOUND(OutputData%OutputLoads,1), UBOUND(OutputData%OutputLoads,1)
-  CALL MeshDestroy( OutputData%OutputLoads(i1), ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%OutputLoads(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%OutputLoads)
 ENDIF
-  CALL MeshDestroy( OutputData%Twr_OutputLoads, ErrStat, ErrMsg )
+  CALL MeshDestroy( OutputData%Twr_OutputLoads, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyOutput
 
  SUBROUTINE AD14_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
