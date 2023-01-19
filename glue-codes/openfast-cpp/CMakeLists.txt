@@ -43,6 +43,7 @@ add_library(openfastcpplib
   $<TARGET_OBJECTS:openfastlib_common_obj>
   $<TARGET_OBJECTS:openfast_prelib_obj>
   $<TARGET_OBJECTS:maplib_obj>
+  $<TARGET_OBJECTS:mapcpplib_obj>
   $<TARGET_OBJECTS:nwtcbaselib_obj> 
   $<TARGET_OBJECTS:nwtcsyslib_obj>
   $<TARGET_OBJECTS:nwtclibs_obj>
@@ -73,52 +74,56 @@ add_library(openfastcpplib
 )
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
-openfast_prelib_obj
-maplib_obj
-nwtclibs_obj
-nwtcsyslib_obj
-nwtcbaselib_obj
-ifwlib
-fvwlib
-uaaerolib
-afinfolib
-aeroacoustics
-aerodynlib
-aerodyn14lib
-servodynlib
-elastodynlib
-beamdynlib
-subdynlib
-hydrodynlib
-orcaflexlib
-extptfm_mckflib
-openfoamtypeslib
-foamfastlib
-scdataextypeslib
-scdataexlib
-feamlib
-moordynlib
-icedynlib
-icefloelib
-openfast_postlib
-versioninfolib
-${HDF5_C_LIBRARIES}
-${HDF5_HL_LIBRARIES}
-${ZLIB_LIBRARIES}
-${LIBXML2_LIBRARIES}
-${MPI_LIBRARIES}
-${CMAKE_DL_LIBS}
+  openfastlib_common_obj
+  openfast_prelib_obj
+  maplib_obj
+  mapcpplib_obj
+  nwtcbaselib_obj
+  nwtcsyslib_obj
+  nwtclibs_obj
+  ifwlib_obj
+  fvwlib_obj
+  uaaerolib_obj
+  afinfolib_obj
+  aeroacoustics_obj
+  aerodynlib_obj
+  aerodyn14lib_obj
+  servodynlib_obj
+  elastodynlib_obj
+  beamdynlib_obj
+  subdynlib_obj
+  hydrodynlib_obj
+  orcaflexlib_obj
+  extptfm_mckflib_obj
+  openfoamtypeslib_obj
+  foamfastlib_obj
+  scdataextypeslib_obj
+  scdataexlib_obj
+  feamlib_obj
+  moordynlib_obj
+  icedynlib_obj
+  icefloelib_obj
+  openfast_postlib_obj
+  versioninfolib_obj
+  ${HDF5_C_LIBRARIES}
+  ${HDF5_HL_LIBRARIES}
+  ${ZLIB_LIBRARIES}
+  ${LIBXML2_LIBRARIES}
+  ${MPI_LIBRARIES}
+  ${CMAKE_DL_LIBS}
 )
 
 add_executable(openfastcpp src/FAST_Prog.cpp)
-target_link_libraries(openfastcpp openfastcpplib
+target_link_libraries(openfastcpp 
+  openfastcpplib
   ${MPI_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
-  ${CMAKE_DL_LIBS})
+  ${CMAKE_DL_LIBS}
+)
 
 if (OPENMP)
   find_package(OpenMP)
