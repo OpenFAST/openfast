@@ -97,15 +97,15 @@ typedef    ^    OutputType             ReKi                             WriteOut
 
 # ..... AeroDyn_Inflow data ...................................................................................................
 # NOTE: useful for driver/wrapper of this module
-typedef   ^      ADI_Data              ADI_ContinuousStateType          x        -     -    -    "Continuous states"
-typedef   ^          ^                 ADI_DiscreteStateType            xd       -     -    -    "Discrete states"
-typedef   ^          ^                 ADI_ConstraintStateType          z        -     -    -    "Constraint states"
-typedef   ^          ^                 ADI_OtherStateType               OtherState   - -    -    "Other states"
+typedef   ^      ADI_Data              ADI_ContinuousStateType          x        :     -    -    "Continuous states"
+typedef   ^          ^                 ADI_DiscreteStateType            xd       :     -    -    "Discrete states"
+typedef   ^          ^                 ADI_ConstraintStateType          z        :     -    -    "Constraint states"
+typedef   ^          ^                 ADI_OtherStateType               OtherState   : -    -    "Other states"
 typedef   ^          ^                 ADI_ParameterType                p        -     -    -    "Parameters"
 typedef   ^          ^                 ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
-typedef   ^          ^                 ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
+typedef   ^          ^                 ADI_InputType                    u        {:}   -    -    "Array of inputs associated with InputTimes"
 typedef   ^          ^                 ADI_OutputType                   y        -     -    -    "System outputs"
-typedef   ^          ^                 DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
+typedef   ^          ^                 DbKi                             inputTimes {:} -    -    "Array of times associated with u array"
 
 # ..... Rotor elastic data ..................................................................................................
 # NOTE: useful for driver/wrapper of this module

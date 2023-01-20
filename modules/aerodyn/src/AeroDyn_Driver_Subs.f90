@@ -235,21 +235,20 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialze AD inputs
-   allocate(ADI%u(2), STAT=errStat2)      ! set to size two for linear
-      if (ErrStat2 /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate inuput"
-         if (Failed())  return
-      endif
+   allocate(ADI%u(2),          STAT=errStat2);  if (Failed0("ADI input" )) return      ! set to size two for linear
+   allocate(ADI%x(1),          STAT=errStat2);  if (Failed0("x"         )) return
+   allocate(ADI%xd(1),         STAT=errStat2);  if (Failed0("xd"        )) return
+   allocate(ADI%z(1),          STAT=errStat2);  if (Failed0("z"         )) return
+   allocate(ADI%OtherState(1), STAT=errStat2);  if (Failed0("OtherState")) return
    call AllocAry( ADI%inputTimes, 2, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
    ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
+      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    END DO              
    ! --- AeroDyn + Inflow at T=0
-   call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
+   call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialize outputs
    call Dvr_InitializeOutputs(dvr%numTurbines, dvr%out, dvr%numSteps, errStat2, errMsg2); if(Failed()) return
@@ -273,6 +272,18 @@ contains
       Failed = errStat >= AbortErrLev
       if(Failed) call cleanUp()
    end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 
 end subroutine Dvr_InitCase
 
@@ -299,12 +310,12 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! u(1) is at nt, u(2) is at nt-1.  Set inputs for nt timestep
    call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
+   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
 
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1 (current time)
-   call ADI_CalcOutput(time, ADI%u(2), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2 ); if(Failed()) return
+   call ADI_CalcOutput(time, ADI%u(2), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2 ); if(Failed()) return
 
    ! Write outputs for all turbines at nt-1
    call Dvr_WriteOutputs(nt, time, dvr, dvr%out, ADI%y, errStat2, errMsg2); if(Failed()) return
@@ -328,7 +339,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    endif
 
    ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
-   call ADI_UpdateStates( time, nt-1, ADI%u(:), ADI%inputTimes, ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%m, errStat2, errMsg2); if(Failed()) return
+   call ADI_UpdateStates( time, nt-1, ADI%u(:), ADI%inputTimes, ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%m, errStat2, errMsg2); if(Failed()) return
 
 contains
 
@@ -399,7 +410,7 @@ subroutine Dvr_CleanUp(dvr, ADI, FED, initialized, errStat, errMsg)
    call Dvr_EndCase(dvr, ADI, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
-   call ADI_End( ADI%u(:), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
+   call ADI_End( ADI%u(:), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
@@ -436,7 +447,9 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    else
       ! UA does not like changes of dt between cases
       if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
-         call WrScr('[INFO] dt is changing between cases, AeroDyn will be re-initialized')
+         call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
+         call ADI_End( ADI%u(1:1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
+         !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
       if (ADI%p%AD%WakeMod == WakeMod_FVW) then
@@ -444,7 +457,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          needInit=.true.
       endif
       if (needInit) then
-         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
+         call ADI_End( ADI%u(1:1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
       endif
    endif
 
@@ -508,7 +521,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          end do
       enddo
 
-      call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
+      call ADI_Init(InitInp, ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, dt, InitOut, errStat, errMsg)
 
       ! Set output headers
       if (iCase==1) then
@@ -517,7 +530,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    else
       ! --- Reinit
       ! TODO change rootname, but that's a parameter..
-      call ADI_ReInit(ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%m, dt, errStat2, errMsg2); if(Failed()) return
+      call ADI_ReInit(ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%m, dt, errStat2, errMsg2); if(Failed()) return
    endif
 
 
@@ -1968,7 +1981,7 @@ subroutine WrVTK_Surfaces(t_global, ADI, FED, p_FAST, VTK_count)
    ! Free wake
    if (allocated(ADI%m%AD%FVW_u)) then
       if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x%AD%FVW, ADI%z%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if   
 end subroutine WrVTK_Surfaces
@@ -2030,7 +2043,7 @@ subroutine WrVTK_Lines(t_global, ADI, FED, p_FAST, VTK_count)
    ! Free wake (only write this here if doing line meshes only -- FVW is written with surface outputs)
    if (allocated(ADI%m%AD%FVW_u) .and. p_FAST%WrVTK_Type==2) then
       if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x%AD%FVW, ADI%z%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+         call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(1)%AD%FVW, ADI%z(1)%AD%FVW, ADI%m%AD%FVW, trim(p_FAST%VTK_OutFileRoot)//'.FVW', VTK_count, p_FAST%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
       end if   
    end if
 end subroutine WrVTK_Lines
