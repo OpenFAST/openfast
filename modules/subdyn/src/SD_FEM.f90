@@ -921,6 +921,8 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%D      = (/D1, D2/)
 
       else if (eType==idMemberX) then
+
+         p%ElemProps(i)%eType  = 1
          if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
             Shear = .false.
          elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko
