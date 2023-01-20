@@ -59,6 +59,8 @@ typedef   ^                         ^             INTEGER                n_VTKTi
 typedef   ^                         ^             SiKi                   VTKHubRad        -      -     -   "Hub radius for visualization"    m
 typedef   ^                         ^             ReKi                   VTKNacDim        6      -     -   "Nacelle dimensions for visualization"    m
 typedef   ^                         ^             SiKi                   VTKRefPoint      3      -     -   "RefPoint for VTK outputs"
+typedef   ^                         ^             DbKi                   DT_Outs          -      -     -   "Output time resolution" s
+typedef   ^                         ^             IntKi                  n_DT_Out         -      -     -   "Number of time steps between writing a line in the time-marching output files" -
 
 # ..... Blade data for driver.................................................................................................
 typedef   ^                        BladeData     ReKi                    pitch            -      -     -   "rad" -

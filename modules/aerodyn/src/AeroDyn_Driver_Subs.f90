@@ -235,6 +235,13 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialze AD inputs
+   allocate(ADI%u(2), STAT=errStat2)      ! set to size two for linear
+      if (ErrStat2 /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate inuput"
+         if (Failed())  return
+      endif
+   call AllocAry( ADI%inputTimes, 2, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
    ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
