@@ -33,7 +33,8 @@ typedef  ^   ElemPropType  ReKi    Ixx      -  -  -  "Moment of inertia of an el
 typedef  ^   ElemPropType  ReKi    Iyy      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  ReKi    Jzz      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  LOGICAL Shear    -  -  -  "Use timoshenko (true) E-B (false)"
-typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_x    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_y    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
