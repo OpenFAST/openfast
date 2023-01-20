@@ -141,6 +141,8 @@ target_link_libraries(unsteadyaero_driver uaaerolib afinfolib nwtclibs versionin
 
 # c-bindings interface library
 set(ADI_C_SOURCES
+  src/AeroDyn_Driver_Subs.f90
+  src/AeroDyn_Driver_Types.f90
   src/AeroDyn_Inflow_C_Binding.f90
 )
 add_library(aerodyn_inflow_c_binding SHARED ${ADI_C_SOURCES})

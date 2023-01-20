@@ -22,6 +22,8 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE ISO_C_BINDING
    USE AeroDyn_Inflow
    USE AeroDyn_Inflow_Types
+   USE AeroDyn_Driver_Types,  only: Dvr_Outputs
+   USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs
    USE NWTC_Library
    USE VersionInfo
 
@@ -141,6 +143,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     one or multiple points.
    !        - 1 point   -- rigid floating body assumption
    !        - N points  -- flexible structure (either floating or fixed bottom)
+   logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
    integer(IntKi)                         :: NumTurbines = 1         ! Number of turbines (only one at present) 
    integer(IntKi)                         :: NumBlades               ! Number of blades (only one rotor allowed at present)
    integer(IntKi)                         :: NumMeshPts              ! Number of mesh points we are interfacing motions/loads to/from AD
@@ -149,14 +152,6 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(MeshType)                         :: BldPtLoadMesh_tmp       ! mesh for loads  for external nodes -- temporary
 !   type(MeshType)                         :: NacMotionMesh           ! mesh for motion  of nacelle -- TODO: add this mesh for nacelle load transfers
 !   type(MeshType)                         :: NacLoadMesh             ! mesh for loads  for nacelle loads -- TODO: add this mesh for nacelle load transfers
-   integer(IntKi)                         :: WrVTK                   !< Write VTK outputs [0: none, 1: init only, 2: animation]
-   integer(IntKi)                         :: WrVTK_Type              !< Write VTK outputs as [1: surface, 2: lines, 3: both]
-   real(SiKi)                             :: VTKNacDim(6)            !< Nacelle dimension passed in for VTK surface rendering [0,y0,z0,Lx,Ly,Lz] (m)
-   real(SiKi)                             :: VTKHubrad               !< Hub radius for VTK surface rendering
-   real(SiKi)                             :: VTK_RefPos(3) = (/ 0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)    !TODO: should this be an input?
-   integer(IntKi)                         :: VTK_tWidth              !< width of the time field in the VTK
-   character(IntfStrLen)                  :: VTK_OutFileRoot         !< Root name to use for echo files, vtk, etc.
-   logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
@@ -174,6 +169,14 @@ MODULE AeroDyn_Inflow_C_BINDING
    real(ReKi), allocatable                :: tmpBldPtMeshAcc(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
    real(ReKi), allocatable                :: tmpBldPtMeshFrc(:,:)       ! temp array.  Probably don't need this, but makes conversion to   C clearer.
    !------------------------------------------------------------------------------------
+
+   !------------------------------
+   !  Outputs
+   type(Dvr_Outputs)                      :: WrOutputsData           !< Data for writing outputs to file
+   integer(IntKi), parameter              :: idFmtNone   = 0
+   integer(IntKi), parameter              :: idFmtAscii  = 1
+   integer(IntKi), parameter              :: idFmtBinary = 2
+   integer(IntKi), parameter              :: idFmtBoth   = 3
 
    !------------------------------------------------------------------------------------
    !  Visualization
@@ -391,26 +394,27 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       if (Failed())  return
    endif
    ! VTK outputs
-   WrVTK       = int(WrVTK_in,     IntKi)
-   WrVTK_Type  = int(WrVTK_inType, IntKi)
-   VTKNacDim   = real(VTKNacDim_in, SiKi)
-   VTKHubrad   = real(VTKHubrad_in, SiKi)
-   if ( WrVTK < 0_IntKi .or. WrVTK > 2_IntKi ) then
+   WrOutputsData%WrVTK       = int(WrVTK_in,     IntKi)
+   WrOutputsData%WrVTK_Type  = int(WrVTK_inType, IntKi)
+   WrOutputsData%VTKNacDim   = real(VTKNacDim_in, SiKi)
+   WrOutputsData%VTKHubrad   = real(VTKHubrad_in, SiKi)
+   WrOutputsData%VTKRefPoint = (/ 0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)    !TODO: should this be an input?
+   if ( WrOutputsData%WrVTK < 0_IntKi .or. WrOutputsData%WrVTK > 2_IntKi ) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]"
       if (Failed())  return
    endif
-   if ( WrVTK_Type > 0_IntKi ) then
-      if ( WrVTK_Type < 1_IntKi .or. WrVTK_Type > 3_IntKi ) then
+   if ( WrOutputsData%WrVTK_Type > 0_IntKi ) then
+      if ( WrOutputsData%WrVTK_Type < 1_IntKi .or. WrOutputsData%WrVTK_Type > 3_IntKi ) then
          ErrStat2 =  ErrID_Fatal
          ErrMsg2  =  "WrVTK_Type option for writing VTK visualization files must be [1: surface, 2: lines, 3: both]"
          if (Failed())  return
       endif
-      if (VTKHubRad < 0.0_SiKi) then
+      if (WrOutputsData%VTKHubRad < 0.0_SiKi) then
          ErrStat2 =  ErrID_Warn
          ErrMsg2  =  "VTKHubRad for surface visualization of hub less than zero.  Setting to zero."
          if (Failed())  return
-         VTKHubRad = 0.0_SiKi
+         WrOutputsData%VTKHubRad = 0.0_SiKi
       endif
    endif
    ! Flag to transpose DCMs as they are passed in
@@ -433,8 +437,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    InitInp%AD%WtrDpth     = REAL(WtrDpth_C,     ReKi)
    InitInp%AD%MSL2SWL     = REAL(MSL2SWL_C,     ReKi)
    InitInp%storeHHVel     = storeHHVel
-   InitInp%WrVTK          = WrVTK
-   InitInp%WrVTK_Type     = WrVTK_Type
+   InitInp%WrVTK          = WrOutputsData%WrVTK
+   InitInp%WrVTK_Type     = WrOutputsData%WrVTK_Type
    InitInp%IW_InitInp%CompInflow = 1    ! Use InflowWind
 
    ! setup rotors for AD -- interface only supports one rotor at present
@@ -526,10 +530,10 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Set the interface  meshes for motion inputs and loads output
    !-------------------------------------------------------------
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
-   if (WrVTK > 0_IntKi) then
-      call SetVTKParameters(OutRootName,u(1)%AD%rotors(:),VTK_RefPos,ErrStat2,ErrMsg2)
+   if (WrOutputsData%WrVTK > 0_IntKi) then
+      call SetVTKParameters(OutRootName,u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
       if (Failed())  return
-      call WrVTK_refMeshes(u(1)%AD%rotors(:),VTK_RefPos,ErrStat2,ErrMsg2)
+      call WrVTK_refMeshes(u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
       if (Failed())  return
    endif
 
@@ -1014,7 +1018,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
 
    ! Write VTK if requested (animation=2)
-   if (WrVTK > 1_IntKi)    call WrVTK_Meshes(u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+   if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1490,14 +1494,14 @@ subroutine SetVTKParameters(OutRootName, rot_u, RefPoint, errStat, errMsg)
    
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
-   call GetPath ( OutRootName, VTK_OutFileRoot, TmpFileName ) ! the returned VTK_OutFileRoot includes a file separator character at the end
-   VTK_OutFileRoot = trim(VTK_OutFileRoot) // 'vtk-ADI'
-   call MKDIR( trim(VTK_OutFileRoot) )
-   VTK_OutFileRoot = trim( VTK_OutFileRoot ) // PathSep // trim(TmpFileName)
+   call GetPath ( OutRootName, WrOutputsData%Root, TmpFileName ) ! the returned WrOutputsData%Root includes a file separator character at the end
+   WrOutputsData%Root = trim(WrOutputsData%Root) // 'vtk-ADI'
+   call MKDIR( trim(WrOutputsData%Root) )
+   WrOutputsData%Root = trim( WrOutputsData%Root ) // PathSep // trim(TmpFileName)
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   VTK_tWidth = CEILING( log10( TMax / dT_Global ) ) + 1
+   WrOutputsData%VTK_tWidth = CEILING( log10( TMax / dT_Global ) ) + 1
 
    if (allocated(VTK_Surface)) then
       return ! The surfaces were already computed (for combined cases)
@@ -1541,7 +1545,7 @@ subroutine SetVTKParameters(OutRootName, rot_u, RefPoint, errStat, errMsg)
    enddo ! Loop on turbine 
 
    ! Get radius for ground (blade length + hub radius):
-   GroundRad = MaxBladeLength + MaxTwrLength+ VTKHubRad
+   GroundRad = MaxBladeLength + MaxTwrLength+ WrOutputsData%VTKHubRad
    ! write the ground or seabed reference polygon:
    ! Averaging the center point of the ground:
    !RefPoint(1:2) = dvr%WT(1)%originInit(1:2)
@@ -1551,7 +1555,7 @@ subroutine SetVTKParameters(OutRootName, rot_u, RefPoint, errStat, errMsg)
    !RefPoint(1:2) = RefPoint(1:2) / NumTurbines
    
    RefLengths  = GroundRad  + sqrt((WorldBoxMax(1)-WorldBoxMin(1))**2 + (WorldBoxMax(2)-WorldBoxMin(2))**2)
-   call WrVTK_Ground (RefPoint, RefLengths, trim(VTK_OutFileRoot) // '.GroundSurface', errStat2, errMsg2 )         
+   call WrVTK_Ground (RefPoint, RefLengths, trim(WrOutputsData%Root) // '.GroundSurface', errStat2, errMsg2 )
 
 
    ! --- Create surfaces for Nacelle, Base, Tower, Blades
@@ -1559,17 +1563,17 @@ subroutine SetVTKParameters(OutRootName, rot_u, RefPoint, errStat, errMsg)
       VTK_Surface(iWT)%NumSectors = 25   
 
       ! Create nacelle box
-      VTK_Surface(iWT)%NacelleBox(:,1) = (/ VTKNacDim(1)             , VTKNacDim(2)+VTKNacDim(5), VTKNacDim(3) /)
-      VTK_Surface(iWT)%NacelleBox(:,2) = (/ VTKNacDim(1)+VTKNacDim(4), VTKNacDim(2)+VTKNacDim(5), VTKNacDim(3) /) 
-      VTK_Surface(iWT)%NacelleBox(:,3) = (/ VTKNacDim(1)+VTKNacDim(4), VTKNacDim(2)             , VTKNacDim(3) /)
-      VTK_Surface(iWT)%NacelleBox(:,4) = (/ VTKNacDim(1)             , VTKNacDim(2)             , VTKNacDim(3) /) 
-      VTK_Surface(iWT)%NacelleBox(:,5) = (/ VTKNacDim(1)             , VTKNacDim(2)             , VTKNacDim(3)+VTKNacDim(6) /)
-      VTK_Surface(iWT)%NacelleBox(:,6) = (/ VTKNacDim(1)+VTKNacDim(4), VTKNacDim(2)             , VTKNacDim(3)+VTKNacDim(6) /) 
-      VTK_Surface(iWT)%NacelleBox(:,7) = (/ VTKNacDim(1)+VTKNacDim(4), VTKNacDim(2)+VTKNacDim(5), VTKNacDim(3)+VTKNacDim(6) /)
-      VTK_Surface(iWT)%NacelleBox(:,8) = (/ VTKNacDim(1)             , VTKNacDim(2)+VTKNacDim(5), VTKNacDim(3)+VTKNacDim(6) /) 
+      VTK_Surface(iWT)%NacelleBox(:,1) = (/ WrOutputsData%VTKNacDim(1)                           , WrOutputsData%VTKNacDim(2)+WrOutputsData%VTKNacDim(5), WrOutputsData%VTKNacDim(3) /)
+      VTK_Surface(iWT)%NacelleBox(:,2) = (/ WrOutputsData%VTKNacDim(1)+WrOutputsData%VTKNacDim(4), WrOutputsData%VTKNacDim(2)+WrOutputsData%VTKNacDim(5), WrOutputsData%VTKNacDim(3) /) 
+      VTK_Surface(iWT)%NacelleBox(:,3) = (/ WrOutputsData%VTKNacDim(1)+WrOutputsData%VTKNacDim(4), WrOutputsData%VTKNacDim(2)                           , WrOutputsData%VTKNacDim(3) /)
+      VTK_Surface(iWT)%NacelleBox(:,4) = (/ WrOutputsData%VTKNacDim(1)                           , WrOutputsData%VTKNacDim(2)                           , WrOutputsData%VTKNacDim(3) /) 
+      VTK_Surface(iWT)%NacelleBox(:,5) = (/ WrOutputsData%VTKNacDim(1)                           , WrOutputsData%VTKNacDim(2)                           , WrOutputsData%VTKNacDim(3)+WrOutputsData%VTKNacDim(6) /)
+      VTK_Surface(iWT)%NacelleBox(:,6) = (/ WrOutputsData%VTKNacDim(1)+WrOutputsData%VTKNacDim(4), WrOutputsData%VTKNacDim(2)                           , WrOutputsData%VTKNacDim(3)+WrOutputsData%VTKNacDim(6) /) 
+      VTK_Surface(iWT)%NacelleBox(:,7) = (/ WrOutputsData%VTKNacDim(1)+WrOutputsData%VTKNacDim(4), WrOutputsData%VTKNacDim(2)+WrOutputsData%VTKNacDim(5), WrOutputsData%VTKNacDim(3)+WrOutputsData%VTKNacDim(6) /)
+      VTK_Surface(iWT)%NacelleBox(:,8) = (/ WrOutputsData%VTKNacDim(1)                           , WrOutputsData%VTKNacDim(2)+WrOutputsData%VTKNacDim(5), WrOutputsData%VTKNacDim(3)+WrOutputsData%VTKNacDim(6) /) 
 
       ! Create base box (using towerbase or nacelle dim)
-      BaseBoxDim = minval(VTKNacDim(4:6))/2
+      BaseBoxDim = minval(WrOutputsData%VTKNacDim(4:6))/2
       if (size(m%VTK_Surfaces(iWT)%TowerRad)>0) then
          BaseBoxDim = m%VTK_Surfaces(iWT)%TowerRad(1)
       endif
@@ -1611,7 +1615,7 @@ subroutine WrVTK_refMeshes(rot_u, RefPoint, ErrStat, ErrMsg)
       sWT = '.T'//trim(num2lstr(iWT))
    endif
 
-   select case (WrVTK_Type)
+   select case (WrOutputsData%WrVTK_Type)
       case (1)    ! surfaces -- don't write any surface references
          call WrVTK_PointsRef(  ErrStat2,ErrMsg2); if (Failed()) return;
       case (2)    ! lines
@@ -1636,21 +1640,21 @@ contains
       ErrMsg3  =  ''
 
       ! Blade point motion (structural mesh from driver)
-      call MeshWrVTKreference(RefPoint, BldPtMotionMesh, trim(VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', ErrStat3, ErrMsg3)
+      call MeshWrVTKreference(RefPoint, BldPtMotionMesh, trim(WrOutputsData%Root)//trim(sWT)//'.BldPtMotionMesh', ErrStat3, ErrMsg3)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blade root motion (point only)
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
          do k=1,NumBlades
             if (rot_u(iWT)%BladeRootMotion(k)%Committed) then
-               call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
+               call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
       endif
 
       ! Nacelle (structural point input
-      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTKreference(RefPoint, rot_u(iWT)%NacelleMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', ErrStat3, ErrMsg3)
+      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTKreference(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%Root)//trim(sWT)//'.NacelleMotion', ErrStat3, ErrMsg3)
       if (ErrStat3 >= AbortErrLev) return
    end subroutine WrVTK_PointsRef
 
@@ -1662,22 +1666,22 @@ contains
       ErrMsg3  =  ''
 
       ! Tower
-      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%TowerMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Tower', ErrStat3, ErrMsg3 )
+      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Tower', ErrStat3, ErrMsg3 )
       if (ErrStat3 >= AbortErrLev) return
 
       ! Nacelle meshes
-      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%NacelleMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Nacelle', ErrStat3, ErrMsg3 )
+      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Nacelle', ErrStat3, ErrMsg3 )
       if (ErrStat3 >= AbortErrLev) return
 
       ! Hub
-      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%HubMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Hub', ErrStat3, ErrMsg3 )
+      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTKreference(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Hub', ErrStat3, ErrMsg3 )
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
          do k=1,NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
-               call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeMotion(k), trim(VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
+               call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.Blade'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
@@ -1713,7 +1717,7 @@ subroutine WrVTK_Meshes(rot_u, RefPoint, ErrStat, ErrMsg)
    endif
 
 
-   select case (WrVTK_Type)
+   select case (WrOutputsData%WrVTK_Type)
       case (1)    ! surfaces
          call WrVTK_Points(  ErrStat2,ErrMsg2); if (Failed()) return;
          call WrVTK_Surfaces(ErrStat2,ErrMsg2); if (Failed()) return;
@@ -1741,27 +1745,27 @@ contains
       ErrMsg3  =  ''
 
       ! Blade point motion (structural mesh from driver)
-      call MeshWrVTK(RefPoint, BldPtMotionMesh, trim(VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+      call MeshWrVTK(RefPoint, BldPtMotionMesh, trim(WrOutputsData%Root)//trim(sWT)//'.BldPtMotionMesh', N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blade root motion (point only)
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
          do k=1,NumBlades
             if (rot_u(iWT)%BladeRootMotion(k)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
       endif
 
       ! Nacelle (structural point input
-      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.NacelleMotion', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+      if ( rot_u(iWT)%NacelleMotion%Committed ) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%Root)//trim(sWT)//'.NacelleMotion', N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Free wake
       if (allocated(m%AD%FVW_u) .and. iWT==1) then
          if (allocated(m%AD%FVW_u(1)%WingsMesh)) then
-            call WrVTK_FVW(p%AD%FVW, x(STATE_CURR)%AD%FVW, z(STATE_CURR)%AD%FVW, m%AD%FVW, trim(VTK_OutFileRoot)//'.FVW', N_Global, VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+            call WrVTK_FVW(p%AD%FVW, x(STATE_CURR)%AD%FVW, z(STATE_CURR)%AD%FVW, m%AD%FVW, trim(WrOutputsData%Root)//'.FVW', N_Global, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          endif
       end if
    end subroutine WrVTK_Points
@@ -1777,27 +1781,27 @@ contains
       ErrMsg3  =  ''
 
 !TODO: use this routine when it is moved out of the driver and into ADI
-!      call AD_WrVTK_Surfaces(u(1)%AD, y%AD, RefPoint, m%VTK_Surfaces, N_Global, VTK_OutFileRoot, VTK_tWidth, 25, VTKHubRad)
+!      call AD_WrVTK_Surfaces(u(1)%AD, y%AD, RefPoint, m%VTK_Surfaces, N_Global, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
 
       ! Nacelle
       if ( rot_u(iWT)%NacelleMotion%Committed ) then
-         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.NacelleSurface', N_Global, &
-                                      OutputFields, errStat3, errMsg3, VTK_tWidth, verts=VTK_Surface(iWT)%NacelleBox)
+         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%Root)//trim(sWT)//'.NacelleSurface', N_Global, &
+                                      OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, verts=VTK_Surface(iWT)%NacelleBox)
          if (ErrStat3 >= AbortErrLev) return
       endif
 
       ! Tower
       if (rot_u(iWT)%TowerMotion%Committed) then
-         call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%TowerMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.TowerSurface', &
-                                    N_Global, OutputFields, errStat3, errMsg3, VTK_tWidth, numSectors, m%VTK_Surfaces(iWT)%TowerRad )
+         call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%Root)//trim(sWT)//'.TowerSurface', &
+                                    N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, m%VTK_Surfaces(iWT)%TowerRad )
          if (ErrStat3 >= AbortErrLev) return
       endif
 
       ! Hub
       if (rot_u(iWT)%HubMotion%Committed) then
-         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%HubMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.HubSurface', &
-                                      N_Global, OutputFields, errStat3, errMsg3, VTK_tWidth, &
-                                      NumSegments=numSectors, radius=VTKHubRad)
+         call MeshWrVTK_PointSurface (RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%Root)//trim(sWT)//'.HubSurface', &
+                                      N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, &
+                                      NumSegments=numSectors, radius=WrOutputsData%VTKHubRad)
          if (ErrStat3 >= AbortErrLev) return
       endif
 
@@ -1805,8 +1809,8 @@ contains
       if (allocated(rot_u(iWT)%BladeMotion)) then
          do k=1,NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
-               call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(k), trim(VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
-                                          N_Global, OutputFields, errStat3, errMsg3, VTK_tWidth , verts=m%VTK_Surfaces(iWT)%BladeShape(k)%AirfoilCoords, &
+               call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                          N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=m%VTK_Surfaces(iWT)%BladeShape(k)%AirfoilCoords, &
                                           Sib=y%AD%rotors(iWT)%BladeLoad(k) )
                   if (ErrStat3 >= AbortErrLev) return
             endif
@@ -1822,22 +1826,22 @@ contains
       ErrMsg3  =  ''
 
       ! Tower
-      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Tower', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+      if (rot_u(iWT)%TowerMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Tower', N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Nacelle meshes
-      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Nacelle', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+      if (rot_u(iWT)%NacelleMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%NacelleMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Nacelle', N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Hub
-      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(VTK_OutFileRoot)//trim(sWT)//'.Hub', N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+      if (rot_u(iWT)%HubMotion%Committed) call MeshWrVTK(RefPoint, rot_u(iWT)%HubMotion, trim(WrOutputsData%Root)//trim(sWT)//'.Hub', N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
          do k=1,NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
-               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(k), trim(VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k)), N_Global, .true., ErrStat3, ErrMsg3, VTK_tWidth)
+               call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.Blade'//trim(num2lstr(k)), N_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
