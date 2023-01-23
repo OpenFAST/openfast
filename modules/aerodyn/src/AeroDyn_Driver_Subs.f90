@@ -1796,12 +1796,13 @@ end subroutine interpTimeValue
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg)
+subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg, dirname)
    type(Dvr_Outputs),     intent(inout) :: p_FAST           !< The parameters of the glue code
    type(Dvr_SimData), target,    intent(inout) :: dvr           ! intent(out) only so that we can save FmtWidth in dvr%out%ActualChanLen
    type(ADI_Data),     target,   intent(in   ) :: ADI       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    integer(IntKi),               intent(  out) :: errStat          !< Error status of the operation
    character(*),                 intent(  out) :: errMsg           !< Error message if errStat /= ErrID_None
+   character(*),        optional,intent(in   ) :: dirname
    real(SiKi)                              :: RefPoint(3), RefLengths(2)               
    real(SiKi)                              :: x, y                
    real(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
@@ -1812,6 +1813,7 @@ subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg)
    integer(IntKi)                          :: errStat2
    character(ErrMsgLen)                    :: errMsg2
    character(*), parameter                 :: RoutineName = 'SetVTKParameters'
+   character(1024)                         :: dir
    real(SiKi) :: BladeLength, MaxBladeLength, MaxTwrLength, GroundRad, MaxLength
    real(SiKi) :: WorldBoxMax(3), WorldBoxMin(3) ! Extent of the turbines
    real(SiKi) :: BaseBoxDim
@@ -1820,13 +1822,19 @@ subroutine setVTKParameters(p_FAST, dvr, ADI, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
+   if (present(dirname)) then
+      dir = trim(dirname)
+   else
+      dir = 'vtk'
+   endif
+
    ! --- Tower Blades (NOTE: done by ADI)
    !call AD_SetVTKSurface(InitOut_AD, u%AD, m%VTK_Surfaces, errStat2, errMsg2); if(Failed()) return
 
    ! get the name of the output directory for vtk files (in a subdirectory called "vtk" of the output directory), and
    ! create the VTK directory if it does not exist
    call GetPath ( p_FAST%root, p_FAST%VTK_OutFileRoot, vtkroot ) ! the returned p_FAST%VTK_OutFileRoot includes a file separator character at the end
-   p_FAST%VTK_OutFileRoot = trim(p_FAST%VTK_OutFileRoot) // 'vtk'
+   p_FAST%VTK_OutFileRoot = trim(p_FAST%VTK_OutFileRoot) // trim(dir)
    call MKDIR( trim(p_FAST%VTK_OutFileRoot) )
    p_FAST%VTK_OutFileRoot = trim( p_FAST%VTK_OutFileRoot ) // PathSep // trim(vtkroot)
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
