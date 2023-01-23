@@ -4,11 +4,11 @@ Example of pendulum. The first member, defined by joints 1 and 2, it's used as a
 False            Echo        - Echo input data to "<rootname>.SD.ech" (flag)
 "DEFAULT"        SDdeltaT    - Local Integration Step. If "default", the glue-code integration step will be used.
              4   IntMethod   - Integration Method [1/2/3/4 = RK4/AB4/ABM4/AM2].
-True             SttcSolve   - Solve dynamics about static equilibrium point
-True             GuyanLoadCorrection - Include extra moment from lever arm at interface in interface reactions.
+False             SttcSolve   - Solve dynamics about static equilibrium point
+False             GuyanLoadCorrection - Include extra moment from lever arm at interface in interface reactions.
 -------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
              3   FEMMod      - FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B);  2=Tapered E-B (unavailable);  3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]
-             2   NDiv        - Number of sub-elements per member
+             1   NDiv        - Number of sub-elements per member
 False             CBMod       - [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.
             0   Nmodes      - Number of internal modes to retain (ignored if CBMod=False). If Nmodes=0 --> Guyan Reduction.
 837, 1, 3.9, 1, 25.24  JDampings   - Damping Ratios for each retained mode (% of critical) If Nmodes>0, list Nmodes structural damping ratios for each retained mode (% of critical), or a single damping ratio to be applied to all retained modes. (last entered value will be used for all remaining modes).
@@ -62,7 +62,7 @@ PropSetID   MatDens
              1   NCOSMs      - Number of unique cosine matrices (i.e., of unique member alignments including principal axis rotations); ignored if NXPropSets=0   or 9999 in any element below
 COSMID    COSM11    COSM12    COSM13    COSM21    COSM22    COSM23    COSM31    COSM32    COSM33
  (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)
-  1   7.0710678E-01  -7.0710678E-01   0.0000000E+00   4.0824829E-01   4.0824829E-01  -8.1649658E-01   5.7735027E-01   5.7735027E-01   5.7735027E-01
+  1    7.071067811865474617E-01   -7.071067811865474617E-01    0.000000000000000000E+00    4.082482904638629617E-01    4.082482904638629617E-01   -8.164965809277261455E-01    5.773502691896258421E-01    5.773502691896258421E-01    5.773502691896258421E-01
 ------------------------ JOINT ADDITIONAL CONCENTRATED MASSES--------------------------
              0   NCmass      - Number of joints with concentrated masses; Global Coordinate System
 CMJointID       JMass            JMXX             JMYY             JMZZ

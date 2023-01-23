@@ -22,5 +22,5 @@ False              Echo           - Echo the input file data (flag). In order to
 1    nAppliedLoads  - Number of applied loads at given nodes
 ALJointID    Fx     Fy    Fz     Mx     My     Mz   UnsteadyFile
    (-)       (N)    (N)   (N)   (Nm)   (Nm)   (Nm)     (-)
-   2        1e6   -1e6   0     0       0      0
+   2        1e6   1e6   0     0       0      0
 END of driver input file

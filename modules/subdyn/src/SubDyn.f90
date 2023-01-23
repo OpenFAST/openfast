@@ -1149,25 +1149,25 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,E
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
 Init%Members(:,:) = 0.0_ReKi
-if (LegacyFormat) then
-   nColumns = 5
-   Init%Members(:,iMType) = idMemberBeam ! Important, in legacy all members are beams
-   Init%Members(:,7) = -1
-else
-   nColumns = MembersCol
-endif
 
 nColumns=MembersCol
+
+if (p%NMembers == 0) then
+   CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
+   return
+endif
+
 CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
 READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
 CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
 if (ErrStat2/=0) then
-   ! We try with 4 columns (legacy format)
+   ! We try with one column less (legacy format)
    nColumns = MembersCol-1
    deallocate(StrArray)
    CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
-   call LegacyWarning('Member table contains 6 columns instead of 7, using default member cosines.')
+   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members.\
+   The directional cosines will be computed based on the member nodes for all members.')
    Init%Members(:,7) = -1
 endif
 ! Extract fields from first line
@@ -1179,17 +1179,15 @@ DO I = 1, nColumns
    endif
 ENDDO
 
-deallocate(StrArray)
+if (allocated(StrArray)) then
+   deallocate(StrArray)
+endif
+
 ! ! Read remaining lines
 DO I = 2, p%NMembers
    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Members(I,1:(nColumns)) = Dummy_IntAry(1:(nColumns))
-ENDDO
-
-! DO I = 1, p%NMembers
-!    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-!    Init%Members(I,1:(nColumns)) = Dummy_IntAry(1:(nColumns))
-! ENDDO   
+   Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
+ENDDO 
 
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
@@ -3798,7 +3796,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '("#",I9,9(ES16.7E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
     

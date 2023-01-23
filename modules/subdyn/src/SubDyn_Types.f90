@@ -131,7 +131,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsX      !< Extended property sets [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMass      !< Concentrated mass information [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: JDampings      !< Damping coefficients for internal modes [-]
     INTEGER(IntKi)  :: GuyanDampMod      !< Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix] [-]
