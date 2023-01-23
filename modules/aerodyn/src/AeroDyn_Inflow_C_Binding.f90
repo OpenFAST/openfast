@@ -22,8 +22,8 @@ MODULE AeroDyn_Inflow_C_BINDING
    USE ISO_C_BINDING
    USE AeroDyn_Inflow
    USE AeroDyn_Inflow_Types
-   USE AeroDyn_Driver_Types,  only: Dvr_Outputs
-   USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs
+   USE AeroDyn_Driver_Types,  only: Dvr_SimData, Dvr_Outputs
+   USE AeroDyn_Driver_Subs,   only: Dvr_InitializeOutputs, Dvr_WriteOutputs   ! SetVTKParameters,
    USE NWTC_Library
    USE VersionInfo
 
@@ -86,17 +86,10 @@ MODULE AeroDyn_Inflow_C_BINDING
    !        quadratic interp     u(3)  with inputs at T,T-dt,T-2*dt
    integer(IntKi)                         :: InterpOrder
    !------------------------------
-   !  Primary AD derived data types
-   type(ADI_InputType),  allocatable :: u(:)              !< Inputs at T, T-dt, T-2*dt (history kept for updating states)
+   !  Primary ADI data derived data types
+   type(ADI_Data)                    :: ADI
    type(ADI_InitInputType)           :: InitInp           !< Initialization data
    type(ADI_InitOutputType)          :: InitOutData       !< Initial output data -- Names, units, and version info.
-   type(ADI_ParameterType)           :: p                 !< Parameters
-   type(ADI_ContinuousStateType)     :: x(0:2)            !< continuous states at Time t and t+dt (predicted)
-   type(ADI_DiscreteStateType)       :: xd(0:2)           !< discrete states   at Time t and t+dt (predicted)
-   type(ADI_ConstraintStateType)     :: z(0:2)            !< Constraint states at Time t and t+dt (predicted)
-   type(ADI_OtherStateType)          :: OtherStates(0:2)  !< Initial other/optimization states
-   type(ADI_OutputType)              :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-   type(ADI_MiscVarType)             :: m                 !< Misc variables for optimization (not copied in glue code)
    !------------------------------
    !  Time tracking
    !     When we are performing a correction step, time information of previous
@@ -115,7 +108,6 @@ MODULE AeroDyn_Inflow_C_BINDING
    integer(IntKi)                         :: N_Global          ! global timestep
    real(DbKi)                             :: T_Initial         ! initial Time of simulation
    real(DbKi)                             :: TMax              ! initial Time of simulation
-   real(DbKi),       allocatable          :: InputTimes(:)     ! input times corresponding to u(:) array
    real(DbKi)                             :: InputTimePrev     ! input time of last UpdateStates call
    ! Note that we are including the previous state info here (not done in OF this way)
    integer(IntKi),   parameter            :: STATE_LAST = 0    ! Index for previous state (not needed in OF, but necessary here)
@@ -173,6 +165,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !------------------------------
    !  Outputs
    type(Dvr_Outputs)                      :: WrOutputsData           !< Data for writing outputs to file
+   type(Dvr_SimData)                      :: SimData                 !< data about the simulation
    integer(IntKi), parameter              :: idFmtNone   = 0
    integer(IntKi), parameter              :: idFmtAscii  = 1
    integer(IntKi), parameter              :: idFmtBinary = 2
@@ -502,21 +495,19 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !        u(1)  inputs at t
    !        u(2)  inputs at t -   dt
    !        u(3)  inputs at t - 2*dt      ! quadratic only
-   allocate(u(InterpOrder+1), STAT=ErrStat2)
-      if (ErrStat2 /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate inuput"
-         if (Failed())  return
-      endif
-   call AllocAry( InputTimes, InterpOrder+1, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
-
+   allocate(ADI%u(InterpOrder+1), STAT=ErrStat2);  if (Failed0("inputs"    )) return
+   allocate(ADI%x(0:2),           STAT=errStat2);  if (Failed0("x"         )) return
+   allocate(ADI%xd(0:2),          STAT=errStat2);  if (Failed0("xd"        )) return
+   allocate(ADI%z(0:2),           STAT=errStat2);  if (Failed0("z"         )) return
+   allocate(ADI%OtherState(0:2),  STAT=errStat2);  if (Failed0("OtherState")) return
+   call AllocAry( ADI%InputTimes, InterpOrder+1, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
 
    ! Call the main subroutine AeroDyn_Inflow_Init
    !     dT_Global and InitInp are passed into AD_Init, all the rest are set by AD_Init
    !
    !     NOTE: Pass u(1) only (this is empty and will be set inside Init).  We will copy
    !           this to u(2) and u(3) afterwards
-   call ADI_Init( InitInp, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, dT_Global, InitOutData, ErrStat2, ErrMsg2 )
+   call ADI_Init( InitInp, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, dT_Global, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
@@ -531,9 +522,9 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !-------------------------------------------------------------
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      call SetVTKParameters(OutRootName,u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+      call SetVTKParameters(OutRootName,ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
       if (Failed())  return
-      call WrVTK_refMeshes(u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+      call WrVTK_refMeshes(ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
       if (Failed())  return
    endif
 
@@ -545,30 +536,30 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !     order = SIZE(Input)
    !-------------------------------------------------------------
    do i=2,InterpOrder+1
-      call ADI_CopyInput (u(1),  u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+      call ADI_CopyInput (ADI%u(1),  ADI%u(i),  MESH_NEWCOPY, Errstat2, ErrMsg2)
          if (Failed())  return
    enddo
    do i = 1, InterpOrder + 1
-      InputTimes(i) = t_initial - (i - 1) * dT_Global
+      ADI%InputTimes(i) = t_initial - (i - 1) * dT_Global
    enddo
-   InputTimePrev = InputTimes(1) - dT_Global    ! Initialize for UpdateStates
+   InputTimePrev = ADI%InputTimes(1) - dT_Global    ! Initialize for UpdateStates
 
 
    !-------------------------------------------------------------
-   ! Initial setup of other pieces of x,xd,z,OtherStates
+   ! Initial setup of other pieces of x,xd,z,OtherState
    !-------------------------------------------------------------
-   CALL ADI_CopyContState  ( x(          STATE_CURR), x(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyConstrState( z(          STATE_CURR), z(          STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyOtherState ( OtherStates(STATE_CURR), OtherStates(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
 
    !-------------------------------------------------------------
    ! Setup the previous timestep copies of states
    !-------------------------------------------------------------
-   CALL ADI_CopyContState  ( x(          STATE_CURR), x(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyDiscState  ( xd(         STATE_CURR), xd(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyConstrState( z(          STATE_CURR), z(          STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
-   CALL ADI_CopyOtherState ( OtherStates(STATE_CURR), OtherStates(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyContState  ( ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyDiscState  ( ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyConstrState( ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
+   CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
 
 
    !TODO: Is there any other InitOutData should be returned?
@@ -610,6 +601,18 @@ CONTAINS
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+      if(Failed0) call FailCleanup()
+   end function Failed0
 
    subroutine FailCleanup()
       if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
@@ -840,16 +843,16 @@ CONTAINS
             return
          endif
       do i=1,NumBlades
-         call MeshMapCreate( BldPtMotionMesh, u(1)%AD%rotors(1)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i), ErrStat3, ErrMsg3 )
+         call MeshMapCreate( BldPtMotionMesh, ADI%u(1)%AD%rotors(1)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i), ErrStat3, ErrMsg3 )
             if (ErrStat3 >= AbortErrLev) return
-         call MeshMapCreate( y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh, Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat3, ErrMsg3 )
+         call MeshMapCreate( ADI%y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh, Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat3, ErrMsg3 )
             if (ErrStat3 >= AbortErrLev) return
       enddo
       ! nacelle -- TODO: add this mesh for nacelle load transfers
 !      if ( y%AD%rotors(1)%NacelleLoad%Committed ) then
-!         call MeshMapCreate( NacMotionMesh, u(1)%AD%rotors(1)%NacelleMotion, Map_NacPtMotion_2_AD_Nac, ErrStat3, ErrMsg3 )
+!         call MeshMapCreate( NacMotionMesh, ADI%u(1)%AD%rotors(1)%NacelleMotion, Map_NacPtMotion_2_AD_Nac, ErrStat3, ErrMsg3 )
 !            if (ErrStat3 >= AbortErrLev) return
-!         call MeshMapCreate( y%AD%rotors(1)%NacelleLoad, NacLoadMesh, Map_AD_Nac_2_NacPtLoad, ErrStat3, ErrMsg3 )
+!         call MeshMapCreate( ADI%y%AD%rotors(1)%NacelleLoad, NacLoadMesh, Map_AD_Nac_2_NacPtLoad, ErrStat3, ErrMsg3 )
 !            if (ErrStat3 >= AbortErrLev) return
 !      endif
 
@@ -906,7 +909,7 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !ErrMsg   =  "AeroDyn_Inflo_C_ReInit is not currently functional. Aborting."
 !call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 !
-!   call ADI_ReInit(p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), m, dT_Global, errStat2, errMsg2)
+!   call ADI_ReInit(ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%m, dT_Global, errStat2, errMsg2)
 !      if (Failed())  return
 !
 !   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -958,7 +961,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
    real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
    real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
-   real(c_float),             intent(  out)  :: OutputChannelValues_C(p%NumOuts)
+   real(c_float),             intent(  out)  :: OutputChannelValues_C(ADI%p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
@@ -995,7 +998,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AD_SetInputMotion( u(1), &
+   call AD_SetInputMotion( ADI%u(1), &
             HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
             NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
             BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
@@ -1003,11 +1006,11 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
       if (Failed())  return
 
    ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
-   CALL ADI_CalcOutput( Time, u(1), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
+   CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
    ! Transfer resulting load meshes to intermediate mesh
-   call AD_TransferLoads( u(1), y, ErrStat2, ErrMsg2 )
+   call AD_TransferLoads( ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
    ! Set output force/moment array
@@ -1015,10 +1018,10 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    MeshFrc_C(1:6*NumMeshPts) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts), c_float), (/6*NumMeshPts/) )
 
    ! Get the output channel info out of y
-   OutputChannelValues_C = REAL(y%WriteOutput, C_FLOAT)
+   OutputChannelValues_C = REAL(ADI%y%WriteOutput, C_FLOAT)
 
    ! Write VTK if requested (animation=2)
-   if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+   if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1122,10 +1125,10 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    else ! Setup time input times array
       InputTimePrev          = real(Time_C,DbKi)            ! Store for check next time
       if (InterpOrder>1) then ! quadratic, so keep the old time
-         InputTimes(INPUT_LAST) = ( N_Global - 1 ) * dT_Global    ! u(3) at T-dT
+         ADI%InputTimes(INPUT_LAST) = ( N_Global - 1 ) * dT_Global    ! u(3) at T-dT
       endif
-      InputTimes(INPUT_CURR) =   N_Global       * dT_Global       ! u(2) at T
-      InputTimes(INPUT_PRED) = ( N_Global + 1 ) * dT_Global       ! u(1) at T+dT
+      ADI%InputTimes(INPUT_CURR) =   N_Global       * dT_Global       ! u(2) at T
+      ADI%InputTimes(INPUT_PRED) = ( N_Global + 1 ) * dT_Global       ! u(1) at T+dT
       N_Global = N_Global + 1_IntKi                               ! increment counter to T+dT
    endif
 
@@ -1134,17 +1137,17 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
       ! Step back to previous state because we are doing a correction step
       !     -- repeating the T -> T+dt update with new inputs at T+dt
       !     -- the STATE_CURR contains states at T+dt from the previous call, so revert those
-      CALL ADI_CopyContState   (x(          STATE_LAST), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyDiscState   (xd(         STATE_LAST), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyConstrState (z(          STATE_LAST), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-      CALL ADI_CopyOtherState  (OtherStates(STATE_LAST), OtherStates(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL ADI_CopyContState   (ADI%x(         STATE_LAST), ADI%x(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL ADI_CopyDiscState   (ADI%xd(        STATE_LAST), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL ADI_CopyConstrState (ADI%z(         STATE_LAST), ADI%z(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+      CALL ADI_CopyOtherState  (ADI%OtherState(STATE_LAST), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    else
       ! Cycle inputs back one timestep since we are moving forward in time.
       if (InterpOrder>1) then ! quadratic, so keep the old time
-         call ADI_CopyInput( u(INPUT_CURR), u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);        if (Failed())  return
+         call ADI_CopyInput( ADI%u(INPUT_CURR), ADI%u(INPUT_LAST), MESH_UPDATECOPY, ErrStat2, ErrMsg2);        if (Failed())  return
       endif
       ! Move inputs from previous t+dt (now t) to t
-      call ADI_CopyInput( u(INPUT_PRED), u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
+      call ADI_CopyInput( ADI%u(INPUT_PRED), ADI%u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
    endif
 
    !-------------------------------------------------------
@@ -1158,7 +1161,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
 
    ! Transfer motions to input meshes
    call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AD_SetInputMotion( u(INPUT_PRED), &
+   call AD_SetInputMotion( ADI%u(INPUT_PRED), &
             HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
             NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
             BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
@@ -1169,14 +1172,14 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    ! Set copy the current state over to the predicted state for sending to UpdateStates
    !     -- The STATE_PREDicted will get updated in the call.
    !     -- The UpdateStates routine expects this to contain states at T at the start of the call (history not passed in)
-   CALL ADI_CopyContState   (x(          STATE_CURR), x(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (z(          STATE_CURR), z(          STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (OtherStates(STATE_CURR), OtherStates(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
 
 
    ! Call the main subroutine ADI_UpdateStates to get the velocities
-   CALL ADI_UpdateStates( InputTimes(INPUT_CURR), N_Global, u, InputTimes, p, x(STATE_PRED), xd(STATE_PRED), z(STATE_PRED), OtherStates(STATE_PRED), m, ErrStat2, ErrMsg2 )
+   CALL ADI_UpdateStates( ADI%InputTimes(INPUT_CURR), N_Global, ADI%u, ADI%InputTimes, ADI%p, ADI%x(STATE_PRED), ADI%xd(STATE_PRED), ADI%z(STATE_PRED), ADI%OtherState(STATE_PRED), ADI%m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
 
@@ -1186,16 +1189,16 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    ! move current state at T to previous state at T-dt
    !     -- STATE_LAST now contains info at time T
    !     -- this allows repeating the T --> T+dt update
-   CALL ADI_CopyContState   (x(          STATE_CURR), x(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (xd(         STATE_CURR), xd(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (z(          STATE_CURR), z(          STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (OtherStates(STATE_CURR), OtherStates(STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_CURR), ADI%x(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    ! Update the predicted state as the new current state
    !     -- we have now advanced from T to T+dt.  This allows calling with CalcOuput to get the outputs at T+dt
-   CALL ADI_CopyContState   (x(          STATE_PRED), x(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyDiscState   (xd(         STATE_PRED), xd(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyConstrState (z(          STATE_PRED), z(          STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
-   CALL ADI_CopyOtherState  (OtherStates(STATE_PRED), OtherStates(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyContState   (ADI%x(         STATE_PRED), ADI%x(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyDiscState   (ADI%xd(        STATE_PRED), ADI%xd(        STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyConstrState (ADI%z(         STATE_PRED), ADI%z(         STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+   CALL ADI_CopyOtherState  (ADI%OtherState(STATE_PRED), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
 
 
 
@@ -1247,8 +1250,8 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    !     If u is not allocated, then we didn't get far at all in initialization,
    !     or AD_C_End got called before Init.  We don't want a segfault, so check
    !     for allocation.
-   if (allocated(u)) then
-      call ADI_End( u(:), p, x(STATE_CURR), xd(STATE_CURR), z(STATE_CURR), OtherStates(STATE_CURR), y, m, ErrStat2, ErrMsg2 )
+   if (allocated(ADI%u)) then
+      call ADI_End( ADI%u(:), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
 
@@ -1256,30 +1259,30 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    !        logic is required here (this isn't necessary in the fortran driver
    !        or in openfast, but may be when this code is called from C, Python,
    !        or some other code using the c-bindings.
-   if (allocated(u)) then
-      do i=2,size(u)
-         call ADI_DestroyInput( u(i), ErrStat2, ErrMsg2 )
+   if (allocated(ADI%u)) then
+      do i=2,size(ADI%u)
+         call ADI_DestroyInput( ADI%u(i), ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       enddo
-      if (allocated(u))             deallocate(u)
+      if (allocated(ADI%u))             deallocate(ADI%u)
    endif
 
    ! Destroy any other copies of states (rerun on (STATE_CURR) is ok)
-   call ADI_DestroyContState(   x(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyContState(   x(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyContState(   x(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   xd(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   xd(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyDiscState(   xd(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( z(          STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( z(          STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyConstrState( z(          STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  OtherStates(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  OtherStates(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   call ADI_DestroyOtherState(  OtherStates(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyContState(   ADI%x(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyDiscState(   ADI%xd(        STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyConstrState( ADI%z(         STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_LAST), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_CURR), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call ADI_DestroyOtherState(  ADI%OtherState(STATE_PRED), ErrStat2, ErrMsg2 );  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! if deallocate other items now
-   if (allocated(InputTimes))    deallocate(InputTimes)
+   !if (allocated(InputTimes))    deallocate(InputTimes)
 
    ! Clear out mesh related data storage
    call ClearMesh()
@@ -1430,7 +1433,7 @@ subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
    do i=1,NumBlades
       if ( y_local%AD%rotors(1)%BladeLoad(i)%Committed ) then
          if (debugverbose > 4)  call MeshPrintInfo( CU, y_local%AD%rotors(1)%BladeLoad(i), MeshName='AD%rotors('//trim(Num2LStr(1))//')%BladeLoad('//trim(Num2LStr(i))//')' )
-         call Transfer_Line2_to_Point( y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), &
+         call Transfer_Line2_to_Point( ADI%y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), &
                   ErrStat3, ErrMsg3, u_local%AD%rotors(1)%BladeMotion(i), BldPtMotionMesh )
          if (ErrStat3 >= AbortErrLev)  return
          BldPtLoadMesh%Force  = BldPtLoadMesh%Force  + BldPtLoadMesh_tmp%Force
@@ -1574,8 +1577,8 @@ subroutine SetVTKParameters(OutRootName, rot_u, RefPoint, errStat, errMsg)
 
       ! Create base box (using towerbase or nacelle dim)
       BaseBoxDim = minval(WrOutputsData%VTKNacDim(4:6))/2
-      if (size(m%VTK_Surfaces(iWT)%TowerRad)>0) then
-         BaseBoxDim = m%VTK_Surfaces(iWT)%TowerRad(1)
+      if (size(ADI%m%VTK_Surfaces(iWT)%TowerRad)>0) then
+         BaseBoxDim = ADI%m%VTK_Surfaces(iWT)%TowerRad(1)
       endif
       VTK_Surface(iWT)%BaseBox(:,1) = (/ -BaseBoxDim             , -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /)
       VTK_Surface(iWT)%BaseBox(:,2) = (/ -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim+2*BaseBoxDim, -BaseBoxDim /) 
@@ -1763,9 +1766,9 @@ contains
       if (ErrStat3 >= AbortErrLev) return
 
       ! Free wake
-      if (allocated(m%AD%FVW_u) .and. iWT==1) then
-         if (allocated(m%AD%FVW_u(1)%WingsMesh)) then
-            call WrVTK_FVW(p%AD%FVW, x(STATE_CURR)%AD%FVW, z(STATE_CURR)%AD%FVW, m%AD%FVW, trim(WrOutputsData%Root)//'.FVW', N_Global, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
+      if (allocated(ADI%m%AD%FVW_u) .and. iWT==1) then
+         if (allocated(ADI%m%AD%FVW_u(1)%WingsMesh)) then
+            call WrVTK_FVW(ADI%p%AD%FVW, ADI%x(STATE_CURR)%AD%FVW, ADI%z(STATE_CURR)%AD%FVW, ADI%m%AD%FVW, trim(WrOutputsData%Root)//'.FVW', N_Global, WrOutputsData%VTK_tWidth, bladeFrame=.FALSE.)  ! bladeFrame==.FALSE. to output in global coords
          endif
       end if
    end subroutine WrVTK_Points
@@ -1781,7 +1784,7 @@ contains
       ErrMsg3  =  ''
 
 !TODO: use this routine when it is moved out of the driver and into ADI
-!      call AD_WrVTK_Surfaces(u(1)%AD, y%AD, RefPoint, m%VTK_Surfaces, N_Global, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
+!      call AD_WrVTK_Surfaces(ADI%u(1)%AD, ADI%y%AD, RefPoint, ADI%m%VTK_Surfaces, N_Global, WrOutputsData%Root, WrOutputsData%VTK_tWidth, 25, WrOutputsData%VTKHubRad)
 
       ! Nacelle
       if ( rot_u(iWT)%NacelleMotion%Committed ) then
@@ -1793,7 +1796,7 @@ contains
       ! Tower
       if (rot_u(iWT)%TowerMotion%Committed) then
          call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%TowerMotion, trim(WrOutputsData%Root)//trim(sWT)//'.TowerSurface', &
-                                    N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, m%VTK_Surfaces(iWT)%TowerRad )
+                                    N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth, numSectors, ADI%m%VTK_Surfaces(iWT)%TowerRad )
          if (ErrStat3 >= AbortErrLev) return
       endif
 
@@ -1810,8 +1813,8 @@ contains
          do k=1,NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
                call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%Root)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
-                                          N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=m%VTK_Surfaces(iWT)%BladeShape(k)%AirfoilCoords, &
-                                          Sib=y%AD%rotors(iWT)%BladeLoad(k) )
+                                          N_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(k)%AirfoilCoords, &
+                                          Sib=ADI%y%AD%rotors(iWT)%BladeLoad(k) )
                   if (ErrStat3 >= AbortErrLev) return
             endif
          enddo
