@@ -1,2 +1,0 @@
-1. vertical cantilever
-2. angled-cantilever (different mode shapes but same mode frequencies)
