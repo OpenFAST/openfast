@@ -369,11 +369,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    n_VTK                   = -1_IntKi                    ! Set VTK output to T=0 at first call
    ! Interpolation order
    InterpOrder            = int(InterpOrder_C, IntKi)
-   if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)"
-      if (Failed())  return
-   endif
 
    ! VTK outputs
    WrOutputsData%WrVTK        = int(WrVTK_in,     IntKi)
@@ -382,24 +377,15 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    WrOutputsData%VTKHubrad    = real(VTKHubrad_in, SiKi)
    WrOutputsData%VTKRefPoint  = (/ 0.0_ReKi, 0.0_ReKi, 0.0_ReKi /)    !TODO: should this be an input?
    WrOutputsData%root         = trim(OutRootName)
-   if ( WrOutputsData%WrVTK < 0_IntKi .or. WrOutputsData%WrVTK > 2_IntKi ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]"
-      if (Failed())  return
-   endif
-   if ( WrOutputsData%WrVTK_Type > 0_IntKi ) then
-      if ( WrOutputsData%WrVTK_Type < 1_IntKi .or. WrOutputsData%WrVTK_Type > 3_IntKi ) then
-         ErrStat2 =  ErrID_Fatal
-         ErrMsg2  =  "WrVTK_Type option for writing VTK visualization files must be [1: surface, 2: lines, 3: both]"
-         if (Failed())  return
-      endif
-      if (WrOutputsData%VTKHubRad < 0.0_SiKi) then
-         ErrStat2 =  ErrID_Warn
-         ErrMsg2  =  "VTKHubRad for surface visualization of hub less than zero.  Setting to zero."
-         if (Failed())  return
-         WrOutputsData%VTKHubRad = 0.0_SiKi
-      endif
-   endif
+   WrOutputsData%n_VTKTime = 1   ! output every timestep
+
+   ! Write outputs to file
+   WrOutputsData%fileFmt = int(wrOuts_C, IntKi)
+   WrOutputsData%DT_Outs = real(DT_Outs_C, DbKi)
+
+   ! Validate and set some inputs (moved to subroutine to make cleaner to read
+   call ValidateSetInputs(ErrStat2,ErrMsg2); if(Failed()) return
+
    ! Flag to transpose DCMs as they are passed in
    TransposeDCM      = TransposeDCM_in
 
@@ -408,7 +394,10 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    InitInp%AD%Linearize          = .FALSE.
    !InitInp%IW_InitInp%Linearize  = .FALSE.
 
-   ! AeroDyn values passed in through interface
+
+   !----------------------------------------------------
+   ! Set AeroDyn initialization data
+   !----------------------------------------------------
    InitInp%AD%Gravity     = REAL(gravity_C,     ReKi)
    InitInp%AD%defFldDens  = REAL(defFldDens_C,  ReKi)
    InitInp%AD%defKinVisc  = REAL(defKinVisc_C,  ReKi)
@@ -448,7 +437,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    do i=1,Sim%WT(1)%NumBlades
       call OrientRemap(InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i))
    enddo
-
 
    ! Number of blades and initial positions
    !  -  NumMeshPts is the number of interface Mesh points we are expecting on the python
@@ -545,13 +533,9 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    CALL ADI_CopyOtherState ( ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_LAST), MESH_NEWCOPY, Errstat2, ErrMsg2);    if (Failed())  return
 
 
-   !TODO: Is there any other InitOutData should be returned?
-
-
    !-------------------------------------------------
    !  Set output channel information for driver code
    !-------------------------------------------------
-
    ! Number of channels
    NumChannels_C = size(InitOutData%WriteOutputHdr)
 
@@ -571,6 +555,12 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    OutputChannelNames_C(k) = C_NULL_CHAR
    OutputChannelUnits_C(k) = C_NULL_CHAR
 
+   !-------------------------------------------------
+   !  Write output file if requested
+   !-------------------------------------------------
+   if (WrOutputsData%fileFmt > idFmtNone) then
+      call SetupFileOutputs()
+   endif
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -605,6 +595,79 @@ CONTAINS
       if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
    end subroutine FailCleanup
 
+
+   !> Validate and set some of the outputs (values must be stored before here as some might be changed)
+   subroutine ValidateSetInputs(ErrStat3,ErrMsg3)
+      integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
+      character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
+      ! Interporder
+      if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
+         call SetErrStat(ErrID_Fatal,"InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)",ErrStat3,ErrMsg3,RoutineName)
+         return
+      endif
+
+      ! VTK outputs
+      if ( WrOutputsData%WrVTK < 0_IntKi .or. WrOutputsData%WrVTK > 2_IntKi ) then
+         call SetErrStat(ErrID_Fatal,"WrVTK option for writing VTK visualization files must be [0: none, 1: init only, 2: animation]",ErrStat3,ErrMsg3,RoutineName)
+         return
+      endif
+      if ( WrOutputsData%WrVTK_Type > 0_IntKi ) then
+         if ( WrOutputsData%WrVTK_Type < 1_IntKi .or. WrOutputsData%WrVTK_Type > 3_IntKi ) then
+            call SetErrStat(ErrID_Fatal,"WrVTK_Type option for writing VTK visualization files must be [1: surface, 2: lines, 3: both]",ErrStat3,ErrMsg3,RoutineName)
+            return
+         endif
+         if (WrOutputsData%VTKHubRad < 0.0_SiKi) then
+            call SetErrStat(ErrID_Warn,"VTKHubRad for surface visualization of hub less than zero.  Setting to zero.",ErrStat3,ErrMsg3,RoutineName)
+            WrOutputsData%VTKHubRad = 0.0_SiKi
+         endif
+      endif
+
+      ! check fileFmt
+      if ( WrOutputsData%fileFmt /= idFmtNone .and. WrOutputsData%fileFmt /= idFmtAscii .and. &
+           WrOutputsData%fileFmt /= idFmtBinary .and. WrOutputsData%fileFmt /= idFmtBoth) then
+         call SetErrStat(ErrID_Warn,"Invalid file output format requested.  Turning off file output.",ErrStat3,ErrMsg3,RoutineName)
+         WrOutputsData%fileFmt = idFmtNone
+      endif
+      if (WrOutputsData%fileFmt > idFmtNone) then
+         ! If a smaller timestep between outputs is requested than the simulation runs at, change to DT
+         if (WrOutputsData%DT_Outs < Sim%dT) then
+            WrOutputsData%DT_Outs = Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested DT_Outs is smaller than timestep DT.  Setting DT_Outs to DT.",ErrStat3,ErrMsg3,RoutineName)
+         endif
+         ! If not an integer multiple of DT, adjust
+         WrOutputsData%n_DT_Out = NINT( WrOutputsData%DT_Outs / Sim%dT )
+         if (.NOT. EqualRealNos( WrOutputsData%DT_outs, Sim%dT * WrOutputsData%n_DT_Out )) then
+            WrOutputsData%DT_Outs = real(WrOutputsData%n_DT_Out, DbKi) * Sim%dT
+            call SetErrStat(ErrID_Warn,"Requested DT_Outs is not an integer multiple of DT.  Changing DT_Outs to "//trim(Num2LStr(WrOutputsData%DT_Outs))//".",ErrStat3,ErrMsg3,RoutineName)
+         endif
+      endif
+   end subroutine ValidateSetInputs
+
+   !> allocate data storage for file outputs
+   subroutine SetupFileOutputs()
+      ! time channel (stored but not counted as an output)
+      allocate(WrOutputsData%WriteOutputHdr(1), STAT=ErrStat2); if(Failed0("WriteOutputHdr")) return;
+      allocate(WrOutputsData%WriteOutputUnt(1), STAT=ErrStat2); if(Failed0("WriteOutputUnt")) return;
+      allocate(Sim%wt(1)%WriteOutput(1),        STAT=ErrStat2); if(Failed0("WriteOutput")) return;
+      WrOutputsData%WriteOutputHdr(1) = 'Time'
+      WrOutputsData%WriteOutputUnt(1) = '(s)'
+      WrOutputsData%nDvrOutputs = 0
+
+      ! assemble all headers
+      call concatOutputHeaders(WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, InitOutData%WriteOutputHdr, InitOutData%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+
+      ! allocate output file handling and set formats
+      WrOutputsData%outFmt = "ES15.8E2" 
+      WrOutputsData%delim  = TAB
+      WrOutputsData%AD_ver = InitOutData%Ver 
+      allocate(WrOutputsData%unOutFile(Sim%numTurbines), STAT=ErrStat2); if(Failed0("unOutFile")) return;
+      WrOutputsData%unOutFile = -1
+!FIXME: number of timesteps is incorrect!
+      call Dvr_InitializeOutputs(Sim%numTurbines, WrOutputsData, Sim%numSteps-1, ErrStat2, ErrMsg2); if(Failed()) return
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+   end subroutine SetupFileOutputs
+
+
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
    subroutine ShowPassedData()
@@ -636,6 +699,9 @@ CONTAINS
       call WrScr("   Time variables")
       call WrScr("       DT_C                           "//trim(Num2LStr( DT_C          )) )
       call WrScr("       TMax_C                         "//trim(Num2LStr( TMax_C        )) )
+      call WrScr("   Output variables")
+      call WrScr("       wrOuts_C                       "//trim(Num2LStr( wrOuts_C      )) )
+      call WrScr("       DT_Outs_C                      "//trim(Num2LStr( DT_Outs_C     )) )
       call WrScr("   Flags")
       TmpFlag="F";   if (storeHHVel) TmpFlag="T"
       call WrScr("       storeHHVel                     "//TmpFlag )
@@ -1001,8 +1067,16 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(ADI%y%WriteOutput, C_FLOAT)
 
+   !-------------------------------------------------------
+   ! write outputs
+   !-------------------------------------------------------
    ! Write VTK if requested (animation=2)
    if (WrOutputsData%WrVTK > 1_IntKi)    call WrVTK_Meshes(ADI%u(1)%AD%rotors(:),(/0.0_SiKi,0.0_SiKi,0.0_SiKi/),ErrStat2,ErrMsg2)
+
+   if (WrOutputsData%fileFmt > idFmtNone) then
+!FIXME: need some way to overwrite the correction timesteps (for text file)!
+      call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
+   endif
 
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
@@ -1182,7 +1256,6 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    CALL ADI_CopyOtherState  (ADI%OtherState(STATE_PRED), ADI%OtherState(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
 
 
-
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 contains
@@ -1209,6 +1282,8 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
 
    ! Local variables
    integer(IntKi)             :: i                                !< generic loop counter
+   character(10)              :: sWT                              !< string for turbine
+   integer(IntKi)             :: iWT                              !< current wind turbine
    integer                    :: ErrStat                          !< aggregated error status
    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
    integer                    :: ErrStat2                         !< temporary error status  from a call
@@ -1218,6 +1293,27 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   ! Finalize output file
+   if (WrOutputsData%fileFmt > idFmtNone) then
+      ! Close the output file
+      if (WrOutputsData%fileFmt==idFmtBoth .or. WrOutputsData%fileFmt == idFmtAscii) then
+         do iWT=1,Sim%numTurbines
+            if (WrOutputsData%unOutFile(iWT) > 0) close(WrOutputsData%unOutFile(iWT))
+         enddo
+      endif
+      if (WrOutputsData%fileFmt==idFmtBoth .or. WrOutputsData%fileFmt == idFmtBinary) then
+         do iWT=1,Sim%numTurbines
+            if (Sim%numTurbines >1) then
+               sWT = '.T'//trim(num2lstr(iWT))
+            else
+              sWT = ''
+            endif
+            call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDyn_Inflow_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), errStat2, errMsg2)
+            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         enddo
+      endif
+   end if
 
    ! clear out any globably allocated helper arrays
    if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
