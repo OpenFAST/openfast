@@ -2,6 +2,8 @@
 name: 'Development Pipeline'
 
 on:
+  workflow_dispatch:
+
   push:
     paths-ignore:
       - 'LICENSE'
