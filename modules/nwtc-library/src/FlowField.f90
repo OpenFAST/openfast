@@ -629,7 +629,7 @@ contains
          dy2(i) = dy2(i)*dy2(i + 1) + u(i)
          dy(i) = real(b(i) - (x(i + 1) - x(i))*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
       end do
-      dy(n) = real(b(n - 1) + (x(n) - x(n - 1))*(dy2(n - 1)/6.0_ReKi + dy2(n)/3.0_ReKi), SiKi)
+      dy(n) = 0.0_ReKi
 
    end subroutine
 
@@ -1329,7 +1329,7 @@ contains
          dy2(i) = dy2(i)*dy2(i + 1) + u(i)
          dy(i) = real(b(i) - h*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
       end do
-      dy(n) = real(b(n - 1) + h*(dy2(n - 1)/6.0_ReKi + dy2(n)/3.0_ReKi), SiKi)
+      dy(n) = 0.0_ReKi
 
    end subroutine
 
