@@ -117,6 +117,8 @@ openfast_postlib_obj
 versioninfolib_obj
 )
 
+# Note that the python interface requires that openfastlib be a shared library
+# so it can be opened with dlopen
 add_library(openfastlib SHARED
   $<TARGET_OBJECTS:openfastlib_common_obj>
   $<TARGET_OBJECTS:openfast_prelib_obj>

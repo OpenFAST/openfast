@@ -74,7 +74,14 @@ add_library(openfastcpplib
   $<TARGET_OBJECTS:openfast_postlib_obj>
   $<TARGET_OBJECTS:versioninfolib_obj>
 )
+
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# note the use of ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}. This is to ensure the compiler 
+# links to the required fortran libraries (e.g. libgfortran). Because the library is 
+# entirely made up of objects cmake cannot reliably detect that it is a fortran library 
+# and must be informed of the correct libraries to link to or else there can be undefined 
+# symbol errors
 target_link_libraries(openfastcpplib
   openfastlib_common_obj
   openfast_prelib_obj
