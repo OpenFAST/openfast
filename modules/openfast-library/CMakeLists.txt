@@ -117,7 +117,7 @@ openfast_postlib_obj
 versioninfolib_obj
 )
 
-add_library(openfastlib
+add_library(openfastlib SHARED
   $<TARGET_OBJECTS:openfastlib_common_obj>
   $<TARGET_OBJECTS:openfast_prelib_obj>
   $<TARGET_OBJECTS:mapcpplib_obj>
