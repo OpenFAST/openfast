@@ -68,7 +68,7 @@ The following packages are required for regression testing:
 - Python 3.7+
 - Numpy
 - CMake and CTest (Optional)
-- Bokeh 1.4 (Optional)
+- Bokeh 2.4+ (Optional)
 
 .. _python_driver:
 
