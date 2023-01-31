@@ -129,7 +129,6 @@ set(OPENFAST_MODULES
   nwtc-library
   inflowwind
   aerodyn
-  aerodyn14
   servodyn
   elastodyn
   beamdyn

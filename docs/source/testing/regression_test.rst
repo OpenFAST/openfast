@@ -221,11 +221,11 @@ Flags can be compounded making useful variations such as
 
 .. code-block:: bash
 
-    # Run all cases that use AeroDyn14 with verbose output
-    ctest -V -L aerodyn14
+    # Run all cases that use SubDyn with verbose output
+    ctest -V -L subdyn
 
-    # Run all cases that use AeroDyn14 in 16 concurrent processes
-    ctest -j 16 -L aerodyn14
+    # Run all cases that use SubDyn in 16 concurrent processes
+    ctest -j 16 -L subdyn
 
     # Run the case with name "5MW_DLL_Potential_WTurb" with verbose output
     ctest -V -R 5MW_DLL_Potential_WTurb

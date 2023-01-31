@@ -38,7 +38,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ED_InitInputType
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
-    CHARACTER(1024)  :: ADInputFile      !< Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info [-]
     LOGICAL  :: CompElast      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
@@ -740,7 +739,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: PtfmCMxt      !< Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
     REAL(ReKi)  :: PtfmCMyt      !< Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
     LOGICAL  :: BD4Blades      !< flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false) [-]
-    LOGICAL  :: UseAD14      !< flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14. [-]
     INTEGER(IntKi)  :: BldNd_NumOuts      !< Number of requested output channels per blade node (ED_AllBldNdOuts) [-]
     INTEGER(IntKi)  :: BldNd_TotNumOuts      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -832,7 +830,6 @@ CONTAINS
    ErrMsg  = ""
     DstInitInputData%InputFile = SrcInitInputData%InputFile
     DstInitInputData%Linearize = SrcInitInputData%Linearize
-    DstInitInputData%ADInputFile = SrcInitInputData%ADInputFile
     DstInitInputData%CompElast = SrcInitInputData%CompElast
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
@@ -898,7 +895,6 @@ CONTAINS
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%ADInputFile)  ! ADInputFile
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
@@ -935,10 +931,6 @@ CONTAINS
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%ADInputFile)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%ADInputFile(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CompElast, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%RootName)
@@ -986,10 +978,6 @@ CONTAINS
     END DO ! I
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%ADInputFile)
-      OutData%ADInputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
     OutData%CompElast = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompElast)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%RootName)
@@ -16361,7 +16349,6 @@ ENDIF
     DstParamData%PtfmCMxt = SrcParamData%PtfmCMxt
     DstParamData%PtfmCMyt = SrcParamData%PtfmCMyt
     DstParamData%BD4Blades = SrcParamData%BD4Blades
-    DstParamData%UseAD14 = SrcParamData%UseAD14
     DstParamData%BldNd_NumOuts = SrcParamData%BldNd_NumOuts
     DstParamData%BldNd_TotNumOuts = SrcParamData%BldNd_TotNumOuts
 IF (ALLOCATED(SrcParamData%BldNd_OutParam)) THEN
@@ -17123,7 +17110,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! PtfmCMxt
       Re_BufSz   = Re_BufSz   + 1  ! PtfmCMyt
       Int_BufSz  = Int_BufSz  + 1  ! BD4Blades
-      Int_BufSz  = Int_BufSz  + 1  ! UseAD14
       Int_BufSz  = Int_BufSz  + 1  ! BldNd_NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! BldNd_TotNumOuts
   Int_BufSz   = Int_BufSz   + 1     ! BldNd_OutParam allocated yes/no
@@ -18622,8 +18608,6 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%PtfmCMyt
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%BD4Blades, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%UseAD14, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%BldNd_NumOuts
     Int_Xferred = Int_Xferred + 1
@@ -20404,8 +20388,6 @@ ENDIF
     OutData%PtfmCMyt = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%BD4Blades = TRANSFER(IntKiBuf(Int_Xferred), OutData%BD4Blades)
-    Int_Xferred = Int_Xferred + 1
-    OutData%UseAD14 = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseAD14)
     Int_Xferred = Int_Xferred + 1
     OutData%BldNd_NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

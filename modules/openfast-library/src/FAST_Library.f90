@@ -601,10 +601,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
                         
    ! 7-Sep-2015: Sang wants these integers for the OpenFOAM mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each 
    ! blade mesh to be the same, so if this DOES ever change, we'll need to make OpenFOAM less tied to the AeroDyn mapping.
-   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN   
-      NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
-      NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
-   ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
+   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
       IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
          IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
             NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)

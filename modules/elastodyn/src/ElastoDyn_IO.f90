@@ -1276,14 +1276,13 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads the input file and stores all the data in the ED_InputFile structure.
 !! It does not perform data validation.
-SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
+SUBROUTINE ED_ReadInput( InputFileName, InputFileData, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
    REAL(DbKi),           INTENT(IN)       :: Default_DT     !< The default DT (from glue code)
 
    CHARACTER(*), INTENT(IN)               :: InputFileName  !< Name of the input file
-   CHARACTER(*), INTENT(IN)               :: MeshFile       !< File that contains the blade mesh information (AeroDyn input file for now) -- later this info will be defined in one of the ED input files.
    CHARACTER(*), INTENT(IN)               :: OutFileRoot    !< The rootname of all the output files written by this routine.
 
    TYPE(ED_InputFile),   INTENT(OUT)      :: InputFileData  !< Data stored in the module's input file
@@ -1376,7 +1375,7 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, BD4Blades, Defa
 
       ! get the blade input-file data (from blade and mesh files)
    IF (.NOT. BD4Blades) THEN
-      CALL ReadBladeInputs ( BldFile, MeshFile, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+      CALL ReadBladeInputs ( BldFile, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call Cleanup()
@@ -1462,14 +1461,13 @@ END SUBROUTINE ED_ValidateInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the data from the blade and mesh inputs files.
 !! This routines assumes that InputFileData%NumBl has already been set.
-SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( BldFile, InputFileData, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
 
    TYPE(ED_InputFile),     INTENT(INOUT)  :: InputFileData                       !< Input file data Data for Blade K stored in the module's input file
    CHARACTER(*),           INTENT(IN)     :: BldFile(:)                          !< The array of file names containing blade information
-   CHARACTER(*),           INTENT(IN)     :: MeshFile                            !< The file names containing blade mesh information (for now, the aerodyn primary file)
    INTEGER(IntKi),         INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
 
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat                             !< The error ID
@@ -1503,14 +1501,7 @@ SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, InputFileData, UnEc, ErrStat, Er
 
 
       ! Get the blade discretization here:
-   IF ( len_trim(MeshFile) == 0 ) THEN
-      InputFileData%InpBlMesh(1)%BldNodes = InputFileData%BldNodes
-   ELSE
-         ! we will get the discretization from AeroDyn's input file
-      CALL ReadBladeMeshFileAD( InputFileData%InpBlMesh(1), MeshFile, UnEc, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-   END IF
+   InputFileData%InpBlMesh(1)%BldNodes = InputFileData%BldNodes
 
 
       ! Read the input file(s) for all of the blades:
@@ -1854,176 +1845,6 @@ CONTAINS
    END SUBROUTINE Cleanup
    
 END SUBROUTINE ReadBladeFile
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads in the AeroDyn v14.00.00 input file to get the
-!! blade discretization used in the structural dynamics module.
-SUBROUTINE ReadBladeMeshFileAD( BladeKInputFileMesh, MeshFile, UnEc, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      ! Passed variables
-
-   TYPE(ED_BladeMeshInputData),   INTENT(INOUT)  :: BladeKInputFileMesh                 !< All the data in the ElastoDyn input file
-   CHARACTER(*),                  INTENT(IN)     :: MeshFile                            !< Name of the AeroDyn input file data (for mesh)
-
-   INTEGER(IntKi),                INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
-   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             !< Error status
-   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              !< Error message
-
-      ! Local variables:
-   INTEGER(IntKi), PARAMETER    :: NInputCols = 4                                       ! Number of input columns to be read from the file
-   REAL(ReKi)                   :: TmpRAry(NInputCols)                                  ! Temporary variable to read table from file
-   INTEGER(IntKi)               :: I                                                    ! loop counter
-   INTEGER(IntKi)               :: NumLin2Skp                                           ! number of lines to read
-   INTEGER(IntKi)               :: NumFoil                                              ! number of airfoil lines to skip in the AD input file.
-   INTEGER(IntKi)               :: UnIn                                                 ! Unit number for reading file
-
-   INTEGER(IntKi)               :: ErrStat2                                             ! Temporary Error status
-   CHARACTER(ErrMsgLen)         :: ErrMsg2                                              ! Temporary Err msg
-   CHARACTER(*), PARAMETER      :: RoutineName = 'ReadBladeMeshFileAD'
-   CHARACTER(1024)              :: Line                                                 ! Temporary string.
-!   CHARACTER(1024)              :: TmpStr(1)                                            ! Temporary string.
-
-
-
-      ! Get an available unit number for the file.
-
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Open the AeroDyn input file.
-
-   CALL OpenFInpFile ( UnIn, MeshFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-
-      ! Add a separator to the echo file if appropriate.
-
-   IF ( UnEc > 0 )  WRITE (UnEc,'(//,A,/)')  'Mesh input data from (AeroDyn input) file "'//TRIM( MeshFile )//'":'
-
-
-   !  -------------- HEADER -------------------------------------------------------
-   ! BJJ: This file is AeroDyn's input file. Until we decide on a format for the
-   ! structural dynamics input, we will get this information from AeroDyn like we
-   ! used to.
-
-   DO I = 1,9
-      CALL ReadCom ( UnIn, MeshFile, 'AeroDyn input (for structural dynamics mesh)', ErrStat2, ErrMsg2  )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   END DO
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   END IF
-
-      ! See if the next line is "NEWTOWER".  If it is, read 7 more lines.  If not, read 5 more lines.
-
-   CALL ReadVar( UnIn, MeshFile, Line, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! Check if this is the "special string" to indicate the new tower influence model
-
-   CALL Conv2UC( Line )
-   IF ( INDEX(Line, "NEWTOWER" ) > 0 ) THEN
-      NumLin2Skp = 7
-   ELSE
-      NumLin2Skp = 5
-   END IF
-
-   DO I = 1,NumLin2Skp
-      CALL ReadCom ( UnIn, MeshFile, 'AeroDyn input (for structural dynamics mesh)', ErrStat2, ErrMsg2  )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   END DO
-
-   CALL ReadVar ( UnIn, MeshFile, NumFoil, 'NumFoil', &
-                  'Number of airfoil lines to skip in AeroDyn input (for structural dynamics mesh)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   DO I = 1,NumFoil
-      CALL ReadCom ( UnIn, MeshFile, 'AeroDyn input (for structural dynamics mesh)', ErrStat2, ErrMsg2  )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   END DO
-
-
-  !  -------------- Blade Mesh Data --------------------------------------------------
-
-      ! Read in the number of blade elements
-   CALL ReadVar( UnIn, MeshFile, BladeKInputFileMesh%BldNodes, 'BldNodes', 'Number of blade elements', ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! Allocate the arrays to store input
-   CALL Alloc_BladeMeshInputProperties( BladeKInputFileMesh, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! Read comment line for the element table
-   CALL ReadCom( UnIn, MeshFile, 'Blade element table headers', ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   DO I = 1, BladeKInputFileMesh%BldNodes
-
-      CALL ReadAry( UnIn, MeshFile, TmpRAry, NInputCols, 'Blade element line'//TRIM(Num2LStr(I)), 'Blade element input table', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         BladeKInputFileMesh%RNodes(  I) = TmpRAry(1)
-         BladeKInputFileMesh%AeroTwst(I) = TmpRAry(2)*D2R  !Convert input file data (degrees) to radians
-         BladeKInputFileMesh%Chord(   I) = TmpRAry(4)
-
-   END DO
-
-      !bjj: move this to a validation routine if we plan to keep AD14 stuff in ElastoDyn:
-   IF ( ANY( BladeKInputFileMesh%Chord < 0.0_ReKi ) ) THEN
-      call SetErrStat( ErrID_Fatal, 'Chord length must be larger than 0 meters.', ErrStat, ErrMsg, RoutineName )
-      RETURN
-   END IF
-
-
-      ! Close the input file:
-
-   CALL cleanup() 
-   RETURN
-
-
-CONTAINS
-   SUBROUTINE Cleanup()
-      CLOSE( UnIn )
-   END SUBROUTINE Cleanup
-END SUBROUTINE ReadBladeMeshFileAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the furling file input and converts units as appropriate.
 SUBROUTINE ReadFurlFile( FurlFile, InputFileData, UnEc, ErrStat, ErrMsg  )
