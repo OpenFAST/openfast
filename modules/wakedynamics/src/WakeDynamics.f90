@@ -25,6 +25,7 @@
 module WakeDynamics
     
    use NWTC_Library
+   use VTK
    use WakeDynamics_Types
      
    implicit none
@@ -1634,9 +1635,9 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 !                dx(3) = p%dr
 !                call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
 !                call vtk_point_data_init(mvtk)
-!                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-!                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-!                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+!                call vtk_point_data_scalar(xd%Vx_wake2(:,:,i),'Vx',mvtk)
+!                call vtk_point_data_scalar(xd%Vy_wake2(:,:,i),'Vy',mvtk)
+!                call vtk_point_data_scalar(xd%Vz_wake2(:,:,i),'Vz',mvtk)
 !                call vtk_close_file(mvtk)
 !             endif
 
@@ -1660,7 +1661,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                 call vtk_point_data_scalar(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
              endif
              if (p%WAT) then
-                call vtk_point_data_scalar_2D(y%WAT_k_mt(:,:,i),'k_mt', mvtk) 
+                call vtk_point_data_scalar(y%WAT_k_mt(:,:,i),'k_mt', mvtk)
              endif             
              call vtk_close_file(mvtk)
           endif
