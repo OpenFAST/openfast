@@ -21,7 +21,7 @@
 MODULE AeroDyn_IO
  
    use NWTC_Library
-   use AeroDyn_Output_Params
+   use AeroDyn_IO_Params
    use AeroDyn_Types
    use BEMTUncoupled, only : VelocityIsZero
    use FVW_Subs,      only : FVW_AeroOuts

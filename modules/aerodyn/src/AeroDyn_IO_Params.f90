@@ -1,4 +1,4 @@
-module AeroDyn_Output_Params
+module AeroDyn_IO_Params
    use NWTC_Library
 
        ! Indices for computing output channels:
@@ -2476,4 +2476,4 @@ module AeroDyn_Output_Params
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
 
 
-end module AeroDyn_Output_Params
+end module AeroDyn_IO_Params

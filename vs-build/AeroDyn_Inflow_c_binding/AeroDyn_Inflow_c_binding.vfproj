@@ -257,7 +257,7 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_IO.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Output_Params.f90">
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_IO_Params.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
 		<Filter Name="AirFoil_Info">
