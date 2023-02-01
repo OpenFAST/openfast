@@ -38,6 +38,7 @@ set(AEROACOUSTIC_SOURCES
 # AeroDyn lib
 set(AD_LIBS_SOURCES
   src/AeroDyn.f90
+  src/AeroDyn_Output_Params.f90
   src/AeroDyn_IO.f90
   src/AeroDyn_AllBldNdOuts_IO.f90
   src/BEMT.f90

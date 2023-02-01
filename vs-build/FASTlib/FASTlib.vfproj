@@ -456,6 +456,7 @@
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_AllBldNdOuts_IO.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Inflow.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_IO.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Output_Params.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\BEMT.f90"/>
 		<File RelativePath="..\..\modules\aerodyn\src\BEMTUncoupled.f90"/>
