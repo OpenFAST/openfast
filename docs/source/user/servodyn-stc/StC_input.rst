@@ -107,7 +107,7 @@ StC Degrees of Freedom
 
    DOF mode   {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF
    (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD;
-   4: Prescribed force/moment time series}
+   4: Prescribed force/moment time series; 5: Force determined by external DLL}
 
 
 **StC_X_DOF** [flag]
@@ -310,7 +310,8 @@ StructCtrl Control
 
 **StC_CMODE** [switch]
 
-   Control mode   {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}
+   Control mode   {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode}.
+   When using StC_DOF_MODE==5, StC_CMODE must be 2.
 
 **StC_SA_MODE** [-]
 
@@ -425,7 +426,8 @@ when* **StC_DOF_MODE==4**.
 
 **PrescribedForcesCoord** [switch]
 
-   Prescribed forces are in global or local coordinates   {1: global; 2: local}
+   Prescribed forces are in global or local coordinates  {1: global; 2: local}.  
+   When using StC_DOF_MODE==5, PrescribedForcesCoord must be 1.
 
 **PrescribedForcesFile** [-]
 
