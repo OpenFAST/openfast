@@ -50,6 +50,7 @@ MODULE StrucCtrl
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_TLCD          = 3          !< tuned liquid column dampers !MEG & SP
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Prescribed    = 4          !< prescribed force series
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_ForceDLL      = 5          !< prescribed force series
 
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control
    INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_ActiveEXTERN    = 4          !< active control
@@ -971,6 +972,23 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                y%Mesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%M_P(1:3,i_pt))
             enddo
          endif
+      ELSEIF ( p%StC_DOF_MODE == DOFMode_ForceDLL ) THEN
+         !  Note that the prescribed force is applied the same to all Mesh pts
+         !  that are passed into this instance of the StC
+         if (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_GLOBAL) then
+            ! Global coords
+            do i_pt=1,p%NumMeshPts
+               y%Mesh(i_pt)%Force(1:3,1)  =  m%F_ext(1:3,i_pt)
+               y%Mesh(i_pt)%Moment(1:3,1) =  0
+            enddo
+         ! Leave in per Andy's suggestion
+         ! elseif (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_LOCAL) then
+         !    ! local coords
+         !    do i_pt=1,p%NumMeshPts
+         !       y%Mesh(i_pt)%Force(1:3,1)  =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%F_P(1:3,i_pt))
+         !       y%Mesh(i_pt)%Moment(1:3,1) =  matmul(transpose(u%Mesh(i_pt)%Orientation(:,:,1)), m%M_P(1:3,i_pt))
+         !    enddo
+         endif
       END IF
 
       ! Set output values for the measured displacements for  
@@ -1256,7 +1274,7 @@ SUBROUTINE StC_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
             dxdt%StC_x(6,i_pt) = 0.0_ReKi ! Z is off
          enddo
 
-      ELSE IF ( p%StC_DOF_MODE == DOFMode_Prescribed ) THEN
+      ELSE IF ( p%StC_DOF_MODE == DOFMode_Prescribed .or. p%StC_DOF_MODE == DOFMode_ForceDLL) THEN
       ! if prescribed forces, there are no states to advance, so return
          do i_pt=1,p%NumMeshPts
             dxdt%StC_x(1,i_pt) = 0
@@ -2139,9 +2157,10 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
          InputFileData%StC_DOF_MODE /= DOFMode_Indept       .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_Omni         .and. &
          InputFileData%StC_DOF_MODE /= DOFMode_TLCD         .and. &
-         InputFileData%StC_DOF_MODE /= DOFMode_Prescribed) &
+         InputFileData%StC_DOF_MODE /= DOFMode_Prescribed   .and. &
+         InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) &
       CALL SetErrStat( ErrID_Fatal, 'DOF mode (StC_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), '// &
-               'or 2 (omni-directional), or 3 (TLCD), or 4 (prescribed force time-series).', ErrStat, ErrMsg, RoutineName )
+               'or 2 (omni-directional), or 3 (TLCD), 4 (prescribed force time-series), or 5 (force from external DLL).', ErrStat, ErrMsg, RoutineName )
 
       ! Check control modes
    IF (  InputFileData%StC_CMODE /= ControlMode_None     .and. &
@@ -2153,9 +2172,12 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
 
       ! Check control channel
    if ( InputFileData%StC_CMode == CMODE_ActiveDLL ) then
-      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and.  InputFileData%StC_DOF_MODE /= DOFMode_Omni ) then
+      if ( InputFileData%StC_DOF_MODE /= DOFMode_Indept .and. &
+           InputFileData%StC_DOF_MODE /= DOFMode_Omni   .and. &
+           InputFileData%StC_DOF_MODE /= DOFMode_ForceDLL) then
          call SetErrStat( ErrID_Fatal, 'Control mode 4 (active with Simulink control), or 5 (active with DLL control) '// &
-               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
+               'can only be used with independent or omni DOF (StC_DOF_Mode=1 or 2) or force from external DLL '// &
+               '(StC_DOF_Mode = 5) in this version of StrucCtrl.', ErrStat, ErrMsg, RoutineName )
       endif
       if (InitInp%NumMeshPts > 1) then
          do i=2,InitInp%NumMeshPts  ! Warn if controlling multiple mesh points with single instance (blade TMD)
