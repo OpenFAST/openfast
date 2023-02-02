@@ -2213,6 +2213,21 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       endif
    endif
 
+      ! DLL Force - not sure if necessary, but nothing happens if these inputs are incorrect
+   if (InputFileData%StC_DOF_MODE == DOFMode_ForceDLL) then
+      
+      ! Need global force coord
+      if (InputFileData%PrescribedForcesCoordSys /= PRESCRIBED_FORCE_GLOBAL) THEN
+         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be '//trim(Num2LStr(PRESCRIBED_FORCE_GLOBAL))//   &
+                                 ' when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
+      endif
+
+      ! Need active DLL control
+      if (InputFileData%StC_CMODE /= CMODE_ActiveDLL) THEN
+         call SetErrStat( ErrID_Fatal, 'StC_CMODE must be '//trim(Num2LStr(CMODE_ActiveDLL))//   &
+                                 ' when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
+      endif
+   endif
 
       ! Check masses make some kind of sense
    if (InputFileData%StC_DOF_MODE == DOFMode_Indept .and. InputFileData%StC_X_DOF .and. (InputFileData%StC_X_M <= 0.0_ReKi) )    & 
