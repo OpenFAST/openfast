@@ -981,7 +981,7 @@ SUBROUTINE StC_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                y%Mesh(i_pt)%Force(1:3,1)  =  m%F_ext(1:3,i_pt)
                y%Mesh(i_pt)%Moment(1:3,1) =  0
             enddo
-         ! Leave in per Andy's suggestion
+         ! Leave in for now just in case we decide there is a use case for a follower force from the DLL
          ! elseif (p%PrescribedForcesCoordSys == PRESCRIBED_FORCE_LOCAL) then
          !    ! local coords
          !    do i_pt=1,p%NumMeshPts
@@ -2218,8 +2218,8 @@ subroutine    StC_ValidatePrimaryData( InputFileData, InitInp, ErrStat, ErrMsg )
       
       ! Need global force coord
       if (InputFileData%PrescribedForcesCoordSys /= PRESCRIBED_FORCE_GLOBAL) THEN
-         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be '//trim(Num2LStr(PRESCRIBED_FORCE_GLOBAL))//   &
-                                 ' when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'PrescribedForcesCoordSys must be global ('//trim(Num2LStr(PRESCRIBED_FORCE_GLOBAL))//   &
+                                 ') when StC_DOF_MODE is '//trim(Num2LStr(DOFMode_ForceDLL)) , ErrStat, ErrMsg, RoutineName )
       endif
 
       ! Need active DLL control
