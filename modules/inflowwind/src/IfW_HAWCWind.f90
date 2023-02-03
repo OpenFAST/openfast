@@ -269,7 +269,8 @@ SUBROUTINE ReadTurbulenceData(p, InitInp, ErrStat, ErrMsg)
          CALL SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName) 
          IF (ErrStat >= AbortErrLev) RETURN
 
-      DO IX = 1,p%FF%NFFSteps
+      ! DO IX = p%FF%NFFSteps,1,-1 ! This order fixes #256
+      DO IX = 1,p%FF%NFFSteps    ! This order is wrong (has been in dev and hawc2 for a while now)
          DO IY = p%FF%NYGrids,1,-1
             !DO IZ = 1,p%FF%NZGrids
 
