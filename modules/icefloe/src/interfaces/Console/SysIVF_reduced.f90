@@ -56,7 +56,7 @@ MODULE SysSubs
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
    INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
@@ -128,8 +128,6 @@ CONTAINS
 
 
    CALL FLUSH ( INT(Unit, B4Ki) )
-!bjj: ADAMS does not compile well with this, so I'll put it back to the subroutine form:
-!   FLUSH ( Unit )
 
 
    RETURN

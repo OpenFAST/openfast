@@ -85,9 +85,6 @@ contains
 !   !              the DOF, respectively.  Turning off the DOF forces the
 !   !              current RATE to remain fixed.  If the rate is currently zero,
 !   !              the current POSITION will remain fixed as well.
-!   !       Note that this technique WILL NOT work for user-defined routines
-!   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-!   !       preprocessor.
 !
 !
 !USE                             Precision
@@ -148,9 +145,6 @@ SUBROUTINE UserHSSBr ( GenTrq, ElecPwr, HSS_Spd, NumBl, ZTime, DT, DirRoot, HSSB
    !              the DOF, respectively.  Turning off the DOF forces the
    !              current RATE to remain fixed.  If the rate is currently zero,
    !              the current POSITION will remain fixed as well.
-   !       Note that this technique WILL NOT work for user-defined routines
-   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-   !       preprocessor.
 
 
 USE                             Precision
@@ -174,7 +168,7 @@ CHARACTER(1024), INTENT(IN ) :: DirRoot                                         
 
 
 
-HSSBrFrac = 0.0   ! NOTE: This must be specified as a real number between 0.0 (off - no brake torque) and 1.0 (full - max brake torque = HSSBrTqF); FAST/ADAMS will Abort otherwise.
+HSSBrFrac = 0.0   ! NOTE: This must be specified as a real number between 0.0 (off - no brake torque) and 1.0 (full - max brake torque = HSSBrTqF); FAST will Abort otherwise.
 
 
 
@@ -256,9 +250,6 @@ END SUBROUTINE UserTFin
 !   !              the DOF, respectively.  Turning off the DOF forces the
 !   !              current RATE to remain fixed.  If the rate is currently zero,
 !   !              the current POSITION will remain fixed as well.
-!   !       Note that this technique WILL NOT work for user-defined routines
-!   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-!   !       preprocessor.
 !
 !
 !USE                             Precision
@@ -419,10 +410,7 @@ SUBROUTINE UserYawCont ( YawPos, YawRate, WindDir, YawError, NumBl, ZTime, DT, D
    !              setting YawDOF to False.
    !       This technique is useful, for example, if the yaw bearing has
    !       an electromagnetic latch that will unlock and relock the hinge under
-   !       certain specified conditions.
-   !       Note that this technique WILL NOT work for user-defined routines
-   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-   !       preprocessor.
+   !       certain specified conditions..
 
 
 USE                             Precision
