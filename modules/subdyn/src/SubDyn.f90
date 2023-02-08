@@ -566,39 +566,14 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! We know that the Guyan modes are rigid body modes.
          ! We will add them in the "Full system" later
       endif
-      !m%UL_NS = m%UL ! Store the internal displacements without SIM
+      m%UL_NS = m%UL ! TODO TODO TODO remove SIM later
+
       ! --- Build original DOF vectors ("full" prior to constraints and CB)
-!       m%U_red       (p%IDI__) = m%UR_bar
-!       m%U_red       (p%ID__L) = m%UL     
-!       m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-!       m%U_red       (p%ID__F) = 0
-!       m%U_red_dot   (p%IDI__) = m%UR_bar_dot
-!       m%U_red_dot   (p%ID__L) = m%UL_dot     
-!       m%U_red_dot   (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-!       m%U_red_dot   (p%ID__F) = 0
-!       m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
-!       m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
-!       m%U_red_dotdot(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-!       m%U_red_dotdot(p%ID__F) = 0
-! 
-!       if (p%reduced) then
-!          m%U_full        = matmul(p%T_red, m%U_red)
-!          m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
-!          m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
-!       else
-!          m%U_full        = m%U_red
-!          m%U_full_dot    = m%U_red_dot
-!          m%U_full_dotdot = m%U_red_dotdot
-!       endif
-      ! 
       call ReducedToFull(p, m, m%UR_bar        , m%UL       , m%U_full       )
       call ReducedToFull(p, m, m%UR_bar_dot    , m%UL_dot   , m%U_full_dot   )
       call ReducedToFull(p, m, m%UR_bar_dotdot,  m%UL_dotdot, m%U_full_dotdot)
-
-
-
-      ! Do the same for the Displacements without SIM
-
+      ! Do the same for the displacements without SIM
+      call ReducedToFull(p, m, m%UR_bar        , m%UL_NS    , m%U_full_NS    )
 
       ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
       m%U_full_elast  = m%U_full
@@ -621,6 +596,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
             ! Full displacements CB-rotated + Guyan (KEEP ME) >>> Rotate All
             if (p%GuyanLoadCorrection) then
+               m%U_full_NS    (DOFList(1:3)) = matmul(Rb2g, m%U_full_NS    (DOFList(1:3))) + duP(1:3)       
+               m%U_full_NS    (DOFList(4:6)) = matmul(Rb2g, m%U_full_NS    (DOFList(4:6))) + rotations(1:3)
                m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
                m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
                m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
@@ -628,6 +605,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
                m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
             else
+               m%U_full_NS    (DOFList(1:3)) = m%U_full_NS    (DOFList(1:3)) + duP(1:3)       
+               m%U_full_NS    (DOFList(4:6)) = m%U_full_NS    (DOFList(4:6)) + rotations(1:3)
                m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
                m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
                m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
@@ -643,10 +622,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
             y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! NOTE: using only the Guyan Displacements
             ! --- Full elastic displacements for others (moordyn)
-            call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            call SmllRotTrans( 'UR_bar input angles', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
-            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3))
             ! --- Elastic velocities and accelerations 
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
@@ -659,12 +638,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
             DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
             ! TODO TODO which orientation to give for joints with more than 6 dofs?
             ! Construct the direction cosine matrix given the output angles
-            CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            CALL SmllRotTrans( 'UR_bar input angles', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
-            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3))
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
-            y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3))
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
             y%Y2mesh%RotationVel     (:,iSDNode)     = m%U_full_dot    (DOFList(4:6))
@@ -678,6 +657,17 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          y%Y3mesh%TranslationAcc  (:,iSDNode)     = y%Y2mesh%TranslationAcc  (:,iSDNode)
          y%Y3mesh%RotationVel     (:,iSDNode)     = y%Y2mesh%RotationVel     (:,iSDNode)
          y%Y3mesh%RotationAcc     (:,iSDNode)     = y%Y2mesh%RotationAcc     (:,iSDNode)
+      enddo
+
+      ! --- Temporary sanity check
+      do iSDNode = 1,p%nNodes
+         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+         do i = 1,6
+            if ( abs(m%U_full(DOFList(I)) - m%U_full_NS(DOFList(I)) )>1e-12) then
+               print*,'>>>> Error too big', I, iSDNode
+               STOP
+            endif
+         enddo
       enddo
                                     
       ! --------------------------------------------------------------------------------
@@ -2766,12 +2756,9 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_NS,    p%nDOF,      'U_full_NS',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_elast, p%nDOF,      'U_full_elast',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_full_elast_NS, p%nDOF,   'U_full_elast_NS',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,  'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,  'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
@@ -3101,15 +3088,7 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
       m%UR_bar = 0.0_ReKi
    endif
    ! --- Build original DOF vectors (DOF before the CB reduction)
-   m%U_red(p%IDI__) = m%UR_bar
-   m%U_red(p%ID__L) = m%UL     
-   m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-   m%U_red(p%ID__F) = 0
-   if (p%reduced) then
-      DU_full = matmul(p%T_red, m%U_red)
-   else
-      DU_full = m%U_red
-   endif
+   call ReducedToFull(p, m, m%UR_bar, m%UL, DU_full)
    ! --- Adding Guyan contribution for rigid body
    if (bGuyan .and. p%Floating) then
       ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
