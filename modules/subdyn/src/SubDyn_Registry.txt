@@ -144,14 +144,17 @@ typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -
 typedef  ^    MiscVarType    ReKi           UR_bar        {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dotdot {:}  -  -  
-typedef  ^    MiscVarType    ReKi           UL            {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UL            {:}  -  -  "Internal DOFs (L) displacements " 
+typedef  ^    MiscVarType    ReKi           UL_NS         {:}  -  -  "Internal DOFs (L) displacements, No SIM (NS)" 
 typedef  ^    MiscVarType    ReKi           UL_dot        {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UL_dotdot     {:}  -  -  
-typedef  ^    MiscVarType    ReKi           DU_full       {:}  -  -  "Delta U used for extra moment" 
-typedef  ^    MiscVarType    ReKi           U_full        {:}  -  -  
+typedef  ^    MiscVarType    ReKi           DU_full       {:}  -  -  "Delta U used for extra moment, size nDOF" 
+typedef  ^    MiscVarType    ReKi           U_full        {:}  -  -  "Displacement of all DOFs (full system) with SIM"
+typedef  ^    MiscVarType    ReKi           U_full_NS     {:}  -  -  "Displacement of all DOFs (full system), No SIM (NS)"
 typedef  ^    MiscVarType    ReKi           U_full_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_full_dotdot {:}  -  -  
-typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating)"
+typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating), includes SIM"
+typedef  ^    MiscVarType    ReKi           U_full_elast_NS {:} - -  "Elastic displacements (no Guyan for floating), No SIM (NS)"
 typedef  ^    MiscVarType    ReKi           U_red          {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_red_dot      {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_red_dotdot   {:}  -  -  

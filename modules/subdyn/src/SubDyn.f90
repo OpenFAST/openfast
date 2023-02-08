@@ -566,29 +566,39 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! We know that the Guyan modes are rigid body modes.
          ! We will add them in the "Full system" later
       endif
-      ! --- Build original DOF vectors (DOF before the CB reduction)
-      m%U_red       (p%IDI__) = m%UR_bar
-      m%U_red       (p%ID__L) = m%UL     
-      m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red       (p%ID__F) = 0
-      m%U_red_dot   (p%IDI__) = m%UR_bar_dot
-      m%U_red_dot   (p%ID__L) = m%UL_dot     
-      m%U_red_dot   (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red_dot   (p%ID__F) = 0
-      m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
-      m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
-      m%U_red_dotdot(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red_dotdot(p%ID__F) = 0
+      !m%UL_NS = m%UL ! Store the internal displacements without SIM
+      ! --- Build original DOF vectors ("full" prior to constraints and CB)
+!       m%U_red       (p%IDI__) = m%UR_bar
+!       m%U_red       (p%ID__L) = m%UL     
+!       m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+!       m%U_red       (p%ID__F) = 0
+!       m%U_red_dot   (p%IDI__) = m%UR_bar_dot
+!       m%U_red_dot   (p%ID__L) = m%UL_dot     
+!       m%U_red_dot   (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+!       m%U_red_dot   (p%ID__F) = 0
+!       m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
+!       m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
+!       m%U_red_dotdot(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+!       m%U_red_dotdot(p%ID__F) = 0
+! 
+!       if (p%reduced) then
+!          m%U_full        = matmul(p%T_red, m%U_red)
+!          m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
+!          m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
+!       else
+!          m%U_full        = m%U_red
+!          m%U_full_dot    = m%U_red_dot
+!          m%U_full_dotdot = m%U_red_dotdot
+!       endif
+      ! 
+      call ReducedToFull(p, m, m%UR_bar        , m%UL       , m%U_full       )
+      call ReducedToFull(p, m, m%UR_bar_dot    , m%UL_dot   , m%U_full_dot   )
+      call ReducedToFull(p, m, m%UR_bar_dotdot,  m%UL_dotdot, m%U_full_dotdot)
 
-      if (p%reduced) then
-         m%U_full        = matmul(p%T_red, m%U_red)
-         m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
-         m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
-      else
-         m%U_full        = m%U_red
-         m%U_full_dot    = m%U_red_dot
-         m%U_full_dotdot = m%U_red_dotdot
-      endif
+
+
+      ! Do the same for the Displacements without SIM
+
 
       ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
       m%U_full_elast  = m%U_full
@@ -2749,11 +2759,14 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UL,           p%nDOF__L,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_NS,        p%nDOF__L,   'UL_NS',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dotdot,    p%nDOF__L,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%DU_full,      p%nDOF,      'DU_full',       ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full_NS,    p%nDOF,      'U_full_NS',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_elast, p%nDOF,      'U_full_elast',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full_elast_NS, p%nDOF,   'U_full_elast_NS',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
@@ -3018,6 +3031,34 @@ contains
    END SUBROUTINE CleanUp
    
 END SUBROUTINE PartitionDOFNodes
+
+
+!> Setup the vector of reduced DOFs based on R and L values, and transfer to full vector of DOFs
+!! Reminder "reduced" here means the reduction due to constraints (rigid links and rotational joints)
+!! This is a generic function, "x" can be used for displacements, velocities, accelerations
+!! m%U_red is only used as a intermediate storage
+SUBROUTINE ReducedToFull(p, m, xR_bar, xL, x_full)
+   TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
+   TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xR_bar      !< Values of "x" interface nodes (6xnI)
+   REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xL          !< Values of "x" internal nodes
+   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: x_full      !< Values of "x" transferred to full vector of DOF
+   if (p%reduced) then
+      ! Filling up full vector of reduced DOF
+      m%U_red(p%IDI__) = xR_bar
+      m%U_red(p%ID__L) = xL     
+      m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      m%U_red(p%ID__F) = 0
+      ! Transfer to full 
+      x_full = matmul(p%T_red, m%U_red) ! TODO use LAPACK
+   else
+      ! We use U_full directly
+      x_full(p%IDI__) = xR_bar
+      x_full(p%ID__L) = xL     
+      x_full(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      x_full(p%ID__F) = 0
+   endif
+END SUBROUTINE ReducedToFull
 
 !> Compute displacements of all nodes in global system (Guyan + Rotated CB)
 !! 
