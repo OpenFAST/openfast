@@ -556,6 +556,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! We know that the Guyan modes are rigid body modes.
          ! We will add them in the "Full system" later
       endif
+      m%UL_NS = m%UL ! Storing displacements without SIM
       ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
          FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
@@ -566,13 +567,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          end if          
          m%UL = m%UL + ULS 
       endif    
-      m%UL_NS = m%UL ! TODO TODO TODO remove SIM later
 
-      ! --- Build original DOF vectors ("full" prior to constraints and CB)
+      ! --- Build original DOF vectors ("full", prior to constraints and CB)
       call ReducedToFull(p, m, m%UR_bar        , m%UL       , m%U_full       )
       call ReducedToFull(p, m, m%UR_bar_dot    , m%UL_dot   , m%U_full_dot   )
       call ReducedToFull(p, m, m%UR_bar_dotdot,  m%UL_dotdot, m%U_full_dotdot)
-      ! Do the same for the displacements without SIM
+      ! Do the same for the displacements without SIM. We'll use those for Y3 mesh
       call ReducedToFull(p, m, m%UR_bar        , m%UL_NS    , m%U_full_NS    )
 
       ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
@@ -659,17 +659,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          y%Y3mesh%RotationAcc     (:,iSDNode)     = y%Y2mesh%RotationAcc     (:,iSDNode)
       enddo
 
-      ! --- Temporary sanity check
-      do iSDNode = 1,p%nNodes
-         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-         do i = 1,6
-            if ( abs(m%U_full(DOFList(I)) - m%U_full_NS(DOFList(I)) )>1e-12) then
-               print*,'>>>> Error too big', I, iSDNode
-               STOP
-            endif
-         enddo
-      enddo
-                                    
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
