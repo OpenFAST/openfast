@@ -543,16 +543,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )    + matmul( p%C2_62   , x%qmdot )    & 
                          + matmul( p%D2_63, udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
       end if
-      ! Static improvement (modify UL)
-      if (p%SttcSolve/=idSIM_None) then
-         FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
-         ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
-         if ( p%nDOFM > 0) then
-            UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-            ULS = ULS-UL0M
-         end if          
-         m%UL = m%UL + ULS 
-      endif    
       ! --- Adding Guyan contribution to R and L DOFs
       if (.not.p%Floating) then
          ! Then we add the Guyan motion here
@@ -566,6 +556,16 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! We know that the Guyan modes are rigid body modes.
          ! We will add them in the "Full system" later
       endif
+      ! Static improvement (modify UL)
+      if (p%SttcSolve/=idSIM_None) then
+         FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
+         ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
+         if ( p%nDOFM > 0) then
+            UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
+            ULS = ULS-UL0M
+         end if          
+         m%UL = m%UL + ULS 
+      endif    
       m%UL_NS = m%UL ! TODO TODO TODO remove SIM later
 
       ! --- Build original DOF vectors ("full" prior to constraints and CB)
