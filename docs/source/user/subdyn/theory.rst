@@ -1842,7 +1842,7 @@ Similar considerations apply for Eq. :eq:`bigY2`.
 
 
 The coupling load :math:`F_{{TP},cpl}` given in Eq. :eq:`bigY1` corresponds to the rection force at the TP reference position. 
-In the "free boundary condition" case, there is no need to correct this output load since the reference position is at the deflected position.
+In the "free boundary condition" (floating) case, there is no need to correct this output load since the reference position is at the deflected position.
 For the "fixed boundary condition" case, the reference position does not correspond to the deflected position, so the reaction moment needs to be transfered to the deflected position as follows:
 
 .. math::

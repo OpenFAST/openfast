@@ -520,7 +520,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Y2Mesh: rigidbody displacements            , elastic velocities and accelerations on all FEM nodes
       ! Y3Mesh: elastic   displacements without SIM, elastic velocities and accelerations on all FEM nodes
 
-      ! External force on internal nodes (F_L)
+      ! External force on internal nodes (m%F_L) based on LMesh + FG (grav+cable) + controllable cables
       ! - We only apply the lever arm for       (fixed-bottom case + GuyanLoadCorrection)
       ! - We only rotate the external loads for (floating case + GuyanLoadCorrection)
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating)); if(Failed()) return
@@ -590,7 +590,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%U_full_dotdot = m%U_red_dotdot
       endif
 
-      ! Storing elastic motion (full motion for fixed bottom, CB motion only for floating)
+      ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
       m%U_full_elast  = m%U_full
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
@@ -3094,7 +3094,7 @@ END SUBROUTINE LeverArm
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
-!! First, the full vector of external forces is built on the non-reduced DOF
+!! First, the full vector of external forces/moments is built on the non-reduced DOF
 !! Then, the vector is reduced using the T_red matrix
 SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadCorrection, RotateLoads)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
@@ -3208,7 +3208,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
 
    ! --- Reduced vector of external force
    if (p%reduced) then
-      m%Fext_red = matmul(p%T_red_T, m%Fext)
+      m%Fext_red = matmul(p%T_red_T, m%Fext) ! TODO use LAPACK
       F_L= m%Fext_red(p%ID__L)
    else
       F_L= m%Fext(p%ID__L)
