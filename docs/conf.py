@@ -28,7 +28,7 @@ builddir = sys.argv[-1]
 sourcedir = sys.argv[-2]
 
 # Use this to turn Doxygen on or off
-useDoxygen = True
+useDoxygen = False
 
 # This function was adapted from https://gitlab.kitware.com/cmb/smtk
 # Only run when on readthedocs
