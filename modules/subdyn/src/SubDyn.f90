@@ -470,9 +470,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !locals
       INTEGER(IntKi)               :: I          ! Counters
       INTEGER(IntKi)               :: iSDNode
-      REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! TODO Misc
       REAL(ReKi)                   :: rotations(3)
-      REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! TODO Misc Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
       REAL(ReKi)                   :: Y1_CB(6)
       REAL(ReKi)                   :: Y1_CB_L(6)
@@ -485,7 +483,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: DCM(3,3)
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
-      ! Variables for Guayn rigid body motion
+      ! Variables for Guyan rigid body motion
       real(ReKi), dimension(3) :: Om, OmD ! Omega, OmegaDot (body rotational speed and acceleration)
       real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
       real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
@@ -560,13 +558,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%UL_NS = m%UL ! Storing displacements without SIM
       ! Static improvement (modify UL)
       if (p%SttcSolve/=idSIM_None) then
-         FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
-         ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
+         m%F_L2    = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
+         m%UL_SIM  = MATMUL(p%PhiLInvOmgL2, m%F_L2)
          if ( p%nDOFM > 0) then
-            UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-            ULS = ULS-UL0M
+            m%UL_0m = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), m%F_L2(1:p%nDOFM)       )
+            m%UL_SIM = m%UL_SIM - m%UL_0m
          end if          
-         m%UL = m%UL + ULS
+         m%UL = m%UL + m%UL_SIM
       endif    
 
       ! --- Build original DOF vectors ("full", prior to constraints and CB)
@@ -765,11 +763,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF        
          
          ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
+         CALL SDOut_MapOutputs(u, p, x, y, m, m%AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
             
          ! Put the output data in the WriteOutput array
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+            y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
             IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
                m%SDWrOutput(I) = y%WriteOutput(I)            
             END IF                        
@@ -1828,7 +1826,6 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
    REAL(ReKi)                                      :: xq(2*p%nDOFM) !temporary states (qm and qmdot only)
    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
-   REAL(ReKi)                                      :: F_L2(p%nDOF__L)   ! temporary copy of F_L
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
 
@@ -1851,7 +1848,7 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, F_L2, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
+   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L2, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    if (p%GuyanLoadCorrection.and.p%Floating) then
       ! >>> Rotate All - udotdot_TP to body coordinates
@@ -1861,11 +1858,11 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
-   F_L2        = 0.5_ReKi * ( F_L2        + m%F_L        )
+   m%F_L2      = 0.5_ReKi * ( m%F_L2      + m%F_L        )
           
    ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
    xq(        1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                     !upper portion of array
-   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(F_L2,p%PhiM ))  !lower portion of array
+   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(m%F_L2,p%PhiM ))  !lower portion of array
    ! note: matmul(F_L2,p%PhiM  ) = matmul(p%PhiM_T,F_L2) because F_L2 is 1-D
              
    !....................................................
@@ -2735,6 +2732,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
       
    ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
    CALL AllocAry( Misc%F_L,          p%nDOF__L,   'F_L',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%F_L2,         p%nDOF__L,   'F_L2',          ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
@@ -2742,6 +2740,8 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
    CALL AllocAry( Misc%UL_NS,        p%nDOF__L,   'UL_NS',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dotdot,    p%nDOF__L,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_SIM,       p%nDOF__L,   'UL_SIM'   ,     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_0m,        p%nDOF__L,   'UL_0m',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%DU_full,      p%nDOF,      'DU_full',       ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_NS,    p%nDOF,      'U_full_NS',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
@@ -3027,7 +3027,7 @@ SUBROUTINE ReducedToFull(p, m, xR_bar, xL, x_full)
       m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
       m%U_red(p%ID__F) = 0
       ! Transfer to full 
-      x_full = matmul(p%T_red, m%U_red) ! TODO use LAPACK
+      x_full = matmul(p%T_red, m%U_red) ! TODO use LAPACK, but T_red and U_red have different types...
    else
       ! We use U_full directly
       x_full(p%IDI__) = xR_bar

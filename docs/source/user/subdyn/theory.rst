@@ -1935,9 +1935,9 @@ dynamic solution.
 The SIM formulation provides a correction for the displacements of the
 internal nodes. The uncorrected displacements are now noted :math:`{\hat{U}}_{L}`, while
 the corrected displacements are noted :math:`U_L`. The SIM correction
-consists in an additional term :math:`U_L` obtained by adding the total
-static deflection of all the internal
-DOFs (:math:`U_{L0}`), and subtracting the static deflection associated
+consists in an additional term :math:`U_{L,\text{SIM}}` obtained 
+as the static deflection of all the internal DOFs (:math:`U_{L0}`)
+minus the static deflection associated
 with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
 
 .. math::   :label: SIM
