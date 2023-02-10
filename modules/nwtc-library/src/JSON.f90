@@ -18,7 +18,10 @@
 !
 !**********************************************************************************************************************************
 module JSON
-   use Precision, only: IntKi, SiKi, R8Ki, QuKi
+   use Precision, only: IntKi, SiKi, R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
+   use Precision, only: QuKi
+#endif
    use NWTC_Base, only: ErrID_None, ErrID_Fatal
    use NWTC_IO, only: num2lstr
 
@@ -29,7 +32,9 @@ module JSON
       module procedure json_write_array2R4  ! Two dimension array of SiKi
       module procedure json_write_array2I   ! Two dimension array of IntKi
       module procedure json_write_array2R8  ! Two dimension array of R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
       module procedure json_write_array2R16 ! Two dimension array of QuKi
+#endif
    end interface
 
    private
@@ -168,6 +173,7 @@ subroutine json_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
    end if
 end subroutine json_write_array2R8
 
+#ifdef OPENFAST_DOUBLE_PRECISION
 subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
@@ -210,6 +216,6 @@ subroutine json_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, AllFmt)
       ErrMsg  = 'Error writing array '//trim(key)//' to JSON file'
    end if
 end subroutine json_write_array2R16
-
+#endif
 
 end module JSON

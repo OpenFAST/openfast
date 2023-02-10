@@ -47,14 +47,18 @@ MODULE SysSubs
    INTERFACE NWTC_ERF ! Returns the ERF value of its argument
       MODULE PROCEDURE NWTC_ERFR4
       MODULE PROCEDURE NWTC_ERFR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE NWTC_ERFR16
+#endif
    END INTERFACE
 
    INTERFACE NWTC_gamma ! Returns the gamma value of its argument
          ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
       MODULE PROCEDURE NWTC_gammaR4
       MODULE PROCEDURE NWTC_gammaR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE NWTC_gammaR16
+#endif
    END INTERFACE
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
@@ -131,6 +135,7 @@ FUNCTION NWTC_ERFR8( x )
 
 END FUNCTION NWTC_ERFR8
 !=======================================================================
+#ifdef OPENFAST_DOUBLE_PRECISION
 FUNCTION NWTC_ERFR16( x )
 
    ! Returns the ERF value of its argument. The result has a value equal  
@@ -142,6 +147,7 @@ FUNCTION NWTC_ERFR16( x )
    NWTC_ERFR16 = ERF( x )
 
 END FUNCTION NWTC_ERFR16
+#endif
 !=======================================================================
 FUNCTION NWTC_GammaR4( x )
 
@@ -167,6 +173,7 @@ FUNCTION NWTC_GammaR8( x )
 
 END FUNCTION NWTC_GammaR8
 !=======================================================================
+#ifdef OPENFAST_DOUBLE_PRECISION
 FUNCTION NWTC_GammaR16( x )
 
    ! Returns the gamma value of its argument. The result has a value equal  
@@ -178,6 +185,7 @@ FUNCTION NWTC_GammaR16( x )
    NWTC_GammaR16 = gamma( x )
 
 END FUNCTION NWTC_GammaR16
+#endif
 !=======================================================================
 SUBROUTINE FlushOut ( Unit )
 

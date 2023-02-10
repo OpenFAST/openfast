@@ -35,7 +35,9 @@ INTEGER, PARAMETER        :: LuxLevel       = 3       ! Luxury Level for RanLux 
 INTERFACE UniformRandomNumbers
 MODULE PROCEDURE UniformRandomNumbersR4   ! 4-byte reals
 MODULE PROCEDURE UniformRandomNumbersR8   ! 8-byte reals
+#ifdef OPENFAST_DOUBLE_PRECISION
 MODULE PROCEDURE UniformRandomNumbersR16  ! 16-byte reals
+#endif
 END INTERFACE
 
 CONTAINS
@@ -161,6 +163,7 @@ SUBROUTINE UniformRandomNumbersR8( pRNG_Type, RandomNumbers )
 END SUBROUTINE UniformRandomNumbersR8
 !=======================================================================
 !> \copydoc nwtc_randomnumber::uniformrandomnumbersr4
+#ifdef OPENFAST_DOUBLE_PRECISION
 SUBROUTINE UniformRandomNumbersR16( pRNG_Type, RandomNumbers )
 
    IMPLICIT NONE
@@ -186,5 +189,6 @@ SUBROUTINE UniformRandomNumbersR16( pRNG_Type, RandomNumbers )
    END IF
 
 END SUBROUTINE UniformRandomNumbersR16
+#endif
 
 END MODULE

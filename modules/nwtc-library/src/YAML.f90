@@ -18,7 +18,10 @@
 !
 !**********************************************************************************************************************************
 module YAML
-   use Precision, only: IntKi, SiKi, R8Ki, QuKi
+   use Precision, only: IntKi, SiKi, R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
+   use Precision, only: QuKi
+#endif
    use NWTC_Base, only: ErrID_None, ErrID_Fatal
    use NWTC_IO, only: num2lstr
 
@@ -34,8 +37,10 @@ module YAML
       module procedure yaml_write_array1R8  ! Single dimension array (Ary) of R8Ki
       module procedure yaml_write_array2R8  ! Two dimension array of R8Ki
       module procedure yaml_write_array2I   ! Two dimension array of IntKi
+#ifdef OPENFAST_DOUBLE_PRECISION
       module procedure yaml_write_array1R16 ! Single dimension array (Ary) of QuKi
       module procedure yaml_write_array2R16 ! Two dimension array of QuKi
+#endif
    end interface
 
    !> Write list to file
@@ -43,7 +48,9 @@ module YAML
       module procedure yaml_write_listI   ! Single dimension array (Ary) of IntKi
       module procedure yaml_write_listR4  ! Single dimension array (Ary) of SiKi
       module procedure yaml_write_listR8  ! Single dimension array (Ary) of R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
       module procedure yaml_write_listR16 ! Single dimension array (Ary) of QuKi
+#endif
    end interface
    
    !> Write variable to file
@@ -52,7 +59,9 @@ module YAML
       module procedure yaml_write_varI   ! IntKi
       module procedure yaml_write_varR4  ! SiKi
       module procedure yaml_write_varR8  ! R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
       module procedure yaml_write_varR16 ! QuKi
+#endif
    end interface
    private
 
@@ -189,6 +198,7 @@ subroutine yaml_write_varR8(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comme
    endif
 end subroutine yaml_write_varR8
 
+#ifdef OPENFAST_DOUBLE_PRECISION
 subroutine yaml_write_varR16(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comment)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Variable name
@@ -215,7 +225,7 @@ subroutine yaml_write_varR16(fid, key, val, VarFmt, ErrStat, ErrMsg, level, comm
       ErrMsg  = 'Error writing variable '//trim(key)//' to YAML file'
    endif
 end subroutine yaml_write_varR16
-
+#endif
 
 
 ! --------------------------------------------------------------------------------}
@@ -347,6 +357,7 @@ subroutine yaml_write_listR8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, commen
    end if
 end subroutine yaml_write_listR8
 
+#ifdef OPENFAST_DOUBLE_PRECISION
 subroutine yaml_write_listR16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< list name
@@ -388,6 +399,7 @@ subroutine yaml_write_listR16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comme
       ErrMsg  = 'Error writing list '//trim(key)//' to YAML file'
    end if
 end subroutine yaml_write_listR16
+#endif
 
 ! --------------------------------------------------------------------------------
 ! --- Write 1D array
@@ -506,6 +518,7 @@ subroutine yaml_write_array1R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    end if
 end subroutine yaml_write_array1R8
 
+#ifdef OPENFAST_DOUBLE_PRECISION
 subroutine yaml_write_array1R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
@@ -543,7 +556,7 @@ subroutine yaml_write_array1R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
       ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
 end subroutine yaml_write_array1R16
-
+#endif
 
 
 ! --------------------------------------------------------------------------------}
@@ -718,6 +731,7 @@ subroutine yaml_write_array2R8(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comm
    end if
 end subroutine yaml_write_array2R8
 
+#ifdef OPENFAST_DOUBLE_PRECISION
 subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, comment, AllFmt)
    integer(IntKi),             intent(in   ) :: fid     !< File Unit
    character(len=*),           intent(in   ) :: key     !< Array name
@@ -770,6 +784,6 @@ subroutine yaml_write_array2R16(fid, key, A, VarFmt, ErrStat, ErrMsg, level, com
       ErrMsg  = 'Error writing array '//trim(key)//' to YAML file'
    end if
 end subroutine yaml_write_array2R16
-
+#endif
 
 end module YAML

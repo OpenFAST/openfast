@@ -103,23 +103,23 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllLAry2
       MODULE PROCEDURE AllLAry3
    !   MODULE PROCEDURE AllLAry4                               Not yet coded.
-
       MODULE PROCEDURE AllR4Ary1       ! 1-dimensional array of SiKi reals
-      MODULE PROCEDURE AllR8Ary1       ! 1-dimensional array of R8Ki reals
-      MODULE PROCEDURE AllR16Ary1      ! 1-dimensional array of QuKi reals
       MODULE PROCEDURE AllR4Ary2       ! 2-dimensional array of SiKi reals
-      MODULE PROCEDURE AllR8Ary2       ! 2-dimensional array of R8Ki reals
-      MODULE PROCEDURE AllR16Ary2      ! 2-dimensional array of QuKi reals
-
       MODULE PROCEDURE AllR4Ary3       ! 3-dimensional array of SiKi reals
-      MODULE PROCEDURE AllR8Ary3       ! 3-dimensional array of R8Ki reals
-      MODULE PROCEDURE AllR16Ary3      ! 3-dimensional array of QuKi reals
       MODULE PROCEDURE AllR4Ary4       ! 4-dimensional array of SiKi reals
-      MODULE PROCEDURE AllR8Ary4       ! 4-dimensional array of R8Ki reals
-      MODULE PROCEDURE AllR16Ary4      ! 4-dimensional array of QuKi reals
       MODULE PROCEDURE AllR4Ary5       ! 5-dimensional array of SiKi reals
+      MODULE PROCEDURE AllR8Ary1       ! 1-dimensional array of R8Ki reals      
+      MODULE PROCEDURE AllR8Ary2       ! 2-dimensional array of R8Ki reals
+      MODULE PROCEDURE AllR8Ary3       ! 3-dimensional array of R8Ki reals
+      MODULE PROCEDURE AllR8Ary4       ! 4-dimensional array of R8Ki reals
       MODULE PROCEDURE AllR8Ary5       ! 5-dimensional array of R8Ki reals
+#ifdef OPENFAST_DOUBLE_PRECISION
+      MODULE PROCEDURE AllR16Ary1      ! 1-dimensional array of QuKi reals
+      MODULE PROCEDURE AllR16Ary2      ! 2-dimensional array of QuKi reals
+      MODULE PROCEDURE AllR16Ary3      ! 3-dimensional array of QuKi reals
+      MODULE PROCEDURE AllR16Ary4      ! 4-dimensional array of QuKi reals
       MODULE PROCEDURE AllR16Ary5      ! 5-dimensional array of QuKi reals
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::allipary1
@@ -130,7 +130,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllRPAry2
       MODULE PROCEDURE AllR4PAry3
       MODULE PROCEDURE AllR8PAry3
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE AllR16PAry3
+#endif
 !      MODULE PROCEDURE AllRPAry4   !not yet coded
    END INTERFACE
 
@@ -141,7 +143,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseLoVar                                             ! Parses an LOGICAL from a string.
       MODULE PROCEDURE ParseSiVar                                             ! Parses a single-precision REAL from a string.
       MODULE PROCEDURE ParseR8Var                                             ! Parses a double-precision REAL from a string.
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ParseQuVar                                             ! Parses a quad-precision REAL from a string.
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::parsechvarwdefault
@@ -151,7 +155,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseLoVarWDefault                                     ! Parses an LOGICAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseSiVarWDefault                                     ! Parses a single-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseR8VarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ParseQuVarWDefault                                     ! Parses a quad-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::parsedbary
@@ -160,7 +166,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseLoAry                                             ! Parse an array of LOGICAL values.
       MODULE PROCEDURE ParseSiAry                                             ! Parse an array of single-precision REAL values.
       MODULE PROCEDURE ParseR8Ary                                             ! Parse an array of double-precision REAL values.
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ParseQuAry                                             ! Parse an array of quad-precision REAL values.
+#endif
       MODULE PROCEDURE ParseChAry
    END INTERFACE
 
@@ -168,7 +176,9 @@ MODULE NWTC_IO
    INTERFACE CheckRealVar
       MODULE PROCEDURE CheckR4Var     ! 4-byte real
       MODULE PROCEDURE CheckR8Var     ! 8-byte real
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE CheckR16Var    ! 16-byte real
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_io::readcvar
@@ -178,7 +188,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadLVar
       MODULE PROCEDURE ReadR4Var     ! 4-byte real
       MODULE PROCEDURE ReadR8Var     ! 8-byte real
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ReadR16Var    ! 16-byte real
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::readivarwdefault
@@ -188,7 +200,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadLVarWDefault      ! Logical
       MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
       MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
+#endif
       MODULE PROCEDURE ReadIAryWDefault
    END INTERFACE
    
@@ -203,8 +217,10 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR4AryFromStr
       MODULE PROCEDURE ReadR8Ary  ! read array of 8-byte reals
       MODULE PROCEDURE ReadR8AryFromStr
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ReadR16Ary ! read array of 16-byte reals
       MODULE PROCEDURE ReadR16AryFromStr
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::readcarylines   
@@ -212,7 +228,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadCAryLines
       MODULE PROCEDURE ReadR4AryLines
       MODULE PROCEDURE ReadR8AryLines
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE ReadR16AryLines
+#endif
 !     MODULE PROCEDURE ReadIAryLines         ! Not coded yet
 !     MODULE PROCEDURE ReadLAryLines         ! Not coded yet
    END INTERFACE
@@ -223,7 +241,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE B8Ki2LStr       ! 8 byte integers
       MODULE PROCEDURE R2LStr4         ! 4-byte  reals
       MODULE PROCEDURE R2LStr8         ! 8-byte  reals
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE R2LStr16        ! 16-byte reals
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::dispnvd0
@@ -239,8 +259,10 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R4     ! Two dimension matrix of SiKi
       MODULE PROCEDURE WrMatrix1R8     ! Single dimension matrix (Ary) of R8Ki
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE WrMatrix1R16    ! Single dimension matrix (Ary) of QuKi
       MODULE PROCEDURE WrMatrix2R16    ! Two dimension matrix of QuKi
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_io::wrpartialmatrix1r8
@@ -254,7 +276,9 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrIAryFileNR
       MODULE PROCEDURE WrR4AryFileNR
       MODULE PROCEDURE WrR8AryFileNR
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE WrR16AryFileNR
+#endif
    END INTERFACE
 
 CONTAINS
@@ -796,6 +820,7 @@ CONTAINS
    END SUBROUTINE AllR8PAry3
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16PAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg ) 
 
 
@@ -831,6 +856,7 @@ CONTAINS
    Ary = 0
    RETURN
    END SUBROUTINE AllR16PAry3
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllLAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
@@ -1004,6 +1030,7 @@ CONTAINS
    END SUBROUTINE AllR8Ary1
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16Ary1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
 
 
@@ -1037,6 +1064,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary1
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
@@ -1115,6 +1143,7 @@ CONTAINS
    END SUBROUTINE AllR8Ary2
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
 
@@ -1150,6 +1179,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary2
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
@@ -1226,6 +1256,7 @@ CONTAINS
    END SUBROUTINE AllR8Ary3
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
 
@@ -1261,6 +1292,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary3
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
@@ -1339,6 +1371,7 @@ CONTAINS
    END SUBROUTINE AllR8Ary4
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
 
 
@@ -1375,6 +1408,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary4
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
    SUBROUTINE AllR4Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
@@ -1459,6 +1493,7 @@ CONTAINS
    END SUBROUTINE AllR8Ary5
 !=======================================================================
 !> \copydoc nwtc_io::allcary1
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AllR16Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
 
 
@@ -1498,7 +1533,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AllR16Ary5
-
+#endif
 !=======================================================================
 !> This subroutine checks the data to be parsed to make sure it finds
 !! the expected variable name and an associated value.
@@ -1769,6 +1804,7 @@ SUBROUTINE CheckR8Var( RealVar, RealDesc, ErrStat, ErrMsg )
 END SUBROUTINE CheckR8Var
 !=======================================================================
 !> \copydoc nwtc_io::checkr4var
+#ifdef OPENFAST_DOUBLE_PRECISION
 SUBROUTINE CheckR16Var( RealVar, RealDesc, ErrStat, ErrMsg )
 
    REAL(QuKi),  INTENT(IN)            :: RealVar                               !< Real value to check
@@ -1785,6 +1821,7 @@ SUBROUTINE CheckR16Var( RealVar, RealDesc, ErrStat, ErrMsg )
    END IF
    
 END SUBROUTINE CheckR16Var
+#endif
 !=======================================================================
 !> This routine converts all the text in a string to upper case.
    SUBROUTINE Conv2UC ( Str )
@@ -3577,6 +3614,7 @@ END SUBROUTINE CheckR16Var
 !> This subroutine parses the specified line of text for AryLen REAL values.
 !! Generate an error message if the value is the wrong type.
 !! Use ParseAry (nwtc_io::parseary) instead of directly calling a specific routine in the generic interface.   
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE ParseQuAry ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
 
          ! Arguments declarations.
@@ -3756,6 +3794,7 @@ END SUBROUTINE CheckR16Var
       
       RETURN
    END SUBROUTINE ParseQuVarWDefault
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::parsedbary
    SUBROUTINE ParseInAry ( FileInfo, LineNum, AryName, Ary, AryLen, ErrStat, ErrMsg, UnEc )
@@ -4980,6 +5019,7 @@ END SUBROUTINE CheckR16Var
    END FUNCTION R2LStr8
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION R2LStr16 ( Num, Fmt_in )
 
       ! This function converts a 16-byte floating point number to
@@ -5021,6 +5061,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END FUNCTION R2LStr16
+#endif
 !======================================================================
 !> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
 !!  into an array (either on same line or multiple lines).
@@ -6601,6 +6642,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE ReadR8AryFromStr
 !=======================================================================
 !> \copydoc nwtc_io::readcary
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE ReadR16Ary ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
 
 
@@ -6694,6 +6736,7 @@ END SUBROUTINE CheckR16Var
    END IF
    RETURN
    END SUBROUTINE ReadR16AryFromStr
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::readcarylines   
    SUBROUTINE ReadR4AryLines ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -6790,6 +6833,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE ReadR8AryLines
 !=======================================================================
 !> \copydoc nwtc_io::readcarylines   
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE ReadR16AryLines ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
 
 
@@ -6837,6 +6881,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR16AryLines
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
@@ -7034,6 +7079,7 @@ END SUBROUTINE CheckR16Var
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE ReadR16Var ( UnIn, Fil, Var, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
 
 
@@ -7132,6 +7178,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE ReadR16VarWDefault
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::readr4varwdefault
    SUBROUTINE ReadIAryWDefault ( UnIn, Fil, Var, AryLen, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
@@ -8020,6 +8067,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE WrMatrix1R8
 !=======================================================================
 !> \copydoc nwtc_io::wrmatrix1r4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE WrMatrix1R16( A, Un, ReFmt, MatName )
    
       REAL(QuKi),             INTENT(IN) :: A(:)
@@ -8048,6 +8096,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE WrMatrix1R16
+#endif
 !=======================================================================
 !> \copydoc nwtc_io::wrmatrix1r4
    SUBROUTINE WrMatrix2R4( A, Un, ReFmt, MatName )
@@ -8122,6 +8171,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE WrMatrix2R8
 !=======================================================================  
 !> \copydoc nwtc_io::wrmatrix1r4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE WrMatrix2R16( A, Un, ReFmt, MatName )
    
       REAL(QuKi),             INTENT(IN) :: A(:,:)
@@ -8156,6 +8206,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE WrMatrix2R16
+#endif
 !=======================================================================  
 !> Based on nwtc_io::wrmatrix, this routine writes a matrix to an already-open text file. It allows
 !! the user to omit rows and columns of A in the the file.
@@ -8490,6 +8541,7 @@ END SUBROUTINE CheckR16Var
    END SUBROUTINE WrR8AryFileNR
 !=======================================================================
 !> \copydoc nwtc_io::wrr4aryfilenr
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE WrR16AryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
 
       ! Argument declarations.
@@ -8528,6 +8580,7 @@ END SUBROUTINE CheckR16Var
 
    RETURN
    END SUBROUTINE WrR16AryFileNR
+#endif
 !=======================================================================
 !> This routine writes out a string to the screen.
    RECURSIVE SUBROUTINE WrScr ( InStr )

@@ -69,11 +69,15 @@ MODULE NWTC_Num
 
    REAL(SiKi)                                :: Pi_R4                         !< Ratio of a circle's circumference to its diameter in 4-byte precision
    REAL(R8Ki)                                :: Pi_R8                         !< Ratio of a circle's circumference to its diameter in 8-byte precision
+#ifdef OPENFAST_DOUBLE_PRECISION
    REAL(QuKi)                                :: Pi_R16                        !< Ratio of a circle's circumference to its diameter in 16-byte precision
+#endif
 
    REAL(SiKi)                                :: TwoPi_R4                      !< 2*pi in 4-byte precision
    REAL(R8Ki)                                :: TwoPi_R8                      !< 2*pi in 8-byte precision
+#ifdef OPENFAST_DOUBLE_PRECISION
    REAL(QuKi)                                :: TwoPi_R16                     !< 2*pi in 16-byte precision
+#endif
    
    ! constants for kernel smoothing
    INTEGER, PARAMETER :: kernelType_EPANECHINIKOV = 1
@@ -96,14 +100,18 @@ MODULE NWTC_Num
    INTERFACE EqualRealNos
       MODULE PROCEDURE EqualRealNos4
       MODULE PROCEDURE EqualRealNos8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE EqualRealNos16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::eulerconstructr4()
    INTERFACE EulerConstruct
       MODULE PROCEDURE EulerConstructR4
       MODULE PROCEDURE EulerConstructR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE EulerConstructR16
+#endif
    END INTERFACE
 
    INTERFACE EulerConstructZYX
@@ -114,7 +122,9 @@ MODULE NWTC_Num
    INTERFACE EulerExtract
       MODULE PROCEDURE EulerExtractR4
       MODULE PROCEDURE EulerExtractR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE EulerExtractR16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::taitbryanyxzextractr4()
@@ -122,20 +132,26 @@ MODULE NWTC_Num
    INTERFACE TaitBryanYXZExtract
       MODULE PROCEDURE TaitBryanYXZExtractR4
       MODULE PROCEDURE TaitBryanYXZExtractR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE TaitBryanYXZExtractR16
+#endif
    END INTERFACE
    
    INTERFACE TaitBryanYXZConstruct
       MODULE PROCEDURE TaitBryanYXZConstructR4
       MODULE PROCEDURE TaitBryanYXZConstructR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE TaitBryanYXZConstructR16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::outerproductr4
    INTERFACE OuterProduct
       MODULE PROCEDURE OuterProductR4
       MODULE PROCEDURE OuterProductR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE OuterProductR16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::cross_productr4()
@@ -144,7 +160,9 @@ MODULE NWTC_Num
       MODULE PROCEDURE Cross_ProductR4R8
       MODULE PROCEDURE Cross_ProductR8
       MODULE PROCEDURE Cross_ProductR8R4
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Cross_ProductR16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::smllrottransd()
@@ -164,21 +182,27 @@ MODULE NWTC_Num
    INTERFACE Zero2TwoPi
       MODULE PROCEDURE Zero2TwoPiR4
       MODULE PROCEDURE Zero2TwoPiR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Zero2TwoPiR16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::twonormr4
    INTERFACE TwoNorm
       MODULE PROCEDURE TwoNormR4
       MODULE PROCEDURE TwoNormR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE TwoNormR16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::tracer4
    INTERFACE trace
       MODULE PROCEDURE traceR4
       MODULE PROCEDURE traceR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE traceR16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::dcm_expd
@@ -217,18 +241,24 @@ MODULE NWTC_Num
    INTERFACE InterpStp
       MODULE PROCEDURE InterpStpComp4
       MODULE PROCEDURE InterpStpComp8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE InterpStpComp16
+#endif
       MODULE PROCEDURE InterpStpReal4
       MODULE PROCEDURE InterpStpReal4_8
       MODULE PROCEDURE InterpStpReal8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE InterpStpReal16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::interparrayr4
    INTERFACE InterpArray
       MODULE PROCEDURE InterpArrayR4
       MODULE PROCEDURE InterpArrayR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE InterpArrayR16
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::interpwrappedstpreal4
@@ -236,51 +266,69 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpWrappedStpReal4
       MODULE PROCEDURE InterpWrappedStpReal4_8
       MODULE PROCEDURE InterpWrappedStpReal8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE InterpWrappedStpReal16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::locatestpr4
    INTERFACE LocateStp
       MODULE PROCEDURE LocateStpR4
       MODULE PROCEDURE LocateStpR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE LocateStpR16
+#endif
    END INTERFACE
 
    !> \copydoc nwtc_num::skewsymmatr4
    INTERFACE SkewSymMat
       MODULE PROCEDURE SkewSymMatR4
       MODULE PROCEDURE SkewSymMatR8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE SkewSymMatR16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::angle_extrapinterp2_r4
    INTERFACE Angles_ExtrapInterp
       MODULE PROCEDURE Angles_ExtrapInterp1_R4
       MODULE PROCEDURE Angles_ExtrapInterp1_R8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Angles_ExtrapInterp1_R16
+#endif
       MODULE PROCEDURE Angles_ExtrapInterp1_R4R
       MODULE PROCEDURE Angles_ExtrapInterp1_R8R
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Angles_ExtrapInterp1_R16R
+#endif
       MODULE PROCEDURE Angles_ExtrapInterp2_R4
       MODULE PROCEDURE Angles_ExtrapInterp2_R8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Angles_ExtrapInterp2_R16
+#endif
       MODULE PROCEDURE Angles_ExtrapInterp2_R4R
       MODULE PROCEDURE Angles_ExtrapInterp2_R8R
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE Angles_ExtrapInterp2_R16R
+#endif
    END INTERFACE
 
       !> \copydoc nwtc_num::addorsub2pi_r4
    INTERFACE AddOrSub2Pi
       MODULE PROCEDURE AddOrSub2Pi_R4
       MODULE PROCEDURE AddOrSub2Pi_R8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE AddOrSub2Pi_R16
+#endif
    END INTERFACE
    
       !> \copydoc nwtc_num::mpi2pi_r4
    INTERFACE MPi2Pi
       MODULE PROCEDURE MPi2Pi_R4
       MODULE PROCEDURE MPi2Pi_R8
+#ifdef OPENFAST_DOUBLE_PRECISION
       MODULE PROCEDURE MPi2Pi_R16
+#endif
    END INTERFACE
    
 CONTAINS
@@ -356,6 +404,7 @@ CONTAINS
    END SUBROUTINE AddOrSub2Pi_R8
 !=======================================================================
 !> \copydoc nwtc_num::addorsub2pi_r4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE AddOrSub2Pi_R16 ( OldAngle, NewAngle )
 
       ! Argument declarations:
@@ -384,6 +433,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE AddOrSub2Pi_R16
+#endif
 !=======================================================================
    FUNCTION BlendCosine( x, LowerBound, UpperBound ) RESULT(S)
    
@@ -620,6 +670,7 @@ CONTAINS
    END FUNCTION Cross_ProductR8R4
 !=======================================================================
 !> \copydoc nwtc_num::cross_productr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION Cross_ProductR16(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
@@ -638,6 +689,7 @@ CONTAINS
 
    RETURN
    END FUNCTION Cross_ProductR16
+#endif
 !=======================================================================
 !> This routine calculates the parameters needed to compute a irregularly-spaced natural cubic spline.
 !! Natural cubic splines are used in that the curvature at the end points is zero.
@@ -1756,6 +1808,7 @@ CONTAINS
    END FUNCTION EqualRealNos8
 !=======================================================================
 !> \copydoc nwtc_num::equalrealnos4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
 
       ! passed variables
@@ -1788,6 +1841,7 @@ CONTAINS
 
 
    END FUNCTION EqualRealNos16
+#endif
 !=======================================================================
 !> This function creates a rotation matrix, M, from a 1-2-3 rotation
 !! sequence of the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
@@ -1903,6 +1957,7 @@ CONTAINS
    END FUNCTION EulerConstructR8
 !=======================================================================
 !> \copydoc nwtc_num::eulerconstructr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION EulerConstructR16(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
@@ -1952,6 +2007,7 @@ CONTAINS
       M(3,3) =        cx*cy               
    
    END FUNCTION EulerConstructR16
+#endif
 !=======================================================================
 !> if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
 !! the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$ (in radians), that formed 
@@ -2156,6 +2212,7 @@ CONTAINS
    END FUNCTION EulerExtractR8
 !=======================================================================
 !> \copydoc nwtc_num::eulerextractr4 
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION EulerExtractR16(M) result(theta)
    
       ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
@@ -2250,6 +2307,7 @@ CONTAINS
             
       
    END FUNCTION EulerExtractR16
+#endif
 
 !=======================================================================
 !> 
@@ -3257,6 +3315,7 @@ END FUNCTION FindValidChannelIndx
    END FUNCTION InterpStpComp8
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION InterpStpComp16( XVal, XAry, YAry, Ind, AryLen )
 
       ! Function declaration.
@@ -3315,6 +3374,7 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END FUNCTION InterpStpComp16
+#endif
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
@@ -3494,6 +3554,7 @@ END FUNCTION FindValidChannelIndx
    END FUNCTION InterpStpReal8 
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION InterpStpReal16( XVal, XAry, YAry, Ind, AryLen )
 
       ! Function declaration.
@@ -3550,6 +3611,7 @@ END FUNCTION FindValidChannelIndx
 
    RETURN
    END FUNCTION InterpStpReal16
+#endif
 !=======================================================================
 !> This funtion returns a y-value array that corresponds to an input x-value by interpolating into the arrays.
 !! It uses the passed index as the starting point and does a stepwise interpolation from there. This is
@@ -3926,6 +3988,7 @@ END FUNCTION FindValidChannelIndx
    END FUNCTION InterpWrappedStpReal8
 !=======================================================================
 !> \copydoc nwtc_num::interpwrappedstpreal4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION InterpWrappedStpReal16( XValIn, XAry, YAry, Ind, AryLen )
 
       ! Function declaration.
@@ -3958,6 +4021,7 @@ END FUNCTION FindValidChannelIndx
    
    
    END FUNCTION InterpWrappedStpReal16 
+#endif
 !=======================================================================
 !> This subroutine calculates interpolated values for an array of input values.
 !! The size of the xknown and yknown arrays must match, and the size of the
@@ -4045,6 +4109,7 @@ END FUNCTION FindValidChannelIndx
    END SUBROUTINE InterpArrayR8
 !=======================================================================
 !> \copydoc nwtc_num::interparrayr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE InterpArrayR16( xknown, yknown, xnew, ynew )
       REAL(QuKi), INTENT(IN   ) :: xknown(:)
       REAL(QuKi), INTENT(IN   ) :: yknown(:)
@@ -4084,6 +4149,7 @@ END FUNCTION FindValidChannelIndx
             endif
          end function interp_lin0
    END SUBROUTINE InterpArrayR16
+#endif
 !=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
@@ -4421,6 +4487,7 @@ end subroutine kernelSmoothing
    END SUBROUTINE LocateStpR8
 !=======================================================================
 !> \copydoc nwtc_num::locatestpr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE LocateStpR16( XVal, XAry, Ind, AryLen )
 
       ! Argument declarations.
@@ -4467,6 +4534,7 @@ end subroutine kernelSmoothing
    RETURN
 
    END SUBROUTINE LocateStpR16
+#endif
 !=======================================================================
 !> This routine calculates the mean value of an array.
    FUNCTION Mean ( Ary, AryLen )
@@ -4557,6 +4625,7 @@ end subroutine kernelSmoothing
    END SUBROUTINE MPi2Pi_R8
 !=======================================================================
 !> \copydoc nwtc_num::mpi2pi_r4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE MPi2Pi_R16 ( Angle )
 
                  
@@ -4579,6 +4648,7 @@ end subroutine kernelSmoothing
 
    RETURN
    END SUBROUTINE MPi2Pi_R16
+#endif
 !=======================================================================
 !> This function takes an angle in radians and converts it to 
 !! an angle in degrees in the range [-180,180]
@@ -4650,6 +4720,7 @@ end function Rad2M180to180Deg
    END FUNCTION OuterProductR8   
 !=======================================================================
 !> \copydoc nwtc_num::outerproductr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION OuterProductR16(u,v)
    
    ! this routine calculates the outer product of two vectors
@@ -4669,6 +4740,7 @@ end function Rad2M180to180Deg
    ENDDO
 
    END FUNCTION OuterProductR16 
+#endif
 !=======================================================================
 !> This subroutine perturbs an orientation matrix by a small angle.  Two methods
 !! are used:
@@ -5724,11 +5796,15 @@ end function Rad2M180to180Deg
       Inv2Pi_S  =  0.5_SiKi/Pi_S    ! 1.0_SiKi/TwoPi_S
       Pi_R4   = ACOS( -1.0_SiKi )
       Pi_R8   = ACOS( -1.0_R8Ki )
+#ifdef OPENFAST_DOUBLE_PRECISION
       Pi_R16  = ACOS( -1.0_QuKi )
+#endif
 
       TwoPi_R4  = Pi_R4 *2.0_SiKi
       TwoPi_R8  = Pi_R8 *2.0_R8Ki
+#ifdef OPENFAST_DOUBLE_PRECISION
       TwoPi_R16 = Pi_R16*2.0_QuKi
+#endif
       
          ! IEEE constants:
       CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
@@ -6411,6 +6487,7 @@ end function Rad2M180to180Deg
    END FUNCTION SkewSymMatR8
 !=======================================================================
 !> \copydoc nwtc_num::skewsymmatr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION SkewSymMatR16 ( x ) RESULT(M)
 
       ! Function arguments
@@ -6432,7 +6509,7 @@ end function Rad2M180to180Deg
    
    RETURN
    END FUNCTION SkewSymMatR16
-
+#endif
 !=======================================================================
 !> If M is a rotation matrix from a 1-2-3 rotation sequence about Y-X-Z, this function returns 
 !! the 3 sequential angles, \f$\theta_y\f$, \f$\theta_x\f$, and \f$\theta_z\f$ (in radians), that formed 
@@ -6718,6 +6795,7 @@ end function Rad2M180to180Deg
    END FUNCTION TaitBryanYXZExtractR8
 
 !> See nwtc_num::taitbryanyxzextractr4 for detailed explanation of algorithm
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION TaitBryanYXZExtractR16(M) result(theta)
    
    
@@ -6795,7 +6873,7 @@ end function Rad2M180to180Deg
 
       
    END FUNCTION TaitBryanYXZExtractR16
-   
+#endif
       FUNCTION TaitBryanYXZConstructR4(theta) result(M)
             ! this function creates a rotation matrix, M, from a 1-2-3 rotation
       ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
@@ -6893,6 +6971,7 @@ end function Rad2M180to180Deg
    
    END FUNCTION TaitBryanYXZConstructR8
    
+#ifdef OPENFAST_DOUBLE_PRECISION
   FUNCTION TaitBryanYXZConstructR16(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
@@ -6941,7 +7020,7 @@ end function Rad2M180to180Deg
       M(3,3) =   cy*cx      
    
    END FUNCTION TaitBryanYXZConstructR16
-
+#endif
 
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
@@ -7001,6 +7080,7 @@ end function Rad2M180to180Deg
    END FUNCTION traceR8
 !=======================================================================
 !> \copydoc nwtc_num::tracer4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION traceR16(A)
          
    REAL(QuKi), INTENT(IN)  :: A(:,:)
@@ -7017,6 +7097,7 @@ end function Rad2M180to180Deg
    end do
    
    END FUNCTION traceR16
+#endif
 !=======================================================================
 !> This function returns the \f$l_2\f$ (Euclidian) norm of a vector, 
 !! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The \f$l_2\f$-norm is defined as   
@@ -7051,6 +7132,7 @@ end function Rad2M180to180Deg
    END FUNCTION
 !=======================================================================
 !> \copydoc nwtc_num::twonormr4
+#ifdef OPENFAST_DOUBLE_PRECISION
    FUNCTION TwoNormR16(v)
    
       ! this function returns the 2-norm of a vector v
@@ -7063,6 +7145,7 @@ end function Rad2M180to180Deg
       
       
    END FUNCTION
+#endif
 !=======================================================================  
 !> This routine is used to convert Angle to an equivalent value
 !!  in the range \f$[0, 2\pi)\f$. \n
@@ -7118,6 +7201,7 @@ end function Rad2M180to180Deg
    END SUBROUTINE Zero2TwoPiR8   
 !=======================================================================  
 !> \copydoc nwtc_num::zero2twopir4
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE Zero2TwoPiR16 ( Angle )
 
       ! This routine is used to convert Angle to an equivalent value
@@ -7144,6 +7228,7 @@ end function Rad2M180to180Deg
 
    RETURN
    END SUBROUTINE Zero2TwoPiR16
+#endif
 !=======================================================================
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp1_R4(Angle1, Angle2, tin, Angle_out, tin_out )
@@ -7233,6 +7318,7 @@ end function Rad2M180to180Deg
    END SUBROUTINE Angles_ExtrapInterp1_R8
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE Angles_ExtrapInterp1_R16(Angle1, Angle2, tin, Angle_out, tin_out)
        REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
@@ -7274,6 +7360,7 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
 
    END SUBROUTINE Angles_ExtrapInterp1_R16
+#endif
 !=======================================================================
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp1_R4R(Angle1, Angle2, tin, Angle_out, tin_out )
@@ -7363,6 +7450,7 @@ end function Rad2M180to180Deg
    END SUBROUTINE Angles_ExtrapInterp1_R8R
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE Angles_ExtrapInterp1_R16R(Angle1, Angle2, tin, Angle_out, tin_out)
        REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
@@ -7404,6 +7492,7 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
 
    END SUBROUTINE Angles_ExtrapInterp1_R16R
+#endif
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp2_R4(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
@@ -7531,6 +7620,7 @@ end function Rad2M180to180Deg
    END SUBROUTINE Angles_ExtrapInterp2_R8
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE Angles_ExtrapInterp2_R16(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
        REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
        REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
@@ -7591,6 +7681,7 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
       
    END SUBROUTINE Angles_ExtrapInterp2_R16
+#endif
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp2_R4R(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
@@ -7718,6 +7809,7 @@ end function Rad2M180to180Deg
    END SUBROUTINE Angles_ExtrapInterp2_R8R
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
+#ifdef OPENFAST_DOUBLE_PRECISION
    SUBROUTINE Angles_ExtrapInterp2_R16R(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
        REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
        REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
@@ -7778,5 +7870,6 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
       
    END SUBROUTINE Angles_ExtrapInterp2_R16R
+#endif
 !=======================================================================  
 END MODULE NWTC_Num
