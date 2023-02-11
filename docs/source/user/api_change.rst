@@ -10,6 +10,16 @@ The line number corresponds to the resulting line number after all changes are i
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
 
+OpenFAST v3.4.1 to OpenFAST v3.4.1 
+----------------------------------
+
+Restored the AeroDyn channel names with `Aero` in the name.  These had be
+changed to `Fld` in v3.4.0 which caused headaches for users.  The `Fld` names
+are now aliases to the `Aero` names.
+
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `dev`
 OpenFAST v3.3.0 to OpenFAST v3.4.0 
 ----------------------------------
 
