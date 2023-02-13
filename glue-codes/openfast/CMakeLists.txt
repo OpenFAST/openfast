@@ -17,7 +17,7 @@
 set (CMAKE_CXX_STANDARD 11)
 
 add_executable(openfast src/FAST_Prog.f90)
-target_link_libraries(openfast openfast_postlib foamfastlib)
+target_link_libraries(openfast openfast_postlib extinflowlib)
 set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
 
 include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)

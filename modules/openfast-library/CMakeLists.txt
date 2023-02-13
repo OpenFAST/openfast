@@ -36,7 +36,7 @@ target_link_libraries(openfast_prelib
   hydrodynlib
   orcaflexlib
   extptfm_mckflib
-  openfoamtypeslib
+  extinflowtypeslib
   scdataextypeslib
   feamlib
   moordynlib
@@ -51,10 +51,10 @@ add_library(openfast_postlib
   src/FAST_Subs.f90
   src/FAST_Solver.f90
   )
-target_link_libraries(openfast_postlib openfast_prelib scdataexlib foamfastlib versioninfolib)
+target_link_libraries(openfast_postlib openfast_prelib scdataexlib extinflowlib versioninfolib)
 
 add_library(openfastlib SHARED src/FAST_Library.f90)
-target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib foamfastlib)
+target_link_libraries(openfastlib openfast_postlib openfast_prelib scdataexlib extinflowlib)
 set_property(TARGET openfastlib PROPERTY LINKER_LANGUAGE Fortran)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)

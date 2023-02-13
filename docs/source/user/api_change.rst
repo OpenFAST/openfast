@@ -9,8 +9,11 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.4.0 to OpenFAST dev 
+OpenFAST v3.4.1 to OpenFAST dev 
 ----------------------------------
+
+The name of the module `OpenFOAM` module was changed to `ExtInflow`.  This
+module couples CFD codes to OpenFAST by actuator lines.
 
 ============================================= ==== ================= ========================================================================================================================================================================================================
 Modified in OpenFAST `dev`
@@ -22,7 +25,7 @@ ServoDyn-StructCtrl                            6   StC_DOF_MODE      2   StC_DOF
 
 
 
-OpenFAST v3.4.1 to OpenFAST v3.4.1 
+OpenFAST v3.4.0 to OpenFAST v3.4.1 
 ----------------------------------
 
 Restored the AeroDyn channel names with `Aero` in the name.  These had be

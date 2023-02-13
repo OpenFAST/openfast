@@ -1,11 +1,11 @@
-//!STARTOFREGISTRYGENERATEDFILE 'OpenFOAM_Types.h'
+//!STARTOFREGISTRYGENERATEDFILE 'ExtInflow_Types.h'
 //!
 //! WARNING This file is generated automatically by the FAST registry.
 //! Do not edit.  Your changes to this file will be lost.
 //!
 
-#ifndef _OpenFOAM_TYPES_H
-#define _OpenFOAM_TYPES_H
+#ifndef _ExtInflow_TYPES_H
+#define _ExtInflow_TYPES_H
 
 
 #ifdef _WIN32 //define something for Windows (32-bit)
@@ -20,7 +20,7 @@
 #endif
 
 
-  typedef struct OpFM_InitInputType {
+  typedef struct ExInf_InitInputType {
     void * object ;
     int NumActForcePtsBlade ;
     int NumActForcePtsTower ;
@@ -29,21 +29,21 @@
     float BladeLength ;
     float TowerHeight ;
     float TowerBaseHeight ;
-  } OpFM_InitInputType_t ;
-  typedef struct OpFM_InitOutputType {
+  } ExInf_InitInputType_t ;
+  typedef struct ExInf_InitOutputType {
     void * object ;
     char * WriteOutputHdr ;     int WriteOutputHdr_Len ;
     char * WriteOutputUnt ;     int WriteOutputUnt_Len ;
 
-  } OpFM_InitOutputType_t ;
-  typedef struct OpFM_MiscVarType {
+  } ExInf_InitOutputType_t ;
+  typedef struct ExInf_MiscVarType {
     void * object ;
 
 
 
 
-  } OpFM_MiscVarType_t ;
-  typedef struct OpFM_ParameterType {
+  } ExInf_MiscVarType_t ;
+  typedef struct ExInf_ParameterType {
     void * object ;
     float AirDens ;
     int NumBl ;
@@ -57,8 +57,8 @@
     float BladeLength ;
     float TowerHeight ;
     float TowerBaseHeight ;
-  } OpFM_ParameterType_t ;
-  typedef struct OpFM_InputType {
+  } ExInf_ParameterType_t ;
+  typedef struct ExInf_InputType {
     void * object ;
     float * pxVel ;     int pxVel_Len ;
     float * pyVel ;     int pyVel_Len ;
@@ -77,24 +77,24 @@
     float * momenty ;     int momenty_Len ;
     float * momentz ;     int momentz_Len ;
     float * forceNodesChord ;     int forceNodesChord_Len ;
-  } OpFM_InputType_t ;
-  typedef struct OpFM_OutputType {
+  } ExInf_InputType_t ;
+  typedef struct ExInf_OutputType {
     void * object ;
     float * u ;     int u_Len ;
     float * v ;     int v_Len ;
     float * w ;     int w_Len ;
     float * WriteOutput ;     int WriteOutput_Len ;
-  } OpFM_OutputType_t ;
-  typedef struct OpFM_UserData {
-    OpFM_InitInputType_t           OpFM_InitInput ;
-    OpFM_InitOutputType_t          OpFM_InitOutput ;
-    OpFM_MiscVarType_t             OpFM_Misc ;
-    OpFM_ParameterType_t           OpFM_Param ;
-    OpFM_InputType_t               OpFM_Input ;
-    OpFM_OutputType_t              OpFM_Output ;
-  } OpFM_t ;
+  } ExInf_OutputType_t ;
+  typedef struct ExInf_UserData {
+    ExInf_InitInputType_t          ExInf_InitInput ;
+    ExInf_InitOutputType_t         ExInf_InitOutput ;
+    ExInf_MiscVarType_t            ExInf_Misc ;
+    ExInf_ParameterType_t          ExInf_Param ;
+    ExInf_InputType_t              ExInf_Input ;
+    ExInf_OutputType_t             ExInf_Output ;
+  } ExInf_t ;
 
-#endif // _OpenFOAM_TYPES_H
+#endif // _ExtInflow_TYPES_H
 
 
 //!ENDOFREGISTRYGENERATEDFILE
