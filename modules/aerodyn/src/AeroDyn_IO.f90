@@ -3146,7 +3146,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
-   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
+   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T41,1(:,F13.3))'                ! Format for outputting mass and modal data.
    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
 
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
@@ -3230,6 +3230,22 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       Msg = 'No'
    end if   
    WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Calculate tower aerodynamic loads? '//TRIM(Msg)
+
+      ! CavitCheck
+   if (p%CavitCheck) then
+      Msg = 'Yes'
+   else
+      Msg = 'No'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) p%CavitCheck, 'CavitCheck', 'Perform cavitation check? '//TRIM(Msg)
+
+      ! Buoyancy
+   if (p%Buoyancy) then
+      Msg = 'Yes'
+   else
+      Msg = 'No'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
 
 
    if (p_AD%WakeMod/=WakeMod_none) then
@@ -3401,6 +3417,12 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
    END DO
 
+   ! Buoyancy parameters
+   WRITE (UnSu,'(//,A,/)')  'Buoyancy parameters:'
+   WRITE (UnSu,FmtDat ) '    Hub volume                     (m^3)', p%VolHub ! Buoyancy volume of the hub
+   WRITE (UnSu,FmtDat ) '    Nacelle volume                 (m^3)', p%VolNac ! Buoyancy volume of the nacelle
+   WRITE (UnSu,FmtDat ) '    Total blade volume, calculated (m^3)', p%VolBl  ! Buoyancy volume of all blades
+   WRITE (UnSu,FmtDat ) '    Tower volume, calculated       (m^3)', p%VolTwr ! Buoyancy volume of the tower
 
    CLOSE(UnSu)
 

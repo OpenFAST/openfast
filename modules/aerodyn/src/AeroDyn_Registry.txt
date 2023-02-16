@@ -338,6 +338,8 @@ typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotParameterType	ReKi	VolBl       -	-	-	"Buoyancy volume of all blades" m^3
+typedef	^	RotParameterType	ReKi	VolTwr       -	-	-	"Buoyancy volume of the tower" m^3
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -

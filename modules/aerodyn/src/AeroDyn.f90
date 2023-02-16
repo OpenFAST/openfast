@@ -1305,6 +1305,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%HubCenBx = RotData%HubCenBx
    p%VolNac = RotData%VolNac
    p%NacCenB = RotData%NacCenB
+   p%VolBl            = 0.0_ReKi
+   p%VolTwr           = 0.0_ReKi
    
    p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
@@ -1372,12 +1374,15 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: j                !< Loop counter for nodes
    REAL(ReKi), DIMENSION(3)                     :: posCBu           !< Global undisplaced position of the center of buoyancy of node j
    REAL(ReKi), DIMENSION(3)                     :: posCBuplus       !< Global undisplaced position of the center of buoyancy of node j+1
+   REAL(ReKi), DIMENSION(3)                     :: tempVolBl        !< Individual blade buoyancy volume
+
    CHARACTER(*), PARAMETER                      :: RoutineName = 'SetBuoyancyParameters'
 
 
       ! Initialize variables for this routine
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   tempVolBl = 0.0_ReKi
 
    
       ! Allocate buoyancy parameters
@@ -1418,7 +1423,9 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
          else
             p%BlAxCent(j,k) = ( p%BlRad(j,k)**2 + 2.0_ReKi*p%BlRad(j,k)*p%BlRad(j+1,k) + 3.0_ReKi*p%BlRad(j+1,k)**2 ) / ( 4.0_ReKi*( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2) ) ! fractional axial centroid of element j
          end if
+         tempVolBl(k) = tempVolBl(k) + pi/3.0_ReKi * ( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2 ) * p%BlDL(j,k)
       end do ! j = nodes
+      p%VolBl = p%VolBl + tempVolBl(k)
 
    end do ! k = blades
 
@@ -1436,6 +1443,7 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
          else
             p%TwrAxCent(j) = ( p%TwrRad(j)**2 + 2.0_ReKi*p%TwrRad(j)*p%TwrRad(j+1) + 3.0_ReKi*p%TwrRad(j+1)**2 ) / ( 4.0_ReKi*( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2) ) ! fractional axial centroid of element j
          end if
+         p%VolTwr = p%VolTwr + pi/3.0_ReKi * ( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2 ) * p%TwrDL(j)
       end do ! j = nodes
    end if
 

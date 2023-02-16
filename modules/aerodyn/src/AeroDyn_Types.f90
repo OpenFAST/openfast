@@ -378,6 +378,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
+    REAL(ReKi)  :: VolBl      !< Buoyancy volume of all blades [m^3]
+    REAL(ReKi)  :: VolTwr      !< Buoyancy volume of the tower [m^3]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length based on CB, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTaper      !< Matrix of blade element taper, used in buoyancy calculation [-]
@@ -13277,6 +13279,8 @@ ENDIF
     DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
     DstRotParameterTypeData%VolNac = SrcRotParameterTypeData%VolNac
     DstRotParameterTypeData%NacCenB = SrcRotParameterTypeData%NacCenB
+    DstRotParameterTypeData%VolBl = SrcRotParameterTypeData%VolBl
+    DstRotParameterTypeData%VolTwr = SrcRotParameterTypeData%VolTwr
 IF (ALLOCATED(SrcRotParameterTypeData%BlRad)) THEN
   i1_l = LBOUND(SrcRotParameterTypeData%BlRad,1)
   i1_u = UBOUND(SrcRotParameterTypeData%BlRad,1)
@@ -13680,6 +13684,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
+      Re_BufSz   = Re_BufSz   + 1  ! VolBl
+      Re_BufSz   = Re_BufSz   + 1  ! VolTwr
   Int_BufSz   = Int_BufSz   + 1     ! BlRad allocated yes/no
   IF ( ALLOCATED(InData%BlRad) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BlRad upper/lower bounds for each dimension
@@ -14030,6 +14036,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    ReKiBuf(Re_Xferred) = InData%VolBl
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VolTwr
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BlRad) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -14654,6 +14664,10 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%VolBl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VolTwr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlRad not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
