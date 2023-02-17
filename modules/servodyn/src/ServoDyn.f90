@@ -388,6 +388,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 
+   ! Set channel names here
+   IF (ALLOCATED(InitInp%ChannelNames)) THEN
+      CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames), 'u%ChannelNames', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
+
+      u%ChannelNames = InitInp%ChannelNames
+
+   ENDIF
+
       !............................................................................................
       ! Define system output initializations (set up mesh) here:
       !............................................................................................

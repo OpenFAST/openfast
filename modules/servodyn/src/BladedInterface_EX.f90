@@ -55,6 +55,7 @@ MODULE BladedInterface_EX
    integer(IntKi),   parameter   :: EXavrSWAP_Size       = 3300   !< size of the avrSWAP array with the extended array sizing (increment this as new blocks ar added)
    real(ReKi),       parameter   :: EXavrSWAP_Ver        = 1.000  !< Version. increment minor for new signal addition, increment major for new block addition
    integer(IntKi),   parameter   :: ExSensors_StartIdx   = 1001   !< Starting index for the non-lidar measurements group
+   integer(IntKi),   parameter   :: ExSensors_MaxPtfm    = 18   !< Starting index for the non-lidar measurements group
    integer(IntKi),   parameter   :: ExSensors_MaxChan    = 1000   !< Maximum channels in non-lidar measurements group
    integer(IntKi),   parameter   :: LidarMsr_StartIdx    = 2001   !< Starting index for the lidar measurements
    integer(IntKi),   parameter   :: LidarMsr_MaxChan     = 500    !< Maximum channels in lidar measurements group
@@ -207,8 +208,18 @@ contains
 
 
    subroutine InitNonLidarSensors()    ! Channels 1019:2000
+      integer(IntKi)                                  :: ChanInd, I
       ! This is a placeholder for info about other sensor channels that are passed to the DLL
       !call WrSumInfoSend(1019, 'Description of channel info sent to DLL')
+      
+      ! Add OpenFAST channel descriptions, TODO: units
+      ChanInd = ExSensors_StartIdx+ExSensors_MaxPtfm
+
+      DO I = 2, Size(u%ChannelNames)   ! Skip first one, which is time and not actually in u%AllOutData
+         call WrSumInfoSend(ChanInd, 'OpenFAST output -- '//TRIM(u%ChannelNames(I))//' -- (units TBD)')
+         ChanInd = ChanInd + 1
+      ENDDO
+
    end subroutine InitNonLidarSensors
 
 
@@ -453,6 +464,9 @@ CONTAINS
    !> Set the sensor inputs for non-lidar channels.
    !!    avrSWAP(1001:2000)
    subroutine SetEXavrSWAP_Sensors()
+
+      integer(IntKi)                               :: StartInd
+
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < (ExSensors_StartIdx + ExSensors_MaxChan - 1) ) return
 
@@ -473,6 +487,10 @@ CONTAINS
       !------------------
       ! Set other sensors here (non-lidar measurements)
       !       Add summary file descriptions about channels to InitNonLidarSensors as channels are added.
+
+      ! Add OpenFAST outputs
+      StartInd = ExSensors_StartIdx+ExSensors_MaxPtfm
+      dll_data%avrSWAP(StartInd:StartInd+size(u%AllOutData,1)-1) = u%AllOutData(:,u%n_Out)
 
    end subroutine SetEXavrSWAP_Sensors
 
