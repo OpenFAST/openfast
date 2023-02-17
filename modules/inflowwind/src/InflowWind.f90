@@ -44,8 +44,8 @@ MODULE InflowWind
    USE                              InflowWind_Types
    USE                              NWTC_Library
    USE                              InflowWind_Subs
-   USE                              IfW_FlowField_Types
-   USE                              IfW_FlowField
+   USE                              FlowField_IO_Types
+   USE                              FlowField_IO
 
    USE                              Lidar                      ! module for obtaining sensor data
    
@@ -133,8 +133,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
       TYPE(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
  
-      TYPE(IfW_FlowField_InitInputType)                     :: FlowField_InitData     !< initialization info
-      TYPE(IfW_FlowField_InitOutputType)                    :: Interp_InitOutData  !< initialization output info
+      TYPE(FlowField_IO_InitInputType)                     :: FlowField_InitData     !< initialization info
+      TYPE(FlowField_IO_InitOutputType)                    :: Interp_InitOutData  !< initialization output info
 
       TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData     !< initialization info
       TYPE(IfW_UniformWind_InitOutputType)                  :: Uniform_InitOutData  !< initialization output info
@@ -306,6 +306,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       FlowField_InitData%SumFileUnit = SumFileUnit
       FlowField_InitData%PropagationDir = InputFileData%PropagationDir
       FlowField_InitData%VFlowAngle = InputFileData%VFlowAngle
+      FlowField_InitData%VelInterpOrder = InputFileData%VelInterpOrder
       FlowField_InitData%CalcAccel = InitInp%CalcAccel
 
       select case(FlowField_InitData%WindType)
@@ -373,7 +374,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          return
       end select
 
-      call IfW_FlowField_Init(FlowField_InitData, p%FlowField, Interp_InitOutData, TmpErrStat, TmpErrMsg)
+      call FlowField_IO_Init(FlowField_InitData, p%FlowField, Interp_InitOutData, TmpErrStat, TmpErrMsg)
 
 
       SELECT CASE ( InputFileData%WindType )

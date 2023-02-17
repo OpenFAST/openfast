@@ -80,6 +80,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WindType = 0      !< Type of windfile [-]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation (meteorological direction) [(degrees)]
     REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [degrees]
+    INTEGER(IntKi)  :: VelInterpOrder = 0      !< Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7] [-]
     INTEGER(IntKi)  :: NWindVel      !< Number of points to output the wind velocity (0 to 9) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVxiList      !< List of X coordinates for wind velocity measurements [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVyiList      !< List of Y coordinates for wind velocity measurements [meters]
@@ -523,6 +524,7 @@ CONTAINS
     DstInputFileData%WindType = SrcInputFileData%WindType
     DstInputFileData%PropagationDir = SrcInputFileData%PropagationDir
     DstInputFileData%VFlowAngle = SrcInputFileData%VFlowAngle
+    DstInputFileData%VelInterpOrder = SrcInputFileData%VelInterpOrder
     DstInputFileData%NWindVel = SrcInputFileData%NWindVel
 IF (ALLOCATED(SrcInputFileData%WindVxiList)) THEN
   i1_l = LBOUND(SrcInputFileData%WindVxiList,1)
@@ -680,6 +682,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WindType
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
+      Int_BufSz  = Int_BufSz  + 1  ! VelInterpOrder
       Int_BufSz  = Int_BufSz  + 1  ! NWindVel
   Int_BufSz   = Int_BufSz   + 1     ! WindVxiList allocated yes/no
   IF ( ALLOCATED(InData%WindVxiList) ) THEN
@@ -781,6 +784,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VFlowAngle
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%VelInterpOrder
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NWindVel
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WindVxiList) ) THEN
@@ -982,6 +987,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%VFlowAngle = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%VelInterpOrder = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NWindVel = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindVxiList not allocated

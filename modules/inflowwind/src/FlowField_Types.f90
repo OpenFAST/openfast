@@ -144,6 +144,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
     REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
+    INTEGER(IntKi)  :: VelInterpOrder = 0      !< Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7] [-]
     LOGICAL  :: RotateWindBox = .false.      !< flag indicating if the wind will be rotated [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
@@ -2722,6 +2723,7 @@ ENDIF
     DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
     DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
     DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
+    DstFlowFieldTypeData%VelInterpOrder = SrcFlowFieldTypeData%VelInterpOrder
     DstFlowFieldTypeData%RotateWindBox = SrcFlowFieldTypeData%RotateWindBox
     DstFlowFieldTypeData%RotToWind = SrcFlowFieldTypeData%RotToWind
     DstFlowFieldTypeData%RotFromWind = SrcFlowFieldTypeData%RotFromWind
@@ -2814,6 +2816,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
+      Int_BufSz  = Int_BufSz  + 1  ! VelInterpOrder
       Int_BufSz  = Int_BufSz  + 1  ! RotateWindBox
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotToWind)  ! RotToWind
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotFromWind)  ! RotFromWind
@@ -2940,6 +2943,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VFlowAngle
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%VelInterpOrder
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RotateWindBox, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO i2 = LBOUND(InData%RotToWind,2), UBOUND(InData%RotToWind,2)
@@ -3136,6 +3141,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%VFlowAngle = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%VelInterpOrder = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%RotateWindBox = TRANSFER(IntKiBuf(Int_Xferred), OutData%RotateWindBox)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%RotToWind,1)

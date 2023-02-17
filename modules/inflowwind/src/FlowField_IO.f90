@@ -23,17 +23,17 @@
 !
 !**********************************************************************************************************************************
 
-module IfW_FlowField
+module FlowField_IO
 
 use NWTC_Library
-use IfW_FlowField_Types
+use FlowField_IO_Types
 use FlowField
 
 implicit none
 private
-public :: IfW_FlowField_Init
+public :: FlowField_IO_Init
 
-type(ProgDesc), parameter :: IfW_FlowField_Ver = ProgDesc('IfW_FlowField', '', '')
+type(ProgDesc), parameter :: FlowField_IO_Ver = ProgDesc('FlowField_IO', '', '')
 
 integer(IntKi), parameter :: ScaleMethod_None = 0, &           !< no scaling
                              ScaleMethod_Direct = 1, &         !< direct scaling factors
@@ -55,15 +55,15 @@ contains
 !----------------------------------------------------------------------------------------------------
 !> A subroutine to initialize the UserWind module. This routine will initialize the module.
 !----------------------------------------------------------------------------------------------------
-subroutine IfW_FlowField_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
+subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
-   type(IfW_FlowField_InitInputType), intent(in)   :: InitInp           !< Input data for initialization
+   type(FlowField_IO_InitInputType), intent(in)   :: InitInp           !< Input data for initialization
    type(FlowFieldType), intent(out)                :: FF                !< Flow field
-   type(IfW_FlowField_InitOutputType), intent(out) :: InitOut           !< Misc variables for optimization (not copied in glue code)
+   type(FlowField_IO_InitOutputType), intent(out) :: InitOut           !< Misc variables for optimization (not copied in glue code)
    integer(IntKi), intent(out)                     :: ErrStat           !< determines if an error has been encountered
    character(*), intent(out)                       :: ErrMsg            !< A message about the error.  See NWTC_Library info for ErrID_* levels.
 
-   character(*), parameter                         :: RoutineName = 'IfW_FlowField_Init'
+   character(*), parameter                         :: RoutineName = 'FlowField_IO_Init'
    integer(IntKi)                                  :: TmpErrStat        ! Temp variable for the error status
    character(ErrMsgLen)                            :: TmpErrMsg         ! temporary error message
 
@@ -142,14 +142,14 @@ subroutine IfW_FlowField_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
    select case (FF%FieldType)
    case (Uniform_FieldType)
-      if (InitInp%CalcAccel) then
+      if (InitInp%CalcAccel .or. (InitInp%VelInterpOrder == 3)) then
          call UniformField_CalcAccel(FF%Uniform, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end if
 
    case (Grid_FieldType)
-      if (InitInp%CalcAccel) then
+      if (InitInp%CalcAccel .or. (InitInp%VelInterpOrder == 3)) then
          call GridField_CalcAccel(FF%Grid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -197,7 +197,7 @@ subroutine IfW_FlowField_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
    ! Initialization Output
    !----------------------------------------------------------------------------
 
-   InitOut%Ver = IfW_FlowField_Ver
+   InitOut%Ver = FlowField_IO_Ver
 
 end subroutine
 
@@ -470,7 +470,7 @@ subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 
    if (SumFileUnit > 0) then
       write (SumFileUnit, '(A)')
-      write (SumFileUnit, '(A)') 'Uniform wind.  Module '//TRIM(IfW_FlowField_Ver%Name)//' '//TRIM(IfW_FlowField_Ver%Ver)
+      write (SumFileUnit, '(A)') 'Uniform wind.  Module '//TRIM(FlowField_IO_Ver%Name)//' '//TRIM(FlowField_IO_Ver%Ver)
       write (SumFileUnit, '(A)') '     FileName:                    '//TRIM(InitInp%WindFileName)
       write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', UF%RefHeight
       write (SumFileUnit, '(A34,G12.4)') '     Reference length (m):        ', UF%RefLength
@@ -793,7 +793,7 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    if (SumFileUnit > 0) then
       write (SumFileUnit, '(A)')
       write (SumFileUnit, '(A)') 'TurbSim wind type.  Read by InflowWind sub-module ' &
-         //TRIM(IfW_FlowField_Ver%Name)//' '//TRIM(IfW_FlowField_Ver%Ver)
+         //TRIM(FlowField_IO_Ver%Name)//' '//TRIM(FlowField_IO_Ver%Ver)
       write (SumFileUnit, '(A)') TRIM(TmpErrMsg)
       write (SumFileUnit, '(5x,A)') 'FileName:                    '//TRIM(InitInp%WindFileName)
       write (SumFileUnit, '(5x,A29,I3)') 'Binary file format id:       ', GF%WindFileFormat
@@ -1073,7 +1073,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    if (SumFileUnit > 0) then
       write (SumFileUnit, '(A)')
-      write (SumFileUnit, '(A)') 'HAWC wind type.  Read by InflowWind sub-module IfW_FlowField'
+      write (SumFileUnit, '(A)') 'HAWC wind type.  Read by InflowWind sub-module FlowField_IO'
 
       write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', GF%RefHeight
       write (SumFileUnit, '(A34,G12.4)') '     Timestep (s):                ', GF%DTime
@@ -2263,4 +2263,4 @@ end subroutine
 
 ! end subroutine Read_Bladed_Tower
 
-end module IfW_FlowField
+end module FlowField_IO

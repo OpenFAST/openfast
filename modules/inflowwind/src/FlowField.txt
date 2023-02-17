@@ -102,6 +102,7 @@ typedef  ^           FlowFieldType          IntKi               FieldType       
 typedef  ^           ^                      ReKi                RefPosition         3     -         -     "Reference position (point where box is rotated)"                 meters
 typedef  ^           ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
 typedef  ^           ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians
+typedef  ^           ^                      IntKi               VelInterpOrder      -     0         -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
 typedef  ^           ^                      logical             RotateWindBox       -  .false.      -     "flag indicating if the wind will be rotated"                     -
 typedef  ^           ^                      ReKi                RotToWind         {3}{3}  -         -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
 typedef  ^           ^                      ReKi                RotFromWind       {3}{3}  -         -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
