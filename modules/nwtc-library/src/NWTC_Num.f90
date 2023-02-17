@@ -1154,10 +1154,10 @@ CONTAINS
    REAL(SiKi)              :: DCM_expR(3,3)  !< the computed matrix exponential, \f$\Lambda\f$
    
       ! local variables
-   REAL(ReKi)              :: stheta         ! sine of angle of rotation   
-   REAL(ReKi)              :: theta          ! angle of rotation   
-   REAL(ReKi)              :: theta2         ! angle of rotation squared
-   REAL(ReKi)              :: tmp_Mat(3,3)
+   REAL(SiKi)              :: stheta         ! sine of angle of rotation   
+   REAL(SiKi)              :: theta          ! angle of rotation   
+   REAL(SiKi)              :: theta2         ! angle of rotation squared
+   REAL(SiKi)              :: tmp_Mat(3,3)
    
    INTEGER(IntKi)          :: ErrStat
    CHARACTER(30)           :: ErrMsg  
@@ -1166,8 +1166,8 @@ CONTAINS
    theta = TwoNorm(lambda)                   ! Eq. 32
    theta2 = theta**2
 
-   IF ( EqualRealNos(theta,   0.0_ReKi)   .or. &
-        EqualRealNos(theta2,  0.0_ReKi) ) THEN  !
+   IF ( EqualRealNos(theta,   0.0_SiKi)   .or. &
+        EqualRealNos(theta2,  0.0_SiKi) ) THEN  !
       
       CALL eye(DCM_expR, ErrStat, ErrMsg)    ! Eq. 33a
       
@@ -1175,15 +1175,15 @@ CONTAINS
       
          ! convert lambda to skew-symmetric matrix:
       !tmp_mat = -SkewSymMat(lambda)
-      tmp_mat(1,1) =  0.0_ReKi                                            
+      tmp_mat(1,1) =  0.0_SiKi                                            
       tmp_mat(2,1) = -lambda(3)                                           
       tmp_mat(3,1) =  lambda(2)                                           
       tmp_mat(1,2) =              lambda(3)                               
-      tmp_mat(2,2) =              0.0_ReKi                                
+      tmp_mat(2,2) =              0.0_SiKi                                
       tmp_mat(3,2) =             -lambda(1)                               
       tmp_mat(1,3) =                               -lambda(2)             
       tmp_mat(2,3) =                                lambda(1)             
-      tmp_mat(3,3) =                                0.0_ReKi            
+      tmp_mat(3,3) =                                0.0_SiKi            
       
       
          ! Eq. 33b
@@ -1369,11 +1369,11 @@ CONTAINS
    CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
-   REAL(ReKi)                        :: cosTheta
-   REAL(ReKi)                        :: theta
-   REAL(ReKi)                        :: TwoSinTheta
+   REAL(SiKi)                        :: cosTheta
+   REAL(SiKi)                        :: theta
+   REAL(SiKi)                        :: TwoSinTheta
    REAL(SiKi)                        :: v(3)
-   REAL(ReKi)                        :: divisor
+   REAL(SiKi)                        :: divisor
    INTEGER(IntKi)                    :: indx_max
       
          ! initialization
@@ -1381,13 +1381,13 @@ CONTAINS
       ErrMsg  = ""   
    
    
-      cosTheta  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
-      cosTheta  = min( max(cosTheta,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      cosTheta  = 0.5_SiKi*( trace(DCM) - 1.0_SiKi )
+      cosTheta  = min( max(cosTheta,-1.0_SiKi), 1.0_SiKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
       theta     = ACOS( cosTheta )                         ! Eq. 25 ( 0<=theta<=pi )
       
       
       !IF ( EqualRealNos( pi, theta )  ) THEN
-      IF ( theta > 3.1_ReKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
+      IF ( theta > 3.1_SiKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
          ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
 
          logMap(1) = 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3);
@@ -1396,7 +1396,7 @@ CONTAINS
              
          indx_max = maxloc( abs(logMap), 1 )
              
-         divisor = sqrt(abs( logMap(indx_max) *  2.0_ReKi*(1.0_ReKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
+         divisor = sqrt(abs( logMap(indx_max) *  2.0_SiKi*(1.0_SiKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
          if (indx_max == 1) then
            !logMap(1) = 1.0 + DCM(1,1) - DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(1)
             logMap(2) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(2)
@@ -1415,7 +1415,7 @@ CONTAINS
          ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
          ! we'll do a little checking to see if we should change the sign:
          
-         IF ( EqualRealNos( pi, theta )  ) RETURN
+         IF ( EqualRealNos( Pi_S, theta )  ) RETURN
          
          v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
          v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
@@ -1426,9 +1426,9 @@ CONTAINS
          
       ELSE
          
-         TwoSinTheta = 2.0_ReKi*sin(theta)
+         TwoSinTheta = 2.0_SiKi*sin(theta)
          
-         IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, TwoSinTheta ) ) THEN
+         IF ( EqualRealNos(0.0_SiKi, theta) .or. EqualRealNos( 0.0_SiKi, TwoSinTheta ) ) THEN
          
             !skewSym = DCM - TRANSPOSE(DCM)
             !
@@ -1439,7 +1439,7 @@ CONTAINS
             !logMap = 0.5_ReKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
          
          
-            logMap = 0.0_ReKi                                                   ! Eq. 26a
+            logMap = 0.0_SiKi                                                   ! Eq. 26a
                   
          ELSE ! 0 < theta < pi 
       
@@ -1549,9 +1549,9 @@ CONTAINS
    
    REAL(SiKi),     INTENT(INOUT) :: tensor(:,:)
 
-   REAL(ReKi)                    :: diff1, diff2      ! magnitude-squared of difference between two adjacent values
-   REAL(ReKi)                    :: temp(3), temp1(3) ! difference between two tensors
-   REAL(ReKi)                    :: period(3)         ! the period to add to the rotational parameters
+   REAL(SiKi)                    :: diff1, diff2      ! magnitude-squared of difference between two adjacent values
+   REAL(SiKi)                    :: temp(3), temp1(3) ! difference between two tensors
+   REAL(SiKi)                    :: period(3)         ! the period to add to the rotational parameters
    INTEGER(IntKi)                :: nc                ! size of the tensors matrix
    INTEGER(IntKi)                :: ic                ! loop counters for each array dimension
    
@@ -1562,7 +1562,7 @@ CONTAINS
       
       diff1 = TwoNorm( tensor(:,ic) )
       
-      if ( .NOT. EqualRealNos( diff1, 0.0_ReKi) ) then
+      if ( .NOT. EqualRealNos( diff1, 0.0_SiKi) ) then
             ! check if we're going around a 2pi boundary:
       
          period = tensor(:,ic) * ( Twopi/diff1 )
@@ -2069,11 +2069,11 @@ CONTAINS
    END IF
 
       ! initialize to zero:
-   A = 0._ReKi
+   A = 0.0_SiKi
 
       ! set the diagonals to one:
    DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
-      A(j,j) = 1._ReKi
+      A(j,j) = 1.0_SiKi
    END DO
 
    END SUBROUTINE Eye2
@@ -2144,12 +2144,12 @@ CONTAINS
    END IF
 
       ! initialize to zero:
-   A = 0._ReKi
+   A = 0.0_SiKi
 
       ! set the diagonals to one:
    DO i = 1, n ! loop through the matrices
       DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
-         A(j,j,i) = 1._ReKi
+         A(j,j,i) = 1.0_SiKi
       END DO
    END DO
 
@@ -2505,17 +2505,17 @@ END FUNCTION FindValidChannelIndx
    INTEGER,    INTENT(OUT )           :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
    CHARACTER(*),INTENT(OUT ),OPTIONAL :: ErrMsg                ! a non-zero value indicates an error in the permutation matrix algorithm
 
-   REAL(ReKi)                         :: GetSmllRotAngsR ( 3 )
+   REAL(SiKi)                         :: GetSmllRotAngsR ( 3 )
 
       ! local variables
-   REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
-   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4_ReKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(SiKi)                         :: denom                 ! the denominator of the resulting matrix
+   REAL(SiKi), PARAMETER              :: LrgAngle  = 0.4_SiKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
-   GetSmllRotAngsR = 0.0_ReKi
+   GetSmllRotAngsR = 0.0_SiKi
    ErrStat         = ErrID_None
    ErrMsg          = ""
 
@@ -2524,9 +2524,9 @@ END FUNCTION FindValidChannelIndx
    GetSmllRotAngsR(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsR(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_ReKi
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_SiKi
 
-   IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
+   IF ( .NOT. EqualRealNos( denom, 0.0_SiKi ) ) THEN
       GetSmllRotAngsR = GetSmllRotAngsR / denom
 
          ! check that the angles are, in fact, small
@@ -5524,16 +5524,16 @@ end function Rad2M180to180Deg
 
       ! Local Variables:
 
-   REAL(ReKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-   REAL(ReKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(ReKi)                          :: Theta11                                         ! = Theta1^2
-   REAL(ReKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta22                                         ! = Theta2^2
-   REAL(ReKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta33                                         ! = Theta3^2
-   REAL(ReKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(ReKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(SiKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(SiKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(SiKi)                          :: Theta11                                         ! = Theta1^2
+   REAL(SiKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta22                                         ! = Theta2^2
+   REAL(SiKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta33                                         ! = Theta3^2
+   REAL(SiKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
+   REAL(SiKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
 
    LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
@@ -5570,18 +5570,18 @@ end function Rad2M180to180Deg
    SQRT1SqrdSum = SQRT( 1.0_ReKi + SqrdSum )
    ComDenom     = SqrdSum*SQRT1SqrdSum
 
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Reki )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Reki )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Reki )
+   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Siki )
+   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Siki )
+   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Siki )
 
 
       ! Define the transformation matrix:
 
    IF ( ComDenom == 0.0_ReKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
 
-      TransMat(1,:) = (/ 1.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
-      TransMat(2,:) = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
-      TransMat(3,:) = (/ 0.0_ReKi, 0.0_ReKi, 1.0_ReKi /)
+      TransMat(1,:) = (/ 1.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
+      TransMat(2,:) = (/ 0.0_SiKi, 1.0_SiKi, 0.0_SiKi /)
+      TransMat(3,:) = (/ 0.0_SiKi, 0.0_SiKi, 1.0_SiKi /)
 
    ELSE                          ! At least one angle is nonzero
 
@@ -6107,7 +6107,7 @@ end function Rad2M180to180Deg
    
    FUNCTION TaitBryanYXZConstructR8(theta) result(M)
    
-     ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
       ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
       ! M represents a change of basis (from global to local coordinates; 
       ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
@@ -6347,14 +6347,14 @@ end function Rad2M180to180Deg
    SUBROUTINE Angles_ExtrapInterp1_R8(Angle1, Angle2, tin, Angle_out, tin_out)
        REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R8Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R8Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
          
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(R8Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
     
@@ -6396,8 +6396,8 @@ end function Rad2M180to180Deg
                                                                      
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(SiKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
     
@@ -6613,7 +6613,7 @@ end function Rad2M180to180Deg
        REAL(R4Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
        REAL(R4Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
     
@@ -6676,7 +6676,7 @@ end function Rad2M180to180Deg
        REAL(R4Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
        REAL(R4Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
     
