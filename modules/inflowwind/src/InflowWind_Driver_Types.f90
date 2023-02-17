@@ -62,7 +62,7 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in  -- command line option only
 
       LOGICAL                 :: WindGridOutputInit   = .FALSE.      !< Is the WindGridOut file initialized
-      LOGICAL                 :: PointsOutputInit     = .FALSE.      !< Is the Points output file initialized
+      LOGICAL                 :: PointsOutputInit(3)  = .FALSE.      !< Is the Points output file initialized
       LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
@@ -81,12 +81,12 @@ MODULE InflowWind_Driver_Types
       CHARACTER(1024)         :: SummaryFileName               !< Filename for the summary information output
 
       CHARACTER(1024)         :: PointsFileName                !< Filename of points file to read in
-      CHARACTER(1024)         :: PointsOutputName              !< Filename for output from points read in from points file
+      CHARACTER(1024)         :: PointsOutputName(3)           !< Filename for output from points read in from points file
       CHARACTER(1024)         :: FFTOutputName                 !< Filename for output from points read in from points file
       CHARACTER(1024)         :: WindGridOutputName            !< Filename for output from points read in from points file
 
       INTEGER(IntKi)          :: WindGridOutputUnit            !< Unit number for the output file for the wind grid data
-      INTEGER(IntKi)          :: PointsOutputUnit              !< Unit number for the output file for the Points file output
+      INTEGER(IntKi)          :: PointsOutputUnit(3)           !< Unit number for the output file for the Points file output
       INTEGER(IntKi)          :: FFTOutputUnit                 !< Unit number for the output file for the FFT results
 
       INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps

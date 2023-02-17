@@ -2405,6 +2405,7 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
       ! The arguments
    TYPE( IfWDriver_Flags ),            INTENT(IN   )  :: DvrFlags           !< Flags indicating which settings were set
    TYPE( IfWDriver_Settings ),         INTENT(IN   )  :: DvrSettings        !< Stored settings
+   integer(IntKi)                                     :: i
 
    CALL WrsCr(TRIM(GetNVD(DvrSettings%ProgInfo)))
    CALL WrScr(' DvrIptFile:          '//FLAG(DvrFlags%DvrIptFile)//        '      '//TRIM(DvrSettings%DvrIptFileName))
@@ -2445,7 +2446,9 @@ if (DvrFlags%WindGrid) then
    CALL WrScr(' WindGridOutputInit:  '//FLAG(DvrFlags%WindGridOutputInit)//'      Unit #:  '//TRIM(Num2LStr(DvrSettings%WindGridOutputUnit)))
 end if
    CALL WrScr(' FFTOutputInit:       '//FLAG(DvrFlags%FFTOutputInit)//     '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutputUnit)))
-   CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit)))
+   do i = 1, size(DvrSettings%PointsOutputUnit)
+      CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit(i))//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit(i))))
+   end do
    RETURN
 END SUBROUTINE printSettings
 

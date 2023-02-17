@@ -14,17 +14,11 @@
 # limitations under the License.
 #
 
-if (GENERATE_TYPES)
-  generate_f90_types(src/FlowField.txt ${CMAKE_CURRENT_LIST_DIR}/src/FlowField_Types.f90 -noextrap)
-endif()
-
 set(NWTCLIBS_SOURCES
   src/JSON.f90
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
   src/ModMesh_Types.f90
-  src/FlowField.f90
-  src/FlowField_Types.f90
   src/NWTC_Base.f90
   src/NWTC_IO.f90
   src/NWTC_Library.f90
