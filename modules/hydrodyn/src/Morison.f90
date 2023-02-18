@@ -3284,11 +3284,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      ! Get the initial z-positions of the two end nodes of the member to determine whether the member should 
-      ! be surface piercing
+      ! Get the z-positions of the two end nodes of the member to determine whether the member is surface piercing 
       z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
       z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
-      IF ( z2 > 0.0_SiKi .AND. z1 <= 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
+      ! Include displacement if wave stretching enabled and WaveDisp /= 0
+      IF ( p%WaveStMod > 0 .AND. p%WaveDisp /= 0 ) THEN
+        z1 = z1 + u%Mesh%TranslationDisp(3, mem%NodeIndx(1))
+        z2 = z2 + u%Mesh%TranslationDisp(3, mem%NodeIndx(N+1))
+      END IF
+
+      IF ( p%WaveStMod > 0 .AND. z1 <= m%WaveElev(mem%NodeIndx(1)) .AND. z2 > m%WaveElev(mem%NodeIndx(N+1)) ) THEN 
       
       !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
                 
@@ -3413,15 +3418,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END DO ! i =1,N+1    ! loop through member nodes  
 
-        IF (FSElem < 0_IntKi) THEN ! No partially wetted element identified - Bad!
-          CALL SetErrStat(ErrID_Warn, 'No partially wetted element identified for an initially surface-piercing member.  Skipping load smoothing.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-          ! RETURN
-        ! ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
-        !   CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-        !   RETURN
-        END IF
-
-        IF (FSElem > 0_IntKi) THEN ! Perform load smoothing if there is a partially wetted element
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
@@ -3661,10 +3657,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
         END IF
 
-        END IF
-
-
-      ELSE !-------------------------------Fully Submerged Member or No Wave Stretching-------------------------------!
+      ELSE !----------------------------Non-surface Piercing Member or No Wave Stretching----------------------------!
       
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
@@ -3678,11 +3671,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            END IF
            
            ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
-           IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
-              CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
-                                     //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-              !RETURN
-           END IF
+           ! IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
+           !    CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
+           !                           //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+           ! END IF
                       
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Default value for fully submerged interior node
@@ -3703,7 +3695,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               h_c    = -mem%dl/4.0_ReKi
            ELSE ! Interior node
               ! Need to check if element crosses the SWL, but only if WaveStMod == 0
-              ! With wave stretching, will error out anyway unless all nodes are submerged
+              ! With wave stretching, surface-piercing members are already handled by the IF branch
               IF (p%WaveStMod==0) THEN ! No wave stretching
                  ! Initial z position will always be used
                  z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
