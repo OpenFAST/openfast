@@ -93,7 +93,7 @@ foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules/aerodyn modu
 endforeach()
 
 ## openfast seed
-foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
+foreach(turbineDirectory 5MW_Baseline AOC AWT27 UAE_VI WP_Baseline)
   file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
   DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
 endforeach()
