@@ -2574,6 +2574,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: r1
    REAL(ReKi)               :: r2
    REAL(ReKi)               :: dRdl_mg     ! shorthand for taper including marine growth of element i
+   REAL(ReKi)               :: RMGFSInt    ! Member radius with marine growth at the intersection with the instantaneous free surface
    real(ReKi)               :: g     ! gravity constant
    REAL(ReKi)               :: h0    ! distances along cylinder centerline from point 1 to the waterplane
    real(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
@@ -3513,19 +3514,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                SubRatio  * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem+1)) + &
           (1.0-SubRatio) * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem  ))   &
         )
-        dRdl_p  = 0.5*( abs(mem%dRdl_mg(FSElem-1)) + abs(mem%dRdl_mg(FSElem)) )
+        dRdl_p  = abs(mem%dRdl_mg(FSElem))
+        RMGFSInt = SubRatio * mem%RMG(FSElem+1) + (1.0-SubRatio) * mem%RMG(FSElem)
+
         vec = matmul( mem%Ak,vrelFSInt )
-        F_DS = mem%Cd(FSElem)*p%WtrDens*mem%RMG(FSElem)*TwoNorm(vec)*vec  +  &
-                  0.5*mem%AxCd(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*dRdl_p * & 
+        F_DS = mem%Cd(FSElem)*p%WtrDens*RMGFSInt*TwoNorm(vec)*vec  +  &
+                  0.5*mem%AxCd(FSElem)*p%WtrDens*pi*RMGFSInt*dRdl_p * & 
                   abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )
-        
+
         ! Hydrodynamic added mass and inertia loads
         IF ( .NOT. mem%PropPot ) THEN
            
            ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
            IF (p%AMMod > 0_IntKi) THEN
-              Am =      mem%Ca(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*mem%Ak + &
-                  2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p*mem%kkt
+              Am =      mem%Ca(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*mem%Ak + &
+                  2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p*mem%kkt
               F_AS = -matmul( Am, &
                          SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
                     (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
@@ -3533,13 +3536,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          
            ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
            IF ( mem%PropMCF) THEN
-              F_IS=                             p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAMCFFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+              F_IS=                             p%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAMCFFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
            ELSE
-              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
            END IF
         END IF
         
@@ -3547,7 +3550,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !                         Perform the load redistribution for smooth time series                     !
         !----------------------------------------------------------------------------------------------------!
         ! Evaluate the load redistribution function
-        f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
+        f_redist = 0.0_ReKi
+        IF (FSElem > 1_IntKi) THEN ! At least one fully submerged element
+           f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
+        END IF
         
         ! deltal = mem%dl and h_c = 0 should always be used here by design. Moment correction will be applied separately
         deltal = mem%dl
@@ -3555,11 +3561,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Viscous drag
         ! Apply load redistribution to the first node below the free surface
-        IF (FSElem > 1_IntKi) THEN ! At least one fully submerged element
-           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
-        ELSE IF (FSElem > 0_IntKi) THEN ! No fully submerged element
-           Df_hydro =  (SubRatio-1.0_ReKi)*F_D0 + SubRatio*F_DS
-        END IF
+        Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
         CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
         m%memberLoads(im)%F_D(:, FSElem) = m%memberLoads(im)%F_D(:, FSElem) + Df_hydro_lumped
         y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3567,11 +3569,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Apply load redistribution to the second node below the free surface
         IF (FSElem > 1_IntKi) THEN ! Note: Only need to modify the loads on the second node below the free surface when there is at least one fully submerged element.
-           IF (FSElem > 2_IntKi) THEN ! At least two fully submerged element
-              Df_hydro = f_redist * F_D0
-           ELSE ! One fully submerged element
-              Df_hydro = 2.0_ReKi * f_redist * F_D0
-           END IF
+           Df_hydro = f_redist * F_D0
            CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
            m%memberLoads(im)%F_D(:, FSElem-1) = m%memberLoads(im)%F_D(:, FSElem-1) + Df_hydro_lumped
            y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
@@ -3584,11 +3582,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( p%AMMod > 0_IntKi ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               ! Apply load redistribution to the first node below the free surface
-              IF (FSElem > 1_IntKi) THEN
-                  Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
-              ELSE IF (FSElem > 0_IntKi) THEN
-                  Df_hydro =  (SubRatio-1.0_ReKi)*F_A0 + SubRatio*F_AS
-              END IF
+              Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
               CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
               m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
               y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3596,11 +3590,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
               ! Apply load redistribution to the second node below the free surface
               IF (FSElem > 1_IntKi) THEN
-                  IF (FSElem > 2_IntKi) THEN
-                      Df_hydro = f_redist * F_A0
-                  ELSE
-                      Df_hydro = 2.0_ReKi * f_redist *F_A0
-                  END IF
+                  Df_hydro = f_redist * F_A0
                   CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
                   m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
                   y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
@@ -3610,11 +3600,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
            ! Apply load redistribution to the first node below the free surface
-           IF (FSElem > 1_IntKi) THEN
-               Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
-           ELSE IF (FSElem > 0_IntKi) THEN
-               Df_hydro =  (SubRatio-1.0_ReKi)*F_I0 + SubRatio*F_IS
-           END IF
+           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
            CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
            m%memberLoads(im)%F_I(:, FSElem) = m%memberLoads(im)%F_I(:, FSElem) + Df_hydro_lumped
            y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3622,11 +3608,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
            ! Apply load redistribution to the second node below the free surface
            IF (FSElem > 1_IntKi) THEN
-               IF (FSElem > 2_IntKi) THEN
-                   Df_hydro = f_redist * F_I0
-               ELSE
-                   Df_hydro = 2.0_ReKi * f_redist * F_I0
-               END IF
+               Df_hydro = f_redist * F_I0
                CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
                m%memberLoads(im)%F_I(:, FSElem-1) = m%memberLoads(im)%F_I(:, FSElem-1) + Df_hydro_lumped
                y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
