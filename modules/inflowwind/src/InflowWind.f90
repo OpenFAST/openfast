@@ -46,6 +46,7 @@ MODULE InflowWind
    USE                              InflowWind_Subs
    USE                              FlowField_IO_Types
    USE                              FlowField_IO
+   USE                              FlowField
 
    USE                              Lidar                      ! module for obtaining sensor data
    
@@ -306,7 +307,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       FlowField_InitData%SumFileUnit = SumFileUnit
       FlowField_InitData%PropagationDir = InputFileData%PropagationDir
       FlowField_InitData%VFlowAngle = InputFileData%VFlowAngle
-      FlowField_InitData%VelInterpOrder = InputFileData%VelInterpOrder
+      FlowField_InitData%VelInterpCubic = InputFileData%VelInterpCubic
       FlowField_InitData%CalcAccel = InitInp%CalcAccel
 
       select case(FlowField_InitData%WindType)
@@ -974,8 +975,10 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    !-----------------------------
    ! Outputs: OutputData%VelocityUVW
    !-----------------------------
-   CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
-                     OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
+   ! CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
+   !                   OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
+   call FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
+                  OutputData%VelocityUVW, OutputData%AccelUVW, TmpErrStat, TmpErrMsg)
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
    !-----------------------------

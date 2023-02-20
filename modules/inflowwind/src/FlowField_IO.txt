@@ -57,17 +57,17 @@ typedef  ^              ^                     ReKi                    XOffset   
 
 typedef  ^              UserInitInputType     SiKi                    Dummy                   -     -     -     "User field initialization input dummy value"                     -
 
-typedef  ^              ExtGridInitInputType  IntKi                   n                       4     -     -     "number of grid points in the x, y, z, and t directions"                     -
+typedef  ^              Grid4DInitInputType   IntKi                   n                       4     -     -     "number of grid points in the x, y, z, and t directions"                     -
 typedef  ^              ^                     ReKi                    delta                   4     -     -     "size between 2 consecutive grid points in each grid direction"               "m,m,m,s"
 typedef  ^              ^                     ReKi                    pZero                   3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))"    "m"
 
-typedef  ^              ExtPointInitInputType IntKi                   Dummy                   -     -     -     "External Point field initialization input dummy value"                     -
+typedef  ^              PointsInitInputType   IntKi                   Dummy                   -     -     -     "Point field initialization input dummy value"                     -
 
 typedef  ^              InitInputType         IntKi                   WindType                -     0     -     "Type of the windfile"                                            -
 typedef  ^              ^                     IntKi                   SumFileUnit             -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
 typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Direction of wind propagation"                                 radians
 typedef  ^              ^                     ReKi                    VFlowAngle              -     -     -     "Vertical (upflow) angle"                                       -
-typedef  ^              ^                     IntKi                   VelInterpOrder          -     0     -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
+typedef  ^              ^                     logical                 VelInterpCubic          -  .false.  -     "Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]" -
 typedef  ^              ^                     logical                 CalcAccel               -  .false.  -     "Flag to calculate acceleration data"                           -
 typedef  ^              ^                     SteadyInitInputType     Steady                  -     -     -     "" -
 typedef  ^              ^                     UniformInitInputType    Uniform                 -     -     -     "" -
@@ -75,8 +75,8 @@ typedef  ^              ^                     TurbSimInitInputType    TurbSim   
 typedef  ^              ^                     BladedInitInputType     Bladed                  -     -     -     "" -
 typedef  ^              ^                     HAWCInitInputType       HAWC                    -     -     -     "" -
 typedef  ^              ^                     UserInitInputType       User                    -     -     -     "" -
-typedef  ^              ^                     ExtGridInitInputType    ExtGrid                 -     -     -     "" -
-typedef  ^              ^                     ExtPointInitInputType   ExtPoint                -     -     -     "" -
+typedef  ^              ^                     Grid4DInitInputType     Grid4D                  -     -     -     "" -
+typedef  ^              ^                     PointsInitInputType     Points                  -     -     -     "" -
 
 typedef  ^              WindFileDat           character(1024)         FileName                -     -     -     "Name of the windfile retrieved"                               -
 typedef  ^              ^                     IntKi                   WindType                -     0     -     "Type of the windfile"                                         -

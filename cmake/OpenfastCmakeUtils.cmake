@@ -48,7 +48,7 @@ function(generate_f90_types regfile outfile)
     DEPENDS openfast_registry ${input}
     COMMAND ${CMAKE_BINARY_DIR}/modules/openfast-registry/openfast_registry ${input} "-O" "${outdir}" ${OPENFAST_REGISTRY_INCLUDES} ${ARGN}
   )
-  set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
+  set_source_files_properties(${outfile} PROPERTIES GENERATED TRUE)
 endfunction(generate_f90_types)
 
 #

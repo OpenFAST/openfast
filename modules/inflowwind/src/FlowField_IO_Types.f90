@@ -126,17 +126,17 @@ IMPLICIT NONE
     REAL(SiKi)  :: Dummy      !< User field initialization input dummy value [-]
   END TYPE UserInitInputType
 ! =======================
-! =========  ExtGridInitInputType  =======
-  TYPE, PUBLIC :: ExtGridInitInputType
+! =========  Grid4DInitInputType  =======
+  TYPE, PUBLIC :: Grid4DInitInputType
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-  END TYPE ExtGridInitInputType
+  END TYPE Grid4DInitInputType
 ! =======================
-! =========  ExtPointInitInputType  =======
-  TYPE, PUBLIC :: ExtPointInitInputType
-    INTEGER(IntKi)  :: Dummy      !< External Point field initialization input dummy value [-]
-  END TYPE ExtPointInitInputType
+! =========  PointsInitInputType  =======
+  TYPE, PUBLIC :: PointsInitInputType
+    INTEGER(IntKi)  :: Dummy      !< Point field initialization input dummy value [-]
+  END TYPE PointsInitInputType
 ! =======================
 ! =========  FlowField_IO_InitInputType  =======
   TYPE, PUBLIC :: FlowField_IO_InitInputType
@@ -144,7 +144,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SumFileUnit      !< Unit number for the summary file (-1 for none).  Provided by IfW. [-]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
     REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [-]
-    INTEGER(IntKi)  :: VelInterpOrder = 0      !< Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7] [-]
+    LOGICAL  :: VelInterpCubic = .false.      !< Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7] [-]
     LOGICAL  :: CalcAccel = .false.      !< Flag to calculate acceleration data [-]
     TYPE(SteadyInitInputType)  :: Steady      !<  [-]
     TYPE(UniformInitInputType)  :: Uniform      !<  [-]
@@ -152,8 +152,8 @@ IMPLICIT NONE
     TYPE(BladedInitInputType)  :: Bladed      !<  [-]
     TYPE(HAWCInitInputType)  :: HAWC      !<  [-]
     TYPE(UserInitInputType)  :: User      !<  [-]
-    TYPE(ExtGridInitInputType)  :: ExtGrid      !<  [-]
-    TYPE(ExtPointInitInputType)  :: ExtPoint      !<  [-]
+    TYPE(Grid4DInitInputType)  :: Grid4D      !<  [-]
+    TYPE(PointsInitInputType)  :: Points      !<  [-]
   END TYPE FlowField_IO_InitInputType
 ! =======================
 ! =========  WindFileDat  =======
@@ -2325,9 +2325,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE FlowField_IO_UnPackUserInitInputType
 
- SUBROUTINE FlowField_IO_CopyExtGridInitInputType( SrcExtGridInitInputTypeData, DstExtGridInitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(ExtGridInitInputType), INTENT(IN) :: SrcExtGridInitInputTypeData
-   TYPE(ExtGridInitInputType), INTENT(INOUT) :: DstExtGridInitInputTypeData
+ SUBROUTINE FlowField_IO_CopyGrid4DInitInputType( SrcGrid4DInitInputTypeData, DstGrid4DInitInputTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(Grid4DInitInputType), INTENT(IN) :: SrcGrid4DInitInputTypeData
+   TYPE(Grid4DInitInputType), INTENT(INOUT) :: DstGrid4DInitInputTypeData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2336,17 +2336,17 @@ ENDIF
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_CopyExtGridInitInputType'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_CopyGrid4DInitInputType'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstExtGridInitInputTypeData%n = SrcExtGridInitInputTypeData%n
-    DstExtGridInitInputTypeData%delta = SrcExtGridInitInputTypeData%delta
-    DstExtGridInitInputTypeData%pZero = SrcExtGridInitInputTypeData%pZero
- END SUBROUTINE FlowField_IO_CopyExtGridInitInputType
+    DstGrid4DInitInputTypeData%n = SrcGrid4DInitInputTypeData%n
+    DstGrid4DInitInputTypeData%delta = SrcGrid4DInitInputTypeData%delta
+    DstGrid4DInitInputTypeData%pZero = SrcGrid4DInitInputTypeData%pZero
+ END SUBROUTINE FlowField_IO_CopyGrid4DInitInputType
 
- SUBROUTINE FlowField_IO_DestroyExtGridInitInputType( ExtGridInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(ExtGridInitInputType), INTENT(INOUT) :: ExtGridInitInputTypeData
+ SUBROUTINE FlowField_IO_DestroyGrid4DInitInputType( Grid4DInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(Grid4DInitInputType), INTENT(INOUT) :: Grid4DInitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
@@ -2355,7 +2355,7 @@ ENDIF
   LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FlowField_IO_DestroyExtGridInitInputType'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FlowField_IO_DestroyGrid4DInitInputType'
 
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -2366,13 +2366,13 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
- END SUBROUTINE FlowField_IO_DestroyExtGridInitInputType
+ END SUBROUTINE FlowField_IO_DestroyGrid4DInitInputType
 
- SUBROUTINE FlowField_IO_PackExtGridInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE FlowField_IO_PackGrid4DInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(ExtGridInitInputType),  INTENT(IN) :: InData
+  TYPE(Grid4DInitInputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2387,7 +2387,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_PackExtGridInitInputType'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_PackGrid4DInitInputType'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2445,13 +2445,13 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%pZero(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
- END SUBROUTINE FlowField_IO_PackExtGridInitInputType
+ END SUBROUTINE FlowField_IO_PackGrid4DInitInputType
 
- SUBROUTINE FlowField_IO_UnPackExtGridInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE FlowField_IO_UnPackGrid4DInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(ExtGridInitInputType), INTENT(INOUT) :: OutData
+  TYPE(Grid4DInitInputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2463,7 +2463,7 @@ ENDIF
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_UnPackExtGridInitInputType'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_UnPackGrid4DInitInputType'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2492,11 +2492,11 @@ ENDIF
       OutData%pZero(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
- END SUBROUTINE FlowField_IO_UnPackExtGridInitInputType
+ END SUBROUTINE FlowField_IO_UnPackGrid4DInitInputType
 
- SUBROUTINE FlowField_IO_CopyExtPointInitInputType( SrcExtPointInitInputTypeData, DstExtPointInitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(ExtPointInitInputType), INTENT(IN) :: SrcExtPointInitInputTypeData
-   TYPE(ExtPointInitInputType), INTENT(INOUT) :: DstExtPointInitInputTypeData
+ SUBROUTINE FlowField_IO_CopyPointsInitInputType( SrcPointsInitInputTypeData, DstPointsInitInputTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(PointsInitInputType), INTENT(IN) :: SrcPointsInitInputTypeData
+   TYPE(PointsInitInputType), INTENT(INOUT) :: DstPointsInitInputTypeData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2504,15 +2504,15 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_CopyExtPointInitInputType'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_CopyPointsInitInputType'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstExtPointInitInputTypeData%Dummy = SrcExtPointInitInputTypeData%Dummy
- END SUBROUTINE FlowField_IO_CopyExtPointInitInputType
+    DstPointsInitInputTypeData%Dummy = SrcPointsInitInputTypeData%Dummy
+ END SUBROUTINE FlowField_IO_CopyPointsInitInputType
 
- SUBROUTINE FlowField_IO_DestroyExtPointInitInputType( ExtPointInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(ExtPointInitInputType), INTENT(INOUT) :: ExtPointInitInputTypeData
+ SUBROUTINE FlowField_IO_DestroyPointsInitInputType( PointsInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(PointsInitInputType), INTENT(INOUT) :: PointsInitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
@@ -2521,7 +2521,7 @@ ENDIF
   LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'FlowField_IO_DestroyExtPointInitInputType'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'FlowField_IO_DestroyPointsInitInputType'
 
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -2532,13 +2532,13 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
- END SUBROUTINE FlowField_IO_DestroyExtPointInitInputType
+ END SUBROUTINE FlowField_IO_DestroyPointsInitInputType
 
- SUBROUTINE FlowField_IO_PackExtPointInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE FlowField_IO_PackPointsInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(ExtPointInitInputType),  INTENT(IN) :: InData
+  TYPE(PointsInitInputType),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2553,7 +2553,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_PackExtPointInitInputType'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_PackPointsInitInputType'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2599,13 +2599,13 @@ ENDIF
 
     IntKiBuf(Int_Xferred) = InData%Dummy
     Int_Xferred = Int_Xferred + 1
- END SUBROUTINE FlowField_IO_PackExtPointInitInputType
+ END SUBROUTINE FlowField_IO_PackPointsInitInputType
 
- SUBROUTINE FlowField_IO_UnPackExtPointInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE FlowField_IO_UnPackPointsInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(ExtPointInitInputType), INTENT(INOUT) :: OutData
+  TYPE(PointsInitInputType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2616,7 +2616,7 @@ ENDIF
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_UnPackExtPointInitInputType'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'FlowField_IO_UnPackPointsInitInputType'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2629,7 +2629,7 @@ ENDIF
   Int_Xferred  = 1
     OutData%Dummy = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
- END SUBROUTINE FlowField_IO_UnPackExtPointInitInputType
+ END SUBROUTINE FlowField_IO_UnPackPointsInitInputType
 
  SUBROUTINE FlowField_IO_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(FlowField_IO_InitInputType), INTENT(IN) :: SrcInitInputData
@@ -2649,7 +2649,7 @@ ENDIF
     DstInitInputData%SumFileUnit = SrcInitInputData%SumFileUnit
     DstInitInputData%PropagationDir = SrcInitInputData%PropagationDir
     DstInitInputData%VFlowAngle = SrcInitInputData%VFlowAngle
-    DstInitInputData%VelInterpOrder = SrcInitInputData%VelInterpOrder
+    DstInitInputData%VelInterpCubic = SrcInitInputData%VelInterpCubic
     DstInitInputData%CalcAccel = SrcInitInputData%CalcAccel
       CALL FlowField_IO_Copysteadyinitinputtype( SrcInitInputData%Steady, DstInitInputData%Steady, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -2669,10 +2669,10 @@ ENDIF
       CALL FlowField_IO_Copyuserinitinputtype( SrcInitInputData%User, DstInitInputData%User, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL FlowField_IO_Copyextgridinitinputtype( SrcInitInputData%ExtGrid, DstInitInputData%ExtGrid, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL FlowField_IO_Copygrid4dinitinputtype( SrcInitInputData%Grid4D, DstInitInputData%Grid4D, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-      CALL FlowField_IO_Copyextpointinitinputtype( SrcInitInputData%ExtPoint, DstInitInputData%ExtPoint, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL FlowField_IO_Copypointsinitinputtype( SrcInitInputData%Points, DstInitInputData%Points, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE FlowField_IO_CopyInitInput
@@ -2710,9 +2710,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL FlowField_IO_Destroyuserinitinputtype( InitInputData%User, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FlowField_IO_Destroyextgridinitinputtype( InitInputData%ExtGrid, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FlowField_IO_Destroygrid4dinitinputtype( InitInputData%Grid4D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FlowField_IO_Destroyextpointinitinputtype( InitInputData%ExtPoint, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FlowField_IO_Destroypointsinitinputtype( InitInputData%Points, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE FlowField_IO_DestroyInitInput
 
@@ -2755,7 +2755,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! SumFileUnit
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
-      Int_BufSz  = Int_BufSz  + 1  ! VelInterpOrder
+      Int_BufSz  = Int_BufSz  + 1  ! VelInterpCubic
       Int_BufSz  = Int_BufSz  + 1  ! CalcAccel
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Steady: size of buffers for each call to pack subtype
@@ -2860,37 +2860,37 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! ExtGrid: size of buffers for each call to pack subtype
-      CALL FlowField_IO_Packextgridinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%ExtGrid, ErrStat2, ErrMsg2, .TRUE. ) ! ExtGrid 
+      Int_BufSz   = Int_BufSz + 3  ! Grid4D: size of buffers for each call to pack subtype
+      CALL FlowField_IO_Packgrid4dinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! ExtGrid
+      IF(ALLOCATED(Re_Buf)) THEN ! Grid4D
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! ExtGrid
+      IF(ALLOCATED(Db_Buf)) THEN ! Grid4D
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! ExtGrid
+      IF(ALLOCATED(Int_Buf)) THEN ! Grid4D
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz   = Int_BufSz + 3  ! ExtPoint: size of buffers for each call to pack subtype
-      CALL FlowField_IO_Packextpointinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%ExtPoint, ErrStat2, ErrMsg2, .TRUE. ) ! ExtPoint 
+      Int_BufSz   = Int_BufSz + 3  ! Points: size of buffers for each call to pack subtype
+      CALL FlowField_IO_Packpointsinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, .TRUE. ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! ExtPoint
+      IF(ALLOCATED(Re_Buf)) THEN ! Points
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! ExtPoint
+      IF(ALLOCATED(Db_Buf)) THEN ! Points
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! ExtPoint
+      IF(ALLOCATED(Int_Buf)) THEN ! Points
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -2929,7 +2929,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VFlowAngle
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%VelInterpOrder
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%VelInterpCubic, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CalcAccel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -3101,7 +3101,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL FlowField_IO_Packextgridinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%ExtGrid, ErrStat2, ErrMsg2, OnlySize ) ! ExtGrid 
+      CALL FlowField_IO_Packgrid4dinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, OnlySize ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3129,7 +3129,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL FlowField_IO_Packextpointinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%ExtPoint, ErrStat2, ErrMsg2, OnlySize ) ! ExtPoint 
+      CALL FlowField_IO_Packpointsinitinputtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, OnlySize ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3193,7 +3193,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%VFlowAngle = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    OutData%VelInterpOrder = IntKiBuf(Int_Xferred)
+    OutData%VelInterpCubic = TRANSFER(IntKiBuf(Int_Xferred), OutData%VelInterpCubic)
     Int_Xferred = Int_Xferred + 1
     OutData%CalcAccel = TRANSFER(IntKiBuf(Int_Xferred), OutData%CalcAccel)
     Int_Xferred = Int_Xferred + 1
@@ -3470,7 +3470,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL FlowField_IO_Unpackextgridinitinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%ExtGrid, ErrStat2, ErrMsg2 ) ! ExtGrid 
+      CALL FlowField_IO_Unpackgrid4dinitinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%Grid4D, ErrStat2, ErrMsg2 ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3510,7 +3510,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL FlowField_IO_Unpackextpointinitinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%ExtPoint, ErrStat2, ErrMsg2 ) ! ExtPoint 
+      CALL FlowField_IO_Unpackpointsinitinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%Points, ErrStat2, ErrMsg2 ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

@@ -94,39 +94,39 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
       call UniformWind_Init(InitInp%Uniform, InitInp%SumFileUnit, FF%Uniform, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (3) ! Binary TurbSim FF
-      FF%FieldType = Grid_FieldType
-      call TurbSim_Init(InitInp%TurbSim, InitInp%SumFileUnit, FF%Grid, InitOut%FileDat, TmpErrStat, TmpErrMsg)
+      FF%FieldType = Grid3D_FieldType
+      call TurbSim_Init(InitInp%TurbSim, InitInp%SumFileUnit, FF%Grid3D, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (4) ! Binary Bladed-Style FF
-      FF%FieldType = Grid_FieldType
+      FF%FieldType = Grid3D_FieldType
       ! call Read_Bladed_Binary(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
       TmpErrStat = ErrID_Fatal
       TmpErrMsg = "Binary Bladed Wind is not implemented"
 
    case (5) ! HAWC
-      FF%FieldType = Grid_FieldType
-      call HAWC_Init(InitInp%HAWC, InitInp%SumFileUnit, FF%Grid, InitOut%FileDat, TmpErrStat, TmpErrMsg)
+      FF%FieldType = Grid3D_FieldType
+      call HAWC_Init(InitInp%HAWC, InitInp%SumFileUnit, FF%Grid3D, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (6) ! User Defined
-      FF%FieldType = Grid_FieldType
+      FF%FieldType = Grid3D_FieldType
       TmpErrStat = ErrID_Fatal
       TmpErrMsg = "User Wind is not implemented"
 
    case (7) ! Native Bladed FF
-      FF%FieldType = Grid_FieldType
+      FF%FieldType = Grid3D_FieldType
       ! call Read_Bladed_Native(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
       TmpErrStat = ErrID_Fatal
       TmpErrMsg = "Native Bladed Wind is not implemented"
 
    case (8) ! External Grid
-      FF%FieldType = ExtGrid_FieldType
+      FF%FieldType = Grid4D_FieldType
       TmpErrStat = ErrID_Fatal
-      TmpErrMsg = "ExtGrid Wind is not implemented"
+      TmpErrMsg = "Grid4D Wind is not implemented"
 
    case (9) ! External Point
-      FF%FieldType = ExtPoint_FieldType
+      FF%FieldType = Point_FieldType
       TmpErrStat = ErrID_Fatal
-      TmpErrMsg = "ExtPoint Wind is not implemented"
+      TmpErrMsg = "Points Wind is not implemented"
 
    case default ! Others
       TmpErrStat = ErrID_Fatal
@@ -140,19 +140,24 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
    ! Field Type Initialization
    !----------------------------------------------------------------------------
 
+   ! Reset flag indicating that acceleration field is valid
+   FF%AccFieldValid = .false.
+
    select case (FF%FieldType)
    case (Uniform_FieldType)
-      if (InitInp%CalcAccel .or. (InitInp%VelInterpOrder == 3)) then
+      if (InitInp%CalcAccel .or. (InitInp%VelInterpCubic)) then
          call UniformField_CalcAccel(FF%Uniform, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
+         FF%AccFieldValid = .true.
       end if
 
-   case (Grid_FieldType)
-      if (InitInp%CalcAccel .or. (InitInp%VelInterpOrder == 3)) then
-         call GridField_CalcAccel(FF%Grid, TmpErrStat, TmpErrMsg)
+   case (Grid3D_FieldType)
+      if (InitInp%CalcAccel .or. (InitInp%VelInterpCubic)) then
+         call Grid3DField_CalcAccel(FF%Grid3D, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
+         FF%AccFieldValid = .true.
       end if
 
    case default
@@ -563,7 +568,7 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    type(TurbSimInitInputType), intent(in)    :: InitInp
    integer(IntKi), intent(in)                :: SumFileUnit
-   type(GridFieldType), intent(out)          :: GF
+   type(Grid3DFieldType), intent(out)          :: GF
    type(WindFileDat), intent(out)            :: FileDat
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -784,7 +789,7 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    ! Store wind file metadata
    !----------------------------------------------------------------------------
 
-   call PopulateWindFileDatFromGridField(GF, InitInp%WindFileName, 3, GF%NTGrids > 0, FileDat)
+   call PopulateWindFileDatFromGrid3DField(GF, InitInp%WindFileName, 3, GF%NTGrids > 0, FileDat)
 
    !----------------------------------------------------------------------------
    ! Write the summary file
@@ -838,7 +843,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    type(HAWCInitInputType), intent(in)    :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
-   type(GridFieldType), intent(out)       :: GF
+   type(Grid3DFieldType), intent(out)       :: GF
    type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1065,7 +1070,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    ! Store wind file metadata
    !----------------------------------------------------------------------------
 
-   call PopulateWindFileDatFromGridField(GF, InitInp%WindFileName(1), 5, .false., FileDat)
+   call PopulateWindFileDatFromGrid3DField(GF, InitInp%WindFileName(1), 5, .false., FileDat)
 
    !----------------------------------------------------------------------------
    ! Write the summary file
@@ -1119,17 +1124,17 @@ subroutine User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-!> ExtGrid_Init initializes a wind field defined by a 4D grid.
-subroutine ExtGrid_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
+!> Grid4D_Init initializes a wind field defined by a 4D grid.
+subroutine Grid4D_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
 
-   type(ExtGridInitInputType), intent(in) :: InitInp
+   type(Grid4DInitInputType), intent(in) :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
-   type(ExtGridFieldType), intent(out)    :: EGF
+   type(Grid4DFieldType), intent(out)    :: EGF
    type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = "ExtGrid_Init"
+   character(*), parameter                :: RoutineName = "Grid4D_Init"
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
 
@@ -1157,9 +1162,9 @@ subroutine ExtGrid_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine PopulateWindFileDatFromGridField(GridField, FileName, WindType, HasTower, FileDat)
+subroutine PopulateWindFileDatFromGrid3DField(Grid3DField, FileName, WindType, HasTower, FileDat)
 
-   type(GridFieldType), intent(in)  :: GridField
+   type(Grid3DFieldType), intent(in)  :: Grid3DField
    character(*), intent(in)         :: FileName
    integer(IntKi), intent(in)       :: WindType
    logical, intent(in)              :: HasTower
@@ -1167,34 +1172,34 @@ subroutine PopulateWindFileDatFromGridField(GridField, FileName, WindType, HasTo
 
    FileDat%FileName = FileName
    FileDat%WindType = WindType
-   FileDat%RefHt = GridField%RefHeight
+   FileDat%RefHt = Grid3DField%RefHeight
    FileDat%RefHt_Set = .true.
-   FileDat%DT = GridField%DTime
-   FileDat%NumTSteps = GridField%NSteps
+   FileDat%DT = Grid3DField%DTime
+   FileDat%NumTSteps = Grid3DField%NSteps
    FileDat%ConstantDT = .true.
 
-   if (GridField%Periodic) then
-      FileDat%TRange = [0.0_ReKi, GridField%TotalTime]
+   if (Grid3DField%Periodic) then
+      FileDat%TRange = [0.0_ReKi, Grid3DField%TotalTime]
       FileDat%TRange_Limited = .false.
    else  ! Shift the time range to compensate for the shifting of the wind grid
-      FileDat%TRange = [0.0_ReKi, GridField%TotalTime] - GridField%InitXPosition*GridField%InvMWS
+      FileDat%TRange = [0.0_ReKi, Grid3DField%TotalTime] - Grid3DField%InitXPosition*Grid3DField%InvMWS
       FileDat%TRange_Limited = .true.
    end if
 
-   FileDat%YRange = [-GridField%YHWid, GridField%YHWid]
+   FileDat%YRange = [-Grid3DField%YHWid, Grid3DField%YHWid]
    FileDat%YRange_Limited = .true.   ! Hard boundaries enforced in y-direction
 
    ! If has tower data
    if (HasTower) then
-      FileDat%ZRange = [0.0_Reki, GridField%RefHeight + GridField%ZHWid]
+      FileDat%ZRange = [0.0_Reki, Grid3DField%RefHeight + Grid3DField%ZHWid]
    else
-      FileDat%ZRange = [GridField%GridBase, GridField%GridBase + GridField%ZHWid*2.0]
+      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0]
    end if
 
    FileDat%ZRange_Limited = .true.
-   FileDat%BinaryFormat = GridField%WindFileFormat
+   FileDat%BinaryFormat = Grid3DField%WindFileFormat
    FileDat%IsBinary = .true.
-   FileDat%MWS = GridField%MeanWS
+   FileDat%MWS = Grid3DField%MeanWS
 
    FileDat%TI = 0.0_ReKi
    FileDat%TI_listed = .false.

@@ -25,7 +25,7 @@ use FlowField_Types
 implicit none
 
 public FlowField_GetVelAcc
-public UniformField_CalcAccel, GridField_CalcAccel
+public UniformField_CalcAccel, Grid3DField_CalcAccel
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
 integer(IntKi), parameter  :: WindProfileType_Constant = 0  !< constant wind
@@ -39,28 +39,43 @@ contains
 !> FlowField_GetVelAcc gets the velocities (and accelerations) at the given point positions.
 !! Accelerations are only calculated if the AccelUVW array is allocated.
 subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
-   type(FlowFieldType), intent(in)                 :: FF              !< FlowField data structure
-   integer(IntKi), intent(in)                      :: IStart          !< Start index for returning velocities for external field
-   real(DbKi), intent(in)                          :: Time            !< Time to evaluate velocities/accelerations
-   real(ReKi), dimension(:, :), intent(in)         :: PositionXYZ     !< Array of positions to evaluate velocites/accelerations
-   real(ReKi), dimension(:, :), intent(inout)      :: VelocityUVW     !< Array of velocity outputs
-   real(ReKi), dimension(:, :), allocatable, intent(inout) :: AccelUVW  !< Array of acceleration outputs
-   integer(IntKi), intent(out)                     :: ErrStat         !< Error status
-   character(*), intent(out)                       :: ErrMsg          !< Error message
 
-   character(*), parameter                         :: RoutineName = "FlowField_GetVelAcc"
-   integer(IntKi)                                  :: i
-   integer(IntKi)                                  :: NumPoints
-   real(ReKi), dimension(:, :), allocatable        :: Position
-   type(UniformField_Interp)                       :: UFop
-   integer(IntKi)                                  :: TmpErrStat
-   character(ErrMsgLen)                            :: TmpErrMsg
+   type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
+   integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
+   real(DbKi), intent(in)                    :: Time              !< Time to evaluate velocities/accelerations
+   real(ReKi), intent(in)                    :: PositionXYZ(:, :) !< Array of positions to evaluate velocites/accelerations
+   real(ReKi), intent(inout)                 :: VelocityUVW(:, :) !< Array of velocity outputs
+   real(ReKi), allocatable, intent(inout)    :: AccelUVW(:, :)    !< Array of acceleration outputs
+   integer(IntKi), intent(out)               :: ErrStat           !< Error status
+   character(*), intent(out)                 :: ErrMsg            !< Error message
+
+   character(*), parameter                   :: RoutineName = "FlowField_GetVelAcc"
+   integer(IntKi)                            :: i
+   integer(IntKi)                            :: NumPoints
+   logical                                   :: CalcAccel
+   real(ReKi), allocatable                   :: Position(:, :)
+   integer(IntKi)                            :: TmpErrStat
+   character(ErrMsgLen)                      :: TmpErrMsg
+   ! Uniform Field
+   type(UniformField_Interp)                 :: UFopVel, UFopAcc
+   ! Grid3D Field
+   real(ReKi)                                :: Xi(3)
+   real(ReKi)                                :: VelCell(8, 3), AccCell(8, 3)
+   logical                                   :: Is3D
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Get number of points to evaluate
    NumPoints = size(PositionXYZ, dim=2)
+
+   ! Determine if acceleration should be calculated and returned
+   CalcAccel = allocated(AccelUVW)
+   if (CalcAccel .and. .not. FF%AccFieldValid) then
+      call SetErrStat(ErrID_Fatal, "Accel output requested, but accel field is not valid", &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+   end if
 
    ! Allocate position array
    call AllocAry(Position, 3, NumPoints, "Rotated position data", TmpErrStat, TmpErrMsg)
@@ -70,15 +85,13 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
    end if
 
    ! Copy positions or transform based on wind box rotation
-   if (.not. FF%RotateWindBox) then
-      Position = PositionXYZ
-   else
+   if (FF%RotateWindBox) then
       do i = 1, NumPoints
          Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
       end do
+   else
+      Position = PositionXYZ
    end if
-
-   !TODO: Check that position, velocity, and acceleration are all the same shape
 
    !----------------------------------------------------------------------------
    !  Wind speed coordinate transforms from Wind file coordinates to global
@@ -103,79 +116,132 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
       ! Uniform Flow Field
       !-------------------------------------------------------------------------
 
-      ! If accel allocated
-      if (allocated(AccelUVW)) then
-         UFop = UniformField_GetSmoothOP(FF%Uniform, Time)
+      ! If cubic velocity interp requested, calculate operating point using
+      ! cubic interpolation. Otherwise, use linear interpolation
+      if (FF%VelInterpCubic) then
+         UFopVel = UniformField_IterpCubic(FF%Uniform, Time)
       else
-         UFop = UniformField_GetOP(FF%Uniform, Time)
+         UFopVel = UniformField_InterpLinear(FF%Uniform, Time)
       end if
 
-      ! Get velocity or velocity and acceleration
-      if (.not. allocated(AccelUVW)) then
+      ! If acceleration output is requested
+      if (CalcAccel) then
+
+         ! If cubic interpolation was used for the velocity, use same for accel
+         ! otherwise, calculate operating point via cubic interpolation
+         if (FF%VelInterpCubic) then
+            UFopAcc = UFopVel
+         else
+            UFopAcc = UniformField_IterpCubic(FF%Uniform, Time)
+         end if
+
+         ! Loop throuh points and calcualate velocity and acceleration
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
-               VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFop, Position(:, i))
-            else
-               VelocityUVW(:, i) = 0.0_ReKi
-            end if
-         end do
-      else
-         do i = 1, NumPoints
-            if (Position(3, i) > 0.0_ReKi) then
-               VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFop, Position(:, i))
-               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFop, Position(:, i))
+               VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
+               AccelUVW(:, i) = UniformField_GetAcc(FF%Uniform, UFopAcc, Position(:, i))
             else
                VelocityUVW(:, i) = 0.0_ReKi
                AccelUVW(:, i) = 0.0_ReKi
             end if
          end do
-      end if
 
-   case (Grid_FieldType)
+      else  ! Otherwise, only velocity requested
 
-      !-------------------------------------------------------------------------
-      ! Grid Flow Field
-      !-------------------------------------------------------------------------
-
-      ! Loop through points
-      do i = 1, NumPoints
-
-         ! If height is less than zero, set velocity to zero
-         if (Position(3, i) <= 0.0_ReKi) then
-            VelocityUVW(:, i) = 0.0_ReKi
-            if (allocated(AccelUVW)) AccelUVW(:, i) = 0.0_ReKi
-            cycle
-         end if
-
-         ! Get velocity or velocity and acceleration
-         if (.not. allocated(AccelUVW)) then
-            call GridField_GetVel(FF%Grid, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
-         else
-            call GridField_GetVelAcc(FF%Grid, Time, Position(:, i), VelocityUVW(:, i), AccelUVW(:, i), TmpErrStat, TmpErrMsg)
-         end if
-         if (TmpErrStat >= AbortErrLev) then
-            call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-
-      end do
-
-      ! Add mean wind speed after interpolation if flag is set
-      if (FF%Grid%AddMeanAfterInterp) then
+         ! Loop throuh points and calcualate velocity
          do i = 1, NumPoints
-            VelocityUVW(1, i) = VelocityUVW(1, i) + GetMeanVelocity(FF%Grid, Position(3, i))
+            if (Position(3, i) > 0.0_ReKi) then
+               VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
+            else
+               VelocityUVW(:, i) = 0.0_ReKi
+            end if
          end do
       end if
 
-   case (ExtGrid_FieldType)
+   case (Grid3D_FieldType)
 
       !-------------------------------------------------------------------------
-      ! External Grid Flow Field
+      ! Grid3D Flow Field
       !-------------------------------------------------------------------------
 
-      ! If external field is not allocated, return error
-      if (.not. allocated(FF%ExtGrid%Vel)) then
-         call SetErrStat(ErrID_Fatal, "External Grid Field not allocated", ErrStat, ErrMsg, RoutineName)
+      if (CalcAccel) then
+
+         ! Loop through points
+         do i = 1, NumPoints
+
+            ! If height < zero, set velocity/acceleration to zero, continue
+            if (Position(3, i) <= 0.0_ReKi) then
+               VelocityUVW(:, i) = 0.0_ReKi
+               AccelUVW(:, i) = 0.0_ReKi
+               cycle
+            end if
+
+            ! Calculate grid cells for interpolation
+            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), CalcAccel, &
+                                     VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
+            if (TmpErrStat >= AbortErrLev) then
+               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+
+            if (FF%VelInterpCubic) then
+               ! Cubic velocity and cubic acceleration
+               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                               Velocity=VelocityUVW(:, i), Accel=AccelUVW(:, i))
+            else
+               ! Linear velocity and cubic acceleration
+               VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
+               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                               Accel=AccelUVW(:, i))
+            end if
+
+         end do
+      else
+
+         ! Loop through points
+         do i = 1, NumPoints
+
+            ! If height < zero, set velocity to zero, continue
+            if (Position(3, i) <= 0.0_ReKi) then
+               VelocityUVW(:, i) = 0.0_ReKi
+               cycle
+            end if
+
+            ! Calculate grid cells for interpolation
+            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), CalcAccel, &
+                                     VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
+            if (TmpErrStat >= AbortErrLev) then
+               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+
+            ! Cubic or linear velocity interpolation
+            if (FF%VelInterpCubic) then
+               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                               Velocity=VelocityUVW(:, i))
+            else
+               VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
+            end if
+
+         end do
+      end if
+
+      ! Add mean wind speed after interpolation if flag is set
+      if (FF%Grid3D%AddMeanAfterInterp) then
+         do i = 1, NumPoints
+            VelocityUVW(1, i) = VelocityUVW(1, i) + GetMeanVelocity(FF%Grid3D, Position(3, i))
+         end do
+      end if
+
+   case (Grid4D_FieldType)
+
+      !-------------------------------------------------------------------------
+      ! Grid4D Flow Field
+      !-------------------------------------------------------------------------
+
+      ! If field is not allocated, return error
+      if (.not. allocated(FF%Grid4D%Vel)) then
+         call SetErrStat(ErrID_Fatal, "Grid4D Field not allocated", ErrStat, ErrMsg, RoutineName)
          return
       end if
 
@@ -188,27 +254,27 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
             cycle
          end if
 
-         call ExtGridField_GetVel(FF%ExtGrid, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
+         call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
          if (TmpErrStat >= AbortErrLev) then
             call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             return
          end if
       end do
 
-   case (ExtPoint_FieldType)
+   case (Point_FieldType)
 
       !-------------------------------------------------------------------------
-      ! External Grid Flow Field
+      ! Point Flow Field
       !-------------------------------------------------------------------------
 
-      ! If external field is not allocated, return error
-      if (.not. allocated(FF%ExtPoint%Vel)) then
-         call SetErrStat(ErrID_Fatal, "External Point Field not allocated", ErrStat, ErrMsg, RoutineName)
+      ! If points field is not allocated, return error
+      if (.not. allocated(FF%Points%Vel)) then
+         call SetErrStat(ErrID_Fatal, "Points Point Field not allocated", ErrStat, ErrMsg, RoutineName)
          return
       end if
 
       ! Set velocities directly from velocity array
-      VelocityUVW = FF%ExtPoint%Vel(:, IStart:IStart + NumPoints - 1)
+      VelocityUVW = FF%Points%Vel(:, IStart:IStart + NumPoints - 1)
 
    case (User_FieldType)
 
@@ -229,7 +295,7 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
    !----------------------------------------------------------------------------
 
    if (FF%RotateWindBox) then
-      if (.not. allocated(AccelUVW)) then
+      if (.not. CalcAccel) then
          do i = 1, NumPoints
             VelocityUVW(:, i) = matmul(FF%RotFromWind, VelocityUVW(:, i))
          end do
@@ -250,7 +316,7 @@ contains
    end function
 
    function GetMeanVelocity(GF, PosZ) result(U)
-      type(GridFieldType), intent(in)  :: GF
+      type(Grid3DFieldType), intent(in)  :: GF
       real(ReKi), intent(in)           :: PosZ
       real(ReKi)                       :: U
       select case (GF%WindProfileType)
@@ -340,7 +406,7 @@ function UniformField_GetAcc(UF, op, Position) result(Accel)
 
 end function
 
-pure function UniformField_GetOP(UF, Time) result(op)
+pure function UniformField_InterpLinear(UF, Time) result(op)
 
    type(UniformFieldType), intent(in)  :: UF
    real(DbKi), intent(in)              :: Time
@@ -405,7 +471,7 @@ pure function UniformField_GetOP(UF, Time) result(op)
 
 end function
 
-pure function UniformField_GetSmoothOP(UF, Time) result(op)
+pure function UniformField_IterpCubic(UF, Time) result(op)
 
    type(UniformFieldType), intent(in)  :: UF
    real(DbKi), intent(in)              :: Time
@@ -500,7 +566,7 @@ subroutine UniformField_CalcAccel(UF, ErrStat, ErrMsg)
    integer(IntKi), intent(out)         :: ErrStat
    character(*), intent(out)           :: ErrMsg
 
-   character(*), parameter             :: RoutineName = "UniformField_CalcAccel"
+   character(*), parameter             :: RoutineName = "Uniform_CalcAccel"
    integer(IntKi)                      :: TmpErrStat
    character(ErrMsgLen)                :: TmpErrMsg
    real(ReKi), allocatable             :: b(:), u(:), dy2(:)
@@ -635,27 +701,26 @@ contains
 
 end subroutine
 
-subroutine GridField_GetVel(GF, Time, Position, Velocity, ErrStat, ErrMsg)
-   type(GridFieldType), intent(in)  :: GF             !< Grid-Field data
-   real(ReKi), intent(in)           :: Position(3)    !< position X,Y,Z to get value
-   real(DbKi), intent(in)           :: Time           !< Weights [-1,1]
-   real(ReKi), intent(out)          :: Velocity(3)    !< The U, V, W velocities
-   integer(IntKi), intent(out)      :: ErrStat
-   character(*), intent(out)        :: ErrMsg
+subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
 
-   character(*), parameter          :: RoutineName = "GridField_GetVel"
-   real(ReKi)                       :: DY, DZ, DT     ! Weights [-1,1]
-   real(ReKi), dimension(8, 3)      :: P              ! Interp points
-   real(ReKi), dimension(8)         :: N              ! Shape function values
+   type(Grid3DFieldType), intent(in)   :: G3D            !< 3D Grid-Field data
+   real(DbKi), intent(in)              :: Time           !< time (s)
+   real(ReKi), intent(in)              :: Position(3)    !< position X,Y,Z to get value
+   logical, intent(in)                 :: CalcAccel      !< flag to populat AccCell
+   real(ReKi), intent(out)             :: VelCell(8, 3)  !<
+   real(ReKi), intent(out)             :: AccCell(8, 3)  !<
+   real(ReKi), intent(out)             :: Xi(3)          !< isoparametric coord of position in cell (y,z,t) [-1, +1]
+   logical, intent(out)                :: Is3D           !<
+   integer(IntKi), intent(out)         :: ErrStat        !< error status
+   character(*), intent(out)           :: ErrMsg         !< error message
 
-   integer(IntKi)                   :: IT_LO, IT_HI
-   integer(IntKi)                   :: IY_LO, IY_HI
-   integer(IntKi)                   :: IZ_LO, IZ_HI
-   integer(IntKi)                   :: ic
-
-   logical                          :: OnGrid
-   real(ReKi)                       :: TimeShifted
-   integer(IntKi)                   :: boundStat
+   character(*), parameter    :: RoutineName = "Grid3DField_GetSmoothInterp"
+   integer(IntKi)             :: IY_Lo, IY_Hi
+   integer(IntKi)             :: IZ_Lo, IZ_Hi
+   integer(IntKi)             :: IT_Lo, IT_Hi
+   logical                    :: OnGrid
+   real(ReKi)                 :: TimeShifted
+   integer(IntKi)             :: boundStat
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -665,7 +730,7 @@ subroutine GridField_GetVel(GF, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Get grid time bounds
-   boundStat = GridField_GetBoundsT(GF, Time, Position(1), DT, IT_LO, IT_HI, TimeShifted)
+   boundStat = Grid3DField_GetBoundsT(G3D, Time, Position(1), Xi(3), IT_Lo, IT_Hi, TimeShifted)
    if (boundStat > 0) then
       ErrMsg = ' Error: GF wind array was exhausted at '//TRIM(Num2LStr(TIME))// &
                ' seconds (trying to access data at '//TRIM(Num2LStr(TimeShifted))//' seconds).'
@@ -674,7 +739,7 @@ subroutine GridField_GetVel(GF, Time, Position, Velocity, ErrStat, ErrMsg)
    end if
 
    ! Get grid Z bounds
-   boundStat = GridField_GetBoundsZ(GF, Position(3), DZ, IZ_LO, IZ_HI, OnGrid)
+   boundStat = Grid3DField_GetBoundsZ(G3D, Position(3), Xi(2), IZ_Lo, IZ_Hi, OnGrid)
    if (boundStat < 0) then
       ErrMsg = ' GF wind array boundaries violated. Grid too small in Z direction '// &
                '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
@@ -688,325 +753,219 @@ subroutine GridField_GetVel(GF, Time, Position, Velocity, ErrStat, ErrMsg)
    end if
 
    !----------------------------------------------------------------------------
-   ! Interpolate
+   ! Extract cells from grids
    !----------------------------------------------------------------------------
 
-   if (OnGrid .or. GF%InterpTower) then
+   if (OnGrid .or. G3D%InterpTower) then
 
       ! Get grid Y bounds
-      boundStat = GridField_GetBoundsY(GF, Position(2), DY, IY_LO, IY_HI)
+      boundStat = Grid3DField_GetBoundsY(G3D, Position(2), Xi(1), IY_Lo, IY_Hi)
       if (boundStat /= 0) then
          ErrMsg = ' GF wind array boundaries violated: Grid too small in Y direction. Y='// &
-                  TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*GF%YHWid))// &
-                  ', '//TRIM(Num2LStr(GF%YHWid))//']'
+                  TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*G3D%YHWid))// &
+                  ', '//TRIM(Num2LStr(G3D%YHWid))//']'
          ErrStat = ErrID_Fatal
          return
       end if
 
+      Is3D = .true.
+
       if (OnGrid) then
 
-         ! Get points from the grid
-         P(1, :) = GF%Vel(:, IY_LO, IZ_LO, IT_LO)
-         P(2, :) = GF%Vel(:, IY_HI, IZ_LO, IT_LO)
-         P(3, :) = GF%Vel(:, IY_LO, IZ_HI, IT_LO)
-         P(4, :) = GF%Vel(:, IY_HI, IZ_HI, IT_LO)
-         P(5, :) = GF%Vel(:, IY_LO, IZ_LO, IT_HI)
-         P(6, :) = GF%Vel(:, IY_HI, IZ_LO, IT_HI)
-         P(7, :) = GF%Vel(:, IY_LO, IZ_HI, IT_HI)
-         P(8, :) = GF%Vel(:, IY_HI, IZ_HI, IT_HI)
+         ! Get velocities from the grid
+         VelCell(1, :) = G3D%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
+         VelCell(2, :) = G3D%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
+         VelCell(3, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
+         VelCell(4, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
+         VelCell(5, :) = G3D%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
+         VelCell(6, :) = G3D%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
+         VelCell(7, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
+         VelCell(8, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
 
-      else if (GF%InterpTower) then
+         ! Get accelerations from the grid
+         if (CalcAccel) then
+            AccCell(1, :) = G3D%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
+            AccCell(2, :) = G3D%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
+            AccCell(3, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
+            AccCell(4, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
+            AccCell(5, :) = G3D%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
+            AccCell(6, :) = G3D%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
+            AccCell(7, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
+            AccCell(8, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
+         end if
 
-         ! Get points from grid bottom and ground
-         P(1, :) = 0.0_ReKi !GF%Vel(:, IY_LO, IZ_LO, IT_LO)
-         P(2, :) = 0.0_ReKi !GF%Vel(:, IY_HI, IZ_LO, IT_LO)
-         P(3, :) = GF%Vel(:, IY_LO, IZ_HI, IT_LO)
-         P(4, :) = GF%Vel(:, IY_HI, IZ_HI, IT_LO)
-         P(5, :) = 0.0_ReKi !GF%Vel(:, IY_HI, IZ_LO, IT_HI)
-         P(6, :) = 0.0_ReKi !GF%Vel(:, IY_LO, IZ_LO, IT_HI)
-         P(7, :) = GF%Vel(:, IY_LO, IZ_HI, IT_HI)
-         P(8, :) = GF%Vel(:, IY_HI, IZ_HI, IT_HI)
+      else if (G3D%InterpTower) then
+
+         ! Get velocities from the grid
+         VelCell(1, :) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
+         VelCell(2, :) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
+         VelCell(3, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
+         VelCell(4, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
+         VelCell(5, :) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
+         VelCell(6, :) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
+         VelCell(7, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
+         VelCell(8, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
+
+         ! Get accelerations from the grid
+         if (CalcAccel) then
+            AccCell(1, :) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
+            AccCell(2, :) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
+            AccCell(3, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
+            AccCell(4, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
+            AccCell(5, :) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
+            AccCell(6, :) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
+            AccCell(7, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
+            AccCell(8, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
+         end if
 
       end if
-
-      ! Get 3D interpolation weights
-      N(1) = (1.0_ReKi - DY)*(1.0_ReKi - DZ)
-      N(2) = (1.0_ReKi + DY)*(1.0_ReKi - DZ)
-      N(3) = (1.0_ReKi - DY)*(1.0_ReKi + DZ)
-      N(4) = (1.0_ReKi + DY)*(1.0_ReKi + DZ)
-      N(5) = (1.0_ReKi - DY)*(1.0_ReKi - DZ)
-      N(6) = (1.0_ReKi + DY)*(1.0_ReKi - DZ)
-      N(7) = (1.0_ReKi - DY)*(1.0_ReKi + DZ)
-      N(8) = (1.0_ReKi + DY)*(1.0_ReKi + DZ)
-      N(1:4) = N(1:4)*(1.0_ReKi - DT)/8.0_ReKi
-      N(5:8) = N(5:8)*(1.0_ReKi + DT)/8.0_ReKi
-
-      ! Calculate velocity
-      do ic = 1, 3
-         Velocity(ic) = dot_product(P(:, ic), N)
-      end do
 
    else
 
-      if (IZ_HI <= GF%NTGrids) then
-         ! In tower grid
-         P(1, :) = GF%VelTower(:, IZ_LO, IT_LO)
-         P(2, :) = GF%VelTower(:, IZ_HI, IT_LO)
-         P(3, :) = GF%VelTower(:, IZ_LO, IT_HI)
-         P(4, :) = GF%VelTower(:, IZ_HI, IT_HI)
-      else
-         ! Between tower grid and ground
-         P(1, :) = GF%VelTower(:, IZ_LO, IT_LO)
-         P(2, :) = 0.0_ReKi
-         P(3, :) = GF%VelTower(:, IZ_LO, IT_HI)
-         P(4, :) = 0.0_ReKi
+      Is3D = .false.
+
+      ! In tower grid
+      if (IZ_HI <= G3D%NTGrids) then
+         VelCell(1, :) = G3D%VelTower(:, IZ_LO, IT_LO)
+         VelCell(2, :) = G3D%VelTower(:, IZ_HI, IT_LO)
+         VelCell(3, :) = G3D%VelTower(:, IZ_LO, IT_HI)
+         VelCell(4, :) = G3D%VelTower(:, IZ_HI, IT_HI)
+
+         if (CalcAccel) then
+            AccCell(1, :) = G3D%AccTower(:, IZ_LO, IT_LO)
+            AccCell(2, :) = G3D%AccTower(:, IZ_HI, IT_LO)
+            AccCell(3, :) = G3D%AccTower(:, IZ_LO, IT_HI)
+            AccCell(4, :) = G3D%AccTower(:, IZ_HI, IT_HI)
+         end if
+
+      else  ! Between tower grid and ground
+
+         VelCell(1, :) = G3D%VelTower(:, IZ_LO, IT_LO)
+         VelCell(2, :) = 0.0_ReKi
+         VelCell(3, :) = G3D%VelTower(:, IZ_LO, IT_HI)
+         VelCell(4, :) = 0.0_ReKi
+
+         if (CalcAccel) then
+            AccCell(1, :) = G3D%AccTower(:, IZ_LO, IT_LO)
+            AccCell(2, :) = 0.0_ReKi
+            AccCell(3, :) = G3D%AccTower(:, IZ_LO, IT_HI)
+            AccCell(4, :) = 0.0_ReKi
+         end if
+
       end if
-
-      ! Get 2D interpolation weights
-      N(1) = (1.0_ReKi - DZ)*(1.0_ReKi - DT)/4.0_ReKi
-      N(2) = (1.0_ReKi + DZ)*(1.0_ReKi - DT)/4.0_ReKi
-      N(3) = (1.0_ReKi - DZ)*(1.0_ReKi + DT)/4.0_ReKi
-      N(4) = (1.0_ReKi + DZ)*(1.0_ReKi + DT)/4.0_ReKi
-
-      ! Calculate velocity
-      do ic = 1, 3
-         Velocity(ic) = dot_product(P(1:4, ic), N(1:4))
-      end do
 
    end if
 
 end subroutine
 
-! function GridField_GetAcc(GF, Position, DY, DZ, DT, P, Interp3D) result(Accel)
+pure function Grid3DField_GetVelLinear(VelCell, Xi, Is3D) result(Velocity)
 
-!    type(GridFieldType), intent(in)           :: GF
-!    real(ReKi), dimension(3), intent(in)      :: Position
-!    real(ReKi), intent(in)                    :: DY, DZ, DT     !< Weights [-1,1]
-!    real(ReKi), dimension(3, 8), intent(in)   :: P              !< Interp points
-!    logical, intent(in)                       :: Interp3D       !< flag for 3D vs 2D interp
-!    real(ReKi), dimension(3)                  :: Accel
+   real(ReKi), intent(in)    :: VelCell(8, 3)  !< velocities at corners of grid cell
+   real(ReKi), intent(in)    :: Xi(3)          !< isoparametric coordinates in cell (dy, dz, dt) [-1, +1]
+   logical, intent(in)       :: Is3D           !< flag for 3D or 2D grid
+   real(ReKi)                :: Velocity(3)    !< The U, V, W velocities
 
-!    character(*), parameter                   :: RoutineName = "GridField_GetAcc"
-!    real(ReKi)                                :: N(8, 1)
+   real(ReKi)                :: N(8)           ! Shape function values
+   integer(IntKi)            :: IC
 
-!    if (Interp3D) then
+   if (Is3D) then
 
-!       ! Get 3D interpolation weights
-!       N(1, 1) = (1.0_ReKi - DY)*(1.0_ReKi - DZ)
-!       N(2, 1) = (1.0_ReKi + DY)*(1.0_ReKi - DZ)
-!       N(3, 1) = (1.0_ReKi - DY)*(1.0_ReKi + DZ)
-!       N(4, 1) = (1.0_ReKi + DY)*(1.0_ReKi + DZ)
-!       N(5, 1) = (1.0_ReKi - DY)*(1.0_ReKi - DZ)
-!       N(6, 1) = (1.0_ReKi + DY)*(1.0_ReKi - DZ)
-!       N(7, 1) = (1.0_ReKi - DY)*(1.0_ReKi + DZ)
-!       N(8, 1) = (1.0_ReKi + DY)*(1.0_ReKi + DZ)
-!       N(1:4, 1) = N(1:4, 1)/(-4.0_ReKi*GF%DTime)
-!       N(5:8, 1) = N(5:8, 1)/(4.0_ReKi*GF%DTime)
+      ! Get 3D interpolation weights
+      N(1) = (1.0_ReKi - Xi(1))*(1.0_ReKi - Xi(2))
+      N(2) = (1.0_ReKi + Xi(1))*(1.0_ReKi - Xi(2))
+      N(3) = (1.0_ReKi - Xi(1))*(1.0_ReKi + Xi(2))
+      N(4) = (1.0_ReKi + Xi(1))*(1.0_ReKi + Xi(2))
+      N(5) = (1.0_ReKi - Xi(1))*(1.0_ReKi - Xi(2))
+      N(6) = (1.0_ReKi + Xi(1))*(1.0_ReKi - Xi(2))
+      N(7) = (1.0_ReKi - Xi(1))*(1.0_ReKi + Xi(2))
+      N(8) = (1.0_ReKi + Xi(1))*(1.0_ReKi + Xi(2))
+      N(1:4) = N(1:4)*(1.0_ReKi - Xi(3))/8.0_ReKi
+      N(5:8) = N(5:8)*(1.0_ReKi + Xi(3))/8.0_ReKi
 
-!       ! Calculate Accel via matrix multiplication
-!       Accel = pack(matmul(P, N), .true.)
-
-!    else
-
-!       ! Get 2D interpolation weights
-!       N(1, 1) = (1.0_ReKi - DZ)/(-2.0_ReKi*GF%DTime)
-!       N(2, 1) = (1.0_ReKi + DZ)/(-2.0_ReKi*GF%DTime)
-!       N(3, 1) = (1.0_ReKi - DZ)/(2.0_ReKi*GF%DTime)
-!       N(4, 1) = (1.0_ReKi + DZ)/(2.0_ReKi*GF%DTime)
-
-!       ! Calculate Accel via matrix multiplication
-!       Accel = pack(matmul(P(:, 1:4), N(1:4, 1)), .true.)
-
-!    end if
-
-! end function
-
-! subroutine GridField_GetInterp(GF, Time, Position, DY, DZ, DT, P, Interp3D, ErrStat, ErrMsg)
-
-!    type(GridFieldType), intent(in)     :: GF                !< Grid-Field data
-!    real(DbKi), intent(in)              :: Time              !< time (s)
-!    real(ReKi), intent(in)              :: Position(3)       !< position X,Y,Z to get value
-!    real(ReKi), intent(out)             :: DY, DZ, DT        !<
-!    real(ReKi), intent(out)             :: P(3, 8)
-!    logical, intent(out)                :: Interp3D
-!    integer(IntKi), intent(out)         :: ErrStat           !< error status
-!    character(*), intent(out)           :: ErrMsg            !< error message
-
-!    character(*), parameter             :: RoutineName = "GridField_GetInterp"
-
-! end subroutine
-
-subroutine GridField_GetVelAcc(GF, Time, Position, Velocity, Accel, ErrStat, ErrMsg)
-
-   type(GridFieldType), intent(in)  :: GF                !< Grid-Field data
-   real(DbKi), intent(in)           :: Time              !< time (s)
-   real(ReKi), intent(in)           :: Position(3)       !< position X,Y,Z to get value
-   real(ReKi), intent(out)          :: Velocity(3)       !<
-   real(ReKi), intent(out)          :: Accel(3)          !<
-   integer(IntKi), intent(out)      :: ErrStat           !< error status
-   character(*), intent(out)        :: ErrMsg            !< error message
-
-   character(*), parameter          :: RoutineName = "GridField_GetSmoothInterp"
-   real(ReKi)                       :: Xi_Y, Xi_Z, Xi_T  ! isoparametric coordinates (Y,Z,T)
-   integer(IntKi)                   :: IY_Lo, IY_Hi
-   integer(IntKi)                   :: IZ_Lo, IZ_Hi
-   integer(IntKi)                   :: IT_Lo, IT_Hi
-   integer(IntKi)                   :: IT, IC
-   real(ReKi)                       :: V(4, 3, 2), A(4, 3, 2), N(4)
-   real(ReKi)                       :: P(3, 2), PP(3, 2)
-   real(ReKi)                       :: h, t, C1, C2, C3, C4
-   logical                          :: OnGrid
-   real(ReKi)                       :: TimeShifted
-   integer(IntKi)                   :: boundStat
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-   !----------------------------------------------------------------------------
-   ! Find grid bounds in Time and Z
-   !----------------------------------------------------------------------------
-
-   ! Get grid time bounds
-   boundStat = GridField_GetBoundsT(GF, Time, Position(1), Xi_T, IT_Lo, IT_Hi, TimeShifted)
-   if (boundStat > 0) then
-      ErrMsg = ' Error: GF wind array was exhausted at '//TRIM(Num2LStr(TIME))// &
-               ' seconds (trying to access data at '//TRIM(Num2LStr(TimeShifted))//' seconds).'
-      ErrStat = ErrID_Fatal
-      return
-   end if
-
-   ! Get grid Z bounds
-   boundStat = GridField_GetBoundsZ(GF, Position(3), Xi_Z, IZ_Lo, IZ_Hi, OnGrid)
-   if (boundStat < 0) then
-      ErrMsg = ' GF wind array boundaries violated. Grid too small in Z direction '// &
-               '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
-      ErrStat = ErrID_Fatal
-      return
-   else if (boundStat > 0) then
-      ErrMsg = ' GF wind array boundaries violated. Grid too small in Z direction (Z='// &
-               TRIM(Num2LStr(Position(3)))//' m is above the grid).'
-      ErrStat = ErrID_Fatal
-      return
-   end if
-
-   !----------------------------------------------------------------------------
-   ! Interpolate
-   !----------------------------------------------------------------------------
-
-   if (OnGrid .or. GF%InterpTower) then
-
-      ! Get grid Y bounds
-      boundStat = GridField_GetBoundsY(GF, Position(2), Xi_Y, IY_Lo, IY_Hi)
-      if (boundStat /= 0) then
-         ErrMsg = ' GF wind array boundaries violated: Grid too small in Y direction. Y='// &
-                  TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*GF%YHWid))// &
-                  ', '//TRIM(Num2LStr(GF%YHWid))//']'
-         ErrStat = ErrID_Fatal
-         return
-      end if
-
-      if (OnGrid) then
-
-         ! Get velocities from the grid
-         V(1, :, 1) = GF%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
-         V(2, :, 1) = GF%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
-         V(3, :, 1) = GF%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
-         V(4, :, 1) = GF%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
-         V(1, :, 2) = GF%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
-         V(2, :, 2) = GF%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
-         V(3, :, 2) = GF%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
-         V(4, :, 2) = GF%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
-
-         ! Get accelerations from the grid
-         A(1, :, 1) = GF%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
-         A(2, :, 1) = GF%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
-         A(3, :, 1) = GF%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
-         A(4, :, 1) = GF%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
-         A(1, :, 2) = GF%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
-         A(2, :, 2) = GF%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
-         A(3, :, 2) = GF%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
-         A(4, :, 2) = GF%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
-
-      else if (GF%InterpTower) then
-
-         ! Get velocities from the grid
-         V(1, :, 1) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
-         V(2, :, 1) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
-         V(3, :, 1) = GF%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
-         V(4, :, 1) = GF%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
-         V(1, :, 2) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
-         V(2, :, 2) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
-         V(3, :, 2) = GF%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
-         V(4, :, 2) = GF%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
-
-         ! Get accelerations from the grid
-         A(1, :, 1) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
-         A(2, :, 1) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
-         A(3, :, 1) = GF%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
-         A(4, :, 1) = GF%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
-         A(1, :, 2) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
-         A(2, :, 2) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
-         A(3, :, 2) = GF%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
-         A(4, :, 2) = GF%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
-
-      end if
-
-      ! Get interpolation weights
-      N(1) = (1.0_ReKi - Xi_Y)*(1.0_ReKi - Xi_Z)/4.0_ReKi
-      N(2) = (1.0_ReKi + Xi_Y)*(1.0_ReKi - Xi_Z)/4.0_ReKi
-      N(3) = (1.0_ReKi - Xi_Y)*(1.0_ReKi + Xi_Z)/4.0_ReKi
-      N(4) = (1.0_ReKi + Xi_Y)*(1.0_ReKi + Xi_Z)/4.0_ReKi
-
-      ! Calculate velocity and acceleration at lo and hi time
-      do IT = 1, 2
-         do IC = 1, 3
-            P(IC, IT) = dot_product(V(:, IC, IT), N)
-            PP(IC, IT) = dot_product(A(:, IC, IT), N)
-         end do
+      ! Calculate velocity
+      do ic = 1, 3
+         Velocity(ic) = dot_product(VelCell(:, ic), N)
       end do
 
    else
 
-      if (IZ_HI <= GF%NTGrids) then
+      ! Get 2D interpolation weights
+      N(1) = (1.0_ReKi - Xi(2))*(1.0_ReKi - Xi(3))/4.0_ReKi
+      N(2) = (1.0_ReKi + Xi(2))*(1.0_ReKi - Xi(3))/4.0_ReKi
+      N(3) = (1.0_ReKi - Xi(2))*(1.0_ReKi + Xi(3))/4.0_ReKi
+      N(4) = (1.0_ReKi + Xi(2))*(1.0_ReKi + Xi(3))/4.0_ReKi
 
-         ! In tower grid
-         V(1, :, 1) = GF%VelTower(:, IZ_LO, IT_LO)
-         V(2, :, 1) = GF%VelTower(:, IZ_HI, IT_LO)
-         V(1, :, 2) = GF%VelTower(:, IZ_LO, IT_HI)
-         V(2, :, 2) = GF%VelTower(:, IZ_HI, IT_HI)
+      ! Calculate velocity
+      do ic = 1, 3
+         Velocity(ic) = dot_product(VelCell(1:4, ic), N(1:4))
+      end do
 
-         A(1, :, 1) = GF%AccTower(:, IZ_LO, IT_LO)
-         A(2, :, 1) = GF%AccTower(:, IZ_HI, IT_LO)
-         A(1, :, 2) = GF%AccTower(:, IZ_LO, IT_HI)
-         A(2, :, 2) = GF%AccTower(:, IZ_HI, IT_HI)
+   end if
 
-      else
+end function
 
-         ! Between tower grid and ground
-         V(1, :, 1) = GF%VelTower(:, IZ_LO, IT_LO)
-         V(2, :, 1) = 0.0_ReKi
-         V(1, :, 2) = GF%VelTower(:, IZ_LO, IT_HI)
-         V(2, :, 2) = 0.0_ReKi
+subroutine Grid3DField_GetVelAccCubic(DTime, VelCell, AccCell, Xi, Is3D, Velocity, Accel)
 
-         ! Between tower grid and ground
-         A(1, :, 1) = GF%AccTower(:, IZ_LO, IT_LO)
-         A(2, :, 1) = 0.0_ReKi
-         A(1, :, 2) = GF%AccTower(:, IZ_LO, IT_HI)
-         A(2, :, 2) = 0.0_ReKi
+   real(ReKi), intent(in)              :: DTime          !< cell delta time
+   real(ReKi), intent(in)              :: VelCell(8, 3)  !<
+   real(ReKi), intent(in)              :: AccCell(8, 3)  !<
+   real(ReKi), intent(in)              :: Xi(3)          !< cell distance (dy, dz, dt) [-1, +1]
+   logical, intent(in)                 :: Is3D           !<
+   real(ReKi), intent(out), optional   :: Velocity(3)    !<
+   real(ReKi), intent(out), optional   :: Accel(3)       !<
 
-      end if
+   character(*), parameter    :: RoutineName = "Grid3DField_GetVelAccCubic"
+   integer(IntKi)             :: IC
+   real(ReKi)                 :: N(4)
+   real(ReKi)                 :: P(3, 2), PP(3, 2)
+   real(ReKi)                 :: h, t, C1, C2, C3, C4
+
+   ! If 3D interpolation
+   if (Is3D) then
 
       ! Get interpolation weights
-      N(1) = (1.0_ReKi - Xi_Z)/2.0_ReKi
-      N(2) = (1.0_ReKi + Xi_Z)/2.0_ReKi
+      N(1) = (1.0_ReKi - Xi(1))*(1.0_ReKi - Xi(2))/4.0_ReKi
+      N(2) = (1.0_ReKi + Xi(1))*(1.0_ReKi - Xi(2))/4.0_ReKi
+      N(3) = (1.0_ReKi - Xi(1))*(1.0_ReKi + Xi(2))/4.0_ReKi
+      N(4) = (1.0_ReKi + Xi(1))*(1.0_ReKi + Xi(2))/4.0_ReKi
+
+      ! Calculate velocity at lo and hi time
+      if (present(Velocity)) then
+         do IC = 1, 3
+            P(IC, 1) = dot_product(VelCell(1:4, IC), N)  ! low time
+            P(IC, 2) = dot_product(VelCell(5:8, IC), N)  ! hi time
+         end do
+      end if
+
+      ! Calculate acceleration at lo and hi time
+      if (present(Accel)) then
+         do IC = 1, 3
+            PP(IC, 1) = dot_product(AccCell(1:4, IC), N) ! low time
+            PP(IC, 2) = dot_product(AccCell(5:8, IC), N) ! hi time
+         end do
+      end if
+
+   else  ! 2D (Tower)
+
+      ! Get interpolation weights
+      N(1) = (1.0_ReKi - Xi(2))/2.0_ReKi
+      N(2) = (1.0_ReKi + Xi(2))/2.0_ReKi
 
       ! Calculate velocity and acceleration at lo and hi time
-      do IT = 1, 2
+      if (present(Velocity)) then
          do IC = 1, 3
-            P(IC, IT) = dot_product(V(1:2, IC, IT), N(1:2))
-            PP(IC, IT) = dot_product(A(1:2, IC, IT), N(1:2))
+            P(IC, 1) = dot_product(VelCell(1:2, IC), N(1:2))   ! low time
+            P(IC, 2) = dot_product(VelCell(3:4, IC), N(1:2))   ! hi time
          end do
-      end do
+      end if
+
+      ! Calculate acceleration at lo and hi time
+      if (present(Accel)) then
+         do IC = 1, 3
+            PP(IC, 1) = dot_product(AccCell(1:2, IC), N(1:2))  ! low time
+            PP(IC, 2) = dot_product(AccCell(3:4, IC), N(1:2))  ! hi time
+         end do
+      end if
 
    end if
 
@@ -1014,28 +973,30 @@ subroutine GridField_GetVelAcc(GF, Time, Position, Velocity, Accel, ErrStat, Err
    ! Smooth velocity and acceleration using cubic hermite spline
    !----------------------------------------------------------------------------
 
-   h = GF%DTime
-   t = (Xi_T + 1)/2.0_ReKi
+   h = DTime
+   t = (Xi(3) + 1)/2.0_ReKi
 
-   C1 = 2.0_ReKi*t*t*t - 3.0_ReKi*t*t + 1.0_ReKi
-   C2 = (t*t*t - 2.0_ReKi*t*t + t)*h
-   C3 = -2.0_ReKi*t*t*t + 3.0_ReKi*t*t
-   C4 = (t*t*t - t*t)*h
+   if (present(Velocity)) then
+      C1 = 2.0_ReKi*t*t*t - 3.0_ReKi*t*t + 1.0_ReKi
+      C2 = (t*t*t - 2.0_ReKi*t*t + t)*h
+      C3 = -2.0_ReKi*t*t*t + 3.0_ReKi*t*t
+      C4 = (t*t*t - t*t)*h
+      Velocity = C1*P(:, 1) + C2*PP(:, 1) + C3*P(:, 2) + C4*PP(:, 2)
+   end if
 
-   Velocity = C1*P(:, 1) + C2*PP(:, 1) + C3*P(:, 2) + C4*PP(:, 2)
-
-   C1 = (6.0_ReKi*t*t - 6.0_ReKi*t)/h
-   C2 = 3.0_ReKi*t*t - 4.0_ReKi*t + 1.0_ReKi
-   C3 = -C1
-   C4 = 3.0_ReKi*t*t - 2.0_ReKi*t
-
-   Accel = C1*P(:, 1) + C2*PP(:, 1) + C3*P(:, 2) + C4*PP(:, 2)
+   if (present(Accel)) then
+      C1 = (6.0_ReKi*t*t - 6.0_ReKi*t)/h
+      C2 = 3.0_ReKi*t*t - 4.0_ReKi*t + 1.0_ReKi
+      C3 = -C1
+      C4 = 3.0_ReKi*t*t - 2.0_ReKi*t
+      Accel = C1*P(:, 1) + C2*PP(:, 1) + C3*P(:, 2) + C4*PP(:, 2)
+   end if
 
 end subroutine
 
-function GridField_GetBoundsY(GF, PosY, DY, IY_LO, IY_HI) result(stat)
+function Grid3DField_GetBoundsY(G3D, PosY, DY, IY_LO, IY_HI) result(stat)
 
-   type(GridFieldType), intent(in)     :: GF
+   type(Grid3DFieldType), intent(in)   :: G3D
    real(ReKi), intent(in)              :: PosY
    real(ReKi), intent(out)             :: DY
    integer(IntKi), intent(out)         :: IY_LO, IY_HI
@@ -1044,7 +1005,7 @@ function GridField_GetBoundsY(GF, PosY, DY, IY_LO, IY_HI) result(stat)
    integer(IntKi)                      :: stat
 
    ! Calculate position on Y grid
-   Y_Grid = (PosY + GF%YHWid)*GF%InvDY + 1
+   Y_Grid = (PosY + G3D%YHWid)*G3D%InvDY + 1
 
    ! Calculate bounding grid indices
    IY_LO = floor(Y_Grid, IntKi)
@@ -1056,15 +1017,15 @@ function GridField_GetBoundsY(GF, PosY, DY, IY_LO, IY_HI) result(stat)
    ! Initialize stat to zero to indicate position is in bounds
    stat = 0
 
-   if (IY_LO >= 1 .and. IY_HI <= GF%NYGrids) then
+   if (IY_LO >= 1 .and. IY_HI <= G3D%NYGrids) then
       DY = 2.0_ReKi*DY - 1.0_ReKi
    else if (IY_LO == 0 .and. DY >= 1.0_ReKi - GridTol) then
       IY_LO = 1
       IY_HI = 2
       DY = -1.0_ReKi
-   else if (IY_LO == GF%NYGrids .and. DY <= GridTol) then
-      IY_LO = GF%NYGrids - 1
-      IY_HI = GF%NYGrids
+   else if (IY_LO == G3D%NYGrids .and. DY <= GridTol) then
+      IY_LO = G3D%NYGrids - 1
+      IY_HI = G3D%NYGrids
       DY = 1.0_ReKi
    else
       ! Position outside
@@ -1073,9 +1034,9 @@ function GridField_GetBoundsY(GF, PosY, DY, IY_LO, IY_HI) result(stat)
 
 end function
 
-function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
+function Grid3DField_GetBoundsZ(G3D, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
 
-   type(GridFieldType), intent(in)     :: GF
+   type(Grid3DFieldType), intent(in)   :: G3D
    real(ReKi), intent(in)              :: PosZ
    real(ReKi), intent(out)             :: DZ
    integer(IntKi), intent(out)         :: IZ_LO, IZ_HI
@@ -1085,7 +1046,7 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
    real(ReKi)                          :: Z_GRID
 
    ! Calculate position on Z grid
-   Z_GRID = (PosZ - GF%GridBase)*GF%InvDZ + 1
+   Z_GRID = (PosZ - G3D%GridBase)*G3D%InvDZ + 1
 
    ! Calculate bounding grid indices
    IZ_LO = floor(Z_GRID, IntKi)
@@ -1098,7 +1059,7 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
    stat = 0
 
    ! If indices are within grid, set on grid to true
-   if (IZ_LO >= 1 .and. IZ_HI <= GF%NZGrids) then
+   if (IZ_LO >= 1 .and. IZ_HI <= G3D%NZGrids) then
 
       OnGrid = .true.
       DZ = 2.0_ReKi*DZ - 1.0_ReKi
@@ -1110,21 +1071,21 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
          IZ_LO = 1
          IZ_HI = 2
          DZ = -1.0_ReKi
-      else if (GF%InterpTower) then
+      else if (G3D%InterpTower) then
          ! Interp from bottom of grid to ground (zero velocity)
          OnGrid = .false.
          IZ_LO = 0
          IZ_HI = 1
-         DZ = 2.0_ReKi*(PosZ/GF%GridBase) - 1.0_ReKi
-      else if (GF%NTGrids > 0) then
+         DZ = 2.0_ReKi*(PosZ/G3D%GridBase) - 1.0_ReKi
+      else if (G3D%NTGrids > 0) then
          ! Interpolate with tower grid
          OnGrid = .false.
          ! Tower grid is reversed (lowest index is top of tower)
          IZ_LO = int(-(Z_GRID - 1)) + 1
-         if (IZ_LO >= GF%NTGrids) then
+         if (IZ_LO >= G3D%NTGrids) then
             ! Between end of tower grid and ground (zero velocity)
-            IZ_LO = GF%NTGrids
-            DZ = 1.0_ReKi - 2.0_ReKi*(PosZ/(GF%GridBase - real(IZ_LO - 1, ReKi)/GF%InvDZ))
+            IZ_LO = G3D%NTGrids
+            DZ = 1.0_ReKi - 2.0_ReKi*(PosZ/(G3D%GridBase - real(IZ_LO - 1, ReKi)/G3D%InvDZ))
          else
             ! Within tower grid
             DZ = 2.0_ReKi*(real(2 - IZ_LO, ReKi) - Z_GRID) - 1.0_ReKi
@@ -1135,12 +1096,12 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
          stat = -1
       end if
 
-   else if (IZ_HI > GF%NZGrids) then ! Above Grid
+   else if (IZ_HI > G3D%NZGrids) then ! Above Grid
 
-      if (IZ_HI == GF%NZGrids + 1 .and. DZ <= GridTol) then
+      if (IZ_HI == G3D%NZGrids + 1 .and. DZ <= GridTol) then
          OnGrid = .true.
-         IZ_LO = GF%NZGrids - 1
-         IZ_HI = GF%NZGrids
+         IZ_LO = G3D%NZGrids - 1
+         IZ_HI = G3D%NZGrids
          DZ = 1.0_ReKi
       else
          ! Position above grid
@@ -1151,9 +1112,9 @@ function GridField_GetBoundsZ(GF, PosZ, DZ, IZ_LO, IZ_HI, OnGrid) result(stat)
 
 end function
 
-function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) result(stat)
+function Grid3DField_GetBoundsT(G3D, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) result(stat)
 
-   type(GridFieldType), intent(in)     :: GF
+   type(Grid3DFieldType), intent(in)   :: G3D
    real(DbKi), intent(in)              :: Time
    real(ReKi), intent(in)              :: PosX
    real(ReKi), intent(out)             :: DT
@@ -1170,15 +1131,15 @@ function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) res
    ! large as the rotor. If it isn't, then the interpolation will not work.
 
    ! in distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
-   TimeShifted = real(Time, ReKi) + (GF%InitXPosition - PosX)*GF%InvMWS
+   TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
    ! If field is periodic and time is after total time, remove total time
-   if (GF%Periodic .and. TimeShifted > GF%TotalTime) then
-      TimeShifted = TimeShifted - GF%TotalTime
+   if (G3D%Periodic .and. TimeShifted > G3D%TotalTime) then
+      TimeShifted = TimeShifted - G3D%TotalTime
    end if
 
    ! Get position on T grid
-   T_GRID = TimeShifted*GF%Rate + 1
+   T_GRID = TimeShifted*G3D%Rate + 1
 
    ! Calculate bounding grid indices
    IT_LO = floor(T_GRID, IntKi)
@@ -1191,11 +1152,11 @@ function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) res
    stat = 0
 
    ! Adjust indices and interpolant
-   if (IT_LO >= 1 .and. IT_HI <= GF%NSteps) then
+   if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
       ! Point is within grid
       DT = 2.0_ReKi*DT - 1.0_ReKi
-   else if (IT_LO == GF%NSteps) then
-      if (GF%Periodic) then
+   else if (IT_LO == G3D%NSteps) then
+      if (G3D%Periodic) then
          ! Time wraps back to beginning
          IT_HI = 1
          DT = 2.0_ReKi*DT - 1.0_ReKi
@@ -1205,8 +1166,8 @@ function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) res
          DT = -1.0_Reki
       else
          ! Extrapolate
-         IT_LO = GF%NSteps - 1
-         IT_HI = GF%NSteps
+         IT_LO = G3D%NSteps - 1
+         IT_HI = G3D%NSteps
          DT = DT + 1.0_ReKi
       end if
    else
@@ -1216,65 +1177,65 @@ function GridField_GetBoundsT(GF, Time, PosX, DT, IT_LO, IT_HI, TimeShifted) res
 
 end function
 
-subroutine GridField_CalcAccel(GF, ErrStat, ErrMsg)
-   type(GridFieldType), intent(inout)  :: GF
-   integer(IntKi), intent(out)         :: ErrStat
-   character(*), intent(out)           :: ErrMsg
+subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
+   type(Grid3DFieldType), intent(inout)   :: G3D
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter             :: RoutineName = "GridField_CalcAccel"
-   integer(IntKi)                      :: TmpErrStat
-   character(ErrMsgLen)                :: TmpErrMsg
-   integer(IntKi)                      :: ic, iy, iz
-   real(ReKi), allocatable             :: b(:), u(:), dy2(:)
+   character(*), parameter                :: RoutineName = "Grid3DField_CalcAccel"
+   integer(IntKi)                         :: TmpErrStat
+   character(ErrMsgLen)                   :: TmpErrMsg
+   integer(IntKi)                         :: ic, iy, iz
+   real(ReKi), allocatable                :: b(:), u(:), dy2(:)
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Allocate storage for acceleration grid
-   call AllocAry(GF%Acc, size(GF%Vel, dim=1), size(GF%Vel, dim=2), &
-                 size(GF%Vel, dim=3), size(GF%Vel, dim=4), &
+   call AllocAry(G3D%Acc, size(G3D%Vel, dim=1), size(G3D%Vel, dim=2), &
+                 size(G3D%Vel, dim=3), size(G3D%Vel, dim=4), &
                  'grid-field velocity data', TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Allocate storage for B used in cubic spline derivative calc
-   call AllocAry(B, GF%NSteps, "storage for B", TmpErrStat, TmpErrMsg)
+   call AllocAry(B, G3D%NSteps, "storage for B", TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Allocate storage for U used in cubic spline derivative calc
-   call AllocAry(U, GF%NSteps, "storage for U", TmpErrStat, TmpErrMsg)
+   call AllocAry(U, G3D%NSteps, "storage for U", TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Allocate storage for V used in cubic spline derivative calc
-   call AllocAry(dy2, GF%NSteps, "storage for V", TmpErrStat, TmpErrMsg)
+   call AllocAry(dy2, G3D%NSteps, "storage for V", TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Calculate acceleration at each grid point
-   do iz = 1, GF%NZGrids
-      do iy = 1, GF%NYGrids
-         do ic = 1, GF%NComp
-            call CalcCubicSplineDeriv(GF%DTime, GF%Vel(ic, iy, iz, :), GF%Acc(ic, iy, iz, :))
+   do iz = 1, G3D%NZGrids
+      do iy = 1, G3D%NYGrids
+         do ic = 1, G3D%NComp
+            call CalcCubicSplineDeriv(G3D%DTime, G3D%Vel(ic, iy, iz, :), G3D%Acc(ic, iy, iz, :))
          end do
       end do
    end do
 
    ! If grid field includes tower grids
-   if (GF%NTGrids > 0) then
+   if (G3D%NTGrids > 0) then
 
       ! Allocate storage for tower acceleration
-      call AllocAry(GF%AccTower, size(GF%VelTower, dim=1), &
-                    size(GF%VelTower, dim=2), size(GF%VelTower, dim=3), &
+      call AllocAry(G3D%AccTower, size(G3D%VelTower, dim=1), &
+                    size(G3D%VelTower, dim=2), size(G3D%VelTower, dim=3), &
                     'tower wind acceleration data.', TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
       ! Loop through tower grid and calculate acceleration
-      do iz = 1, GF%NTGrids
-         do ic = 1, GF%NComp
-            call CalcCubicSplineDeriv(GF%DTime, GF%VelTower(ic, iz, :), GF%AccTower(ic, iz, :))
+      do iz = 1, G3D%NTGrids
+         do ic = 1, G3D%NComp
+            call CalcCubicSplineDeriv(G3D%DTime, G3D%VelTower(ic, iz, :), G3D%AccTower(ic, iz, :))
          end do
       end do
    end if
@@ -1335,16 +1296,16 @@ contains
 
 end subroutine
 
-subroutine ExtGridField_GetVel(EGF, Time, Position, Velocity, ErrStat, ErrMsg)
+subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
 
-   type(ExtGridFieldType), intent(in)  :: EGF            !< External grid-field data
+   type(Grid4DFieldType), intent(in)   :: G4D            !< 4D grid-field data
    real(DbKi), intent(in)              :: Time           !< time to get value
    real(ReKi), intent(in)              :: Position(3)    !< position X,Y,Z to get value
    real(ReKi), intent(out)             :: Velocity(3)    !< The U, V, W velocities
    integer(IntKi), intent(out)         :: ErrStat
    character(*), intent(out)           :: ErrMsg
 
-   character(*), parameter             :: RoutineName = "ExtGridField_GetVel"
+   character(*), parameter             :: RoutineName = "Grid4DField_GetVel"
 
    integer(IntKi)                      :: Indx_Lo(4)  ! index associated with lower bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
    integer(IntKi)                      :: Indx_Hi(4)  ! index associated with upper bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
@@ -1362,7 +1323,7 @@ subroutine ExtGridField_GetVel(EGF, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    do i = 1, 3
-      tmp = (Position(i) - EGF%pZero(i))/EGF%delta(i)
+      tmp = (Position(i) - G4D%pZero(i))/G4D%delta(i)
       Indx_Lo(i) = INT(tmp) + 1                          ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       xi(i) = 2.0_ReKi*(tmp - aint(tmp)) - 1.0_ReKi   ! convert to value between -1 and 1
    end do
@@ -1372,10 +1333,10 @@ subroutine ExtGridField_GetVel(EGF, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    i = 4
-   tmp = real((Time - EGF%TimeStart)/EGF%delta(i), ReKi)
+   tmp = real((Time - G4D%TimeStart)/G4D%delta(i), ReKi)
    Indx_Lo(i) = INT(tmp) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
    xi(i) = 2.0_ReKi*(tmp - aint(tmp)) - 1.0_ReKi  ! convert to value between -1 and 1
-   if ((Indx_Lo(i) == EGF%n(i))) then
+   if ((Indx_Lo(i) == G4D%n(i))) then
       if (abs(xi(i) + 1.0_SiKi) < 0.001_SiKi) then    ! Allow for the special case where Time = TgridStart + deltat*( n_high_low - 1 )
          Indx_Lo(i) = Indx_Lo(i) - 1
          xi(i) = 1.0_SiKi
@@ -1391,12 +1352,12 @@ subroutine ExtGridField_GetVel(EGF, Time, Position, Velocity, ErrStat, ErrMsg)
          Indx_Lo(i) = 1
          call SetErrStat(ErrID_Fatal, 'Outside the grid bounds.', ErrStat, ErrMsg, RoutineName)
          return
-      elseif (Indx_Lo(i) >= EGF%n(i)) then
-         Indx_Lo(i) = max(EGF%n(i) - 1, 1)           ! make sure it's a valid index
+      elseif (Indx_Lo(i) >= G4D%n(i)) then
+         Indx_Lo(i) = max(G4D%n(i) - 1, 1)           ! make sure it's a valid index
          call SetErrStat(ErrID_Fatal, 'Outside the grid bounds.', ErrStat, ErrMsg, RoutineName)
          return
       end if
-      Indx_Hi(i) = min(Indx_Lo(i) + 1, EGF%n(i))     ! make sure it's a valid index
+      Indx_Hi(i) = min(Indx_Lo(i) + 1, G4D%n(i))     ! make sure it's a valid index
    end do
 
    !----------------------------------------------------------------------------
@@ -1431,28 +1392,47 @@ subroutine ExtGridField_GetVel(EGF, Time, Position, Velocity, ErrStat, ErrMsg)
    ! Get point values
    !----------------------------------------------------------------------------
 
-   P(:, 1) = EGF%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), Indx_Lo(4))
-   P(:, 2) = EGF%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), Indx_Lo(4))
-   P(:, 3) = EGF%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), Indx_Lo(4))
-   P(:, 4) = EGF%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), Indx_Lo(4))
-   P(:, 5) = EGF%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), Indx_Lo(4))
-   P(:, 6) = EGF%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), Indx_Lo(4))
-   P(:, 7) = EGF%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), Indx_Lo(4))
-   P(:, 8) = EGF%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), Indx_Lo(4))
-   P(:, 9) = EGF%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), Indx_Hi(4))
-   P(:, 10) = EGF%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), Indx_Hi(4))
-   P(:, 11) = EGF%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), Indx_Hi(4))
-   P(:, 12) = EGF%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), Indx_Hi(4))
-   P(:, 13) = EGF%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), Indx_Hi(4))
-   P(:, 14) = EGF%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), Indx_Hi(4))
-   P(:, 15) = EGF%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), Indx_Hi(4))
-   P(:, 16) = EGF%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), Indx_Hi(4))
+   P(:, 1) = G4D%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), Indx_Lo(4))
+   P(:, 2) = G4D%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), Indx_Lo(4))
+   P(:, 3) = G4D%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), Indx_Lo(4))
+   P(:, 4) = G4D%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), Indx_Lo(4))
+   P(:, 5) = G4D%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), Indx_Lo(4))
+   P(:, 6) = G4D%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), Indx_Lo(4))
+   P(:, 7) = G4D%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), Indx_Lo(4))
+   P(:, 8) = G4D%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), Indx_Lo(4))
+   P(:, 9) = G4D%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), Indx_Hi(4))
+   P(:, 10) = G4D%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Lo(3), Indx_Hi(4))
+   P(:, 11) = G4D%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Lo(3), Indx_Hi(4))
+   P(:, 12) = G4D%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Lo(3), Indx_Hi(4))
+   P(:, 13) = G4D%Vel(:, Indx_Lo(1), Indx_Lo(2), Indx_Hi(3), Indx_Hi(4))
+   P(:, 14) = G4D%Vel(:, Indx_Hi(1), Indx_Lo(2), Indx_Hi(3), Indx_Hi(4))
+   P(:, 15) = G4D%Vel(:, Indx_Lo(1), Indx_Hi(2), Indx_Hi(3), Indx_Hi(4))
+   P(:, 16) = G4D%Vel(:, Indx_Hi(1), Indx_Hi(2), Indx_Hi(3), Indx_Hi(4))
 
    !----------------------------------------------------------------------------
    ! Interpolate
    !----------------------------------------------------------------------------
 
    Velocity = pack(matmul(P, N), .true.)
+
+end subroutine
+
+subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
+
+   type(UserFieldType), intent(in)     :: UF             !< user-field data
+   real(DbKi), intent(in)              :: Time           !< time to get value
+   real(ReKi), intent(in)              :: Position(3)    !< position X,Y,Z to get value
+   real(ReKi), intent(out)             :: Velocity(3)    !< The U, V, W velocities
+   integer(IntKi), intent(out)         :: ErrStat
+   character(*), intent(out)           :: ErrMsg
+
+   character(*), parameter             :: RoutineName = "UserField_GetVel"
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   Velocity = 0.0_ReKi
+   call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented", ErrStat, ErrMsg, RoutineName)
 
 end subroutine
 

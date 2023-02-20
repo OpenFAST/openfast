@@ -65,7 +65,7 @@ typedef  InflowWind/InflowWind   InflowWind_InputFile   LOGICAL      EchoFlag   
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of windfile"                                       -
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation (meteorological direction)"  (degrees)
 typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                degrees
-typedef  ^                       ^                 IntKi             VelInterpOrder    -     0     -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
+typedef  ^                       ^                 LOGICAL           VelInterpCubic    -   .FALSE. -     "Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]" -
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters

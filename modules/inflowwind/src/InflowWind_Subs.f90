@@ -240,8 +240,8 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
    CALL ParseVarWDefault( InFileInfo, CurLine, "VFlowAng", InputFileData%VFlowAngle, 0.0_ReKi, TmpErrStat, TmpErrMsg, UnEc )
    if (Failed()) return
 
-      ! VelInterpOrder: Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]
-   CALL ParseVar( InFileInfo, CurLine, "VelInterpOrder", InputFileData%VelInterpOrder, TmpErrStat, TmpErrMsg, UnEc )
+      ! VelInterpCubic: Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]
+   CALL ParseVar( InFileInfo, CurLine, "VelInterpCubic", InputFileData%VelInterpCubic, TmpErrStat, TmpErrMsg, UnEc )
    if (Failed()) return
 
       ! NWindVel: Number of points to output the wind velocity (0 to 9)
