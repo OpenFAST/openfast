@@ -1496,7 +1496,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    ! Check if members with the MacCamy-Fuchs diffraction model and not modeled by potential flow satisfy the necessary criteria.
    IF ( member%PropMCF .AND. ( .NOT. member%PropPot )) THEN
       ! Check if surface piercing
-      IF ( (Za-MSL2SWL)*(Zb-MSL2SWL) > 0 ) THEN ! Two end joints of the member on the same side of the SWL
+      IF ( Za*Zb > 0 ) THEN ! Two end joints of the member on the same side of the SWL
          CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must be surface piercing.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
          RETURN
       END IF
@@ -2574,6 +2574,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: r1
    REAL(ReKi)               :: r2
    REAL(ReKi)               :: dRdl_mg     ! shorthand for taper including marine growth of element i
+   REAL(ReKi)               :: RMGFSInt    ! Member radius with marine growth at the intersection with the instantaneous free surface
    real(ReKi)               :: g     ! gravity constant
    REAL(ReKi)               :: h0    ! distances along cylinder centerline from point 1 to the waterplane
    real(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
@@ -3284,11 +3285,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      ! Get the initial z-positions of the two end nodes of the member to determine whether the member should 
-      ! be surface piercing
+      ! Get the z-positions of the two end nodes of the member to determine whether the member is surface piercing 
       z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
       z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
-      IF ( z2 > 0.0_SiKi .AND. z1 <= 0.0_SiKi .AND. p%WaveStMod > 0) THEN 
+      ! Include displacement if wave stretching enabled and WaveDisp /= 0
+      IF ( p%WaveStMod > 0 .AND. p%WaveDisp /= 0 ) THEN
+        z1 = z1 + u%Mesh%TranslationDisp(3, mem%NodeIndx(1))
+        z2 = z2 + u%Mesh%TranslationDisp(3, mem%NodeIndx(N+1))
+      END IF
+
+      IF ( p%WaveStMod > 0 .AND. z1 <= m%WaveElev(mem%NodeIndx(1)) .AND. z2 > m%WaveElev(mem%NodeIndx(N+1)) ) THEN 
       
       !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
                 
@@ -3350,7 +3356,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            !-------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------!
            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
            f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
@@ -3413,15 +3419,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
         END DO ! i =1,N+1    ! loop through member nodes  
 
-        IF (FSElem < 0_IntKi) THEN ! No partially wetted element identified - Bad!
-          CALL SetErrStat(ErrID_Warn, 'No partially wetted element identified for an initially surface-piercing member.  Skipping load smoothing.  This has happend to Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-          ! RETURN
-        ! ELSE IF (FSElem < 3) THEN ! Only one or no element is fully submerged - Bad!
-        !   CALL SetErrStat(ErrID_Fatal, 'For each surface-piercing member, at least two elements must remain fully submerged.  This is not true for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-        !   RETURN
-        END IF
-
-        IF (FSElem > 0_IntKi) THEN ! Perform load smoothing if there is a partially wetted element
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
@@ -3517,19 +3514,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                SubRatio  * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem+1)) + &
           (1.0-SubRatio) * u%Mesh%TranslationVel(:,mem%NodeIndx(FSElem  ))   &
         )
-        dRdl_p  = 0.5*( abs(mem%dRdl_mg(FSElem-1)) + abs(mem%dRdl_mg(FSElem)) )
+        dRdl_p  = abs(mem%dRdl_mg(FSElem))
+        RMGFSInt = SubRatio * mem%RMG(FSElem+1) + (1.0-SubRatio) * mem%RMG(FSElem)
+
         vec = matmul( mem%Ak,vrelFSInt )
-        F_DS = mem%Cd(FSElem)*p%WtrDens*mem%RMG(FSElem)*TwoNorm(vec)*vec  +  &
-                  0.5*mem%AxCd(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*dRdl_p * & 
-                  matmul( dot_product( mem%k, vrelFSInt )*mem%kkt, vrelFSInt )
-        
+        F_DS = mem%Cd(FSElem)*p%WtrDens*RMGFSInt*TwoNorm(vec)*vec  +  &
+                  0.5*mem%AxCd(FSElem)*p%WtrDens*pi*RMGFSInt*dRdl_p * & 
+                  abs(dot_product( mem%k, vrelFSInt )) * matmul( mem%kkt, vrelFSInt )
+
         ! Hydrodynamic added mass and inertia loads
         IF ( .NOT. mem%PropPot ) THEN
            
            ! ------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------
            IF (p%AMMod > 0_IntKi) THEN
-              Am =      mem%Ca(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*mem%Ak + &
-                  2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p*mem%kkt
+              Am =      mem%Ca(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*mem%Ak + &
+                  2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p*mem%kkt
               F_AS = -matmul( Am, &
                          SubRatio  * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem+1)) + &
                     (1.0-SubRatio) * u%Mesh%TranslationAcc(:,mem%NodeIndx(FSElem  )) )
@@ -3537,13 +3536,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          
            ! ------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ------------------------
            IF ( mem%PropMCF) THEN
-              F_IS=                             p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAMCFFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+              F_IS=                             p%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAMCFFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
            ELSE
-              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)   * matmul( mem%Ak,  FAFSInt ) + &
-                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*mem%RMG(FSElem)*mem%RMG(FSElem)*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
-                           2.0*mem%AxCp(FSElem)          *pi*mem%RMG(FSElem)                *dRdl_pp * FDynPFSInt*mem%k
+              F_IS=(mem%Ca(FSElem)+mem%Cp(FSElem))*p%WtrDens*pi*RMGFSInt*RMGFSInt   * matmul( mem%Ak,  FAFSInt ) + &
+                           2.0*mem%AxCa(FSElem)*p%WtrDens*pi*RMGFSInt*RMGFSInt*dRdl_p  * matmul( mem%kkt, FAFSInt ) + &
+                           2.0*mem%AxCp(FSElem)          *pi*RMGFSInt                *dRdl_pp * FDynPFSInt*mem%k
            END IF
         END IF
         
@@ -3551,7 +3550,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !                         Perform the load redistribution for smooth time series                     !
         !----------------------------------------------------------------------------------------------------!
         ! Evaluate the load redistribution function
-        f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
+        f_redist = 0.0_ReKi
+        IF (FSElem > 1_IntKi) THEN ! At least one fully submerged element
+           f_redist = 2.0_ReKi * SubRatio**3 - 3.5_ReKi * SubRatio**2 + SubRatio + 0.5_ReKi
+        END IF
         
         ! deltal = mem%dl and h_c = 0 should always be used here by design. Moment correction will be applied separately
         deltal = mem%dl
@@ -3559,11 +3561,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Viscous drag
         ! Apply load redistribution to the first node below the free surface
-        IF (FSElem > 1_IntKi) THEN ! At least one fully submerged element
-           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
-        ELSE IF (FSElem > 0_IntKi) THEN ! No fully submerged element
-           Df_hydro =  (SubRatio-1.0_ReKi)*F_D0 + SubRatio*F_DS
-        END IF
+        Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_D0 + SubRatio/2.0_ReKi*F_DS
         CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
         m%memberLoads(im)%F_D(:, FSElem) = m%memberLoads(im)%F_D(:, FSElem) + Df_hydro_lumped
         y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3571,11 +3569,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
         ! Apply load redistribution to the second node below the free surface
         IF (FSElem > 1_IntKi) THEN ! Note: Only need to modify the loads on the second node below the free surface when there is at least one fully submerged element.
-           IF (FSElem > 2_IntKi) THEN ! At least two fully submerged element
-              Df_hydro = f_redist * F_D0
-           ELSE ! One fully submerged element
-              Df_hydro = 2.0_ReKi * f_redist * F_D0
-           END IF
+           Df_hydro = f_redist * F_D0
            CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
            m%memberLoads(im)%F_D(:, FSElem-1) = m%memberLoads(im)%F_D(:, FSElem-1) + Df_hydro_lumped
            y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
@@ -3588,11 +3582,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( p%AMMod > 0_IntKi ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               ! Apply load redistribution to the first node below the free surface
-              IF (FSElem > 1_IntKi) THEN
-                  Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
-              ELSE IF (FSElem > 0_IntKi) THEN
-                  Df_hydro =  (SubRatio-1.0_ReKi)*F_A0 + SubRatio*F_AS
-              END IF
+              Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_A0 + SubRatio/2.0_ReKi*F_AS
               CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
               m%memberLoads(im)%F_A(:, FSElem) = m%memberLoads(im)%F_A(:, FSElem) + Df_hydro_lumped
               y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3600,11 +3590,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
               ! Apply load redistribution to the second node below the free surface
               IF (FSElem > 1_IntKi) THEN
-                  IF (FSElem > 2_IntKi) THEN
-                      Df_hydro = f_redist * F_A0
-                  ELSE
-                      Df_hydro = 2.0_ReKi * f_redist *F_A0
-                  END IF
+                  Df_hydro = f_redist * F_A0
                   CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
                   m%memberLoads(im)%F_A(:, FSElem-1) = m%memberLoads(im)%F_A(:, FSElem-1) + Df_hydro_lumped
                   y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
@@ -3614,11 +3600,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            
            !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
            ! Apply load redistribution to the first node below the free surface
-           IF (FSElem > 1_IntKi) THEN
-               Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
-           ELSE IF (FSElem > 0_IntKi) THEN
-               Df_hydro =  (SubRatio-1.0_ReKi)*F_I0 + SubRatio*F_IS
-           END IF
+           Df_hydro = ((SubRatio-1.0_ReKi)/(2.0_ReKi)-f_redist)*F_I0 + SubRatio/2.0_ReKi*F_IS
            CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
            m%memberLoads(im)%F_I(:, FSElem) = m%memberLoads(im)%F_I(:, FSElem) + Df_hydro_lumped
            y%Mesh%Force (:,mem%NodeIndx(FSElem)) = y%Mesh%Force (:,mem%NodeIndx(FSElem)) + Df_hydro_lumped(1:3)
@@ -3626,11 +3608,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         
            ! Apply load redistribution to the second node below the free surface
            IF (FSElem > 1_IntKi) THEN
-               IF (FSElem > 2_IntKi) THEN
-                   Df_hydro = f_redist * F_I0
-               ELSE
-                   Df_hydro = 2.0_ReKi * f_redist * F_I0
-               END IF
+               Df_hydro = f_redist * F_I0
                CALL LumpDistrHydroLoads( Df_hydro, mem%k, deltal, h_c, Df_hydro_lumped)
                m%memberLoads(im)%F_I(:, FSElem-1) = m%memberLoads(im)%F_I(:, FSElem-1) + Df_hydro_lumped
                y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) = y%Mesh%Force (:,mem%NodeIndx(FSElem-1)) + Df_hydro_lumped(1:3)
@@ -3661,10 +3639,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
         END IF
 
-        END IF
-
-
-      ELSE !-------------------------------Fully Submerged Member or No Wave Stretching-------------------------------!
+      ELSE !----------------------------Non-surface Piercing Member or No Wave Stretching----------------------------!
       
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
@@ -3678,11 +3653,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            END IF
            
            ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
-           IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
-              CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
-                                     //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-              !RETURN
-           END IF
+           ! IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
+           !    CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
+           !                           //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
+           ! END IF
                       
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Default value for fully submerged interior node
@@ -3690,20 +3664,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            h_c    = 0.0_ReKi
            
            ! Special cases
+           ! Note that we only need to check if element crosses the SWL if WaveStMod == 0
+           ! With wave stretching, surface-piercing members are already handled by the IF branch above
            IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
               deltal =  mem%dl/2.0_ReKi
               h_c    =  mem%dl/4.0_ReKi
+              ! Check for the special case where the first element also crosses the SWL
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used without wave stretching
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = h
+                    h_c    = 0.5*h
+                 END IF
+              END IF
            ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
               ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
               !       This is the correct behavior.
               deltal =  mem%dl/2.0_ReKi - mem%h_floor
               h_c    =  0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+              ! Check for the special case where the next element crosses the SWL
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used without wave stretching
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = h - mem%h_floor
+                    h_c    = 0.5*(h + mem%h_floor)
+                 END IF
+              END IF
            ELSE IF ( i == N+1 ) THEN ! Last node
               deltal =  mem%dl/2.0_ReKi
               h_c    = -mem%dl/4.0_ReKi
            ELSE ! Interior node
               ! Need to check if element crosses the SWL, but only if WaveStMod == 0
-              ! With wave stretching, will error out anyway unless all nodes are submerged
+              ! With wave stretching, surface-piercing members are already handled by the IF branch
               IF (p%WaveStMod==0) THEN ! No wave stretching
                  ! Initial z position will always be used
                  z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
@@ -3730,7 +3726,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            !--------------------- hydrodynamic drag loads: sides: Section 7.1.2 --------------------------------! 
            vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
            f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+                     0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
            CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(4:6, i)
