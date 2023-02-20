@@ -3682,14 +3682,36 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            h_c    = 0.0_ReKi
            
            ! Special cases
+           ! Note that we only need to check if element crosses the SWL if WaveStMod == 0
+           ! With wave stretching, surface-piercing members are already handled by the IF branch above
            IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
               deltal =  mem%dl/2.0_ReKi
               h_c    =  mem%dl/4.0_ReKi
+              ! Check for the special case where the first element also crosses the SWL
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used without wave stretching
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = h
+                    h_c    = 0.5*h
+                 END IF
+              END IF
            ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
               ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
               !       This is the correct behavior.
               deltal =  mem%dl/2.0_ReKi - mem%h_floor
               h_c    =  0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
+              ! Check for the special case where the next element crosses the SWL
+              IF (p%WaveStMod==0) THEN ! No wave stretching
+                 ! Initial z position will always be used without wave stretching
+                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
+                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
+                    deltal = h - mem%h_floor
+                    h_c    = 0.5*(h + mem%h_floor)
+                 END IF
+              END IF
            ELSE IF ( i == N+1 ) THEN ! Last node
               deltal =  mem%dl/2.0_ReKi
               h_c    = -mem%dl/4.0_ReKi
