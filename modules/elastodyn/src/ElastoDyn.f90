@@ -1431,6 +1431,10 @@ END IF
    y%HubPtMotion%TranslationDisp(3,1)  =     m%RtHS%rQ(2) + p%PtfmRefzt
    y%HubPtMotion%TranslationDisp       = y%HubPtMotion%TranslationDisp - y%HubPtMotion%Position   ! relative position
    
+   y%HubDisplacementX = y%HubPtMotion%TranslationDisp(1,1)
+   y%HubDisplacementY = y%HubPtMotion%TranslationDisp(2,1)
+   y%HubDisplacementZ = y%HubPtMotion%TranslationDisp(3,1)
+   
       ! Orientation:        
    y%HubPtMotion%Orientation(1,1,1)    =     m%CoordSys%g1(1) 
    y%HubPtMotion%Orientation(2,1,1)    =     m%CoordSys%g2(1)
