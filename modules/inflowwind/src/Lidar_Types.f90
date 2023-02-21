@@ -33,7 +33,7 @@ MODULE Lidar_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SensorType_None = 0
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SensorType_None = 0 
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SensorType_SinglePoint = 1 
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SensorType_ContinuousLidar = 2 
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SensorType_PulsedLidar = 3 
@@ -109,10 +109,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Lidar_InputType
     REAL(ReKi)  :: PulseLidEl      !< the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis) [-]
     REAL(ReKi)  :: PulseLidAz      !< the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis) [-]
-    REAL(ReKi)  :: HubDisplacementX      !< . [-]
-    REAL(ReKi)  :: HubDisplacementY      !< . [-]
-    REAL(ReKi)  :: HubDisplacementZ      !< . [-]
- END TYPE Lidar_InputType
+    REAL(ReKi)  :: HubDisplacementX      !< Hub displacement in the X direction, taken from  ElastoDyn [-]
+    REAL(ReKi)  :: HubDisplacementY      !< Hub displacement in the Y direction, taken from  ElastoDyn [-]
+    REAL(ReKi)  :: HubDisplacementZ      !< Hub displacement in the Z direction, taken from  ElastoDyn [-]
+  END TYPE Lidar_InputType
 ! =======================
 ! =========  Lidar_OutputType  =======
   TYPE, PUBLIC :: Lidar_OutputType
@@ -121,7 +121,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
- END TYPE Lidar_OutputType
+  END TYPE Lidar_OutputType
 ! =======================
 CONTAINS
  SUBROUTINE Lidar_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -133,6 +133,7 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyInitInput'
@@ -270,6 +271,7 @@ CONTAINS
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInitInput'
@@ -451,6 +453,7 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyParam'
@@ -549,7 +552,8 @@ ENDIF
   ELSE
      DEALLOCATEpointers_local = .true.
   END IF
-  IF (ALLOCATED(ParamData%FocalDistanceX)) THEN
+  
+IF (ALLOCATED(ParamData%FocalDistanceX)) THEN
   DEALLOCATE(ParamData%FocalDistanceX)
 ENDIF
 IF (ALLOCATED(ParamData%FocalDistanceY)) THEN
@@ -613,24 +617,24 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! DisplacementLidarY
       Re_BufSz   = Re_BufSz   + 1  ! DisplacementLidarZ
       Int_BufSz  = Int_BufSz  + 1  ! NumBeam
-      Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
   IF ( ALLOCATED(InData%FocalDistanceX) ) THEN
-      Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceX upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceX upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceX)  ! FocalDistanceX
   END IF
-      Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceY allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceY allocated yes/no
   IF ( ALLOCATED(InData%FocalDistanceY) ) THEN
-      Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceY upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceY upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceY)  ! FocalDistanceY
   END IF
-      Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceZ allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceZ allocated yes/no
   IF ( ALLOCATED(InData%FocalDistanceZ) ) THEN
-      Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceZ upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceZ upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceZ)  ! FocalDistanceZ
   END IF
-      Int_BufSz   = Int_BufSz   + 1     ! MsrPosition allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPosition allocated yes/no
   IF ( ALLOCATED(InData%MsrPosition) ) THEN
-      Int_BufSz   = Int_BufSz   + 2*2  ! MsrPosition upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*2  ! MsrPosition upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPosition)  ! MsrPosition
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
@@ -773,6 +777,7 @@ ENDIF
     DO i1 = LBOUND(InData%LidPosition,1), UBOUND(InData%LidPosition,1)
       ReKiBuf(Re_Xferred) = InData%LidPosition(i1)
       Re_Xferred = Re_Xferred + 1
+    END DO
  END SUBROUTINE Lidar_PackParam
 
  SUBROUTINE Lidar_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -789,6 +794,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackParam'
@@ -1622,7 +1628,6 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyInput'
@@ -1751,7 +1756,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInput'
@@ -2254,8 +2258,6 @@ ENDIF
  REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -2315,8 +2317,6 @@ ENDIF
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'Lidar_Input_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
