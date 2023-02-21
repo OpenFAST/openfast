@@ -107,10 +107,18 @@ IMPLICIT NONE
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
-    INTEGER(IntKi)  :: SensorType = SensorType_None      !< Sensor type (for lidar/sensor module) [-]
+    IINTEGER(IntKi)  :: SensorType      !< Sensor type (for lidar/sensor module) [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of lidar beams [-]
     INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceX      !< LIDAR LOS focal distance co-ordinates in the x direction [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceY      !< LIDAR LOS focal distance co-ordinates in the y direction [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceZ      !< LIDAR LOS focal distance co-ordinates in the z direction [m]
+    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
+    REAL(ReKi)  :: MeasurementInterval      !< Time between each measurement [s]
+    REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
+    INTEGER(IntKi)  :: ConsiderHubMotion      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [-]
     TYPE(IfW_FFWind_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================
@@ -592,9 +600,50 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
     DstInputFileData%OutList = SrcInputFileData%OutList
 ENDIF
     DstInputFileData%SensorType = SrcInputFileData%SensorType
+    DstInputFileData%NumBeam = SrcInputFileData%NumBeam
     DstInputFileData%NumPulseGate = SrcInputFileData%NumPulseGate
     DstInputFileData%RotorApexOffsetPos = SrcInputFileData%RotorApexOffsetPos
     DstInputFileData%LidRadialVel = SrcInputFileData%LidRadialVel
+    IF (ALLOCATED(SrcInputFileData%FocalDistanceX)) THEN
+  i1_l = LBOUND(SrcInputFileData%FocalDistanceX,1)
+  i1_u = UBOUND(SrcInputFileData%FocalDistanceX,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%FocalDistanceX)) THEN 
+    ALLOCATE(DstInputFileData%FocalDistanceX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%FocalDistanceX.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%FocalDistanceX = SrcInputFileData%FocalDistanceX
+ENDIF
+IF (ALLOCATED(SrcInputFileData%FocalDistanceY)) THEN
+  i1_l = LBOUND(SrcInputFileData%FocalDistanceY,1)
+  i1_u = UBOUND(SrcInputFileData%FocalDistanceY,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%FocalDistanceY)) THEN 
+    ALLOCATE(DstInputFileData%FocalDistanceY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%FocalDistanceY.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%FocalDistanceY = SrcInputFileData%FocalDistanceY
+ENDIF
+IF (ALLOCATED(SrcInputFileData%FocalDistanceZ)) THEN
+  i1_l = LBOUND(SrcInputFileData%FocalDistanceZ,1)
+  i1_u = UBOUND(SrcInputFileData%FocalDistanceZ,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%FocalDistanceZ)) THEN 
+    ALLOCATE(DstInputFileData%FocalDistanceZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%FocalDistanceZ.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%FocalDistanceZ = SrcInputFileData%FocalDistanceZ
+ENDIF
+    DstInputFileData%PulseSpacing = SrcInputFileData%PulseSpacing
+    DstInputFileData%MeasurementInterval = SrcInputFileData%MeasurementInterval
+    DstInputFileData%URefLid = SrcInputFileData%URefLid
+    DstInputFileData%ConsiderHubMotion = SrcInputFileData%ConsiderHubMotion
       CALL IfW_FFWind_CopyInitInput( SrcInputFileData%FF, DstInputFileData%FF, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -721,9 +770,29 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
       Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotorApexOffsetPos)  ! RotorApexOffsetPos
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
+      Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
+  IF ( ALLOCATED(InData%FocalDistanceX) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceX upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceX)  ! FocalDistanceX
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceY allocated yes/no
+  IF ( ALLOCATED(InData%FocalDistanceY) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceY upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceY)  ! FocalDistanceY
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceZ allocated yes/no
+  IF ( ALLOCATED(InData%FocalDistanceZ) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceZ upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceZ)  ! FocalDistanceZ
+  END IF
+      Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
+      Re_BufSz   = Re_BufSz   + 1  ! MeasurementInterval
+      Re_BufSz   = Re_BufSz   + 1  ! URefLid
+      Int_BufSz  = Int_BufSz  + 1  ! ConsiderHubMotion
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! FF: size of buffers for each call to pack subtype
       CALL IfW_FFWind_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, .TRUE. ) ! FF 
@@ -905,13 +974,68 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%SensorType
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumPulseGate
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
       ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
       Re_Xferred = Re_Xferred + 1
-    END DO
+    END DO    
     IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+     IF ( .NOT. ALLOCATED(InData%FocalDistanceX) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceX,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceX,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%FocalDistanceX,1), UBOUND(InData%FocalDistanceX,1)
+        ReKiBuf(Re_Xferred) = InData%FocalDistanceX(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%FocalDistanceY) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceY,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceY,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%FocalDistanceY,1), UBOUND(InData%FocalDistanceY,1)
+        ReKiBuf(Re_Xferred) = InData%FocalDistanceY(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%FocalDistanceZ) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceZ,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceZ,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%FocalDistanceZ,1), UBOUND(InData%FocalDistanceZ,1)
+        ReKiBuf(Re_Xferred) = InData%FocalDistanceZ(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    ReKiBuf(Re_Xferred) = InData%PulseSpacing
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MeasurementInterval
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%URefLid
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%ConsiderHubMotion
     Int_Xferred = Int_Xferred + 1
       CALL IfW_FFWind_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, OnlySize ) ! FF 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1118,6 +1242,8 @@ ENDIF
   END IF
     OutData%SensorType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%NumPulseGate = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%RotorApexOffsetPos,1)
@@ -1127,6 +1253,68 @@ ENDIF
       Re_Xferred = Re_Xferred + 1
     END DO
     OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
+    Int_Xferred = Int_Xferred + 1
+    IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceX not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FocalDistanceX)) DEALLOCATE(OutData%FocalDistanceX)
+    ALLOCATE(OutData%FocalDistanceX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceX.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%FocalDistanceX,1), UBOUND(OutData%FocalDistanceX,1)
+        OutData%FocalDistanceX(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceY not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FocalDistanceY)) DEALLOCATE(OutData%FocalDistanceY)
+    ALLOCATE(OutData%FocalDistanceY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceY.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%FocalDistanceY,1), UBOUND(OutData%FocalDistanceY,1)
+        OutData%FocalDistanceY(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceZ not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FocalDistanceZ)) DEALLOCATE(OutData%FocalDistanceZ)
+    ALLOCATE(OutData%FocalDistanceZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceZ.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%FocalDistanceZ,1), UBOUND(OutData%FocalDistanceZ,1)
+        OutData%FocalDistanceZ(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%PulseSpacing = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MeasurementInterval = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%URefLid = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%ConsiderHubMotion = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
