@@ -589,14 +589,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             Init%InData_IfW%FDext%delta  = ExternInitData%windGrid_delta
             Init%InData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
          end if
-
-         ! bjj: these lidar inputs should come from an InflowWind input file; I'm hard coding them here for now
-         Init%InData_IfW%lidar%SensorType          = ExternInitData%SensorType
-         Init%InData_IfW%lidar%LidRadialVel        = ExternInitData%LidRadialVel
-         Init%InData_IfW%lidar%RotorApexOffsetPos  = 0.0
-         Init%InData_IfW%lidar%NumPulseGate        = 0
       ELSE
-         Init%InData_IfW%lidar%SensorType          = SensorType_None
          Init%InData_IfW%Use4Dext                  = .false.
       END IF
 
@@ -626,6 +619,18 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
+      
+       IF ( p_FAST%CompServo == Module_SrvD ) THEN !assign the number of gates to ServD
+         Init%InData_SrvD%LidSpeed = 0.0
+         Init%InData_SrvD%MsrPositionsX = 0.0
+         Init%InData_SrvD%MsrPositionsY = 0.0
+         Init%InData_SrvD%MsrPositionsZ = 0.0   
+         Init%InData_SrvD%SensorType = IfW%p%lidar%SensorType
+         Init%InData_SrvD%NumBeam    = IfW%p%lidar%NumBeam
+         Init%InData_SrvD%NumPulseGate = IfW%p%lidar%NumPulseGate
+         Init%InData_SrvD%PulseSpacing = IfW%p%lidar%PulseSpacing 
+       END IF
+      
 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM ) THEN
 
@@ -1435,7 +1440,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       endif
    end if
 
-   m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)
+
 
 
    !...............................................................................................................................
