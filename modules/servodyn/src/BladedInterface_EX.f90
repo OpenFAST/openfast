@@ -482,6 +482,16 @@ CONTAINS
    subroutine SetEXavrSWAP_LidarSensors()
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < (LidarMsr_StartIdx + LidarMsr_MaxChan - 1) ) return
+      
+      dll_data%avrswap(2001:2005) = u%LidSpeed(1:5)        ! Lidar Measured Wind Speeds
+      dll_data%avrswap(2006:2010) = u%MsrPositionsX(1:5)   ! Lidar Measurement Points X
+      dll_data%avrswap(2011:2015) = u%MsrPositionsY(1:5)   ! Lidar Measurement Points Y
+      dll_data%avrswap(2016:2020) = u%MsrPositionsZ(1:5)   ! Lidar Measurement Points Z
+      dll_data%avrswap(2021)      = p%SensorType           ! Sensor Type
+      dll_data%avrswap(2022)      = p%NumBeam              ! Number of Beams
+      dll_data%avrswap(2023)      = p%NumPulseGate         ! Number of Pulse Gates
+      dll_data%avrswap(2024)      = p%URefLid              ! Reference average wind speed for the lidar 
+      
    end subroutine SetEXavrSWAP_LidarSensors
 
    !> Set the Lidar related sensor inputs
