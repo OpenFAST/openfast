@@ -84,6 +84,10 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
                                           
+      ! Temporary variables for error handling
+    INTEGER(IntKi)                                          ::  TmpErrStat          !< temporary error message
+    CHARACTER(ErrMsgLen)                                    ::  TmpErrMsg                                          
+                                          
       ! local variables                   
    INTEGER(IntKi)                                        :: IBeam                                        
    INTEGER(IntKi)                                        :: ErrStat2    ! temporary Error status of the operation
@@ -636,10 +640,9 @@ IF (p%lidar%SensorType == SensorType_None) RETURN
    
       END DO      
       
-      
-   END IF !type of lidar measurements
-         
-   
+   END IF   
+   END IF !type of lidar measurementd
+  
    CALL Cleanup()
          
    RETURN
