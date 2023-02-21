@@ -107,9 +107,9 @@ IMPLICIT NONE
     LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
-    IINTEGER(IntKi)  :: SensorType      !< Sensor type (for lidar/sensor module) [-]
+    INTEGER(IntKi)  :: SensorType      !< Sensor type (for lidar/sensor module) [-]
     INTEGER(IntKi)  :: NumBeam      !< Number of lidar beams [-]
-    INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< The number of range gates to return wind speeds at [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]
     LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceX      !< LIDAR LOS focal distance co-ordinates in the x direction [m]
@@ -118,7 +118,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
     REAL(ReKi)  :: MeasurementInterval      !< Time between each measurement [s]
     REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
-    INTEGER(IntKi)  :: ConsiderHubMotion      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [-]
+    INTEGER(IntKi)  :: ConsiderHubMotion      !< Flag whether the hub motion's impact on the Lidar measurement will be considered [-]
     TYPE(IfW_FFWind_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================
@@ -604,7 +604,7 @@ ENDIF
     DstInputFileData%NumPulseGate = SrcInputFileData%NumPulseGate
     DstInputFileData%RotorApexOffsetPos = SrcInputFileData%RotorApexOffsetPos
     DstInputFileData%LidRadialVel = SrcInputFileData%LidRadialVel
-    IF (ALLOCATED(SrcInputFileData%FocalDistanceX)) THEN
+IF (ALLOCATED(SrcInputFileData%FocalDistanceX)) THEN
   i1_l = LBOUND(SrcInputFileData%FocalDistanceX,1)
   i1_u = UBOUND(SrcInputFileData%FocalDistanceX,1)
   IF (.NOT. ALLOCATED(DstInputFileData%FocalDistanceX)) THEN 
@@ -681,6 +681,15 @@ IF (ALLOCATED(InputFileData%WindVziList)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceX)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceX)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceY)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceY)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceZ)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceZ)
 ENDIF
   CALL IfW_FFWind_DestroyInitInput( InputFileData%FF, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -774,7 +783,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotorApexOffsetPos)  ! RotorApexOffsetPos
       Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
-      Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
   IF ( ALLOCATED(InData%FocalDistanceX) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceX upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceX)  ! FocalDistanceX
@@ -981,10 +990,10 @@ ENDIF
     DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
       ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
       Re_Xferred = Re_Xferred + 1
-    END DO    
+    END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-     IF ( .NOT. ALLOCATED(InData%FocalDistanceX) ) THEN
+  IF ( .NOT. ALLOCATED(InData%FocalDistanceX) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1254,7 +1263,7 @@ ENDIF
     END DO
     OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
     Int_Xferred = Int_Xferred + 1
-    IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceX not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceX not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
