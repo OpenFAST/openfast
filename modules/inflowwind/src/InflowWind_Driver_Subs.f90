@@ -77,6 +77,7 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("                  "//SwChar//"HAWC          -- convert contents of <filename> to HAWC format ")
    CALL WrScr("                  "//SwChar//"Bladed        -- convert contents of <filename> to Bladed format ")
    CALL WrScr("                  "//SwChar//"vtk           -- convert contents of <filename> to vtk format ")
+   CALL WrScr("                  "//SwChar//"accel         -- calculate wind acceleration in addition to velocity")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
@@ -326,6 +327,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "UNIFORM"   )   THEN
             CLFlags%WrUniform    = .TRUE.
+            RETURN
+         ELSEIF   ( TRIM(ThisArgUC) == "ACCEL"   )   THEN
+            CLFlags%OutputAccel    = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
@@ -1073,7 +1077,15 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    IF ( PathIsRelative( DvrSettings%PointsFileName ) ) DvrSettings%PointsFileName = TRIM(PriPath)//TRIM(DvrSettings%PointsFileName)
 
-
+      ! CalcAccel - calculate wind acceleration (unused if .not. DvrFlags%PointsFile)
+   CALL ReadVar( UnIn, FileName,DvrFlags%OutputAccel, 'CalcAccel', ' Calc and output wind acceleration',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
 
    !-------------------------------------------------------------------------------------------------
    !  gridded data output
@@ -1340,6 +1352,8 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    DvrFlags%WrBladed  = DvrFlags%WrBladed  .or. CLFlags%WrBladed           ! create file if specified in either place
    DvrFlags%WrVTK     = DvrFlags%WrVTK     .or. CLFlags%WrVTK              ! create file if specified in either place
    DvrFlags%WrUniform = DvrFlags%WrUniform .or. CLFlags%WrUniform          ! create file if specified in either place
+
+   DvrFlags%OutputAccel = DvrFlags%OutputAccel .or. CLFlags%OutputAccel          ! calculate acceleration if specified in either place
 
 !      ! Due to the complexity, we are handling overwriting driver input file settings with
 !      ! command line settings and the instance where no driver input file is read separately.
@@ -2153,7 +2167,7 @@ SUBROUTINE WindGridMessage( Settings, ToFile, Msg, MsgLen )
    IF ( ToFile ) THEN
       Msg='#  '
    ELSE
-      Msg="Requested wind grid data will be written to "//TRIM(Settings%WindGridOutputName)//'.'
+      Msg="Requested wind grid data will be written to "//TRIM(Settings%WindGridOutput%Name)//'.'
    ENDIF
    Msg   =  TRIM(Msg)//"  Requested data:"//NewLine
 
@@ -2262,11 +2276,8 @@ END SUBROUTINE
 
 
 !> This subroutine outputs the results of the WindGrid calculations information at each timestep.
-SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, GridXYZ, GridVel, TIME, ErrStat, ErrMsg)
-
-   INTEGER(IntKi),                     INTENT(INOUT)  :: FileUnit             !< Unit number for the output file
-   CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
-   LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
+SUBROUTINE WindGridVel_OutputWrite (OutFile, Settings, GridXYZ, GridVel, TIME, ErrStat, ErrMsg)
+   TYPE(OutputFile),                   INTENT(INOUT)  :: OutFile
    TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
    REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
    REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
@@ -2292,39 +2303,39 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
 
 
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
-   IF ( .NOT. Initialized ) THEN
+   IF ( .NOT. OutFile%Initialized ) THEN
 
-      CALL GetNewUnit( FileUnit )
-      CALL OpenFOutFile( FileUnit, TRIM(FileName), ErrStatTmp, ErrMsgTmp )
+      CALL GetNewUnit( OutFile%Unit )
+      CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WindGridVel_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      Initialized =  .TRUE.
+      OutFile%Initialized =  .TRUE.
 
          ! Write header section
-      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
+      WRITE( OutFile%Unit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
             ' on '//CurDate()//' at '//CurTime()//'.'
-      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at a grid of points at each '// &
+      WRITE( OutFile%Unit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at a grid of points at each '// &
                                                    'requested timestep'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Z,U,V,W at each timestep'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Z,U,V,W at each timestep'
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
       CALL WindGridMessage( Settings, .TRUE., ErrMsgTmp, LenErrMsgTmp )
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  ErrMsgTmp(1:LenErrMsgTmp)
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#           X              Y              Z  '//  &
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  ErrMsgTmp(1:LenErrMsgTmp)
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '#           X              Y              Z  '//  &
                                                    '            U              V              W'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#          (m)            (m)            (m) '//  &
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '#          (m)            (m)            (m) '//  &
                                                    '          (m/s)          (m/s)          (m/s)'
    ELSE
 
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp ) NewLine//NewLine
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(TIME))
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp ) NewLine//NewLine
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(TIME))
 
       DO I = 1,SIZE(GridXYZ,DIM=2)
 
-         WRITE (FileUnit,WindVelFmt, IOSTAT=ErrStatTmp )    GridXYZ(1,I),GridXYZ(2,I),GridXYZ(3,I),GridVel(1,I),GridVel(2,I),GridVel(3,I)
+         WRITE (OutFile%Unit,WindVelFmt, IOSTAT=ErrStatTmp )    GridXYZ(1,I),GridXYZ(2,I),GridXYZ(3,I),GridVel(1,I),GridVel(2,I),GridVel(3,I)
 
       ENDDO
 
@@ -2333,22 +2344,20 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
 END SUBROUTINE WindGridVel_OutputWrite
 
 
-SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, GridXYZ, GridVel, TIME, ErrStat, ErrMsg)
+SUBROUTINE PointData_OutputWrite (OutFile, Settings, GridXYZ, GridDat, TIME, IsVel, ErrStat, ErrMsg)
 
-   INTEGER(IntKi),                     INTENT(INOUT)  :: FileUnit             !< Unit number for the output file
-   CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
-   LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
+   TYPE(OutputFile),                   INTENT(INOUT)  :: OutFile
    TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
    REAL(ReKi),                         INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
-   REAL(ReKi),                         INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
+   REAL(ReKi),                         INTENT(IN   )  :: GridDat(:,:)         !< The velocity grid passed in
    REAL(DbKi),                         INTENT(IN   )  :: TIME                 !< The current time
+   LOGICAL,                            INTENT(IN   )  :: IsVel                !< Is this velocity output
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
          ! Temporary local variables
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
    CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
-   INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
    INTEGER(IntKi)                                     :: I                    !< Generic counter
 
    CHARACTER(61)                                      :: NameUnitFmt          !< Format specifier for the output file for channel names and units
@@ -2364,38 +2373,48 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
 
 
       ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
-   IF ( .NOT. Initialized ) THEN
+   IF ( .NOT. OutFile%Initialized ) THEN
 
-      CALL GetNewUnit( FileUnit )
-      CALL OpenFOutFile( FileUnit, TRIM(FileName), ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'PointsVel_OutputWrite' )
+      CALL GetNewUnit( OutFile%Unit )
+      CALL OpenFOutFile( OutFile%Unit, TRIM(OutFile%Name), ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'PointData_OutputWrite' )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      Initialized =  .TRUE.
+      OutFile%Initialized =  .TRUE.
 
          ! Write header section
-      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
+      WRITE( OutFile%Unit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
             ' on '//CurDate()//' at '//CurTime()//'.'
-      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at the '//   &
-                                                   TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
-                                                   'file '//TRIM(Settings%PointsFileName)//'.'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit, NameUnitFmt, IOSTAT=ErrStatTmp  )  'T', 'X', 'Y', 'Z', 'U', 'V', 'W'
-      WRITE (FileUnit, NameUnitFmt, IOSTAT=ErrStatTmp  )  '(s)', '(m)', '(m)', '(m)', '(m/s)', '(m/s)', '(m/s)'
+      if (IsVel) then
+         WRITE( OutFile%Unit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at the '//   &
+                                                      TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
+                                                      'file '//TRIM(Settings%PointsFileName)//'.'
+      else
+         WRITE( OutFile%Unit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind acceleration at the '//   &
+                                                      TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
+                                                      'file '//TRIM(Settings%PointsFileName)//'.'
+      end if
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (OutFile%Unit, NameUnitFmt, IOSTAT=ErrStatTmp  )  'T', 'X', 'Y', 'Z', 'U', 'V', 'W'
+      if (IsVel) then
+         WRITE (OutFile%Unit, NameUnitFmt, IOSTAT=ErrStatTmp  )  '(s)', '(m)', '(m)', '(m)', '(m/s)', '(m/s)', '(m/s)'
+      else    
+         WRITE (OutFile%Unit, NameUnitFmt, IOSTAT=ErrStatTmp  )  '(s)', '(m)', '(m)', '(m)', '(m/s/s)', '(m/s/s)', '(m/s/s)'
+      end if
    ELSE
 
       DO I = 1,SIZE(GridXYZ,DIM=2)
 
-         WRITE (FileUnit, PointsVelFmt, IOSTAT=ErrStatTmp ) TIME, GridXYZ(1,I), GridXYZ(2,I), GridXYZ(3,I), GridVel(1,I), GridVel(2,I), GridVel(3,I)
+         WRITE (OutFile%Unit, PointsVelFmt, IOSTAT=ErrStatTmp ) TIME, GridXYZ(1,I), GridXYZ(2,I), GridXYZ(3,I), GridDat(1,I), GridDat(2,I), GridDat(3,I)
 
       ENDDO
 
    ENDIF
 
-END SUBROUTINE PointsVel_OutputWrite
+END SUBROUTINE PointData_OutputWrite
 
 
 
@@ -2411,8 +2430,8 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
    CALL WrScr(' DvrIptFile:          '//FLAG(DvrFlags%DvrIptFile)//        '      '//TRIM(DvrSettings%DvrIptFileName))
    CALL WrScr(' IfWIptFile:          '//FLAG(DvrFlags%IfWIptFile)//        '      '//TRIM(DvrSettings%IfWIptFileName))
    CALL WrScr(' PointsFile:          '//FLAG(DvrFlags%PointsFile)//        '      '//TRIM(DvrSettings%PointsFileName))
-   CALL WrScr(' FFTOutputName:       '//FLAG(DvrFlags%FFTcalc)//           '      '//TRIM(DvrSettings%FFTOutputName))
-   CALL WrScr(' WindGridOutName:     '//FLAG(DvrFlags%WindGrid)//          '      '//TRIM(DvrSettings%WindGridOutputName))
+   CALL WrScr(' FFTOutputName:       '//FLAG(DvrFlags%FFTcalc)//           '      '//TRIM(DvrSettings%FFTOutput%Name))
+   CALL WrScr(' WindGridOutName:     '//FLAG(DvrFlags%WindGrid)//          '      '//TRIM(DvrSettings%WindGridOutput%Name))
    CALL WrScr(' Summary:             '//FLAG(DvrFlags%Summary))
    CALL WrScr(' SummaryFile:         '//FLAG(DvrFlags%SummaryFile)//       '      '//TRIM(DvrSettings%SummaryFileName))
    CALL WrScr(' TStart:              '//FLAG(DvrFlags%TStart)//            '      '//TRIM(Num2LStr(DvrSettings%TStart)))
@@ -2443,13 +2462,11 @@ if (DvrFlags%WindGrid) then
    CALL WrScr(' Dx:                  '//FLAG(DvrFlags%Dx)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(1))))
    CALL WrScr(' Dy:                  '//FLAG(DvrFlags%Dy)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(2))))
    CALL WrScr(' Dz:                  '//FLAG(DvrFlags%Dz)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(3))))
-   CALL WrScr(' WindGridOutputInit:  '//FLAG(DvrFlags%WindGridOutputInit)//'      Unit #:  '//TRIM(Num2LStr(DvrSettings%WindGridOutputUnit)))
+   CALL WrScr(' WindGridOutputInit:  '//FLAG(DvrSettings%WindGridOutput%Initialized)//   '      Unit #:  '//TRIM(Num2LStr(DvrSettings%WindGridOutput%Unit)))
 end if
-   CALL WrScr(' FFTOutputInit:       '//FLAG(DvrFlags%FFTOutputInit)//     '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutputUnit)))
-   do i = 1, size(DvrSettings%PointsOutputUnit)
-      CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit(i))//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit(i))))
-   end do
-   RETURN
+   CALL WrScr(' FFTOutputInit:       '//FLAG(DvrSettings%FFTOutput%Initialized)//        '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutput%Unit)))
+   CALL WrScr(' PointsVelOutputInit: '//FLAG(DvrSettings%PointsVelOutput%Initialized)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsVelOutput%Unit)))
+   CALL WrScr(' PointsAccOutputInit: '//FLAG(DvrSettings%PointsVelOutput%Initialized)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsVelOutput%Unit)))
 END SUBROUTINE printSettings
 
 

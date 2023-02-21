@@ -46,7 +46,6 @@ MODULE InflowWind
    USE                              InflowWind_Subs
    USE                              FlowField_IO_Types
    USE                              FlowField_IO
-   USE                              FlowField
 
    USE                              Lidar                      ! module for obtaining sensor data
    
@@ -281,18 +280,27 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       ! Allocate the arrays for passing points in and velocities out
       CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
+      InputGuess%PositionXYZ = 0.0_ReKi
+      InputGuess%HubPosition = 0.0_ReKi
+      CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)  
+
       CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat>= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
          ENDIF
-      InputGuess%PositionXYZ = 0.0_ReKi
-      InputGuess%HubPosition = 0.0_ReKi
-      CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)
-      
       y%VelocityUVW = 0.0_ReKi
+
+      IF ( InitInp%OutputAccel ) THEN
+         CALL AllocAry( y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg )
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat>= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            ENDIF
+            y%AccelUVW = 0.0_ReKi
+      ENDIF
 
 
       !-----------------------------------------------------------------
@@ -308,7 +316,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       FlowField_InitData%PropagationDir = InputFileData%PropagationDir
       FlowField_InitData%VFlowAngle = InputFileData%VFlowAngle
       FlowField_InitData%VelInterpCubic = InputFileData%VelInterpCubic
-      FlowField_InitData%CalcAccel = InitInp%CalcAccel
+      FlowField_InitData%OutputAccel = InitInp%OutputAccel
 
       select case(FlowField_InitData%WindType)
 
@@ -975,11 +983,8 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    !-----------------------------
    ! Outputs: OutputData%VelocityUVW
    !-----------------------------
-   ! CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
-   !                   OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
-   call FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
-                  OutputData%VelocityUVW, OutputData%AccelUVW, TmpErrStat, TmpErrMsg)
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
+                     OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
 
    !-----------------------------
    ! Output: OutputData%DiskVel

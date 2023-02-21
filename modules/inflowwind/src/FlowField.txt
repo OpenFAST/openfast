@@ -99,6 +99,7 @@ typedef  ^           PointsFieldType      ReKi                Vel               
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^           FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
+typedef  ^           ^                      logical             Enabled             -  .true.       -     "" -
 typedef  ^           ^                      ReKi                RefPosition         3     -         -     "Reference position (point where box is rotated)"                 meters
 typedef  ^           ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
 typedef  ^           ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians

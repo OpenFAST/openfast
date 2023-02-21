@@ -113,7 +113,7 @@ typedef  ^                       ^                 CHARACTER(1024)   RootName   
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
 typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
 typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
-typedef  ^                       ^                 LOGICAL           CalcAccel        -     .FALSE.     -      "Flag to calculate acceleration."                                    -
+typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
@@ -203,6 +203,7 @@ typedef  ^                       ^         IfW_UserWind_MiscVarType  UserWind   
 typedef  ^                       ^            IfW_4Dext_MiscVarType  FDext             -     -     -     "MiscVars from FDext"                                -
 typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
+typedef  ^                       ^                 ReKi              WindAiUVW         ::    -     -     "List of UVW accelerations for wind acceleration measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  m/s^2
 typedef  ^                    MiscVarType          InflowWind_InputType  u_Avg             -     -     -     "inputs for computing rotor-averaged values"  -
 typedef  ^                    MiscVarType          InflowWind_OutputType y_Avg             -     -     -     "outputs for computing rotor-averaged values"  -
 typedef  ^                    MiscVarType          InflowWind_InputType  u_Hub             -     -     -     "inputs for computing hub values"  -

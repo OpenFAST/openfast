@@ -141,6 +141,7 @@ IMPLICIT NONE
 ! =========  FlowFieldType  =======
   TYPE, PUBLIC :: FlowFieldType
     INTEGER(IntKi)  :: FieldType = 0      !< Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External} [-]
+    LOGICAL  :: Enabled = .true.      !<  [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
     REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
@@ -2721,6 +2722,7 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstFlowFieldTypeData%FieldType = SrcFlowFieldTypeData%FieldType
+    DstFlowFieldTypeData%Enabled = SrcFlowFieldTypeData%Enabled
     DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
     DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
     DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
@@ -2815,6 +2817,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! FieldType
+      Int_BufSz  = Int_BufSz  + 1  ! Enabled
       Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
@@ -2937,6 +2940,8 @@ ENDIF
   Int_Xferred = 1
 
     IntKiBuf(Int_Xferred) = InData%FieldType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%Enabled, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%RefPosition,1), UBOUND(InData%RefPosition,1)
       ReKiBuf(Re_Xferred) = InData%RefPosition(i1)
@@ -3135,6 +3140,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred  = 1
     OutData%FieldType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%Enabled = TRANSFER(IntKiBuf(Int_Xferred), OutData%Enabled)
     Int_Xferred = Int_Xferred + 1
     i1_l = LBOUND(OutData%RefPosition,1)
     i1_u = UBOUND(OutData%RefPosition,1)

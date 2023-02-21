@@ -31,6 +31,7 @@ PROGRAM InflowWind_Driver
    USE InflowWind_Driver_Types    ! Contains types and routines for handling the input arguments
    USE InflowWind_Driver_Subs     ! Contains subroutines for the driver program
    USE FlowField
+   USE InflowWind_Subs, only: CalculateOutput
 
    IMPLICIT NONE
 
@@ -61,21 +62,17 @@ PROGRAM InflowWind_Driver
    TYPE(IfWDriver_Flags)                              :: SettingsFlags           ! Flags indicating which settings were specified (includes CL and ipt file)
    TYPE(IfWDriver_Settings)                           :: Settings                ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)              ! Keep track of how long this takes to run
-   REAL(DbKi)                                         :: Timer2(2)               ! Keep track of how long this takes to run
    REAL(DbKi)                                         :: TimeNow                 ! The current time
-   INTEGER(IntKi)                                     :: NumTotalPoints          ! Number of points for this iteration
    LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
-   CHARACTER(11)                                      :: TmpNumString            ! Temporary string for holding a number
    INTEGER(IntKi)                                     :: ITime                   ! Generic counter for keeping track of the timestep index
-
 
 !FIXME: may want to borrow some of the type storage concepts from WAMIT2
 !FIXME: look at Waves.f90 for ideas on other things needed for this
       ! Local variables for the FFT calculations
-   REAL(ReKi),    ALLOCATABLE                         :: FFTDataSetVel(:,:)      ! Velocity dataset for FFT calcs. Indices of (NumTimeSteps,3). Index 2 gives dimension U,V,W
-   COMPLEX(ReKi), ALLOCATABLE                         :: FFTDataSetFrq(:,:)      ! Complex frequency information for the FFT (NumFreqs,3).  Index 2 gives dimension X,Y,Z
-   REAL(ReKi),    ALLOCATABLE                         :: TimeArray(:)            ! Time array information.     (NumTimeSteps)
-   REAL(ReKi),    ALLOCATABLE                         :: FreqArray(:)            ! Frequency array information (NumFreqs)
+   ! REAL(ReKi),    ALLOCATABLE                         :: FFTDataSetVel(:,:)      ! Velocity dataset for FFT calcs. Indices of (NumTimeSteps,3). Index 2 gives dimension U,V,W
+   ! COMPLEX(ReKi), ALLOCATABLE                         :: FFTDataSetFrq(:,:)      ! Complex frequency information for the FFT (NumFreqs,3).  Index 2 gives dimension X,Y,Z
+   ! REAL(ReKi),    ALLOCATABLE                         :: TimeArray(:)            ! Time array information.     (NumTimeSteps)
+   ! REAL(ReKi),    ALLOCATABLE                         :: FreqArray(:)            ! Frequency array information (NumFreqs)
 
 
 
@@ -111,10 +108,6 @@ PROGRAM InflowWind_Driver
    CALL NWTC_Init
    CALL DispNVD(ProgInfo)
 
-!   Beep = .FALSE.
-
-
-
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Setup the program -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -122,62 +115,9 @@ PROGRAM InflowWind_Driver
       ! Start the timer
    CALL CPU_TIME( Timer(1) )
 
-
       ! Set some CLSettings to null/default values
-   CLSettings%DvrIptFileName           =  ""             ! No input name name until set
-   CLSettings%IfWIptFileName           =  ""             ! No IfW input file name until set
-   CLSettings%SummaryFileName          =  ""             ! No summary file name until set
-   CLSettings%NumTimeSteps             =  0_IntKi
-   CLSettings%DT                       =  0.0_DbKi
-   CLSettings%TStart                   =  0.0_ReKi
-   CLSettings%FFTcoord                 =  0.0_ReKi       ! Set to origin
-   CLSettings%GridDelta                =  0.0_ReKi       ! No stepsize
-   CLSettings%GridN                    =  1_IntKi        ! No grid points to calculate -- center of grid only
-   CLSettings%XRange                   =  0.0_ReKi       ! No xrange points
-   CLSettings%YRange                   =  0.0_ReKi       ! No Yrange points
-   CLSettings%ZRange                   =  0.0_ReKi       ! No Zrange points
-   CLSettings%PointsFileName           =  ""             ! No points file name until set
-   CLSettings%PointsOutputName         =  ""             ! No points file name until set
-   CLSettings%FFTOutputName            =  ""             ! No FFT output file name until set
-   CLSettings%WindGridOutputName       =  ""             ! No WindGrid output file name until set
-   CLSettings%WindGridOutputUnit       =  -1_IntKi       ! No WindGrid output unit set
-   CLSettings%FFTOutputUnit            =  -1_IntKi       ! No FFT output unit set
-   CLSettings%PointsOutputUnit         =  -1_IntKi       ! No Points file output unit set
-   CLSettings%ProgInfo                 =  ProgInfo       ! Driver info
-
-      ! Set some CLSettingsFlags to null/default values
-   CLSettingsFlags%DvrIptFile          =  .FALSE.        ! Driver     input filename given as command line argument
-   CLSettingsFlags%IfWIptFile          =  .FALSE.        ! InflowWind input filename given as command line argument
-   CLSettingsFlags%Summary             =  .FALSE.        ! create a summary at command line? (data extents in the wind file)
-   CLSettingsFlags%SummaryFile         =  .FALSE.        ! create a summary file of the output?
-   CLSettingsFlags%TStart              =  .FALSE.        ! specified time to start at
-   CLSettingsFlags%NumTimeSteps        =  .FALSE.        ! specified a number of timesteps
-   CLSettingsFlags%NumTimeStepsDefault =  .FALSE.        ! specified 'DEFAULT' for number of timesteps
-   CLSettingsFlags%DT                  =  .FALSE.        ! specified a resolution in time
-   CLSettingsFlags%DTDefault           =  .FALSE.        ! specified 'DEFAULT' for resolution in time
-   CLSettingsFlags%FFTcalc             =  .FALSE.        ! do an FFT
-   CLSettingsFlags%WindGrid            =  .FALSE.        ! Requested output of wind data on a grid -- input file option only
-   CLSettingsFlags%XRange              =  .FALSE.        ! specified a range of x      -- command line option only -- stored as GridCtrCoord and GridDelta
-   CLSettingsFlags%YRange              =  .FALSE.        ! specified a range of y      -- command line option only -- stored as GridCtrCoord and GridDelta
-   CLSettingsFlags%ZRange              =  .FALSE.        ! specified a range of z      -- command line option only -- stored as GridCtrCoord and GridDelta
-   CLSettingsFlags%Dx                  =  .FALSE.        ! specified a resolution in x -- command line option only, 0.0 otherwise
-   CLSettingsFlags%Dy                  =  .FALSE.        ! speficied a resolution in y
-   CLSettingsFlags%Dz                  =  .FALSE.        ! specified a resolution in z
-   CLSettingsFlags%PointsFile          =  .FALSE.        ! points filename to read in  -- command line option only
-   CLSettingsFlags%WindGridOutputInit  =  .FALSE.        ! Wind Grid output file not started
-   CLSettingsFlags%FFTOutputInit       =  .FALSE.        ! FFT output file not started
-   CLSettingsFlags%PointsOutputInit    =  .FALSE.        ! Points output file not started
-   CLSettingsFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
-   CLSettingsFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
-   CLSettingsFlags%WrHAWC              =  .FALSE.        ! don't convert to HAWC format
-   CLSettingsFlags%WrBladed            =  .FALSE.        ! don't convert to Bladed format
-   CLSettingsFlags%WrVTK               =  .FALSE.        ! don't convert to VTK format
-   CLSettingsFlags%WrUniform           =  .FALSE.        ! don't convert to UniformWind format
-
-      ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
-   Settings       =  CLSettings
-   SettingsFlags  =  CLSettingsFlags
-
+    CLSettings%ProgInfo = ProgInfo       
+    Settings%ProgInfo   = ProgInfo
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Parse the command line inputs -=-=-
@@ -309,13 +249,14 @@ PROGRAM InflowWind_Driver
 
 
 
-      ! Sanity check: if an input points file is specified, make sure it actually exists. Open it if specified
-
+   ! If output based a points file was requested
    IF ( SettingsFlags%PointsFile ) THEN
+
+      ! Check if the points file exists, abort if not found
       INQUIRE( file=TRIM(Settings%PointsFileName), exist=TempFileExist )
       IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
 
-         ! Now read the file in and save the points
+      ! Now read the file in and save the points
       CALL ReadPointsFile( Settings%PointsFileName, PointsXYZ, ErrStat,ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
@@ -324,24 +265,31 @@ PROGRAM InflowWind_Driver
          ErrStat  =  ErrID_None
       ENDIF
 
+      ! Display number of points read from file
       CALL WrScr(NewLine//"Read "//TRIM(Num2LStr(SIZE(PointsXYZ,DIM=2)))//" points from '"//TRIM(Settings%PointsFileName)//"'.")
 
-         ! Make name for output
-      CALL GetRoot( Settings%PointsFileName, Settings%PointsOutputName(1) )
-      Settings%PointsOutputName(1) = TRIM(Settings%PointsOutputName(1))//'.Velocity.dat'
+      ! Create velocity output file name from points input file name
+      ! Display that file will be created, output message if it will be overwritten
+      CALL GetRoot( Settings%PointsFileName, Settings%PointsVelOutput%Name )
+      Settings%PointsVelOutput%Name = TRIM(Settings%PointsVelOutput%Name)//'.dat'
+      CALL WrScr(NewLine//"Results output to '"//TRIM(Settings%PointsVelOutput%Name)//"'.")
+      INQUIRE( file=TRIM(Settings%PointsVelOutput%Name), exist=TempFileExist )
+      IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsVelOutput%Name))
 
-      CALL GetRoot( Settings%PointsFileName, Settings%PointsOutputName(2) )
-      Settings%PointsOutputName(2) = TRIM(Settings%PointsOutputName(2))//'.Velocity.FF.dat'
+      ! If wind accelerations were requested, create/open file, print overwrite warning of applicable
+      IF (SettingsFlags%OutputAccel) then
+         CALL GetRoot( Settings%PointsFileName, Settings%PointsAccOutput%Name )
+         Settings%PointsAccOutput%Name = TRIM(Settings%PointsAccOutput%Name)//'.Acc.dat'
+         CALL WrScr(NewLine//"Results output to '"//TRIM(Settings%PointsAccOutput%Name)//"'.")
+         INQUIRE( file=TRIM(Settings%PointsAccOutput%Name), exist=TempFileExist )
+         IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsAccOutput%Name))
+      END IF
 
-      CALL GetRoot( Settings%PointsFileName, Settings%PointsOutputName(3) )
-      Settings%PointsOutputName(3) = TRIM(Settings%PointsOutputName(3))//'.Accel.FF.dat'
-
-         ! Display that file will be created, output message if it will be overwritten
-      do i = 1, size(Settings%PointsOutputName)
-         CALL WrScr(NewLine//"Results output to '"//TRIM(Settings%PointsOutputName(i))//"'.")
-         INQUIRE( file=TRIM(Settings%PointsOutputName(i)), exist=TempFileExist )
-         IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsOutputName(i)))
-      end do
+      CALL GetRoot( Settings%PointsFileName, Settings%PointsRefOutput%Name )
+      Settings%PointsRefOutput%Name = TRIM(Settings%PointsRefOutput%Name)//'.Ref.dat'
+      CALL WrScr(NewLine//"Results output to '"//TRIM(Settings%PointsRefOutput%Name)//"'.")
+      INQUIRE( file=TRIM(Settings%PointsRefOutput%Name), exist=TempFileExist )
+      IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsRefOutput%Name))
 
    ENDIF
 
@@ -350,24 +298,24 @@ PROGRAM InflowWind_Driver
    IF ( SettingsFlags%FFTcalc ) THEN
          ! Make name for output
       IF ( SettingsFlags%DvrIptFile )  THEN
-         CALL GetRoot( Settings%DvrIptFileName, Settings%FFTOutputName )
+         CALL GetRoot( Settings%DvrIptFileName, Settings%FFTOutput%Name )
       ELSE
-         CALL GetRoot( Settings%IfWIptFileName, Settings%FFTOutputName )
+         CALL GetRoot( Settings%IfWIptFileName, Settings%FFTOutput%Name )
       ENDIF
 
-      Settings%FFTOutputName  =  TRIM(Settings%FFTOutputName)//'_'// &
+      Settings%FFTOutput%Name  =  TRIM(Settings%FFTOutput%Name)//'_'// &
          TRIM(Num2LStr(Settings%FFTcoord(1)))//'x_'// &
          TRIM(Num2LStr(Settings%FFTcoord(2)))//'y_'// &
          TRIM(Num2LStr(Settings%FFTcoord(3)))//'z'//'.FFT'
 
-      CALL WrScr(NewLine//"Writing FFT results to '"//TRIM(Settings%FFTOutputName)//"' for coordinate ( "//    &
+      CALL WrScr(NewLine//"Writing FFT results to '"//TRIM(Settings%FFTOutput%Name)//"' for coordinate ( "//    &
          TRIM(Num2LStr(Settings%FFTcoord(1)))//", "// &
          TRIM(Num2LStr(Settings%FFTcoord(2)))//", "// &
          TRIM(Num2LStr(Settings%FFTcoord(3)))//" ).")
 
          ! If the output file already exists, warn that it will be overwritten
-      INQUIRE( file=TRIM(Settings%FFTOutputName), exist=TempFileExist )
-      IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%FFTOutputName))
+      INQUIRE( file=TRIM(Settings%FFTOutput%Name), exist=TempFileExist )
+      IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%FFTOutput%Name))
 
 
    ENDIF
@@ -378,12 +326,12 @@ PROGRAM InflowWind_Driver
 
          ! Create WindGrid output name
       IF ( SettingsFlags%DvrIptFile )  THEN
-         CALL GetRoot( Settings%DvrIptFileName, Settings%WindGridOutputName )
+         CALL GetRoot( Settings%DvrIptFileName, Settings%WindGridOutput%Name )
       ELSE
-         CALL GetRoot( Settings%IfWIptFileName, Settings%WindGridOutputName )
+         CALL GetRoot( Settings%IfWIptFileName, Settings%WindGridOutput%Name )
       ENDIF
 
-      Settings%WindGridOutputName   =  TRIM(Settings%WindGridOutputName)//'.WindGrid.out'
+      Settings%WindGridOutput%Name   =  TRIM(Settings%WindGridOutput%Name)//'.WindGrid.out'
 
          ! Output message if some verbosity.
       IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
@@ -474,8 +422,8 @@ PROGRAM InflowWind_Driver
    
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
-   ! Set flag to calculate acceleration
-   InflowWind_InitInp%CalcAccel = .TRUE.
+   ! Set flag to calculate accelerations if requested
+   InflowWind_InitInp%OutputAccel = SettingsFlags%OutputAccel
 
    CALL InflowWind_Init( InflowWind_InitInp, InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
@@ -641,9 +589,8 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
    IF ( SettingsFlags%WindGrid ) THEN
 
          ! Write the header for the WindGrid output file
-      CALL WindGridVel_OutputWrite( Settings%WindGridOutputUnit, Settings%WindGridOutputName, SettingsFlags%WindGridOutputInit, &
-               Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityUVW,    &
-               TimeNow, ErrStat, ErrMsg )
+      CALL WindGridVel_OutputWrite( Settings%WindGridOutput, Settings, InflowWind_u1%PositionXYZ, &
+                                    InflowWind_y1%VelocityUVW, TimeNow, ErrStat, ErrMsg )
 
 
          ! Setup the actual grid points -- scan order, Y,Z,X
@@ -692,11 +639,13 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
       ENDIF
 
          ! Allocate the array for the acceleration results -- 3 x Npoints
-      CALL AllocAry( InflowWind_y2%AccelUVW, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
-         "Array of accelerations corresponding to Points file", ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) THEN
-         CALL DriverCleanup()
-         CALL ProgAbort( ErrMsg )
+      IF ( SettingsFlags%OutputAccel ) THEN
+         CALL AllocAry( InflowWind_y2%AccelUVW, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
+            "Array of accelerations corresponding to Points file", ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ENDIF
       ENDIF
 
          ! WriteOutput info
@@ -709,20 +658,33 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
          InflowWind_y2%WriteOutput  =  InflowWind_y1%WriteOutput
       ENDIF
 
-         ! Now create the output files.  Write header information
-      do i = 1, size(Settings%PointsOutputUnit)
-         CALL PointsVel_OutputWrite( Settings%PointsOutputUnit(i), Settings%PointsOutputName(i), &
-                  SettingsFlags%PointsOutputInit(i), Settings, InflowWind_u2%PositionXYZ, &
-                  InflowWind_y2%VelocityUVW, TimeNow, ErrStat, ErrMsg )
-      end do
+         ! Now create the velocity output file.  Write header information
+      CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                  InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) THEN
+         CALL DriverCleanup()
+         CALL ProgAbort( 'Error creating point data velocity output file: '//trim(Settings%PointsVelOutput%Name) )
+      ENDIF
+
+         ! If point acceleration calculate was requested, create file and write header
+      IF ( SettingsFlags%OutputAccel ) THEN
+         CALL PointData_OutputWrite( Settings%PointsAccOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                     InflowWind_y2%AccelUVW, TimeNow, .false., ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( 'Error creating point data acceleration output file: '//trim(Settings%PointsAccOutput%Name) )
+         ENDIF
+      END IF
+
+         ! Now create the reference velocity output file.  Write header information
+      CALL PointData_OutputWrite( Settings%PointsRefOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                  InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+      IF ( ErrStat /= ErrID_None ) THEN
+         CALL DriverCleanup()
+         CALL ProgAbort( 'Error creating point data velocity output file: '//trim(Settings%PointsRefOutput%Name) )
+      ENDIF
 
    ENDIF
-
-
-
-
-
-
 
       ! FFT setup
    IF ( SettingsFlags%FFTcalc ) THEN
@@ -810,96 +772,90 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
 
       TimeNow  =  Settings%TStart + Settings%DT*(ITime)
 
-         ! Get results for WindGrid data from IfW -- WindGrid may contain only a single point at the hub if the WindGrid flag isn't set.
-      CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u1, InflowWind_p, &
-                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg)
-
-
-
-         ! Make sure no errors occured that give us reason to terminate now.
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL DriverCleanup()
-         CALL ProgAbort( ErrMsg )
-      ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 10_IntKi ) ) THEN
-         CALL WrScr(NewLine//' Timestep '//TRIM(Num2LStr(ITime))//   &
-                    ' InflowWind_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//        &
-                    NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
-      ENDIF
-
-
-         ! Write the WindGrid results to a file for this timestep
       IF ( SettingsFlags%WindGrid ) THEN
 
-         CALL WindGridVel_OutputWrite( Settings%WindGridOutputUnit, Settings%WindGridOutputName, SettingsFlags%WindGridOutputInit, &
-                  Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityUVW,    &
-                  TimeNow, ErrStat, ErrMsg )
+            ! Get results for WindGrid data from IfW -- WindGrid may contain only a single point at the hub if the WindGrid flag isn't set.
+         CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u1, InflowWind_p, &
+                     InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                     InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg)
 
+            ! Make sure no errors occured that give us reason to terminate now.
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 10_IntKi ) ) THEN
+            CALL WrScr(NewLine//' Timestep '//TRIM(Num2LStr(ITime))// &
+                     ' InflowWind_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//NewLine// &
+                     '                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+         ENDIF
+
+         ! Write the WindGrid results to a file for this timestep
+         CALL WindGridVel_OutputWrite( Settings%WindGridOutput, Settings,  &
+                  InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityUVW,    &
+                  TimeNow, ErrStat, ErrMsg )
       ENDIF
+
+         ! If point results were requested
+      IF ( SettingsFlags%PointsFile ) THEN
+         
+         ! Calculate velocity/acceleration at points
+         InflowWind_p%FlowField%Enabled = .true.
+         CALL InflowWind_CalcOutput( TimeNow, InflowWind_u2, InflowWind_p, &
+            InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+            InflowWind_y2, InflowWind_MiscVars, ErrStat, ErrMsg)
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 10_IntKi ) ) THEN
+            CALL WrScr(NewLine//' Timestep '//TRIM(Num2LStr(ITime))//   &
+                     ' InflowWind_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//NewLine// &
+                     '                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+         ENDIF
+   
+         ! Output the Points results for this timestep
+         CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                     InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         END IF
+
+         ! If acceleration at points was requested, output values
+         IF ( SettingsFlags%OutputAccel ) then
+            CALL PointData_OutputWrite( Settings%PointsAccOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                        InflowWind_y2%AccelUVW, TimeNow, .false., ErrStat, ErrMsg )
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL DriverCleanup()
+               CALL ProgAbort( ErrMsg )
+            END IF
+         END IF
+
+         ! Calculate reference velocity and output
+         InflowWind_p%FlowField%Enabled = .false.
+         CALL InflowWind_CalcOutput( TimeNow, InflowWind_u2, InflowWind_p, &
+               InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+               InflowWind_y2, InflowWind_MiscVars, ErrStat, ErrMsg)
+         CALL PointData_OutputWrite( Settings%PointsRefOutput, Settings, InflowWind_u2%PositionXYZ, &
+                                     InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         END IF
+   
+      END IF
 
          ! Calculate results for FFT if we are performing one
       IF ( SettingsFlags%FFTcalc ) THEN
 
-            ! Get the results from IfW
+         ! Get the results from IfW
 !        CALL InflowWind_CalcOutput()
 
-            ! Copy results over to the array for storage
+         ! Copy results over to the array for storage
 !        FFTdata(ITime,:)  =
-
-
+      
       ENDIF
 
-
    ENDDO    ! ITime loop
-
-   ! Calculate results for the Points and export them for this timestep
-   IF ( SettingsFlags%PointsFile ) THEN
-
-      call CPU_TIME( Timer2(1) )
-      
-      ! Get results for Points data from IfW
-      do ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
-         TimeNow = Settings%TStart + Settings%DT*(ITime)
-
-         call InflowWind_CalcOutput( TimeNow,  InflowWind_u2, InflowWind_p, &
-         InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-         InflowWind_y2, InflowWind_MiscVars, ErrStat, ErrMsg)
-   
-         ! Output the Points results for this timestep
-         call PointsVel_OutputWrite( Settings%PointsOutputUnit(1), Settings%PointsOutputName(1), &
-               SettingsFlags%PointsOutputInit(1), Settings, InflowWind_u2%PositionXYZ, &
-               InflowWind_y2%VelocityUVW, TimeNow, ErrStat, ErrMsg )
-      end do
-
-      call CPU_TIME(Timer2(2))
-      call WrScr(NewLine//'Elapsed time IfW: '//TRIM(Num2LStr(Timer2(2)-Timer2(1)))//' seconds')
-      call CPU_TIME( Timer2(1) )
-
-      ! Get results for Points data from FlowField
-      do ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
-         TimeNow = Settings%TStart + Settings%DT*(ITime)
-
-         call FlowField_GetVelAcc(InflowWind_p%FlowField, 0, TimeNow, &
-                                  InflowWind_u2%PositionXYZ, &
-                                  InflowWind_y2%VelocityUVW, &
-                                  InflowWind_y2%AccelUVW, ErrStat, ErrMsg)
-
-         ! Output the Points velocity results for this timestep
-         call PointsVel_OutputWrite( Settings%PointsOutputUnit(2), Settings%PointsOutputName(2), &
-               SettingsFlags%PointsOutputInit(2), Settings, InflowWind_u2%PositionXYZ, &
-               InflowWind_y2%VelocityUVW, TimeNow, ErrStat, ErrMsg )
-
-         ! Output the Points acceleration results for this timestep
-         call PointsVel_OutputWrite( Settings%PointsOutputUnit(3), Settings%PointsOutputName(3), &
-               SettingsFlags%PointsOutputInit(3), Settings, InflowWind_u2%PositionXYZ, &
-               InflowWind_y2%AccelUVW, TimeNow, ErrStat, ErrMsg )
-      end do
-
-      call CPU_TIME(Timer2(2))
-      call WrScr(NewLine//'Elapsed time FF: '//TRIM(Num2LStr(Timer2(2)-Timer2(1)))//' seconds')
-            
-   end if
-
 
 
       !  output table of results for the outlist comparison and check if very verbose -- print statements are
@@ -1031,13 +987,12 @@ CONTAINS
 
    SUBROUTINE DriverCleanup()
 
-
-      if (Settings%WindGridOutputUnit  > -1_IntKi ) CLOSE( Settings%WindGridOutputUnit )
-      do i = 1, size(Settings%PointsOutputUnit)
-         if (Settings%PointsOutputUnit(i)    > -1_IntKi ) CLOSE( Settings%PointsOutputUnit(i) )
-      end do
-      if (Settings%FFTOutputUnit       > -1_IntKi ) CLOSE( Settings%FFTOutputUnit )
-
+         ! Close output files that may have been opened
+      if (Settings%WindGridOutput%Unit  > -1_IntKi ) CLOSE( Settings%WindGridOutput%Unit )
+      if (Settings%PointsVelOutput%Unit > -1_IntKi ) CLOSE( Settings%PointsVelOutput%Unit )
+      if (Settings%PointsAccOutput%Unit > -1_IntKi ) CLOSE( Settings%PointsAccOutput%Unit )
+      if (Settings%PointsRefOutput%Unit > -1_IntKi ) CLOSE( Settings%PointsRefOutput%Unit )
+      if (Settings%FFTOutput%Unit       > -1_IntKi ) CLOSE( Settings%FFTOutput%Unit )
 
          ! Find out how long this actually took
       CALL CPU_TIME( Timer(2) )

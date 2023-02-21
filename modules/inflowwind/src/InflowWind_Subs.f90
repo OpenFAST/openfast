@@ -900,6 +900,14 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    IF ( ErrStat>= AbortErrLev ) RETURN
    m%WindViUVW   =  0.0_ReKi
 
+      ! If output acceleration flag is set, allocate array to hold wind point accelerations.
+   IF (InitInp%OutputAccel) THEN
+      CALL AllocAry( m%WindAiUVW, 3, p%NWindVel, "Array of wind accelerations corresponding to the WindViLists", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat>= AbortErrLev ) RETURN
+      m%WindAiUVW   =  0.0_ReKi
+   END IF
+
    CALL AllocAry( m%u_Hub%PositionXYZ, 3, 1, "Array of positions for hub values", TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    CALL AllocAry( m%y_Hub%VelocityUVW, 3, 1, "Array of velocities for hub values", TmpErrStat, TmpErrMsg )
@@ -1450,7 +1458,7 @@ END SUBROUTINE InflowWind_CloseSumFile
 
 
 SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, FillWrOut, ErrStat, ErrMsg )
-
+      USE FlowField, only: FlowField_GetVelAcc
 
       IMPLICIT                                                    NONE
 
@@ -1489,6 +1497,24 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          ! Initialize ErrStat
       ErrStat  = ErrID_None
       ErrMsg   = ""
+
+      !-----------------------------------------------------------------------
+      !  Points coordinate transforms from to global to wind file coordinates
+      !-----------------------------------------------------------------------
+
+      if (p%FlowField%Enabled) then
+         CALL FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
+                                  y%VelocityUVW, y%AccelUVW, TmpErrStat, TmpErrMsg)
+         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+         ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
+         IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
+            CALL FlowField_GetVelAcc(p%FlowField, 0, Time, p%WindViXYZ, &
+                                     m%WindViUVW, m%WindAiUVW, TmpErrStat, TmpErrMsg)
+         ENDIF
+         return
+      end if
 
 
       !-----------------------------------------------------------------------

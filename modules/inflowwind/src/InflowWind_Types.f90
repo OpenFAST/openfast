@@ -129,7 +129,7 @@ IMPLICIT NONE
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     LOGICAL  :: WindType2UseInputFile = .TRUE.      !< Flag for toggling file based IO in wind type 2. [-]
     TYPE(FileInfoType)  :: WindType2Data      !< Optional slot for wind type 2 data if file IO is not used. [-]
-    LOGICAL  :: CalcAccel = .FALSE.      !< Flag to calculate acceleration. [-]
+    LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(IfW_4Dext_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
     REAL(ReKi)  :: RadAvg      !< Radius (from hub) used for averaging wind speed [-]
@@ -227,6 +227,7 @@ IMPLICIT NONE
     TYPE(IfW_4Dext_MiscVarType)  :: FDext      !< MiscVars from FDext [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViUVW      !< List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ [meters/second]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAiUVW      !< List of UVW accelerations for wind acceleration measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ [m/s^2]
     TYPE(InflowWind_InputType)  :: u_Avg      !< inputs for computing rotor-averaged values [-]
     TYPE(InflowWind_OutputType)  :: y_Avg      !< outputs for computing rotor-averaged values [-]
     TYPE(InflowWind_InputType)  :: u_Hub      !< inputs for computing hub values [-]
@@ -1210,7 +1211,7 @@ ENDIF
       CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%WindType2Data, DstInitInputData%WindType2Data, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-    DstInitInputData%CalcAccel = SrcInitInputData%CalcAccel
+    DstInitInputData%OutputAccel = SrcInitInputData%OutputAccel
       CALL Lidar_CopyInitInput( SrcInitInputData%lidar, DstInitInputData%lidar, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -1330,7 +1331,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-      Int_BufSz  = Int_BufSz  + 1  ! CalcAccel
+      Int_BufSz  = Int_BufSz  + 1  ! OutputAccel
       Int_BufSz   = Int_BufSz + 3  ! lidar: size of buffers for each call to pack subtype
       CALL Lidar_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%lidar, ErrStat2, ErrMsg2, .TRUE. ) ! lidar 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1471,7 +1472,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%CalcAccel, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%OutputAccel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
       CALL Lidar_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%lidar, ErrStat2, ErrMsg2, OnlySize ) ! lidar 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1661,7 +1662,7 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    OutData%CalcAccel = TRANSFER(IntKiBuf(Int_Xferred), OutData%CalcAccel)
+    OutData%OutputAccel = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutputAccel)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -5182,6 +5183,20 @@ IF (ALLOCATED(SrcMiscData%WindViUVW)) THEN
   END IF
     DstMiscData%WindViUVW = SrcMiscData%WindViUVW
 ENDIF
+IF (ALLOCATED(SrcMiscData%WindAiUVW)) THEN
+  i1_l = LBOUND(SrcMiscData%WindAiUVW,1)
+  i1_u = UBOUND(SrcMiscData%WindAiUVW,1)
+  i2_l = LBOUND(SrcMiscData%WindAiUVW,2)
+  i2_u = UBOUND(SrcMiscData%WindAiUVW,2)
+  IF (.NOT. ALLOCATED(DstMiscData%WindAiUVW)) THEN 
+    ALLOCATE(DstMiscData%WindAiUVW(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAiUVW.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%WindAiUVW = SrcMiscData%WindAiUVW
+ENDIF
       CALL InflowWind_CopyInput( SrcMiscData%u_Avg, DstMiscData%u_Avg, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -5234,6 +5249,9 @@ IF (ALLOCATED(MiscData%AllOuts)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%WindViUVW)) THEN
   DEALLOCATE(MiscData%WindViUVW)
+ENDIF
+IF (ALLOCATED(MiscData%WindAiUVW)) THEN
+  DEALLOCATE(MiscData%WindAiUVW)
 ENDIF
   CALL InflowWind_DestroyInput( MiscData%u_Avg, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5393,6 +5411,11 @@ ENDIF
   IF ( ALLOCATED(InData%WindViUVW) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WindViUVW upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WindViUVW)  ! WindViUVW
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WindAiUVW allocated yes/no
+  IF ( ALLOCATED(InData%WindAiUVW) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WindAiUVW upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WindAiUVW)  ! WindAiUVW
   END IF
       Int_BufSz   = Int_BufSz + 3  ! u_Avg: size of buffers for each call to pack subtype
       CALL InflowWind_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u_Avg, ErrStat2, ErrMsg2, .TRUE. ) ! u_Avg 
@@ -5690,6 +5713,26 @@ ENDIF
       DO i2 = LBOUND(InData%WindViUVW,2), UBOUND(InData%WindViUVW,2)
         DO i1 = LBOUND(InData%WindViUVW,1), UBOUND(InData%WindViUVW,1)
           ReKiBuf(Re_Xferred) = InData%WindViUVW(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WindAiUVW) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindAiUVW,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindAiUVW,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindAiUVW,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindAiUVW,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%WindAiUVW,2), UBOUND(InData%WindAiUVW,2)
+        DO i1 = LBOUND(InData%WindAiUVW,1), UBOUND(InData%WindAiUVW,1)
+          ReKiBuf(Re_Xferred) = InData%WindAiUVW(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
@@ -6115,6 +6158,29 @@ ENDIF
       DO i2 = LBOUND(OutData%WindViUVW,2), UBOUND(OutData%WindViUVW,2)
         DO i1 = LBOUND(OutData%WindViUVW,1), UBOUND(OutData%WindViUVW,1)
           OutData%WindViUVW(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindAiUVW not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WindAiUVW)) DEALLOCATE(OutData%WindAiUVW)
+    ALLOCATE(OutData%WindAiUVW(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WindAiUVW.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%WindAiUVW,2), UBOUND(OutData%WindAiUVW,2)
+        DO i1 = LBOUND(OutData%WindAiUVW,1), UBOUND(OutData%WindAiUVW,1)
+          OutData%WindAiUVW(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO

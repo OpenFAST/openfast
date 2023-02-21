@@ -9,14 +9,7 @@
 include Registry_NWTC_Library.txt
 usefrom FlowField.txt
 
-typedef  FlowField_IO   ContinuousStateType   ReKi                    DummyContState          -     -     -     "Remove this variable if you have continuous states"            -
-typedef  ^              DiscreteStateType     ReKi                    DummyDiscState          -     -     -     "Remove this variable if you have discrete states"              -
-typedef  ^              ConstraintStateType   ReKi                    DummyConstrState        -     -     -     "Remove this variable if you have constraint states"            -
-typedef  ^              OtherStateType        ReKi                    DummyOtherState         -     -     -     "Remove this variable if you have other states"                 -
-typedef  ^              MiscVarType           ReKi                    DummyMiscVar            -     -     -     "Remove this variable if you have misc variables"               -
-typedef  ^              InputType             ReKi                    Position                ::    -     -     "Array holding the input positions at a given timestep"         meters
-
-typedef  ^              SteadyInitInputType   ReKi                    HWindSpeed              -     -     -     "Horizontal wind speed"                                         m/s
+typedef  FlowField_IO   SteadyInitInputType   ReKi                    HWindSpeed              -     -     -     "Horizontal wind speed"                                         m/s
 typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "Reference height for horizontal wind speed"                    meters
 typedef  ^              ^                     ReKi                    PLExp                   -     -     -     "Power law exponent"                                            -
 
@@ -68,7 +61,7 @@ typedef  ^              ^                     IntKi                   SumFileUni
 typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Direction of wind propagation"                                 radians
 typedef  ^              ^                     ReKi                    VFlowAngle              -     -     -     "Vertical (upflow) angle"                                       -
 typedef  ^              ^                     logical                 VelInterpCubic          -  .false.  -     "Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]" -
-typedef  ^              ^                     logical                 CalcAccel               -  .false.  -     "Flag to calculate acceleration data"                           -
+typedef  ^              ^                     logical                 OutputAccel             -  .false.  -     "Flag to indicate that wind acceleration should be output"      -
 typedef  ^              ^                     SteadyInitInputType     Steady                  -     -     -     "" -
 typedef  ^              ^                     UniformInitInputType    Uniform                 -     -     -     "" -
 typedef  ^              ^                     TurbSimInitInputType    TurbSim                 -     -     -     "" -

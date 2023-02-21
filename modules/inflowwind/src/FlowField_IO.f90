@@ -145,25 +145,34 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
    select case (FF%FieldType)
    case (Uniform_FieldType)
-      if (InitInp%CalcAccel .or. (InitInp%VelInterpCubic)) then
+
+      if (InitInp%OutputAccel .or. (InitInp%VelInterpCubic)) then
          call UniformField_CalcAccel(FF%Uniform, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
          FF%AccFieldValid = .true.
       end if
+      FF%VelInterpCubic = InitInp%VelInterpCubic
 
    case (Grid3D_FieldType)
-      if (InitInp%CalcAccel .or. (InitInp%VelInterpCubic)) then
+      if (InitInp%OutputAccel .or. (InitInp%VelInterpCubic)) then
          call Grid3DField_CalcAccel(FF%Grid3D, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
          FF%AccFieldValid = .true.
       end if
+      FF%VelInterpCubic = InitInp%VelInterpCubic
 
    case default
-      if (InitInp%CalcAccel) then
+      if (InitInp%OutputAccel) then
          call SetErrStat(ErrID_Fatal, "Acceleration not implemented for field type", &
                          ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      if (InitInp%VelInterpCubic) then
+         CALL WrScr ( ' Cubic velocity interpolation not implemented for WindType '//&
+                       num2LStr(InitInp%WindType)//', using linear interpolation' )
+         FF%VelInterpCubic = .false.
       end if
    end select
 
