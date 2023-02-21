@@ -842,6 +842,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
     REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
     REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
+    REAL(ReKi)  :: HubDisplacementX      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [m]
+    REAL(ReKi)  :: HubDisplacementY      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [m]
+    REAL(ReKi)  :: HubDisplacementZ      !< For AeroDyn14 & ServoDyn/TMD: motions of the nacelle. [m]
   END TYPE ED_OutputType
 ! =======================
 CONTAINS
@@ -23521,6 +23524,9 @@ ENDIF
     DstOutputData%LSShftFxa = SrcOutputData%LSShftFxa
     DstOutputData%LSShftFys = SrcOutputData%LSShftFys
     DstOutputData%LSShftFzs = SrcOutputData%LSShftFzs
+    DstOutputData%HubDisplacementX = SrcOutputData%HubDisplacementX
+    DstOutputData%HubDisplacementY = SrcOutputData%HubDisplacementY
+    DstOutputData%HubDisplacementZ = SrcOutputData%HubDisplacementZ
  END SUBROUTINE ED_CopyOutput
 
  SUBROUTINE ED_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -23855,6 +23861,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
+      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementX
+      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementY
+      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementZ
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -24301,6 +24310,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%LSShftFys
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%LSShftFzs
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HubDisplacementX
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HubDisplacementY
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%HubDisplacementZ
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackOutput
 
@@ -24899,6 +24914,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%LSShftFzs = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%HubDisplacementX = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%HubDisplacementY = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%HubDisplacementZ = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackOutput
 
 
@@ -25343,6 +25364,12 @@ END IF ! check if allocated
   y_out%LSShftFys = y1%LSShftFys + b * ScaleFactor
   b = -(y1%LSShftFzs - y2%LSShftFzs)
   y_out%LSShftFzs = y1%LSShftFzs + b * ScaleFactor
+  b = -(y1%HubDisplacementX - y2%HubDisplacementX)
+  y_out%HubDisplacementX = y1%HubDisplacementX + b * ScaleFactor
+  b = -(y1%HubDisplacementY - y2%HubDisplacementY)
+  y_out%HubDisplacementY = y1%HubDisplacementY + b * ScaleFactor
+  b = -(y1%HubDisplacementZ - y2%HubDisplacementZ)
+  y_out%HubDisplacementZ = y1%HubDisplacementZ + b * ScaleFactor
  END SUBROUTINE ED_Output_ExtrapInterp1
 
 
@@ -25518,6 +25545,15 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%LSShftFzs - y2%LSShftFzs) + t(2)**2*(-y1%LSShftFzs + y3%LSShftFzs))* scaleFactor
   c = ( (t(2)-t(3))*y1%LSShftFzs + t(3)*y2%LSShftFzs - t(2)*y3%LSShftFzs ) * scaleFactor
   y_out%LSShftFzs = y1%LSShftFzs + b  + c * t_out
+  b = (t(3)**2*(y1%HubDisplacementX - y2%HubDisplacementX) + t(2)**2*(-y1%HubDisplacementX + y3%HubDisplacementX))* scaleFactor
+  c = ( (t(2)-t(3))*y1%HubDisplacementX + t(3)*y2%HubDisplacementX - t(2)*y3%HubDisplacementX ) * scaleFactor
+  y_out%HubDisplacementX = y1%HubDisplacementX + b  + c * t_out
+  b = (t(3)**2*(y1%HubDisplacementY - y2%HubDisplacementY) + t(2)**2*(-y1%HubDisplacementY + y3%HubDisplacementY))* scaleFactor
+  c = ( (t(2)-t(3))*y1%HubDisplacementY + t(3)*y2%HubDisplacementY - t(2)*y3%HubDisplacementY ) * scaleFactor
+  y_out%HubDisplacementY = y1%HubDisplacementY + b  + c * t_out
+  b = (t(3)**2*(y1%HubDisplacementZ - y2%HubDisplacementZ) + t(2)**2*(-y1%HubDisplacementZ + y3%HubDisplacementZ))* scaleFactor
+  c = ( (t(2)-t(3))*y1%HubDisplacementZ + t(3)*y2%HubDisplacementZ - t(2)*y3%HubDisplacementZ ) * scaleFactor
+  y_out%HubDisplacementZ = y1%HubDisplacementZ + b  + c * t_out
  END SUBROUTINE ED_Output_ExtrapInterp2
 
 END MODULE ElastoDyn_Types
