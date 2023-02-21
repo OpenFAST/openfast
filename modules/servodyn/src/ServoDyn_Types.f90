@@ -248,6 +248,15 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
     REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
     REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speed [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    INTEGER(IntKi)  :: PulseSpacing      !< Distance between range gates [-]
+    INTEGER(IntKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
     REAL(DbKi)  :: DLL_DT      !< interval for calling DLL (integer multiple number of DT) [s]
     CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -541,7 +550,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TStCMotionMesh      !< StC module tower        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: SStCMotionMesh      !< StC module substructure input motion mesh [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed           !< Lidar measured wind speed [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speed [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
@@ -963,7 +972,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%fromSC)  ! fromSC
   END IF
-    Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
   IF ( ALLOCATED(InData%LidSpeed) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
@@ -1750,7 +1759,7 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -3786,7 +3795,7 @@ ENDIF
     DstBladedDLLTypeData%LSShftFxa = SrcBladedDLLTypeData%LSShftFxa
     DstBladedDLLTypeData%LSShftFys = SrcBladedDLLTypeData%LSShftFys
     DstBladedDLLTypeData%LSShftFzs = SrcBladedDLLTypeData%LSShftFzs
-    IF (ALLOCATED(SrcBladedDLLTypeData%LidSpeed)) THEN
+IF (ALLOCATED(SrcBladedDLLTypeData%LidSpeed)) THEN
   i1_l = LBOUND(SrcBladedDLLTypeData%LidSpeed,1)
   i1_u = UBOUND(SrcBladedDLLTypeData%LidSpeed,1)
   IF (.NOT. ALLOCATED(DstBladedDLLTypeData%LidSpeed)) THEN 
@@ -4121,6 +4130,7 @@ IF (ALLOCATED(BladedDLLTypeData%MsrPositionsY)) THEN
 ENDIF
 IF (ALLOCATED(BladedDLLTypeData%MsrPositionsZ)) THEN
   DEALLOCATE(BladedDLLTypeData%MsrPositionsZ)
+ENDIF
 IF (ALLOCATED(BladedDLLTypeData%GenSpd_TLU)) THEN
   DEALLOCATE(BladedDLLTypeData%GenSpd_TLU)
 ENDIF
@@ -4298,7 +4308,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
-      Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
   IF ( ALLOCATED(InData%LidSpeed) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
@@ -4658,7 +4668,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%LSShftFzs
     Re_Xferred = Re_Xferred + 1
-    IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
+  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5336,7 +5346,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%LSShftFzs = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-    IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -12975,6 +12985,11 @@ IF (ALLOCATED(SrcParamData%Jac_Idx_SStC_y)) THEN
   END IF
     DstParamData%Jac_Idx_SStC_y = SrcParamData%Jac_Idx_SStC_y
 ENDIF
+    DstParamData%SensorType = SrcParamData%SensorType
+    DstParamData%NumBeam = SrcParamData%NumBeam
+    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
+    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
+    DstParamData%URefLid = SrcParamData%URefLid
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -13471,6 +13486,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Jac_Idx_SStC_y upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_y)  ! Jac_Idx_SStC_y
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! SensorType
+      Re_BufSz   = Re_BufSz   + 1  ! NumBeam
+      Re_BufSz   = Re_BufSz   + 1  ! NumPulseGate
+      Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
+      Re_BufSz   = Re_BufSz   + 1  ! URefLid
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -14330,6 +14350,16 @@ ENDIF
         END DO
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%SensorType
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%NumBeam
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%NumPulseGate
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PulseSpacing
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%URefLid
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -15346,6 +15376,16 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%SensorType = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NumBeam = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%NumPulseGate = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PulseSpacing = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%URefLid = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -15927,7 +15967,7 @@ ENDIF
       END IF
     END DO
   END IF
-   Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
   IF ( ALLOCATED(InData%LidSpeed) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
@@ -16363,7 +16403,7 @@ ENDIF
       ENDIF
     END DO
   END IF
-    IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
+  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
