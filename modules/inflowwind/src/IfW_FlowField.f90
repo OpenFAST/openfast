@@ -17,14 +17,14 @@
 ! limitations under the License.
 !**********************************************************************************************************************************
 
-module FlowField
+module IfW_FlowField
 
 use NWTC_Library
-use FlowField_Types
+use IfW_FlowField_Types
 
 implicit none
 
-public FlowField_GetVelAcc
+public IfW_FlowField_GetVelAcc
 public UniformField_CalcAccel, Grid3DField_CalcAccel
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
@@ -36,9 +36,9 @@ real(ReKi), parameter      :: GridTol = 1.0E-3              ! Tolerance for dete
 
 contains
 
-!> FlowField_GetVelAcc gets the velocities (and accelerations) at the given point positions.
+!> IfW_FlowField_GetVelAcc gets the velocities (and accelerations) at the given point positions.
 !! Accelerations are only calculated if the AccelUVW array is allocated.
-subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
+subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
 
    type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
    integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
@@ -49,7 +49,7 @@ subroutine FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, Accel
    integer(IntKi), intent(out)               :: ErrStat           !< Error status
    character(*), intent(out)                 :: ErrMsg            !< Error message
 
-   character(*), parameter                   :: RoutineName = "FlowField_GetVelAcc"
+   character(*), parameter                   :: RoutineName = "IfW_FlowField_GetVelAcc"
    integer(IntKi)                            :: i
    integer(IntKi)                            :: NumPoints
    logical                                   :: OutputAccel
@@ -721,7 +721,6 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, VelCell, AccCell,
    integer(IntKi)             :: IT_Lo, IT_Hi
    logical                    :: OnGrid
    real(ReKi)                 :: TimeShifted
-   integer(IntKi)             :: boundStat
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1138,7 +1137,7 @@ subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
    integer(IntKi)                         :: ic, iy, iz
-   real(ReKi), allocatable                :: b(:), u(:), dy2(:)
+   real(ReKi), allocatable                :: u(:), dy2(:)
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1150,10 +1149,11 @@ subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! Allocate storage for B used in cubic spline derivative calc
-   call AllocAry(B, G3D%NSteps, "storage for B", TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   ! If number of time grids is 1 or 2, set all accelerations to zero, return
+   if (G3D%NTGrids < 3) then
+      G3D%Acc = 0.0_SiKi
+      return 
+   end if
 
    ! Allocate storage for U used in cubic spline derivative calc
    call AllocAry(U, G3D%NSteps, "storage for U", TmpErrStat, TmpErrMsg)
@@ -1165,29 +1165,32 @@ subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   ! Calculate acceleration at each grid point
+   ! Loop through grid points and calculate derivative using spline
    do iz = 1, G3D%NZGrids
       do iy = 1, G3D%NYGrids
          do ic = 1, G3D%NComp
-            call CalcCubicSplineDeriv(G3D%DTime, G3D%Vel(ic, iy, iz, :), G3D%Acc(ic, iy, iz, :))
+            call CalcCubicSplineDeriv(G3D%NSteps, G3D%DTime, G3D%Vel(ic, iy, iz, :), G3D%Acc(ic, iy, iz, :))
          end do
       end do
    end do
 
-   ! If grid field includes tower grids
-   if (G3D%NTGrids > 0) then
+   ! If grid field does not include tower grids, return
+   if (G3D%NTGrids == 0) return
 
-      ! Allocate storage for tower acceleration
-      call AllocAry(G3D%AccTower, size(G3D%VelTower, dim=1), &
-                    size(G3D%VelTower, dim=2), size(G3D%VelTower, dim=3), &
-                    'tower wind acceleration data.', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+   ! Allocate storage for tower acceleration
+   call AllocAry(G3D%AccTower, size(G3D%VelTower, dim=1), &
+                 size(G3D%VelTower, dim=2), size(G3D%VelTower, dim=3), &
+                 'tower wind acceleration data.', TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
-      ! Loop through tower grid and calculate acceleration
+   ! If number of time grids is 1 or 2, set all accelerations to zero
+   if (G3D%NTGrids < 3) then
+      G3D%Acc = 0.0_SiKi
+   else  ! Otherwise, calculate acceleration at each grid point
       do iz = 1, G3D%NTGrids
          do ic = 1, G3D%NComp
-            call CalcCubicSplineDeriv(G3D%DTime, G3D%VelTower(ic, iz, :), G3D%AccTower(ic, iz, :))
+            call CalcCubicSplineDeriv(G3D%NSteps, G3D%DTime, G3D%VelTower(ic, iz, :), G3D%AccTower(ic, iz, :))
          end do
       end do
    end if
@@ -1198,51 +1201,44 @@ contains
    !! spaced a constant 'h' apart. It then calculates the corresponding
    !! derivative of y with respect to x at the same x values and returns it
    !! in the dy array.
-   subroutine CalcCubicSplineDeriv(h, y, dy)
-      real(ReKi), intent(in)        :: h
-      real(SiKi), intent(in)        :: y(:)
-      real(SiKi), intent(out)       :: dy(:)
+   subroutine CalcCubicSplineDeriv(n, h, y, dy)
+      integer(IntKi), intent(in)    :: n     ! number of points
+      real(ReKi), intent(in)        :: h     ! delta time
+      real(SiKi), intent(in)        :: y(:)  ! value at each time
+      real(SiKi), intent(out)       :: dy(:) ! value derivative at each time
 
-      integer(IntKi)                :: i, n
+      integer(IntKi)                :: i
       real(ReKi)                    :: p, un
 
-      ! Get size of arrays
-      n = size(y)
-
-      ! If 1 or 2 points, set derivatives to zero and return
-      if (n < 3) then
-         do i = 1, n
-            dy(i) = 0.0_ReKi
-         end do
-         return
+      ! If periodic function, set beginning and end to have same slope
+      if (G3D%Periodic) then
+         dy(1) = real((y(2) - y(n - 1))/(2.0_ReKi*h), SiKi)
+         dy(n) = dy(1)
+      else
+         dy(1) = 0.0_ReKi
+         dy(n) = 0.0_ReKi
       end if
 
-      ! First derivative is zero at lower boundary condition
+      ! Apply first derivative at lower boundary condition
       dy2(1) = -0.5_ReKi
-      u(1) = 3.0_ReKi*(y(2) - y(1))/h**2
-
-      ! Calculate slopes
-      do i = 1, n - 1
-         b(i) = (y(i + 1) - y(i))/h
-      end do
+      u(1) = 3.0_ReKi*((y(2) - y(1))/h - dy(1))/h
 
       ! Decomposition
       do i = 2, n - 1
          p = 0.5_ReKi*dy2(i - 1) + 2.0_ReKi
          dy2(i) = -0.5_ReKi/p
-         u(i) = (6.*((y(i + 1) - y(i))/h - (y(i) - y(i - 1))/h)/(2.0_ReKi*h) - 0.5_ReKi*u(i - 1))/p
+         u(i) = (6.*((y(i + 1) - 2.0_ReKi*y(i) + y(i - 1))/h)/(2.0_ReKi*h) - 0.5_ReKi*u(i - 1))/p
       end do
 
-      ! First derviative is zero at upper boundary condition
-      un = -3.0_ReKi*(y(n) - y(n - 1))/h**2
+      ! Apply first derviative at upper boundary condition
+      un = 3.0_ReKi*(dy(n) - (y(n) - y(n - 1))/h)/h
       dy2(n) = (un - 0.5_ReKi*u(n - 1))/(0.5_ReKi*dy2(n - 1) + 1.0_ReKi)
 
       ! Back substitution and derivative calculation
       do i = n - 1, 1, -1
          dy2(i) = dy2(i)*dy2(i + 1) + u(i)
-         dy(i) = real(b(i) - h*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
+         dy(i) = real((y(i + 1) - y(i))/h - h*(dy2(i)/3.0_ReKi + dy2(i + 1)/6.0_ReKi), SiKi)
       end do
-      dy(n) = 0.0_ReKi
 
    end subroutine
 

@@ -1458,7 +1458,7 @@ END SUBROUTINE InflowWind_CloseSumFile
 
 
 SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, FillWrOut, ErrStat, ErrMsg )
-      USE FlowField, only: FlowField_GetVelAcc
+      USE IfW_FlowField, only: IfW_FlowField_GetVelAcc
 
       IMPLICIT                                                    NONE
 
@@ -1503,14 +1503,14 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
       !-----------------------------------------------------------------------
 
       if (p%FlowField%Enabled) then
-         CALL FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
+         CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
                                   y%VelocityUVW, y%AccelUVW, TmpErrStat, TmpErrMsg)
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
          ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
          IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
-            CALL FlowField_GetVelAcc(p%FlowField, 0, Time, p%WindViXYZ, &
+            CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, p%WindViXYZ, &
                                      m%WindViUVW, m%WindAiUVW, TmpErrStat, TmpErrMsg)
          ENDIF
          return

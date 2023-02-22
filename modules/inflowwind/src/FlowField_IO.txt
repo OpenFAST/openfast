@@ -7,7 +7,7 @@
 #----------------------------------------------------------------------------------------------------------------------------------
 
 include Registry_NWTC_Library.txt
-usefrom FlowField.txt
+usefrom IfW_FlowField.txt
 
 typedef  FlowField_IO   SteadyInitInputType   ReKi                    HWindSpeed              -     -     -     "Horizontal wind speed"                                         m/s
 typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "Reference height for horizontal wind speed"                    meters
@@ -20,12 +20,26 @@ typedef  ^              ^                     ReKi                    Propagatio
 typedef  ^              ^                     logical                 UseInputFile            -   .true.  -     "Flag for toggling file based IO in wind type 2."               -
 typedef  ^              ^                     FileInfoType            PassedFileData          -     -     -     "Optional slot for wind type 2 data if file IO is not used."    -
 
+typedef  ^              Grid3DInitInputType   IntKi                   ScaleMethod             -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
+typedef  ^              ^                     ReKi                    SF                      3     0     -     "Turbulence scaling factor for each direction [ScaleMethod=1]"   -
+typedef  ^              ^                     ReKi                    SigmaF                  3     0     -     "Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2]"   -
+typedef  ^              ^                     IntKi                   WindProfileType         -    -1     -     "Wind profile type (0=constant;1=logarithmic;2=power law)" -
+typedef  ^              ^                     ReKi                    RefHt                   -     0     -     "Reference (hub) height of the grid"                        meters
+typedef  ^              ^                     ReKi                    URef                    -     0     -     "Mean u-component wind speed at the reference height"       meters
+typedef  ^              ^                     ReKi                    PLExp                   -     0     -     "Power law exponent (used for PL wind profile type only)"   -
+typedef  ^              ^                     ReKi                    VLinShr                 -     0     -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
+typedef  ^              ^                     ReKi                    HLinShr                 -     0     -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
+typedef  ^              ^                     ReKi                    RefLength               -     1     -     "Reference (rotor) length of the grid (used for horizontal wind profile type only)"   -
+typedef  ^              ^                     ReKi                    Z0                      -     0     -     "Surface roughness length (used for LOG wind profile type only)"  -
+typedef  ^              ^                     ReKi                    XOffset                 -     0     -     "distance offset for FF wind files"  m
+
 typedef  ^              TurbSimInitInputType  character(1024)         WindFileName            -     -     -     "Name of the wind file to use"                              -
 
 typedef  ^              BladedInitInputType   character(1024)         WindFileName            -     -     -     "Root filename"                                             -
 typedef  ^              ^                     logical                 NativeBladedFmt         -     -     -     "Whether this is native Bladed (needs wind profile and TI scaling) or not" -
 typedef  ^              ^                     logical                 TowerFileExist          -     -     -     "Tower file exists"                                            -
 typedef  ^              ^                     IntKi                   TurbineID               -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
+typedef  ^              ^                     logical                 FixedWindFileRootName   -  .false.  -     "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
 
 typedef  ^              BladedInitOutputType  ReKi                    TI                      {3}   -     -     "Turbulence intensity given in the file"                       -
 typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Propogation direction from native Bladed format" degrees  
@@ -38,15 +52,7 @@ typedef  ^              ^                     IntKi                   nz        
 typedef  ^              ^                     ReKi                    dx                      -     0     -     "size of grids in the x direction (in the 3 files above)"         -
 typedef  ^              ^                     ReKi                    dy                      -     0     -     "size of grids in the y direction (in the 3 files above)"         -
 typedef  ^              ^                     ReKi                    dz                      -     0     -     "size of grids in the z direction (in the 3 files above)"         -
-typedef  ^              ^                     ReKi                    RefHt                   -     0     -     "Reference (hub) height of the grid"                              meters
-typedef  ^              ^                     IntKi                   ScaleMethod             -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
-typedef  ^              ^                     ReKi                    SF                      3     0     -     "Turbulence scaling factor for each direction [ScaleMethod=1]"    -
-typedef  ^              ^                     ReKi                    SigmaF                  3     0     -     "Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2]"   -
-typedef  ^              ^                     ReKi                    URef                    -     0     -     "Mean u-component wind speed at the reference height"             meters
-typedef  ^              ^                     IntKi                   WindProfileType         -    -1     -     "Wind profile type (0=constant;1=logarithmic;2=power law)"        -
-typedef  ^              ^                     ReKi                    PLExp                   -     0     -     "Power law exponent (used for PL wind profile type only)"         -
-typedef  ^              ^                     ReKi                    Z0                      -     0     -     "Surface roughness length (used for LOG wind profile type only)"  -
-typedef  ^              ^                     ReKi                    XOffset                 -     0     -     "distance offset for FF wind files"                               meters
+typedef  ^              ^                     Grid3DInitInputType     G3D                     -     -     -     "Grid3D initialization input" -
 
 typedef  ^              UserInitInputType     SiKi                    Dummy                   -     -     -     "User field initialization input dummy value"                     -
 

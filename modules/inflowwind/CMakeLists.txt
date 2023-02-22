@@ -24,13 +24,13 @@ if (GENERATE_TYPES)
   generate_f90_types(src/IfW_UniformWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UniformWind_Types.f90 -noextrap)
   generate_f90_types(src/IfW_UserWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UserWind_Types.f90 -noextrap)
   generate_f90_types(src/IfW_FFWind_Base.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_FFWind_Base_Types.f90 -noextrap)
-  generate_f90_types(src/FlowField.txt ${CMAKE_CURRENT_LIST_DIR}/src/FlowField_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_FlowField.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_FlowField_Types.f90 -noextrap)
   generate_f90_types(src/FlowField_IO.txt ${CMAKE_CURRENT_LIST_DIR}/src/FlowField_IO_Types.f90 -noextrap)
 endif()
 
 set(IFW_SOURCES
-  src/FlowField_Types.f90
-  src/FlowField.f90
+  src/IfW_FlowField_Types.f90
+  src/IfW_FlowField.f90
   src/FlowField_IO_Types.f90
   src/FlowField_IO.f90
   src/IfW_BladedFFWind.f90

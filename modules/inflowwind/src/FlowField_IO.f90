@@ -27,7 +27,7 @@ module FlowField_IO
 
 use NWTC_Library
 use FlowField_IO_Types
-use FlowField
+use IfW_FlowField
 
 implicit none
 private
@@ -87,11 +87,11 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
    select case (InitInp%WindType)
    case (1) ! Steady
       FF%FieldType = Uniform_FieldType
-      call SteadyWind_Init(InitInp%Steady, InitInp%SumFileUnit, FF%Uniform, InitOut%FileDat, TmpErrStat, TmpErrMsg)
+      call SteadyWind_ReadFile(InitInp%Steady, InitInp%SumFileUnit, FF%Uniform, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (2) ! Uniform
       FF%FieldType = Uniform_FieldType
-      call UniformWind_Init(InitInp%Uniform, InitInp%SumFileUnit, FF%Uniform, InitOut%FileDat, TmpErrStat, TmpErrMsg)
+      call UniformWind_ReadFile(InitInp%Uniform, InitInp%SumFileUnit, FF%Uniform, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (3) ! Binary TurbSim FF
       FF%FieldType = Grid3D_FieldType
@@ -99,9 +99,7 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
    case (4) ! Binary Bladed-Style FF
       FF%FieldType = Grid3D_FieldType
-      ! call Read_Bladed_Binary(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
-      TmpErrStat = ErrID_Fatal
-      TmpErrMsg = "Binary Bladed Wind is not implemented"
+      call Bladed_ReadFile(InitInp%Bladed, InitInp%SumFileUnit, InitOut%Bladed, FF%Grid3D, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
    case (5) ! HAWC
       FF%FieldType = Grid3D_FieldType
@@ -114,11 +112,9 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
    case (7) ! Native Bladed FF
       FF%FieldType = Grid3D_FieldType
-      ! call Read_Bladed_Native(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
-      TmpErrStat = ErrID_Fatal
-      TmpErrMsg = "Native Bladed Wind is not implemented"
+      call Bladed_ReadFile(InitInp%Bladed, InitInp%SumFileUnit, InitOut%Bladed, FF%Grid3D, InitOut%FileDat, TmpErrStat, TmpErrMsg)
 
-   case (8) ! External Grid
+   case (8) ! Grid
       FF%FieldType = Grid4D_FieldType
       TmpErrStat = ErrID_Fatal
       TmpErrMsg = "Grid4D Wind is not implemented"
@@ -170,8 +166,8 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
          return
       end if
       if (InitInp%VelInterpCubic) then
-         CALL WrScr ( ' Cubic velocity interpolation not implemented for WindType '//&
-                       num2LStr(InitInp%WindType)//', using linear interpolation' )
+         call WrScr(' Cubic velocity interpolation not implemented for WindType '// &
+                    num2LStr(InitInp%WindType)//', using linear interpolation')
          FF%VelInterpCubic = .false.
       end if
    end select
@@ -215,7 +211,7 @@ subroutine FlowField_IO_Init(InitInp, FF, InitOut, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
+subroutine SteadyWind_ReadFile(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    type(SteadyInitInputType), intent(in)  :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
    type(UniformFieldType), intent(out)    :: UF
@@ -223,7 +219,7 @@ subroutine SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = 'SteadyWind_Init'
+   character(*), parameter                :: RoutineName = 'SteadyWind_ReadFile'
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
 
@@ -236,7 +232,7 @@ subroutine SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    UF%RefLength = 1.0_ReKi
 
    ! Allocate uniform wind data arrays
-   call Alloc_UniformWindArrays(UF, TmpErrStat, TmpErrMsg)
+   call UniformWind_AllocArrays(UF, TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -295,7 +291,7 @@ subroutine SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
+subroutine UniformWind_ReadFile(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    type(UniformInitInputType), intent(in)    :: InitInp
    integer(IntKi), intent(in)                :: SumFileUnit
    type(UniformFieldType), intent(out)       :: UF
@@ -303,7 +299,7 @@ subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter                   :: RoutineName = 'UniformWind_Init'
+   character(*), parameter                   :: RoutineName = 'UniformWind_ReadFile'
    integer(IntKi), parameter                 :: MaxNumCols = 9
    integer(IntKi), parameter                 :: MaxTries = 100
    integer(IntKi)                            :: NumCols
@@ -337,7 +333,7 @@ subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    UF%DataSize = WindFileInfo%NumLines
 
    ! Allocate uniform wind data arrays
-   call Alloc_UniformWindArrays(UF, TmpErrStat, TmpErrMsg)
+   call UniformWind_AllocArrays(UF, TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -353,7 +349,8 @@ subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    ! so set upflow=0 and reduce number of columns to read remaning data
    call ParseAry(WindFileInfo, LineNo, "HH file line", TmpData(1:NumCols), NumCols, TmpErrStat, TmpErrMsg)
    if (TmpErrStat /= 0) then
-      CALL SetErrStat(ErrID_Info,' Could not read upflow column in uniform wind files. Assuming upflow is 0.', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Info, ' Could not read upflow column in uniform wind files. Assuming upflow is 0.', &
+                      ErrStat, ErrMsg, RoutineName)
       UF%AngleV = 0
       NumCols = MaxNumCols - 1
    end if
@@ -502,12 +499,12 @@ subroutine UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine Alloc_UniformWindArrays(UF, ErrStat, ErrMsg)
+subroutine UniformWind_AllocArrays(UF, ErrStat, ErrMsg)
    type(UniformFieldType), intent(inout)     :: UF
-   integer(IntKi), intent(OUT)               :: ErrStat
-   character(*), intent(OUT)                 :: ErrMsg
+   integer(IntKi), intent(out)               :: ErrStat
+   character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter                   :: RoutineName = 'Alloc_UniformWindArrays'
+   character(*), parameter                   :: RoutineName = 'UniformWind_AllocArrays'
    integer(IntKi)                            :: TmpErrStat
    character(ErrMsgLen)                      :: TmpErrMsg
 
@@ -573,11 +570,11 @@ end subroutine
 !> Read_TurbSim reads the binary TurbSim-format FF file (.bts).  It fills the FFData array with
 !! velocity data for the grids and fills the Tower array with velocities at points on the tower
 !! (if data exists).
-subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
+subroutine TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
 
    type(TurbSimInitInputType), intent(in)    :: InitInp
    integer(IntKi), intent(in)                :: SumFileUnit
-   type(Grid3DFieldType), intent(out)          :: GF
+   type(Grid3DFieldType), intent(out)        :: G3D
    type(WindFileDat), intent(out)            :: FileDat
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -630,43 +627,43 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    ! Populate parameter data from header
    !----------------------------------------------------------------------------
 
-   GF%WindFileFormat = header%FileID    ! file format identifier
-   GF%Periodic = header%FileID == 8     ! 7 is used for non-periodic wind files; 8 is periodic wind
-   GF%InterpTower = .false.             ! wind should not be interpolated at tower
-   GF%AddMeanAfterInterp = .false.      ! do not add mean wind speed after interpolation
+   G3D%WindFileFormat = header%FileID    ! file format identifier
+   G3D%Periodic = header%FileID == 8     ! 7 is used for non-periodic wind files; 8 is periodic wind
+   G3D%InterpTower = .false.             ! wind should not be interpolated at tower
+   G3D%AddMeanAfterInterp = .false.      ! do not add mean wind speed after interpolation
 
-   GF%DTime = real(header%dt, ReKi)     ! grid spacing in time (dt), m/s
-   GF%Rate = 1.0_ReKi/GF%DTime           ! Data rate (1/DTime), Hertz
+   G3D%DTime = real(header%dt, ReKi)     ! grid spacing in time (dt), m/s
+   G3D%Rate = 1.0_ReKi/G3D%DTime           ! Data rate (1/DTime), Hertz
 
-   GF%NComp = 3                         ! TurbSim file file contains 3 wind components
-   GF%NYGrids = header%NYGrids          ! the number of grid points laterally
-   GF%NZGrids = header%NZGrids          ! the number of grid points vertically
-   GF%NTGrids = header%NTGrids          ! the number of tower points
-   GF%NSteps = header%NSteps          ! the number of time steps
+   G3D%NComp = 3                         ! TurbSim file file contains 3 wind components
+   G3D%NYGrids = header%NYGrids          ! the number of grid points laterally
+   G3D%NZGrids = header%NZGrids          ! the number of grid points vertically
+   G3D%NTGrids = header%NTGrids          ! the number of tower points
+   G3D%NSteps = header%NSteps          ! the number of time steps
 
-   GF%InvDY = 1.0_ReKi/real(header%dy, ReKi)     ! 1/dy
-   GF%YHWid = 0.5_ReKi*(GF%NYGrids - 1)/GF%InvDY   ! half the grid width (m)
+   G3D%InvDY = 1.0_ReKi/real(header%dy, ReKi)     ! 1/dy
+   G3D%YHWid = 0.5_ReKi*(G3D%NYGrids - 1)/G3D%InvDY   ! half the grid width (m)
 
-   GF%InvDZ = 1.0_ReKi/real(header%dz, ReKi)     ! 1/dz
-   GF%ZHWid = 0.5_ReKi*(GF%NZGrids - 1)/GF%InvDZ   ! half the grid height (m)
+   G3D%InvDZ = 1.0_ReKi/real(header%dz, ReKi)     ! 1/dz
+   G3D%ZHWid = 0.5_ReKi*(G3D%NZGrids - 1)/G3D%InvDZ   ! half the grid height (m)
 
-   GF%MeanWS = real(header%mws, ReKi)                 ! the mean wind speed at hub height (m/s)
-   GF%InvMWS = 1.0_ReKi/GF%MeanWS                      ! inverse of mean wind speed
+   G3D%MeanWS = real(header%mws, ReKi)                 ! the mean wind speed at hub height (m/s)
+   G3D%InvMWS = 1.0_ReKi/G3D%MeanWS                      ! inverse of mean wind speed
 
-   GF%RefHeight = real(header%ref_height, ReKi)       ! height of the hub (m)
-   GF%GridBase = real(header%grid_base_height, ReKi)  ! height of the bottom of the grid (m)
+   G3D%RefHeight = real(header%ref_height, ReKi)       ! height of the hub (m)
+   G3D%GridBase = real(header%grid_base_height, ReKi)  ! height of the bottom of the grid (m)
 
-   if (GF%Periodic) then
-      GF%InitXPosition = 0                       ! start at the hub
-      GF%TotalTime = GF%NSteps*GF%DTime
+   if (G3D%Periodic) then
+      G3D%InitXPosition = 0                       ! start at the hub
+      G3D%TotalTime = G3D%NSteps*G3D%DTime
    else
-      GF%InitXPosition = GF%YHWid                 ! start half the grid width ahead of the turbine
-      GF%TotalTime = (GF%NSteps - 1)*GF%DTime
+      G3D%InitXPosition = G3D%YHWid                 ! start half the grid width ahead of the turbine
+      G3D%TotalTime = (G3D%NSteps - 1)*G3D%DTime
    end if
 
-   GF%WindProfileType = WindProfileType_None     ! unused for turbsim
-   GF%PLExp = 0                                  ! unused for turbsim
-   GF%Z0 = 0                                     ! unused for turbsim
+   G3D%WindProfileType = WindProfileType_None     ! unused for turbsim
+   G3D%PLExp = 0                                  ! unused for turbsim
+   G3D%Z0 = 0                                     ! unused for turbsim
 
    !----------------------------------------------------------------------------
    ! Binary scaling factors from header
@@ -699,13 +696,13 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Allocate storage for grid-field velocity data
-   call AllocAry(GF%Vel, GF%NComp, GF%NYGrids, GF%NZGrids, GF%NSteps, &
+   call AllocAry(G3D%Vel, G3D%NComp, G3D%NYGrids, G3D%NZGrids, G3D%NSteps, &
                  'grid-field velocity data', TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Allocate storage for raw grid-field velocity for each time step
-   allocate (VelRaw(GF%NComp, GF%NYGrids, GF%NZGrids), stat=TmpErrStat)
+   allocate (VelRaw(G3D%NComp, G3D%NYGrids, G3D%NZGrids), stat=TmpErrStat)
    if (TmpErrStat /= 0) then
       call SetErrStat(ErrID_Fatal, "error allocating grid-field time step velocity data", &
                       ErrStat, ErrMsg, RoutineName)
@@ -713,16 +710,16 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
 
    ! If tower grids specified
-   if (GF%NTGrids > 0) then
+   if (G3D%NTGrids > 0) then
 
       ! Allocate storage for tower velocity data
-      call AllocAry(GF%VelTower, GF%NComp, GF%NTGrids, GF%NSteps, &
+      call AllocAry(G3D%VelTower, G3D%NComp, G3D%NTGrids, G3D%NSteps, &
                     'tower wind velocity data.', TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
       ! Allocate storage for raw tower data for each timestep
-      allocate (TwrRaw(GF%NComp, GF%NTGrids), stat=TmpErrStat)
+      allocate (TwrRaw(G3D%NComp, G3D%NTGrids), stat=TmpErrStat)
       if (TmpErrStat /= 0) then
          call SetErrStat(ErrID_Fatal, "error allocating tower time step velocity data", &
                          ErrStat, ErrMsg, RoutineName)
@@ -736,16 +733,16 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    ! This could take a while, so we'll write a message indicating what's going on:
    call WrScr(NewLine//'   Reading a ' &
-              //TRIM(Num2LStr(GF%NYGrids))//'x' &
-              //TRIM(Num2LStr(GF%NZGrids))// &
-              ' grid ('//TRIM(Num2LStr(GF%YHWid*2))//' m wide, '// &
-              TRIM(Num2LStr(GF%GridBase))//' m to '// &
-              TRIM(Num2LStr(GF%GridBase + GF%ZHWid*2))// &
+              //TRIM(Num2LStr(G3D%NYGrids))//'x' &
+              //TRIM(Num2LStr(G3D%NZGrids))// &
+              ' grid ('//TRIM(Num2LStr(G3D%YHWid*2))//' m wide, '// &
+              TRIM(Num2LStr(G3D%GridBase))//' m to '// &
+              TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2))// &
               ' m above ground) with a characteristic wind speed of '// &
-              TRIM(Num2LStr(GF%MeanWS))//' m/s. '//TRIM(DescStr))
+              TRIM(Num2LStr(G3D%MeanWS))//' m/s. '//TRIM(DescStr))
 
    ! Loop through time steps
-   do IT = 1, GF%NSteps
+   do IT = 1, G3D%NSteps
 
       ! Read grid-field raw wind data (normalized) comprised of 2-byte integers, INT(2)
       ! Indices are Velocity components, Y coordinates, Z coordinates
@@ -758,12 +755,12 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
       ! Loop through wind components (U, V, W), calculate de-normalized velocity (m/s)
       do IC = 1, 3
-         GF%Vel(IC, :, :, IT) = (real(VelRaw(IC, :, :), SiKi) - Voffset(IC))/VSlope(IC)
+         G3D%Vel(IC, :, :, IT) = (real(VelRaw(IC, :, :), SiKi) - Voffset(IC))/VSlope(IC)
       end do !IC
 
       ! Read tower raw wind data (normalized) comprised of 2-byte integers, INT(2)
       ! Indices are Velocity components, Z coordinates
-      if (GF%NTGrids > 0) then
+      if (G3D%NTGrids > 0) then
          read (WindFileUnit, IOSTAT=TmpErrStat) TwrRaw
          if (TmpErrStat /= 0) then
             call SetErrStat(ErrID_Fatal, ' Error reading tower wind components in the FF binary file "'// &
@@ -773,7 +770,7 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
          ! Loop through wind components (U, V, W), calculate de-normalized velocity (m/s)
          do IC = 1, 3
-            GF%VelTower(IC, :, IT) = (real(TwrRaw(IC, :), SiKi) - Voffset(IC))/VSlope(IC)
+            G3D%VelTower(IC, :, IT) = (real(TwrRaw(IC, :), SiKi) - Voffset(IC))/VSlope(IC)
          end do
       end if
    end do
@@ -784,21 +781,21 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    close (WindFileUnit)
 
-   if (GF%Periodic) then
-      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(GF%NSteps))//' time steps of '// &
-                 TRIM(Num2LStr(GF%Rate))//'-Hz grid-field data (period of '// &
-                 TRIM(Num2LStr(GF%DTime*(GF%NSteps)))//' seconds).')
+   if (G3D%Periodic) then
+      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(G3D%NSteps))//' time steps of '// &
+                 TRIM(Num2LStr(G3D%Rate))//'-Hz grid-field data (period of '// &
+                 TRIM(Num2LStr(G3D%DTime*(G3D%NSteps)))//' seconds).')
    else
-      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(GF%NSteps))//' time steps of '// &
-                 TRIM(Num2LStr(GF%Rate))//'-Hz grid-field data ('// &
-                 TRIM(Num2LStr(GF%DTime*(GF%NSteps - 1)))//' seconds).')
+      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(G3D%NSteps))//' time steps of '// &
+                 TRIM(Num2LStr(G3D%Rate))//'-Hz grid-field data ('// &
+                 TRIM(Num2LStr(G3D%DTime*(G3D%NSteps - 1)))//' seconds).')
    end if
 
    !----------------------------------------------------------------------------
    ! Store wind file metadata
    !----------------------------------------------------------------------------
 
-   call PopulateWindFileDatFromGrid3DField(GF, InitInp%WindFileName, 3, GF%NTGrids > 0, FileDat)
+   call Grid3DField_PopulateWindFileDat(G3D, InitInp%WindFileName, 3, G3D%NTGrids > 0, FileDat)
 
    !----------------------------------------------------------------------------
    ! Write the summary file
@@ -810,32 +807,32 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
          //TRIM(FlowField_IO_Ver%Name)//' '//TRIM(FlowField_IO_Ver%Ver)
       write (SumFileUnit, '(A)') TRIM(TmpErrMsg)
       write (SumFileUnit, '(5x,A)') 'FileName:                    '//TRIM(InitInp%WindFileName)
-      write (SumFileUnit, '(5x,A29,I3)') 'Binary file format id:       ', GF%WindFileFormat
-      write (SumFileUnit, '(5x,A29,G12.4)') 'Reference height (m):        ', GF%RefHeight
-      write (SumFileUnit, '(5x,A29,G12.4)') 'Timestep (s):                ', GF%DTime
-      write (SumFileUnit, '(5x,A29,I12)') 'Number of timesteps:         ', GF%NSteps
-      write (SumFileUnit, '(5x,A29,G12.4)') 'Mean windspeed (m/s):        ', GF%MeanWS
-      write (SumFileUnit, '(5x,A29,L1)') 'Windfile is periodic:        ', GF%Periodic
-      write (SumFileUnit, '(5x,A29,L1)') 'Windfile includes tower:     ', GF%NTGrids > 0
+      write (SumFileUnit, '(5x,A29,I3)') 'Binary file format id:       ', G3D%WindFileFormat
+      write (SumFileUnit, '(5x,A29,G12.4)') 'Reference height (m):        ', G3D%RefHeight
+      write (SumFileUnit, '(5x,A29,G12.4)') 'Timestep (s):                ', G3D%DTime
+      write (SumFileUnit, '(5x,A29,I12)') 'Number of timesteps:         ', G3D%NSteps
+      write (SumFileUnit, '(5x,A29,G12.4)') 'Mean windspeed (m/s):        ', G3D%MeanWS
+      write (SumFileUnit, '(5x,A29,L1)') 'Windfile is periodic:        ', G3D%Periodic
+      write (SumFileUnit, '(5x,A29,L1)') 'Windfile includes tower:     ', G3D%NTGrids > 0
 
-      if (GF%Periodic) then
+      if (G3D%Periodic) then
          write (SumFileUnit, '(5x,A)') 'Time range (s):              [ '// &
-            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(GF%TotalTime))//' ]'
+            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%TotalTime))//' ]'
       else  ! Shift the time range to compensate for the shifting of the wind grid
          write (SumFileUnit, '(5x,A)') 'Time range (s):              [ '// &
-            TRIM(Num2LStr(-GF%InitXPosition*GF%InvMWS))//' : '// &
-            TRIM(Num2LStr(GF%TotalTime - GF%InitXPosition*GF%InvMWS))//' ]'
+            TRIM(Num2LStr(-G3D%InitXPosition*G3D%InvMWS))//' : '// &
+            TRIM(Num2LStr(G3D%TotalTime - G3D%InitXPosition*G3D%InvMWS))//' ]'
       end if
 
       write (SumFileUnit, '(5x,A)') 'Y range (m):                 [ '// &
-         TRIM(Num2LStr(-GF%YHWid))//' : '//TRIM(Num2LStr(GF%YHWid))//' ]'
+         TRIM(Num2LStr(-G3D%YHWid))//' : '//TRIM(Num2LStr(G3D%YHWid))//' ]'
 
-      if (GF%NTGrids > 0) then
+      if (G3D%NTGrids > 0) then
          write (SumFileUnit, '(5x,A)') 'Z range (m):                 [ '// &
-            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(GF%RefHeight + GF%ZHWid))//' ]'
+            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       else
          write (SumFileUnit, '(5x,A)') 'Z range (m):                 [ '// &
-            TRIM(Num2LStr(GF%RefHeight - GF%ZHWid))//' : '//TRIM(Num2LStr(GF%RefHeight + GF%ZHWid))//' ]'
+            TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
       ! Get IO status for unit
@@ -848,11 +845,11 @@ subroutine TurbSim_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
+subroutine HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
 
    type(HAWCInitInputType), intent(in)    :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
-   type(Grid3DFieldType), intent(out)       :: GF
+   type(Grid3DFieldType), intent(out)     :: G3D
    type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -876,56 +873,50 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   GF%WindFileFormat = 0
-   GF%Periodic = .true.
-   GF%InterpTower = .true.
-   GF%AddMeanAfterInterp = .true.
+   G3D%WindFileFormat = 0
+   G3D%Periodic = .true.
+   G3D%InterpTower = .true.
+   G3D%AddMeanAfterInterp = .true.
 
-   GF%DTime = InitInp%dx/InitInp%URef
-   GF%Rate = 1.0_ReKi/GF%DTime
+   G3D%DTime = InitInp%dx/InitInp%G3D%URef
+   G3D%Rate = 1.0_ReKi/G3D%DTime
 
-   GF%NComp = 3
-   GF%NYGrids = InitInp%ny
-   GF%NZGrids = InitInp%nz
-   GF%NTGrids = 0
-   GF%NSteps = InitInp%nx
+   G3D%NComp = 3
+   G3D%NYGrids = InitInp%ny
+   G3D%NZGrids = InitInp%nz
+   G3D%NTGrids = 0
+   G3D%NSteps = InitInp%nx
 
-   GF%YHWid = 0.5_ReKi*InitInp%dy*(GF%NYGrids - 1)
-   GF%InvDY = 1.0/InitInp%dy
+   G3D%YHWid = 0.5_ReKi*InitInp%dy*(G3D%NYGrids - 1)
+   G3D%InvDY = 1.0/InitInp%dy
 
-   GF%ZHWid = 0.5_ReKi*InitInp%dz*(GF%NZGrids - 1)
-   GF%InvDZ = 1.0_ReKi/InitInp%dz
+   G3D%ZHWid = 0.5_ReKi*InitInp%dz*(G3D%NZGrids - 1)
+   G3D%InvDZ = 1.0_ReKi/InitInp%dz
 
-   GF%MeanWS = InitInp%URef
-   GF%InvMWS = 1.0_ReKi/GF%MeanWS
+   G3D%MeanWS = InitInp%G3D%URef
+   G3D%InvMWS = 1.0_ReKi/G3D%MeanWS
 
-   GF%RefHeight = InitInp%RefHt
-   GF%GridBase = GF%RefHeight - GF%ZHWid
+   G3D%RefHeight = InitInp%G3D%RefHt
+   G3D%GridBase = G3D%RefHeight - G3D%ZHWid
 
-   GF%InitXPosition = InitInp%XOffset
-   GF%TotalTime = GF%NSteps*InitInp%dx/GF%MeanWS
+   G3D%InitXPosition = InitInp%G3D%XOffset
+   G3D%TotalTime = G3D%NSteps*InitInp%dx/G3D%MeanWS
 
-   GF%WindProfileType = InitInp%WindProfileType
-   GF%Z0 = InitInp%Z0
-   GF%PLExp = InitInp%PLExp
+   G3D%WindProfileType = InitInp%G3D%WindProfileType
+   G3D%Z0 = InitInp%G3D%Z0
+   G3D%PLExp = InitInp%G3D%PLExp
 
    ScaleFactors = 0.0_ReKi
 
    !----------------------------------------------------------------------------
-   ! Validate arguments
+   ! Validate initialization iput
    !----------------------------------------------------------------------------
 
-   if ((InitInp%ScaleMethod == ScaleMethod_Direct) .and. any(InitInp%SF(:GF%NComp) < 0.0_ReKi)) then
-      call SetErrStat(ErrID_Fatal, 'Turbulence scaling factors must not be negative.', ErrStat, ErrMsg, RoutineName)
-   elseif ((InitInp%ScaleMethod == ScaleMethod_StdDev) .and. any(InitInp%SigmaF(:GF%NComp) < 0.0_ReKi)) then
-      call SetErrStat(ErrID_Fatal, 'Turbulence standard deviations must not be negative.', ErrStat, ErrMsg, RoutineName)
-   else if ((InitInp%ScaleMethod /= 0) .and. (InitInp%ScaleMethod /= 1) .and. (InitInp%ScaleMethod /= 2)) then
-      call SetErrStat(ErrID_Fatal, 'Turbulence scaling method must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
-   else if (InitInp%RefHt < 0.0_ReKi .or. EqualRealNos(GF%RefHeight, 0.0_ReKi)) then
-      call SetErrStat(ErrID_Fatal, 'The grid reference height must be larger than 0.', ErrStat, ErrMsg, RoutineName)
-   else if (GF%MeanWS < 0.0_ReKi) then
-      call SetErrStat(ErrID_Fatal, 'The reference wind speed must not be negative.', ErrStat, ErrMsg, RoutineName)
-   else if (InitInp%nx < 1) then
+   call Grid3DField_ValidateInput(InitInp%G3D, 3, TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   if (InitInp%nx < 1) then
       call SetErrStat(ErrID_Fatal, 'Number of grid points in the X direction must be at least 1.', ErrStat, ErrMsg, RoutineName)
    else if (InitInp%ny < 1) then
       call SetErrStat(ErrID_Fatal, 'Number of grid points in the Y direction must be at least 1.', ErrStat, ErrMsg, RoutineName)
@@ -937,10 +928,6 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
       call SetErrStat(ErrID_Fatal, 'The grid spacing in the Y direction must be larger than 0.', ErrStat, ErrMsg, RoutineName)
    else if (InitInp%dz < 0.0_ReKi .or. EqualRealNos(InitInp%dz, 0.0_ReKi)) then
       call SetErrStat(ErrID_Fatal, 'The grid spacing in the Z direction must be larger than 0.', ErrStat, ErrMsg, RoutineName)
-   else if (GF%GridBase < 0.0_ReKi) then
-      call SetErrStat(ErrID_Severe, 'WARNING: The bottom of the grid is located at a height of '// &
-                      trim(Num2LStr(GF%GridBase))//' meters, which is below the ground.'// &
-                      ' Winds below the ground will be set to 0.', ErrStat, ErrMsg, RoutineName)
    end if
    if (ErrStat >= AbortErrLev) return
 
@@ -949,13 +936,13 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Allocate storage for grid-field velocity data
-   call AllocAry(GF%Vel, GF%NComp, GF%NYGrids, GF%NZGrids, GF%NSteps, &
+   call AllocAry(G3D%Vel, G3D%NComp, G3D%NYGrids, G3D%NZGrids, G3D%NSteps, &
                  'grid-field velocity data', TmpErrStat, TmpErrMsg)
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Allocate storage for raw grid-field velocity for each time step
-   allocate (VelRaw(GF%NZGrids, GF%NYGrids), stat=TmpErrStat)
+   allocate (VelRaw(G3D%NZGrids, G3D%NYGrids), stat=TmpErrStat)
    if (TmpErrStat /= 0) then
       call SetErrStat(ErrID_Fatal, "error allocating grid-field time step velocity data", &
                       ErrStat, ErrMsg, RoutineName)
@@ -968,10 +955,10 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
 
    ! Display message indicating that file is being read
    call WrScr(NewLine//'   Reading HAWC wind files with grids of '// &
-              TRIM(Num2LStr(GF%NSteps))//' x '//TRIM(Num2LStr(GF%NYGrids))//' x '//TRIM(Num2LStr(GF%NZGrids))//' points'// &
-              ' ('//TRIM(Num2LStr(GF%YHWid*2))//' m wide, '//TRIM(Num2LStr(GF%GridBase))//' m to '// &
-              TRIM(Num2LStr(GF%GridBase + GF%ZHWid*2))// &
-              ' m above ground) with a characteristic wind speed of '//TRIM(Num2LStr(GF%MeanWS))//' m/s. ')
+              TRIM(Num2LStr(G3D%NSteps))//' x '//TRIM(Num2LStr(G3D%NYGrids))//' x '//TRIM(Num2LStr(G3D%NZGrids))//' points'// &
+              ' ('//TRIM(Num2LStr(G3D%YHWid*2))//' m wide, '//TRIM(Num2LStr(G3D%GridBase))//' m to '// &
+              TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2))// &
+              ' m above ground) with a characteristic wind speed of '//TRIM(Num2LStr(G3D%MeanWS))//' m/s. ')
 
    ! Get a unit number to use for the wind file
    call GetNewUnit(WindFileUnit, TmpErrStat, TmpErrMsg)
@@ -979,7 +966,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
 
    ! Loop through wind components (X, Y, Z)
-   do IC = 1, GF%NComp
+   do IC = 1, G3D%NComp
 
       ! Open wind file for this component
       call OpenBInpFile(WindFileUnit, InitInp%WindFileName(IC), TmpErrStat, TmpErrMsg)
@@ -987,7 +974,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
 
       ! Loop through time steps
-      do IX = 1, GF%NSteps
+      do IX = 1, G3D%NSteps
 
          ! Read file data for this timestep (Z(1:N),Y(N:1),C(1:3))
          read (WindFileUnit, IOSTAT=TmpErrStat) VelRaw
@@ -1001,10 +988,10 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
          end if
 
          ! Reorganize raw data into grid-field array (reverse Y indices)
-         do IZ = 1, GF%NZGrids
-            ! Vel(NFFComp, NYGrids, NZGrids, NSteps)
+         do IZ = 1, G3D%NZGrids
+            ! Vel(NComp, NYGrids, NZGrids, NSteps)
             ! VelRaw(NZGrids, NYGrids)
-            GF%Vel(IC, :, IZ, IX) = VelRaw(IZ, GF%NYGrids:1:-1)
+            G3D%Vel(IC, :, IZ, IX) = VelRaw(IZ, G3D%NYGrids:1:-1)
          end do
       end do
 
@@ -1014,63 +1001,23 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    end do
 
    !----------------------------------------------------------------------------
-   ! Scale turbulence
+   ! Scale turbulence to requested intensity
    !----------------------------------------------------------------------------
 
-   select case (InitInp%ScaleMethod)
-
-   case (ScaleMethod_None) ! No scaling
-      ScaleFactors = 1.0_ReKi
-
-   case (ScaleMethod_Direct) ! Apply scale factors from file
-      ScaleFactors = InitInp%SF
-
-   case (ScaleMethod_StdDev) ! Use scale factor to get requested sigma
-
-      ! find the center point of the grid (if we don't have an odd number
-      ! of grid points, we'll pick the point closest to the center)
-      iz = ishft(InitInp%nz + 1, -1) ! integer divide by 2
-      iy = ishft(InitInp%ny + 1, -1) ! integer divide by 2
-
-      ! Loop through components
-      do ic = 1, GF%NComp
-
-         ! Mean of component for all time
-         vMean = sum(GF%Vel(ic, iy, iz, :))/InitInp%nx
-
-         ! Sum of square of component value for all time
-         vSum2 = dot_product(GF%Vel(ic, iy, iz, :), GF%Vel(ic, iy, iz, :))
-
-         ! Standard deviation of component
-         ActualSigma = real(sqrt(abs(vSum2/InitInp%nx - vMean**2)), kind(ActualSigma))
-
-         ! If actual sigma is nearly zero,
-         if (EqualRealNos(ActualSigma, 0.0_ReKi)) then
-            ScaleFactors(ic) = 0.0_ReKi
-            if (.not. EqualRealNos(InitInp%SigmaF(ic), 0.0_ReKi)) then
-               call SetErrStat(ErrID_Fatal,"Computed standard deviation is zero; cannot scale to achieve target non-zero standard deviation.", ErrStat, ErrMsg, RoutineName )                  
-            end if
-         else
-            ScaleFactors(ic) = InitInp%SigmaF(ic)/ActualSigma
-         end if
-      end do
-   end select
-
-   ! Loop through components and apply scale factors
-   do ic = 1, GF%NComp
-      GF%Vel(ic, :, :, :) = real(ScaleFactors(ic)*GF%Vel(ic, :, :, :), SiKi)
-   end do
+   call ScaleTurbulence(InitInp%G3D, G3D%Vel, ScaleFactors, TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
    !----------------------------------------------------------------------------
    ! Remove the U component mean wind speed
    !----------------------------------------------------------------------------
 
    ! If scaling method is not none, remove mean value of X component at each grid point
-   if (InitInp%ScaleMethod /= ScaleMethod_None) then
-      do iz = 1, GF%NZGrids
-         do iy = 1, GF%NYGrids
-            vMean = sum(GF%Vel(1, iy, iz, :))/GF%NSteps
-            GF%Vel(1, iy, iz, :) = real(GF%Vel(1, iy, iz, :) - vMean, SiKi)
+   if (InitInp%G3D%ScaleMethod /= ScaleMethod_None) then
+      do iz = 1, G3D%NZGrids
+         do iy = 1, G3D%NYGrids
+            vMean = sum(G3D%Vel(1, iy, iz, :))/G3D%NSteps
+            G3D%Vel(1, iy, iz, :) = real(G3D%Vel(1, iy, iz, :) - vMean, SiKi)
          end do
       end do
    end if
@@ -1079,7 +1026,7 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
    ! Store wind file metadata
    !----------------------------------------------------------------------------
 
-   call PopulateWindFileDatFromGrid3DField(GF, InitInp%WindFileName(1), 5, .false., FileDat)
+   call Grid3DField_PopulateWindFileDat(G3D, InitInp%WindFileName(1), 5, .false., FileDat)
 
    !----------------------------------------------------------------------------
    ! Write the summary file
@@ -1089,18 +1036,18 @@ subroutine HAWC_Init(InitInp, SumFileUnit, GF, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)')
       write (SumFileUnit, '(A)') 'HAWC wind type.  Read by InflowWind sub-module FlowField_IO'
 
-      write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', GF%RefHeight
-      write (SumFileUnit, '(A34,G12.4)') '     Timestep (s):                ', GF%DTime
-      write (SumFileUnit, '(A34,I12)') '     Number of timesteps:         ', GF%NSteps
-      write (SumFileUnit, '(A34,G12.4)') '     Mean windspeed (m/s):        ', GF%MeanWS
+      write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', G3D%RefHeight
+      write (SumFileUnit, '(A34,G12.4)') '     Timestep (s):                ', G3D%DTime
+      write (SumFileUnit, '(A34,I12)') '     Number of timesteps:         ', G3D%NSteps
+      write (SumFileUnit, '(A34,G12.4)') '     Mean windspeed (m/s):        ', G3D%MeanWS
       write (SumFileUnit, '(A)') '     Time range (s):              [ '// &
-         TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(GF%TotalTime))//' ]'
+         TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%TotalTime))//' ]'
       write (SumFileUnit, '(A)') '     X range (m):                 [ '// &
-         TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(GF%TotalTime*GF%MeanWS))//' ]'
+         TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%TotalTime*G3D%MeanWS))//' ]'
       write (SumFileUnit, '(A)') '     Y range (m):                 [ '// &
-         TRIM(Num2LStr(-GF%YHWid))//' : '//TRIM(Num2LStr(GF%YHWid))//' ]'
+         TRIM(Num2LStr(-G3D%YHWid))//' : '//TRIM(Num2LStr(G3D%YHWid))//' ]'
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
-         TRIM(Num2LStr(GF%GridBase))//' : '//TRIM(Num2LStr(GF%GridBase + GF%ZHWid*2.0))//' ]'
+         TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
       write (SumFileUnit, '(A)') 'Scaling factors used:'
       write (SumFileUnit, '(A)') '  u           v           w       '
@@ -1134,11 +1081,11 @@ subroutine User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 end subroutine
 
 !> Grid4D_Init initializes a wind field defined by a 4D grid.
-subroutine Grid4D_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
+subroutine Grid4D_Init(InitInp, SumFileUnit, G4D, FileDat, ErrStat, ErrMsg)
 
    type(Grid4DInitInputType), intent(in) :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
-   type(Grid4DFieldType), intent(out)    :: EGF
+   type(Grid4DFieldType), intent(out)     :: G4D
    type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1151,19 +1098,19 @@ subroutine Grid4D_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
    ErrMsg = ""
 
    ! Initialize field from inputs
-   EGF%n = InitInp%n
-   EGF%delta = InitInp%delta
-   EGF%pZero = InitInp%pZero
-   EGF%TimeStart = 0.0_ReKi
+   G4D%n = InitInp%n
+   G4D%delta = InitInp%delta
+   G4D%pZero = InitInp%pZero
+   G4D%TimeStart = 0.0_ReKi
 
    ! uvw velocity components at x,y,z,t coordinates
-   call AllocAry(EGF%Vel, 3, EGF%n(1), EGF%n(2), EGF%n(3), EGF%n(4), &
+   call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
                  'External Grid Velocity', TmpErrStat, TmpErrMsg)
    call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
    ! Initialize velocities to zero
-   EGF%Vel = 0.0_SiKi
+   G4D%Vel = 0.0_SiKi
 
    if (SumFileUnit > 0) then
       write (SumFileUnit, '(A)') InitInp%n
@@ -1171,7 +1118,1315 @@ subroutine Grid4D_Init(InitInp, SumFileUnit, EGF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-subroutine PopulateWindFileDatFromGrid3DField(Grid3DField, FileName, WindType, HasTower, FileDat)
+subroutine Bladed_ReadFile(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat, ErrMsg)
+
+   type(BladedInitInputType), intent(in)     :: InitInp  !< Initialization data passed to the module
+   integer(IntKi), intent(in)                :: SumFileUnit
+   type(BladedInitOutputType), intent(out)   :: InitOut  !< Initial output
+   type(Grid3DFieldType), intent(out)        :: G3D      !< Parameters
+   type(WindFileDat), intent(out)            :: FileDat
+   integer(IntKi), intent(out)               :: ErrStat  !< determines if an error has been encountered
+   character(*), intent(out)                 :: ErrMsg   !< Message about errors
+
+   ! REAL(ReKi),  INTENT(  OUT)  :: TI      (3)    !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   character(*), parameter    :: RoutineName = "Bladed_ReadFile"
+   type(Grid3DInitInputType)  :: G3D_InitInp ! initialization input for grid 3d field
+   real(ReKi)                 :: BinTI(3)    ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
+   real(ReKi)                 :: NatTI(3)    ! turbulence intensities of the wind components as defined in the native FF summary file
+   real(ReKi)                 :: UBar
+   real(ReKi)                 :: ZCenter
+   real(ReKi)                 :: ScaleFactors(3)   ! turbulence scaling factors
+   real(ReKi)                 :: TI(3)
+   real(ReKi)                 :: SigmaF(3)         ! Turbulence standard deviation
+   integer(IntKi)             :: ScaleMethod
+   integer(IntKi)             :: UnitWind      ! Unit number for the InflowWind input file
+   integer(B2Ki)              :: Dum_Int2
+   integer(IntKi)             :: I
+   logical                    :: CWise
+   logical                    :: LHR            ! Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
+   logical                    :: Exists
+   character(1028)            :: SumFile        ! length is LEN(ParamData%WindFileName) + the 4-character extension.
+   character(1028)            :: TwrFile        ! length is LEN(ParamData%WindFileName) + the 4-character extension.
+   character(1024)            :: BinFileName
+   character(1024)            :: PriPath
+   character(ErrMsgLen)       :: TmpErrMsg      ! temporary error message
+   integer(IntKi)             :: TmpErrStat     ! temporary error status
+
+   ErrMsg = ''
+   ErrStat = ErrID_None
+
+   if (InitInp%NativeBladedFmt) then
+
+      call Bladed_ReadNativeSummary(InitInp%WindFileName, G3D_InitInp%PLExp, G3D_InitInp%VLinShr, &
+                                    G3D_InitInp%HLinShr, G3D_InitInp%RefLength, NatTI, G3D%MeanWS, &
+                                    G3D%RefHeight, InitOut%PropagationDir, InitOut%VFlowAngle, &
+                                    BinFileName, G3D_InitInp%XOffset, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+      if (pathIsRelative(BinFileName)) then
+         call GetPath(InitInp%WindFileName, PriPath)     ! Binary file will be relative to the path where the primary input file is located.
+         BinFileName = TRIM(PriPath)//TRIM(BinFileName)
+      end if
+
+      if (InitInp%FixedWindFileRootName) then ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+         if (InitInp%TurbineID == 0) then     ! .TRUE. for the FAST.Farm low-resolution domain
+            BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'Low'
+         else                                   ! FAST.Farm high-resolution domain(s)
+            BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
+         end if
+      end if
+
+      ! default values for Bladed Format
+      CWise = .false.
+      ZCenter = G3D%RefHeight
+      G3D%Periodic = .true.
+
+      G3D_InitInp%ScaleMethod = ScaleMethod_StdDev
+      G3D_InitInp%SigmaF = NatTI*G3D%MeanWS
+      G3D_InitInp%SF = SigmaF
+
+      ! it could also have logarithmic, but I'm going to leave that off for now
+      G3D_InitInp%RefHt = G3D%RefHeight
+      G3D_InitInp%URef = G3D%MeanWS
+      G3D_InitInp%WindProfileType = WindProfileType_PL ! it could also have logarithmic, but I'm going to leave that off for now
+
+      InitOut%TI = 100.0_ReKi
+      UBar = 0.0_ReKi
+      LHR = .true.
+
+   else
+      InitOut%PropagationDir = 0.0_ReKi
+      InitOut%VFlowAngle = 0.0_ReKi
+      G3D_InitInp%VLinShr = 0.0_ReKi
+      G3D_InitInp%HLinShr = 0.0_ReKi
+      G3D_InitInp%RefLength = 1.0_ReKi
+
+      BinFileName = InitInp%WindFileName
+   end if
+
+   ! Get a unit number to use
+
+   call GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   !----------------------------------------------------------------------------------------------
+   ! Open the binary file, read its "header" (first 2-byte integer) to determine what format
+   ! binary file it is, and close it.
+   !----------------------------------------------------------------------------------------------
+
+   call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Read the first binary integer from the file to get info on the type.
+   ! Cannot use library read routines since this is a 2-byte integer.
+   read (UnitWind, IOSTAT=TmpErrStat) Dum_Int2
+   close (UnitWind)
+
+   if (TmpErrStat /= 0) then
+      call SetErrStat(ErrID_Fatal, ' Error reading first binary integer from file "'//TRIM(BinFileName)//'."', &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   !----------------------------------------------------------------------------------------------
+   ! Read the files to get the required FF data.
+   !----------------------------------------------------------------------------------------------
+
+   ! Store the binary format information so the InflowWind code can use it.
+   ! Also changes to IntKi from INT(2) to compare in the SELECT below
+   G3D%WindFileFormat = Dum_Int2
+
+   select case (G3D%WindFileFormat)
+
+   case (-1, -2, -3, -99)                                         ! Bladed-style binary format
+
+      if (.not. InitInp%NativeBladedFmt) then
+
+         !...........................................................................................
+         ! Create full-field summary file name from binary file root name.  Also get tower file
+         ! name.
+         !...........................................................................................
+
+         call GetRoot(BinFileName, SumFile)
+
+         TwrFile = TRIM(SumFile)//'.twr'
+         SumFile = TRIM(SumFile)//'.sum'
+
+         !...........................................................................................
+         ! Read the summary file to get necessary scaling information
+         !...........................................................................................
+
+         call Bladed_ReadTurbSimSummary(UnitWind, TRIM(SumFile), CWise, ZCenter, InitOut%TI, UBar, G3D%RefHeight, G3D%Periodic, LHR, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) then
+            close (UnitWind)
+            return
+         end if
+
+      end if
+
+      !...........................................................................................
+      ! Open the binary file and read its header
+      !...........................................................................................
+
+      call OpenBInpFile(UnitWind, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         close (UnitWind)
+         return
+      end if
+
+      if (Dum_Int2 == -99) then                                                      ! Newer-style BLADED format
+         call Bladed_ReadHeader1(UnitWind, BinTI, G3D, InitInp%NativeBladedFmt, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) then
+            close (UnitWind)
+            return
+         end if
+
+         ! If the TIs are also in the binary file (BinTI > 0),
+         ! use those numbers instead of ones from the summary file
+
+         if (.not. InitInp%NativeBladedFmt) then
+            do I = 1, G3D%NComp
+               if (BinTI(I) > 0) InitOut%TI(I) = BinTI(I)
+            end do
+         end if
+
+      else
+         call Bladed_ReadHeader0(UnitWind, G3D, InitInp%NativeBladedFmt, TmpErrStat, TmpErrMsg)     ! Older-style BLADED format
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) then
+            close (UnitWind)
+            return
+         end if
+
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Let's see if the summary and binary FF wind files go together before continuing.
+      !-------------------------------------------------------------------------
+
+      if (.not. InitInp%NativeBladedFmt) then
+         if (ABS(UBar - G3D%MeanWS) > 0.1) then
+            call SetErrStat(ErrID_Fatal, ' Error: Incompatible mean hub-height wind speeds in FF wind files. '// &
+                            '(Check that the .sum and .wnd files were generated together.)', ErrStat, ErrMsg, RoutineName)
+            close (UnitWind)
+            return
+         end if
+
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Calculate the height of the bottom of the grid
+      !-------------------------------------------------------------------------
+
+      G3D%GridBase = ZCenter - G3D%ZHWid         ! the location, in meters, of the bottom of the grid
+      if (G3D%GridBase < 0.0_ReKi) then
+         call SetErrStat(ErrID_Severe, 'WARNING: The bottom of the grid is located at a height of '// &
+                         TRIM(Num2LStr(G3D%GridBase))//' meters, which is below the ground.'// &
+                         ' Winds below the ground will be set to 0.', ErrStat, ErrMsg, RoutineName)
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Read the binary grids (converted tƒo m/s) and close the file
+      !-------------------------------------------------------------------------
+
+      call Bladed_ReadGrids(UnitWind, InitInp%NativeBladedFmt, CWise, LHR, InitOut%TI, G3D, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+
+      close (UnitWind)
+      if (InitInp%NativeBladedFmt) InitOut%TI = NatTI*100.0_ReKi  ! report these TI for the native Bladed format in percent
+
+      if (ErrStat >= AbortErrLev) return
+
+      !-------------------------------------------------------------------------
+      ! Read the tower points file
+      !-------------------------------------------------------------------------
+
+      if (InitInp%TowerFileExist .and. .not. InitInp%NativeBladedFmt) then      ! If we specified a tower file
+         inquire (FILE=TRIM(TwrFile), EXIST=Exists)
+
+         ! Double check that the tower file exists and read it.  If it was requested but doesn't exist,
+         ! throw fatal error and exit.
+         if (Exists) then
+            call Bladed_ReadTower(UnitWind, G3D, TwrFile, TmpErrStat, TmpErrMsg)
+            call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               close (UnitWind)
+               return
+            end if
+         else
+            call SetErrStat(ErrID_Fatal, ' Tower file '//TRIM(TwrFile)//' specified for Bladed full-field '// &
+                            'wind files does not exist.', ErrStat, ErrMsg, RoutineName)
+            close (UnitWind)
+            return
+         end if
+      else
+         G3D%NTGrids = 0_IntKi
+      end if
+
+   case DEFAULT
+      call SetErrStat(ErrID_Fatal, ' This is not a bladed-style binary wind file (binary format identifier: '// &
+                      TRIM(Num2LStr(G3D%WindFileFormat))//'.  This might be a TurbSim binary wind file.', &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+
+   end select
+
+   !----------------------------------------------------------------------------
+   ! Post reading
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! If the wind file has zero-mean and unit standard deviation (native Bladed format), scale the data:
+   !----------------------------------------------------------------------------
+
+   G3D%AddMeanAfterInterp = .false.
+
+   if (InitInp%NativeBladedFmt) then
+
+      G3D%InterpTower = .true.
+      G3D%AddMeanAfterInterp = .true.
+
+      ! Validate scaling data if we've got native-Bladed format
+      call Grid3DField_ValidateInput(G3D_InitInp, G3D%NComp, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+      ! scale to requested TI (or use requested scale factors)
+      call ScaleTurbulence(G3D_InitInp, G3D%Vel(:, :, :, 1:G3D%NSteps), ScaleFactors, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   else
+      G3D%InterpTower = .false.
+      G3D%WindProfileType = WindProfileType_None
+   end if
+
+   if (G3D%Periodic) then
+      G3D%InitXPosition = 0                ! start at the hub
+      G3D%TotalTime = G3D%NSteps*G3D%DTime
+   else
+      G3D%InitXPosition = G3D%YHWid          ! start half the grid width ahead of the turbine
+      G3D%TotalTime = (G3D%NSteps - 1)*G3D%DTime
+   end if
+
+   IF (InitInp%NativeBladedFmt) THEN
+      G3D%InitXPosition = G3D_InitInp%XOffset
+   END IF
+
+   !-------------------------------------------------------------------------------------------------
+   ! Set the InitOutput information
+   !-------------------------------------------------------------------------------------------------
+
+   InitOut%TI = TI
+
+   !-------------------------------------------------------------------------------------------------
+   ! Write to the summary file
+   !-------------------------------------------------------------------------------------------------
+
+   if (SumFileUnit > 0) then
+      write (SumFileUnit, '(A)')
+      write (SumFileUnit, '(A)') 'Bladed-style wind type.  Read by InflowWind sub-module '// &
+         TRIM(FlowField_IO_Ver%Name)//' '//TRIM(FlowField_IO_Ver%Ver)
+      write (SumFileUnit, '(A)') TRIM(TmpErrMsg)
+      write (SumFileUnit, '(A)') '     FileName:                    '//TRIM(InitInp%WindFileName)
+      write (SumFileUnit, '(A34,I3)') '     Binary file format id:       ', G3D%WindFileFormat
+      write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', G3D%RefHeight
+      write (SumFileUnit, '(A34,G12.4)') '     Timestep (s):                ', G3D%DTime
+      write (SumFileUnit, '(A34,I12)') '     Number of timesteps:         ', G3D%NSteps
+      write (SumFileUnit, '(A34,G12.4)') '     Mean windspeed (m/s):        ', G3D%MeanWS
+      write (SumFileUnit, '(A)') '     Characteristic TI:            [ '// &
+         TRIM(Num2LStr(TI(1)))//', '//TRIM(Num2LStr(TI(2)))//', '//TRIM(Num2LStr(TI(3)))//' ] '
+      write (SumFileUnit, '(A34,L1)') '     Windfile is periodic:        ', G3D%Periodic
+      write (SumFileUnit, '(A34,L1)') '     Windfile includes tower:     ', G3D%NTGrids > 0
+
+      if (G3D%Periodic) then
+         write (SumFileUnit, '(A)') '     Time range (s):              [ '// &
+            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%TotalTime))//' ]'
+      else  ! Shift the time range to compensate for the shifting of the wind grid
+         write (SumFileUnit, '(A)') '     Time range (s):              [ '// &
+            TRIM(Num2LStr(-G3D%InitXPosition*G3D%InvMWS))//' : '// &
+            TRIM(Num2LStr(G3D%TotalTime - G3D%InitXPosition*G3D%InvMWS))//' ]'
+      end if
+
+      write (SumFileUnit, '(A)') '     Y range (m):                 [ '// &
+         TRIM(Num2LStr(-G3D%YHWid))//' : '//TRIM(Num2LStr(G3D%YHWid))//' ]'
+
+      if (G3D%NTGrids > 0) then
+         write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
+            TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
+      else
+         write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
+            TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
+      end if
+
+      ! We are assuming that if the last line was written ok, then all of them were.
+      if (TmpErrStat /= 0_IntKi) then
+         call SetErrStat(ErrID_Fatal, 'Error writing to summary file.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+end subroutine Bladed_ReadFile
+
+subroutine Bladed_ReadTurbSimSummary(UnitWind, FileName, CWise, ZCenter, TI, UBar, RefHt, Periodic, LHR, ErrStat, ErrMsg)
+
+   character(*), parameter                     :: RoutineName = "Bladed_ReadTurbSimSummary"
+
+   ! Passed variables
+   integer(IntKi), intent(in)  :: UnitWind       !< unit number for the file to open
+   character(*), intent(in)  :: FileName       !< name of the summary file
+   logical, intent(out)  :: CWise          !< rotation (for reading the order of the binary data)
+   real(ReKi), intent(out)  :: ZCenter        !< the height at the center of the grid
+   real(ReKi), intent(out)  :: TI(3)    !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   real(ReKi), intent(out)  :: UBar           !< mean (advection) wind speed
+   real(ReKi), intent(out)  :: RefHt          !< Reference height
+   logical, intent(out)  :: Periodic       !< rotation (for reading the order of the binary data)
+   logical, intent(out)  :: LHR            !< Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
+   integer(IntKi), intent(out)  :: ErrStat        !< returns 0 if no error encountered in the subroutine
+   character(*), intent(out)  :: ErrMsg         !< holds the error messages
+
+   ! Local variables
+   real(ReKi)                                         :: ZGOffset       ! The vertical offset of the turbine on rectangular grid (allows turbulence not centered on turbine hub)
+
+   integer, parameter                                 :: NumStrings = 7 ! number of strings to be looking for in the file
+
+   integer(IntKi)                                     :: FirstIndx      ! The first character of a line where data is located
+   integer(IntKi)                                     :: I              ! A loop counter
+   integer(IntKi)                                     :: LastIndx       ! The last  character of a line where data is located
+   integer(IntKi)                                     :: LineCount      ! Number of lines that have been read in the file
+
+   logical                                            :: StrNeeded(NumStrings)   ! if the string has been found
+
+   character(1024)                                    :: LINE           ! temporary storage for reading a line from the file
+
+   ! Temporary variables for error handling
+   integer(IntKi)                                     :: TmpErrStat     ! temporary error status
+   character(ErrMsgLen)                               :: TmpErrMsg      ! temporary error message
+
+   !----------------------------------------------------------------------------------------------
+   ! Initialize some variables
+   !----------------------------------------------------------------------------------------------
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   LineCount = 0
+   StrNeeded(:) = .true.
+   ZGOffset = 0.0
+   RefHt = 0.0
+   Periodic = .false.
+   LHR = .false.
+   CWise = .false.  ! default value, in case it is not in this file
+
+   !----------------------------------------------------------------------------------------------
+   ! Open summary file.
+   !----------------------------------------------------------------------------------------------
+
+   call OpenFInpFile(UnitWind, TRIM(FileName), TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   !----------------------------------------------------------------------------------------------
+   ! Read the summary file.
+   !----------------------------------------------------------------------------------------------
+
+   ! Here are the strings we're looking for, in this order:
+   ! 1) 'CLOCKWISE' (optional)
+   ! 2) 'HUB HEIGHT'
+   ! 3)     (unused; decided we didn't need to read data also stored in the binary file)
+   ! 4) 'UBAR'
+   ! 5) 'HEIGHT OFFSET' (optional)
+   ! 6) 'PERIODIC' (optional)
+   ! 7) 'BLADED LEFT-HAND RULE' (optional)
+
+   do while ((ErrStat == ErrID_None) .and. StrNeeded(NumStrings))
+
+      LineCount = LineCount + 1
+
+      read (UnitWind, '(A)', IOSTAT=TmpErrStat) LINE
+      if (TmpErrStat /= 0) then
+
+         ! the "HEIGHT OFFSET", "PERIODIC", and "BLADED LEFT-HAND RULE" parameters are not necessary.  We'll assume they are zero/false if we didn't find it.
+         ! We will also assume "CLOCKWISE" is false if we didn't find it.
+         if (StrNeeded(2) .or. StrNeeded(4)) then
+            call SetErrStat(ErrID_Fatal, ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'// &
+                            TRIM(FileName)//'". Could not find all of the required parameters.', ErrStat, ErrMsg, RoutineName)
+            return
+         else
+            exit
+         end if
+
+      end if
+
+      call Conv2UC(LINE)
+
+      if (StrNeeded(2)) then ! if "CLOCKWISE" (StrNeeded(1)) is in the file, we would have already read it. If not, it's not in this file.
+
+         if (StrNeeded(1)) then
+
+            !-------------------------------------------------------------------------------------------
+            ! #1: Get the rotation direction, using the string "CLOCKWISE"
+            !-------------------------------------------------------------------------------------------
+
+            if (INDEX(LINE, 'CLOCKWISE') > 0) then
+
+               read (LINE, *, IOSTAT=TmpErrStat) CWise          ! Look for True/False values
+
+               if (TmpErrStat /= 0) then                         ! Look for Yes/No values instead
+
+                  LINE = ADJUSTL(LINE)                      ! Remove leading spaces from input line
+
+                  select case (LINE(1:1))
+                  case ('Y')
+                     CWise = .true.
+                  case ('N')
+                     CWise = .false.
+                  case DEFAULT
+                     call SetErrStat(ErrID_Fatal, ' Error reading rotation direction (CLOCKWISE) from FF summary file.', ErrStat, ErrMsg, RoutineName)
+                     return
+                  end select
+                  cycle
+
+               end if ! TmpErrStat /= 0
+               StrNeeded(1) = .false.
+
+            end if   ! INDEX for "CLOCKWISE"
+
+         end if
+
+         !-------------------------------------------------------------------------------------------
+         ! #2: Get the hub height, using the strings "HUB HEIGHT" or "ZHUB"
+         !-------------------------------------------------------------------------------------------
+
+         if (INDEX(LINE, 'HUB HEIGHT') > 0 .or. INDEX(LINE, 'ZHUB') > 0) then
+
+            read (LINE, *, IOSTAT=TmpErrStat) RefHt
+
+            if (TmpErrStat /= 0) then
+               call SetErrStat(ErrID_Fatal, ' Error reading hub height from FF summary file.', ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+            StrNeeded(2) = .false.
+
+         end if !INDEX for "HUB HEIGHT" or "ZHUB"
+
+         !      ELSEIF ( StrNeeded(3) ) THEN
+         !
+         !         !-------------------------------------------------------------------------------------------
+         !         ! #3: Get the grid width (& height, if available), using the strings "GRID WIDTH" or "RDIAM"
+         !         !    If GRID HEIGHT is specified, use it, too. -- THIS IS UNNECESSARY AS IT'S STORED IN THE BINARY FILE
+         !         !-------------------------------------------------------------------------------------------
+
+      elseif (StrNeeded(4)) then
+
+         !-------------------------------------------------------------------------------------------
+         ! #4: Get the mean wind speed "UBAR" and turbulence intensities from following lines for
+         !     scaling Bladed-style FF binary files
+         !-------------------------------------------------------------------------------------------
+
+         if (INDEX(LINE, 'UBAR') > 0) then
+
+            FirstIndx = INDEX(LINE, '=') + 1        ! Look for the equal siqn to find the number we're looking for
+
+            read (LINE(FirstIndx:LEN(LINE)), *, IOSTAT=TmpErrStat) UBar
+
+            if (TmpErrStat /= 0) then
+               call SetErrStat(ErrID_Fatal, ' Error reading UBar binary data normalizing parameter from FF summary file.', ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+
+            do I = 1, 3
+
+               LineCount = LineCount + 1
+
+               read (UnitWind, '(A)', IOSTAT=TmpErrStat) LINE
+               if (TmpErrStat /= 0) then
+                  call SetErrStat(ErrID_Fatal, ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)// &
+                                  '". Could not find all of the required parameters.', ErrStat, ErrMsg, RoutineName)
+                  return
+               end if
+
+               FirstIndx = INDEX(LINE, '=') + 1     ! Read the number between the = and % signs
+               LastIndx = INDEX(LINE, '%') - 1
+
+               if (LastIndx <= FirstIndx) LastIndx = LEN(LINE)   ! If there's no % sign, read to the end of the line
+
+               read (LINE(FirstIndx:LastIndx), *, IOSTAT=TmpErrStat) TI(I)
+               if (TmpErrStat /= 0) then
+                  call SetErrStat(ErrID_Fatal, ' Error reading TI('//TRIM(Num2LStr(I))// &
+                                  ') binary data normalizing parameter from FF summary file.', ErrStat, ErrMsg, RoutineName)
+                  return
+               end if
+
+            end do !I
+
+            StrNeeded(4) = .false.
+
+         end if
+
+      elseif (StrNeeded(5)) then
+
+         !-------------------------------------------------------------------------------------------
+         ! #5: Get the grid "HEIGHT OFFSET", if it exists (in TurbSim). Otherwise, assume it's zero
+         !           ZGOffset = HH - GridBase - ParamData%FF%FFZHWid
+         !-------------------------------------------------------------------------------------------
+         if (INDEX(LINE, 'HEIGHT OFFSET') > 0) then
+
+            FirstIndx = INDEX(LINE, '=') + 1
+
+            read (LINE(FirstIndx:LEN(LINE)), *, IOSTAT=TmpErrStat) ZGOffset
+
+            if (TmpErrStat /= 0) then
+               call SetErrStat(ErrID_Fatal, ' Error reading height offset from FF summary file.', ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+
+            StrNeeded(5) = .false.
+
+         end if !INDEX for "HEIGHT OFFSET"
+
+      else
+
+         if (StrNeeded(6)) then
+
+            !-------------------------------------------------------------------------------------------
+            ! #6: Get the grid "PERIODIC", if it exists (in TurbSim). Otherwise, assume it's
+            !        not a periodic file (would only show up if the HEIGHT OFFSET is in the file)
+            !-------------------------------------------------------------------------------------------
+            if (INDEX(LINE, 'PERIODIC') > 0) then
+
+               Periodic = .true.
+               StrNeeded(6) = .false.
+               cycle
+            end if !INDEX for "PERIODIC"
+         end if
+
+         if (StrNeeded(7)) then
+
+            if (INDEX(LINE, 'BLADED LEFT-HAND RULE') > 0) then
+               LHR = .true.
+               StrNeeded(7) = .false.
+            end if ! INDEX for "BLADED LEFT-HAND RULE"
+
+         end if
+
+      end if ! StrNeeded
+
+   end do !WHILE
+
+   !-------------------------------------------------------------------------------------------------
+   ! Close the summary file
+   !-------------------------------------------------------------------------------------------------
+
+   close (UnitWind)
+
+   !-------------------------------------------------------------------------------------------------
+   ! Calculate the height of the grid center
+   !-------------------------------------------------------------------------------------------------
+
+   ZCenter = RefHt - ZGOffset
+
+end subroutine Bladed_ReadTurbSimSummary
+
+subroutine Bladed_ReadNativeSummary(FileName, PLExp, VLinShr, HLinShr, RefLength, TI, &
+                                    UBar, RefHt, PropagationDir, VFlowAngle, BinFileName, &
+                                    XOffset, ErrStat, ErrMsg)
+
+   character(*), intent(in)         :: FileName       !< name of the summary file
+   real(ReKi), intent(out)          :: PLExp          !< the power-law exponent for vertical wind shear
+   real(ReKi), intent(out)          :: VLinShr        !< the linear shape for vertical wind shear
+   real(ReKi), intent(out)          :: HLinShr        !< the linear shape for horizontal wind shear
+   real(ReKi), intent(out)          :: RefLength      !< Reference (rotor) diameter
+   real(ReKi), intent(out)          :: TI(3)          !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   real(ReKi), intent(out)          :: UBar           !< mean (advection) wind speed
+   real(ReKi), intent(out)          :: RefHt          !< Reference height
+   real(ReKi), intent(out)          :: PropagationDir !< propagation direction
+   real(ReKi), intent(out)          :: VFlowAngle     !< vertical flow angle
+   character(*), intent(out)        :: BinFileName    !< name of the binary file containing wind data
+   real(ReKi), intent(out)          :: XOffset        !< distance offset for start of wind files
+   integer(IntKi), intent(out)      :: ErrStat        !< returns 0 if no error encountered in the subroutine
+   character(*), intent(out)        :: ErrMsg         !< holds the error messages
+
+   character(*), parameter          :: RoutineName = "Bladed_ReadNativeSummary"
+   integer(IntKi), parameter        :: UnEc = -1      ! echo file unit number (set to something else > 0 for debugging)
+   integer(IntKi)                   :: CurLine        ! Current line to parse in FileInfo data structure
+   integer(IntKi)                   :: ErrStat2       ! temporary error status
+   character(ErrMsgLen)             :: ErrMsg2        ! temporary error message
+
+   type(FileInfoType)               :: FileInfo       ! The derived type for holding the file information.
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+!----------------------------------------------------------------------------
+! Open and read the summary file; store data in FileInfo structure.
+!----------------------------------------------------------------------------
+
+   call ProcessComFile(FileName, FileInfo, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) then
+      call Cleanup()
+      return
+   end if
+
+!----------------------------------------------------------------------------
+! Process the lines stored in FileInfo
+!----------------------------------------------------------------------------
+
+   CurLine = 1
+
+   call ParseVar(FileInfo, CurLine, 'UBAR', UBar, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'REFHT', RefHt, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'TI', TI(1), ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'TI_V', TI(2), ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'TI_W', TI(3), ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'WDIR', PropagationDir, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   PropagationDir = R2D*PropagationDir
+
+   call ParseVar(FileInfo, CurLine, 'FLINC', VFlowAngle, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   VFlowAngle = R2D*VFlowAngle ! convert to degrees
+
+   call ParseVar(FileInfo, CurLine, 'WINDF', BinFileName, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call ParseVar(FileInfo, CurLine, 'WSHEAR', PLExp, ErrStat2, ErrMsg2, UnEc)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (ErrStat >= AbortErrLev) then
+      call Cleanup()
+      return
+   end if
+
+   call ParseVar(FileInfo, CurLine, 'VLINSHEAR', VLinShr, ErrStat2, ErrMsg2, UnEc)
+   if (ErrStat2 /= ErrID_None) then
+      VLinShr = 0.0_ReKi ! this will be the default if VLINSHEAR is not in the file
+   end if
+
+   call ParseVar(FileInfo, CurLine, 'HLINSHEAR', HLinShr, ErrStat2, ErrMsg2, UnEc)
+   if (ErrStat2 /= ErrID_None) then
+      HLinShr = 0.0_ReKi ! this will be the default if HLINSHEAR is not in the file
+   end if
+
+   call ParseVar(FileInfo, CurLine, 'REFLENGTH', RefLength, ErrStat2, ErrMsg2, UnEc)
+   if (ErrStat2 /= ErrID_None) then
+      RefLength = 0.0_ReKi ! this will be the default if RefLength is not in the file; it will cause an error if either of the linear shears are non-zero
+   end if
+
+   call ParseVar(FileInfo, CurLine, 'XOffset', XOffset, ErrStat2, ErrMsg2, UnEc)
+   if (ErrStat2 /= ErrID_None) then
+      XOffset = 0.0_ReKi ! this will be the default if offset is not in the file
+   end if
+
+!----------------------------------------------------------------------------
+! Clean FileInfo data structure (including pointers and allocatable arrays)
+!----------------------------------------------------------------------------
+
+   call Cleanup()
+
+contains
+
+   subroutine Cleanup()
+      call NWTC_Library_DestroyFileInfoType(FileInfo, ErrStat2, ErrMsg2)
+   end subroutine Cleanup
+
+end subroutine Bladed_ReadNativeSummary
+
+!====================================================================================================
+!>   Reads the binary headers from the turbulence files of the old Bladed variety.  Note that
+   !!   because of the normalization, neither ParamData%FF%NZGrids or ParamData%FF%NYGrids are larger than 32 points.
+   !!   21-Sep-2009 - B. Jonkman, NREL/NWTC.
+   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+subroutine Bladed_ReadHeader0(WindFileUnit, G3D, NativeBladedFmt, ErrStat, ErrMsg)
+
+   integer(IntKi), intent(in)             :: WindFileUnit      !< unit number of already-opened wind file
+   type(Grid3DFieldType), intent(inout)   :: G3D               !< Parameters
+   logical, intent(in)                    :: NativeBladedFmt   !< Whether this should ignore the advection speed in the binary file
+   integer(IntKi), intent(out)            :: ErrStat           !< error status
+   character(*), intent(out)              :: ErrMsg            !< error message
+
+   type :: HeaderType
+      integer(B2Ki)  :: NComp
+      integer(B2Ki)  :: DeltaZ, DeltaY, DeltaX
+      integer(B2Ki)  :: NStepsHalf, MWS10
+      integer(B2Ki)  :: zLu, yLu, xLu, dummy, rnd
+      integer(B2Ki)  :: NZ1000, NY1000
+   end type
+
+   character(*), parameter    :: RoutineName = "Bladed_ReadHeader0"
+   real(ReKi)                 :: FFXDelt
+   real(ReKi)                 :: FFYDelt
+   real(ReKi)                 :: FFZDelt
+
+   type(HeaderType)           :: header
+   integer(B2Ki)              :: dummy(6)
+   integer(IntKi)             :: iostat     ! for checking the IOSTAT from a READ or Open statement
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   !----------------------------------------------------------------------------
+   ! Read the header (file has just been opened)
+   !----------------------------------------------------------------------------
+
+   ! Read header
+   read (WindFileUnit, IOSTAT=iostat) header
+   if (iostat /= 0) then
+      call SetErrStat(ErrID_Fatal, ' Error reading header 0 from binary FF file.', &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   G3D%NComp = -1*header%NComp
+
+   FFZDelt = 0.001*header%DeltaZ
+   G3D%InvDZ = 1.0/FFZDelt
+
+   FFYDelt = 0.001*header%DeltaY
+   G3D%InvDY = 1.0/FFYDelt
+
+   FFXDelt = 0.001*header%DeltaX
+   G3D%NSteps = 2*header%NStepsHalf
+
+   if (.not. NativeBladedFmt) G3D%MeanWS = 0.1*header%MWS10
+   G3D%InvMWS = 1.0/G3D%MeanWS
+   G3D%DTime = FFXDelt/G3D%MeanWS
+   G3D%Rate = 1.0/G3D%DTime
+
+   G3D%NZGrids = header%NZ1000/1000
+   G3D%ZHWid = 0.5*FFZDelt*(G3D%NZGrids - 1)
+
+   G3D%NYGrids = header%NY1000/1000
+   G3D%YHWid = 0.5*FFYDelt*(G3D%NYGrids - 1)
+
+   if (G3D%NComp == 3) then
+      read (WindFileUnit, IOSTAT=iostat) dummy
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading header 0 from binary FF file.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+end subroutine Bladed_ReadHeader0
+
+subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMsg)
+
+   integer(IntKi), intent(in)             :: UnitWind          !< unit number of already-opened wind file
+   real(ReKi), intent(out)                :: TI(3)             !< turbulence intensity contained in file header
+   type(Grid3DFieldType), intent(inout)   :: G3D               !< Parameters
+   logical, intent(in)                    :: NativeBladedFmt   !< Whether this should ignore the advection speed in the binary file
+   integer(IntKi), intent(out)            :: ErrStat           !< error status
+   character(*), intent(out)              :: ErrMsg            !< error message
+
+   type :: Turb4Type
+      integer(B4Ki)  :: NComp
+      real(SiKi)     :: Latitude, RoughLen, RefHeight, TurbInt(3)
+   end type
+
+   type :: Turb78Type
+      integer(B4Ki)  :: HeaderSize, NComp
+   end type
+
+   type :: Turb7Type
+      real(SiKi)     :: CoherenceDecay, CoherenceScale
+   end type
+
+   type :: Turb8Type
+      real(SiKi)     :: dummy1(6)
+      integer(B4Ki)  :: dummy2(3)
+      real(SiKi)     :: dummy3(2)
+      integer(B4Ki)  :: dummy4(3)
+      real(SiKi)     :: dummy5(2)
+   end type
+
+   type :: Sub1Type
+      real(SiKi)     :: DeltaZ, DeltaY, DeltaX
+      integer(B4Ki)  :: NStepsHalf
+      real(SiKi)     :: MeanWS, zLu, yLu, xLu
+      integer(B4Ki)  :: dummy, rnd, NZ, NY
+   end type
+
+   type :: Sub2Type
+      real(SiKi)     :: zLv, yLv, xLv, zLw, yLw, xLw
+   end type
+
+   character(*), parameter    :: RoutineName = "Bladed_ReadHeader1"
+
+   type(Turb4Type)            :: Turb4
+   type(Turb78Type)           :: Turb78
+   type(Sub1Type)             :: Sub1
+   type(Sub2Type)             :: Sub2
+   type(Turb7Type)            :: Turb7
+   type(Turb8Type)            :: Turb8
+
+   real(ReKi)                 :: FFXDelt
+   real(ReKi)                 :: FFYDelt
+   real(ReKi)                 :: FFZDelt
+   integer(B2Ki)              :: Dum_Int2
+   integer(B2Ki)              :: TurbType
+   integer(IntKi)             :: iostat
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Initialize turbulence intensities
+   TI(:) = -1                                                                                !Initialize to -1 (not all models contain TI)
+
+   !----------------------------------------------------------------------------
+   ! File reading
+   !----------------------------------------------------------------------------
+
+   ! Read 2-byte integer. Can't use library routines for this.
+   read (UnitWind, IOSTAT=iostat) Dum_Int2                                                 ! -99 (file ID)
+   if (iostat /= 0) then
+      call SetErrStat(ErrID_Fatal, ' Error reading integer from binary FF file.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Read 2-byte integer. Can't use library routines for this.
+   read (UnitWind, IOSTAT=iostat) TurbType                                                 ! turbulence type
+   if (iostat /= 0) then
+      call SetErrStat(ErrID_Fatal, ' Error reading turbulence type from binary FF file.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   select case (TurbType)
+
+   case (1, 2)          ! 1-component Von Karman (1) or Kaimal (2)
+      G3D%NComp = 1
+
+   case (3, 5)          ! 3-component Von Karman (3) or IEC-2 Kaimal (5)
+      G3D%NComp = 3
+
+   case (4)             ! improved Von Karman
+
+      read (UnitWind, IOSTAT=iostat) Turb4
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading number of components from binary FF file.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      G3D%NComp = Turb4%NComp
+      TI = Turb4%TurbInt
+
+   case (7, 8)          ! General Kaimal (7) or  Mann model (8)
+
+      read (UnitWind, IOSTAT=iostat) Turb78
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading number of header records from binary FF file.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+      G3D%NComp = Turb78%NComp
+
+   case DEFAULT
+
+      call SetErrStat(ErrID_Warn, ' InflowWind does not recognize the full-field turbulence file type ='// &
+                      TRIM(Num2LStr(int(TurbType)))//'.', ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+   end select
+
+   read (UnitWind, IOSTAT=iostat) Sub1
+   if (iostat /= 0) then
+      call SetErrStat(ErrID_Fatal, ' Error reading header Sub1 from binary FF file.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   FFZDelt = Sub1%DeltaZ
+   G3D%InvDZ = 1.0/FFZDelt
+
+   FFYDelt = Sub1%DeltaY
+   G3D%InvDY = 1.0/FFYDelt
+
+   FFXDelt = Sub1%DeltaX
+
+   G3D%NSteps = 2*Sub1%NStepsHalf
+
+   if (.not. NativeBladedFmt) G3D%MeanWS = Sub1%MeanWS
+   G3D%InvMWS = 1.0/G3D%MeanWS
+   G3D%DTime = FFXDelt/G3D%MeanWS
+   G3D%Rate = 1.0/G3D%DTime
+
+   G3D%NZGrids = Sub1%NZ
+   G3D%ZHWid = 0.5*FFZDelt*(G3D%NZGrids - 1)    ! half the vertical size of the grid
+
+   G3D%NYGrids = Sub1%NY
+   G3D%YHWid = 0.5*FFYDelt*(G3D%NYGrids - 1)
+
+   ! unused variables: zLv, yLv, xLv, zLw, yLw, xLw
+   if (G3D%NComp == 3) then
+      read (UnitWind, IOSTAT=iostat) Sub2
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading 4-byte length scales from binary FF file.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+
+   select case (TurbType)
+   case (7)       ! General Kaimal model
+
+      ! Unused variables: coherence decay constant and coherence scale parameter in m
+      read (UnitWind, IOSTAT=iostat) Turb7
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading header for Turb7 from binary FF file.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+   case (8)       ! Mann model
+
+      ! Unused variables
+      read (UnitWind, IOSTAT=iostat) Turb8
+      if (iostat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading header for Turb8 from binary FF file.', &
+                         ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+
+   end select !TurbType
+
+end subroutine Bladed_ReadHeader1
+
+subroutine Bladed_ReadGrids(UnitWind, NativeBladedFmt, CWise, LHR, TI, G3D, ErrStat, ErrMsg)
+
+   integer(IntKi), intent(in)             :: UnitWind          !< unit number of already-opened wind file
+   logical, intent(in)                    :: NativeBladedFmt   !< whether this data is in native Bladed format (scale to zero mean and unit standard deviation)
+   logical, intent(in)                    :: CWise             !< clockwise flag (determines if y is increasing or decreasing in file)
+   logical, intent(in)                    :: LHR               !< Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
+   real(ReKi), intent(in)                 :: TI(3)             !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   type(Grid3DFieldType), intent(inout)   :: G3D               !< Parameters
+   integer(IntKi), intent(out)            :: ErrStat           !< error status
+   character(*), intent(out)              :: ErrMsg            !< error message
+
+   character(*), parameter    :: RoutineName = "Bladed_ReadGrids"
+   real(ReKi)                 :: FF_Scale(3)    !< used for "un-normalizing" the data
+   real(ReKi)                 :: FF_Offset(3)   !< used for "un-normalizing" the data
+   integer(B2Ki), allocatable :: raw_ff(:, :, :)
+   integer(IntKi)             :: CFirst, CLast, CStep
+   integer(IntKi)             :: IC, IR, IT
+   integer(IntKi)             :: TmpErrStat
+   character(ErrMsgLen)       :: TmpErrMsg
+
+   ErrMsg = ""
+   ErrStat = ErrID_None
+
+   if (NativeBladedFmt) then
+      FF_Scale = 0.001_ReKi
+      FF_Offset = 0.0_ReKi
+   else
+      FF_Scale = 0.001_ReKi*G3D%MeanWS*TI/100.0_ReKi
+      FF_Offset = (/G3D%MeanWS, 0.0_ReKi, 0.0_ReKi/)  ! used for "un-normalizing" the data
+   end if
+
+   ! Bladed convention has positive V pointed along negative Y
+   if (LHR) then ! left-hand rule
+      FF_Scale(2) = -FF_Scale(2)
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Generate an informative message
+   !----------------------------------------------------------------------------
+   ! This could take a while, so we'll write a message to tell users what's going on:
+
+   call WrScr(NewLine//'   Reading a '//TRIM(Num2LStr(G3D%NYGrids))//'x'// &
+              TRIM(Num2LStr(G3D%NZGrids))// &
+              ' grid ('//TRIM(Num2LStr(G3D%YHWid*2))//' m wide, '// &
+              TRIM(Num2LStr(G3D%GridBase))//' m to '// &
+              TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2))// &
+              ' m above ground) with a characteristic wind speed of '// &
+              TRIM(Num2LStr(G3D%MeanWS))//' m/s. ')
+
+   !----------------------------------------------------------------------------
+   ! Allocate space for the data array
+   !----------------------------------------------------------------------------
+
+   ! Add another step, just in case there is an odd number of steps.
+   G3D%NSteps = G3D%NSteps + 1
+
+   ! If velocity array is allocated and the size is wrong, deallocate
+   if (allocated(G3D%Vel)) then
+      if (SIZE(G3D%Vel, 1) /= G3D%NZGrids .or. &
+          SIZE(G3D%Vel, 2) /= G3D%NYGrids .or. &
+          SIZE(G3D%Vel, 3) /= G3D%NComp .or. &
+          SIZE(G3D%Vel, 3) /= G3D%NSteps) then
+         deallocate (G3D%Vel)
+      end if
+   end if
+
+   ! If velocity array isn't allocated, allocate it with proper size
+   if (.not. ALLOCATED(G3D%Vel)) then
+      call AllocAry(G3D%Vel, G3D%NComp, G3D%NYGrids, G3D%NZGrids, G3D%NSteps, &
+                    'Full-field wind data array.', TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+
+   ! Allocate space to read all data for a given time slice
+   allocate (raw_ff(G3D%NComp, G3D%NYGrids, G3D%NZGrids), STAT=TmpErrStat)
+   if (TmpErrStat /= 0) then
+      call SetErrStat(ErrID_Fatal, 'Error allocating memory for '// &
+                      TRIM(Num2LStr(G3D%NComp*G3D%NYGrids*G3D%NZGrids))// &
+                      ' B2Ki in the raw data array.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Initialize the data and set column indexing to account for
+   ! direction of turbine rotation (CWise)
+   !----------------------------------------------------------------------------
+
+   ! Initialize velocity components not in file to zero
+   do IC = G3D%NComp + 1, 3
+      G3D%Vel(IC, :, :, :) = 0.0_SiKi
+   end do
+
+   if (CWise) then
+      CFirst = G3D%NYGrids
+      CLast = 1
+      CStep = -1
+   else
+      CFirst = 1
+      CLast = G3D%NYGrids
+      CStep = 1
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Loop through all the time steps, reading the data and converting to m/s
+   !----------------------------------------------------------------------------
+
+   ! Loop through time steps
+   do IT = 1, G3D%NSteps
+
+      ! Read raw data (NFFComp,NYGrids,NZGrids)
+      read (UnitWind, IOStat=TmpErrStat) raw_ff
+
+      ! If data was read successfully, transfer into velocity array, continue
+      if (TmpErrStat == 0) then
+         do IC = 1, G3D%NComp
+            G3D%Vel(IC, :, :, IT) = real(FF_Offset(IC) + FF_Scale(IC)*raw_ff(IC, CFirst:CLast:CStep, :), SiKi)
+         end do
+         cycle
+      end if
+
+      ! If time iterator equals number of steps, then the number of steps were even
+      ! so fix the number of steps and exit loop
+      if (IT == G3D%NSteps) then
+         G3D%NSteps = G3D%NSteps - 1
+         ErrStat = ErrID_None
+         exit
+      end if
+
+      ! Otherwise, an error occurred reading the file, return
+      call SetErrStat(ErrID_Fatal, ' Error reading binary data file. '// &
+                      'ic = '//TRIM(Num2LStr(ic))// &
+                      ', ir = '//TRIM(Num2LStr(ir))// &
+                      ', it = '//TRIM(Num2LStr(it))// &
+                      ', nffsteps = '//TRIM(Num2LStr(G3D%NSteps)), ErrStat, ErrMsg, RoutineName)
+      return
+   end do
+
+   if (G3D%Periodic) then
+      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(G3D%NSteps))//' time steps of '// &
+                 TRIM(Num2LStr(G3D%Rate))//'-Hz full-field data (period of '// &
+                 TRIM(Num2LStr(G3D%DTime*G3D%NSteps))//' seconds).')
+
+   else
+      call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(G3D%NSteps))//' time steps of '// &
+                 TRIM(Num2LStr(G3D%Rate))//'-Hz full-field data ('// &
+                 TRIM(Num2LStr(G3D%DTime*(G3D%NSteps - 1)))//' seconds).')
+   end if
+
+end subroutine Bladed_ReadGrids
+
+subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
+
+   integer(IntKi)                         :: UnitWind       !< unit number of wind file to be opened
+   type(Grid3DFieldType), intent(inout)   :: G3D            !< Parameters
+   character(*), intent(in)               :: TwrFileName
+   integer(IntKi), intent(out)            :: ErrStat        !< error status return value (0=no error; non-zero is error)
+   character(*), intent(out)              :: ErrMsg         !< a message for errors that occur
+
+   type :: HeaderType
+      real(SiKi)     :: DZ, DX, Zmax
+      integer(B4Ki)  :: NumOutSteps, NumZ
+      real(SiKi)     :: UHub, TI(3)
+   end type
+
+   character(*), parameter    :: RoutineName = "Bladed_ReadTower"
+   real(ReKi), parameter      :: FF_Offset(3) = (/1.0, 0.0, 0.0/)  ! used for "un-normalizing" the data
+   real(ReKi), parameter      :: TOL = 1E-4     ! tolerence for wind file comparisons
+   integer(IntKi)             :: IC, IT         ! loop counters
+   real(SiKi)                 :: TI(3)          ! scaling values for "un-normalizing the data" [approx. turbulence intensities of the wind components]
+   integer(B2Ki), allocatable :: raw_twr(:, :)  ! holds tower velocity for one timestep
+   type(HeaderType)           :: header
+   integer(IntKi)             :: TmpErrStat     ! IOSTAT value.
+   character(ErrMsgLen)       :: TmpErrMsg
+
+   ErrMsg = ''
+   ErrStat = ErrID_None
+
+   !----------------------------------------------------------------------------
+   ! Initialization
+   !----------------------------------------------------------------------------
+
+   ! If number of wind components is not three, return with error
+   if (G3D%NComp /= 3) then
+      call SetErrStat(ErrID_Fatal, ' Error: Tower binary files require 3 wind components.', &
+                      ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Initialize the number of tower grids to zero
+   G3D%NTGrids = 0
+
+   !----------------------------------------------------------------------------
+   ! Open the file
+   !----------------------------------------------------------------------------
+
+   call OpenBInpFile(UnitWind, TRIM(TwrFileName), TmpErrStat, TmpErrMsg)
+   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   !----------------------------------------------------------------------------
+   ! Read the header information and check that it's compatible with the
+   ! FF Bladed-style binary parameters already read.
+   !----------------------------------------------------------------------------
+
+   read (UnitWind, IOSTAT=TmpErrStat) header
+   if (TmpErrStat /= 0) then
+      call SetErrStat(ErrID_Fatal, &
+                      ' Error reading header of the binary tower file "' &
+                      //TRIM(TwrFileName)//'."', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! If delta Z in file doesn't match tower file
+   if (ABS(header%DZ*G3D%InvDZ - 1) > TOL) then
+      call SetErrStat(ErrID_Fatal, ' Z resolution in the FF binary file does not match the tower file.', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! If X resolution doesn't match the tower file
+   if (ABS(header%DX*G3D%InvMWS/G3D%DTime - 1) > TOL) then
+      call SetErrStat(ErrID_Fatal, ' Time resolution in the FF binary file does not match the tower file.', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! If the height doesn't match the tower file
+   if (ABS(header%Zmax/G3D%GridBase - 1) > TOL) then
+      call SetErrStat(ErrID_Fatal, ' Height in the FF binary file does not match the tower file "'//TRIM(TwrFileName)//'."', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! Number of time steps doesn't match the tower file
+   if (header%NumOutSteps /= G3D%NSteps) then
+      call SetErrStat(ErrID_Fatal, ' Number of time steps in the FF binary file does not match the tower file.', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! If mean wind speed doesn't match tower file
+   if (ABS(header%UHub*G3D%InvMWS - 1) > TOL) then
+      call SetErrStat(ErrID_Fatal, ' Mean wind speed in the FF binary file does not match the tower file.', &
+                      ErrStat, ErrMsg, RoutineName)
+   end if
+
+   ! If any of the previous checks failed, or the number of tower grids is zero,
+   ! close the wind file and return
+   if (ErrStat >= AbortErrLev .or. header%NumZ == 0) then
+      close (UnitWind)
+      return
+   end if
+
+   ! Set number of tower grids from header
+   G3D%NTGrids = header%NumZ
+
+   ! Set turbulence intensity from header
+   TI = header%TI
+
+   !----------------------------------------------------------------------------
+   ! Allocate arrays for the tower points
+   !----------------------------------------------------------------------------
+
+   ! If tower array is allocated and the wrong size, deallocate
+   if (allocated(G3D%VelTower)) then
+      if (size(G3D%VelTower, 1) /= G3D%NComp .or. &
+          size(G3D%VelTower, 1) /= G3D%NTGrids .or. &
+          size(G3D%VelTower, 1) /= G3D%NSteps) then
+         deallocate (G3D%VelTower)
+      end if
+   end if
+
+   ! If the tower array isn't allocated, allocate it
+   if (.not. ALLOCATED(G3D%VelTower)) then
+      call AllocAry(G3D%VelTower, G3D%NComp, G3D%NTGrids, G3D%NSteps, &
+                    'Tower wind data array.', TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
+
+   ! Allocate space to read all data for a given time slice
+   allocate (raw_twr(G3D%NComp, G3D%NTGrids), STAT=TmpErrStat)
+   if (TmpErrStat /= 0) then
+      call SetErrStat(ErrID_Fatal, 'Error allocating memory for '// &
+                      TRIM(Num2LStr(G3D%NComp*G3D%NYGrids*G3D%NZGrids))// &
+                      ' B2Ki in the raw data array.', ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Read the 16-bit time-series data and scale it to 32-bit reals
+   !----------------------------------------------------------------------------
+
+   ! Loop through time.
+   do IT = 1, G3D%NSteps
+
+      ! Read wind compnents for this time slice. Can't use library read routines for this.
+      read (UnitWind, IOSTAT=TmpErrStat) raw_twr       ! normalized wind-component, INT(2)
+      if (TmpErrStat /= 0) then
+         call SetErrStat(ErrID_Fatal, ' Error reading binary tower data file. it = '//TRIM(Num2LStr(it))// &
+                         ', nffsteps = '//TRIM(Num2LStr(G3D%NSteps)), ErrStat, ErrMsg, RoutineName)
+         G3D%NTGrids = 0
+         return
+      end if
+
+      ! Loop through wind components and populate array after scaling to m/s
+      do IC = 1, G3D%NComp
+         G3D%VelTower(IC, :, IT) = real(G3D%MeanWS*(FF_Offset(IC) + 0.00001*TI(IC)*raw_twr(IC, :)), SiKi)
+      end do
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Close the file
+   !----------------------------------------------------------------------------
+
+   close (UnitWind)
+
+   call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(G3D%NSteps))//' time steps of '// &
+              TRIM(Num2LStr(G3D%NTGrids))//'x1 tower data grids.')
+
+end subroutine Bladed_ReadTower
+
+subroutine Grid3DField_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower, FileDat)
 
    type(Grid3DFieldType), intent(in)  :: Grid3DField
    character(*), intent(in)         :: FileName
@@ -1215,1066 +2470,196 @@ subroutine PopulateWindFileDatFromGrid3DField(Grid3DField, FileName, WindType, H
 
 end subroutine
 
-! subroutine Read_Bladed_Native(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
-
-!    ! Passed Variables:
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p        !< Parameters
-!    type(IfW_Interp_InitInputType), intent(inout)   :: InitInp  !< Initialization inputs
-!    type(IfW_Interp_InitOutputType), intent(out)    :: InitOut  !< Initialization outputs
-!    integer(IntKi), intent(in)       :: WindFileUnit            !< unit number for the wind file
-!    integer(IntKi), intent(in)       :: SumFileUnit             !< unit number for the summary file
-!    integer(IntKi), intent(out)      :: ErrStat                 !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)        :: ErrMsg                  !< message about the error encountered
-
-!    ! Local Parameters:
-!    character(*), parameter          :: RoutineName = "Read_Bladed_Native"
-
-!    ! Local Variables:
-!    character(1024)                  :: WindFileName
-!    logical                          :: NativeFormat      !< file is in native bladed format
-!    logical                          :: TowerFileExist    !< tower file exists
-!    character(1024)                  :: BinFileName
-!    character(1024)                  :: PriPath
-!    character(1028)                  :: SumFile           ! length is LEN(ParamData%WindFileName) + the 4-character extension.
-!    character(1028)                  :: TwrFile           ! length is LEN(ParamData%WindFileName) + the 4-character extension.
-
-!    integer(IntKi)                   :: ScaleMethod       ! Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]
-!    real(ReKi)                       :: NatTI(3), TI      ! Turbulence scaling factor for each direction [ScaleMethod=1]
-!    real(ReKi)                       :: SF(3)             ! Turbulence scaling factor for each direction [ScaleMethod=1]
-!    real(ReKi)                       :: SigmaF(3)         ! Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2]
-
-!    real(ReKi)                       :: FFXDelt, FFYDelt, FFZDelt
-!    real(ReKi)                       :: XOffset
-!    real(ReKi)                       :: UBar
-!    real(ReKi)                       :: ZCenter
-
-!    logical                          :: CWise
-!    logical                          :: LHR               ! Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
-!    logical                          :: exists
-
-!    integer(B2Ki)                    :: FileFormat
-!    integer(IntKi)                   :: TmpErrStat        ! temporary error status
-!    character(ErrMsgLen)             :: TmpErrMsg         ! temporary error message
-
-!    ! Wind file is specified directly in input file
-!    WindFileName = InitInp%WindFileNames(1)
-
-!    ! No tower file is used
-!    TowerFileExist = .false.
-
-!    ! Read the native bladed summary file
-!    call Read_Bladed_Native_Summary( &
-!       WindFileName, p%MeanFFWS, p%RefHt, InitOut%TI, InitOut%PropagationDir, &
-!       InitOut%VFlowAngle, BinFileName, p%PLExp, p%InitXPosition, ErrStat, ErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    ! Binary file will be relative to the path where the primary input file is located.
-!    if (pathIsRelative(BinFileName)) then
-!       call GetPath(WindFileName, PriPath)
-!       BinFileName = TRIM(PriPath)//TRIM(BinFileName)
-!    end if
-
-!    ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-!    if (InitInp%FixedWindFileRootName) then
-!       if (InitInp%TurbineID == 0) then
-!          ! .TRUE. for the FAST.Farm low-resolution domain
-!          BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'Low'
-!       else
-!          ! FAST.Farm high-resolution domain(s)
-!          BinFileName = TRIM(BinFileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-!       end if
-!    end if
-
-!    p%WindProfileType = WindProfileType_PL
-!    p%Periodic = .true.
-
-!    InitInp%ScaleMethod = ScaleMethod_StdDev
-!    InitInp%SigmaF = InitOut%TI*p%MeanFFWS
-!    InitInp%SF = InitInp%SigmaF
-
-!    InitInp%RefHt = p%RefHt
-!    InitInp%URef = p%MeanFFWS
-!    InitInp%WindProfileType = WindProfileType_PL
-
-!    CWise = .false.
-!    ZCenter = p%RefHt
-!    TI = 100.0_ReKi
-!    UBar = 0.0_ReKi
-!    LHR = .true.
-
-! end subroutine
-
-! !> Read_Bladed reads the bladed full-field wind file.
-! subroutine Read_Bladed_Binary(p, InitInp, InitOut, WindFileUnit, SumFileUnit, ErrStat, ErrMsg)
-
-!    ! Passed Variables:
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p        !< Parameters
-!    type(IfW_Interp_InitInputType), intent(inout)   :: InitInp  !< Initialization inputs
-!    type(IfW_Interp_InitOutputType), intent(out)    :: InitOut  !< Initialization outputs
-!    integer(IntKi), intent(in)       :: WindFileUnit            !< unit number for the wind file
-!    integer(IntKi), intent(in)       :: SumFileUnit             !< unit number for the summary file
-!    integer(IntKi), intent(out)      :: ErrStat                 !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)        :: ErrMsg                  !< message about the error encountered
-
-!    ! Local Parameters:
-!    character(*), parameter          :: RoutineName = "Read_Bladed_Binary"
-!    logical, parameter               :: NativeFormat = .false.
-
-!    ! Local Variables:
-!    character(1024)                  :: WindFileName
-!    logical                          :: TowerFileExist    !< tower file exists
-!    character(1024)                  :: BinFileName
-!    character(1024)                  :: PriPath
-!    character(1028)                  :: SumFile           ! length is LEN(ParamData%WindFileName) + the 4-character extension.
-!    character(1028)                  :: TwrFile           ! length is LEN(ParamData%WindFileName) + the 4-character extension.
-
-!    integer(IntKi)                   :: ScaleMethod       ! Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]
-
-!    real(ReKi)                       :: TI(3)             ! Turbulence scaling factor for each direction [ScaleMethod=1]
-!    real(ReKi)                       :: SF(3)             ! Turbulence scaling factor for each direction [ScaleMethod=1]
-!    real(ReKi)                       :: SigmaF(3)         ! Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2]
-
-!    real(ReKi)                       :: XOffset
-!    real(ReKi)                       :: UBar
-!    real(ReKi)                       :: ZCenter
-
-!    logical                          :: CWise
-!    logical                          :: LHR               ! Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
-!    logical                          :: exists
-
-!    integer(IntKi)                   :: TmpErrStat        ! temporary error status
-!    character(ErrMsgLen)             :: TmpErrMsg         ! temporary error message
-
-!    !----------------------------------------------------------------------------
-!    ! Initialize variables
-!    !----------------------------------------------------------------------------
-
-!    ErrStat = ErrID_None
-!    ErrMsg = ""
-
-!    InitOut%PropagationDir = 0.0_ReKi
-!    InitOut%VFlowAngle = 0.0_ReKi
-!    BinFileName = InitInp%WindFileNames(1)
-
-!    ! Create summary and tower file paths from bin file path
-!    call GetRoot(BinFileName, SumFile)
-!    TwrFile = TRIM(SumFile)//'.twr'
-!    SumFile = TRIM(SumFile)//'.sum'
-
-!    ! Read the summary file to get necessary scaling information
-!    call Read_Bladed_TurbSim_Summary(WindFileUnit, SumFile, CWise, ZCenter, TI, UBar, &
-!                                     p%RefHt, p%Periodic, LHR, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-!    if (InitInp%FixedWindFileRootName) then
-!       if (InitInp%TurbineID == 0) then
-!          ! .TRUE. for the FAST.Farm low-resolution domain
-!          WindFileName = TRIM(WindFileName)//TRIM(PathSep)//'Low'
-!       else
-!          ! FAST.Farm high-resolution domain(s)
-!          WindFileName = TRIM(WindFileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-!       end if
-!    end if
-
-!    WindFileName = TRIM(WindFileName)//'.wnd'
-
-!    InitOut%PropagationDir = 0.0_ReKi
-!    InitOut%VFlowAngle = 0.0_ReKi
-!    BinFileName = WindFileName
-
-!    !----------------------------------------------------------------------------
-!    ! Write the summary file
-!    !----------------------------------------------------------------------------
-
-!    if (SumFileUnit > 0) then
-!       write (SumFileUnit, '(A)')
-!       write (SumFileUnit, '(A)') 'Bladed-style wind type.  Read by InflowWind sub-module '// &
-!          TRIM(IfW_Interp_Ver%Name)//' '//TRIM(IfW_Interp_Ver%Ver)
-!       write (SumFileUnit, '(A)') TRIM(TmpErrMsg)
-!       write (SumFileUnit, '(A)') '     FileName:                    '//TRIM(InitInp%WindFileNames(1))
-!       write (SumFileUnit, '(A34,I3)') '     Binary file format id:       ', p%WindFileFormat
-!       write (SumFileUnit, '(A34,G12.4)') '     Reference height (m):        ', p%RefHt
-!       write (SumFileUnit, '(A34,G12.4)') '     Timestep (s):                ', p%FFDTime
-!       write (SumFileUnit, '(A34,I12)') '     Number of timesteps:         ', p%NSteps
-!       write (SumFileUnit, '(A34,G12.4)') '     Mean windspeed (m/s):        ', p%MeanFFWS
-!       write (SumFileUnit, '(A)') '     Characteristic TI:            [ '// &
-!          TRIM(Num2LStr(TI(1)))//', '//TRIM(Num2LStr(TI(2)))//', '//TRIM(Num2LStr(TI(3)))//' ] '
-!       write (SumFileUnit, '(A34,L1)') '     Windfile is periodic:        ', p%Periodic
-!       write (SumFileUnit, '(A34,L1)') '     Windfile includes tower:     ', p%NTGrids > 0
-
-!       if (p%Periodic) then
-!          write (SumFileUnit, '(A)') '     Time range (s):              [ '// &
-!             TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(p%TotalTime))//' ]'
-!       else  ! Shift the time range to compensate for the shifting of the wind grid
-!          write (SumFileUnit, '(A)') '     Time range (s):              [ '// &
-!             TRIM(Num2LStr(-p%InitXPosition*p%InvMFFWS))//' : '// &
-!             TRIM(Num2LStr(p%TotalTime - p%InitXPosition*p%InvMFFWS))//' ]'
-!       end if
-
-!       write (SumFileUnit, '(A)') '     Y range (m):                 [ '// &
-!          TRIM(Num2LStr(-p%FFYHWid))//' : '//TRIM(Num2LStr(p%FFYHWid))//' ]'
-
-!       if (p%NTGrids > 0) then
-!          write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
-!             TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(p%RefHt + p%FFZHWid))//' ]'
-!       else
-!          write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
-!             TRIM(Num2LStr(p%RefHt - p%FFZHWid))//' : '//TRIM(Num2LStr(p%RefHt + p%FFZHWid))//' ]'
-!       end if
-
-!    end if
-
-! end subroutine
-
-! subroutine Read_Bladed_Wind_File(p, WindFileUnit, BinFileName, NativeFormat, UBar, ZCenter, TI, ErrStat, ErrMsg)
-
-!    ! Passed Variables:
-!    type(IfW_Interp_ParameterType), intent(inout)  :: p         !< Parameters
-!    integer(IntKi), intent(in)       :: WindFileUnit            !< unit number for the wind file
-!    character(*), intent(in)         :: BinFileName
-!    logical, intent(in)              :: NativeFormat
-!    real(ReKi), intent(in)           :: UBar
-!    real(ReKi), intent(in)           :: ZCenter
-!    real(ReKi), intent(inout)        :: TI(3)
-!    integer(IntKi), intent(out)      :: ErrStat                 !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)        :: ErrMsg                  !< message about the error encountered
-
-!    ! Local Parameters:
-!    character(*), parameter          :: RoutineName = "Read_Bladed_Wind_File"
-
-!    ! Local Variables:
-!    integer(B2Ki)                    :: FileFormat
-!    real(ReKi)                       :: FFXDelt, FFYDelt, FFZDelt
-!    real(ReKi)                       :: BinTI(3)          ! Turbulence scaling factor for each direction [ScaleMethod=1]
-!    integer(IntKi)                   :: TmpErrStat        ! temporary error status
-!    character(ErrMsgLen)             :: TmpErrMsg         ! temporary error message
-
-!    !----------------------------------------------------------------------------
-!    ! Open the binary file and read contents
-!    !----------------------------------------------------------------------------
-
-!    ! Open the wind file
-!    call OpenBInpFile(WindFileUnit, TRIM(BinFileName), TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    ! Read the first binary integer from the file to get info on the type.
-!    ! Cannot use library read routines since this is a 2-byte integer.
-!    read (WindFileUnit, IOSTAT=TmpErrStat) FileFormat
-!    if (TmpErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading first binary integer from file "' &
-!                       //TRIM(BinFileName)//'."', ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Save file format in parameters struct
-!    p%WindFileFormat = FileFormat
-
-!    ! Read file headers
-!    select case (p%WindFileFormat)
-!    case (-1, -2, -3)
-!       call Read_Bladed_FF_Header0(p, WindFileUnit, NativeFormat, FFXDelt, FFYDelt, FFZDelt, TmpErrStat, TmpErrMsg)
-!    case (-99)
-!       call Read_Bladed_FF_Header1(p, WindFileUnit, NativeFormat, BinTI, FFXDelt, FFYDelt, FFZDelt, TmpErrStat, TmpErrMsg)
-!       where (BinTI > 0) TI = BinTI
-!    case default
-!       call SetErrStat(ErrID_Fatal, ' This is not a bladed-style binary wind file (binary format identifier: '// &
-!                       TRIM(Num2LStr(p%WindFileFormat))//'.  This might be a TurbSim binary wind file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!    end select
-!    if (ErrStat >= AbortErrLev) return
-
-!    ! If not native format and mean wind speed is different from summary file
-!    if ((.not. NativeFormat) .and. (ABS(UBar - p%MeanFFWS) > 0.1)) then
-!       call SetErrStat(ErrID_Fatal, ' Error: Incompatible mean hub-height wind speeds in FF wind files. '// &
-!                       '(Check that the .sum and .wnd files were generated together.)', ErrStat, ErrMsg, RoutineName)
-!       close (WindFileUnit)
-!       return
-!    end if
-
-!    ! Calculate the height of the bottom of the grid (meters), error if less than zero
-!    p%GridBase = ZCenter - p%FFZHWid
-!    if (p%GridBase < 0.0_ReKi) then
-!       call SetErrStat(ErrID_Severe, 'WARNING: The bottom of the grid is located at a height of '// &
-!                       TRIM(Num2LStr(p%GridBase))//' meters, which is below the ground.'// &
-!                       ' Winds below the ground will be set to 0.', ErrStat, ErrMsg, RoutineName)
-!    end if
-
-!    ! Read binary grid data
-!    call Read_Bladed_Grids(p, WindFileUnit, LHR, TI, CWise, NativeFormat, p, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    close (WindFileUnit)
-!    if (ErrStat >= AbortErrLev) return
-
-!    !----------------------------------------------------------------------------
-!    ! Read tower data if requested
-!    !----------------------------------------------------------------------------
-
-!    ! If a tower file was specified
-!    if (TowerFileExist) then
-
-!       inquire (FILE=TRIM(TwrFile), EXIST=Exists)
-
-!       ! Double check that the tower file exists and read it.  If it was requested but doesn't exist,
-!       ! throw fatal error and exit.
-!       if (Exists) then
-!          call Read_Bladed_Tower()
-!          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!          if (ErrStat >= AbortErrLev) then
-!             close (WindFileUnit)
-!             return
-!          end if
-!       else
-!          call SetErrStat(ErrID_Fatal, ' Tower file '//TRIM(TwrFile)//' specified for Bladed full-field '// &
-!                          'wind files does not exist.', ErrStat, ErrMsg, RoutineName)
-!          close (WindFileUnit)
-!          return
-!       end if
-!    else
-!       p%NTGrids = 0
-!    end if
-
-!    ! Report native turbulence intensities in percent
-!    if (NativeFormat) TI = TI*100.0_ReKi
-
-! end subroutine
-
-! !> Read_Bladed_TurbSim_Summary reads the summary file generated by TurbSim
-!    !! to get the normalizing parameters needed to read the bladed binary file
-!    !! which was genered by TurbSim.
-! subroutine Read_Bladed_TurbSim_Summary(WindFileUnit, FileName, CWise, ZCenter, TI, UBar, RefHt, Periodic, LHR, ErrStat, ErrMsg)
-
-!    integer(IntKi), intent(IN)    :: WindFileUnit   !< unit number for the file to open
-!    character(*), intent(IN)      :: FileName       !< name of the summary file
-!    logical, intent(OUT)          :: CWise          !< rotation (for reading the order of the binary data)
-!    real(ReKi), intent(OUT)       :: ZCenter        !< the height at the center of the grid
-!    real(ReKi), intent(OUT)       :: TI(3)          !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-!    real(ReKi), intent(OUT)       :: UBar           !< mean (advection) wind speed
-!    real(ReKi), intent(OUT)       :: RefHt          !< Reference height
-!    logical, intent(OUT)          :: Periodic       !< rotation (for reading the order of the binary data)
-!    logical, intent(OUT)          :: LHR            !< Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
-!    integer(IntKi), intent(OUT)   :: ErrStat        !< returns 0 if no error encountered in the subroutine
-!    character(*), intent(OUT)     :: ErrMsg         !< holds the error messages
-
-!    character(*), parameter       :: RoutineName = "Read_Bladed_TurbSim_Summary"
-
-!    real(ReKi)                    :: ZGOffset       ! The vertical offset of the turbine on rectangular grid (allows turbulence not centered on turbine hub)
-!    integer(IntKi)                :: I, J           ! Counters
-!    character(1024)               :: Line           ! temporary storage for reading a line from the file
-!    integer(IntKi)                :: ContentSize    ! summary file size
-!    character(:), allocatable     :: FileContents   ! summary file contents
-!    integer(IntKi)                :: TmpErrStat     ! temporary error status
-!    character(ErrMsgLen)          :: TmpErrMsg      ! temporary error message
-
-!    !-------------------------------------------------------------------------
-!    ! Initialize variables
-!    !-------------------------------------------------------------------------
-
-!    ErrStat = ErrID_None
-!    ErrMsg = ''
-
-!    !-------------------------------------------------------------------------
-!    ! Read summary file contents
-!    !-------------------------------------------------------------------------
-
-!    call OpenBInpFile(WindFileUnit, FileName, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    inquire (WindFileUnit, size=ContentSize)
-!    allocate (character(ContentSize) :: FileContents)
-!    read (WindFileUnit, IOSTAT=TmpErrStat) FileContents
-!    close (WindFileUnit)
-
-!    if (TmpErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading TurbSim summary file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Convert file contents to uppercase
-!    call Conv2UC(FileContents)
-
-!    ! Find 'CLOCKWISE' in file
-!    i = index(FileContents, 'CLOCKWISE')
-!    if (i > 0) then
-
-!       ! Find beginning of line where clockwise appears
-!       j = index(FileContents(:i), NewLine, back=.true.) + 1
-
-!       ! Get line with leading spaces removed
-!       line = adjustl(FileContents(j:i))
-
-!       ! Get value from beginning of line
-!       select case (line(1:1))
-!       case ("T", "Y")
-!          CWise = .true.
-!       case ("F", "N")
-!          CWise = .false.
-!       end select
-!    else
-!       CWise = .false.
-!    end if
-
-!    ! Find 'HUB HEIGHT' or 'ZHUB' in file
-!    i = index(FileContents, 'HUB HEIGHT')
-!    if (i == 0) i = index(FileContents, 'ZHUB')
-!    if (i == 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading hub height from FF summary file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Find beginning of line where 'HUB HEIGHT' or 'ZHUB' occur
-!    j = index(FileContents(:i), NewLine, back=.true.) + 1
-
-!    ! Read value from line
-!    read (FileContents(j:), *, IOSTAT=TmpErrStat) RefHt
-!    if (TmpErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading hub height from FF summary file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Find the mean speed
-!    i = index(FileContents, 'UBAR')
-!    if (i == 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error find UBar in FF summary file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Get index of next equal sign
-!    i = index(FileContents(i:), '=') + i + 1
-!    read (FileContents(i:), *, IOSTAT=TmpErrStat) UBar
-!    if (TmpErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading UBar from FF summary file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Read turbulence intensities on lines after mean speed
-!    do j = 1, 3
-!       i = INDEX(FileContents(i:), '=') + i + 1
-!       read (FileContents(i:), *, IOSTAT=TmpErrStat) TI(j)
-!       if (TmpErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading TI('//TRIM(Num2LStr(j))// &
-!                          ') from FF summary file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    end do
-
-!    ! Find the grid "HEIGHT OFFSET" (optional, default to zero)
-!    i = index(FileContents, "HEIGHT OFFSET")
-!    if (i > 0) then
-!       i = INDEX(FileContents(i:), '=') + i + 1
-!       read (FileContents(i:), *, IOSTAT=TmpErrStat) ZGOffset
-!       if (TmpErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading height offset from FF summary file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    else
-!       ZGOffset = 0.0_ReKi
-!    end if
-
-!    ! Calculate the height of the grid center
-!    ZCenter = RefHt - ZGOffset
-
-!    ! If "PERIODIC" is in summary, then file is periodic
-!    Periodic = index(FileContents(i:), 'PERIODIC') > 0
-
-!    ! If "BLADED LEFT-HAND RULE" is in file, then file uses LHR
-!    LHR = index(FileContents(i:), 'BLADED LEFT-HAND RULE') > 0
-
-! end subroutine Read_Bladed_TurbSim_Summary
-
-! !> This subroutine reads the text summary file to get normalizing parameters, the location of the
-! !! grid, and the direction the grid was written to the binary file
-! subroutine Read_Bladed_Native_Summary(SumFileName, UBar, RefHt, TI, PropagationDir, &
-!                                       VFlowAngle, BinFileName, PLExp, XOffset, ErrStat, ErrMsg)
-
-!    character(*), intent(in)     :: SumFileName          !< Summary file name
-!    real(ReKi), intent(out)       :: UBar
-!    real(ReKi), intent(out)       :: RefHt
-!    real(ReKi), intent(out)       :: TI(3)             ! turbulenc
-!    real(ReKi), intent(out)       :: PropagationDir
-!    real(ReKi), intent(out)       :: VFlowAngle
-!    character(1024), intent(out)  :: BinFileName
-!    real(ReKi), intent(out)       :: PLExp
-!    real(ReKi), intent(out)       :: XOffset
-!    integer(IntKi), intent(out)   :: ErrStat              !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)     :: ErrMsg               !< message about the error encountered
-
-!    character(*), parameter       :: RoutineName = "Read_Bladed_Native_Summary"
-!    integer(IntKi), parameter     :: UnEc = -1      ! echo file unit number (set to something else > 0 for debugging)
-
-!    type(FileInfoType)            :: FileInfo       ! The derived type for holding the file information.
-!    integer(IntKi)                :: CurLine        ! Current line to parse in FileInfo data structure
-!    integer(IntKi)                :: TmpErrStat       ! temporary error status
-!    character(ErrMsgLen)          :: TmpErrMsg        ! temporary error message
-
-!    ! Initialize error variables
-!    ErrStat = ErrID_None
-!    ErrMsg = ''
-
-!    !-------------------------------------------------------------------------
-!    ! Open and read the summary file; store data in FileInfo structure.
-!    !-------------------------------------------------------------------------
-
-!    call ProcessComFile(SumFileName, FileInfo, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    !-------------------------------------------------------------------------
-!    ! Process the lines stored in FileInfo
-!    !-------------------------------------------------------------------------
-
-!    CurLine = 1
-
-!    call ParseVar(FileInfo, CurLine, 'UBAR', UBar, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'REFHT', RefHt, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'TI', TI(1), TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'TI_V', TI(2), TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'TI_W', TI(3), TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'WDIR', PropagationDir, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    PropagationDir = R2D*PropagationDir
-
-!    call ParseVar(FileInfo, CurLine, 'FLINC', VFlowAngle, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    VFlowAngle = R2D*VFlowAngle ! convert to degrees
-
-!    call ParseVar(FileInfo, CurLine, 'WINDF', BinFileName, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    call ParseVar(FileInfo, CurLine, 'WSHEAR', PLExp, TmpErrStat, TmpErrMsg, UnEc)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-!    if (ErrStat >= AbortErrLev) return
-
-!    call ParseVar(FileInfo, CurLine, 'XOffset', XOffset, TmpErrStat, TmpErrMsg, UnEc)
-!    if (TmpErrStat /= ErrID_None) then
-!       XOffset = 0.0_ReKi ! this will be the default if offset is not in the file
-!    end if
-
-! end subroutine Read_Bladed_Native_Summary
-
-! subroutine Read_Bladed_FF_Header0(p, WindFileUnit, NativeFormat, FFXDelt, FFYDelt, FFZDelt, ErrStat, ErrMsg)
-
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p              !< Parameters
-!    integer(IntKi), intent(IN)                      :: WindFileUnit   !< unit number for the file to open
-!    logical, intent(in)                             :: NativeFormat
-!    real(ReKi), intent(out)                         :: FFXDelt
-!    real(ReKi), intent(out)                         :: FFYDelt
-!    real(ReKi), intent(out)                         :: FFZDelt
-!    integer(IntKi), intent(out)                     :: ErrStat        !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)                       :: ErrMsg         !< message about the error encountered
-
-!    character(*), parameter                         :: RoutineName = "Read_Bladed_FF_Header0"
-
-!    integer(IntKi)                                  :: TmpErrStat     ! temporary error status
-!    character(ErrMsgLen)                            :: TmpErrMsg      ! temporary error message
-
-!    type :: HeaderType
-!       integer(B2Ki)  :: DeltaZ, DeltaY, DeltaX
-!       integer(B2Ki)  :: NumTimeStepsHalf, MFFWS10
-!       integer(B2Ki)  :: zLu, yLu, xLu, dummy, rnd
-!       integer(B2Ki)  :: nz1000, ny1000
-!    end type
-
-!    type(HeaderType)  :: header
-!    integer(B2Ki)     :: dummy(6)
-
-!    ! Read header
-!    read (WindFileUnit, IOSTAT=ErrStat) header
-!    if (ErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading header 0 from binary FF file.', ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Number of full-field velocity components
-!    p%NFFComp = -1*p%WindFileFormat
-
-!    ! Grid Deltas
-!    FFZDelt = 0.001_ReKi*real(header%DeltaZ, ReKi)
-!    p%InvFFZD = 1.0_ReKi/FFZDelt
-!    FFYDelt = 0.001_ReKi*real(header%DeltaY, ReKi)
-!    p%InvFFYD = 1.0_ReKi/FFYDelt
-!    FFXDelt = 0.001_ReKi*real(header%DeltaX, ReKi)
-
-!    ! Number of time steps
-!    p%NSteps = 2*header%NumTimeStepsHalf
-
-!    ! Mean full field wind speed
-!    if (.not. NativeFormat) p%MeanFFWS = 0.1*header%MFFWS10
-!    p%InvMFFWS = 1.0/p%MeanFFWS
-!    p%FFDTime = FFXDelt/p%MeanFFWS
-!    p%FFRate = 1.0/p%FFDTime
-
-!    ! Z and Y Grid size
-!    p%NZGrids = header%nz1000/1000
-!    p%FFZHWid = 0.5*FFZDelt*(p%NZGrids - 1)
-!    p%NYGrids = header%ny1000/1000
-!    p%FFYHWid = 0.5*FFYDelt*(p%NYGrids - 1)
-
-!    ! Read dummy variables (zLv, yLv, xLv, zLw, yLw, xLw)
-!    if (p%NFFComp == 3) then
-!       read (WindFileUnit, IOSTAT=TmpErrStat) dummy
-!       if (TmpErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header 0 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    end if
-
-! end subroutine Read_Bladed_FF_Header0
-
-! subroutine Read_Bladed_FF_Header1(p, WindFileUnit, NativeFormat, TI, FFXDelt, FFYDelt, FFZDelt, ErrStat, ErrMsg)
-
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p              !< Parameters
-!    integer(IntKi), intent(IN)                      :: WindFileUnit   !< unit number for the file to open
-!    logical, intent(in)                             :: NativeFormat
-!    real(ReKi), intent(out)                        :: TI(3)          !< turbulence intensities
-!    real(ReKi), intent(out)                         :: FFXDelt
-!    real(ReKi), intent(out)                         :: FFYDelt
-!    real(ReKi), intent(out)                         :: FFZDelt
-!    integer(IntKi), intent(out)                     :: ErrStat        !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)                       :: ErrMsg         !< message about the error encountered
-
-!    character(*), parameter                         :: RoutineName = "Read_Bladed_FF_Header1"
-
-!    integer(B2Ki)                                   :: TurbType
-!    integer(IntKi)                                  :: i
-
-!    type :: Turb4Type
-!       integer(B4Ki)  :: NComp
-!       real(SiKi)  :: Latitude, RoughLen, RefHeight, TurbInt(3)
-!    end type
-
-!    type :: Turb78Type
-!       integer(B4Ki)  :: HeaderSize, NComp
-!    end type
-
-!    type :: Turb7Type
-!       real(SiKi)     :: CoherenceDecay, CoherenceScale
-!    end type
-
-!    type :: Turb8Type
-!       real(SiKi)     :: dummy1(6)
-!       integer(B4Ki)  :: dummy2(3)
-!       real(SiKi)     :: dummy3(2)
-!       integer(B4Ki)  :: dummy4(3)
-!       real(SiKi)     :: dummy5(2)
-!    end type
-
-!    type :: Sub1Type
-!       real(SiKi)     :: DeltaZ, DeltaY, DeltaX
-!       integer(B4Ki)  :: NumTimeStepsHalf
-!       real(SiKi)     :: MFFWS, zLu, yLu, xLu
-!       integer(B4Ki)  :: dummy, rnd, nz, ny
-!    end type
-
-!    type :: Sub2Type
-!       real(SiKi)     :: zLv, yLv, xLv, zLw, yLw, xLw
-!    end type
-
-!    type(Turb4Type)  :: Turb4
-!    type(Turb78Type) :: Turb78
-!    type(Sub1Type)   :: Sub1
-!    type(Sub2Type)   :: Sub2
-!    type(Turb7Type)  :: Turb7
-!    type(Turb8Type)  :: Turb8
-
-!    ! Read turbulence type (int16)
-!    read (WindFileUnit, IOSTAT=ErrStat) TurbType
-!    if (ErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading header 0 from binary FF file.', ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    ! Switch based on turbulence type
-!    select case (TurbType)
-
-!    case (1, 2)    ! 1-component Von Karman (1) or Kaimal (2)
-!       p%NFFComp = 1
-
-!    case (3, 5)    ! 3-component Von Karman (3) or IEC-2 Kaimal (5)
-!       p%NFFComp = 3
-
-!    case (4)       ! Improved Von Karman
-!       read (WindFileUnit, IOSTAT=ErrStat) Turb4
-!       if (ErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header for TurbType=4 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-
-!       ! Number of components (should be 3)
-!       p%NFFComp = Turb4%NComp
-
-!       ! Turbulence intensity
-!       where (Turb4%TurbInt > 0) TI = Turb4%TurbInt
-
-!    case (7, 8)       ! General Kaimal (7) or Mann model (8)
-!       read (WindFileUnit, IOSTAT=ErrStat) Turb78
-!       if (ErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header for TurbType=7,8 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-
-!       ! Number of components
-!       p%NFFComp = Turb78%NComp
-
-!    case default      ! Unknown turbulence type
-!       call SetErrStat(ErrID_Warn, ' InflowWind does not recognize the full-field turbulence file type ='// &
-!                       TRIM(Num2LStr(int(TurbType, IntKi)))//'.', ErrStat, ErrMsg, RoutineName)
-!       if (ErrStat >= AbortErrLev) return
-!    end select
-
-!    ! Read header sub 1
-!    read (WindFileUnit, IOSTAT=ErrStat) Sub1
-!    if (ErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, ' Error reading header for Sub1 from binary FF file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    FFZDelt = Sub1%DeltaZ
-!    p%InvFFZD = 1/FFZDelt
-!    FFYDelt = Sub1%DeltaY
-!    p%InvFFYD = 1/FFYDelt
-!    FFXDelt = Sub1%DeltaX
-
-!    if (.not. NativeFormat) p%MeanFFWS = Sub1%MFFWS
-!    p%InvMFFWS = 1.0/p%MeanFFWS
-!    p%FFDTime = FFXDelt/p%MeanFFWS
-!    p%FFRate = 1.0/p%FFDTime
-
-!    p%NZGrids = Sub1%nz
-!    p%FFZHWid = 0.5*FFZDelt*(p%NZGrids - 1)
-!    p%NYGrids = Sub1%ny
-!    p%FFYHWid = 0.5*FFYDelt*(p%NYGrids - 1)
-
-!    if (p%NFFComp == 3) then
-!       read (WindFileUnit, IOSTAT=ErrStat) Sub2
-!       if (ErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header for Sub2 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    end if
-
-!    ! Read additional parameters based on turbulence type
-!    select case (TurbType)
-!    case (7)
-!       read (WindFileUnit, IOSTAT=ErrStat) Turb7
-!       if (ErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header for Turb7 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    case (8)
-!       read (WindFileUnit, IOSTAT=ErrStat) Turb8
-!       if (ErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading header for Turb8 from binary FF file.', &
-!                          ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-!    end select
-
-! end subroutine
-
-! subroutine Read_Bladed_Grids(p, WindFileUnit, LHR, TI, NativeFormat, CWise, FFXDelt, FFYDelt, FFZDelt, ErrStat, ErrMsg)
-
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p              !< Parameters
-!    integer(IntKi), intent(IN)                      :: WindFileUnit   !< unit number for the file to open
-!    logical, intent(in)                             :: LHR
-!    real(ReKi), intent(out)                         :: TI(3)          !< turbulence intensities
-!    logical, intent(in)                             :: NativeFormat
-!    logical, intent(in)                             :: Cwise
-!    real(ReKi), intent(out)                         :: FFXDelt
-!    real(ReKi), intent(out)                         :: FFYDelt
-!    real(ReKi), intent(out)                         :: FFZDelt
-!    integer(IntKi), intent(out)                     :: ErrStat        !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)                       :: ErrMsg         !< message about the error encountered
-
-!    character(*), parameter                         :: RoutineName = "Read_Bladed_Grids"
-
-!    real(ReKi)                                      :: FF_Scale(3)       !< used for "un-normalizing" the data
-!    real(ReKi)                                      :: FF_Offset(3)      !< used for "un-normalizing" the data
-!    integer(B2Ki), allocatable                      :: raw_ff(:, :, :)
-!    integer(IntKi)                                  :: CFirst, CLast, CStep
-!    integer(IntKi)                                  :: IC, IT
-!    integer(IntKi)                                  :: TmpErrStat     ! temporary error status
-!    character(ErrMsgLen)                            :: TmpErrMsg      ! temporary error message
-
-!    ! Initialize error variables
-!    ErrMsg = ""
-!    ErrStat = ErrID_None
-
-!    ! Calculate wind scale and offset
-!    if (NativeFormat) then
-!       FF_Scale = 0.001_ReKi
-!       FF_Offset = 0.0_ReKi
-!    else
-!       FF_Scale = 0.001_ReKi*p%MeanFFWS*TI/100.0_ReKi
-!       FF_Offset = (/p%MeanFFWS, 0.0_ReKi, 0.0_ReKi/)
-!    end if
-
-!    ! Bladed convention has positive V pointed along negative Y
-!    if (LHR) FF_Scale(2) = -FF_Scale(2) ! left-hand rule
-
-!    ! Print message to inform user that wind file is being read (may take a while).
-!    call WrScr(NewLine//'   Reading a '//TRIM(Num2LStr(p%NYGrids))// &
-!               'x'//TRIM(Num2LStr(p%NZGrids))// &
-!               ' grid ('//TRIM(Num2LStr(p%FFYHWid*2))// &
-!               ' m wide, '//TRIM(Num2LStr(p%GridBase))// &
-!               ' m to '//TRIM(Num2LStr(p%GridBase + p%FFZHWid*2))// &
-!               ' m above ground) with a characteristic wind speed of '// &
-!               TRIM(Num2LStr(p%MeanFFWS))//' m/s. ')
-
-!    !-------------------------------------------------------------------------
-!    ! Allocate space for the FF array
-!    !-------------------------------------------------------------------------
-
-!    ! Add another step, just in case there is an odd number of steps.
-!    p%NSteps = p%NSteps + 1
-
-!    ! Allocate wind data
-!    call Allocate_FF_Wind_Data(p%FFData, p%NSteps, p%NFFComp, &
-!                               p%NYGrids, p%NZGrids, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    !-------------------------------------------------------------------------
-!    ! Initialize the data and set column indexing to account for
-!    ! direction of turbine rotation (CWise)
-!    !-------------------------------------------------------------------------
-
-!    ! Initialize entire array
-!    p%FFData(:, :, :, :) = 0.0_SiKi     ! we may have only one component
-
-!    if (CWise) then
-!       CFirst = p%NYGrids
-!       CLast = 1
-!       CStep = -1
-!    else
-!       CFirst = 1
-!       CLast = p%NYGrids
-!       CStep = 1
-!    end if
-
-!    !----------------------------------------------------------------------------
-!    ! Loop through all the time steps, reading the data and converting to m/s
-!    !----------------------------------------------------------------------------
-
-!    ! Allocate raw full-field array to hold grid data for single time step
-!    allocate (raw_ff(p%NFFComp, p%NYGrids, p%NZGrids))
-
-!    ! Loop through time steps
-!    do IT = 1, p%NSteps
-
-!       ! Read raw data (NFFComp,NYGrids,NZGrids)
-!       read (WindFileUnit, IOStat=TmpErrStat) raw_ff
-
-!       ! If there was an error
-!       if (TmpErrStat /= 0) then
-
-!          ! If there really were an even number of steps
-!          if (IT == p%NSteps) then
-!             p%NSteps = p%NSteps - 1
-!             ErrStat = 0
-!             exit
-!          end if
-
-!          ! Error reading file
-!          call SetErrStat(ErrID_Fatal, ' Error reading binary data file. '// &
-!                          ', it = '//TRIM(Num2LStr(it))// &
-!                          ', nsteps = '//TRIM(Num2LStr(p%NSteps)), ErrStat, ErrMsg, RoutineName)
-!          return
-!       end if
-
-!       ! Scale wind components and store in array
-!       do IC = 1, p%NFFComp
-!          p%FFData(IC, :, :, IT) = real(FF_Offset(IC) + FF_Scale(IC)*raw_ff(IC, CFirst:CLast:CStep, :), SiKi)
-!       end do
-
-!    end do
-
-!    if (p%Periodic) then
-!       call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(p%NSteps))//' time steps of '// &
-!                  TRIM(Num2LStr(p%FFRate))//'-Hz full-field data (period of '// &
-!                  TRIM(Num2LStr(p%FFDTime*p%NSteps))//' seconds).')
-
-!    else
-!       call WrScr(NewLine//'   Processed '//TRIM(Num2LStr(p%NSteps))//' time steps of '// &
-!                  TRIM(Num2LStr(p%FFRate))//'-Hz full-field data ('// &
-!                  TRIM(Num2LStr(p%FFDTime*(p%NSteps - 1)))//' seconds).')
-!    end if
-
-! end subroutine Read_Bladed_Grids
-
-! !> This subroutine reads the binary tower file that corresponds with the
-! !! Bladed-style FF binary file. The FF grid must be read before this subroutine
-! !! is called! (many checks are made to ensure the files belong together)
-! subroutine Read_Bladed_Tower(p, ErrStat, ErrMsg)
-
-!    type(IfW_Interp_ParameterType), intent(inout)   :: p              !< Parameters
-!    integer(IntKi), intent(out)                     :: ErrStat        !< error status return value (0=no error; non-zero is error)
-!    character(*), intent(out)                       :: ErrMsg         !< message about the error encountered
-
-!    type :: HeaderType
-!       real(SiKi)     :: dz, dx, Zmax
-!       integer(B4Ki)  :: NumOutSteps, NumZ
-!       real(SiKi)     :: UHub, TI(3)
-!    end type
-
-!    real(ReKi), parameter      :: TOL = 1E-4     ! tolerence for wind file comparisons
-!    real(ReKi), parameter      :: FF_Offset(3) = (/1.0, 0.0, 0.0/)  ! used for "un-normalizing" the data
-
-!    integer(IntKi)             :: IC, IT         ! loop counters
-!    integer(B2Ki), allocatable :: raw_twr(:, :)   ! holds tower velocity for one timestep
-
-!    type(HeaderType)           :: header
-
-!    !-------------------------------------------------------------------------
-!    ! Initialization
-!    !-------------------------------------------------------------------------
-
-!    ErrMsg = ''
-!    ErrStat = ErrID_None
-
-!    p%NTGrids = 0
-
-!    if (p%NFFComp /= 3) then
-!       call SetErrStat(ErrID_Fatal, ' Error: Tower binary files require 3 wind components.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    !-------------------------------------------------------------------------
-!    ! Open the file
-!    !-------------------------------------------------------------------------
-
-!    call OpenBInpFile(WindFileUnit, TwrFile, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    !-------------------------------------------------------------------------
-!    ! Read the header information and check that it's compatible with the FF Bladed-style binary
-!    ! parameters already read.
-!    !-------------------------------------------------------------------------
-
-!    read (WindFileUnit, IOSTAT=TmpErrStat) header
-!    if (TmpErrStat /= 0) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Error reading header of the binary tower file "' &
-!                       //TRIM(TwrFile)//'."', ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    if (ABS(header%dz*p%InvFFZD - 1) > TOL) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Resolution in the FF binary file does not match the tower file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    if (ABS(header%dx*p%InvMFFWS/p%FFDTime - 1) > TOL) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Time resolution in the FF binary file does not match the tower file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    if (ABS(header%Zmax/p%GridBase - 1) > TOL) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Height in the FF binary file does not match the tower file "' &
-!                       //TRIM(TwrFile)//'."', ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    if (header%NumOutSteps /= p%NSteps) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Number of time steps in the FF binary file does not match the tower file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       return
-!    end if
-
-!    p%NTGrids = header%NumZ
-
-!    if (ABS(header%UHub*p%InvMFFWS - 1) > TOL) then
-!       call SetErrStat(ErrID_Fatal, &
-!                       ' Mean wind speed in the FF binary file does not match the tower file.', &
-!                       ErrStat, ErrMsg, RoutineName)
-!       p%NTGrids = 0
-!       return
-!    end if
-
-!    ! If number of tower grids is zero, close file and return
-!    if (p%NTGrids == 0) then
-!       close (WindFileUnit)
-!       return
-!    end if
-
-!    !-------------------------------------------------------------------------
-!    ! Allocate arrays for the tower points
-!    !-------------------------------------------------------------------------
-
-!    call Allocate_FF_Tower_Data(p%Tower, p%NSteps, p%NFFComp, &
-!                                p%NTGrids, TmpErrStat, TmpErrMsg)
-!    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-
-!    !-------------------------------------------------------------------------
-!    ! Read the 16-bit time-series data and scale it to 32-bit reals
-!    !-------------------------------------------------------------------------
-
-!    ! Loop through time.
-!    do IT = 1, p%NSteps
-
-!       ! Read normalized wind-component, INT(2) for this timestep
-!       read (WindFileUnit, IOSTAT=TmpErrStat) raw_twr
-!       if (TmpErrStat /= 0) then
-!          call SetErrStat(ErrID_Fatal, ' Error reading binary tower data file. it = '//TRIM(Num2LStr(it))// &
-!                          ', nsteps = '//TRIM(Num2LStr(p%NSteps)), ErrStat, ErrMsg, RoutineName)
-!          p%NTGrids = 0
-!          return
-!       end if
-
-!       ! Convert wind components to m/s
-!       do IC = 1, p%NFFComp
-!          p%Tower(IC, :, IT) = real(p%MeanFFWS*(FF_Offset(IC) + 0.00001*TI(IC)*raw_twr(IC, :)), SiKi)
-!       end do
-!    end do
-
-!    !-------------------------------------------------------------------------
-!    ! Close the file
-!    !-------------------------------------------------------------------------
-
-!    close (WindFileUnit)
-
-!    TmpErrMsg = '   Processed '//TRIM(Num2LStr(p%NSteps))//' time steps of '// &
-!                TRIM(Num2LStr(p%NTGrids))//'x1 tower data grids.'
-
-!    call WrScr(NewLine//TRIM(TmpErrMsg))
-
-! end subroutine Read_Bladed_Tower
+subroutine Grid3DField_AddMeanVelocity(InitInp, G3D)
+
+   type(Grid3DInitInputType), intent(in)  :: InitInp  !< Initialization input data passed to the module
+   type(Grid3DFieldType), intent(inout)   :: G3D      !< Initialization input data passed to the module
+
+   real(ReKi)              :: Z                 ! height
+   real(ReKi)              :: Y                 ! distance from centre in horizontal direction
+   real(ReKi)              :: U                 ! mean wind speed
+   integer(IntKi)          :: iz, iy            ! loop counter
+   integer(IntKi)          :: centre_y          ! index of centre in y direction
+
+   ! Loop through grid elevations
+   do iz = 1, G3D%NZGrids
+
+      ! calculate height
+      Z = G3D%GridBase + (iz - 1)/G3D%InvDZ
+      if (Z <= 0.0_ReKi) cycle
+
+      ! Calculate wind speed to add based on profile
+      select case (G3D%WindProfileType)
+
+      case (WindProfileType_PL)
+         U = G3D%MeanWS*(Z/G3D%RefHeight)**G3D%PLExp ! [IEC 61400-1 6.3.1.2 (10)]
+
+      case (WindProfileType_Log)
+         if (.not. EqualRealNos(G3D%RefHeight, G3D%Z0) .and. Z > 0.0_ReKi) then
+            U = G3D%MeanWS*(LOG(Z/G3D%Z0))/(LOG(G3D%RefHeight/G3D%Z0))
+         else
+            U = 0.0_ReKi
+         end if
+
+      case (WindProfileType_Constant)
+         U = G3D%MeanWS
+
+      case DEFAULT
+         U = 0.0_ReKi
+
+      end select
+
+      ! Add vertical linear shear, if nonzero
+      if (InitInp%VLinShr /= 0.0_ReKi) then
+         U = U + G3D%MeanWS*InitInp%VLinShr*(Z - G3D%RefHeight)/G3D%RefLength
+      end if
+
+      ! Add velocity
+      G3D%Vel(1, :, iz, :) = real(G3D%Vel(1, :, iz, :) + U, SiKi)
+
+   end do
+
+   ! Add horizontal linear shear, if nonzero
+   if (InitInp%HLinShr /= 0.0_ReKi) then
+
+      ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
+      centre_y = (G3D%NYGrids + 1)/2 ! integer division
+
+      ! Loop through grid Y coordinates
+      do iy = 1, G3D%NYGrids
+         Y = (iy - centre_y)/G3D%InvDY
+         U = G3D%MeanWS*InitInp%HLinShr*Y/G3D%RefLength
+         G3D%Vel(1, iy, :, :) = real(G3D%Vel(1, iy, :, :) + U, SiKi)
+      end do
+   end if
+
+end subroutine Grid3DField_AddMeanVelocity
+
+subroutine ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
+
+   type(Grid3DInitInputType), intent(IN)   :: InitInp           !< Initialization input data passed to the module
+   real(SiKi), intent(INOUT)               :: Vel(:, :, :, :)   !< full-field wind inflow data
+   real(ReKi), intent(OUT)                 :: ScaleFactors(3)   !< scaling factors that were used
+   integer(IntKi), intent(OUT)             :: ErrStat           !< determines if an error has been encountered
+   character(*), intent(OUT)               :: ErrMsg            !< Message about errors
+
+   ! Local Variables:
+   ! note that the variables used to compute statistics use double precision:
+   character(*), parameter    :: RoutineName = 'ScaleTurbulence'
+   real(DbKi)                 :: v(3)              ! instanteanous wind speed at target position
+   real(DbKi)                 :: vMean(3)          ! average wind speeds over time at target position
+   real(DbKi)                 :: vSum(3)           ! sum over time of wind speeds at target position
+   real(DbKi)                 :: vSum2(3)          ! sum of wind speeds squared
+   real(ReKi)                 :: ActualSigma(3)    ! computed standard deviation
+
+   integer                    :: ic                ! Loop counter for wind component
+   integer                    :: it                ! Loop counter for t
+   integer                    :: iy                ! Loop counter for y
+   integer                    :: iz                ! Loop counter for z
+
+   integer                    :: nc                ! number of FF wind components
+   integer                    :: nt                ! size of x (or t) dimension of turbulence box
+   integer                    :: ny                ! size of y dimension of turbulence box
+   integer                    :: nz                ! size of z dimension of turbulence box
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   nz = size(Vel, 1)
+   ny = size(Vel, 2)
+   nc = size(Vel, 3)
+   nt = size(Vel, 4)
+
+   ! If scaling method is none, set factors to 1 and return (no scaling)
+   if (InitInp%ScaleMethod == ScaleMethod_None) then
+      ScaleFactors = 1.0_ReKi
+      return
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Determine the scaling factors:
+   !----------------------------------------------------------------------------
+
+   ! Use the scaling factors specified in the input file
+   if (InitInp%ScaleMethod == ScaleMethod_Direct) then
+      ScaleFactors = InitInp%sf
+
+   else ! compute the scaling factors to get requested sigma:
+
+      ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
+      iz = (nz + 1)/2 ! integer division
+      iy = (ny + 1)/2 ! integer division
+
+      ! compute the actual sigma at the point specified by (iy,iz). (This sigma should be close to 1.)
+      vSum = sum(Vel(:, iy, iz, :), dim=2)
+      vSum2 = sum(Vel(:, iy, iz, :)**2, dim=2)
+      vMean = vSum/nt
+      ActualSigma = real(SQRT(ABS((vSum2/nt) - vMean**2)), ReKi)
+
+      ! check that the ActualSigma isn't 0
+      ! InitOut%sf = InitInp%SigmaF / ActualSigma  ! factor = Target / actual
+      do ic = 1, nc
+         if (EqualRealNos(ActualSigma(ic), 0.0_ReKi)) then
+            ScaleFactors(ic) = 0.0_ReKi
+            if (.not. EqualRealNos(InitInp%SigmaF(ic), 0.0_ReKi)) then
+               call SetErrStat(ErrID_Fatal, "Computed standard deviation is zero; cannot scale to achieve target non-zero standard deviation.", &
+                               ErrStat, ErrMsg, RoutineName)
+            end if
+         else
+            ScaleFactors(ic) = InitInp%SigmaF(ic)/ActualSigma(ic)
+         end if
+      end do
+
+   end if
+
+   !----------------------------------------------------------------------------
+   ! scale the data using our scaling factors:
+   !----------------------------------------------------------------------------
+
+   do ic = 1, nc
+      Vel(ic, :, :, :) = real(ScaleFactors(ic)*Vel(ic, :, :, :), SiKi)
+   end do
+
+end subroutine ScaleTurbulence
+
+subroutine Grid3DField_ValidateInput(InitInp, NComp, ErrStat, ErrMsg)
+
+   type(Grid3DInitInputType), intent(IN)  :: InitInp           !< Initialization input data passed to the module
+   integer(IntKi), intent(IN)             :: NComp              !< number of full-field wind components (normally 3)
+
+   character(*), parameter                                  :: RoutineName = 'Grid3DField_ValidateInput'
+   integer(intki)                                           :: ic                ! loop counter
+   integer(IntKi), intent(OUT)  :: ErrStat           !< determines if an error has been encountered
+   character(*), intent(OUT)  :: ErrMsg            !< Message about errors
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   if (InitInp%RefHt < 0.0_ReKi .or. EqualRealNos(InitInp%RefHt, 0.0_ReKi)) call SetErrStat(ErrID_Fatal, 'The grid reference height must be larger than 0.', ErrStat, ErrMsg, RoutineName)
+
+   if (InitInp%ScaleMethod == ScaleMethod_Direct) then
+      if (any(InitInp%sf < 0.0_ReKi)) call SetErrStat(ErrID_Fatal, 'Turbulence scaling factors must not be negative.', ErrStat, ErrMsg, RoutineName)
+   elseif (InitInp%ScaleMethod == ScaleMethod_StdDev) then
+      if (any(InitInp%sigmaf < 0.0_ReKi)) call SetErrStat(ErrID_Fatal, 'Turbulence standard deviations must not be negative.', ErrStat, ErrMsg, RoutineName)
+   elseif (InitInp%ScaleMethod /= ScaleMethod_None) then
+      call SetErrStat(ErrID_Fatal, 'Turbulence scaling method must be 0 (none), 1 (direct scaling factors), or 2 (target standard deviation).', ErrStat, ErrMsg, RoutineName)
+   end if
+
+   if (InitInp%WindProfileType == WindProfileType_Log) then
+      if (InitInp%z0 < 0.0_ReKi .or. EqualRealNos(InitInp%z0, 0.0_ReKi)) &
+         call SetErrStat(ErrID_Fatal, 'The surface roughness length, Z0, must be greater than zero', ErrStat, ErrMsg, RoutineName)
+   elseif (InitInp%WindProfileType < WindProfileType_Constant .or. InitInp%WindProfileType > WindProfileType_PL) then
+      call SetErrStat(ErrID_Fatal, 'The WindProfile type must be 0 (constant), 1 (logarithmic) or 2 (power law).', ErrStat, ErrMsg, RoutineName)
+   end if
+
+   if (InitInp%URef < 0.0_ReKi) call SetErrStat(ErrID_Fatal, 'The reference wind speed must not be negative.', ErrStat, ErrMsg, RoutineName)
+
+   if (EqualRealNos(InitInp%RefLength, 0.0_ReKi) .or. InitInp%RefLength < 0.0_ReKi) then
+      if (InitInp%VLinShr /= 0.0_ReKi .or. InitInp%HLinShr /= 0.0_ReKi) then
+         call SetErrStat(ErrID_Fatal, 'The reference length must be a positive number when vertical or horizontal linear shear is used.', ErrStat, ErrMsg, RoutineName)
+      end if
+   end if
+
+end subroutine Grid3DField_ValidateInput
 
 end module FlowField_IO

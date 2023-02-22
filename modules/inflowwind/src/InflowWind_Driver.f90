@@ -30,7 +30,7 @@ PROGRAM InflowWind_Driver
    USE InflowWind_Types
    USE InflowWind_Driver_Types    ! Contains types and routines for handling the input arguments
    USE InflowWind_Driver_Subs     ! Contains subroutines for the driver program
-   USE FlowField
+   USE IfW_FlowField
    USE InflowWind_Subs, only: CalculateOutput
 
    IMPLICIT NONE

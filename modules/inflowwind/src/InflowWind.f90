@@ -336,24 +336,24 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       case (TSFF_WindNumber)
          FlowField_InitData%TurbSim%WindFileName = InputFileData%TSFF_FileName
 
-      case (BladedFF_WindNumber, BladedFF_Shr_WindNumber)
+      case (BladedFF_WindNumber)
          FlowField_InitData%Bladed%TurbineID = InitInp%TurbineID
-         if (InputFileData%WindType /= BladedFF_Shr_WindNumber) then  
-            IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-               IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
-                  InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
-               ELSE                                   ! FAST.Farm high-resolution domain(s)
-                  InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-               ENDIF
+         IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+            IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+               InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
+            ELSE                                   ! FAST.Farm high-resolution domain(s)
+               InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
             ENDIF
-            FlowField_InitData%Bladed%WindFileName       = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
-            FlowField_InitData%Bladed%TowerFileExist     =  InputFileData%BladedFF_TowerFile
-            FlowField_InitData%Bladed%NativeBladedFmt    = .false.
-         else
-            FlowField_InitData%Bladed%WindFileName       =  InputFileData%BladedFF_FileName
-            FlowField_InitData%Bladed%TowerFileExist     = .false.
-            FlowField_InitData%Bladed%NativeBladedFmt    = .true.
-         end if
+         ENDIF
+         FlowField_InitData%Bladed%WindFileName       = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
+         FlowField_InitData%Bladed%TowerFileExist     =  InputFileData%BladedFF_TowerFile
+         FlowField_InitData%Bladed%NativeBladedFmt    = .false.
+
+      case (BladedFF_Shr_WindNumber)
+         FlowField_InitData%Bladed%TurbineID          = InitInp%TurbineID
+         FlowField_InitData%Bladed%WindFileName       =  InputFileData%BladedFF_FileName
+         FlowField_InitData%Bladed%TowerFileExist     = .false.
+         FlowField_InitData%Bladed%NativeBladedFmt    = .true.
 
       case (HAWC_WindNumber)
          FlowField_InitData%HAWC%WindFileName(1) = InputFileData%HAWC_FileName_u
@@ -365,15 +365,15 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          FlowField_InitData%HAWC%dx = InputFileData%HAWC_dx
          FlowField_InitData%HAWC%dy = InputFileData%HAWC_dy
          FlowField_InitData%HAWC%dz = InputFileData%HAWC_dz
-         FlowField_InitData%HAWC%RefHt = InputFileData%FF%RefHt
-         FlowField_InitData%HAWC%ScaleMethod = InputFileData%FF%ScaleMethod
-         FlowField_InitData%HAWC%SF = InputFileData%FF%SF
-         FlowField_InitData%HAWC%SigmaF = InputFileData%FF%SigmaF
-         FlowField_InitData%HAWC%URef = InputFileData%FF%URef
-         FlowField_InitData%HAWC%WindProfileType = InputFileData%FF%WindProfileType
-         FlowField_InitData%HAWC%PLExp = InputFileData%FF%PLExp
-         FlowField_InitData%HAWC%Z0 = InputFileData%FF%Z0
-         FlowField_InitData%HAWC%XOffset = InputFileData%FF%XOffset
+         FlowField_InitData%HAWC%G3D%RefHt = InputFileData%FF%RefHt
+         FlowField_InitData%HAWC%G3D%ScaleMethod = InputFileData%FF%ScaleMethod
+         FlowField_InitData%HAWC%G3D%SF = InputFileData%FF%SF
+         FlowField_InitData%HAWC%G3D%SigmaF = InputFileData%FF%SigmaF
+         FlowField_InitData%HAWC%G3D%URef = InputFileData%FF%URef
+         FlowField_InitData%HAWC%G3D%WindProfileType = InputFileData%FF%WindProfileType
+         FlowField_InitData%HAWC%G3D%PLExp = InputFileData%FF%PLExp
+         FlowField_InitData%HAWC%G3D%Z0 = InputFileData%FF%Z0
+         FlowField_InitData%HAWC%G3D%XOffset = InputFileData%FF%XOffset
 
       case (User_WindNumber)
          ! Add user wind initialization data here
