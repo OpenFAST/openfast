@@ -22,6 +22,14 @@ ServoDyn-StructCtrl                            6   StC_DOF_MODE      2   StC_DOF
 
 
 
+OpenFAST v3.4.1 to OpenFAST v3.4.1 
+----------------------------------
+
+Restored the AeroDyn channel names with `Aero` in the name.  These had be
+changed to `Fld` in v3.4.0 which caused headaches for users.  The `Fld` names
+are now aliases to the `Aero` names.
+
+
 OpenFAST v3.3.0 to OpenFAST v3.4.0 
 ----------------------------------
 

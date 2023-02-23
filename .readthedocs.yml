@@ -7,7 +7,7 @@ version: 2
 
 formats:
   - htmlzip
-  - pdf
+  # - pdf
   # - epub
 
 python:
