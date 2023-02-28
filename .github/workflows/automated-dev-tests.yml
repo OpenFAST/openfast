@@ -543,7 +543,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -587,7 +586,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -631,7 +629,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -675,7 +672,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -719,7 +715,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -763,7 +758,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
@@ -807,7 +801,6 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 

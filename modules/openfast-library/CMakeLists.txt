@@ -28,7 +28,6 @@ target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
   aerodynlib
-  aerodyn14lib
   servodynlib
   elastodynlib
   beamdynlib
