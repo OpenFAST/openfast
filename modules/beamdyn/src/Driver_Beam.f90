@@ -33,6 +33,7 @@ PROGRAM BeamDyn_Driver_Program
    REAL(DbKi)                       :: t_global         ! global-loop time marker
    INTEGER(IntKi)                   :: n_t_final        ! total number of time steps
    INTEGER(IntKi)                   :: n_t_global       ! global-loop time counter
+   INTEGER(IntKi)                   :: n_t_vtk          ! global vtk step counter
    INTEGER(IntKi), parameter        :: BD_interp_order = 1  ! order of interpolation/extrapolation
 
    ! Module1 Derived-types variables; see Registry_Module1.txt for details
@@ -101,7 +102,7 @@ PROGRAM BeamDyn_Driver_Program
    BD_InitInput%RootName = TRIM(RootName)//'.BD'
    BD_InitInput%RootDisp = 0.d0
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
- 
+
    t_global = DvrData%t_initial
    n_t_final = ((DvrData%t_final - DvrData%t_initial) / dt_global )
 
@@ -157,6 +158,13 @@ PROGRAM BeamDyn_Driver_Program
          CALL CheckError()
    END DO
    
+      ! Write VTK reference if requested (ref is (0,0,0)
+   if (DvrData%WrVTK > 0) then
+      call SetVTKvars()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'BldMotion', ErrStat, ErrMsg );  call CheckError()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'PointLoad', ErrStat, ErrMsg );  call CheckError()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'DistrLoad', ErrStat, ErrMsg );  call CheckError()
+   endif
 
 
       !.........................
@@ -207,6 +215,17 @@ PROGRAM BeamDyn_Driver_Program
         CALL CheckError()
 
      CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output)
+
+         ! Write VTK reference if requested (ref is (0,0,0)
+      if (DvrData%WrVTK == 2) then
+         if ( MOD( n_t_global, DvrData%n_VTKTime ) == 0 ) then
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'BldMotion', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'PointLoad', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'DistrLoad', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            call CheckError()
+         endif
+      endif
+
 
      if ( MOD( n_t_global + 1, 100 ) == 0 ) call SimStatus( TiLstPrn, PrevClockTime, t_global, DvrData%t_final )
    ENDDO
@@ -263,5 +282,39 @@ CONTAINS
       end if
          
    end subroutine CheckError
+
+   subroutine SetVTKvars()
+      real(R8Ki)  :: TmpTime
+      real(R8Ki)  :: TmpRate
+      real(R8Ki)  :: TotalTime
+
+      DvrData%VTK_OutFileRoot = trim(BD_InitInput%RootName)
+      n_t_vtk = 0    ! first VTK output number
+
+      ! convert frames-per-second to seconds per sample:
+      TotalTime = DvrData%t_final - DvrData%t_initial
+      if ( DvrData%VTK_fps == 0 ) then
+         TmpTime = TotalTime + dt_global 
+      else
+         TmpTime = 1.0_R8Ki / DvrData%VTK_fps
+      endif
+
+      ! now save the number of time steps between VTK file output:
+      if (TmpTime > TotalTime) then
+         DvrData%n_VTKTime = HUGE(DvrData%n_VTKTime)
+      else
+         DvrData%n_VTKTime = NINT( TmpTime / dt_global )
+         ! I'll warn if p%n_VTKTime*p%DT is not TmpTime
+         IF (DvrData%WrVTK == 2) THEN
+            TmpRate = DvrData%n_VTKTime*dt_global
+            if (.not. EqualRealNos(TmpRate, TmpTime)) then
+               call WrScr('1/VTK_fps is not an integer multiple of DT. FAST will output VTK information at '//&
+                              trim(num2lstr(1.0_DbKi/TmpRate))//' fps, the closest rate possible.')
+            end if
+         end if
+      end if
+
+      DvrData%VTK_tWidth = CEILING( log10( real(n_t_final, ReKi) / DvrData%n_VTKTime ) ) + 1
+   end subroutine SetVTKvars
 
 END PROGRAM BeamDyn_Driver_Program
