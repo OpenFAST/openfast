@@ -51,58 +51,58 @@ typedef   ^                            ^                             CHARACTER(1
 
 
 # Variables local to the Kelvin Chain:                                                                                                                                                                                                                            
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime                         -             -         -        "" -
-#typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime_diff                    -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     C_nalpha_circ                    -             -         -        "slope of the circulatory normal force coefficient vs alpha curve" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kalpha_f                         -             -         -        "filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1)" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kq_f                             -             -         -        "filtered  backwards finite difference of q" -
-typedef   ^                            UA_KelvinChainType            ReKi                     alpha_filt_cur                   -             -         -        "filtered angle of attack" -
-typedef   ^                            UA_KelvinChainType            ReKi                     alpha_e                          -             -         -        "effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4" -
-typedef   ^                            UA_KelvinChainType            ReKi                     dalpha0                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     alpha_f                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kq                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     q_cur                            -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     q_f_cur                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     X1                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     X2                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     X3                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     X4                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_alpha                     -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_q                         -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     K3prime_q                        -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Kprimeprime_q                    -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Dp                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_pot                           -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cc_pot                           -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_circ                  -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_nc                    -             -         -        "non-circulatory component of normal force coefficient response to step change in alpha and q" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_circ                        -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_nc                      -             -         -        "non-circulatory component of the normal force coefficient response to step change in alpha" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_circ                        -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_nc                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_nc                          -             -         -        "non-circulatory component of the moment coefficient response to step change in q" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime                      -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Df                               -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Df_c                             -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Df_m                             -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Dalphaf                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprime                           -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprime_c                         -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_c                    -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprime_m                         -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_m                    -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_v                             -             -         -        "normal force coefficient due to the presence of LE vortex" -
-typedef   ^                            UA_KelvinChainType            ReKi                     C_V                              -             -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex" -
-typedef   ^                            UA_KelvinChainType            ReKi                     Cn_FS                            -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_f                              -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_fc                             -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_fm                             -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_V                              -             -         -        "backwards finite difference of the non-dimensionalized distance parameter" -
-typedef   ^                            UA_KelvinChainType            ReKi                     k_alpha                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     k_q                              -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_alpha                          -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     T_q                              -             -         -        "" -
-typedef   ^                            UA_KelvinChainType            ReKi                     ds                               -             -         -        "non-dimensionalized distance parameter" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime                         -             0.0       -        "" -
+#typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime_diff                    -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_nalpha_circ                    -             0.0       -        "slope of the circulatory normal force coefficient vs alpha curve" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kalpha_f                         -             0.0       -        "filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1)" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq_f                             -             0.0       -        "filtered  backwards finite difference of q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_filt_cur                   -             0.0       -        "filtered angle of attack" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_e                          -             0.0       -        "effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4" -
+typedef   ^                            UA_KelvinChainType            ReKi                     dalpha0                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_f                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_cur                            -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_f_cur                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X1                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X2                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X3                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X4                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_alpha                     -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_q                         -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     K3prime_q                        -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprimeprime_q                    -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dp                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_pot                           -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cc_pot                           -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_circ                  -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_nc                    -             0.0       -        "non-circulatory component of normal force coefficient response to step change in alpha and q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_circ                        -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_nc                      -             0.0       -        "non-circulatory component of the normal force coefficient response to step change in alpha" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_circ                        -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_nc                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_nc                          -             0.0       -        "non-circulatory component of the moment coefficient response to step change in q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime                      -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df                               -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_c                             -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_m                             -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dalphaf                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime                           -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_c                         -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_c                    -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_m                         -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_m                    -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_v                             -             0.0       -        "normal force coefficient due to the presence of LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_V                              -             0.0       -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_FS                            -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_f                              -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fc                             -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fm                             -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_V                              -             0.0       -        "backwards finite difference of the non-dimensionalized distance parameter" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_alpha                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_q                              -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_alpha                          -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_q                              -             0.0       -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     ds                               -             0.0       -        "non-dimensionalized distance parameter" -
 
 
 # ..... States ....................................................................................................................

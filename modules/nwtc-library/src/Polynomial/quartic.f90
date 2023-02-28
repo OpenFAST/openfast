@@ -410,9 +410,9 @@ SUBROUTINE QuarticRoots(a,z)
 !         THE RESOLVENT CUBIC HAS ONLY REAL ROOTS
 !         REORDER THE ROOTS IN INCREASING ORDER
 
-  x1 = DBLE(z(1))
-  x2 = DBLE(z(2))
-  x3 = DBLE(z(3))
+  x1 = REAL(z(1),8)
+  x2 = REAL(z(2),8)
+  x3 = REAL(z(3),8)
   IF (x1 > x2) CALL Swap(x1,x2)
   IF (x2 > x3) CALL Swap(x2,x3)
   IF (x1 > x2) CALL Swap(x1,x2)
@@ -460,7 +460,7 @@ RETURN
 
 !                THE RESOLVENT CUBIC HAS COMPLEX ROOTS
 
-60 t = DBLE(z(1))
+60 t = REAL(z(1),8)
 x = ZERO
 IF (t < ZERO) THEN
   GO TO 61
@@ -469,14 +469,14 @@ ELSE IF (t == ZERO) THEN
 ELSE
   GO TO 62
 END IF
-61 h = ABS(DBLE(z(2))) + ABS(AIMAG(z(2)))
+61 h = ABS(REAL(z(2),8)) + ABS(AIMAG(z(2)))
 IF (ABS(t) <= h) GO TO 70
 GO TO 80
 62 x = SQRT(t)
 IF (q > ZERO) x = -x
 
 70 w = SQRT(z(2))
-  u = TWO*DBLE(w)
+  u = TWO*REAL(w,8)
   v = TWO*ABS(AIMAG(w))
   t =  x - b
   x1 = t + u

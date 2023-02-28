@@ -139,7 +139,7 @@ CONTAINS
       IF (LEN_TRIM(inputString) == 0) THEN
          ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
          ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
-         BathGrid(1,1) = DBLE(defaultDepth)
+         BathGrid(1,1) = REAL(defaultDepth,R8Ki)
          
          ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
          BathGrid_Xs(1) = 0.0_DbKi
