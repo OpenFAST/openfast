@@ -1670,7 +1670,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       nTime = size(Inputs)   
       
       
-      IF      ( p%RdtnMod == 1 )  THEN       ! Update the convolution radiation memory effect sub-module's state  
+      IF ( p%RdtnMod == 1 ) THEN       ! Update the convolution radiation memory effect sub-module's state  
          
             ! Allocate array of Conv_Rdtn inputs
         
@@ -1770,7 +1770,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
             ErrMsg = ' Failed to allocate array SS_Exctn_u.'
             return
          end if
-         if (p%ExctnDisp == 1) then
+         if (p%ExctnDisp > 0) then
             DO I=1,nTime
                ALLOCATE( SS_Exctn_u(I)%PtfmPos(3,p%NBody), STAT = ErrStat  )
                IF (ErrStat /=0) THEN
