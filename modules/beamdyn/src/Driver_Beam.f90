@@ -161,9 +161,17 @@ PROGRAM BeamDyn_Driver_Program
       ! Write VTK reference if requested (ref is (0,0,0)
    if (DvrData%WrVTK > 0) then
       call SetVTKvars()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'BldMotion', ErrStat, ErrMsg );  call CheckError()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'PointLoad', ErrStat, ErrMsg );  call CheckError()
-      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'DistrLoad', ErrStat, ErrMsg );  call CheckError()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion', ErrStat, ErrMsg );  call CheckError()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad', ErrStat, ErrMsg );  call CheckError()
+      call MeshWrVTKreference( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad', ErrStat, ErrMsg );  call CheckError()
+   endif
+      ! Write VTK reference if requested (ref is (0,0,0)
+   if (DvrData%WrVTK == 2) then
+      n_t_vtk = 0
+      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+      call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad',  n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+      call CheckError()
    endif
 
 
@@ -219,9 +227,10 @@ PROGRAM BeamDyn_Driver_Program
          ! Write VTK reference if requested (ref is (0,0,0)
       if (DvrData%WrVTK == 2) then
          if ( MOD( n_t_global, DvrData%n_VTKTime ) == 0 ) then
-            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'BldMotion', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
-            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'PointLoad', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
-            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'DistrLoad', n_t_global, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            n_t_vtk = n_t_vtk + 1
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Output%BldMotion,   trim(DvrData%VTK_OutFileRoot)//'_BldMotion', n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%PointLoad, trim(DvrData%VTK_OutFileRoot)//'_PointLoad', n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
+            call MeshWrVTK( (/0.0_SiKi, 0.0_SiKi, 0.0_SiKi /), BD_Input(1)%DistrLoad, trim(DvrData%VTK_OutFileRoot)//'_DistrLoad', n_t_vtk, .true., ErrStat, ErrMsg, DvrData%VTK_tWidth )
             call CheckError()
          endif
       endif
