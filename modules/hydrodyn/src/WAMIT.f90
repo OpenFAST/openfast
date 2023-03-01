@@ -999,16 +999,6 @@ end if
                      CALL Cleanup()
                      RETURN            
                   END IF
-                  IF (p%ExctnDisp == 2) THEN
-                     p%ExctnFiltConst = exp(-2.0*Pi*p%ExctnCutOff * Interval)
-                     ALLOCATE ( xd%BdyPosFiltM1(1:2, 1:p%NBody) , STAT=ErrStat2 )
-                     IF ( ErrStat2 /= 0 )  THEN
-                        CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the BdyPosFiltM1 array.', ErrStat, ErrMsg, 'WAMIT_Init')
-                        CALL Cleanup()
-                        RETURN            
-                     END IF
-                     xd%BdyPosFiltM1 = 0.0_ReKi
-                  END IF
                else
                   ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
@@ -1335,6 +1325,17 @@ end if
                   end if   
             end if
             
+            IF ( (p%ExctnMod>0) .AND. (p%ExctnDisp==2) ) THEN ! Allocate array for filtered potential-flow body positions
+               p%ExctnFiltConst = exp(-2.0*Pi*p%ExctnCutOff * Interval)
+               ALLOCATE ( xd%BdyPosFilt(1:2, 1:p%NBody, 1:3) , STAT=ErrStat2 )
+               IF ( ErrStat2 /= 0 )  THEN
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the BdyPosFilt array.', ErrStat, ErrMsg, 'WAMIT_Init')
+                  CALL Cleanup()
+                  RETURN            
+               END IF
+               xd%BdyPosFilt = 0.0_ReKi
+            END IF
+
          CASE ( 6 )              ! User wave data.
 
             CALL SetErrStat( ErrID_Fatal, 'User input wave data not applicable for floating platforms.', ErrStat, ErrMsg, 'WAMIT_Init')
@@ -1728,40 +1729,41 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          
       END IF
       
-      IF ( p%ExctnMod == 1) THEN
-         IF (p%ExctnDisp == 2) THEN
-            ALLOCATE( WAMIT_u(nTime), STAT = ErrStat )
+      IF ( (p%ExctnMod>0).AND.(p%ExctnDisp==2) ) THEN
+         ALLOCATE( WAMIT_u(nTime), STAT = ErrStat )
+         IF (ErrStat /=0) THEN
+            ErrMsg = ' Failed to allocate array WAMIT_u.'
+            RETURN
+         END IF
+         DO I=1,nTime
+            ALLOCATE( WAMIT_u(I)%Mesh%TranslationDisp(3,p%NBody), STAT = ErrStat  )
             IF (ErrStat /=0) THEN
-               ErrMsg = ' Failed to allocate array WAMIT_u.'
+               ErrMsg = ' Failed to allocate array WAMIT_u(I)%Mesh%TranslationDisp.'
                RETURN
             END IF
-            DO I=1,nTime
-               ALLOCATE( WAMIT_u(I)%Mesh%TranslationDisp(3,p%NBody), STAT = ErrStat  )
-               IF (ErrStat /=0) THEN
-                  ErrMsg = ' Failed to allocate array WAMIT_u(I)%Mesh%TranslationDisp.'
-                  RETURN
-               END IF
-               DO iBody=1,p%NBody
-                  WAMIT_u(I)%Mesh%TranslationDisp(:,iBody) = Inputs(I)%Mesh%TranslationDisp(:,iBody)
-               END DO
+            DO iBody=1,p%NBody
+               WAMIT_u(I)%Mesh%TranslationDisp(:,iBody) = Inputs(I)%Mesh%TranslationDisp(:,iBody)
             END DO
-            ! Interpolate WAMIT input at time t
-            CALL WAMIT_Input_ExtrapInterp(WAMIT_u, InputTimes, WAMIT_u_t, t, ErrStat, ErrMsg)
-            DO iBody = 1,p%NBody
-               ! Current unfiltered body position at time t
-               bodyPosition(1) = WAMIT_u_t%Mesh%TranslationDisp(1,iBody)
-               bodyPosition(2) = WAMIT_u_t%Mesh%TranslationDisp(2,iBody)
-               ! Filtered body position
-               xd%BdyPosFiltM1(1,iBody) = p%ExctnFiltConst * xd%BdyPosFiltM1(1,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(1)
-               xd%BdyPosFiltM1(2,iBody) = p%ExctnFiltConst * xd%BdyPosFiltM1(2,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(2)  
-            END DO
-            CALL WAMIT_DestroyInput( WAMIT_u_t, ErrStat, ErrMsg)
-            DO I=1,nTime
-               CALL WAMIT_DestroyInput( WAMIT_u(I), ErrStat, ErrMsg)
-            END DO
-            DEALLOCATE(WAMIT_u)
-         END IF
-      ELSE IF ( p%ExctnMod == 2 )  THEN       ! Update the state-space wave excitation sub-module's states      
+         END DO
+         ! Interpolate WAMIT input at time t
+         CALL WAMIT_Input_ExtrapInterp(WAMIT_u, InputTimes, WAMIT_u_t, t+p%dt, ErrStat, ErrMsg)
+         DO iBody = 1,p%NBody
+            ! Current unfiltered body position at time t
+            bodyPosition(1) = WAMIT_u_t%Mesh%TranslationDisp(1,iBody)
+            bodyPosition(2) = WAMIT_u_t%Mesh%TranslationDisp(2,iBody)
+            ! Filtered body position
+            xd%BdyPosFilt(:,iBody,3) = xd%BdyPosFilt(:,iBody,2)
+            xd%BdyPosFilt(:,iBody,2) = xd%BdyPosFilt(:,iBody,1)
+            xd%BdyPosFilt(1,iBody,1) = p%ExctnFiltConst * xd%BdyPosFilt(1,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(1)
+            xd%BdyPosFilt(2,iBody,1) = p%ExctnFiltConst * xd%BdyPosFilt(2,iBody,1) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(2)  
+         END DO
+         CALL WAMIT_DestroyInput( WAMIT_u_t, ErrStat, ErrMsg)
+         DO I=1,nTime
+            CALL WAMIT_DestroyInput( WAMIT_u(I), ErrStat, ErrMsg)
+         END DO
+         DEALLOCATE(WAMIT_u)
+      END IF
+      IF ( p%ExctnMod == 2 )  THEN       ! Update the state-space wave excitation sub-module's states      
           
            ! Allocate array of dummy SS_Excitation inputs for the framework
         
@@ -1770,7 +1772,7 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
             ErrMsg = ' Failed to allocate array SS_Exctn_u.'
             return
          end if
-         if (p%ExctnDisp > 0) then
+         if (p%ExctnDisp == 1) then ! Use unfiltered position
             DO I=1,nTime
                ALLOCATE( SS_Exctn_u(I)%PtfmPos(3,p%NBody), STAT = ErrStat  )
                IF (ErrStat /=0) THEN
@@ -1788,7 +1790,25 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                end if
                
             END DO
-            
+         else if (p%ExctnDisp == 2) then ! Use filtered position (only need x and y coordinates)       
+            DO I=1,nTime
+               ALLOCATE( SS_Exctn_u(I)%PtfmPos(3,p%NBody), STAT = ErrStat  )
+               IF (ErrStat /=0) THEN
+                  ErrMsg = ' Failed to allocate array SS_Exctn_u(I)%PtfmPos.'
+                  RETURN
+               END IF
+               if (p%NBodyMod == 2) then
+                  do iBody=1,p%NBody                  
+                     SS_Exctn_u(I)%PtfmPos(1:2,iBody)   = xd%BdyPosFilt(:,iBody,I) + Inputs(I)%Mesh%Position(1:2,iBody)
+                  end do
+               else
+                  do iBody=1,p%NBody                  
+                     SS_Exctn_u(I)%PtfmPos(1:2,iBody)   = xd%BdyPosFilt(:,iBody,I)
+                  end do
+               end if
+               
+            END DO
+
          end if
          
          call SS_Exc_UpdateStates( t, n, SS_Exctn_u, InputTimes, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, ErrStat, ErrMsg )
@@ -1871,13 +1891,14 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
             ! We are using the displaced x,y location of the WAMIT bodies to determine the Wave Exication force
 
             DO iBody  = 1,p%NBody
-               ! Current unfiltered body position
-               bodyPosition(1) = u%Mesh%TranslationDisp(1,iBody)
-               bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
-               IF ( p%ExctnDisp > 1 ) THEN
+               IF ( p%ExctnDisp == 1 ) THEN
+                  ! Current unfiltered body position
+                  bodyPosition(1) = u%Mesh%TranslationDisp(1,iBody)
+                  bodyPosition(2) = u%Mesh%TranslationDisp(2,iBody)
+               ELSE IF ( p%ExctnDisp == 2 ) THEN
                   ! Use filtered body position
-                  bodyPosition(1) = p%ExctnFiltConst * xd%BdyPosFiltM1(1,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(1)
-                  bodyPosition(2) = p%ExctnFiltConst * xd%BdyPosFiltM1(2,iBody) + (1.0_ReKi - p%ExctnFiltConst) * bodyPosition(2)
+                  bodyPosition(1) = xd%BdyPosFilt(1,iBody,1)
+                  bodyPosition(2) = xd%BdyPosFilt(2,iBody,1)
                END IF
                iStart = (iBody-1)*6+1
                ! WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for each WAMIT Body
