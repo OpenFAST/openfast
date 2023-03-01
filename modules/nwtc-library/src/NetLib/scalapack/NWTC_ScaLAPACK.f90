@@ -43,7 +43,7 @@ CONTAINS
 
       !     .. Array Arguments ..
       INTEGER,         intent(inout) :: KEY( : )
-      DOUBLE PRECISION,intent(inout) :: D( : )            ! On entry, the array to be sorted. On exit, D has been sorted into increasing/decreasing order, depending on ID
+      REAL(R8Ki)      ,intent(inout) :: D( : )            ! On entry, the array to be sorted. On exit, D has been sorted into increasing/decreasing order, depending on ID
 
          ! Local variable
       INTEGER                        :: INFO              ! = 0:  successful exit; < 0:  if INFO = -i, the i-th argument had an illegal value 
@@ -79,7 +79,7 @@ CONTAINS
 
       !     .. Array Arguments ..
       INTEGER,        intent(inout) :: KEY( : )
-      REAL,           intent(inout) :: D( : )            ! On entry, the array to be sorted. On exit, D has been sorted into increasing/decreasing order, depending on ID
+      REAL(R4Ki),     intent(inout) :: D( : )            ! On entry, the array to be sorted. On exit, D has been sorted into increasing/decreasing order, depending on ID
 
          ! Local variable
       INTEGER                       :: INFO              ! = 0:  successful exit; < 0:  if INFO = -i, the i-th argument had an illegal value 

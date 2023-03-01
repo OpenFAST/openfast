@@ -53,6 +53,11 @@ typedef  ^                 WD_InputFileType  IntKi           NumVortices    -  -
 typedef  ^                 WD_InputFileType  IntKi           FilterInit     - - -  "Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch)"
 typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - -  "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
 typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
+# wake added turbulence (WAT) inputs
+typedef  ^                 WD_InputFileType  LOGICAL         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def      -  - - "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad     -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -167,6 +172,10 @@ typedef ^ ParameterType  Logical          OutAllPlanes   - - -    "Output all pl
 typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    - - -    "The root name derived from the primary FAST.Farm input file" -
 typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent directory for all VTK files written by WD" -
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
+# wake added turbulence (WAT) parameters
+typedef ^ ParameterType  LOGICAL          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
+typedef ^ ParameterType  ReKi             WAT_k_Def      -  - -   "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
+typedef ^ ParameterType  ReKi             WAT_k_Grad     -  - -   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef      ^      InputType          ReKi       xhat_disk            {3}     -      -      "Orientation of rotor centerline, normal to disk"      -
@@ -194,4 +203,5 @@ typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:}
 typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
+typedef      ^      OutputType         ReKi       WAT_k_mt             {:}{:}{:}  -    -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
 

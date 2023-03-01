@@ -870,6 +870,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
    p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
+   ! Wake Added Turbulence (WAT) Parameters
+   !p%WAT             = InitInp%InputFileData%WAT  
+   !p%WAT_Basename    = InitInp%InputFileData%WAT_Basename
 
    select case ( p%Mod_Meander )
    case (MeanderMod_Uniform)
@@ -1120,6 +1123,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake.', errStat, errMsg, RoutineName )
    allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
+   allocate ( u%WAT_k_mt  (0:p%NumRadii-1, 0:p%NumPlanes-1, 1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%k_mt.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
 
    u%Vx_wake=0.0_ReKi
@@ -1853,6 +1857,40 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
 
 end subroutine AWAE_TEST_CalcOutput
+
+! WAT TODO
+!> Compute non-scaled turbulence at a given plane based on a Mann Box, current time, and convection velocity of the box
+subroutine TurbPlane(Uconv, t, nr, u_p, v_p, w_p)
+   integer(IntKi),                               intent(in)  :: nr    !< Number of radius in wake plane
+   !real(ReKi), dimension(0:,0:,0:), pointer,    intent(in)  :: u_b   !< TODO turbulence box
+   real(ReKi),                                   intent(in)  :: Uconv !< Convection velocity of the box
+   real(DbKi),                                   intent(in)  :: t     !< Current time
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: u_p   !< Plane to be filled with turbulence values, shape
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: v_p   !< Plane to be filled with turbulence values, shape
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: w_p   !< Plane to be filled with turbulence values, shape
+   integer(IntKi) :: iz, iy ! indices in plane coordinates
+   integer(IntKi) :: ix_b, iy_b, iz_b, ib0, nb  ! Indices in box coordinates
+
+   !nb = size(u_b, 1)
+   nb=2 ! TODO
+   ib0 = int(nb/2)-1 ! NOTE: nb is multiple of 2
+
+   ! Interpolate time
+   ! TODO use Uconv/t to find ix_b
+
+   ! Loop through all plane points
+   do iz = -nr+1, nr-1
+      iz_b = modulo(ib0 + iz, nb) ! NOTE: assumes that turbulene box has indexing starting from 0
+      do iy = -nr+1, nr-1
+         iy_b = modulo(ib0 + iz, nb)
+         u_p(iy,iz) = 0.0_ReKi
+         v_p(iy,iz) = 0.0_ReKi
+         w_p(iy,iz) = 0.0_ReKi
+         !u_b = u_b(iy_b, iz_b, ix_b) ! TODO
+      enddo
+   enddo
+   
+end subroutine 
 
 FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vbox)
       !  I/O variables
