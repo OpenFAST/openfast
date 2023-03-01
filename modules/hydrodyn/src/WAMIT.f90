@@ -1168,7 +1168,7 @@ end if
                DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                   do iGrid = 1, p%SeaSt_Interp_p%n(2)*p%SeaSt_Interp_p%n(3)
                         iX = mod(iGrid-1, p%SeaSt_Interp_p%n(2)) + 1  ! 1st n index is time
-                        iY = (iGrid-1) / p%SeaSt_Interp_p%n(3) + 1
+                        iY = (iGrid-1) / p%SeaSt_Interp_p%n(2) + 1
                         CALL ApplyFFT_cx ( p%WaveExctnGrid(0:InitInp%NStepWave-1,iX,iY,J), WaveExctnCGrid(:,iGrid,J), FFT_Data, ErrStat2 )
                         CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, 'WAMIT_Init')
                         IF ( ErrStat >= AbortErrLev) THEN
