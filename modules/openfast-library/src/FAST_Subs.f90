@@ -2137,13 +2137,8 @@ end do
    NumOuts   = SUM( y_FAST%numOuts )
 
    ! If already allocated from previous call, deallocate?
-   IF (ALLOCATED(y_FAST%ChannelNames)) THEN
-      DEALLOCATE(y_FAST%ChannelNames)
-   ENDIF 
-
-   IF (ALLOCATED(y_FAST%ChannelUnits)) THEN
-      DEALLOCATE(y_FAST%ChannelUnits)
-   ENDIF 
+   IF (ALLOCATED(y_FAST%ChannelNames)) DEALLOCATE(y_FAST%ChannelNames)
+   IF (ALLOCATED(y_FAST%ChannelUnits)) DEALLOCATE(y_FAST%ChannelUnits)
 
    CALL AllocAry( y_FAST%ChannelNames,NumOuts, 'ChannelNames', ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
