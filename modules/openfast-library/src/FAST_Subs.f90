@@ -5368,12 +5368,6 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_AD, 
          end do         
       END IF            
          
-      IF ( y_FAST%numOuts(Module_SrvD) > 0 ) THEN
-         indxLast = indxNext + SIZE(SrvDOutput) - 1
-         OutputAry(indxNext:indxLast) = SrvDOutput
-         indxNext = IndxLast + 1
-      END IF
-
       IF ( y_FAST%numOuts(Module_HD) > 0 ) THEN
          indxLast = indxNext + SIZE(HDOutput) - 1
          OutputAry(indxNext:indxLast) = HDOutput
@@ -5418,6 +5412,12 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_AD, 
             OutputAry(indxNext:indxLast) = y_IceD(i)%WriteOutput
             indxNext = IndxLast + 1
          END DO
+      END IF
+
+      IF ( y_FAST%numOuts(Module_SrvD) > 0 ) THEN
+         indxLast = indxNext + SIZE(SrvDOutput) - 1
+         OutputAry(indxNext:indxLast) = SrvDOutput
+         indxNext = IndxLast + 1
       END IF
 
 END SUBROUTINE FillOutputAry
