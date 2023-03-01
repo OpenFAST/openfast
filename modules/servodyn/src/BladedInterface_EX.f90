@@ -495,9 +495,11 @@ CONTAINS
 
       ! Add OpenFAST outputs
       ChanInd = OutData_StartIdx
-      N_Channels = MIN(Size(u%ChannelNames),OutData_MaxChan)   ! Limit number of channels to OutData_MaxChan
+
+      ! Limit number of channels to OutData_MaxChan, u%Channel names has Time, AllOutData does not
+      N_Channels = MIN(Size(u%ChannelNames)-1,OutData_MaxChan)   
+      
       dll_data%avrSWAP(ChanInd+1:ChanInd+N_Channels) = u%AllOutData(:,u%n_Out)   ! u%n_Out is output time index
-      WRITE(1001,*) u%AllOutData(:,u%n_Out)
 
    end subroutine SetEXavrSWAP_Sensors
 
