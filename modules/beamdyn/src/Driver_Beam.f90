@@ -100,7 +100,7 @@ PROGRAM BeamDyn_Driver_Program
       ! initialize the BD_InitInput values not in the driver input file
    BD_InitInput%RootName = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootName = TRIM(RootName)//'.BD'
-   BD_InitInput%RootDisp = 0.d0
+   BD_InitInput%RootDisp = MATMUL(BD_InitInput%GlbPos(:),DvrData%RootRelInit) - BD_InitInput%GlbPos(:)
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
 
    t_global = DvrData%t_initial
