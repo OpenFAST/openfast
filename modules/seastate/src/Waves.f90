@@ -1991,7 +1991,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       DO k = 1,InitInp%NWaveElevGrid     ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
          i = mod(k-1, InitInp%NGrid(1)) + 1
-         j = (k-1) / InitInp%NGrid(2) + 1
+         j = (k-1) / InitInp%NGrid(1) + 1
          CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), InitOut%WaveElev(:,i,j), InitOut%WaveElevC(:,:,k), ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev.',ErrStat,ErrMsg,'VariousWaves_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
