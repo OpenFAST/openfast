@@ -833,11 +833,8 @@ if (p%ExctnMod == 1 ) then
 
 
       END DO ! End loop through all rows in the file
-
-
-      CLOSE ( UnW3 ) ! Close file.
-
 end if
+      CLOSE ( UnW3 ) ! Close file.
 
       ! For some reason, WAMIT computes the zero- and infinite- frequency limits for
       !   only the added mass.  Based on hydrodynamic theory, the damping is zero at
