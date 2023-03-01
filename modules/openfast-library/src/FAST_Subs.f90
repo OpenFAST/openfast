@@ -1272,12 +1272,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL AllocAry(Init%InData_SrvD%BlPitchInit, Init%OutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      ! Get output channels, except ServoDyn ones
+      CALL FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat2, ErrMsg2, .TRUE. )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      CALL AllocAry(Init%InData_SrvD%ChannelNames, size(y_FAST%ChannelNames), 'ChannelNames', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
       if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
          CALL Cleanup()
          RETURN
       end if
 
+      Init%InData_SrvD%ChannelNames = y_FAST%ChannelNames
       Init%InData_SrvD%BlPitchInit   = Init%OutData_ED%BlPitch
+
       CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
                       SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), Init%OutData_SrvD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1435,19 +1444,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       endif
 
 
-      ! We don't have channel names until here...this may be a hacky place to put it
-      ! we could reinitialize ServoDyn, but that's probably not a great idea...othe modules are only initialized once
-      ! But then the input file won't be written, we need to re-initialize, or re-write the file
-
-      CALL AllocAry(Init%InData_SrvD%ChannelNames, size(y_FAST%ChannelNames), 'ChannelNames', ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      Init%InData_SrvD%ChannelNames = y_FAST%ChannelNames
-
-      CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                      SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), Init%OutData_SrvD, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
 
    end if
 
@@ -1994,7 +1990,7 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
-SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
+SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg, SkipServoDyn )
 
    IMPLICIT NONE
 
@@ -2006,14 +2002,22 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    INTEGER(IntKi),                 INTENT(OUT)          :: ErrStat                               !< Error status
    CHARACTER(*),                   INTENT(OUT)          :: ErrMsg                                !< Error message corresponding to ErrStat
 
+   LOGICAL,      OPTIONAL,         INTENT(IN)           :: SkipServoDyn                         !< Skip file writing and servodyn inputs first time called
+
 
       ! Local variables.
 
    INTEGER(IntKi)                   :: I, J                                            ! Generic index for DO loops.
    INTEGER(IntKi)                   :: indxNext                                        ! The index of the next value to be written to an array
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
+   LOGICAL                          :: SkipSrvD                                    ! Local version of SkipServoDyn
 
-
+   ! Optional input
+   IF (PRESENT(SkipServoDyn)) THEN
+      SkipSrvD = SkipServoDyn
+   ELSE
+      SkipSrvD = .FALSE.
+   END IF
 
    !......................................................
    ! Set the description lines to be printed in the output file
@@ -2128,6 +2132,15 @@ end do
    
    NumOuts   = SUM( y_FAST%numOuts )
 
+   ! If already allocated from previous call, deallocate?
+   IF (ALLOCATED(y_FAST%ChannelNames)) THEN
+      DEALLOCATE(y_FAST%ChannelNames)
+   ENDIF 
+
+   IF (ALLOCATED(y_FAST%ChannelUnits)) THEN
+      DEALLOCATE(y_FAST%ChannelUnits)
+   ENDIF 
+
    CALL AllocAry( y_FAST%ChannelNames,NumOuts, 'ChannelNames', ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( y_FAST%ChannelUnits,NumOuts, 'ChannelUnits', ErrStat, ErrMsg )
@@ -2176,12 +2189,6 @@ end do
    DO i=1,y_FAST%numOuts(Module_AD) !AeroDyn
       y_FAST%ChannelNames(indxNext) = Init%OutData_AD%rotors(1)%WriteOutputHdr(i)
       y_FAST%ChannelUnits(indxNext) = Init%OutData_AD%rotors(1)%WriteOutputUnt(i)
-      indxNext = indxNext + 1
-   END DO
-
-   DO i=1,y_FAST%numOuts(Module_SrvD) !ServoDyn
-      y_FAST%ChannelNames(indxNext) = Init%OutData_SrvD%WriteOutputHdr(i)
-      y_FAST%ChannelUnits(indxNext) = Init%OutData_SrvD%WriteOutputUnt(i)
       indxNext = indxNext + 1
    END DO
 
@@ -2242,6 +2249,16 @@ end do
          END DO ! J
       END DO ! I
    END IF
+
+   ! RETURN HERE, If skipping servodyn and file writing the first time called in Init
+   IF (SkipSrvD)  RETURN
+
+
+   DO i=1,y_FAST%numOuts(Module_SrvD) !ServoDyn
+      y_FAST%ChannelNames(indxNext) = Init%OutData_SrvD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = Init%OutData_SrvD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO
 
 
    !......................................................

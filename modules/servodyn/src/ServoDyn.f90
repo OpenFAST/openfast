@@ -388,14 +388,17 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 
-   ! Set channel names here
-   IF (ALLOCATED(InitInp%ChannelNames)) THEN
-      CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames), 'u%ChannelNames', ErrStat2, ErrMsg2 )
-         if (Failed())  return;
 
-      u%ChannelNames = InitInp%ChannelNames
+   ! Collect output names from OpenFAST and add ServoDyn output channels to list
+   CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'u%ChannelNames', ErrStat2, ErrMsg2 )
+      if (Failed())  return;
 
-   ENDIF
+   u%ChannelNames(1:size(InitInp%ChannelNames)) = InitInp%ChannelNames
+
+   DO I=1,p%NumOuts
+      u%ChannelNames(size(InitInp%ChannelNames)+I) = p%OutParam(I)%Name      ! repeat with units
+   ENDDO
+
 
       !............................................................................................
       ! Define system output initializations (set up mesh) here:
