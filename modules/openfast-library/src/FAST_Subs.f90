@@ -1279,12 +1279,16 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL AllocAry(Init%InData_SrvD%ChannelNames, size(y_FAST%ChannelNames), 'ChannelNames', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      CALL AllocAry(Init%InData_SrvD%ChannelUnits, size(y_FAST%ChannelUnits), 'ChannelUnits', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
       if (ErrStat >= abortErrLev) then ! make sure allocatable arrays are valid before setting them
          CALL Cleanup()
          RETURN
       end if
 
       Init%InData_SrvD%ChannelNames = y_FAST%ChannelNames
+      Init%InData_SrvD%ChannelUnits = y_FAST%ChannelUnits
       Init%InData_SrvD%BlPitchInit   = Init%OutData_ED%BlPitch
 
       CALL SrvD_Init( Init%InData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &

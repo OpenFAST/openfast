@@ -221,7 +221,7 @@ contains
       N_Channels = MIN(Size(u%ChannelNames),OutData_MaxChan)   ! Limit number of channels to OutData_MaxChan
 
       DO I = 2, N_Channels   ! Skip first one, which is time and not actually in u%AllOutData
-         call WrSumInfoSend(ChanInd, 'OpenFAST output -- '//TRIM(u%ChannelNames(I))//' -- (units TBD)')
+         call WrSumInfoSend(ChanInd, 'OpenFAST output -- '//TRIM(u%ChannelNames(I))//' -- '//TRIM(u%ChannelUnits(I)))
          ChanInd = ChanInd + 1
       ENDDO
 

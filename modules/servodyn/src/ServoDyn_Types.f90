@@ -64,6 +64,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: TrimGain      !< Proportional gain for the rotational speed error (>0) [used only if TrimCase>0] [rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque]
     REAL(ReKi)  :: RotSpeedRef      !< Reference rotor speed [rad/s]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelNames      !< Names of the output channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelUnits      !< Output channels units [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootRefPos      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootTransDisp      !< X-Y-Z translation from reference position at init of each blade root (3 x NumBlades) [m]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: BladeRootOrient      !< DCM reference orientation of blade roots (3x3 x NumBlades) [-]
@@ -525,6 +526,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass input data to the DLL controller from the Lidar [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AllOutData      !< Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelNames      !< Names of the output channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelUnits      !< Output channels units [-]
     INTEGER(IntKi)  :: n_Out      !< Time index into the AllOutData array [-]
     TYPE(MeshType)  :: PtfmMotionMesh      !< Platform motion mesh at platform reference point [-]
     TYPE(MeshType) , DIMENSION(:,:), ALLOCATABLE  :: BStCMotionMesh      !< StC module blade        input motion mesh [-]
@@ -620,6 +622,18 @@ IF (ALLOCATED(SrcInitInputData%ChannelNames)) THEN
     END IF
   END IF
     DstInitInputData%ChannelNames = SrcInitInputData%ChannelNames
+ENDIF
+IF (ALLOCATED(SrcInitInputData%ChannelUnits)) THEN
+  i1_l = LBOUND(SrcInitInputData%ChannelUnits,1)
+  i1_u = UBOUND(SrcInitInputData%ChannelUnits,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%ChannelUnits)) THEN 
+    ALLOCATE(DstInitInputData%ChannelUnits(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%ChannelUnits.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%ChannelUnits = SrcInitInputData%ChannelUnits
 ENDIF
 IF (ALLOCATED(SrcInitInputData%BladeRootRefPos)) THEN
   i1_l = LBOUND(SrcInitInputData%BladeRootRefPos,1)
@@ -752,6 +766,9 @@ ENDIF
 IF (ALLOCATED(InitInputData%ChannelNames)) THEN
   DEALLOCATE(InitInputData%ChannelNames)
 ENDIF
+IF (ALLOCATED(InitInputData%ChannelUnits)) THEN
+  DEALLOCATE(InitInputData%ChannelUnits)
+ENDIF
 IF (ALLOCATED(InitInputData%BladeRootRefPos)) THEN
   DEALLOCATE(InitInputData%BladeRootRefPos)
 ENDIF
@@ -847,6 +864,11 @@ ENDIF
   IF ( ALLOCATED(InData%ChannelNames) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ChannelNames upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ChannelNames)*LEN(InData%ChannelNames)  ! ChannelNames
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ChannelUnits allocated yes/no
+  IF ( ALLOCATED(InData%ChannelUnits) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ChannelUnits upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ChannelUnits)*LEN(InData%ChannelUnits)  ! ChannelUnits
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! BladeRootRefPos allocated yes/no
   IF ( ALLOCATED(InData%BladeRootRefPos) ) THEN
@@ -1053,6 +1075,23 @@ ENDIF
       DO i1 = LBOUND(InData%ChannelNames,1), UBOUND(InData%ChannelNames,1)
         DO I = 1, LEN(InData%ChannelNames)
           IntKiBuf(Int_Xferred) = ICHAR(InData%ChannelNames(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ChannelUnits) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ChannelUnits,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ChannelUnits,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ChannelUnits,1), UBOUND(InData%ChannelUnits,1)
+        DO I = 1, LEN(InData%ChannelUnits)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%ChannelUnits(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -1425,6 +1464,26 @@ ENDIF
       DO i1 = LBOUND(OutData%ChannelNames,1), UBOUND(OutData%ChannelNames,1)
         DO I = 1, LEN(OutData%ChannelNames)
           OutData%ChannelNames(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ChannelUnits not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ChannelUnits)) DEALLOCATE(OutData%ChannelUnits)
+    ALLOCATE(OutData%ChannelUnits(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ChannelUnits.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ChannelUnits,1), UBOUND(OutData%ChannelUnits,1)
+        DO I = 1, LEN(OutData%ChannelUnits)
+          OutData%ChannelUnits(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -15080,6 +15139,18 @@ IF (ALLOCATED(SrcInputData%ChannelNames)) THEN
   END IF
     DstInputData%ChannelNames = SrcInputData%ChannelNames
 ENDIF
+IF (ALLOCATED(SrcInputData%ChannelUnits)) THEN
+  i1_l = LBOUND(SrcInputData%ChannelUnits,1)
+  i1_u = UBOUND(SrcInputData%ChannelUnits,1)
+  IF (.NOT. ALLOCATED(DstInputData%ChannelUnits)) THEN 
+    ALLOCATE(DstInputData%ChannelUnits(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%ChannelUnits.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%ChannelUnits = SrcInputData%ChannelUnits
+ENDIF
     DstInputData%n_Out = SrcInputData%n_Out
       CALL MeshCopy( SrcInputData%PtfmMotionMesh, DstInputData%PtfmMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -15204,6 +15275,9 @@ IF (ALLOCATED(InputData%AllOutData)) THEN
 ENDIF
 IF (ALLOCATED(InputData%ChannelNames)) THEN
   DEALLOCATE(InputData%ChannelNames)
+ENDIF
+IF (ALLOCATED(InputData%ChannelUnits)) THEN
+  DEALLOCATE(InputData%ChannelUnits)
 ENDIF
   CALL MeshDestroy( InputData%PtfmMotionMesh, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -15357,6 +15431,11 @@ ENDIF
   IF ( ALLOCATED(InData%ChannelNames) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! ChannelNames upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ChannelNames)*LEN(InData%ChannelNames)  ! ChannelNames
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ChannelUnits allocated yes/no
+  IF ( ALLOCATED(InData%ChannelUnits) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! ChannelUnits upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ChannelUnits)*LEN(InData%ChannelUnits)  ! ChannelUnits
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! n_Out
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
@@ -15723,6 +15802,23 @@ ENDIF
       DO i1 = LBOUND(InData%ChannelNames,1), UBOUND(InData%ChannelNames,1)
         DO I = 1, LEN(InData%ChannelNames)
           IntKiBuf(Int_Xferred) = ICHAR(InData%ChannelNames(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ChannelUnits) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ChannelUnits,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ChannelUnits,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%ChannelUnits,1), UBOUND(InData%ChannelUnits,1)
+        DO I = 1, LEN(InData%ChannelUnits)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%ChannelUnits(i1)(I:I), IntKi)
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -16215,6 +16311,26 @@ ENDIF
       DO i1 = LBOUND(OutData%ChannelNames,1), UBOUND(OutData%ChannelNames,1)
         DO I = 1, LEN(OutData%ChannelNames)
           OutData%ChannelNames(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ChannelUnits not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ChannelUnits)) DEALLOCATE(OutData%ChannelUnits)
+    ALLOCATE(OutData%ChannelUnits(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ChannelUnits.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%ChannelUnits,1), UBOUND(OutData%ChannelUnits,1)
+        DO I = 1, LEN(OutData%ChannelUnits)
+          OutData%ChannelUnits(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
           Int_Xferred = Int_Xferred + 1
         END DO ! I
       END DO
@@ -17886,6 +18002,8 @@ IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(u_out%ChannelNames) .AND. ALLOCATED(u1%ChannelNames)) THEN
 END IF ! check if allocated
+IF (ALLOCATED(u_out%ChannelUnits) .AND. ALLOCATED(u1%ChannelUnits)) THEN
+END IF ! check if allocated
       CALL MeshExtrapInterp1(u1%PtfmMotionMesh, u2%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
 IF (ALLOCATED(u_out%BStCMotionMesh) .AND. ALLOCATED(u1%BStCMotionMesh)) THEN
@@ -18131,6 +18249,8 @@ IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(u_out%ChannelNames) .AND. ALLOCATED(u1%ChannelNames)) THEN
+END IF ! check if allocated
+IF (ALLOCATED(u_out%ChannelUnits) .AND. ALLOCATED(u1%ChannelUnits)) THEN
 END IF ! check if allocated
       CALL MeshExtrapInterp2(u1%PtfmMotionMesh, u2%PtfmMotionMesh, u3%PtfmMotionMesh, tin, u_out%PtfmMotionMesh, tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)

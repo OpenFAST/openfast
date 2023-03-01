@@ -393,10 +393,15 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'u%ChannelNames', ErrStat2, ErrMsg2 )
       if (Failed())  return;
 
+   CALL AllocAry( u%ChannelUnits, size(InitInp%ChannelUnits) + size(p%OutParam) - 1, 'u%ChannelUnits', ErrStat2, ErrMsg2 )
+      if (Failed())  return;
+
    u%ChannelNames(1:size(InitInp%ChannelNames)) = InitInp%ChannelNames
+   u%ChannelUnits(1:size(InitInp%ChannelUnits)) = InitInp%ChannelUnits
 
    DO I=1,p%NumOuts
       u%ChannelNames(size(InitInp%ChannelNames)+I) = p%OutParam(I)%Name      ! repeat with units
+      u%ChannelUnits(size(InitInp%ChannelUnits)+I) = p%OutParam(I)%Units      ! repeat with units
    ENDDO
 
 

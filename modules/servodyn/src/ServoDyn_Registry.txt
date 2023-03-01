@@ -44,6 +44,7 @@ typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed
 typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 typedef	^	InitInputType	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"
+typedef	^	InitInputType	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Output channels units"
 typedef	^	InitInputType	ReKi	BladeRootRefPos	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	BladeRootTransDisp	{:}{:}	-	-	"X-Y-Z translation from reference position at init of each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	BladeRootOrient	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
@@ -519,6 +520,7 @@ typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global i
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
 typedef	^	InputType	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
 typedef	^	InputType	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"
+typedef	^	InputType	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Output channels units"
 typedef	^	InputType	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
