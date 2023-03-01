@@ -1745,10 +1745,10 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
                WAMIT_u(I)%Mesh%TranslationDisp(:,iBody) = Inputs(I)%Mesh%TranslationDisp(:,iBody)
             END DO
          END DO
-         ! Interpolate WAMIT input at time t
+         ! Interpolate WAMIT input at time t+dt
          CALL WAMIT_Input_ExtrapInterp(WAMIT_u, InputTimes, WAMIT_u_t, t+p%dt, ErrStat, ErrMsg)
          DO iBody = 1,p%NBody
-            ! Current unfiltered body position at time t
+            ! Current unfiltered body position at time t+dt
             bodyPosition(1) = WAMIT_u_t%Mesh%TranslationDisp(1,iBody)
             bodyPosition(2) = WAMIT_u_t%Mesh%TranslationDisp(2,iBody)
             ! Filtered body position
