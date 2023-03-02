@@ -165,8 +165,10 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    case (MeanderMod_WndwdJinc) 
       WRITE (UnSum,'(4X,A)')        '( windowed jinc )'
    end select
-WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake meandering (-): '//trim(Num2LStr(farm%AWAE%p%C_Meander))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake meandering (-): '//trim(Num2LStr(farm%AWAE%p%C_Meander))
    
+!FIXME: add summary info about WAT
+
    WRITE (UnSum,'(/,A)'   )  'Time Steps'
    WRITE (UnSum,'(2X,A)')      'Component                        Time Step         Subcyles'
    WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'

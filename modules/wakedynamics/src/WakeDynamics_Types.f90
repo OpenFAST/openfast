@@ -40,6 +40,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Polar = 1      ! Wake model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Curl = 2      ! Wake model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_Wake_Cartesian = 3      ! Wake model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None = 0      ! WAT: off [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 0      ! WAT: predefined turubulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 0      ! WAT: user defined turubulence boxes [-]
 ! =========  WD_InputFileType  =======
   TYPE, PUBLIC :: WD_InputFileType
     REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [>0.0] [m]
@@ -71,7 +74,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: FilterInit      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
     REAL(ReKi)  :: k_vCurl      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes      !< Output all planes [-]
-    LOGICAL  :: WAT      !< Switch for turning on and off wake-added turbulence [-]
+    INTEGER(IntKi)  :: WAT      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
   END TYPE WD_InputFileType
@@ -193,7 +196,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
-    LOGICAL  :: WAT      !< Switch for turning on and off wake-added turbulence [-]
+    INTEGER(IntKi)  :: WAT      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
   END TYPE WD_ParameterType
@@ -455,7 +458,7 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%OutAllPlanes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WAT, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%WAT
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WAT_k_Def
     Re_Xferred = Re_Xferred + 1
@@ -550,7 +553,7 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     OutData%OutAllPlanes = TRANSFER(IntKiBuf(Int_Xferred), OutData%OutAllPlanes)
     Int_Xferred = Int_Xferred + 1
-    OutData%WAT = TRANSFER(IntKiBuf(Int_Xferred), OutData%WAT)
+    OutData%WAT = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WAT_k_Def = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -4446,7 +4449,7 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = InData%TurbNum
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WAT, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%WAT
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WAT_k_Def
     Re_Xferred = Re_Xferred + 1
@@ -4607,7 +4610,7 @@ ENDIF
     END DO ! I
     OutData%TurbNum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%WAT = TRANSFER(IntKiBuf(Int_Xferred), OutData%WAT)
+    OutData%WAT = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WAT_k_Def = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

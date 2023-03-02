@@ -1117,15 +1117,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    ! Read WAT variables
    WD_InitInp%WAT_k_Def  =1.0_ReKi
    WD_InitInp%WAT_k_Grad =1.0_ReKi
-   WD_InitInp%WAT = .false.   ! initialize to false to avoid segfault
-   !CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !CALL ReadCom( UnIn, InputFile, 'dummy predef', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadCom( UnIn, InputFile, 'dummy user', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadCom( UnIn, InputFile, 'dummy userdx', ErrStat2, ErrMsg2, UnEc )
-   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def,     "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   !IF ( PathIsRelative( p%File ) )p%File = TRIM(PriPath)//TRIM(p%File)
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, p%WAT_BoxFile, 'WAT_BoxFile', "Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   call ReadAry( UnIn, InputFile, p%WAT_UserDxDyDz, 3, "WAT_UserDxDyDz", "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def",    "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   IF ( PathIsRelative( p%WAT_BoxFile ) )p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
 
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
@@ -1526,7 +1524,8 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    END IF
    IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
-   ! --- WAT      
+   ! --- WAT
+   IF (WD_InitInp%WAT < 0_IntKi .or. WD_InitInp%WAT > 2_IntKi) CALL SetErrStat(ErrID_Fatal,'WAT option must be 0: no wake added turbulence, 1: predefined turbulence box, or 2: user defined turbulence box.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%WAT_k_Def  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%WAT_k_Grad <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
    

@@ -79,6 +79,13 @@ typedef  ^               ParameterType         IntKi           nZ_low          -
 typedef  ^               ParameterType         ReKi            X0_low          -    - - "X-component of the origin of the low-resolution spatial domain" m
 typedef  ^               ParameterType         ReKi            Y0_low          -    - - "Y-component of the origin of the low-resolution spatial domain" m
 typedef  ^               ParameterType         ReKi            Z0_low          -    - - "Z-component of the origin of the low-resolution spatial domain" m
+
+#typedef  ^               ParameterType         IntKi           WAT             -    - - "Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box}" -
+typedef  ^               ParameterType         CHARACTER(1024) WAT_BoxFile     -    - - "Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined)." -
+typedef  ^               ParameterType         ReKi            WAT_UserDxDyDz  {3}  - - "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2]" (m)
+#typedef  ^               ParameterType         ReKi            WAT_k_Def       -    - - "Calibrated parameter for the influence of the wake deficit in the wake-added turbulence [>=0.0] or DEFAULT [DEFAULT=0.6]" -
+#typedef  ^               ParameterType         ReKi            WAT_k_Grad      -    - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+
 # ..... FAST MiscVar data .......................................................................................................
 typedef	^	             MiscVarType	        ReKi	         AllOuts	      {:}	- - "An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
 typedef	^              	^              	  DbKi	         TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
