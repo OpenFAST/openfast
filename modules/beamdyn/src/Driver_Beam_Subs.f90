@@ -47,7 +47,13 @@ module BeamDyn_driver_subs
       REAL(DbKi)                                    :: RootRelInit(3,3) ! Initial root orientation relative to GlbRot
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
-      REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
+      REAL(R8Ki)                                    :: w                ! magnitude of rotational velocity vector
+
+      INTEGER(IntKi)                                :: WrVTK            ! VTK visualization data output: (switch) {0=none; 1=init; 2=animation}
+      INTEGER(IntKi)                                :: VTK_fps          ! Frame rate for VTK output (frames per second) {will use closest integer multiple of DT} [used only if WrVTK=2]
+      INTEGER(IntKi)                                :: n_VTKTime        ! Number of time steps between writing VTK files
+      INTEGER(IntKi)                                :: VTK_tWidth       ! number of digits in the time part of file name
+      character(1024)                               :: VTK_OutFileRoot  ! rootname for the output file
       
    END TYPE
    
@@ -95,187 +101,95 @@ module BeamDyn_driver_subs
    ErrMsg  = ""
    UnEc = -1
    
-   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2);   if (Failed())  return;
+   CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2);   if (Failed())  return;
       
       
    CALL GetPath( DvrInputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
       
    !-------------------------- HEADER ---------------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   CALL ReadStr(UnIn,DvrInputFile,FTitle,'FTitle','File Header: File Description (line 2)',ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadStr(UnIn,DvrInputFile,FTitle,'FTitle','File Header: File Description (line 2)',ErrStat2, ErrMsg2, UnEc);   if (Failed())  return;
 
    !---------------------- SIMULATION CONTROL --------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DynamicSolve,'DynamicSolve','Use Dynamic solve (false for static solve).',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%t_initial,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%t_final,"t_final", "Ending time of simulation",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DynamicSolve,'DynamicSolve','Use Dynamic solve (false for static solve).',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%t_initial,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%t_final,"t_final", "Ending time of simulation",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
    CALL ReadVar(UnIn,DvrInputFile,dt,"dt", "Time increment size",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    !---------------------- GRAVITY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Gravity Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InitInputData%gravity(:) = 0.0_ReKi
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(1),"InitInputData%gravity(1)", "gravity vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(2),"InitInputData%gravity(2)", "gravity vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(3),"InitInputData%gravity(3)", "gravity vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(1),"InitInputData%gravity(1)", "gravity vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(2),"InitInputData%gravity(2)", "gravity vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(3),"InitInputData%gravity(3)", "gravity vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+
    !---------------------- FRAME PARAMETER --------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Frame Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Frame Parameter',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
    InitInputData%GlbPos(:)   = 0.0_ReKi
    InitInputData%GlbRot(:,:) = 0.0_R8Ki
    InitInputData%RootOri(:,:) = 0.0_R8Ki
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(3),"InitInputData%GlbPos(3)", "position vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(3),"InitInputData%GlbPos(3)", "position vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
 
-   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
    DO i=1,3
        CALL ReadAry(UnIn,DvrInputFile,InitInputData%RootOri(i,:),3,"InitInputData%RootOri",&
-               "Initial root orientation",ErrStat2,ErrMsg2,UnEc)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               "Initial root orientation",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
    ENDDO
 
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%GlbRotBladeT0,"DvrData%GlbRotBladeT0","Is the blade initial orientation also the GlbRot calculation frame",ErrStat2,ErrMSg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%GlbRotBladeT0,"DvrData%GlbRotBladeT0","Is the blade initial orientation also the GlbRot calculation frame",ErrStat2,ErrMSg2,UnEc);   if (Failed())  return;
 
       ! Use the initial blade root orientation as the GlbRot reference orientation for all calculations?
    if ( DvrData%GlbRotBladeT0 ) then
-
          ! Set the GlbRot matrix
       InitInputData%GlbRot = InitInputData%RootOri
-      CALL eye( DvrData%RootRelInit, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+      CALL eye( DvrData%RootRelInit, ErrStat2, ErrMsg2 );   if (Failed())  return;
    else
-
          ! Initialize the GlbRot matrix as the identity.  Relative rotation for root to GlbRot
       DvrData%RootRelInit = InitInputData%RootOri
-       CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   end if
-
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
+       CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 );   if (Failed())  return;
    end if
 
    !---------------------- INITIAL VELOCITY PARAMETER --------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(4),"InitInputData%IniRootVel(1)", "angular velocity vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(5),"InitInputData%IniRootVel(2)", "angular velocity vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(3)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-   
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(4),"InitInputData%IniRootVel(1)", "angular velocity vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(5),"InitInputData%IniRootVel(2)", "angular velocity vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(3)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
    InitInputData%RootVel(1:3) = cross_product(InitInputData%RootVel(4:6),InitInputData%GlbPos(:))
   
    !---------------------- APPLIED FORCE --------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Applied Force',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Applied Force',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
 
       !---------------------- MULTI-POINT LOAD INPUTS ----------------------------------------
    !First read into temporary "line" variable so we can check if this is numeric or not (for backward compatibility)
-   CALL ReadVar(UnIn,DvrInputFile,line,"DvrData%NumPointLoads", "Number of Point Loads (primary input file section header)",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-            call cleanup()
-            return
-      end if
+   CALL ReadVar(UnIn,DvrInputFile,line,"DvrData%NumPointLoads", "Number of Point Loads (primary input file section header)",ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
          
    READ( Line, *, IOSTAT=IOS) DvrData%NumPointLoads
    if (IOS == 0) then !this is numeric, so we can go ahead with the multi-point loads
             
-      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table',ErrStat2,ErrMsg2,UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table Units',ErrStat2,ErrMsg2,UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry(DvrData%MultiPointLoad,max(1,DvrData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-             call cleanup()
-             return
-         end if
-   
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table Units',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
+      CALL AllocAry(DvrData%MultiPointLoad,max(1,DvrData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2);   if (Failed())  return;
       DvrData%MultiPointLoad = 0.0_ReKi      ! this must have at least one node, and it will be initialized to 0      
          
       DO i = 1,DvrData%NumPointLoads
-          CALL ReadAry( UnIn, DvrInputFile, TmpReAry, 7, 'PointLoad', 'Nodal point loads - Node No., DOF No., ', ErrStat2, ErrMsg2, UnEc )       
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          CALL ReadAry( UnIn, DvrInputFile, TmpReAry, 7, 'PointLoad', 'Nodal point loads - Node No., DOF No., ', ErrStat2, ErrMsg2, UnEc );   if (Failed())  return;
           DvrData%MultiPointLoad(i,1) =  TmpReAry(1)
           DvrData%MultiPointLoad(i,2) =  TmpReAry(2)
           DvrData%MultiPointLoad(i,3) =  TmpReAry(3)
@@ -284,37 +198,34 @@ module BeamDyn_driver_subs
           DvrData%MultiPointLoad(i,6) =  TmpReAry(6)
           DvrData%MultiPointLoad(i,7) =  TmpReAry(7)
       ENDDO  
-      if (ErrStat >= AbortErrLev) then
-          call cleanup()
-          return
-      end if
       
       DvrData%NumPointLoads = max(1,DvrData%NumPointLoads) 
    
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
-      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc);   if (Failed())  return;
          
    else
       DvrData%NumPointLoads = 1
-      CALL AllocAry(DvrData%MultiPointLoad,DvrData%NumPointLoads,7,'Point loads input array',ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-             call cleanup()
-             return
-         end if
+      CALL AllocAry(DvrData%MultiPointLoad,DvrData%NumPointLoads,7,'Point loads input array',ErrStat2,ErrMsg2);   if (Failed())  return;
       DvrData%MultiPointLoad = 0.0_ReKi           
    end if ! we read the header already
       
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
-   CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc );   if (Failed())  return;
       IF ( PathIsRelative( InitInputData%InputFile ) ) InitInputData%InputFile = TRIM(PriPath)//TRIM(InitInputData%InputFile)
       
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
+      !---------------------- Outputs ---------------------------------------------------------
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Outputs',ErrStat2,ErrMsg2,UnEc); if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%WrVTK,'WrVTK','WrVTK',ErrStat2,ErrMsg2,UnEc); if (Failed())  return;
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%VTK_fps,'VTK_fps','VTK_fps',ErrStat2,ErrMsg2,UnEc); if (Failed())  return;
+
+      ! FIXME: added error check here, but probably should be done with more comprehensive error checks on the input file
+   if (DvrData%WrVTK < 0 .or. DvrData%WrVTK > 2) then
+      ErrStat2 = ErrID_Fatal;    ErrMsg2  = "WrVTK must be 0=none; 1=init; 2=animation";
+      if (Failed())  return;
+   endif
+
+
 
    call cleanup()
    return
@@ -323,7 +234,13 @@ contains
    subroutine cleanup() 
       close(UnIn)
       return
-   end subroutine cleanup         
+   end subroutine cleanup
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'BD_ReadDvrFile')
+      Failed = ErrStat>=ErrID_Fatal
+      if (Failed) call cleanup()
+      return
+   end function Failed
 END SUBROUTINE BD_ReadDvrFile
 
 SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
