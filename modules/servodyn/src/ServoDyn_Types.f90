@@ -527,6 +527,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass input data to the DLL controller from the Lidar [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AllOutData      !< Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LastOutData      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelNames      !< Names of the output channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelUnits      !< Output channels units [-]
     INTEGER(IntKi)  :: n_Out      !< Time index into the AllOutData array [-]
@@ -15141,6 +15142,18 @@ IF (ALLOCATED(SrcInputData%AllOutData)) THEN
   END IF
     DstInputData%AllOutData = SrcInputData%AllOutData
 ENDIF
+IF (ALLOCATED(SrcInputData%LastOutData)) THEN
+  i1_l = LBOUND(SrcInputData%LastOutData,1)
+  i1_u = UBOUND(SrcInputData%LastOutData,1)
+  IF (.NOT. ALLOCATED(DstInputData%LastOutData)) THEN 
+    ALLOCATE(DstInputData%LastOutData(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%LastOutData.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%LastOutData = SrcInputData%LastOutData
+ENDIF
 IF (ALLOCATED(SrcInputData%ChannelNames)) THEN
   i1_l = LBOUND(SrcInputData%ChannelNames,1)
   i1_u = UBOUND(SrcInputData%ChannelNames,1)
@@ -15286,6 +15299,9 @@ IF (ALLOCATED(InputData%Lidar)) THEN
 ENDIF
 IF (ALLOCATED(InputData%AllOutData)) THEN
   DEALLOCATE(InputData%AllOutData)
+ENDIF
+IF (ALLOCATED(InputData%LastOutData)) THEN
+  DEALLOCATE(InputData%LastOutData)
 ENDIF
 IF (ALLOCATED(InputData%ChannelNames)) THEN
   DEALLOCATE(InputData%ChannelNames)
@@ -15440,6 +15456,11 @@ ENDIF
   IF ( ALLOCATED(InData%AllOutData) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! AllOutData upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AllOutData)  ! AllOutData
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LastOutData allocated yes/no
+  IF ( ALLOCATED(InData%LastOutData) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LastOutData upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LastOutData)  ! LastOutData
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ChannelNames allocated yes/no
   IF ( ALLOCATED(InData%ChannelNames) ) THEN
@@ -15801,6 +15822,21 @@ ENDIF
           ReKiBuf(Re_Xferred) = InData%AllOutData(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LastOutData) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LastOutData,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LastOutData,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LastOutData,1), UBOUND(InData%LastOutData,1)
+        ReKiBuf(Re_Xferred) = InData%LastOutData(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%ChannelNames) ) THEN
@@ -16307,6 +16343,24 @@ ENDIF
           OutData%AllOutData(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LastOutData not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LastOutData)) DEALLOCATE(OutData%LastOutData)
+    ALLOCATE(OutData%LastOutData(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LastOutData.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LastOutData,1), UBOUND(OutData%LastOutData,1)
+        OutData%LastOutData(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ChannelNames not allocated
@@ -18014,6 +18068,12 @@ IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
     END DO
   END DO
 END IF ! check if allocated
+IF (ALLOCATED(u_out%LastOutData) .AND. ALLOCATED(u1%LastOutData)) THEN
+  DO i1 = LBOUND(u_out%LastOutData,1),UBOUND(u_out%LastOutData,1)
+    b = -(u1%LastOutData(i1) - u2%LastOutData(i1))
+    u_out%LastOutData(i1) = u1%LastOutData(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
 IF (ALLOCATED(u_out%ChannelNames) .AND. ALLOCATED(u1%ChannelNames)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(u_out%ChannelUnits) .AND. ALLOCATED(u1%ChannelUnits)) THEN
@@ -18260,6 +18320,13 @@ IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
       c = ( (t(2)-t(3))*u1%AllOutData(i1,i2) + t(3)*u2%AllOutData(i1,i2) - t(2)*u3%AllOutData(i1,i2) ) * scaleFactor
       u_out%AllOutData(i1,i2) = u1%AllOutData(i1,i2) + b  + c * t_out
     END DO
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%LastOutData) .AND. ALLOCATED(u1%LastOutData)) THEN
+  DO i1 = LBOUND(u_out%LastOutData,1),UBOUND(u_out%LastOutData,1)
+    b = (t(3)**2*(u1%LastOutData(i1) - u2%LastOutData(i1)) + t(2)**2*(-u1%LastOutData(i1) + u3%LastOutData(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%LastOutData(i1) + t(3)*u2%LastOutData(i1) - t(2)*u3%LastOutData(i1) ) * scaleFactor
+    u_out%LastOutData(i1) = u1%LastOutData(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(u_out%ChannelNames) .AND. ALLOCATED(u1%ChannelNames)) THEN

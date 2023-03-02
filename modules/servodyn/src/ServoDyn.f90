@@ -404,6 +404,9 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       u%ChannelUnits(size(InitInp%ChannelUnits)+I) = p%OutParam(I)%Units      ! repeat with units
    ENDDO
 
+   CALL AllocAry( u%LastOutData,size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'LastOutData', ErrStat, ErrMsg ) ! this does not include the time channel
+      if (Failed())  return;
+
 
       !............................................................................................
       ! Define system output initializations (set up mesh) here:
