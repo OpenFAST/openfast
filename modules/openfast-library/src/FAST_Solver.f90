@@ -991,9 +991,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, y_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM,
    u_SrvD%LSShftFzs = y_ED%LSShftFzs
 
 
-   u_SrvD%AllOutData = y_FAST%AllOutData
    u_SrvD%LastOutData = y_FAST%LastOutData
-   u_SrvD%n_Out = y_FAST%n_Out
 
    !   ! ServoDyn inputs from AeroDyn
    !IF ( p_FAST%CompAero == Module_AD ) THEN

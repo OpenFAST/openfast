@@ -526,11 +526,9 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< A swap array: used to pass global input data to the DLL controller from the supercontroller [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Lidar      !< A swap array: used to pass input data to the DLL controller from the Lidar [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AllOutData      !< Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LastOutData      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelNames      !< Names of the output channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChannelUnits      !< Output channels units [-]
-    INTEGER(IntKi)  :: n_Out      !< Time index into the AllOutData array [-]
     TYPE(MeshType)  :: PtfmMotionMesh      !< Platform motion mesh at platform reference point [-]
     TYPE(MeshType) , DIMENSION(:,:), ALLOCATABLE  :: BStCMotionMesh      !< StC module blade        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
@@ -15128,20 +15126,6 @@ IF (ALLOCATED(SrcInputData%Lidar)) THEN
   END IF
     DstInputData%Lidar = SrcInputData%Lidar
 ENDIF
-IF (ALLOCATED(SrcInputData%AllOutData)) THEN
-  i1_l = LBOUND(SrcInputData%AllOutData,1)
-  i1_u = UBOUND(SrcInputData%AllOutData,1)
-  i2_l = LBOUND(SrcInputData%AllOutData,2)
-  i2_u = UBOUND(SrcInputData%AllOutData,2)
-  IF (.NOT. ALLOCATED(DstInputData%AllOutData)) THEN 
-    ALLOCATE(DstInputData%AllOutData(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%AllOutData.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%AllOutData = SrcInputData%AllOutData
-ENDIF
 IF (ALLOCATED(SrcInputData%LastOutData)) THEN
   i1_l = LBOUND(SrcInputData%LastOutData,1)
   i1_u = UBOUND(SrcInputData%LastOutData,1)
@@ -15178,7 +15162,6 @@ IF (ALLOCATED(SrcInputData%ChannelUnits)) THEN
   END IF
     DstInputData%ChannelUnits = SrcInputData%ChannelUnits
 ENDIF
-    DstInputData%n_Out = SrcInputData%n_Out
       CALL MeshCopy( SrcInputData%PtfmMotionMesh, DstInputData%PtfmMotionMesh, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -15296,9 +15279,6 @@ IF (ALLOCATED(InputData%fromSCglob)) THEN
 ENDIF
 IF (ALLOCATED(InputData%Lidar)) THEN
   DEALLOCATE(InputData%Lidar)
-ENDIF
-IF (ALLOCATED(InputData%AllOutData)) THEN
-  DEALLOCATE(InputData%AllOutData)
 ENDIF
 IF (ALLOCATED(InputData%LastOutData)) THEN
   DEALLOCATE(InputData%LastOutData)
@@ -15452,11 +15432,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! Lidar upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Lidar)  ! Lidar
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! AllOutData allocated yes/no
-  IF ( ALLOCATED(InData%AllOutData) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! AllOutData upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AllOutData)  ! AllOutData
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! LastOutData allocated yes/no
   IF ( ALLOCATED(InData%LastOutData) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LastOutData upper/lower bounds for each dimension
@@ -15472,7 +15447,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! ChannelUnits upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ChannelUnits)*LEN(InData%ChannelUnits)  ! ChannelUnits
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! n_Out
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! PtfmMotionMesh: size of buffers for each call to pack subtype
       CALL MeshPack( InData%PtfmMotionMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! PtfmMotionMesh 
@@ -15804,26 +15778,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%AllOutData) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AllOutData,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AllOutData,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AllOutData,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AllOutData,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%AllOutData,2), UBOUND(InData%AllOutData,2)
-        DO i1 = LBOUND(InData%AllOutData,1), UBOUND(InData%AllOutData,1)
-          ReKiBuf(Re_Xferred) = InData%AllOutData(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
   IF ( .NOT. ALLOCATED(InData%LastOutData) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -15873,8 +15827,6 @@ ENDIF
         END DO ! I
       END DO
   END IF
-    IntKiBuf(Int_Xferred) = InData%n_Out
-    Int_Xferred = Int_Xferred + 1
       CALL MeshPack( InData%PtfmMotionMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! PtfmMotionMesh 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -16322,29 +16274,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AllOutData not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AllOutData)) DEALLOCATE(OutData%AllOutData)
-    ALLOCATE(OutData%AllOutData(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOutData.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%AllOutData,2), UBOUND(OutData%AllOutData,2)
-        DO i1 = LBOUND(OutData%AllOutData,1), UBOUND(OutData%AllOutData,1)
-          OutData%AllOutData(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LastOutData not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -16403,8 +16332,6 @@ ENDIF
         END DO ! I
       END DO
   END IF
-    OutData%n_Out = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -18060,14 +17987,6 @@ IF (ALLOCATED(u_out%Lidar) .AND. ALLOCATED(u1%Lidar)) THEN
     u_out%Lidar(i1) = u1%Lidar(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
-IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
-  DO i2 = LBOUND(u_out%AllOutData,2),UBOUND(u_out%AllOutData,2)
-    DO i1 = LBOUND(u_out%AllOutData,1),UBOUND(u_out%AllOutData,1)
-      b = -(u1%AllOutData(i1,i2) - u2%AllOutData(i1,i2))
-      u_out%AllOutData(i1,i2) = u1%AllOutData(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
 IF (ALLOCATED(u_out%LastOutData) .AND. ALLOCATED(u1%LastOutData)) THEN
   DO i1 = LBOUND(u_out%LastOutData,1),UBOUND(u_out%LastOutData,1)
     b = -(u1%LastOutData(i1) - u2%LastOutData(i1))
@@ -18311,15 +18230,6 @@ IF (ALLOCATED(u_out%Lidar) .AND. ALLOCATED(u1%Lidar)) THEN
     b = (t(3)**2*(u1%Lidar(i1) - u2%Lidar(i1)) + t(2)**2*(-u1%Lidar(i1) + u3%Lidar(i1)))* scaleFactor
     c = ( (t(2)-t(3))*u1%Lidar(i1) + t(3)*u2%Lidar(i1) - t(2)*u3%Lidar(i1) ) * scaleFactor
     u_out%Lidar(i1) = u1%Lidar(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%AllOutData) .AND. ALLOCATED(u1%AllOutData)) THEN
-  DO i2 = LBOUND(u_out%AllOutData,2),UBOUND(u_out%AllOutData,2)
-    DO i1 = LBOUND(u_out%AllOutData,1),UBOUND(u_out%AllOutData,1)
-      b = (t(3)**2*(u1%AllOutData(i1,i2) - u2%AllOutData(i1,i2)) + t(2)**2*(-u1%AllOutData(i1,i2) + u3%AllOutData(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%AllOutData(i1,i2) + t(3)*u2%AllOutData(i1,i2) - t(2)*u3%AllOutData(i1,i2) ) * scaleFactor
-      u_out%AllOutData(i1,i2) = u1%AllOutData(i1,i2) + b  + c * t_out
-    END DO
   END DO
 END IF ! check if allocated
 IF (ALLOCATED(u_out%LastOutData) .AND. ALLOCATED(u1%LastOutData)) THEN

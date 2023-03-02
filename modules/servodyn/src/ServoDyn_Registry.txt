@@ -520,11 +520,9 @@ typedef	^	InputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
 typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 typedef	^	InputType	SiKi	Lidar	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the Lidar"	-
-typedef	^	InputType	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
 typedef	^	InputType	ReKi	LastOutData	{:}	-	-	"Array to contain the latest output data (last time index); Index 1 is NumOuts"
 typedef	^	InputType	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"
 typedef	^	InputType	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Output channels units"
-typedef	^	InputType	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
 typedef	^	InputType	MeshType	PtfmMotionMesh	-	-	-	"Platform motion mesh at platform reference point" -
 typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        input motion mesh" -
 typedef	^	InputType	MeshType	NStCMotionMesh	{:}	-	-	"StC module nacelle      input motion mesh" -

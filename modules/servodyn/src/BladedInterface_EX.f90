@@ -220,7 +220,7 @@ contains
       ChanInd = OutData_StartIdx + 1
       N_Channels = MIN(Size(u%ChannelNames),OutData_MaxChan)   ! Limit number of channels to OutData_MaxChan
 
-      DO I = 2, N_Channels   ! Skip first one, which is time and not actually in u%AllOutData
+      DO I = 2, N_Channels   ! Skip first one, which is time and not actually in u%LastOutData
          call WrSumInfoSend(ChanInd, 'OpenFAST output -- '//TRIM(u%ChannelNames(I))//' -- '//TRIM(u%ChannelUnits(I)))
          ChanInd = ChanInd + 1
       ENDDO
@@ -496,7 +496,7 @@ CONTAINS
       ! Add OpenFAST outputs
       ChanInd = OutData_StartIdx
 
-      ! Limit number of channels to OutData_MaxChan, u%Channel names has Time, AllOutData does not
+      ! Limit number of channels to OutData_MaxChan, u%Channel names has Time, LastOutData does not
       N_Channels = MIN(Size(u%ChannelNames)-1,OutData_MaxChan)   
       
       dll_data%avrSWAP(ChanInd+1:ChanInd+N_Channels) = u%LastOutData
