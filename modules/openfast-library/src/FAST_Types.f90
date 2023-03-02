@@ -342,6 +342,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FAST_OutputFileType
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: TimeData      !< Array to contain the time output data for the binary file (first output time and a time [fixed] increment) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AllOutData      !< Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LastOutData      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
     INTEGER(IntKi)  :: n_Out      !< Time index into the AllOutData array [-]
     INTEGER(IntKi)  :: NOutSteps      !< Maximum number of output steps [-]
     INTEGER(IntKi) , DIMENSION(NumModules)  :: numOuts      !< number of outputs to print from each module [-]
@@ -15474,6 +15475,18 @@ IF (ALLOCATED(SrcOutputFileTypeData%AllOutData)) THEN
   END IF
     DstOutputFileTypeData%AllOutData = SrcOutputFileTypeData%AllOutData
 ENDIF
+IF (ALLOCATED(SrcOutputFileTypeData%LastOutData)) THEN
+  i1_l = LBOUND(SrcOutputFileTypeData%LastOutData,1)
+  i1_u = UBOUND(SrcOutputFileTypeData%LastOutData,1)
+  IF (.NOT. ALLOCATED(DstOutputFileTypeData%LastOutData)) THEN 
+    ALLOCATE(DstOutputFileTypeData%LastOutData(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%LastOutData.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOutputFileTypeData%LastOutData = SrcOutputFileTypeData%LastOutData
+ENDIF
     DstOutputFileTypeData%n_Out = SrcOutputFileTypeData%n_Out
     DstOutputFileTypeData%NOutSteps = SrcOutputFileTypeData%NOutSteps
     DstOutputFileTypeData%numOuts = SrcOutputFileTypeData%numOuts
@@ -15552,6 +15565,9 @@ ENDIF
 IF (ALLOCATED(OutputFileTypeData%AllOutData)) THEN
   DEALLOCATE(OutputFileTypeData%AllOutData)
 ENDIF
+IF (ALLOCATED(OutputFileTypeData%LastOutData)) THEN
+  DEALLOCATE(OutputFileTypeData%LastOutData)
+ENDIF
 IF (ALLOCATED(OutputFileTypeData%ChannelNames)) THEN
   DEALLOCATE(OutputFileTypeData%ChannelNames)
 ENDIF
@@ -15612,6 +15628,11 @@ ENDDO
   IF ( ALLOCATED(InData%AllOutData) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! AllOutData upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AllOutData)  ! AllOutData
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LastOutData allocated yes/no
+  IF ( ALLOCATED(InData%LastOutData) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LastOutData upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LastOutData)  ! LastOutData
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! n_Out
       Int_BufSz  = Int_BufSz  + 1  ! NOutSteps
@@ -15751,6 +15772,21 @@ ENDDO
           ReKiBuf(Re_Xferred) = InData%AllOutData(i1,i2)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LastOutData) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LastOutData,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LastOutData,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LastOutData,1), UBOUND(InData%LastOutData,1)
+        ReKiBuf(Re_Xferred) = InData%LastOutData(i1)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%n_Out
@@ -15984,6 +16020,24 @@ ENDDO
           OutData%AllOutData(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
         END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LastOutData not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LastOutData)) DEALLOCATE(OutData%LastOutData)
+    ALLOCATE(OutData%LastOutData(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LastOutData.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LastOutData,1), UBOUND(OutData%LastOutData,1)
+        OutData%LastOutData(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
       END DO
   END IF
     OutData%n_Out = IntKiBuf(Int_Xferred)

@@ -341,6 +341,7 @@ typedef  ^  FAST_MiscLinType  ReKi     Y_prevRot   {:}{:} -  -  "Linearization o
 # ..... FAST_OutputFileType data .......................................................................................................
 typedef	FAST	FAST_OutputFileType	DbKi	TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
 typedef	^	FAST_OutputFileType	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
+typedef	^	FAST_OutputFileType	ReKi	LastOutData	{:}	-	-	"Array to contain the latest output data (last time index); Index 1 is NumOuts"
 typedef	^	FAST_OutputFileType	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
 typedef	^	FAST_OutputFileType	IntKi	NOutSteps	-	-	-	"Maximum number of output steps"
 typedef	^	FAST_OutputFileType	IntKi	numOuts	{NumModules}	-	-	"number of outputs to print from each module"

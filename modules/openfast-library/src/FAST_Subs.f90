@@ -2365,6 +2365,17 @@ end do
 
    END IF
 
+      !......................................................
+      ! Allocate data DLL_AllOuts
+      !......................................................
+
+   IF ( p_FAST%CompServo == Module_SrvD .AND. p_FAST%DLL_AllOuts) THEN
+      CALL AllocAry( y_FAST%LastOutData, NumOuts-1, 'LastOutData', ErrStat, ErrMsg ) ! this does not include the time channel
+      IF ( ErrStat >= AbortErrLev ) RETURN
+      y_FAST%LastOutData = 0.0_ReKi
+
+   ENDIF
+
    y_FAST%VTK_count = 0  ! first VTK file has 0 as output
 
 RETURN
@@ -5161,6 +5172,16 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
       ! Write time-series channel data
 
   !y_FAST%WriteThisStep = NeedWriteOutput(n_t_global, t_global, p_FAST)
+
+   ! If we're sending all outputs to DLL, fill output array
+   IF ( p_FAST%CompServo == Module_SrvD .AND. p_FAST%DLL_AllOuts) THEN
+      CALL FillOutputAry(p_FAST, y_FAST, IfW%y%WriteOutput, OpFM%y%WriteOutput, ED%y%WriteOutput, &
+                  AD%y, SrvD%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, ExtPtfm%y%WriteOutput, &
+                  MAPp%y%WriteOutput, FEAM%y%WriteOutput,  MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, &
+                  IceD%y, BD%y, y_FAST%LastOutData)   
+   ENDIF
+
+
    IF ( y_FAST%WriteThisStep )  THEN
 
          ! Generate glue-code output file
