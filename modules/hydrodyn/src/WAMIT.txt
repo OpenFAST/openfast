@@ -76,7 +76,7 @@ typedef   ^                            ^                             Conv_Rdtn_C
 typedef   ^                            DiscreteStateType             Conv_Rdtn_DiscreteStateType           Conv_Rdtn         -          -         -       "discrete states from the convolution radiation module"        -
 typedef   ^                            DiscreteStateType             SS_Rad_DiscreteStateType              SS_Rdtn           -          -         -       "placeholder"        -
 typedef   ^                            DiscreteStateType             SS_Exc_DiscreteStateType              SS_Exctn          -          -         -       "placeholder"        -
-typedef   ^                            DiscreteStateType             ReKi                                  BdyPosFiltM1      {:}{:}     -         -       "Low-pass filtered WAMIT body position at the previous step used when ExctnDisp=2"
+typedef   ^                            DiscreteStateType             ReKi                                  BdyPosFilt        {:}{:}{:}  -         -       "Low-pass filtered WAMIT body position at the current and previous steps used when ExctnDisp=2"
 #
 #
 # Define constraint states here:
