@@ -136,6 +136,7 @@ typedef	^	SrvD_InputFile	CHARACTER(1024)	DLL_ProcName	-	-	-	"Name of the procedu
 typedef	^	SrvD_InputFile	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
 typedef	^	SrvD_InputFile	DbKi	DLL_DT	-	-	-	"interval for calling DLL (must be integer multiple number of DT steps)"	s
 typedef	^	SrvD_InputFile	LOGICAL	DLL_Ramp	-	-	-	"whether the DLL pitch should be a ramp (true) or step change (false) when DLL_DT <> DT. If true, introduces a time delay."	-
+typedef	^	SrvD_InputFile	LOGICAL	DLL_AllOuts	-	-	-	"Send all OpenFAST outputs to DLL interface"	-
 typedef	^	SrvD_InputFile	ReKi	BPCutoff	-	-	-	"The cutoff frequency for the blade pitch low-pass filter. Large values => no filter."	Hz
 typedef	^	SrvD_InputFile	ReKi	NacYaw_North	-	-	-	"Reference yaw angle of the nacelle when the upwind end points due North [used only with DLL Interface]"	radians
 typedef	^	SrvD_InputFile	IntKi	Ptch_Cntrl	-	-	-	"Record 28: Use individual pitch control {0: collective pitch; 1: individual pitch control} [used only with DLL Interface]"	-
@@ -430,6 +431,7 @@ typedef	^	ParameterType	LOGICAL	UseBladedInterface	-	-	-	"Flag that determines i
 typedef	^	ParameterType	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
 typedef	^	ParameterType	DLL_Type	DLL_Trgt	-	-	-	"The addresses and names of the Bladed DLL and its procedure"	-
 typedef	^	ParameterType	LOGICAL	DLL_Ramp	-	-	-	"determines if there is a DLL_DT-ramp time delay (true only when DLL_DT /= DT)"	-
+typedef	^	ParameterType	LOGICAL	DLL_AllOuts	-	-	-	"Send all OpenFAST outputs to DLL interface"	-
 typedef	^	ParameterType	ReKi	BlAlpha	-	-	-	"parameter for low-pass filter of blade pitch commands from the controller DLL"	-
 typedef	^	ParameterType	IntKi	DLL_n	-	-	-	"number of steps between the controller being called and SrvD being called"	-
 typedef	^	ParameterType	IntKi	avcOUTNAME_LEN	-	-	-	"Length of the avcOUTNAME character array passed to/from the DLL"	-

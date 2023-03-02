@@ -184,6 +184,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: VTK_fps      !< number of frames per second to output VTK data [-]
     TYPE(FAST_VTK_SurfaceType)  :: VTK_surface      !< Data for VTK surface visualization [-]
     CHARACTER(4)  :: Tdesc      !< description of turbine ID (for FAST.Farm) screen printing [-]
+    LOGICAL  :: DLL_AllOuts      !< Send all OpenFAST outputs to DLL interface [-]
     LOGICAL  :: CalcSteady      !< Calculate a steady-state periodic operating point before linearization [unused if Linearize=False] [-]
     INTEGER(IntKi)  :: TrimCase      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [unused if Linearize=False; used only if CalcSteady=True] [-]
     REAL(ReKi)  :: TrimTol      !< Tolerance for the rotational speed convergence (>0) [unused if Linearize=False; used only if CalcSteady=True] [-]
@@ -2213,6 +2214,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%Tdesc = SrcParamData%Tdesc
+    DstParamData%DLL_AllOuts = SrcParamData%DLL_AllOuts
     DstParamData%CalcSteady = SrcParamData%CalcSteady
     DstParamData%TrimCase = SrcParamData%TrimCase
     DstParamData%TrimTol = SrcParamData%TrimTol
@@ -2387,6 +2389,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%Tdesc)  ! Tdesc
+      Int_BufSz  = Int_BufSz  + 1  ! DLL_AllOuts
       Int_BufSz  = Int_BufSz  + 1  ! CalcSteady
       Int_BufSz  = Int_BufSz  + 1  ! TrimCase
       Re_BufSz   = Re_BufSz   + 1  ! TrimTol
@@ -2665,6 +2668,8 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%Tdesc(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%DLL_AllOuts, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CalcSteady, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TrimCase
@@ -2998,6 +3003,8 @@ ENDIF
       OutData%Tdesc(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
+    OutData%DLL_AllOuts = TRANSFER(IntKiBuf(Int_Xferred), OutData%DLL_AllOuts)
+    Int_Xferred = Int_Xferred + 1
     OutData%CalcSteady = TRANSFER(IntKiBuf(Int_Xferred), OutData%CalcSteady)
     Int_Xferred = Int_Xferred + 1
     OutData%TrimCase = IntKiBuf(Int_Xferred)

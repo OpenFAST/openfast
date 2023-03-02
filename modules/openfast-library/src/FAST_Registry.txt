@@ -170,6 +170,7 @@ typedef	^	FAST_ParameterType	INTEGER	VTK_tWidth	-	-	-	"Width of number of files 
 typedef	^	FAST_ParameterType	DbKi	VTK_fps	-	-	-	"number of frames per second to output VTK data" -
 typedef	^	FAST_ParameterType	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
 typedef	^	FAST_ParameterType	CHARACTER(4)	Tdesc	-	-	-	"description of turbine ID (for FAST.Farm) screen printing"	
+typedef	^	FAST_ParameterType	LOGICAL	DLL_AllOuts	-	-	-	"Send all OpenFAST outputs to DLL interface"	-
 
 #  Parameters for linearization
 typedef	^	FAST_ParameterType	LOGICAL	CalcSteady	-	-	-	"Calculate a steady-state periodic operating point before linearization [unused if Linearize=False]"	-

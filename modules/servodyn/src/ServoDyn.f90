@@ -5102,6 +5102,10 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, UnSum, ErrStat, ErrMsg )
       write(UnSum, '(A34,I2)')         '    CCMode  -- cable control mode ',p%CCMode
    endif
 
+      !.............................................
+      ! Parameters for DLL Interface
+      !.............................................
+   p%DLL_AllOuts = InputFileData%DLL_AllOuts
 
       !.............................................
       ! Parameters for file output (not including Bladed DLL logging outputs)

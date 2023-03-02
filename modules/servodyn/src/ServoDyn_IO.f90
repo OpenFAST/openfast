@@ -1348,6 +1348,9 @@ subroutine ParseInputFileInfo( PriPath, InputFile, OutFileRoot, FileInfo_In, Inp
       !  DLL_Ramp  - Whether a linear ramp should be used between DLL_DT time steps [introduces time shift when true] (flag) [used only with Bladed Interface]
    call ParseVar( FileInfo_In, CurLine, 'DLL_Ramp', InputFileData%DLL_Ramp, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
+   !  DLL_AllOuts  - Send all OpenFAST outputs to DLL interface (flag) [used only with Bladed Interface]
+   call ParseVar( FileInfo_In, CurLine, 'DLL_AllOuts', InputFileData%DLL_AllOuts, ErrStat2, ErrMsg2, UnEcho )
+      if (Failed())  return;
       !  BPCutoff  - Cuttoff frequency for low-pass filter on blade pitch from DLL (Hz) [used only with Bladed Interface]
    call ParseVar( FileInfo_In, CurLine, 'BPCutoff', InputFileData%BPCutoff, ErrStat2, ErrMsg2, UnEcho )
       if (Failed())  return;
