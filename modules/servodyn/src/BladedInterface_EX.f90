@@ -526,9 +526,7 @@ CONTAINS
       ! Limit number of channels to OutData_MaxChan, u%Channel names has Time, LastOutData does not
       N_Channels = MIN(Size(u%ChannelNames)-1,OutData_MaxChan)   
       
-      dll_data%avrSWAP(OutData_StartIdx+1:OutData_StartIdx+N_Channels) = u%LastOutData(1:OutData_MaxChan)
-
-      write(4000,*) size(dll_data%avrSWAP(OutData_StartIdx+1:OutData_StartIdx+N_Channels)), u%LastOutData(1:OutData_MaxChan)
+      dll_data%avrSWAP(OutData_StartIdx+1:OutData_StartIdx+N_Channels) = u%LastOutData(1:N_Channels)
 
    end subroutine SetEXavrSWAP_FASTOuts
 
