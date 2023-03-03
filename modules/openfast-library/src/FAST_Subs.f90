@@ -1447,9 +1447,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       else  ! Initialize to zero for consistency
          m_FAST%ExternInput%CableDeltaLdot = 0.0_Reki
       endif
-
-
-
    end if
 
    m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)
@@ -2137,7 +2134,7 @@ end do
    
    NumOuts   = SUM( y_FAST%numOuts )
 
-   ! If already allocated from previous call, deallocate?
+   ! If already allocated from previous call, deallocate
    IF (ALLOCATED(y_FAST%ChannelNames)) DEALLOCATE(y_FAST%ChannelNames)
    IF (ALLOCATED(y_FAST%ChannelUnits)) DEALLOCATE(y_FAST%ChannelUnits)
 
@@ -4858,8 +4855,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! STATE_PRED values contain values at t_global_next.
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep )
+      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
+                               MAPp, FEAM, MD, Orca, IceF, IceD, y_FAST%LastOutData, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
 
