@@ -18,6 +18,7 @@ Modified in OpenFAST `dev`
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
 ServoDyn-StructCtrl                            6   StC_DOF_MODE      2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series; 5: Force determined by external DLL}
+ServoDyn                                       82  DLL_AllOuts       True  DLL_AllOuts - Send all OpenFAST outputs to DLL interface (flag) [used only with Bladed Interface]
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 
