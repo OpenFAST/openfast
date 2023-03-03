@@ -57,8 +57,6 @@ MODULE BladedInterface_EX
    real(ReKi),       parameter   :: EXavrSWAP_Ver        = 2.000  !< Version. increment minor for new signal addition, increment major for new block addition
    integer(IntKi),   parameter   :: ExSensors_StartIdx   = 1001   !< Starting index for the non-lidar measurements group
    integer(IntKi),   parameter   :: ExSensors_MaxChan    = 1000   !< Maximum channels in non-lidar measurements group
-   integer(IntKi),   parameter   :: OutData_StartIdx     = 4001   !< Maximum channels in non-lidar measurements group
-   integer(IntKi),   parameter   :: OutData_MaxChan      = 1000   !< Maximum channels in non-lidar measurements group
    integer(IntKi),   parameter   :: LidarMsr_StartIdx    = 2001   !< Starting index for the lidar measurements
    integer(IntKi),   parameter   :: LidarMsr_MaxChan     = 500    !< Maximum channels in lidar measurements group
    integer(IntKi),   parameter   :: LidarCtrl_StartIdx   = 2501   !< Starting index for the lidar control
@@ -68,6 +66,8 @@ MODULE BladedInterface_EX
    integer(IntKi),   parameter   :: StCCtrl_StartIdx     = 2801   !< Starting index for the StC control
    integer(IntKi),   parameter   :: StCCtrl_MaxChan      = 200    !< Maximum channels in StC control group
    integer(IntKi),   parameter   :: StCCtrl_ChanPerSet   = 20     !< Channels needed per set (10 sets for total channels)
+   integer(IntKi),   parameter   :: OutData_StartIdx     = 4001   !< Starting index for the OpenFAST outputs group
+   integer(IntKi),   parameter   :: OutData_MaxChan      = 1000   !< Maximum channels in the OpenFAST outputs group
 
 
 CONTAINS
@@ -145,6 +145,13 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, StC_CtrlChanInitInfo, UnS
    endif
       ! Add additional routines here as needed.
 
+   ! Initialize cable controls (2801:3000)
+   PRINT *, "In init bladed interface"
+   if (p%DLL_AllOuts) then
+      call InitFASTOutputSensors()
+        if (Failed())  return
+   endif
+
       ! Write to summary file
    if (UnSum>0)   call WrBladedSumInfoToFile()
 
@@ -216,6 +223,15 @@ contains
       ! This is a placeholder for info about other sensor channels that are passed to the DLL
       !call WrSumInfoSend(1019, 'Description of channel info sent to DLL')
       
+
+   end subroutine InitNonLidarSensors
+
+   
+   subroutine InitFASTOutputSensors()    ! Channels 4001:5000
+      integer(IntKi)                                  :: ChanInd, I, N_Channels
+      ! This is a placeholder for info about other sensor channels that are passed to the DLL
+      !call WrSumInfoSend(1019, 'Description of channel info sent to DLL')
+      
       ! Add OpenFAST channel descriptions, TODO: units
       ChanInd = OutData_StartIdx + 1
       N_Channels = MIN(Size(u%ChannelNames),OutData_MaxChan)   ! Limit number of channels to OutData_MaxChan
@@ -225,7 +241,7 @@ contains
          ChanInd = ChanInd + 1
       ENDDO
 
-   end subroutine InitNonLidarSensors
+   end subroutine InitFASTOutputSensors
 
 
    subroutine InitCableCtrl()
@@ -460,6 +476,10 @@ SUBROUTINE Fill_EXavrSWAP( t, u, p, dll_data )
 
    call SetEXavrSWAP_Sensors()
 
+   if (p%DLL_AllOuts) then
+      call SetEXavrSWAP_FASTOuts()
+   endif
+
    call SetEXavrSWAP_LidarSensors()
 
    call SetEXavrStC_Sensors()    ! Intermingled with StC control channels passed back from DLL
@@ -469,8 +489,6 @@ CONTAINS
    !> Set the sensor inputs for non-lidar channels.
    !!    avrSWAP(1001:2000)
    subroutine SetEXavrSWAP_Sensors()
-
-      integer(IntKi)                               :: ChanInd, N_Channels
 
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < (ExSensors_StartIdx + ExSensors_MaxChan - 1) ) return
@@ -493,15 +511,26 @@ CONTAINS
       ! Set other sensors here (non-lidar measurements)
       !       Add summary file descriptions about channels to InitNonLidarSensors as channels are added.
 
+
+   end subroutine SetEXavrSWAP_Sensors
+
+      !> Set the sensor inputs for non-lidar channels.
+   !!    avrSWAP(1001:2000)
+   subroutine SetEXavrSWAP_FASTOuts()
+
+      integer(IntKi)                               :: ChanInd, N_Channels
+
       ! Add OpenFAST outputs
       ChanInd = OutData_StartIdx
 
       ! Limit number of channels to OutData_MaxChan, u%Channel names has Time, LastOutData does not
       N_Channels = MIN(Size(u%ChannelNames)-1,OutData_MaxChan)   
       
-      dll_data%avrSWAP(ChanInd+1:ChanInd+N_Channels) = u%LastOutData
+      dll_data%avrSWAP(OutData_StartIdx+1:OutData_StartIdx+N_Channels) = u%LastOutData(1:OutData_MaxChan)
 
-   end subroutine SetEXavrSWAP_Sensors
+      write(4000,*) size(dll_data%avrSWAP(OutData_StartIdx+1:OutData_StartIdx+N_Channels)), u%LastOutData(1:OutData_MaxChan)
+
+   end subroutine SetEXavrSWAP_FASTOuts
 
 
    !> Set the Lidar related sensor inputs
