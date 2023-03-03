@@ -2373,7 +2373,6 @@ end do
       CALL AllocAry( y_FAST%LastOutData, NumOuts-1, 'LastOutData', ErrStat, ErrMsg ) ! this does not include the time channel
       IF ( ErrStat >= AbortErrLev ) RETURN
       y_FAST%LastOutData = 0.0_ReKi
-
    ENDIF
 
    y_FAST%VTK_count = 0  ! first VTK file has 0 as output

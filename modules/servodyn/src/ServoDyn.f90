@@ -390,22 +390,25 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
 
    ! Collect output names from OpenFAST and add ServoDyn output channels to list
-   CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'u%ChannelNames', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
+   if (p%DLL_AllOuts) then
+      CALL AllocAry( u%ChannelNames, size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'u%ChannelNames', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
-   CALL AllocAry( u%ChannelUnits, size(InitInp%ChannelUnits) + size(p%OutParam) - 1, 'u%ChannelUnits', ErrStat2, ErrMsg2 )
-      if (Failed())  return;
+      CALL AllocAry( u%ChannelUnits, size(InitInp%ChannelUnits) + size(p%OutParam) - 1, 'u%ChannelUnits', ErrStat2, ErrMsg2 )
+         if (Failed())  return;
 
-   u%ChannelNames(1:size(InitInp%ChannelNames)) = InitInp%ChannelNames
-   u%ChannelUnits(1:size(InitInp%ChannelUnits)) = InitInp%ChannelUnits
+      u%ChannelNames(1:size(InitInp%ChannelNames)) = InitInp%ChannelNames
+      u%ChannelUnits(1:size(InitInp%ChannelUnits)) = InitInp%ChannelUnits
 
-   DO I=1,p%NumOuts
-      u%ChannelNames(size(InitInp%ChannelNames)+I) = p%OutParam(I)%Name      ! repeat with units
-      u%ChannelUnits(size(InitInp%ChannelUnits)+I) = p%OutParam(I)%Units      ! repeat with units
-   ENDDO
+      DO I=1,p%NumOuts
+         u%ChannelNames(size(InitInp%ChannelNames)+I) = p%OutParam(I)%Name      ! repeat with units
+         u%ChannelUnits(size(InitInp%ChannelUnits)+I) = p%OutParam(I)%Units      ! repeat with units
+      ENDDO
 
-   CALL AllocAry( u%LastOutData,size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'LastOutData', ErrStat, ErrMsg ) ! this does not include the time channel
-      if (Failed())  return;
+      CALL AllocAry( u%LastOutData,size(InitInp%ChannelNames) + size(p%OutParam) - 1, 'LastOutData', ErrStat, ErrMsg ) ! this does not include the time channel
+         if (Failed())  return;
+   endif
+   ! u%LastOutData = 0.0_ReKi
 
 
       !............................................................................................
