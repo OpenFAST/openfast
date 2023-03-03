@@ -68,7 +68,7 @@ The following packages are required for regression testing:
 - Python 3.7+
 - Numpy
 - CMake and CTest (Optional)
-- Bokeh 1.4 (Optional)
+- Bokeh 2.4+ (Optional)
 
 .. _python_driver:
 
@@ -85,17 +85,15 @@ executing with the help option:
 
     >>>$ python manualRegressionTest.py -h
     usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
-                                [-v [Verbose-Flag]] [-case [Case-Name]]
-                                OpenFAST System-Name Compiler-Id Test-Tolerance
+                                [-v [Verbose-Flag]] [-case [Case-Name]] [-module [Module-Name]]
+                                Executable-Name Relative-Tolerance Absolute-Tolerance
 
-    Executes OpenFAST and a regression test for a single test case.
+    Executes OpenFAST or driver and a regression test for a single test case.
 
     positional arguments:
-    OpenFAST              path to the OpenFAST executable
-    System-Name           current system's name: [Darwin,Linux,Windows]
-    Compiler-Id           compiler's id: [Intel,GNU]
-    Test-Tolerance        tolerance defining pass or failure in the regression
-                            test
+    Executable-Name       path to the executable
+    Relative-Tolerance    Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.
+    Absolute-Tolerance    Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.
 
     optional arguments:
     -h, --help            show this help message and exit
@@ -106,6 +104,8 @@ executing with the help option:
     -v [Verbose-Flag], -verbose [Verbose-Flag]
                             bool to include verbose system output
     -case [Case-Name]     single case name to execute
+    -module [Module-Name], -mod [Module-Name]
+                            name of module to execute
 
 .. note::
 
@@ -351,17 +351,15 @@ included Python driver.
     cd reg_tests
     python manualRegressionTest.py -h
     # usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
-    #                                [-v [Verbose-Flag]] [-case [Case-Name]]
-    #                                OpenFAST System-Name Compiler-Id Test-Tolerance
+    #                                [-v [Verbose-Flag]] [-case [Case-Name]] [-module [Module-Name]]
+    #                                Executable-Name Relative-Tolerance Absolute-Tolerance
     # 
-    # Executes OpenFAST and a regression test for a single test case.
+    # Executes OpenFAST or driver and a regression test for a single test case.
     # 
     # positional arguments:
-    #   OpenFAST              path to the OpenFAST executable
-    #   System-Name           current system's name: [Darwin,Linux,Windows]
-    #   Compiler-Id           compiler's id: [Intel,GNU]
-    #   Test-Tolerance        tolerance defining pass or failure in the regression
-    #                         test
+    # Executable-Name       path to the executable
+    # Relative-Tolerance    Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.
+    # Absolute-Tolerance    Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.
     # 
     # optional arguments:
     #   -h, --help            show this help message and exit
@@ -372,12 +370,10 @@ included Python driver.
     #   -v [Verbose-Flag], -verbose [Verbose-Flag]
     #                         bool to include verbose system output
     #   -case [Case-Name]     single case name to execute
+    #   -module [Module-Name], -mod [Module-Name]
+    #                         name of module to execute
 
-    python manualRegressionTest.py \
-        ..\build\bin\openfast_x64_Double.exe \
-        Windows \
-        Intel \
-        1e-5
+    python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe 2.0 1.9
 
 .. _reg_test_windows:
 

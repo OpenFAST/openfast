@@ -1116,6 +1116,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    ! Read WAT variables
    WD_InitInp%WAT_k_Def  =1.0_ReKi
    WD_InitInp%WAT_k_Grad =1.0_ReKi
+   WD_InitInp%WAT = .false.   ! initialize to false to avoid segfault
    !CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc )
    !CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    !CALL ReadCom( UnIn, InputFile, 'dummy predef', ErrStat2, ErrMsg2, UnEc )

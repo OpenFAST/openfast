@@ -10,7 +10,7 @@ Dependencies required to run the regression test suite are
 - Python 3.7+
 - Numpy
 - CMake and CTest
-- Bokeh 1.4 (optional)
+- Bokeh 2.4+ (optional)
 
 ## Execution
 The automated regression test runs CTest and can be executed by running either of the commands `make test` or `ctest` from the build directory. If the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at `openfast/build/glue-codes/openfast/openfast`. However, if the intention is to build only the test suite, the OpenFAST binary should be specified in the CMake configuration under the `CTEST_OPENFAST_EXECUTABLE` flag. There is also a corresponding `CTEST_[MODULE]_NAME` flag for each module that is included in the regression test.
