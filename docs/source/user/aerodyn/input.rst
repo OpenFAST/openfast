@@ -380,16 +380,18 @@ header lines). ``NumTwrNds`` must be greater than or equal to two; the
 higher the number, the finer the resolution and longer the computational
 time; we recommend that ``NumTwrNds`` be between 10 and 20 to balance
 accuracy with computational expense. For each node, ``TwrElev``
-specifies the local elevation of the tower node above ground (or above
-MSL for offshore wind turbines or above the seabed for MHK turbines),
+specifies the local elevation of the tower node above ground (or relative
+to MSL for offshore wind and floating MHK turbines or relative to the seabed for fixed MHK turbines),
 ``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
 local tower drag-force coefficient, ``TwrTI`` specifies the
 turbulence intensity used in the Eames tower shadow model
 (``TwrShadow`` = 2) as a fraction (rather than a percentage) of the
 wind fluctuation, and ``TwrCb`` specifies the tower buoyancy coefficient.
 ``TwrElev`` must be entered in monotonically increasing order—from the lowest
-(tower-base) to the highest (tower-top) elevation. Values of ``TwrTI`` between
-0.05 and 0.4 are recommended.  Values larger than 0.4 up to 1 will trigger a 
+(tower-base) to the highest (tower-top) elevation. For floating MHK turbines with 
+the tower below MSL, tower nodes should be entered as increasingly negative values,
+from the tower-base (closest to the platform) to the tower-top (closest to the nacelle).
+Values of ``TwrTI`` between 0.05 and 0.4 are recommended. Values larger than 0.4 up to 1 will trigger a 
 warning that the results will need to be interpreted carefully, but the code
 will allow such values for scientific investigation purposes. ``TwrCb`` is
 defined at each node as the cross-sectional area of the tower divided by the 

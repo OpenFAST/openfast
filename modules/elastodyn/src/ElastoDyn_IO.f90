@@ -3103,48 +3103,48 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-      ! TowerHt - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerHt - Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! TowerBsHt - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerBsHt - Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMxt - Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMxt - Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMyt - Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMyt", "Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMyt - Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMyt", "Lateral distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMzt - Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! PtfmRefzt - Vertical distance from the ground ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmRefzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()

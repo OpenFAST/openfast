@@ -51,15 +51,15 @@ When the tower potential-flow (``TwrPotent > 0``), tower shadow
 (``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
-above ground (or above MSL for offshore wind turbines or above the
-seabed for MHK turbines) (``TwrElev``), must be entered in
-monotonically increasing order from the lowest (tower-base) to the
-highest (tower-top) elevation. However, when AeroDyn is coupled to FAST,
-the tower-base node in AeroDyn cannot be set lower than the lowest point
+above ground (or relative to MSL for offshore wind and floating 
+MHK turbines or relative to the seabed for fixed MHK turbines) (``TwrElev``),
+must be entered in monotonically increasing order from the lowest (tower-base) to the
+highest (tower-top) elevation (or monotonically decreasing order for floating MHK turbines).
+However, when AeroDyn is coupled to FAST, the tower-base node in AeroDyn cannot be set lower than the lowest point
 where wind is specified in the InflowWind module. To avoid truncating
 the lower section of the tower in AeroDyn, we recommend that the wind be
 specified in InflowWind as low to the ground (or MSL for offshore wind
-turbines or above the seabed for MHK turbines) as possible (this is a
+turbines or seabed for fixed and floating MHK turbines) as possible (this is a
 particular issue for full-field wind file formats).
 
 Model Options Under Operational and Parked/Idling Conditions

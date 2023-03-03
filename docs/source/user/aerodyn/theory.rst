@@ -148,8 +148,8 @@ and depth. The orientation is defined by heading and inclination angles, which
 are calculated for each element at every time step. Total water depth is defined
 by the user, relative to the still water level (or relative to the mean sea 
 level when running AeroDyn in standalone mode with the AeroDyn driver). The
-instantaneous depth of each element is based on the total water depth and 
-element position and is calculated at each time step.
+instantaneous depth of each element is based on its position in global coordinates
+at each time step.
 
 .. _AD_buoy_bladestower:
 
