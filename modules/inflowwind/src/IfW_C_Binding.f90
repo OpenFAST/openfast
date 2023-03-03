@@ -19,11 +19,12 @@
 !**********************************************************************************************************************************
 MODULE InflowWind_C_BINDING
 
-    USE ISO_C_BINDING
-    USE InflowWind
-    USE InflowWind_Subs, only: MaxOutPts
-    USE InflowWind_Types
-    USE NWTC_Library
+   USE ISO_C_BINDING
+   USE InflowWind
+   USE InflowWind_Subs, only: MaxOutPts
+   USE InflowWind_Types
+   USE NWTC_Library
+   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -31,23 +32,28 @@ MODULE InflowWind_C_BINDING
    PUBLIC :: IfW_C_CalcOutput
    PUBLIC :: IfW_C_End
 
+   !  Version info for display
+   type(ProgDesc), parameter              :: version   = ProgDesc( 'InflowWind library', '', '' )
+
    ! Accessible to all routines inside module
-   TYPE(InflowWind_InputType)              :: InputData         !< Inputs to InflowWind
-   TYPE(InflowWind_InitInputType)          :: InitInp
-   TYPE(InflowWind_InitOutputType)         :: InitOutData       !< Initial output data -- Names, units, and version info.
-   TYPE(InflowWind_ParameterType)          :: p                 !< Parameters
-   TYPE(InflowWind_ContinuousStateType)    :: ContStates        !< Initial continuous states
-   TYPE(InflowWind_DiscreteStateType)      :: DiscStates        !< Initial discrete states
-   TYPE(InflowWind_ConstraintStateType)    :: ConstrStates      !< Constraint states at Time
-   TYPE(InflowWind_OtherStateType)         :: OtherStates       !< Initial other/optimization states
-   TYPE(InflowWind_OutputType)             :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-   TYPE(InflowWind_MiscVarType)            :: m                 !< Misc variables for optimization (not copied in glue code)
+   TYPE(InflowWind_InputType)             , SAVE :: InputData         !< Inputs to InflowWind
+   TYPE(InflowWind_InitInputType)         , SAVE :: InitInp
+   TYPE(InflowWind_InitOutputType)        , SAVE :: InitOutData       !< Initial output data -- Names, units, and version info.
+   TYPE(InflowWind_ParameterType)         , SAVE :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType)   , SAVE :: ContStates        !< Initial continuous states
+   TYPE(InflowWind_DiscreteStateType)     , SAVE :: DiscStates        !< Initial discrete states
+   TYPE(InflowWind_ConstraintStateType)   , SAVE :: ConstrStates      !< Constraint states at Time
+   TYPE(InflowWind_OtherStateType)        , SAVE :: OtherStates       !< Initial other/optimization states
+   TYPE(InflowWind_OutputType)            , SAVE :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+   TYPE(InflowWind_MiscVarType)           , SAVE :: m                 !< Misc variables for optimization (not copied in glue code)
 
    !  This must exactly match the value in the Python interface. We are not using the variable 'ErrMsgLen'
    !  so that we avoid issues if ErrMsgLen changes in the NWTC Library. If the value of ErrMsgLen does change
    !  in the NWTC Library, ErrMsgLen_C (and the equivalent value in the Python interface) can be updated 
    !  to be equivalent to ErrMsgLen + 1, but the logic exists to correctly handle different lengths of the strings
    integer(IntKi),   parameter            :: ErrMsgLen_C=1025  ! Numerical equivalent of ErrMsgLen + 1
+
+
 
 CONTAINS
 
@@ -105,6 +111,10 @@ SUBROUTINE IfW_C_Init(InputFileString_C, InputFileStringLength_C, InputUniformSt
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input file as a string 
    CALL C_F_pointer(InputFileString_C, InputFileString)

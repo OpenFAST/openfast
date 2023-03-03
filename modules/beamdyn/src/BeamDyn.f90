@@ -6519,7 +6519,7 @@ SUBROUTINE BD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE BD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedPackedOrient )
+SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(BD_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -6538,7 +6538,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedPackedOrient !< whether a y_op values should contain 3-value representation instead of full orientation matrices
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
 
    INTEGER(IntKi)                                                :: index, i, dof
    INTEGER(IntKi)                                                :: nu
@@ -6547,7 +6547,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
    CHARACTER(*), PARAMETER                                       :: RoutineName = 'BD_GetOP'
    LOGICAL                                                       :: FieldMask(FIELDMASK_SIZE)
-   LOGICAL                                                       :: ReturnSmallAngle
+   LOGICAL                                                       :: ReturnTrimOP
    TYPE(BD_ContinuousStateType)                                  :: dx          ! derivative of continuous states at operating point
 
    
@@ -6585,10 +6585,10 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
    IF ( PRESENT( y_op ) ) THEN
       ! Only the y operating points need to potentially return a smaller array than the "normal" call to this return. In the trim solution, we use a smaller array for y.
-      if (present(NeedPackedOrient)) then
-         ReturnSmallAngle = NeedPackedOrient
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
       else
-         ReturnSmallAngle = .false.
+         ReturnTrimOP = .false.
       end if
       
       if (.not. allocated(y_op)) then
@@ -6599,7 +6599,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             if (ErrStat >= AbortErrLev) return
       end if
 
-      if (ReturnSmallAngle) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
       
       index = 1
       call PackLoadMesh(y%ReactionForce, y_op, index)
@@ -6611,7 +6611,7 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, UseSmlAngle=ReturnSmallAngle)
+      call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
    
       index = index - 1
       do i=1,p%NumOuts + p%BldNd_TotNumOuts
@@ -6711,6 +6711,7 @@ END SUBROUTINE BD_GetOP
 
 
 SUBROUTINE BD_WriteMassStiff( p, m, ErrStat, ErrMsg )
+   use YAML, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
    INTEGER(IntKi),                      INTENT(  OUT) :: ErrStat     !< Error status of the operation
@@ -6731,17 +6732,16 @@ SUBROUTINE BD_WriteMassStiff( p, m, ErrStat, ErrMsg )
 
       ! Write out the mass and stiffness in the calculation frame
    WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(m%StifK, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full stiffness matrix (BD calculation coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'K_BD', RESHAPE(m%StifK, (/p%dof_total, p%dof_total/)), p%OutFmt, ErrStat, ErrMsg, comment='Full stiffness matrix (BD calculation coordinate frame).')
    WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(m%MassM, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full mass matrix (BD calculation coordinate frame)')
-
-   RETURN
+   call yaml_write_array(m%Un_Sum, 'M_BD', RESHAPE(m%MassM, (/p%dof_total, p%dof_total/)), p%OutFmt, ErrStat, ErrMsg, comment='Full mass matrix (BD calculation coordinate frame)')
 
 END SUBROUTINE BD_WriteMassStiff
 !----------------------------------------------------------------------------------------------------------------------------------
 
 
 SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
+   use YAML, only: yaml_write_array
    TYPE(BD_ParameterType),              INTENT(IN   ) :: p           !< Parameters
    TYPE(BD_ContinuousStateType),        INTENT(IN   ) :: x           !< Continuous states at t
    TYPE(BD_MiscVarType),                INTENT(INOUT) :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
@@ -6789,10 +6789,8 @@ SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
    enddo
 
       ! Write out the mass and stiffness in the first node frame
-   WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(TmpStifK, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full stiffness matrix (IEC blade first node coordinate frame)')
-   WRITE(m%Un_Sum,'()')
-   CALL WrMatrix(RESHAPE(TmpMassM, (/p%dof_total, p%dof_total/)), m%Un_Sum, p%OutFmt, 'Full mass matrix (IEC blade first node coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'K_IEC', TmpStifK, p%OutFmt, ErrStat, ErrMsg, comment='Full stiffness matrix (IEC blade first node coordinate frame)')
+   call yaml_write_array(m%Un_Sum, 'M_IEC', TmpMassM, p%OutFmt, ErrStat, ErrMsg, comment='Full mass matrix (IEC blade first node coordinate frame)')
 
 
 

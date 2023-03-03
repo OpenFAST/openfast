@@ -66,57 +66,57 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_KelvinChainType  =======
   TYPE, PUBLIC :: UA_KelvinChainType
-    REAL(ReKi)  :: Cn_prime      !<  [-]
-    REAL(ReKi)  :: C_nalpha_circ      !< slope of the circulatory normal force coefficient vs alpha curve [-]
-    REAL(ReKi)  :: Kalpha_f      !< filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1) [-]
-    REAL(ReKi)  :: Kq_f      !< filtered  backwards finite difference of q [-]
-    REAL(ReKi)  :: alpha_filt_cur      !< filtered angle of attack [-]
-    REAL(ReKi)  :: alpha_e      !< effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4 [-]
-    REAL(ReKi)  :: dalpha0      !<  [-]
-    REAL(ReKi)  :: alpha_f      !<  [-]
-    REAL(ReKi)  :: Kq      !<  [-]
-    REAL(ReKi)  :: q_cur      !<  [-]
-    REAL(ReKi)  :: q_f_cur      !<  [-]
-    REAL(ReKi)  :: X1      !<  [-]
-    REAL(ReKi)  :: X2      !<  [-]
-    REAL(ReKi)  :: X3      !<  [-]
-    REAL(ReKi)  :: X4      !<  [-]
-    REAL(ReKi)  :: Kprime_alpha      !<  [-]
-    REAL(ReKi)  :: Kprime_q      !<  [-]
-    REAL(ReKi)  :: K3prime_q      !<  [-]
-    REAL(ReKi)  :: Kprimeprime_q      !<  [-]
-    REAL(ReKi)  :: Dp      !<  [-]
-    REAL(ReKi)  :: Cn_pot      !<  [-]
-    REAL(ReKi)  :: Cc_pot      !<  [-]
-    REAL(ReKi)  :: Cn_alpha_q_circ      !<  [-]
-    REAL(ReKi)  :: Cn_alpha_q_nc      !< non-circulatory component of normal force coefficient response to step change in alpha and q [-]
-    REAL(ReKi)  :: Cm_q_circ      !<  [-]
-    REAL(ReKi)  :: Cn_alpha_nc      !< non-circulatory component of the normal force coefficient response to step change in alpha [-]
-    REAL(ReKi)  :: Cn_q_circ      !<  [-]
-    REAL(ReKi)  :: Cn_q_nc      !<  [-]
-    REAL(ReKi)  :: Cm_q_nc      !< non-circulatory component of the moment coefficient response to step change in q [-]
-    REAL(ReKi)  :: fprimeprime      !<  [-]
-    REAL(ReKi)  :: Df      !<  [-]
-    REAL(ReKi)  :: Df_c      !<  [-]
-    REAL(ReKi)  :: Df_m      !<  [-]
-    REAL(ReKi)  :: Dalphaf      !<  [-]
-    REAL(ReKi)  :: fprime      !<  [-]
-    REAL(ReKi)  :: fprime_c      !<  [-]
-    REAL(ReKi)  :: fprimeprime_c      !<  [-]
-    REAL(ReKi)  :: fprime_m      !<  [-]
-    REAL(ReKi)  :: fprimeprime_m      !<  [-]
-    REAL(ReKi)  :: Cn_v      !< normal force coefficient due to the presence of LE vortex [-]
-    REAL(ReKi)  :: C_V      !< contribution to the normal force coefficient due to accumulated vorticity in the LE vortex [-]
-    REAL(ReKi)  :: Cn_FS      !<  [-]
-    REAL(ReKi)  :: T_f      !<  [-]
-    REAL(ReKi)  :: T_fc      !<  [-]
-    REAL(ReKi)  :: T_fm      !<  [-]
-    REAL(ReKi)  :: T_V      !< backwards finite difference of the non-dimensionalized distance parameter [-]
-    REAL(ReKi)  :: k_alpha      !<  [-]
-    REAL(ReKi)  :: k_q      !<  [-]
-    REAL(ReKi)  :: T_alpha      !<  [-]
-    REAL(ReKi)  :: T_q      !<  [-]
-    REAL(ReKi)  :: ds      !< non-dimensionalized distance parameter [-]
+    REAL(ReKi)  :: Cn_prime = 0.0      !<  [-]
+    REAL(ReKi)  :: C_nalpha_circ = 0.0      !< slope of the circulatory normal force coefficient vs alpha curve [-]
+    REAL(ReKi)  :: Kalpha_f = 0.0      !< filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1) [-]
+    REAL(ReKi)  :: Kq_f = 0.0      !< filtered  backwards finite difference of q [-]
+    REAL(ReKi)  :: alpha_filt_cur = 0.0      !< filtered angle of attack [-]
+    REAL(ReKi)  :: alpha_e = 0.0      !< effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4 [-]
+    REAL(ReKi)  :: dalpha0 = 0.0      !<  [-]
+    REAL(ReKi)  :: alpha_f = 0.0      !<  [-]
+    REAL(ReKi)  :: Kq = 0.0      !<  [-]
+    REAL(ReKi)  :: q_cur = 0.0      !<  [-]
+    REAL(ReKi)  :: q_f_cur = 0.0      !<  [-]
+    REAL(ReKi)  :: X1 = 0.0      !<  [-]
+    REAL(ReKi)  :: X2 = 0.0      !<  [-]
+    REAL(ReKi)  :: X3 = 0.0      !<  [-]
+    REAL(ReKi)  :: X4 = 0.0      !<  [-]
+    REAL(ReKi)  :: Kprime_alpha = 0.0      !<  [-]
+    REAL(ReKi)  :: Kprime_q = 0.0      !<  [-]
+    REAL(ReKi)  :: K3prime_q = 0.0      !<  [-]
+    REAL(ReKi)  :: Kprimeprime_q = 0.0      !<  [-]
+    REAL(ReKi)  :: Dp = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_pot = 0.0      !<  [-]
+    REAL(ReKi)  :: Cc_pot = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_alpha_q_circ = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_alpha_q_nc = 0.0      !< non-circulatory component of normal force coefficient response to step change in alpha and q [-]
+    REAL(ReKi)  :: Cm_q_circ = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_alpha_nc = 0.0      !< non-circulatory component of the normal force coefficient response to step change in alpha [-]
+    REAL(ReKi)  :: Cn_q_circ = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_q_nc = 0.0      !<  [-]
+    REAL(ReKi)  :: Cm_q_nc = 0.0      !< non-circulatory component of the moment coefficient response to step change in q [-]
+    REAL(ReKi)  :: fprimeprime = 0.0      !<  [-]
+    REAL(ReKi)  :: Df = 0.0      !<  [-]
+    REAL(ReKi)  :: Df_c = 0.0      !<  [-]
+    REAL(ReKi)  :: Df_m = 0.0      !<  [-]
+    REAL(ReKi)  :: Dalphaf = 0.0      !<  [-]
+    REAL(ReKi)  :: fprime = 0.0      !<  [-]
+    REAL(ReKi)  :: fprime_c = 0.0      !<  [-]
+    REAL(ReKi)  :: fprimeprime_c = 0.0      !<  [-]
+    REAL(ReKi)  :: fprime_m = 0.0      !<  [-]
+    REAL(ReKi)  :: fprimeprime_m = 0.0      !<  [-]
+    REAL(ReKi)  :: Cn_v = 0.0      !< normal force coefficient due to the presence of LE vortex [-]
+    REAL(ReKi)  :: C_V = 0.0      !< contribution to the normal force coefficient due to accumulated vorticity in the LE vortex [-]
+    REAL(ReKi)  :: Cn_FS = 0.0      !<  [-]
+    REAL(ReKi)  :: T_f = 0.0      !<  [-]
+    REAL(ReKi)  :: T_fc = 0.0      !<  [-]
+    REAL(ReKi)  :: T_fm = 0.0      !<  [-]
+    REAL(ReKi)  :: T_V = 0.0      !< backwards finite difference of the non-dimensionalized distance parameter [-]
+    REAL(ReKi)  :: k_alpha = 0.0      !<  [-]
+    REAL(ReKi)  :: k_q = 0.0      !<  [-]
+    REAL(ReKi)  :: T_alpha = 0.0      !<  [-]
+    REAL(ReKi)  :: T_q = 0.0      !<  [-]
+    REAL(ReKi)  :: ds = 0.0      !< non-dimensionalized distance parameter [-]
   END TYPE UA_KelvinChainType
 ! =======================
 ! =========  UA_ElementContinuousStateType  =======
@@ -133,8 +133,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_DiscreteStateType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_minus1      !< angle of attack, previous time step [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_filt_minus1      !< filtered angle of attack, previous time step [rad]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered) [rad/s]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered) [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot      !< Rate of change of angle of attack (filtered); BV model [rad/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: alpha_dot_minus1      !< Rate of change of angle of attack (filtered); BV modeldata [rad/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: q_minus1      !< non-dimensional pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kalpha_f_minus1      !< filtered pitching rate, previous time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Kq_f_minus1      !< filtered pitching acceleration, previous time step [-]
@@ -309,15 +309,27 @@ IF (ALLOCATED(SrcInitInputData%UAOff_outerNode)) THEN
 ENDIF
  END SUBROUTINE UA_CopyInitInput
 
- SUBROUTINE UA_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%c)) THEN
   DEALLOCATE(InitInputData%c)
 ENDIF
@@ -640,16 +652,29 @@ IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
 ENDIF
  END SUBROUTINE UA_CopyInitOutput
 
- SUBROUTINE UA_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Version, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
@@ -988,15 +1013,27 @@ ENDIF
     DstKelvinChainTypeData%ds = SrcKelvinChainTypeData%ds
  END SUBROUTINE UA_CopyKelvinChainType
 
- SUBROUTINE UA_DestroyKelvinChainType( KelvinChainTypeData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyKelvinChainType( KelvinChainTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_KelvinChainType), INTENT(INOUT) :: KelvinChainTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyKelvinChainType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyKelvinChainType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE UA_DestroyKelvinChainType
 
  SUBROUTINE UA_PackKelvinChainType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1364,15 +1401,27 @@ ENDIF
     DstElementContinuousStateTypeData%x = SrcElementContinuousStateTypeData%x
  END SUBROUTINE UA_CopyElementContinuousStateType
 
- SUBROUTINE UA_DestroyElementContinuousStateType( ElementContinuousStateTypeData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyElementContinuousStateType( ElementContinuousStateTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_ElementContinuousStateType), INTENT(INOUT) :: ElementContinuousStateTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyElementContinuousStateType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyElementContinuousStateType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE UA_DestroyElementContinuousStateType
 
  SUBROUTINE UA_PackElementContinuousStateType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1517,19 +1566,32 @@ IF (ALLOCATED(SrcContStateData%element)) THEN
 ENDIF
  END SUBROUTINE UA_CopyContState
 
- SUBROUTINE UA_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%element)) THEN
 DO i2 = LBOUND(ContStateData%element,2), UBOUND(ContStateData%element,2)
 DO i1 = LBOUND(ContStateData%element,1), UBOUND(ContStateData%element,1)
-  CALL UA_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat, ErrMsg )
+  CALL UA_Destroyelementcontinuousstatetype( ContStateData%element(i1,i2), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 ENDDO
   DEALLOCATE(ContStateData%element)
@@ -2257,15 +2319,27 @@ IF (ALLOCATED(SrcDiscStateData%Cn_prime_minus1)) THEN
 ENDIF
  END SUBROUTINE UA_CopyDiscState
 
- SUBROUTINE UA_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DiscStateData%alpha_minus1)) THEN
   DEALLOCATE(DiscStateData%alpha_minus1)
 ENDIF
@@ -4113,15 +4187,27 @@ ENDIF
     DstConstrStateData%DummyConstraintState = SrcConstrStateData%DummyConstraintState
  END SUBROUTINE UA_CopyConstrState
 
- SUBROUTINE UA_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE UA_DestroyConstrState
 
  SUBROUTINE UA_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4426,15 +4512,27 @@ IF (ALLOCATED(SrcOtherStateData%activeD)) THEN
 ENDIF
  END SUBROUTINE UA_CopyOtherState
 
- SUBROUTINE UA_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OtherStateData%FirstPass)) THEN
   DEALLOCATE(OtherStateData%FirstPass)
 ENDIF
@@ -4454,7 +4552,8 @@ IF (ALLOCATED(OtherStateData%n)) THEN
   DEALLOCATE(OtherStateData%n)
 ENDIF
 DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL UA_DestroyContState( OtherStateData%xdot(i1), ErrStat, ErrMsg )
+  CALL UA_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
 IF (ALLOCATED(OtherStateData%t_vortexBegin)) THEN
   DEALLOCATE(OtherStateData%t_vortexBegin)
@@ -5396,15 +5495,27 @@ IF (ALLOCATED(SrcMiscData%weight)) THEN
 ENDIF
  END SUBROUTINE UA_CopyMisc
 
- SUBROUTINE UA_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%TESF)) THEN
   DEALLOCATE(MiscData%TESF)
 ENDIF
@@ -5882,15 +5993,27 @@ IF (ALLOCATED(SrcParamData%UA_off_forGood)) THEN
 ENDIF
  END SUBROUTINE UA_CopyParam
 
- SUBROUTINE UA_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%c)) THEN
   DEALLOCATE(ParamData%c)
 ENDIF
@@ -6194,15 +6317,27 @@ ENDIF
     DstInputData%omega = SrcInputData%omega
  END SUBROUTINE UA_CopyInput
 
- SUBROUTINE UA_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE UA_DestroyInput
 
  SUBROUTINE UA_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6368,15 +6503,27 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE UA_CopyOutput
 
- SUBROUTINE UA_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE UA_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(UA_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'UA_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF

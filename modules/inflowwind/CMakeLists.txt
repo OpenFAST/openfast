@@ -53,7 +53,7 @@ target_link_libraries(ifwlib nwtclibs)
 
 # C-bound interface library
 add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90)
-target_link_libraries(ifw_c_binding ifwlib versioninfolib)
+target_link_libraries(ifw_c_binding ifwlib versioninfolib ${CMAKE_DL_LIBS})
 if(APPLE OR UNIX)
    target_compile_definitions(ifw_c_binding PUBLIC -DIMPLICIT_DLLEXPORT)
 endif()

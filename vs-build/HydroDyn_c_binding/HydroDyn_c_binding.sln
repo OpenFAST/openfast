@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{A2215CCC-531E-454C-A1F0-E502FB697697}") = "HydroDynDriver_c_lib.dll", "HydroDynDriver_c_lib.vfproj", "{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}"
+Project("{A2215CCC-531E-454C-A1F0-E502FB697697}") = "HydroDyn_c_binding.dll", "HydroDyn_c_binding.vfproj", "{FDA4A02B-B3A7-4D06-847C-941BE44E76FB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16} = {DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}
 	EndProjectSection

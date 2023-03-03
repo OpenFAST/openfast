@@ -22,4 +22,7 @@ TRUE          UseCm               - Use Cm data in airfoil table
       15.195  Mean                - Cycle mean (deg)
     -180      Phase               - Initial phase (num steps)
 "UA-driver-timeseries.dat"     InputsFile          - Time series data in an ASCII input file (whitespace-separated data).  8 header lines, followed by column data. First column is time (sec), second column is angle-of-attack (deg), third column is InflowVel (m/s)
-"END" of driver input file
+------------------- OUTPUT CONTROL --------------------------------------------
+True          SumPrint            - Write unsteady aerodynamics summary file (flag)
+True          WrAFITables         - Write the tables of aerodynamic coefficients used internally, with extension ".Coeff.out" (flag)
+END of driver input file

@@ -64,8 +64,6 @@ MODULE FAST_ModTypes
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
 
-   LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
-
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 
 

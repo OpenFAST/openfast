@@ -2572,7 +2572,7 @@ Output: nodal motions
 
 **Fixed-bottom case**
 
-.. math:: :label:
+.. math:: :label: nodalMotionFixed
 
         \bar{U}_R  &= T_I U_{TP} 
         ,\qquad
@@ -2597,7 +2597,7 @@ The meshes :math:`y_2` and :math:`y_3` are identical (Guyan displacements comput
 
 **Floating case**
 
-.. math:: :label:
+.. math:: :label: nodalMotionFloating
 
         \bar{U}_R  &= U_{R,\text{rigid}}
         ,\qquad
@@ -2646,7 +2646,13 @@ where :math:`P` is a point belonging to the R- or L-set of nodes.
 Outputs to file:
 ~~~~~~~~~~~~~~~~
 
-**Motions**: nodal motions written to file are in global coordinates, and for the floating case they contain the elastic motion :math:`\bar{U}_L  = U_{L,\text{rigid}} + \Phi_m q_m +  U_{L,\text{SIM}}` (whereas these elastic motions are not returned to the glue code)
+**Motions**: nodal motions written to file are in global coordinates.
+For the fixed-bottom case, they are :math:`\bar{U}_L  = \bar{\Phi}_R \bar{U}_R +     \Phi_m q_m + U_{L,\text{SIM}}`
+(see Eq. :eq:`nodalMotionFixed`).
+For the floating case, they are     :math:`\bar{U}_L  = U_{L,\text{rigid}} + R_{b2g}(\Phi_m q_m +  U_{L,\text{SIM}})`.
+Note that the outputs for the floating case contains the elastic motions (similar to what is returned to MoorDyn), whereas these motions are not returned to the glue code for HydroDyn (see the "0" present in Eq. :eq:`nodalMotionFloating`). 
+
+
 
 
 **Loads**: Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 

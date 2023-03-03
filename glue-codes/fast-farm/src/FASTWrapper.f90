@@ -44,6 +44,8 @@ MODULE FASTWrapper
 
    PUBLIC :: FWrap_t0                             !  call to compute outputs at t0 [and initialize some more variables]
    PUBLIC :: FWrap_Increment                      !  call to update states to n+1 and compute outputs at n+1
+   PUBLIC :: FWrap_SetInputs  
+   PUBLIC :: FWrap_CalcOutput  
    
 
 CONTAINS
@@ -140,6 +142,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          !.... multi-turbine options ....
       ExternInitData%TurbineID = InitInp%TurbNum
       ExternInitData%TurbinePos = InitInp%p_ref_Turbine
+      ExternInitData%WaveFieldMod = InitInp%WaveFieldMod
       
       ExternInitData%FarmIntegration = .true.
       ExternInitData%RootName = InitInp%RootName
@@ -201,6 +204,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !.................
          
       call AllocAry(y%AzimAvg_Ct, p%nr, 'y%AzimAvg_Ct (azimuth-averaged ct)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call AllocAry(y%AzimAvg_Cq, p%nr, 'y%AzimAvg_Cq (azimuth-averaged cq)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       if ( InitInp%UseSC ) then
          call AllocAry(y%toSC, InitInp%NumCtrl2SC, 'y%toSC (turbine controller outputs to Super Controller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -286,11 +290,11 @@ contains
 END SUBROUTINE FWrap_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 ! this routine sets the parameters for the FAST Wrapper module. It does not set p%n_FAST_low because we need to initialize FAST first.
-subroutine FWrap_SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, ErrMsg)
+subroutine FWrap_SetParameters(InitInp, p, dt_FAST, dt_caller, ErrStat, ErrMsg)
    TYPE(FWrap_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(FWrap_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    REAL(DbKi),                      INTENT(IN   )  :: dt_FAST     !< time step for FAST
-   REAL(DbKi),                      INTENT(IN   )  :: InitInp_dt_low  !< time step for FAST.Farm
+   REAL(DbKi),                      INTENT(IN   )  :: dt_caller  !< time step that FWrap will be called at by FAST.Farm (if MooringMod>0, this will be smaller than DT_low)
    
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -317,22 +321,22 @@ subroutine FWrap_SetParameters(InitInp, p, dt_FAST, InitInp_dt_low, ErrStat, Err
    
    
    ! p%n_FAST_low has to be set AFTER we initialize FAST, because we need to know what the FAST time step is going to be.    
-   IF ( EqualRealNos( dt_FAST, InitInp_dt_low ) ) THEN
+   IF ( EqualRealNos( dt_FAST, dt_caller ) ) THEN
       p%n_FAST_low = 1
    ELSE
-      IF ( dt_FAST > InitInp_dt_low ) THEN
+      IF ( dt_FAST > dt_caller ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg = "The FAST time step ("//TRIM(Num2LStr(dt_FAST))// &
-                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
+                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(dt_caller))//" s)."
       ELSE
             ! calculate the number of subcycles:
-         p%n_FAST_low = NINT( InitInp_dt_low / dt_FAST )
+         p%n_FAST_low = NINT( dt_caller / dt_FAST )
             
             ! let's make sure the FAST DT is an exact integer divisor of the global (FAST.Farm) time step:
-         IF ( .NOT. EqualRealNos( InitInp_dt_low, dt_FAST * p%n_FAST_low )  ) THEN
+         IF ( .NOT. EqualRealNos( dt_caller, dt_FAST * p%n_FAST_low )  ) THEN
             ErrStat = ErrID_Fatal
             ErrMsg  = "The FASTWrapper module time step ("//TRIM(Num2LStr(dt_FAST))// &
-                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(InitInp_dt_low))//" s)."
+                      " s) must be an integer divisor of the FAST.Farm or farm-level mooring time step ("//TRIM(Num2LStr(dt_caller))//" s)."
          END IF
             
       END IF
@@ -411,7 +415,7 @@ END SUBROUTINE FWrap_End
 SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds
+   REAL(DbKi),                       INTENT(IN   ) :: t               !< Current simulation time in seconds (no longer used, since inputs are set elsewhere)
    INTEGER(IntKi),                   INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
    TYPE(FWrap_InputType),            INTENT(INOUT) :: u               !< Inputs at t (not changed, but possibly copied)
    TYPE(FWrap_ParameterType),        INTENT(IN   ) :: p               !< Parameters
@@ -451,11 +455,11 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    !ELSE
    !   
          ! set the inputs needed for FAST
-      call FWrap_SetInputs(u, m, t)
+      !call FWrap_SetInputs(u, m, t)   <<< moved up into FAST.Farm FARM_UpdateStates
       
-      ! call FAST p%n_FAST_low times:
-      do n_ss = 1, p%n_FAST_low
-         n_FAST = n*p%n_FAST_low + n_ss - 1
+      ! call FAST p%n_FAST_low times   (p%n_FAST_low is simply the number of steps to make per wrapper call. It is affected by MooringMod)
+      do n_ss = 1, p%n_FAST_low 
+         n_FAST = n*p%n_FAST_low + n_ss - 1    
          
          CALL FAST_Solution_T( t_initial, n_FAST, m%Turbine, ErrStat2, ErrMsg2 )                  
             call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -463,8 +467,8 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
             
       end do ! n_ss
       
-      call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)
-         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      !call FWrap_CalcOutput(p, u, y, m, ErrStat2, ErrMsg2)               <<< moved up into FAST.Farm FARM_UpdateStates
+      !   call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    !END IF
 
@@ -513,6 +517,7 @@ END SUBROUTINE FWrap_t0
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the FASTWrapper outputs based on what this instance of FAST computed.
 SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
+   use AeroDyn_IO, only: Calc_Chi0
 
    TYPE(FWrap_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(FWrap_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
@@ -527,8 +532,16 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    REAL(ReKi)                                      :: num         ! numerator
    REAL(ReKi)                                      :: denom       ! denominator
    REAL(ReKi)                                      :: p0(3)       ! hub location (in FAST with 0,0,0 as turbine reference)
+   REAL(ReKi)                                      :: yHat_plane(3) ! horizontal unit vector normal to xhat
+   REAL(ReKi)                                      :: zHat_plane(3) ! nominally vertical
+   REAL(ReKi)                                      :: zHat_Disk(3) 
    REAL(R8Ki)                                      :: theta(3)    
    REAL(R8Ki)                                      :: orientation(3,3)    
+   REAL(ReKi)                                      :: tmp_sz_z, tmp_sz_y
+
+   REAL(ReKi)                                      :: xSkew(3) 
+   REAL(ReKi)                                      :: ySkew(3) 
+   REAL(ReKi)                                      :: zSkew(3) 
    
    INTEGER(IntKi)                                  :: j, k        ! loop counters
    
@@ -593,10 +606,10 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    
    ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
    y%DiskAvg_Vx_Rel = m%Turbine%AD%m%rotors(1)%V_dot_x
-   
+
    ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially      
    theta = 0.0_ReKi
-   do k=1,size(m%ADRotorDisk)
+   do k=1,size(m%ADRotorDisk) ! loop on blades
             
       m%TempDisp(k)%RefOrientation = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Orientation      
       m%TempDisp(k)%Position       = m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%Position + m%Turbine%AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationDisp     
@@ -619,25 +632,77 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
    end do
          
+   ! --- Ct and Cq on polar grid (goes beyond rotor radius)
    if (EqualRealNos(y%DiskAvg_Vx_Rel,0.0_ReKi)) then
       y%AzimAvg_Ct = 0.0_ReKi
+      y%AzimAvg_Cq = 0.0_ReKi
    else
       y%AzimAvg_Ct(1) = 0.0_ReKi
+      y%AzimAvg_Cq(1) = 0.0_ReKi
       
       do j=2,p%nr
          
+         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
+
+         ! Thrust coefficient
+         ! Ct(r)  = dT/dr / (1/2 rho pi r U_rel^2 ), with dT/dr = sum_iB dFn/dr
          num = 0.0_ReKi
-         do k=1,size(m%ADRotorDisk)
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
             num   =  num + dot_product( y%xHat_Disk, m%ADRotorDisk(k)%Force(:,j) )
          end do
-         
-         denom = m%Turbine%AD%p%rotors(1)%AirDens * pi * p%r(j) * y%DiskAvg_Vx_Rel**2
-            
          y%AzimAvg_Ct(j) = num / denom
+
+         ! Torque coefficient 
+         ! Cq = dQ/dr / (1/2 rho pi r^2 U_rel^2)    dQ/dr =  sum_iB r dFt/dr
+         num = 0.0_ReKi
+         do k=1,size(m%ADRotorDisk) ! loop on blades force contribution
+            num = num - p%r(j)*dot_product(m%ADRotorDisk(k)%RefOrientation(2,:,1), m%ADRotorDisk(k)%Force(:,j) ) + dot_product(y%xHat_Disk, m%ADRotorDisk(k)%Moment(:,j) )
+         end do
+         y%AzimAvg_Cq(j) = num / (denom * p%r(j) )
       end do
          
    end if  
       
+   ! --- Variables needed to orient wake planes in "skew" coordinate system
+   ! chi_skew and psi_skew
+   y%chi_skew = Calc_Chi0(m%Turbine%AD%m%rotors(1)%V_diskAvg, m%turbine%AD%m%rotors(1)%V_dot_x) ! AeroDyn_IO
+
+   ! TODO place me in an AeroDyn Function like Calc_Chi0
+   ! Construct y_hat, orthogonal to x_hat when its z component is neglected (in a projected horizontal plane)
+   yHat_plane(1:3) = (/ -y%xHat_Disk(2), y%xHat_Disk(1), 0.0_ReKi  /)
+   yHat_plane(1:3) = yHat_plane/TwoNorm(yHat_plane)
+   ! Construct z_hat
+   zHat_plane(1)   = -y%xHat_Disk(1)*y%xHat_Disk(3)
+   zHat_plane(2)   = -y%xHat_Disk(2)*y%xHat_Disk(3)
+   zHat_plane(3)   =  y%xHat_Disk(1)*y%xHat_Disk(1) + y%xHat_Disk(2)*y%xHat_Disk(2) 
+   zHat_plane(1:3) =  zHat_plane/TwoNorm(zHat_plane)
+
+!~    zHat_Disk = m%Turbine%AD%Input(1)%rotors(1)%HubMotion%Orientation(3,:,1) ! TODO TODO, shoudn't rotate
+
+   ! Skew system (y and z are in disk plane, x is normal to disk, y is in the cross-flow direction formed by the diskavg velocity)
+   xSkew = y%xHat_Disk 
+   ySkew = y%xHat_Disk - m%Turbine%AD%m%rotors(1)%V_diskAvg 
+   denom = TwoNorm(ySkew)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      ! There is no skew
+      ySkew = yHat_plane
+      zSkew = zHat_plane
+   else
+      ySkew = ySkew / denom
+      zSkew(1) = xSkew(2) * ySkew(3) - xSkew(3) * ySkew(2)
+      zSkew(2) = xSkew(3) * ySkew(1) - xSkew(1) * ySkew(3)
+      zSkew(3) = xSkew(1) * ySkew(2) - xSkew(2) * ySkew(1)
+   endif
+   zHat_Disk = zSkew
+
+   tmp_sz_y = -1.0_ReKi * dot_product(zHat_Disk,yHat_plane)
+   tmp_sz_z =             dot_product(zHat_Disk,zHat_plane)
+   if ( EqualRealNos(tmp_sz_y,0.0_ReKi) .and. EqualRealNos(tmp_sz_z,0.0_ReKi) ) then
+      y%psi_skew = 0.0_ReKi
+   else
+      y%psi_skew = atan2( tmp_sz_y, tmp_sz_z )
+   end if
+  
 END SUBROUTINE FWrap_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the inputs needed before calling an instance of FAST

@@ -26,7 +26,6 @@ set(SUBDYN_SOURCES
   src/SubDyn_Output_Params.f90
   src/SubDyn_Tests.f90
   src/IntegerList.f90
-  src/Yaml.f90
   src/SubDyn_Types.f90
 )
 

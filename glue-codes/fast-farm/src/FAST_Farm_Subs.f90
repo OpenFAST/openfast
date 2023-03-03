@@ -294,8 +294,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       SC_InitOut%NumSC2CtrlGlob = 0
       SC_InitOut%NumSC2Ctrl = 0
       SC_InitOut%NumCtrl2SC = 0
-      allocate(farm%SC%y%fromscglob(0))
-      allocate(farm%SC%y%fromsc(0))
+      allocate(farm%SC%y%fromSCglob(0))
+      allocate(farm%SC%y%fromSC(0))
    end if
    
       !-------------------
@@ -319,6 +319,19 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          CALL Cleanup()
          RETURN
       END IF   
+      
+   !...............................................................................................................................  
+   ! step 4.5: initialize farm-level MoorDyn if applicable
+   !...............................................................................................................................  
+   
+   if (farm%p%MooringMod == 3) then
+      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2)  ! FAST instances must be initialized first so that turbine initial positions are known
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF   
+   end if
 
    !...............................................................................................................................  
    ! step 5: Open output file (or set up output file handling)      
@@ -395,6 +408,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ReadPrimaryFile'
+   Real(ReKi)                    :: DefaultReVal ! Default real value 
+   Real(ReKi)                    :: EstimatedRotorRadius ! Estimated rotor radius
    
    
       ! Initialize some variables:
@@ -537,6 +552,22 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
       
+       ! Mod_WaveField - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+   CALL ReadVar( UnIn, InputFile, p%WaveFieldMod, "Mod_WaveField", "Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+       ! Mod_SharedMooring - flag for array-level mooring. (switch) 0: none, 3: yes/MoorDyn
+   CALL ReadVar( UnIn, InputFile, p%MooringMod, "Mod_SharedMooring", "Array-level mooring handling (-) (switch) {0: none; 3: array-level MoorDyn model}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
    !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -554,6 +585,31 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
    IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
    SC_InitInp%DLL_FileName =  p%SC_FileName
+      
+   !---------------------- SHARED MOORING SYSTEM ------------------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: SHARED MOORING SYSTEM', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! MD_FileName - Name/location of the farm-level MoorDyn input file (quoated string):
+   CALL ReadVar( UnIn, InputFile, p%MD_FileName, "MD_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   IF ( PathIsRelative( p%MD_FileName ) ) p%MD_FileName = TRIM(PriPath)//TRIM(p%MD_FileName)
+   
+      ! DT_Mooring - time step for farm-level mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, p%DT_mooring, "DT_Mooring", "Time step for farm-levem mooring coupling with each turbine [used only when Mod_SharedMooring > 0] (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
    
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc )
@@ -817,34 +873,19 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if      
       
       
-      ! dr - Radial increment of radial finite-difference grid (m) [>0.0]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%dr, "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%Mod_Wake, "Mod_Wake", "Wake model", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%dr      , "dr", "Radial increment of radial finite-difference grid (m) [>0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    
-      ! NumRadii - Number of radii in the radial finite-difference grid (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii", "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-   
-      ! NumPlanes - Number of wake planes (-) [>=2]:
-   CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes, "NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if
-      
+   ! Estimate rotor raidus based on grid size, if user follow approximately the guidelines
+   EstimatedRotorRadius = (WD_InitInp%dr * WD_InitInp%NumRadii) / 3._ReKi
+         
       ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
+   DefaultReVal = 12.5_ReKi/EstimatedRotorRadius ! Eq. (32) of https://doi.org/10.1002/we.2785, with U=10, a=1/3
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
       "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]", &
-      0.0007_ReKi, ErrStat2, ErrMsg2, UnEc)
+      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -862,9 +903,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
 
       ! C_HWkDfl_OY - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]:
+   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
+      DefaultReVal = 0.0_ReKi
+   else
+      DefaultReVal = 0.3_ReKi
+   endif
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_OY, "C_HWkDfl_OY", &
       "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]", &
-      0.3_ReKi, ErrStat2, ErrMsg2, UnEc)
+      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -883,9 +929,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if      
          
       ! C_HWkDfl_xY - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]:
+   if (WD_InitInp%Mod_Wake == Mod_Wake_Curl) then
+      DefaultReVal = 0.0_ReKi
+   else
+      DefaultReVal = -0.004_ReKi
+   endif
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_xY, "C_HWkDfl_xY", &
       "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]", &
-      -0.004_ReKi, ErrStat2, ErrMsg2, UnEc)
+      DefaultReVal, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1022,7 +1073,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
-      end if            
+      end if           
 
       ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
@@ -1043,6 +1094,37 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          call cleanup()
          RETURN        
       end if            
+
+   !----------------------- CURL WAKE PARAMETERS ------------------------------------------
+   CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .True., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.01, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vCurl,          "k_vCurl",    "Eddy viscosity for curl", 2.0 , ErrStat2, ErrMsg2, UnEc); if(failed()) return    
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Projection, "Mod_Projection", "Mod_Projection", -1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return 
+   if (AWAE_InitInp%Mod_Projection==-1) then
+      ! -1 means the user selected "default"
+      if (WD_InitInp%Mod_Wake==Mod_Wake_Curl) then
+           AWAE_InitInp%Mod_Projection=2
+      else 
+           AWAE_InitInp%Mod_Projection=1
+      endif
+   endif
+   !----------------------- WAKE-ADDED TURBULENCE ------------------------------------------
+   ! Read WAT variables
+   WD_InitInp%WAT_k_Def  =1.0_ReKi
+   WD_InitInp%WAT_k_Grad =1.0_ReKi
+   WD_InitInp%WAT = .false.   ! initialize to false to avoid segfault
+   !CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !CALL ReadCom( UnIn, InputFile, 'dummy predef', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadCom( UnIn, InputFile, 'dummy user', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadCom( UnIn, InputFile, 'dummy userdx', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def,     "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !IF ( PathIsRelative( p%File ) )p%File = TRIM(PriPath)//TRIM(p%File)
 
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
@@ -1231,6 +1313,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
          RETURN        
       end if
       
+      
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%OutAllPlanes,    "OutAllPlanes", "Output all planes", .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
+
+      
       ! NOutRadii - Number of radial nodes for wake output for an individual rotor (-) [0 to 20]:
    CALL ReadVar( UnIn, InputFile, p%NOutRadii, "NOutRadii", "Number of radial nodes for wake output for an individual rotor (-) [0 to 20]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1345,6 +1431,12 @@ CONTAINS
       CLOSE( UnIn )
       IF ( UnEc > 0 ) CLOSE ( UnEc )   
    end subroutine cleanup
+
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
    !...............................................................................................................................
 END SUBROUTINE Farm_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1367,6 +1459,12 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   
+   ! --- SIMULATION CONTROL ---   
+   IF ((p%WaveFieldMod .ne. 1) .and. (p%WaveFieldMod .ne. 2)) CALL SetErrStat(ErrID_Fatal,'WaveFieldMod must be 1 or 2.',ErrStat,ErrMsg,RoutineName)
+   IF ((p%MooringMod .ne. 0) .and. (p%MooringMod .ne. 3)) CALL SetErrStat(ErrID_Fatal,'MooringMod must be 0 or 3.',ErrStat,ErrMsg,RoutineName)
+   
+   
    IF (p%DT_low <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_low must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1375,16 +1473,24 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ! --- SUPER CONTROLLER ---
    ! TODO : Verify that the DLL file exists
    
-   
+   ! --- SHARED MOORING SYSTEM ---
+   ! TODO : Verify that p%MD_FileName file exists
+   if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
+      
    ! --- WAKE DYNAMICS ---
+   IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumRadii < 2) CALL SetErrStat(ErrID_Fatal,'NumRadii (number of radii) must be at least 2.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%NumPlanes < 2) CALL SetErrStat(ErrID_Fatal,'NumPlanes (number of wake planes) must be at least 2.',ErrStat,ErrMsg,RoutineName)
 
+   IF (WD_InitInp%k_VortexDecay < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'k_VortexDecay needs to be postive',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%NumVortices < 2) CALL SetErrStat(ErrID_Fatal,'NumVorticies needs to be greater than 1',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%sigma_D < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'sigma_D needs to be postive',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%f_c <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'f_c (cut-off [corner] frequency) must be more than 0 Hz.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_NearWake <= 1.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_NearWake parameter must be greater than 1.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vAmb < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vAmb parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%k_vShr < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vShr parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%k_vCurl < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'k_vCurl parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    
    IF (WD_InitInp%C_vAmb_DMin < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMin parameter must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (WD_InitInp%C_vAmb_DMax <= WD_InitInp%C_vAmb_DMin) CALL SetErrStat(ErrID_Fatal,'C_vAmb_DMax parameter must be larger than C_vAmb_DMin.',ErrStat,ErrMsg,RoutineName)
@@ -1406,14 +1512,23 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
       END IF
    END IF
    
-   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
-      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
-   END IF
+
    
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
+   
+   ! --- CURL
+   IF (WD_InitInp%FilterInit < 0  ) CALL SetErrStat(ErrID_Fatal,'FilterInit needs to >= 0',ErrStat,ErrMsg,RoutineName)
+   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
+      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
+   END IF
+   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
+   ! --- WAT      
+   IF (WD_InitInp%WAT_k_Def  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%WAT_k_Grad <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1505,6 +1620,7 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
          WD_InitInp%TurbNum     = nt
+         WD_InitInp%OutFileRoot = farm%p%OutFileRoot
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
          call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -1544,7 +1660,8 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
 
    ! local variables
    type(FWrap_InitInputType)               :: FWrap_InitInp
-   type(FWrap_InitOutputType)              :: FWrap_InitOut
+   type(FWrap_InitOutputType)              :: FWrap_InitOut   
+   REAL(DbKi)                              :: FWrap_Interval                  !< Coupling interval that FWrap is called at (affected by MooringMod)
 
    INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
@@ -1577,12 +1694,28 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
       FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
       FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
-      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob))
-      FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSCglob`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
+      if (SC_InitOutput%NumSC2CtrlGlob>0) then
+         FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      endif
       
-      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl))
+      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2)
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSC`', ErrStat, ErrMsg, RoutineName )
+         return
+      end if
       
+      if (farm%p%MooringMod > 0) then
+         FWrap_Interval = farm%p%dt_mooring    ! when there is a farm-level mooring model, FASTWrapper will be called at the mooring coupling time step
+      else
+         FWrap_Interval = farm%p%dt_low        ! otherwise FASTWrapper will be called at the regular FAST.Farm time step
+      end if
       
+     !OMP PARALLEL DO default(shared) PRIVATE(nt, FWrap_InitOut, ErrStat2, ErrMsg2) schedule(runtime)
       DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
@@ -1590,6 +1723,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          
          FWrap_InitInp%FASTInFile    = farm%p%WT_FASTInFile(nt)
          FWrap_InitInp%p_ref_Turbine = farm%p%WT_Position(:,nt)
+         FWrap_InitInp%WaveFieldMod  = farm%p%WaveFieldMod
          FWrap_InitInp%TurbNum       = nt
          FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          
@@ -1605,18 +1739,25 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
             FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt_low here:
+            ! NOTE: FWrap_interval, and FWrap_InitOut appear unused
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
-                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt_low, FWrap_InitOut, ErrStat2, ErrMsg2 )
+                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, FWrap_Interval, FWrap_InitOut, ErrStat2, ErrMsg2 )
          
          farm%FWrap(nt)%IsInitialized = .true.
          
+         if (ErrStat2 >= AbortErrLev) then
+            !OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
-            if (ErrStat >= AbortErrLev) then
-               call cleanup()
-               return
-            end if
+            !OMP END CRITICAL
+         endif
             
       END DO   
+      !OMP END PARALLEL DO  
+
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
    
       farm%p%Module_Ver( ModuleFF_FWrap ) = FWrap_InitOut%Ver
       
@@ -1628,6 +1769,268 @@ contains
       call FWrap_DestroyInitOutput( FWrap_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
 END SUBROUTINE Farm_InitFAST
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes a farm-level instance of MoorDyn if applicable
+SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
+
+   ! Passed variables
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+
+   ! local variables
+   type(MD_InitInputType)                  :: MD_InitInp
+   type(MD_InitOutputType)                 :: MD_InitOut
+
+   INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
+   INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitMD'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   CALL WrScr(" --------- in FARM_InitMD, to initiailze farm-level MoorDyn ------- ")
+   
+   
+   ! sort out how many times FASt and MoorDyn will be called per FAST.Farm time step based on DT_low and DT_mooring
+   IF ( EqualRealNos( farm%p%dt_mooring, farm%p%DT_low ) ) THEN
+      farm%p%n_mooring = 1
+   ELSE
+      IF ( farm%p%dt_mooring > farm%p%DT_low ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg = "The farm mooring coupling time step ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
+                    " s) cannot be larger than FAST.Farm time step ("//TRIM(Num2LStr(farm%p%DT_low))//" s)."
+      ELSE
+            ! calculate the number of FAST-MoorDyn subcycles:
+         farm%p%n_mooring = NINT( farm%p%DT_low / farm%p%dt_mooring )
+            
+            ! let's make sure the FAST DT is an exact integer divisor of the global (FAST.Farm) time step:
+         IF ( .NOT. EqualRealNos( farm%p%DT_low, farm%p%dt_mooring * farm%p%n_mooring )  ) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = "The MoorDyn coupling time step, DT_mooring ("//TRIM(Num2LStr(farm%p%dt_mooring))// &
+                      " s) must be an integer divisor of the FAST.Farm time step ("//TRIM(Num2LStr(farm%p%DT_low))//" s)."
+         END IF
+            
+      END IF
+   END IF     
+   
+
+   !.................
+   ! MoorDyn initialization inputs...
+   !................            
+   !FWrap_InitInp%tmax          = farm%p%TMax
+   !FWrap_InitInp%n_high_low    = farm%p%n_high_low + 1   ! Add 1 because the FAST wrapper uses an index that starts at 1
+   !FWrap_InitInp%dt_high       = farm%p%dt_high
+   
+
+   MD_InitInp%FileName  = farm%p%MD_FileName                    ! input file name and path
+   MD_InitInp%RootName  = trim(farm%p%OutFileRoot)//'.FarmMD'   ! root of output files
+   MD_InitInp%FarmSize  = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
+   
+   ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   ! gather spatial initialization inputs for Farm-level MoorDyn
+   DO nt = 1,farm%p%NumTurbines              
+      MD_InitInp%PtfmInit(:,nt) = farm%FWrap(nt)%m%Turbine%MD%m%PtfmInit   ! turbine PRP initial positions and rotations in their respective coordinate systems from each FAST/MD instance
+      MD_InitInp%TurbineRefPos(:,nt) = farm%p%WT_Position(:,nt)            ! reference positions of each turbine in the farm global coordinate system
+   END DO 
+    
+   ! These aren't currently handled at the FAST.Farm level, so just give the farm's MoorDyn default values, which can be overwridden by its input file
+   MD_InitInp%g         =    9.81
+   MD_InitInp%rhoW      = 1025.0
+   MD_InitInp%WtrDepth  =    0.0   !TODO: eventually connect this to a global depth input variable <<<
+
+
+   ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
+   ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+
+   ! initialize MoorDyn
+   CALL MD_Init( MD_InitInp, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
+                 farm%MD%OtherSt, farm%MD%y, farm%MD%m, farm%p%DT_mooring, MD_InitOut, ErrStat2, ErrMsg2 )
+   
+   farm%MD%IsInitialized = .true.
+
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   
+   
+   ! Copy MD inputs over into the 2nd entry of the input array, to allow the first extrapolation in FARM_MD_Increment
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(2) = -0.1_DbKi
+   
+   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   
+   ! Set up mesh maps between MoorDyn and floating platforms.
+   ! (for now assuming ElastoDyn - eventually could differentiate at the turbine level)
+   
+   ! allocate mesh mappings for coupling farm-level MoorDyn with OpenFAST instances
+   ALLOCATE( farm%m%MD_2_FWrap(farm%p%NumTurbines), farm%m%FWrap_2_MD(farm%p%NumTurbines), STAT = ErrStat2 )
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating MD_2_FWrap and FWrap_2_MD.",ErrStat,ErrMsg,RoutineName)
+      CALL Cleanup()
+      RETURN
+   END IF
+   
+   ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
+   do nt = 1,farm%p%NumTurbines      
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
+      
+      ! loads
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
+                          farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+                          
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
+     
+      ! kinematics
+      CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
+                          farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+      
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
+
+      ! Since SubDyn connections are not enabled yet, issue warning
+      if (allocated(farm%FWrap(nt)%m%Turbine%SD%Input)) then
+         call SetErrStat( ErrID_Warn, 'Turbine '//trim(Num2LStr(nt))//': Farm moorings connected to ElastoDyn platform reference instead of SubDyn', Errstat, ErrMsg, RoutineName//':MD_2_FWrap' )
+      endif
+      
+      ! SubDyn alternative:
+      !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
+      !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 )
+      !                    
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
+      !   
+      !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
+      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
+      !                    
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
+      !end if
+   end do   
+   
+
+   farm%p%Module_Ver( ModuleFF_MD) = MD_InitOut%Ver
+   
+   call cleanup()
+      
+contains
+   subroutine cleanup()
+      call MD_DestroyInitInput(  MD_InitInp, ErrStat2, ErrMsg2 )
+      call MD_DestroyInitOutput( MD_InitOut, ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+END SUBROUTINE Farm_InitMD
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine moves a farm-level MoorDyn simulation one step forward, to catch up with FWrap_Increment
+subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
+   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
+   INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation in FARM MoorDyn terms
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+
+   INTEGER(IntKi)                          :: nt                      
+   INTEGER(IntKi)                          :: n_ss                      
+   INTEGER(IntKi)                          :: n_FMD   
+   REAL(DbKi)                              :: t_next        ! time at next step after this one (s)  
+   INTEGER(IntKi)                          :: ErrStat2 
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_MD_Increment'
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   ! ----- extrapolate MD inputs -----
+   t_next = t + farm%p%DT_mooring
+
+   ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
+   CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   
+   ! Shift "window" of MD%Input: move values of Input and InputTimes from index 1 to index 2
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
+
+   ! update index 1 entries with the new extrapolated values
+   CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   farm%MD%InputTimes(1) = t_next  
+
+
+   ! ----- map substructure kinematics to MoorDyn inputs -----      (from mapping called at start of CalcOutputs Solve INputs)
+
+   do nt = 1,farm%p%NumTurbines
+      !if (farm%MD%p%NFairs(nt) > 0 ) then   
+         
+         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%CoupledKinematics(nt), &
+                                       farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+       
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%CoupledKinematics' )
+                             
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
+      !end if 
+   end do 
+
+   
+   ! ----- update states and calculate outputs -----
+   
+   CALL MD_UpdateStates( t, n_FMD, farm%MD%Input, farm%MD%InputTimes, farm%MD%p, farm%MD%x,  &
+                         farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
+   
+   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
+                       farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
+   
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
+   do nt = 1,farm%p%NumTurbines
+   
+      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+         
+         ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
+         !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MeshCopy CoupledLoads' )   
+         
+         
+         ! mapping
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf,  &
+                                       farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+                                       farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
+         
+         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+                  
+         ! SubDyn alternative
+         !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
+         !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
+         !                              farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
+         !
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
+         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
+      end if
+   end do
+   
+         
+end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the initial call to calculate outputs (at t=0).
 !! The Initial Calculate Output algorithm: \n
@@ -1667,7 +2070,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    farm%AWAE%u%xhat_plane = 0.0_ReKi     ! Orientations of wake planes, normal to wake planes, for each turbine
    farm%AWAE%u%p_plane    = 0.0_ReKi     ! Center positions of wake planes for each turbine
    farm%AWAE%u%Vx_wake    = 0.0_ReKi     ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-   farm%AWAE%u%Vr_wake    = 0.0_ReKi     ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vy_wake    = 0.0_ReKi     ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+   farm%AWAE%u%Vz_wake    = 0.0_ReKi     ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
    farm%AWAE%u%D_wake     = 0.0_ReKi     ! Wake diameters at wake planes for each turbine      
    
       !--------------------
@@ -1800,22 +2204,31 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStatWD, ErrStat2 
-   INTEGER(IntKi), ALLOCATABLE             :: ErrStatF(:)                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsgWD
-   CHARACTER(ErrMsgLen), ALLOCATABLE       :: ErrMsgF (:)                     ! Temporary Error message
+   INTEGER(IntKi)                          :: nt                      
+   INTEGER(IntKi)                          :: n_ss                      
+   INTEGER(IntKi)                          :: n_FMD   
+   REAL(DbKi)                              :: t2                              ! time within the FAST-MoorDyn substepping loop for shared moorings
+   INTEGER(IntKi)                          :: ErrStatAWAE, ErrStatMD, ErrStat2 
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsgAWAE
+   CHARACTER(ErrMsgLen)                    :: ErrMsgMD
+   INTEGER(IntKi), ALLOCATABLE             :: ErrStatF(:)                     ! Temporary Error status for FAST
+   CHARACTER(ErrMsgLen), ALLOCATABLE       :: ErrMsgF (:)                     ! Temporary Error message for FAST
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
-!   REAL(DbKi)                              :: tm1,tm2,tm3
+   REAL(DbKi)                              :: tm1,tm2,tm3, tm01, tm02, tm03, tmSF, tmSM  ! timer variables
    
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   allocate ( ErrStatF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+   allocate ( ErrStatF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrStatF.', errStat, errMsg, RoutineName )
-   allocate ( ErrMsgF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+   allocate ( ErrMsgF ( farm%p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrMsgF.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
+   
+   
+
+   
    
    !.......................................................................................
    ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
@@ -1824,13 +2237,24 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. CALL WD_US         
   
+   !$OMP PARALLEL default(shared)
+   !$OMP do private(nt, ErrStat2, ErrMsg2) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
-                     farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
-         call SetErrStat(ErrStatWD, ErrMsgWD, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+
+
+      ! Error handling
+      if (errStat2 /= ErrID_None) then
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+         !$OMP END CRITICAL
+      endif
          
    END DO
+   !$OMP END DO 
+   !$OMP END PARALLEL
    
    if (ErrStat >= AbortErrLev) return
    
@@ -1843,57 +2267,112 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       if (errStat >= AbortErrLev) return
    end if
    
+   
       !--------------------
-      ! 3. CALL F_Increment and 4. CALL AWAE_UpdateStates  
-!#ifdef _OPENMP
-!   tm1 = omp_get_wtime()  
-!#endif     
-   !$OMP PARALLEL DO DEFAULT(Shared) Private(nt) !Private(nt,tm2,tm3)
-   DO nt = 1,farm%p%NumTurbines+1
-      if(nt.ne.farm%p%NumTurbines+1) then  
-!#ifdef _OPENMP
-!         tm3 = omp_get_wtime()  
-!#endif     
+      ! 3. CALL F_Increment (and FARM_MD_Increment) and 4. CALL AWAE_UpdateStates  
+      
+      
+   ! set the inputs needed for FAST (these are slow-varying so can just be done once per farm time step)
+   do nt = 1,farm%p%NumTurbines
+      call FWrap_SetInputs(farm%FWrap(nt)%u, farm%FWrap(nt)%m, t)
+   end do
+   
+   
+   !#ifdef printthreads
+   !   tm1 = omp_get_wtime()  
+   !   tmSF = 0.0_DbKi 
+   !   tmSM = 0.0_DbKi 
+   !#endif     
+   ! Original case: no shared moorings 
+   if (farm%p%MooringMod == 0) then     
+
+      !$OMP PARALLEL DO DEFAULT(Shared) Private(nt)
+      DO nt = 1,farm%p%NumTurbines
          call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                      farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
-         
-!#ifdef _OPENMP
-!         tm2 = omp_get_wtime() 
-!         write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-!#endif
-
-      else
-!#ifdef _OPENMP
-!         tm3 = omp_get_wtime()  
-!#endif    
-         call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )       
-
-!#ifdef _OPENMP
-!         tm2 = omp_get_wtime() 
-!         write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
-!#endif
-      endif
+      END DO
+      !$OMP END PARALLEL DO  
+   
+   ! Farm-level moorings case using MoorDyn
+   else if (farm%p%MooringMod == 3) then
       
-   END DO
-   !$OMP END PARALLEL DO  
+      
+      ! This is the FAST-MoorDyn farm-level substepping loop        
+      do n_ss = 1, farm%p%n_mooring                   ! do n_mooring substeps (number of FAST/FarmMD steps per Farm time step)
+      
+         n_FMD = n*farm%p%n_mooring  + n_ss - 1       ! number of the current time step of the call to FAST and MoorDyn         
+         t2   = t + farm%p%DT_mooring*(n_ss - 1)      ! current time in the loop
 
+         !#ifdef printthreads
+         !   tm01 = omp_get_wtime()  
+         !#endif
+         
+         ! A nested parallel for loop to call each instance of OpenFAST in parallel
+         !$OMP PARALLEL DO DEFAULT(Shared) Private(nt)
+         DO nt = 1,farm%p%NumTurbines
+            call FWrap_Increment( t2, n_FMD, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                        farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
+         END DO              
+         !$OMP END PARALLEL DO
+         
+         !#ifdef printthreads
+         !   tm02 = omp_get_wtime()  
+         !#endif  
+      
+         ! call farm-level MoorDyn time step here (can't multithread this with FAST since it needs inputs from all FAST instances)
+         call Farm_MD_Increment( t2, n_FMD, farm, ErrStatMD, ErrMsgMD)
+         call SetErrStat(ErrStatMD, ErrMsgMD, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! MD error status <<<<<
+         
+         !#ifdef printthreads
+         !   tm03 = omp_get_wtime()
+         !   tmSF = tmSF + tm02-tm01
+         !   tmSM = tmSM + tm03-tm02
+         !#endif           
+         
+      end do    ! n_ss substepping
+   
+      !#ifdef printthreads
+      !   tm2 = omp_get_wtime() 
+      !   write(*,*)  '       Time on FAST sims: '//trim(num2lstr(tmSF))//' s.  Time on Farm MoorDyn: '//trim(num2lstr(tmSM))//' seconds'
+      !#endif
+      
+      
+   else
+      CALL SetErrStat( ErrID_Fatal, 'MooringMod must be 0 or 3.', ErrStat, ErrMsg, RoutineName )
+   end if
+   !#ifdef printthreads   
+   !  tm2 = omp_get_wtime()
+   !  write(*,*) 'Total FAST and Moordyn for FF_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
+   !#endif 
+
+   call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                     farm%AWAE%OtherSt, farm%AWAE%m, ErrStatAWAE, ErrMsgAWAE )       
+
+   !#ifdef printthreads   
+   !  tm3 = omp_get_wtime()
+   !  write(*,*) 'AWAE_US took '//trim(num2lstr(tm3-tm2))//' seconds.'
+   !  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm3-tm1))//' seconds.'
+   !#endif 
+   
+   ! update error messages from FAST's and AWAE's time steps
    DO nt = 1,farm%p%NumTurbines 
-      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates') ! FAST error status
    END DO
+   
+   call SetErrStat(ErrStatAWAE, ErrMsgAWAE, ErrStat, ErrMsg, 'FARM_UpdateStates')  ! AWAE error status
+   
+   ! calculate outputs from FAST as needed by FAST.Farm
+   do nt = 1,farm%p%NumTurbines
+      call FWrap_CalcOutput(farm%FWrap(nt)%p, farm%FWrap(nt)%u, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2)  
+         call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end do
 
-   call SetErrStat(ErrStatF(farm%p%NumTurbines+1), ErrMsgF(farm%p%NumTurbines+1), ErrStat, ErrMsg, 'FARM_UpdateStates')
-
+   
    if (ErrStat >= AbortErrLev) return
 
    
-!#ifdef _OPENMP   
-!  tm2 = omp_get_wtime()
-!  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
-!#endif 
-   
 end subroutine FARM_UpdateStates
-
+!---------------------------------------------------------------------------------------------------------------------------------- 
 subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Time step increment number
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
@@ -1972,13 +2451,35 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             ! Rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
          farm%m%AllOuts(RtVAmbT(nt)) = farm%AWAE%y%Vx_wind_disk(nt)
          
+            ! Time-filtered rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
+         farm%m%AllOuts(RtVAmbFiltT(nt)) = farm%WD(nt)%xd%Vx_wind_disk_filt(0) ! NOTE: filtered value will be 0 at t=0
+
             ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
          farm%m%AllOuts(RtVRelT(nt)) = farm%FWrap(nt)%y%DiskAvg_Vx_Rel
+
+            ! Skew azimuth angle (instantaneous)
+         farm%m%AllOuts(AziSkewT(nt)) = farm%FWrap(nt)%y%psi_skew* R2D
+
+            ! Skew azimuth angle (time-filtered)
+         farm%m%AllOuts(AziSkewFiltT(nt)) = farm%WD(nt)%xd%psi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
+
+            ! Skew angle (instantaneous)
+         farm%m%AllOuts(RtSkewT(nt)) = farm%FWrap(nt)%y%chi_skew * R2D
+
+            ! Skew angle (time-filtered)
+         farm%m%AllOuts(RtSkewFiltT(nt)) = farm%WD(nt)%xd%chi_skew_filt*R2D ! NOTE: filtered value will be 0 at t=0
+
+            ! Rotor circulation for curled-wake model
+         farm%m%AllOuts(RtGamCurlT(nt)) = farm%WD(nt)%m%GammaCurl
+
+            !Rotor-disk averaged thrust coefficient
+         farm%m%AllOuts(RtCtAvgT(nt)) = farm%WD(nt)%m%Ct_avg
          
             ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
          do ir = 1, farm%p%NOutRadii
             farm%m%AllOuts(CtTN(ir, nt)) = farm%FWrap(nt)%y%AzimAvg_Ct(farm%p%OutRadii(ir)+1)  ! y%AzimAvg_Ct is a 1-based array but the user specifies 0-based node indices, so we need to add 1
          end do
+
          
          !.......................................................................................
          ! Wake (for an Individual Rotor)
@@ -2059,20 +2560,23 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                         ! Wake diameter for downstream wake volume, np, of turbine, nt, m
                      farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
             
+                     if (farm%WD(nt)%p%Mod_Wake == Mod_Wake_Polar) then
+                        do ir = 1, farm%p%NOutRadii
+                     
+                              ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                           farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
                   
-                     do ir = 1, farm%p%NOutRadii
-                  
-                           ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                        farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
-               
-                           ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
-                           !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                        farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
-                        farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
-                  
-                     end do  
+                              ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                              !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                           farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
+                           farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
+                     
+                        end do  
+                     else
+                         ! These outputs are invalid for Curl and Cartesian
+                     endif
 
                   else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
                
@@ -2191,13 +2695,18 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. call WD_CO and transfer y_WD to u_AWAE        
    
+   !$OMP PARALLEL DO DEFAULT (shared) PRIVATE(nt, ErrStat2, ErrMsg2) schedule(runtime)
    DO nt = 1,farm%p%NumTurbines
       
       call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                      farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+      if (ErrStat2 >= AbortErrLev) then
+         !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
-         
+         !$OMP END CRITICAL
+      endif
    END DO
+   !$OMP END PARALLEL DO  
    if (ErrStat >= AbortErrLev) return
 
    call Transfer_WD_to_AWAE(farm)
@@ -2334,6 +2843,15 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       
    end if   
    
+      !--------------
+      ! 5. End farm-level MoorDyn
+   if (farm%p%MooringMod == 3) then
+      call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      !TODO: any related items need to be cleared?
+   end if
+   
+   
    !.......................................................................................
    ! close output file
    !.......................................................................................
@@ -2356,10 +2874,13 @@ SUBROUTINE Transfer_FAST_to_WD(farm)
    
    DO nt = 1,farm%p%NumTurbines   
       farm%WD(nt)%u%xhat_disk      = farm%FWrap(nt)%y%xHat_Disk       ! Orientation of rotor centerline, normal to disk
+      farm%WD(nt)%u%psi_skew       = farm%FWrap(nt)%y%psi_skew        ! Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined
+      farm%WD(nt)%u%chi_skew       = farm%FWrap(nt)%y%chi_skew        ! Inflow skew angle
       farm%WD(nt)%u%p_hub          = farm%FWrap(nt)%y%p_hub           ! Center position of hub, m
       farm%WD(nt)%u%D_rotor        = farm%FWrap(nt)%y%D_rotor         ! Rotor diameter, m
       farm%WD(nt)%u%Vx_rel_disk    = farm%FWrap(nt)%y%DiskAvg_Vx_Rel  ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
       farm%WD(nt)%u%Ct_azavg       = farm%FWrap(nt)%y%AzimAvg_Ct      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
+      farm%WD(nt)%u%Cq_azavg       = farm%FWrap(nt)%y%AzimAvg_Cq      ! Azimuthally averaged torque force coefficient (normal to disk), distributed radially, -
       farm%WD(nt)%u%YawErr         = farm%FWrap(nt)%y%YawErr          ! Nacelle-yaw error at the wake planes, rad   
    END DO
    
@@ -2398,8 +2919,9 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
    DO nt = 1,farm%p%NumTurbines   
       farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
       farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vx_wake(:,:,:,nt)  = farm%WD(nt)%y%Vx_wake2       ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vy_wake(:,:,:,nt)  = farm%WD(nt)%y%Vy_wake2       ! Horizontal wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    

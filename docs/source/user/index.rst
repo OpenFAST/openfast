@@ -24,7 +24,10 @@ General
 
 Workshop material, legacy documentation, and other resources are listed below.
 
-- `Workshop Presentations <https://drive.google.com/drive/folders/1BDDfcnIyvmZCwf7eFo0ISI7aF_FMAOvt?usp=sharing>`_
+- `Overview of OpenFAST at NAWEA WindTech 2022 <https://drive.google.com/file/d/1bD5a6rRg6cCKht9Ar8AFJQ8YrI4-wsFe/view>`_
+- `Practical Guide to OpenFAST at NAWEA WindTech 2022 <https://drive.google.com/file/d/1FHovo6btDStPBh1Kv2swA09hIQRcZGZf/view>`_
+- `Overview of OpenFAST at NAWEA WindTech 2019 <https://drive.google.com/file/d/1wagMTOV_CLxSKzS2EEPFp2CExUo3JLpQ/view>`_
+- `Workshop Presentations <https://drive.google.com/drive/folders/1BDDfcnIyvmZCwf7eFo0ISI7aF_FMAOvt>`_
 - :download:`Old FAST v6 User's Guide <../../OtherSupporting/Old_FAST6_UsersGuide.pdf>`
 - :download:`FAST v8 README <../../OtherSupporting/FAST8_README.pdf>`
 - `Implementation of Substructure Flexibility and Member-Level Load Capabilities for Floating Offshore Wind Turbines in OpenFAST <https://www.nrel.gov/docs/fy20osti/76822.pdf>`_
@@ -51,6 +54,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    ElastoDyn <elastodyn/index.rst>
    HydroDyn <hydrodyn/index.rst>
    InflowWind <inflowwind/index.rst>
+   MoorDyn <moordyn/index.rst>
    ServoDyn <servodyn/index.rst>
    Structural Control <servodyn-stc/StC_index.rst>
    TurbSim <turbsim/index.rst>

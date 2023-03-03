@@ -18,7 +18,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    character(*),                 intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    character(1024)      :: PriPath                         ! the path to the primary input file
-   character(1024)      :: sDummy, sLine, Key, Val         ! string to temporarially hold value of read line 
+   character(1024)      :: sDummy, sLine                   ! string to temporarially hold value of read line 
    integer(IntKi)       :: UnIn, i
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
@@ -37,20 +37,21 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'', idEuler1                       , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%DTfvw               ,'DTfvw'              ,'',  p%DTaero                      , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'       ,'', 0.0_ReKi                      , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart','', real(20.0_ReKi*Inp%DTfvw,ReKi), ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%FullCircStart       ,'FullCircStart'       ,'', 0.0_ReKi                      , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                               '--- Circulation specification header'  , ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMethod    ,'CircSolvMethod'    ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001          , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar        (UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
    CALL ReadCom        (UnIn,FileName,                        '=== Separator'                         , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadCom        (UnIn,FileName,                        '--- Wake options header'               , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadCom        (UnIn,FileName,                        '--- Wake extent header'                , ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVar        (UnIn,FileName,Inp%nNWPanels          ,'nNWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar        (UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,''                 , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%nNWPanelsFree      ,'nNWPanelsFree'     ,'', Inp%nNWPanels  , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanels          ,'nFWPanels'         ,'', 0              , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%nFWPanelsFree      ,'nFWPanelsFree'     ,'', Inp%nFWPanels  , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%FWShedVorticity    ,'FWShedVorticity'   ,'', .False.        , ErrStat2,ErrMsg2); if(Failed())return
 
@@ -58,7 +59,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%DiffusionMethod    ,'DiffusionMethod'   ,'',idDiffusionNone , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegDeterMethod     ,'RegDeterMethod'    ,'',idRegDeterConstant, ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%RegFunction        ,'RegFunction'       ,'',idRegVatistas   , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegConstant   , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%WakeRegMethod      ,'WakeRegMethod'     ,'',idRegAge        , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WakeRegParam       ,'WakeRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%WingRegParam       ,'WingRegParam'      ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CoreSpreadEddyVisc ,'CoreSpreadEddyVisc','',100.0_ReKi      , ErrStat2,ErrMsg2); if(Failed())return
@@ -68,18 +69,20 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%ShearModel         ,'ShearModel'        ,'',idShearNone     , ErrStat2,ErrMsg2); if(Failed())return
 
    CALL ReadCom        (UnIn,FileName,                        '--- Speed up header      '             , ErrStat2,ErrMsg2); if(Failed()) return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod     ,'VelocityMethod'    ,'',idVelocityBasic , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor   ,'TreeBranchFactor'  ,'',2.0_ReKi        , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegment     ,'PartPerSegment'    ,'',  1             , ErrStat2,ErrMsg2); if(Failed())return
-!    Inp%TwrShadowOnWake  = .False.
-!    Inp%VelocityMethod   = idVelocityBasic
-!    Inp%TreeBranchFactor = 3.0_ReKi
-!    Inp%PartPerSegment   = 1
+   CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod(1)  ,'VelocityMethod'    ,'',idVelocityTreePart, ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor(1),'TreeBranchFactor'  ,'',1.5_ReKi        , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegment(1)  ,'PartPerSegment'    ,'',  1             , ErrStat2,ErrMsg2); if(Failed())return
+   Inp%PartPerSegment(2)   = 1
+   Inp%TreeBranchFactor(2) = 2.0_ReKi
+   Inp%VelocityMethod(2)   = idVelocityBasic
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%VelocityMethod,   2,'VelocityMethod'    ,'',(/idVelocityTreePart, idVelocityTreeSeg/) , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%TreeBranchFactor, 2,'TreeBranchFactor'  ,'',(/1.5_ReKi, 5.0_ReKi/)                    , ErrStat2,ErrMsg2); if(Failed())return
+   !CALL ReadVarWDefault(UnIn,FileName,Inp%PartPerSegmentr , 2,'PartPerSegment'    ,'',(/1,        2/)                           , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom        (UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadCom        (UnIn,FileName,                  '--- Output options header'          ,ErrStat2,ErrMsg2); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKCoord    , 'VTKCoord'           ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,sDummy          , 'VTK_fps'            ,''             ,ErrStat2,ErrMsg2); if(Failed())return
    Inp%DTvtk = Get_DTvtk( sDummy, p%DTaero, Inp%DTfvw )
@@ -105,31 +108,42 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! --- Advanced Options
    ! NOTE: no error handling since this is for debug
    ! Default options are typically "true"
-   p%InductionAtCP = .true.  ! Compute the induced velocities at Control Points, otherwise, at nodes
-   p%WakeAtTE      = .true.  ! The wake starts at the trailing edge, otherwise, directly at the lifting line
-   p%Induction     = .true.  ! Compute induced velocities, otherwise 0 induced velocities on the lifting line!
-   p%DStallOnWake  = .false.
    CALL ReadCom(UnIn,FileName,                  '=== Separator'                      ,ErrStat2,ErrMsg2); 
    CALL ReadCom(UnIn,FileName,                  '--- Advanced options header'        ,ErrStat2,ErrMsg2);
    if(ErrStat2==ErrID_None) then
       call WrScr(' - Reading advanced options for OLAF:')
       do while(ErrStat2==ErrID_None)
-         read(UnIn, '(A)',iostat=ErrStat2) sDummy
+         read(UnIn, '(A)', iostat=ErrStat2) sDummy
+         if (ErrStat2/=ErrID_None) exit
          call Conv2UC(sDummy)  ! to uppercase
-         if (index(sDummy, 'INDUCTIONATCP')>1) then
+         if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
+            ! pass comment lines
+         elseif (index(sDummy, 'INDUCTIONATCP')>1) then
             read(sDummy, '(L1)') p%InductionAtCP
-            print*,'   >>> InductionAtCP',p%InductionAtCP
+            print*,'   >>> InductionAtCP      ',p%InductionAtCP
          elseif (index(sDummy, 'WAKEATTE')>1) then
             read(sDummy, '(L1)') p%WakeAtTE
-            print*,'   >>> WakeAtTE     ',p%WakeAtTE
+            print*,'   >>> WakeAtTE           ',p%WakeAtTE
          elseif (index(sDummy, 'DSTALLONWAKE')>1) then
             read(sDummy, '(L1)') p%DStallOnWake
-            print*,'   >>> DStallOnWake ',p%DStallOnWake
+            print*,'   >>> DStallOnWake       ',p%DStallOnWake
          elseif (index(sDummy, 'INDUCTION')>1) then
             read(sDummy, '(L1)') p%Induction
-            print*,'   >>> Induction    ',p%Induction
+            print*,'   >>> Induction          ',p%Induction
+         elseif (index(sDummy, 'KFROZENNWEND')>1) then
+            read(sDummy, *) p%kFrozenNWEnd
+            print*,'   >>> kFrozenNWEnd       ',p%kFrozenNWEnd
+         elseif (index(sDummy, 'KFROZENNWSTART')>1) then
+            read(sDummy, *) p%kFrozenNWStart
+            print*,'   >>> kFrozenNWStart     ',p%kFrozenNWStart
+         elseif (index(sDummy, 'VELOCITYMETHODLL')>1) then
+            read(sDummy, *) Inp%VelocityMethod(2)
+            print*,'   >>> VelocityMethod     ',Inp%VelocityMethod
+         elseif (index(sDummy, 'TREEBRANCHFACTORLL')>1) then
+            read(sDummy, *) Inp%TreeBranchFactor(2)
+            print*,'   >>> TreeBranchFactor   ',Inp%TreeBranchFactor
          else
-            print*,'   >>> Line ignored, starting with'//trim(sDummy)
+            print*,'[WARN] Line ignored: '//trim(sDummy)
          endif
       enddo
    endif
@@ -138,21 +152,31 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
 
-   if (Check(.not.(ANY(idCircVALID ==Inp%CirculationMethod)), 'Circulation method (CircSolvingMethod) not implemented: '//trim(Num2LStr(Inp%CirculationMethod)))) return
+   if (Check(.not.(ANY(idCircVALID ==Inp%CircSolvMethod)), 'Circulation method (CircSolvMethod) not implemented: '//trim(Num2LStr(Inp%CircSolvMethod)))) return
    if (Check(.not.(ANY(idIntMethodVALID==Inp%IntMethod    )) , 'Time integration method (IntMethod) not yet implemented. Use Euler 1st order method for now.')) return
    if (Check(.not.(ANY(idDiffusionVALID==Inp%DiffusionMethod)) , 'Diffusion method (DiffusionMethod) not implemented: '//trim(Num2LStr(Inp%DiffusionMethod)))) return
    if (Check(.not.(ANY(idRegDeterVALID ==Inp%RegDeterMethod))  , 'Regularization determination method (RegDeterMethod) not yet implemented: '//trim(Num2LStr(Inp%RegDeterMethod)))) return
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function (RegFunction) not implemented: '//trim(Num2LStr(Inp%RegFunction)))) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method (WakeRegMethod) not implemented: '//trim(Num2LStr(Inp%WakeRegMethod)))) return
    if (Check(.not.(ANY(idShearVALID    ==Inp%ShearModel   )), 'Shear model (ShearModel) not valid: '//trim(Num2LStr(Inp%ShearModel)))) return
-   if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod    )), 'Velocity method (VelocityMethod) not valid: '//trim(Num2LStr(Inp%VelocityMethod)))) return
+   if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(1))), 'Velocity method (VelocityMethod(1)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(1))))) return
+   if (Check(.not.(ANY(idVelocityVALID ==Inp%VelocityMethod(2))), 'Velocity method (VelocityMethod(2)) not valid: '//trim(Num2LStr(Inp%VelocityMethod(2))))) return
 
    if (Check( Inp%DTfvw < p%DTaero, 'DTfvw must be >= DTaero from AD15.')) return
-   if (Inp%CirculationMethod == idCircPolarData) then
-      if (Check( Inp%nNWPanels<1 , 'Number of near wake panels (`nNWPanels`) must be >=1 when using circulation solving with polar data (`CircSolvingMethod=1`)')) return
+   if (Inp%CircSolvMethod == idCircPolarData) then
+      if (Check( Inp%nNWPanels<1 , 'Number of near wake panels (`nNWPanels`) must be >=1 when using circulation solving with polar data (`CircSolvMethod=1`)')) return
    endif
 
    if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
+   if (Check( Inp%nNWPanelsFree<0 , 'Number of free near wake panels must be >=0')) return
+   if (Check( Inp%nNWPanelsFree>Inp%nNWPanels , 'Number of free near wake panels must be <=Number of near wake panels')) return
+   if (Inp%nNWPanels-Inp%nNWPanelsFree>0) then
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      call WrScr('nNWPanelsFree < nNWPanels is a beta feature for simulation speed up.')
+      call WrScr('The frozen near-wake convection might slightly change in the future.')
+      call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+      if (Check( Inp%nFWPanelsFree>0 , 'Number of free wake panels must be 0 when using a fixed NW')) return
+   endif
    if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return
    if (Check( Inp%nFWPanelsFree<0 , 'Number of free far wake panels must be >=0')) return
    if (Check( Inp%nFWPanelsFree>Inp%nFWPanels , 'Number of free far wake panels must be <=Number of far wake panels')) return
@@ -166,6 +190,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    ! Still we force the user to be responsible.
    if (Check((.not.(Inp%FWShedVorticity)) .and. Inp%nNWPanels<30, '`FWShedVorticity` should be true if `nNWPanels`<30. Alternatively, use a larger number of NWPanels  ')) return
 
+   if (Check(p%kFrozenNWEnd>p%kFrozenNWStart , 'kFrozenNWEnd should be smaller than kFrozenNWStart')) return
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
    !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return
@@ -249,7 +274,7 @@ CONTAINS
       GridOut%name =StrArray(1) 
       ! Type
       if (.not. is_int    (StrArray(2), GridOut%type  ) ) then
-         ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'GridType needs to be an integer.'
+         ErrMsg2=trim(ErrMsg2)//NewLine//'GridType needs to be an integer.'
          return
       endif
       ! tStart
@@ -258,7 +283,7 @@ CONTAINS
          GridOut%tStart  = 0.0_ReKi
       else
          if (.not. is_numeric(StrArray(3), GridOut%tStart) ) then 
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TStart needs to be numeric or "default".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'TStart needs to be numeric or "default".'
             return
          endif
       endif
@@ -268,7 +293,7 @@ CONTAINS
          GridOut%tEnd  = 99999.0_ReKi ! TODO
       else
          if (.not. is_numeric(StrArray(4), GridOut%tEnd) ) then
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'TEnd needs to be numeric or "default".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'TEnd needs to be numeric or "default".'
             return
          endif
       endif
@@ -280,7 +305,7 @@ CONTAINS
          GridOut%DTout  = p%DTaero
       else
          if (.not. is_numeric(StrArray(5), GridOut%DTout) ) then
-            ErrMsg2=trim(ErrMsg2)//achar(13)//achar(10)//'DTout needs to be numeric, "default" or "all".'
+            ErrMsg2=trim(ErrMsg2)//NewLine//'DTout needs to be numeric, "default" or "all".'
             return
          endif
       endif
@@ -313,6 +338,12 @@ function is_numeric(string, x)
    character(len=12) :: fmt
    x = 0.0_reki
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid numbers
+      is_numeric = .false.
+      return
+   end if
+   
    write(fmt,'("(F",I0,".0)")') n
    read(string,fmt,iostat=e) x
    is_numeric = e == 0
@@ -327,6 +358,12 @@ function is_int(string, x)
    character(len=12) :: fmt
    x = 0
    n=len_trim(string)
+   
+   if (n==0) then ! blank lines shouldn't be valid integers
+      is_int = .false.
+      return
+   end if
+   
    write(fmt,'("(I",I0,")")') n
    read(string,fmt,iostat=e) x
    is_int = e == 0
@@ -337,7 +374,7 @@ end function is_int
 !> Export FVW variables to VTK
 !! NOTE: when entering this function nNW and nFW has been incremented by 1
 subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, HubOrientation, HubPosition)
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
    type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
    type(FVW_ConstraintStateType),  intent(in   ) :: z !< Constraints
@@ -361,7 +398,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
    real(Reki), dimension(:,:,:), allocatable :: Arr3D !<
    real(Reki), dimension(:,:), allocatable :: Arr2D !<
 
-   type(FVW_VTK_Misc)   :: mvtk
+   type(VTK_Misc)   :: mvtk
 
    call vtk_misc_init(mvtk)
 
@@ -459,12 +496,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth, bladeFrame, Hub
 end subroutine WrVTK_FVW
 
 !> Export Grid velocity field to VTK
-subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, HubOrientation, HubPosition)
+subroutine WrVTK_FVW_Grid(p, m, iGrid, FileRootName, VTKcount, Twidth, HubOrientation, HubPosition)
    use FVW_VortexTools, only: curl_regular_grid
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
-   type(FVW_ContinuousStateType),  intent(in   ) :: x !< States
-   type(FVW_ConstraintStateType),  intent(in   ) :: z !< Constraints
    type(FVW_MiscVarType), target,  intent(in   ) :: m !< MiscVars
    integer(IntKi),  intent(in)           :: iGrid           !< Grid out index
    character(*),    intent(in)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
@@ -478,7 +513,7 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
    character(Twidth) :: Tstr     ! string for current VTK write-out step (padded with zeros)
    real(ReKi), dimension(3) :: dx
    type(GridOutType), pointer :: g
-   type(FVW_VTK_Misc)   :: mvtk
+   type(VTK_Misc)   :: mvtk
 
    call vtk_misc_init(mvtk)
    call set_vtk_binary_format(.false.,mvtk) ! TODO binary fails
@@ -506,15 +541,17 @@ subroutine WrVTK_FVW_Grid(p, x, z, m, iGrid, FileRootName, VTKcount, Twidth, Hub
       call vtk_close_file(mvtk)
    endif
 
-   if(.false.) print*,z%W(1)%Gamma_LL(1) ! unused var for now
+   if(.false.) print*,HubOrientation! unused var for now
+   if(.false.) print*,HubPosition ! unused var for now
+   if(.false.) print*,p%nNWMax ! unused var for now
 end subroutine WrVTK_FVW_Grid
 
 
 
 subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEpsilon, bladeFrame) 
-   use FVW_VTK
+   use VTK
    character(len=*),intent(in)                 :: filename
-   type(FVW_VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
+   type(VTK_Misc),           intent(inout) :: mvtk       !< miscvars for VTK output
    real(ReKi), dimension(:,:),      intent(in) :: SegPoints  !< 
    integer(IntKi), dimension(:,:),  intent(in) :: SegConnct  !< 
    real(ReKi),     dimension(:)  ,  intent(in) :: SegGamma   !< 
@@ -533,9 +570,9 @@ subroutine WrVTK_Segments(filename, mvtk, SegPoints, SegConnct, SegGamma, SegEps
 end subroutine
 
 subroutine WrVTK_Lattice(filename, mvtk, LatticePoints, LatticeGamma, LatticeData3d, bladeFrame)
-   use FVW_VTK ! for all the vtk_* functions
+   use VTK ! for all the vtk_* functions
    character(len=*), intent(in)                         :: filename
-   type(FVW_VTK_Misc),           intent(inout)          :: mvtk          !< miscvars for VTK output
+   type(VTK_Misc),           intent(inout)          :: mvtk          !< miscvars for VTK output
    real(Reki), dimension(:,:,:), intent(in  )           :: LatticePoints !< Array of points 3 x nSpan x nDepth
    real(Reki), dimension(:,:), intent(in  )             :: LatticeGamma  !< Array of            nSpan x nDepth
    real(Reki), dimension(:,:,:), intent(in  ), optional :: LatticeData3d !< Array of n x nSpan x nDepth KEEP ME

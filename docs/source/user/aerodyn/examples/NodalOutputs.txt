@@ -54,5 +54,11 @@ END of input file (the word "END" must appear in the first 3 columns of this las
 "Uin"       - Axial induced velocity in rotating hub coordinates. Axial aligned with hub axis.     rotor plane polar hub rotating coordinates
 "Uit"       - Tangential induced velocity in rotating hub coordinates. Tangential to the rotation plane. Perpendicular to blade aziumth.     rotor plane polar hub rotating coordinates
 "Uir"       - Radial induced velocity in rotating hub coordinates. Radial outwards in rotation plane. Aligned with blade azimuth.     rotor plane polar hub rotating coordinates
+"Fbn"       - Buoyant force normal to chord per unit length at each node
+"Fbt"       - Buoyant force tangential to chord per unit length at each node
+"Fbs"       - Buoyant spanwise force per unit length at each node
+"Mbn"       - Buoyant moment normal to chord per unit length at each node
+"Mbt"       - Buoyant moment tangential to chord per unit length at each node
+"Mbs"       - Buoyant spanwise moment per unit length at each node
 END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
 ---------------------------------------------------------------------------------------

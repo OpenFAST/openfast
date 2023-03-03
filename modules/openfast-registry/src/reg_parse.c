@@ -468,7 +468,45 @@ reg_parse( FILE * infile )
               tokens[FIELD_SYM], tokens[FIELD_TYPE] ) ; }
 #endif
         field_struct->usefrom   = type_struct->usefrom ;
-
+        /* Error Checking for Fortran Pointers used outside of FAST Interfaces: InitInputType, InitOutputType, Parameter */
+        /* Note: Skip this check if the -ccode option is being used */
+        if (field_struct->ndims > 0) {
+            if (!sw_ccode && is_pointer(field_struct)) {
+                if (modname_struct->is_interface_type) {
+                    char nonick[NAMELEN];
+                    sprintf(tmpstr, "%s", make_lower_temp(ddtname));
+                    remove_nickname(modname_struct->nickname, tmpstr, nonick);
+                    if (!strcmp(nonick, "continuousstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in ContinuousStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "discretestatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in DiscreteStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "constraintstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in ConstraintStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "otherstatetype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in OtherStateType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "miscvartype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in MiscVarType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "inputtype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in InputType data\n");
+                        exit(9);
+                    }
+                    if (!strcmp(nonick, "outputtype")) {
+                        fprintf(stderr, "REGISTRY ERROR: Fortran Pointer Arrays cannot be used in OutputType data\n");
+                        exit(9);
+                    }
+                }
+            }
+        }
         add_node_to_end( field_struct , &(type_struct->fields) ) ;
       } // not param
 
@@ -561,12 +599,13 @@ int
 set_dim_len ( char * dimspec , node_t * dim_entry )
 {
   dim_entry->deferred = 0 ;
+  dim_entry->is_pointer = 0;
   if      (!strcmp( dimspec , "standard_domain" ))
    { dim_entry->len_defined_how = DOMAIN_STANDARD ; }
-  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) || dimspec[0] == ':' || dimspec[0] == '(' )
+  else if (!strncmp( dimspec, "constant=" , 9 ) || isNum(dimspec[0]) || dimspec[0] == ':' || dimspec[0] == '*' || dimspec[0] == '(' )
   {
     char *p, *colon, *paren ;
-    p = (isNum(dimspec[0])||dimspec[0]==':'||dimspec[0]=='(')?dimspec:&(dimspec[9]) ;
+    p = (isNum(dimspec[0])||dimspec[0]==':'||dimspec[0]=='*'||dimspec[0]=='(')?dimspec:&(dimspec[9]) ;
     /* check for colon */
     if (( colon = index(p,':')) != NULL )
     {
@@ -583,6 +622,13 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
         dim_entry->deferred = 1 ;
       }
       dim_entry->coord_end   = atoi(colon+1) ;
+    }
+    else if ((colon = index(p, '*')) != NULL)
+    {
+        *colon = '\0';
+        dim_entry->deferred = 1;    
+        dim_entry->coord_end = atoi(colon + 1);
+        dim_entry->is_pointer = 1;
     }
     else
     {
