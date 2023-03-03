@@ -4230,7 +4230,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    IF ( p_FAST%CompInflow == Module_IfW ) CALL IfW_SetExternalInputs( IfW%p, m_FAST, ED%y, IfW%Input(1) )
 
    CALL CalcOutputs_And_SolveForInputs(  n_t_global, t_initial,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-                        p_FAST, y_FAST%LastOutData, m_FAST, y_FAST%WriteThisStep, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
+                        p_FAST, m_FAST, y_FAST%LastOutData, y_FAST%WriteThisStep, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4873,7 +4873,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       !END IF
 
       CALL CalcOutputs_And_SolveForInputs( n_t_global, t_global_next,  STATE_PRED, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-         p_FAST, y_FAST%LastOutData, m_FAST, WriteThisStep, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+         p_FAST, m_FAST, y_FAST%LastOutData, WriteThisStep, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6370,7 +6370,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             end if
 
             CALL CalcOutputs_And_SolveForInputs( -1,  t_global,  STATE_CURR, Turbine%m_FAST%calcJacobian, Turbine%m_FAST%NextJacCalcTime, &
-               Turbine%p_FAST, Turbine%y_FAST%LastOutData, Turbine%m_FAST, .false., Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+               Turbine%p_FAST, Turbine%m_FAST, Turbine%y_FAST%LastOutData, .false., Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
                Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
@@ -7471,7 +7471,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
                IF (ErrStat >= AbortErrLev) RETURN
 
             CALL CalcOutputs_And_SolveForInputs( -1,  m_FAST%Lin%LinTimes(iLinTime),  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-               p_FAST, y_FAST%LastOutData, m_FAST, .true., ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+               p_FAST, m_FAST,  y_FAST%LastOutData, .true., ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7503,7 +7503,7 @@ SUBROUTINE FAST_RestoreForVTKModeShape_T(t_initial, p_FAST, y_FAST, m_FAST, ED, 
                   IF (ErrStat >= AbortErrLev) RETURN
 
                CALL CalcOutputs_And_SolveForInputs( -1, m_FAST%Lin%LinTimes(iLinTime),  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-                  p_FAST, y_FAST%LastOutData, m_FAST, .true., ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+                  p_FAST, m_FAST, y_FAST%LastOutData, .true., ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   IF (ErrStat >= AbortErrLev) RETURN
 

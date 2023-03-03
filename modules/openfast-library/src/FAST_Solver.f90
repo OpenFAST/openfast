@@ -885,11 +885,10 @@ END SUBROUTINE AD14_InputSolve_NoIfW
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for ServoDyn
-SUBROUTINE SrvD_InputSolve( p_FAST, LastOutData, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y_SD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y_SD, LastOutData, MeshMapData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(FAST_ParameterType),         INTENT(IN)     :: p_FAST       !< Glue-code simulation parameters
-   REAL(ReKi),                       INTENT(IN)     :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    TYPE(FAST_MiscVarType),           INTENT(IN)     :: m_FAST       !< Glue-code misc variables (including inputs from external sources like Simulink)
    TYPE(SrvD_InputType),             INTENT(INOUT)  :: u_SrvD       !< ServoDyn Inputs at t
    TYPE(ED_OutputType),TARGET,       INTENT(IN)     :: y_ED         !< ElastoDyn outputs
@@ -897,6 +896,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, LastOutData, m_FAST, u_SrvD, y_ED, y_IfW, y_
    TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       !< OpenFOAM outputs
    TYPE(BD_OutputType),              INTENT(IN)     :: y_BD(:)      !< BD Outputs
    TYPE(SD_OutputType),              INTENT(IN)     :: y_SD         !< SD Outputs
+   REAL(ReKi),                       INTENT(IN)     :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  !< Data for mapping between modules
    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat      !< Error status
    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg       !< Error message
@@ -5021,7 +5021,7 @@ END SUBROUTINE InitModuleMappings
 !! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
 !! *** Note that modules that do not have direct feedthrough should be called first. ***
 SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, calcJacobian, NextJacCalcTime, &
-               p_FAST, LastOutData, m_FAST, WriteThisStep, ED, BD, &
+               p_FAST, m_FAST, LastOutData, WriteThisStep, ED, BD, &
                SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
@@ -5030,9 +5030,8 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    REAL(DbKi)              , intent(in   ) :: NextJacCalcTime     !< Time between calculating Jacobians in the HD-ED and SD-ED simulations
       
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
-
    TYPE(FAST_MiscVarType),   INTENT(IN   ) :: m_FAST              !< Misc variables (including external inputs) for the glue code
+   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    LOGICAL                 , INTENT(IN   ) :: WriteThisStep       !< Will we print the WriteOutput values this step?
 
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
@@ -5101,7 +5100,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
 
 
       !> Solve option 2 (modules without direct feedthrough):
-   CALL SolveOption2(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0, WriteThisStep)
+   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, LastOutData, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0, WriteThisStep)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
 #ifdef OUTPUT_MASS_MATRIX
@@ -5186,7 +5185,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    
    
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN         
-      CALL SrvD_InputSolve( p_FAST, LastOutData, m_FAST, SrvD%Input(1), ED%y, IfW%y, OpFM%y, BD%y, SD%y, MeshmapData, ErrStat2, ErrMsg2 )
+      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%y, IfW%y, OpFM%y, BD%y, SD%y, LastOutData, MeshmapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    END IF         
              
@@ -5547,12 +5546,11 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
 END SUBROUTINE SolveOption2b_Inp2IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine implements the first part of the "option 2" solve for inputs that apply to AeroDyn and ServoDyn.
-SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, MeshMapData, ErrStat, ErrMsg, WriteThisStep)
+SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, LastOutData, MeshMapData, ErrStat, ErrMsg, WriteThisStep)
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    TYPE(FAST_MiscVarType),   INTENT(IN   ) :: m_FAST              !< Misc variables for the glue code (including external inputs)
 
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
@@ -5563,6 +5561,7 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, LastOutData,
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
+   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
    
@@ -5614,7 +5613,7 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, LastOutData,
                        
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN
 
-      CALL SrvD_InputSolve( p_FAST, LastOutData, m_FAST, SrvD%Input(1), ED%y, IfW%y, OpFM%y, BD%y, SD%y, MeshMapData, ErrStat2, ErrMsg2 )
+      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%y, IfW%y, OpFM%y, BD%y, SD%y, LastOutData, MeshMapData, ErrStat2, ErrMsg2 )
 
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
@@ -5623,14 +5622,13 @@ END SUBROUTINE SolveOption2c_Inp2AD_SrvD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine implements the "option 2" solve for all inputs without direct links to HD, SD, MAP, or the ED platform reference 
 !! point.
-SUBROUTINE SolveOption2(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, MeshMapData, ErrStat, ErrMsg, firstCall, WriteThisStep)
+SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, LastOutData, MeshMapData, ErrStat, ErrMsg, firstCall, WriteThisStep)
 !...............................................................................................................................
    LOGICAL                 , intent(in   ) :: firstCall           !< flag to determine how to call ServoDyn (a hack)
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
    TYPE(FAST_MiscVarType),   INTENT(IN   ) :: m_FAST              !< Misc variables for the glue code (including external inputs)
 
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  !< ElastoDyn data
@@ -5641,6 +5639,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, 
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
+   REAL(ReKi)              , INTENT(IN   ) :: LastOutData(:)      !< Array to contain the latest output data (last time index); Index 1 is NumOuts [-]
 
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
@@ -5672,7 +5671,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, 
       CALL SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ! call IfW's CalcOutput; transfer wind-inflow inputs to AD; compute all of SrvD inputs: 
-      CALL SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, LastOutData, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
+      CALL SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, LastOutData, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
   ! ELSE ! these subroutines are called in the AdvanceStates routine before BD, IfW, AD, and SrvD states are updated. This gives a more accurate solution that would otherwise require a correction step.
    END IF
@@ -5859,7 +5858,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    
    
       ! because AeroDyn DBEMT states depend heavily on getting inputs correct, we are overwriting its inputs with updated inflow outputs here
-   CALL SolveOption2c_Inp2AD_SrvD(t_global_next, STATE_PRED, p_FAST, y_FAST%LastOutData, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
+   CALL SolveOption2c_Inp2AD_SrvD(t_global_next, STATE_PRED, p_FAST, m_FAST, ED, BD, AD14, AD, SD, SrvD, IfW, OpFM, y_FAST%LastOutData, MeshMapData, ErrStat2, ErrMsg2, WriteThisStep)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    ! AeroDyn: get predicted states
