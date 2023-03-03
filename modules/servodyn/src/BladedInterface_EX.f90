@@ -146,7 +146,6 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, StC_CtrlChanInitInfo, UnS
       ! Add additional routines here as needed.
 
    ! Initialize cable controls (2801:3000)
-   PRINT *, "In init bladed interface"
    if (p%DLL_AllOuts) then
       call InitFASTOutputSensors()
         if (Failed())  return
