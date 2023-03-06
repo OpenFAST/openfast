@@ -57,7 +57,7 @@ typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue c
 typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
 typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
 #initial inputs of lidar parameters
-typedef	^	InitInputType	ReKi	LidSpeed   {:}   -   -	"Number of Lidar measured wind speeds"	-
+typedef	^	InitInputType	ReKi	LidSpeed   {:}   -   -	"Lidar measured wind speeds"	-
 typedef	^	InitInputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
 typedef	^	InitInputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
 typedef	^	InitInputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
