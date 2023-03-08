@@ -358,6 +358,10 @@ hd_regression("hd_5MW_OC3Spar_DLL_WTurb_WavesIrr"           "hydrodyn;offshore")
 hd_regression("hd_5MW_OC4Semi_WSt_WavesWN"                  "hydrodyn;offshore")
 hd_regression("hd_5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti"    "hydrodyn;offshore")
 hd_regression("hd_TaperCylinderPitchMoment"                 "hydrodyn;offshore")
+hd_regression("hd_NBodyMod1"                                "hydrodyn;offshore")
+hd_regression("hd_NBodyMod2"                                "hydrodyn;offshore")
+hd_regression("hd_NBodyMod3"                                "hydrodyn;offshore")
+
 
 # Py-HydroDyn regression tests
 py_hd_regression("py_hd_5MW_OC4Semi_WSt_WavesWN"            "hydrodyn;offshore;python")
