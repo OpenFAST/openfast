@@ -361,10 +361,10 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    
        MeasurementCurrentStep =  INT(t / p%lidar%MeasurementInterval)
        
-  IF ( (p%lidar%MeasurementInterval * MeasurementCurrentStep) /= t ) THEN
+   IF ( (p%lidar%MeasurementInterval * MeasurementCurrentStep) /= t ) THEN
        Output%VelocityUVW(:,1) = 0 
-  RETURN
-  ENDIF
+   RETURN
+   ENDIF
    
       IF (p%lidar%ConsiderHubMotion == 1) THEN
            LidPosition_N =  (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /) & ! rotor apex position (absolute)
@@ -375,7 +375,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
            LidPosition   =  p%lidar%LidPosition + LidPosition_N
       END IF
 
-  IF (p%lidar%SensorType == SensorType_None) RETURN
+   IF (p%lidar%SensorType == SensorType_None) RETURN
    
     ! allocate arrays to compute outputs
    CALL AllocAry(Input%PositionXYZ, 3,1, 'Input%PositionXYZ',ErrStat2, ErrMsg2)
