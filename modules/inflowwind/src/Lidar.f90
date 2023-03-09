@@ -102,10 +102,22 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      !............................................................................................
-      ! Define parameters here:
-      !............................................................................................
+      ! Check for errors in the InflowWind Input File
       
+      ! Make sure that NumPulseGate makes sense
+    IF ( (p%lidar%SensorType == 3) .and. (p%lidar%NumPulseGate < 0 .OR. p%lidar%NumPulseGate > 5) ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'NumPulseGate must be greater than or equal to zero and less than 5.', &
+                        ErrStat, ErrMsg, RoutineName )
+      RETURN
+    ENDIF
+   
+       ! Make sure that multiple beams are only used when using single point beams
+    IF ( p%lidar%NumBeam > 1 .AND. p%lidar%SensorType > 1) THEN
+      CALL SetErrStat( ErrID_Fatal, 'Multiple beams can only be used with single point lidar', &
+                        ErrStat, ErrMsg, RoutineName )
+      RETURN
+    ENDIF  
+
    CALL AllocAry(p%lidar%MsrPosition , 3, p%lidar%NumBeam, 'Array for measurement coordinates', TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN 
@@ -351,18 +363,19 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
        
   IF ( (p%lidar%MeasurementInterval * MeasurementCurrentStep) /= t ) THEN
        Output%VelocityUVW(:,1) = 0 
+  RETURN
+  ENDIF
    
-  ELSE 
       IF (p%lidar%ConsiderHubMotion == 1) THEN
            LidPosition_N =  (/ u%lidar%HubDisplacementX, u%lidar%HubDisplacementY, u%lidar%HubDisplacementZ /) & ! rotor apex position (absolute)
                                                       + p%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
-           LidPosition = p%lidar%LidPosition + LidPosition_N
+           LidPosition   =  p%lidar%LidPosition + LidPosition_N
       ELSE 
-           LidPosition_N = p%lidar%RotorApexOffsetPos
-           LidPosition = p%lidar%LidPosition + LidPosition_N
+           LidPosition_N =  p%lidar%RotorApexOffsetPos
+           LidPosition   =  p%lidar%LidPosition + LidPosition_N
       END IF
 
-IF (p%lidar%SensorType == SensorType_None) RETURN
+  IF (p%lidar%SensorType == SensorType_None) RETURN
    
     ! allocate arrays to compute outputs
    CALL AllocAry(Input%PositionXYZ, 3,1, 'Input%PositionXYZ',ErrStat2, ErrMsg2)
@@ -641,7 +654,6 @@ IF (p%lidar%SensorType == SensorType_None) RETURN
       END DO      
       
    END IF   
-   END IF !type of lidar measurementd
   
    CALL Cleanup()
          
