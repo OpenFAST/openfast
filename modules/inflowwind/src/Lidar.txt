@@ -36,7 +36,7 @@ typedef	^	Lidar_ParameterType	ReKi    PulseRangeOne       -  -  -	"the range to 
 typedef	^	Lidar_ParameterType	ReKi    DeltaP    	    -  -  -	"the distance between range gates"
 typedef	^	Lidar_ParameterType	ReKi    DeltaR    	    -  -  -	"the FWHM width of the pulse"
 typedef	^	Lidar_ParameterType	ReKi	  r_p	                -  -  -
-typedef	^	Lidar_ParameterType	LOGICAL LidRadialVel        -  -  -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+              typedef	^	Lidar_ParameterType	LOGICAL LidRadialVel        -  -  -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarX  -  -  - "Displacement of the lidar system from the focal measurement point"	-
 typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarY  -  -  - "Displacement of the lidar system from the focal measurement point"	-
 typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarZ  -  -  - "Displacement of the lidar system from the focal measurement point"	-
