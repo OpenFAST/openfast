@@ -545,10 +545,10 @@ typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        
 typedef	^	InputType	MeshType	NStCMotionMesh	{:}	-	-	"StC module nacelle      input motion mesh" -
 typedef	^	InputType	MeshType	TStCMotionMesh	{:}	-	-	"StC module tower        input motion mesh" -
 typedef	^	InputType	MeshType	SStCMotionMesh	{:}	-	-	"StC module substructure input motion mesh" -
-typedef	^	InputType	ReKi	LidSpeed	{:}  -  -	"Lidar measured wind speeds"	       m/s
-typedef	^	InputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
-typedef	^	InputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
-typedef	^	InputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
+typedef	^	InputType	ReKi	LidSpeed	{:}     -       -	"Lidar measured wind speeds"	       m/s
+typedef	^	InputType	ReKi	MsrPositionsX	{:}     -	-	"Lidar X direction measurement points" m
+typedef	^	InputType	ReKi	MsrPositionsY	{:}     -	-	"Lidar Y direction measurement points" m
+typedef	^	InputType	ReKi	MsrPositionsZ	{:}     -	-	"Lidar Z direction measurement points" m
 
 
 # ..... Outputs ...................................................................................................................
