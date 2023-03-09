@@ -910,12 +910,19 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
       
       u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
+      u_SrvD%LidSpeed = 0.0
+      u_SrvD%MsrPositionsX = 0.0
+      u_SrvD%MsrPositionsY = 0.0
+      u_SrvD%MsrPositionsz = 0.0
 
    ELSE  ! No wind inflow
 
       u_SrvD%WindDir  = 0.0
       u_SrvD%HorWindV = 0.0
-
+      u_SrvD%LidSpeed = 0.0
+      u_SrvD%MsrPositionsX = 0.0
+      u_SrvD%MsrPositionsY = 0.0
+      u_SrvD%MsrPositionsz = 0.0
    ENDIF
 
    

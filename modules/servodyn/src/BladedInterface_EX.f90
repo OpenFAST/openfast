@@ -481,17 +481,45 @@ CONTAINS
    !!    avrSWAP(2001:2500)
    subroutine SetEXavrSWAP_LidarSensors()
          ! in case something got set wrong, don't try to write beyond array
-      if (size(dll_data%avrswap) < (LidarMsr_StartIdx + LidarMsr_MaxChan - 1) ) return
+       if (size(dll_data%avrswap) < (LidarMsr_StartIdx + LidarMsr_MaxChan - 1) ) return
+       if (p%NumBeam == 0) return ! Nothing to set
+ 
+       if (p%SensorType == 1) THEN
+        do I=1,p%NumBeam 
+            J=LidarMsr_StartIdx + 4 + (I-1)
+            dll_data%avrswap(LidarMsr_StartIdx)        = p%SensorType           ! Sensor Type
+            dll_data%avrswap(LidarMsr_StartIdx+1)      = p%NumBeam              ! Number of Beams
+            dll_data%avrswap(LidarMsr_StartIdx+2)      = p%NumPulseGate         ! Number of Pulse Gates
+            dll_data%avrswap(LidarMsr_StartIdx+3)      = p%URefLid              ! Reference average wind speed for the lidar 
+            dll_data%avrswap(J)                        = u%LidSpeed(I)          ! Lidar Measured Wind Speeds
+            dll_data%avrswap(J+p%NumBeam)              = u%MsrPositionsX(I)     ! Lidar Measurement Points X
+            dll_data%avrswap(J+(p%NumBeam*2))          = u%MsrPositionsY(I)   ! Lidar Measurement Points Y
+            dll_data%avrswap(J+(p%NumBeam*3))          = u%MsrPositionsZ(I)   ! Lidar Measurement Points Z
+         enddo
       
-      dll_data%avrswap(2001:2005) = u%LidSpeed(1:5)        ! Lidar Measured Wind Speeds
-      dll_data%avrswap(2006:2010) = u%MsrPositionsX(1:5)   ! Lidar Measurement Points X
-      dll_data%avrswap(2011:2015) = u%MsrPositionsY(1:5)   ! Lidar Measurement Points Y
-      dll_data%avrswap(2016:2020) = u%MsrPositionsZ(1:5)   ! Lidar Measurement Points Z
-      dll_data%avrswap(2021)      = p%SensorType           ! Sensor Type
-      dll_data%avrswap(2022)      = p%NumBeam              ! Number of Beams
-      dll_data%avrswap(2023)      = p%NumPulseGate         ! Number of Pulse Gates
-      dll_data%avrswap(2024)      = p%URefLid              ! Reference average wind speed for the lidar 
-      
+      elseif (p%SensorType == 2) THEN
+         dll_data%avrswap(LidarMsr_StartIdx)        = p%SensorType           ! Sensor Type
+         dll_data%avrswap(LidarMsr_StartIdx+1)      = p%NumBeam              ! Number of Beams
+         dll_data%avrswap(LidarMsr_StartIdx+2)      = p%NumPulseGate         ! Number of Pulse Gates
+         dll_data%avrswap(LidarMsr_StartIdx+3)      = p%URefLid              ! Reference average wind speed for the lidar 
+         dll_data%avrswap(LidarMsr_StartIdx+4)      = u%LidSpeed(1)          ! Lidar Measured Wind Speeds
+         dll_data%avrswap(LidarMsr_StartIdx+5)      = u%MsrPositionsX(1)     ! Lidar Measurement Points X
+         dll_data%avrswap(LidarMsr_StartIdx+6)      = u%MsrPositionsY(1)     ! Lidar Measurement Points Y
+         dll_data%avrswap(LidarMsr_StartIdx+7)      = u%MsrPositionsZ(1)     ! Lidar Measurement Points Z
+ 
+      elseif (p%SensorType == 3) THEN
+         do I=1,p%NumPulseGate 
+            J=LidarMsr_StartIdx + 4 + (I-1)  
+            dll_data%avrswap(LidarMsr_StartIdx)        = p%SensorType           ! Sensor Type
+            dll_data%avrswap(LidarMsr_StartIdx+1)      = p%NumBeam              ! Number of Beams
+            dll_data%avrswap(LidarMsr_StartIdx+2)      = p%NumPulseGate         ! Number of Pulse Gates
+            dll_data%avrswap(LidarMsr_StartIdx+3)      = p%URefLid              ! Reference average wind speed for the lidar            
+            dll_data%avrswap(J)                        = u%LidSpeed(I)          ! Lidar Measured Wind Speeds
+            dll_data%avrswap(J+p%NumPulseGate)         = u%MsrPositionsX(I)     ! Lidar Measurement Points X
+            dll_data%avrswap(J+(p%NumPulseGate*2))     = u%MsrPositionsY(I)     ! Lidar Measurement Points Y
+            dll_data%avrswap(J+(p%NumPulseGate*3))     = u%MsrPositionsZ(I)     ! Lidar Measurement Points Z
+         enddo      
+      endif 
    end subroutine SetEXavrSWAP_LidarSensors
 
    !> Set the Lidar related sensor inputs
