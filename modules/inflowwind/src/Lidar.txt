@@ -37,18 +37,18 @@ typedef	^	Lidar_ParameterType	ReKi    DeltaP    	    -  -  -	"the distance betwe
 typedef	^	Lidar_ParameterType	ReKi    DeltaR    	    -  -  -	"the FWHM width of the pulse"
 typedef	^	Lidar_ParameterType	ReKi	  r_p	                -  -  -
 typedef	^	Lidar_ParameterType	LOGICAL LidRadialVel        -  -  -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef	^     Lidar_ParameterType	ReKi	  DisplacementLidarX  -  -  - "Displacement of the lidar system from the focal measurement point"	-
-typedef	^     Lidar_ParameterType	ReKi	  DisplacementLidarY  -  -  - "Displacement of the lidar system from the focal measurement point"	-
-typedef	^     Lidar_ParameterType	ReKi	  DisplacementLidarZ  -  -  - "Displacement of the lidar system from the focal measurement point"	-
-typedef     ^     Lidar_ParameterType     IntKi   NumBeam             -  -  - "Number of lidar beams"	-
-typedef     ^     Lidar_ParameterType     ReKi    FocalDistanceX      :  -  - "LIDAR LOS focal distance co-ordinates in the x direction"	m
-typedef     ^     Lidar_ParameterType     ReKi    FocalDistanceY      :  -  - "LIDAR LOS focal distance co-ordinates in the y direction"	m
-typedef     ^     Lidar_ParameterType     ReKi    FocalDistanceZ      :  -  - "LIDAR LOS focal distance co-ordinates in the z direction"	m
+typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarX  -  -  - "Displacement of the lidar system from the focal measurement point"	-
+typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarY  -  -  - "Displacement of the lidar system from the focal measurement point"	-
+typedef	^ Lidar_ParameterType	ReKi	  DisplacementLidarZ  -  -  - "Displacement of the lidar system from the focal measurement point"	-
+typedef ^ Lidar_ParameterType IntKi   NumBeam             -  -  - "Number of lidar beams"	-
+typedef ^ Lidar_ParameterType ReKi    FocalDistanceX      :  -  - "LIDAR LOS focal distance co-ordinates in the x direction"	m
+typedef ^ Lidar_ParameterType ReKi    FocalDistanceY      :  -  - "LIDAR LOS focal distance co-ordinates in the y direction"	m
+typedef ^ Lidar_ParameterType ReKi    FocalDistanceZ      :  -  - "LIDAR LOS focal distance co-ordinates in the z direction"	m
 typedef	^	Lidar_ParameterType	ReKi	  MsrPosition     {:}{:} -  -	"Position of the desired wind measurement (was XMsrPt, YMsrPt, ZMsrPt)"	m
-typedef     ^     Lidar_ParameterType     ReKi    PulseSpacing        -  -  - "Distance between range gates" 	m
-typedef     ^	Lidar_ParameterType	ReKi	  URefLid		    -	 -  - "Reference average wind speed for the lidar" m/s
-typedef	^     Lidar_ParameterType	IntKi	  ConsiderHubMotion   -  -  - "Flag whether to consider the hub motion's impact on the Lidar measurement"	-
-typedef     ^	Lidar_ParameterType	ReKi	  MeasurementInterval -  -  - "Time steps between lidar measurements" -
+typedef ^ Lidar_ParameterType ReKi    PulseSpacing        -  -  - "Distance between range gates" 	m
+typedef ^	Lidar_ParameterType	ReKi	  URefLid		    -	 -  - "Reference average wind speed for the lidar" m/s
+typedef	^ Lidar_ParameterType	IntKi	  ConsiderHubMotion   -  -  - "Flag whether to consider the hub motion's impact on the Lidar measurement"	-
+typedef ^	Lidar_ParameterType	ReKi	  MeasurementInterval -  -  - "Time steps between lidar measurements" -
 typedef	^	Lidar_ParameterType	ReKi	  LidPosition	   {3} -  - "Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt)"	m
 
 # ..... States ....................................................................................................................
