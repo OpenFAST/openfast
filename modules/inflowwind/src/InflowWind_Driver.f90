@@ -395,7 +395,7 @@ PROGRAM InflowWind_Driver
       ! Some other settings
    InflowWind_InitInp%InputFileName    =  Settings%IfWIptFileName       ! For now, IfW cannot work without an input file.
    !InflowWind_InitInp%DT               =  Settings%DT
-   InflowWind_InitInp%UseInputFile     =  .TRUE.
+   InflowWind_InitInp%FilePassingMethod   =  0_IntKi
    IF ( SettingsFlags%DvrIptFile )  THEN
       CALL GetRoot( Settings%DvrIptFileName, InflowWind_InitInp%RootName )
    ELSE

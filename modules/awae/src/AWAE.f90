@@ -952,7 +952,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Using InflowWind, so initialize that module now
       IfW_InitInp%Linearize         = .false.
       IfW_InitInp%RootName          = TRIM(p%OutFileRoot)//'.IfW'
-      IfW_InitInp%UseInputFile      = .TRUE.
+      IfW_InitInp%FilePassingMethod = 0_IntKi      ! Read IfW input file from disk
       IfW_InitInp%InputFileName     = InitInp%InputFileData%InflowFile
       IfW_InitInp%lidar%Tmax        = 0.0_ReKi
       IfW_InitInp%lidar%HubPosition = 0.0_ReKi

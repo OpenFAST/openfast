@@ -43,8 +43,6 @@ MODULE FAST_Farm_Subs
 
 
     
-   integer, parameter :: maxOutputPoints = 9
-   integer, parameter :: maxOutputPlanes = 99      ! Allow up to 99 outpt planes
    
    CONTAINS
  

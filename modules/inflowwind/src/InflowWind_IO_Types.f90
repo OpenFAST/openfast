@@ -70,7 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: RefLength      !< Reference length for linear horizontal and vertical sheer [-]
     REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
     LOGICAL  :: UseInputFile = .true.      !< Flag for toggling file based IO in wind type 2. [-]
-    TYPE(FileInfoType)  :: PassedFileData      !< Optional slot for wind type 2 data if file IO is not used. [-]
+    TYPE(FileInfoType)  :: PassedFileInfo      !< Optional slot for wind type 2 data if file IO is not used. [-]
   END TYPE Uniform_InitInputType
 ! =======================
 ! =========  Grid3D_InitInputType  =======
@@ -577,7 +577,7 @@ CONTAINS
     DstUniform_InitInputTypeData%RefLength = SrcUniform_InitInputTypeData%RefLength
     DstUniform_InitInputTypeData%PropagationDir = SrcUniform_InitInputTypeData%PropagationDir
     DstUniform_InitInputTypeData%UseInputFile = SrcUniform_InitInputTypeData%UseInputFile
-      CALL NWTC_Library_Copyfileinfotype( SrcUniform_InitInputTypeData%PassedFileData, DstUniform_InitInputTypeData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
+      CALL NWTC_Library_Copyfileinfotype( SrcUniform_InitInputTypeData%PassedFileInfo, DstUniform_InitInputTypeData%PassedFileInfo, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE InflowWind_IO_CopyUniform_InitInputType
@@ -603,7 +603,7 @@ CONTAINS
      DEALLOCATEpointers_local = .true.
   END IF
   
-  CALL NWTC_Library_Destroyfileinfotype( Uniform_InitInputTypeData%PassedFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_Destroyfileinfotype( Uniform_InitInputTypeData%PassedFileInfo, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType
 
@@ -648,20 +648,20 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
       Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! PassedFileData: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileData 
+      Int_BufSz   = Int_BufSz + 3  ! PassedFileInfo: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! PassedFileData
+      IF(ALLOCATED(Re_Buf)) THEN ! PassedFileInfo
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! PassedFileData
+      IF(ALLOCATED(Db_Buf)) THEN ! PassedFileInfo
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! PassedFileData
+      IF(ALLOCATED(Int_Buf)) THEN ! PassedFileInfo
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -704,7 +704,7 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileData 
+      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -805,7 +805,7 @@ CONTAINS
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileData, ErrStat2, ErrMsg2 ) ! PassedFileData 
+      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileInfo, ErrStat2, ErrMsg2 ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

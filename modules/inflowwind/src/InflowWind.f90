@@ -178,31 +178,27 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
 
 
-   ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
-   CALL GetPath( InitInp%InputFileName, PriPath )
 
-   IF ( InitInp%UseInputFile ) THEN
-      CALL ProcessComFile( InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      ENDIF        
-   ELSE
-      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Cleanup()
-         RETURN
-      ENDIF          
-   ENDIF
+   IF ( InitInp%FilePassingMethod == 0_IntKi ) THEN    ! Normal calling with an input file
 
-   CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, &
-                                       InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
+      CALL GetPath( InitInp%InputFileName, PriPath )
+      CALL ProcessComFile( InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg ); if (Failed()) return
+      ! For diagnostic purposes, the following can be used to display the contents
+      ! of the InFileInfo data structure.
+      ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
+
+      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg ); if (Failed()) return
+
+   ELSEIF ( InitInp%FilePassingMethod == 1_IntKi ) THEN        ! passing the FileInfoType structure
+
+      CALL GetPath( InitInp%InputFileName, PriPath )           ! in case a summary file is written
+      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileInfo, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg ); if (Failed()) return
+      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg ); if (Failed()) return
+
+   ELSEIF ( InitInp%FilePassingMethod == 2_IntKi ) THEN        ! passing the InputFileData structure
+
+      CALL InflowWind_CopyInputFile( InitInp%PassedFileData, InputFileData, MESH_NEWCOPY, TmpErrStat, TmpErrMsg ); if (Failed()) return
+
    ENDIF
 
    ! If wind is Grid4D from FAST.Farm, set input file values
@@ -229,60 +225,34 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          
          
    CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
-                    y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
+                    y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg ); if (Failed()) return
    
-
       ! Validate the InflowWind input file information.
+   CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg ); if (Failed()) return
 
-   CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-
-   
       ! If a summary file was requested, open it.
    IF ( InputFileData%SumPrint ) THEN
 
          ! Open the summary file and write some preliminary info to it
-      CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
+      CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg ); if (Failed()) return
    ELSE
       SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
    ENDIF
 
    ! Allocate the array for passing points
-   CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg ); if (Failed()) return
    InputGuess%PositionXYZ = 0.0_ReKi
    InputGuess%HubPosition = 0.0_ReKi
-   CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)  
+   CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg); if (Failed()) return
 
    ! Allocate the array for passing velocities out
-   CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF (ErrStat>= AbortErrLev) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
+   CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg ); if (Failed()) return
    y%VelocityUVW = 0.0_ReKi
 
    ! If requested, allocate the array for passing accelerations out
    IF ( InitInp%OutputAccel ) THEN
-      CALL AllocAry( y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat>= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      ENDIF
+      CALL AllocAry( y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg ); if (Failed()) return
       y%AccelUVW = 0.0_ReKi
    ENDIF
 
@@ -301,32 +271,22 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Steady_InitInput%PLExp = InputFileData%Steady_PLexp
 
       p%FlowField%FieldType = Uniform_FieldType
-      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
 
    case (Uniform_WindNumber)
 
-      Uniform_InitInput%WindFileName = InputFileData%Uniform_FileName
-      Uniform_InitInput%RefHt = InputFileData%Uniform_RefHt
-      Uniform_InitInput%RefLength = InputFileData%Uniform_RefLength
+      Uniform_InitInput%WindFileName   = InputFileData%Uniform_FileName
+      Uniform_InitInput%RefHt          = InputFileData%Uniform_RefHt
+      Uniform_InitInput%RefLength      = InputFileData%Uniform_RefLength
       Uniform_InitInput%PropagationDir = InputFileData%PropagationDir
-      Uniform_InitInput%UseInputFile = InitInp%WindType2UseInputFile
-      Uniform_InitInput%PassedFileData = InitInp%WindType2Data
+      Uniform_InitInput%UseInputFile   =  InitInp%WindType2UseInputFile
+      Uniform_InitInput%PassedFileInfo =  InitInp%WindType2Info
 
       p%FlowField%FieldType = Uniform_FieldType
-      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
@@ -336,12 +296,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
@@ -362,12 +317,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%NativeBladedFmt    = .false.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
@@ -381,12 +331,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%NativeBladedFmt    = .true.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Overwrite the values of PropagationDir and VFlowAngle with values from the native Bladed file
       InputFileData%PropagationDir = Bladed_InitOutput%PropagationDir
@@ -417,12 +362,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       HAWC_InitInput%G3D%XOffset = InputFileData%FF%XOffset
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
@@ -430,12 +370,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case (User_WindNumber)
 
       p%FlowField%FieldType = User_FieldType
-      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, FileDat, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, FileDat, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%User%RefHeight]
@@ -443,11 +378,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case (FDext_WindNumber)
 
       p%FlowField%FieldType = Grid4D_FieldType
-      call IfW_Grid4D_Init(InitInp%FDext, p%FlowField%Grid4D, TmpErrStat, TmpErrMsg)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_Grid4D_Init(InitInp%FDext, p%FlowField%Grid4D, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid4D%RefHeight]
@@ -456,11 +387,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       p%FlowField%FieldType = Point_FieldType
       Points_InitInput%NumWindPoints = InitInp%NumWindPoints
-      call IfW_Points_Init(Points_InitInput, p%FlowField%Points, TmpErrStat, TmpErrMsg)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      endif
+      call IfW_Points_Init(Points_InitInput, p%FlowField%Points, TmpErrStat, TmpErrMsg); if (Failed()) return
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = 0.0_ReKi
@@ -501,9 +428,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case (Uniform_FieldType)
 
       if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
-         call IfW_UniformField_CalcAccel(p%FlowField%Uniform, TmpErrStat, TmpErrMsg)
-         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+         call IfW_UniformField_CalcAccel(p%FlowField%Uniform, TmpErrStat, TmpErrMsg); if (Failed()) return
          p%FlowField%AccFieldValid = .true.
       end if
 
@@ -511,17 +436,13 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Calculate acceleration
       if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
-         call IfW_Grid3DField_CalcAccel(p%FlowField%Grid3D, TmpErrStat, TmpErrMsg)
-         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+         call IfW_Grid3DField_CalcAccel(p%FlowField%Grid3D, TmpErrStat, TmpErrMsg); if (Failed()) return
          p%FlowField%AccFieldValid = .true.
       end if
 
       ! Calculate field average if box is allowed to be exceeded
       if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
-         call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
-         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+         call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg); if (Failed()) return
       end if
 
    case default
@@ -545,35 +466,14 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    ! and VFlowAng from native-Bladed files
    !----------------------------------------------------------------------------
 
-   CALL InflowWind_SetParameters( InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
+   CALL InflowWind_SetParameters( InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg ); if (Failed()) return
    
    ! Allocate arrays for the WriteOutput
-   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
+   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg ); if (Failed()) return
    y%WriteOutput = 0.0_ReKi
    
-   CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
+   CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg ); if (Failed()) return
+   CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg ); if (Failed()) return
 
    InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
    InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
@@ -596,20 +496,11 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       end if
 
       ! also need to add InputGuess%HubOrientation to the u%Linear items
-      CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      ENDIF
+      CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg); if (Failed()) return ! add hub position, orientation(3) + extended inputs
+      CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg); if (Failed()) return
+      CALL AllocAry(InitOutData%IsLoad_u,   InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg); if (Failed()) return
+      CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg); if (Failed()) return
+      CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg); if (Failed()) return
       
       do i=1,InitInp%NumWindPoints
          do j=1,3
@@ -673,6 +564,12 @@ CONTAINS
 
    END SUBROUTINE CleanUp
    
+   
+   logical function Failed()
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function Failed
 END SUBROUTINE InflowWind_Init
 
 
