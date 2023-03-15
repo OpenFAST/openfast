@@ -84,7 +84,7 @@ Windows with Visual Studio regression test
  
     b) Change your working directory to ``openfast\reg_tests``
 
-    c) Type: ``python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe Windows Intel 1e-5`` 
+    c) Type: ``python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe 2.0 1.9`` 
          You should see this: ``executing AWT_YFix_WSt``
 
     d) The tests will continue to execute one-by-one until you finally see something like this:

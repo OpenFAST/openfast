@@ -27,7 +27,7 @@ Summary File
 ------------
 
 SubDyn generates a summary file with the naming convention,
-**OutRootName.SD.sum** if the **SDSum** parameter is set to TRUE.
+**OutRootName.SD.sum** if the **SumPrint** parameter is set to TRUE.
 This file summarizes key information about the substructure model,
 including:
 
