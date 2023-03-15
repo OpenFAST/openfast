@@ -56,7 +56,7 @@ void fast::OpenFAST::init() {
         case fast::trueRestart:
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                /* note that this will set nt_global inside the FAST library */
+                  /* note that this will set nt_global inside the FAST library */
                 std::copy(
                     CheckpointFileRoot[iTurb].data(),
                     CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
@@ -106,6 +106,11 @@ void fast::OpenFAST::init() {
             // this calls the Init() routines of each module
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+                int nodeClusterType = 0;
+                if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                {
+                    nodeClusterType = 1;
+                }
                 std::copy(
                     FASTInputFileName[iTurb].data(),
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
@@ -116,10 +121,10 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &scio.nSC2CtrlGlob, 
-                    &scio.nSC2Ctrl, 
-                    &scio.nCtrl2SC, 
-                    scio.from_SCglob.data(), 
+                    &scio.nSC2CtrlGlob,
+                    &scio.nSC2Ctrl,
+                    &scio.nCtrl2SC,
+                    scio.from_SCglob.data(),
                     scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
@@ -128,6 +133,7 @@ void fast::OpenFAST::init() {
                     &dtFAST,
                     &numBlades[iTurb],
                     &numVelPtsBlade[iTurb],
+                    &nodeClusterType,
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
                     &sc.ip_from_FAST[iTurb],
@@ -168,8 +174,13 @@ void fast::OpenFAST::init() {
                 // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
                 // sc.calcOutputs_n(0.0);
             }
-            
+
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+                int nodeClusterType = 0;
+                if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
+                {
+                    nodeClusterType = 1;
+                }
                 std::copy(
                     FASTInputFileName[iTurb].data(),
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
@@ -180,10 +191,10 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &scio.nSC2CtrlGlob, 
-                    &scio.nSC2Ctrl, 
+                    &scio.nSC2CtrlGlob,
+                    &scio.nSC2Ctrl,
                     &scio.nCtrl2SC,
-                    scio.from_SCglob.data(), 
+                    scio.from_SCglob.data(),
                     scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
@@ -192,6 +203,7 @@ void fast::OpenFAST::init() {
                     &dtFAST,
                     &numBlades[iTurb],
                     &numVelPtsBlade[iTurb],
+                    &nodeClusterType,
                     &cDriver_Input_from_FAST[iTurb],
                     &cDriver_Output_to_FAST[iTurb],
                     &sc.ip_from_FAST[iTurb],
@@ -270,7 +282,7 @@ void fast::OpenFAST::solution0() {
         timeZero = false;
 
         if (scStatus) {
-            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;            
+            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
             //  sc.calcOutputs_n(0.0);
             //  sc.fastSCInputOutput();
         }
@@ -342,7 +354,7 @@ void fast::OpenFAST::step() {
     }
 
     nt_global = nt_global + 1;
-    
+
     if(scStatus) {
         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
         // sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
@@ -807,6 +819,7 @@ void fast::OpenFAST::allocateMemory() {
     nacelle_area.resize(nTurbinesProc);
     air_density.resize(nTurbinesProc);
     numBlades.resize(nTurbinesProc);
+    forcePtsBladeDistributionType.resize(nTurbinesProc);
     numForcePtsBlade.resize(nTurbinesProc);
     numForcePtsTwr.resize(nTurbinesProc);
     numVelPtsBlade.resize(nTurbinesProc);
@@ -824,6 +837,7 @@ void fast::OpenFAST::allocateMemory() {
         for(int i=0;i<3;i++) {
             TurbineBasePos[iTurb][i] = globTurbineData[globProc].TurbineBasePos[i];
         }
+        forcePtsBladeDistributionType[iTurb] =  globTurbineData[globProc].forcePtsBladeDistributionType;
         numForcePtsBlade[iTurb] = globTurbineData[globProc].numForcePtsBlade;
         numForcePtsTwr[iTurb] = globTurbineData[globProc].numForcePtsTwr;
         nacelle_cd[iTurb] = globTurbineData[globProc].nacelle_cd;
@@ -837,7 +851,7 @@ void fast::OpenFAST::allocateMemory() {
     // Allocate memory for OpFM Input types in FAST
     cDriver_Input_from_FAST.resize(nTurbinesProc) ;
     cDriver_Output_to_FAST.resize(nTurbinesProc) ;
-    
+
     if(scStatus) {
         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
         // scio.from_SC.resize(nTurbinesProc);
@@ -925,7 +939,7 @@ hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
             herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesProc);
             status = H5Aclose(attr);
             status = H5Sclose(dataSpace);
-            
+
             dataSpace = H5Screate_simple(1, dims, NULL);
             attr = H5Acreate2(velDataFile, "nTimesteps", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
             status = H5Aclose(attr);
