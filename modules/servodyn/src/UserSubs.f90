@@ -85,9 +85,6 @@ contains
 !   !              the DOF, respectively.  Turning off the DOF forces the
 !   !              current RATE to remain fixed.  If the rate is currently zero,
 !   !              the current POSITION will remain fixed as well.
-!   !       Note that this technique WILL NOT work for user-defined routines
-!   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-!   !       preprocessor.
 !
 !
 !USE                             Precision
@@ -148,9 +145,6 @@ SUBROUTINE UserHSSBr ( GenTrq, ElecPwr, HSS_Spd, NumBl, ZTime, DT, DirRoot, HSSB
    !              the DOF, respectively.  Turning off the DOF forces the
    !              current RATE to remain fixed.  If the rate is currently zero,
    !              the current POSITION will remain fixed as well.
-   !       Note that this technique WILL NOT work for user-defined routines
-   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-   !       preprocessor.
 
 
 USE                             Precision
@@ -174,7 +168,7 @@ CHARACTER(1024), INTENT(IN ) :: DirRoot                                         
 
 
 
-HSSBrFrac = 0.0   ! NOTE: This must be specified as a real number between 0.0 (off - no brake torque) and 1.0 (full - max brake torque = HSSBrTqF); FAST/ADAMS will Abort otherwise.
+HSSBrFrac = 0.0   ! NOTE: This must be specified as a real number between 0.0 (off - no brake torque) and 1.0 (full - max brake torque = HSSBrTqF); FAST will Abort otherwise.
 
 
 
@@ -256,9 +250,6 @@ END SUBROUTINE UserTFin
 !   !              the DOF, respectively.  Turning off the DOF forces the
 !   !              current RATE to remain fixed.  If the rate is currently zero,
 !   !              the current POSITION will remain fixed as well.
-!   !       Note that this technique WILL NOT work for user-defined routines
-!   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-!   !       preprocessor.
 !
 !
 !USE                             Precision
@@ -419,10 +410,8 @@ SUBROUTINE UserYawCont ( YawPos, YawRate, WindDir, YawError, NumBl, ZTime, DT, D
    !              setting YawDOF to False.
    !       This technique is useful, for example, if the yaw bearing has
    !       an electromagnetic latch that will unlock and relock the hinge under
-   !       certain specified conditions.
-   !       Note that this technique WILL NOT work for user-defined routines
-   !       written for ADAMS datasets extracted using the FAST-to-ADAMS
-   !       preprocessor.
+   !       certain specified conditions..
+
 
 USE                             Precision
 USE                             NWTC_Library
@@ -433,148 +422,39 @@ IMPLICIT                        NONE
 
    ! Passed Variables:
 
-INTEGER(4), INTENT(IN )      :: NumBl
-! Number of blades, (-).
+INTEGER(4), INTENT(IN )      :: NumBl                                           ! Number of blades, (-).
 
-REAL(DbKi), INTENT(IN )      :: DT
-! Integration time step, sec.
-REAL(ReKi), INTENT(IN )      :: WindDir
-! Current horizontal hub-height wind direction (positive about the zi-axis),
-! rad.
-REAL(ReKi), INTENT(IN )      :: YawError
-! Current nacelle-yaw error estimate (positve about the zi-axis), rad.
-REAL(ReKi), INTENT(IN )      :: YawPos
-! Current nacelle-yaw angular position, rad.
-REAL(ReKi), INTENT(OUT)      :: YawPosCom
-! Commanded nacelle-yaw angular position (demand yaw angle), rad.
-REAL(ReKi), INTENT(IN )      :: YawRate
-! Current nacelle-yaw angular rate, rad/s.
-REAL(ReKi), INTENT(OUT)      :: YawRateCom
-! Commanded nacelle-yaw angular rate (demand yaw rate), rad/s.
-REAL(DbKi), INTENT(IN )      :: ZTime
-! Current simulation time, sec.
+REAL(DbKi), INTENT(IN )      :: DT                                              ! Integration time step, sec.
+REAL(ReKi), INTENT(IN )      :: WindDir                                         ! Current horizontal hub-height wind direction (positive about the zi-axis), rad.
+REAL(ReKi), INTENT(IN )      :: YawError                                        ! Current nacelle-yaw error estimate (positve about the zi-axis), rad.
+REAL(ReKi), INTENT(IN )      :: YawPos                                          ! Current nacelle-yaw angular position, rad.
+REAL(ReKi), INTENT(OUT)      :: YawPosCom                                       ! Commanded nacelle-yaw angular position (demand yaw angle), rad.
+REAL(ReKi), INTENT(IN )      :: YawRate                                         ! Current nacelle-yaw angular rate, rad/s.
+REAL(ReKi), INTENT(OUT)      :: YawRateCom                                      ! Commanded nacelle-yaw angular rate (demand yaw rate), rad/s.
+REAL(DbKi), INTENT(IN )      :: ZTime                                           ! Current simulation time, sec.
 
-CHARACTER(1024), INTENT(IN ) :: DirRoot
-! The name of the root file including the full path to the current working
-! directory.  This may be useful if you want this routine to write a permanent
-! record of what it does to be stored with the simulation results: the results
-! should be stored in a file whose name (including path) is generated by
-! appending any suitable extension to DirRoot.
+CHARACTER(1024), INTENT(IN ) :: DirRoot                                         ! The name of the root file including the full path to the current working directory.  This may be useful if you want this routine to write a permanent record of what it does to be stored with the simulation results: the results should be stored in a file whose name (including path) is generated by appending any suitable extension to DirRoot.
 
 
 
-   ! Local Variables:
-REAL(ReKi)                   :: WindDirF
-REAL(ReKi)                   :: CosWindDir
-REAL(ReKi)                   :: SinWindDir
-REAL(ReKi), SAVE             :: CosWindDirF
-REAL(ReKi), SAVE             :: SinWindDirF
-REAL(ReKi), SAVE             :: YawPosComLast
-REAL(ReKi), SAVE             :: YawPosDesired
-REAL(ReKi)                   :: YawDelta
-REAL(ReKi)                   :: Error1
-REAL(ReKi)                   :: Error2
-REAL(ReKi), PARAMETER        :: PIby180 = 0.017453292519943
-REAL(ReKi), PARAMETER        :: C = 35.0
-REAL(ReKi), PARAMETER        :: Deadband = 8.0 * PIby180
-REAL(ReKi)                   :: Alpha
-LOGICAL, SAVE                :: Maneuvering
+YawPosCom  = 0.0
+YawRateCom = 0.0
 
-
-
-
-!WRITE(*,*) "UserYawCont:"
-!WRITE(*,*) "   ZTime = ", ZTime
-!WRITE(*,*) "   DT = ", DT
-
-
-! Set the commanded yaw rate.
-YawRateCom = 0.3 * PIby180
-
-
-! Set the time constant of the first-order wind-direction filter.
-! So that at the first time step, the filtered wind direction is 
-! initialized to the actual wind direction, set the time constant
-! initially to zero.  Every time step after that, set it as normally
-! desired.
-Alpha = 0.0
-If (ZTime > 0.0) THEN
-   Alpha = DT/(DT+C)
+!JASON: IMPOSE YAW STEP FOR FAST.Farm CALIBRATION CASE - START
+IF (      ( ZTime >= 648.0_DbKi ) .AND. ( ZTime < 650.0_DbKi ) ) THEN
+   YawRateCom = ( 10.0_ReKi/2.0_ReKi )*D2R 
+   YawPosCom  =  0.0          + YawRateCom*( ZTime - 648.0_DbKi )
+ELSE IF ( ( ZTime >= 650.0_DbKi ) .AND. ( ZTime < 948.0_DbKi ) ) THEN    
+   YawRateCom =  0.0
+   YawPosCom  = 10.0_ReKi*D2R
+ELSE IF ( ( ZTime >= 948.0_DbKi ) .AND. ( ZTime < 950.0_DbKi ) ) THEN    
+   YawRateCom = ( 15.0_ReKi/2.0_ReKi )*D2R 
+   YawPosCom  = 10.0_ReKi*D2R + YawRateCom*( ZTime - 948.0_DbKi )
+ELSE IF ( ( ZTime >= 950.0_DbKi )                               ) THEN
+   YawRateCom =  0.0
+   YawPosCom  = 25.0_ReKi*D2R
 END IF
-
-
-! To deal with winds that are oscillating across the +/-pi boundary,
-! split the wind into its x and y components, and filter those
-! independently, and then put them back together.
-! - split into components
-CosWindDir = COS(WindDir)
-SinWindDir = SIN(WindDir)
-
-! - filter
-CosWindDirF = Alpha*CosWindDirF + (1.0 - Alpha)*CosWindDir
-SinWindDirF = Alpha*SinWindDirF + (1.0 - Alpha)*SinWindDir
-
-! - get filtered direction
-WindDirF = ATAN2(SinWindDirF,CosWindDirF)
-
-
-! Compute the difference between the filtered wind direction and the
-! current yaw setting, which is the yaw error of the control system
-!Error1 = WindDirF - YawPos
-Error1 = YawError - WindDir + WindDirF
-IF (Error1 > PI) THEN
-   Error1 = Error1 - 2.0*PI
-ELSE IF (Error1 < -PI) THEN
-   Error1 = Error1 + 2.0*PI
-END IF
-
-
-! Set the commanded yaw.  
-IF (ZTime == 0.0) THEN
-   YawPosDesired = YawPos
-   YawPosComLast = YawPos
-   Maneuvering = .FALSE.
-ELSE
-
-   Error2 = YawPosDesired-YawPosComLast
-   If (Error2 > PI) THEN
-      Error2 = Error2 - 2.0*PI
-   ELSE IF (Error2 < -PI) THEN
-      Error2 = Error2 + 2.0*PI
-   END IF
-
-   YawDelta = SIGN(1.0,Error2)*MIN(YawRateCom*DT,ABS(Error2))
-
-   IF ((ABS(Error1) > DeadBand) .AND. (Maneuvering .EQV. .FALSE.)) THEN
-     !YawPosDesired = WindDirF
-      YawPosDesired = YawPos + Error1
-      Maneuvering = .TRUE.
-      YawPosComLast = YawPosComLast + YawDelta
-   ELSE IF (Maneuvering .EQV. .TRUE.) THEN
-      YawPosComLast = YawPosComLast + YawDelta
-   END IF
-
-   IF (ABS(YawPosDesired-YawPosComLast) < 1.0E-3) THEN
-      Maneuvering = .FALSE.
-   END IF
-END IF
-
-
-YawPosCom = YawPosComLast
-
-!WRITE(*,*) "   Maneuvering = ", Maneuvering
-!WRITE(*,*) "   YawPos = ", YawPos / PIby180
-!WRITE(*,*) "   YawPosCom = ", YawPosCom * 180.0/PI
-!WRITE(*,*) "   YawRate = ", YawRate * 180.0/PI
-!WRITE(*,*) "   YawRateCom = ", YawRateCom * 180.0/PI
-!WRITE(*,*) "   WindDir = ", WindDir * 180.0/PI
-!WRITE(*,*) "   WindDirF = ", WindDirF * 180.0/PI
-!WRITE(*,*) "   YawError = ", YawError * 180.0/PI
-!WRITE(*,*) "   Error = ", Error1 * 180.0/PI
-!WRITE(*,*) "   Alpha = " , Alpha
-
-
-
+!JASON: IMPOSE YAW STEP FOR FAST.Farm CALIBRATION CASE - END
 
 
 RETURN
