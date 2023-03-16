@@ -410,7 +410,7 @@ SUBROUTINE UserYawCont ( YawPos, YawRate, WindDir, YawError, NumBl, ZTime, DT, D
    !              setting YawDOF to False.
    !       This technique is useful, for example, if the yaw bearing has
    !       an electromagnetic latch that will unlock and relock the hinge under
-   !       certain specified conditions..
+   !       certain specified conditions.
 
 
 USE                             Precision
