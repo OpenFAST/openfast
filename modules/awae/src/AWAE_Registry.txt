@@ -214,4 +214,5 @@ typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}{:}           -     
 typedef   ^ InputType      ReKi       Vy_wake      {:}{:}{:}{:}           -      -      "Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s
 typedef   ^ InputType      ReKi       Vz_wake      {:}{:}{:}{:}           -      -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT)"      m/s
 typedef   ^ InputType      ReKi       D_wake       {:}{:}                 -      -      "Wake diameters at wake planes for each turbine"     m
-
+# wake added turbulence (WAT) inputs
+typedef   ^ InputType      ReKi       WAT_k_mt     {:}{:}{:}              -      -      "Scaling factor k_mt(r,x) for wake-added turbulence"  -

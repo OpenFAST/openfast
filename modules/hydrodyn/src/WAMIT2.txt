@@ -89,7 +89,7 @@ typedef   ^                OtherStateType      IntKi                 DummyOtherS
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef     ^                 MiscVarType       INTEGER              LastIndWave       :        -        -        "Index for last interpolation step of 2nd order forces"   -
-typedef     ^                 ^                 ReKi                 F_Waves2          {6}      -        -        "2nd order force from this timestep"   -
+typedef     ^                 ^                 ReKi                 F_Waves2          {:}      -        -        "2nd order force from this timestep"   -
 
 
 

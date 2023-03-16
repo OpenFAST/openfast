@@ -25,6 +25,7 @@
 module WakeDynamics
     
    use NWTC_Library
+   use VTK
    use WakeDynamics_Types
      
    implicit none
@@ -458,6 +459,10 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%FilterInit    = InitInp%InputFileData%FilterInit  
    p%k_vCurl       = InitInp%InputFileData%k_vCurl  
    p%OutAllPlanes  = InitInp%InputFileData%OutAllPlanes  
+   ! Wake-Added Turbulence (WAT) variables
+   p%WAT           = InitInp%InputFileData%WAT  
+   p%WAT_k_Def     = InitInp%InputFileData%WAT_k_Def  
+   p%WAT_k_Grad    = InitInp%InputFileData%WAT_k_Grad
    
    ! Finite difference grid coordinates r, y, z
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
@@ -635,6 +640,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%D_wake.', errStat, errMsg, RoutineName )  
    allocate ( y%x_plane   (0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%x_plane.', errStat, errMsg, RoutineName )  
+   allocate ( y%WAT_k_mt (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%WAT_k_mt.', errStat, errMsg, RoutineName )  
    if (errStat /= ErrID_None) return
    
    y%xhat_plane = 0.0_Reki
@@ -646,7 +653,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%Vz_wake2   = 0.0_Reki
    y%D_wake     = 0.0_Reki
    y%x_plane    = 0.0_Reki
-
+   y%WAT_k_mt   = 0.0_Reki
       
 end subroutine WD_Init
 
@@ -1497,6 +1504,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
+   real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp
    character(1024) :: Filename
    type(VTK_Misc)   :: mvtk
    real(ReKi), dimension(3) :: dx
@@ -1577,6 +1585,37 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       enddo
    endif ! Curl or Polar
 
+   ! --- WAT - Compute k_mt and add turbulence
+   if ( p%WAT ) then
+      R = u%D_Rotor /2
+      do i = 1,maxPln  
+         if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
+            y%WAT_k_mt(:,:,i) = 0.0_ReKi
+         else
+            do iz = -p%NumRadii+1, p%NumRadii-1
+               do iy = -p%NumRadii+1, p%NumRadii-1
+                  ! Polar gradients
+                  r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
+                  if (EqualRealNos(r_tmp,0.0_ReKi) ) then
+                     S = 0.0_ReKi 
+                     C = 0.0_ReKi
+                     dvdtheta_r = 0.0_ReKi
+                  else
+                     S=p%z(iz)/r_tmp ! Sine
+                     C=p%y(iy)/r_tmp ! Cosine
+                     dvdtheta_r = (m%dvx_dy(iy,iz,i) * (-p%z(iz)) + m%dvx_dz(iy,iz,i) * p%y(iy)) / r_tmp
+                  endif
+                  dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
+                  ! Calculate scaling factor k_mt for wake-added Turbulence
+                  y%WAT_k_mt(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
+                                      + p%WAT_k_Grad/xd%Vx_wind_disk_filt(i) * R * ( abs(dvdr) + abs(dvdtheta_r) )
+               end do ! iy
+            end do ! iz
+         endif
+      end do ! i, plane
+
+   end if
+   
    ! --- VTK outputs per plane
    if (p%OutAllPlanes) then 
        call vtk_misc_init(mvtk)
@@ -1596,9 +1635,9 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 !                dx(3) = p%dr
 !                call vtk_dataset_structured_points((/xd%p_plane(1,i),xd%p_plane(2,i)-dx*p%NumRadii, xd%p_plane(3,i)-dx*p%NumRadii /),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
 !                call vtk_point_data_init(mvtk)
-!                call vtk_point_data_scalar_2D(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-!                call vtk_point_data_scalar_2D(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-!                call vtk_point_data_scalar_2D(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+!                call vtk_point_data_scalar(xd%Vx_wake2(:,:,i),'Vx',mvtk)
+!                call vtk_point_data_scalar(xd%Vy_wake2(:,:,i),'Vy',mvtk)
+!                call vtk_point_data_scalar(xd%Vz_wake2(:,:,i),'Vz',mvtk)
 !                call vtk_close_file(mvtk)
 !             endif
 
@@ -1621,7 +1660,9 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                 call vtk_point_data_scalar(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
                 call vtk_point_data_scalar(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
              endif
-             
+             if (p%WAT) then
+                call vtk_point_data_scalar(y%WAT_k_mt(:,:,i),'k_mt', mvtk)
+             endif             
              call vtk_close_file(mvtk)
           endif
        enddo ! loop on planes
