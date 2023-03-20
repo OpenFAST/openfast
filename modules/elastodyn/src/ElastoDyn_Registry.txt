@@ -805,6 +805,3 @@ typedef	^	OutputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the l
 typedef	^	OutputType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	OutputType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	OutputType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
-typedef	^	OutputType	ReKi	HubDisplacementX	- -	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." m
-typedef	^	OutputType	ReKi	HubDisplacementY	- -	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." m
-typedef	^	OutputType	ReKi	HubDisplacementZ	- -	-	"For AeroDyn14 & ServoDyn/TMD: motions of the nacelle." m
