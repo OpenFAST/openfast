@@ -217,7 +217,7 @@ characteristics similar to the following plots.
   
 
 .. figure:: figs/FFWindExtrap--Tower.png
-   :widt: 90%
+   :width: 90%
 
    Extrapolation of wind values beyond the full field wind grid when tower data is present. The semi-transparent red planes indicate the edges of th e full-field wind grid, blue semi-transparent plane indicates the tower grid, and the red points indcate the data points from the wind grid and tower.  All other points shown on the surface are interpolated/extrapolated.
 
