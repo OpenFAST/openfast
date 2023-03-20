@@ -56,7 +56,7 @@ void fast::OpenFAST::init() {
         case fast::trueRestart:
 
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-                  /* note that this will set nt_global inside the FAST library */
+                /* note that this will set nt_global inside the FAST library */
                 std::copy(
                     CheckpointFileRoot[iTurb].data(),
                     CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
@@ -121,10 +121,10 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &scio.nSC2CtrlGlob,
-                    &scio.nSC2Ctrl,
-                    &scio.nCtrl2SC,
-                    scio.from_SCglob.data(),
+                    &scio.nSC2CtrlGlob, 
+                    &scio.nSC2Ctrl, 
+                    &scio.nCtrl2SC, 
+                    scio.from_SCglob.data(), 
                     scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
@@ -174,7 +174,7 @@ void fast::OpenFAST::init() {
                 // sc.init_sc(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
                 // sc.calcOutputs_n(0.0);
             }
-
+            
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 int nodeClusterType = 0;
                 if (forcePtsBladeDistributionType[iTurb] == "chordClustered")
@@ -191,10 +191,10 @@ void fast::OpenFAST::init() {
                     &tMax,
                     currentFileName,
                     &TurbID[iTurb],
-                    &scio.nSC2CtrlGlob,
-                    &scio.nSC2Ctrl,
+                    &scio.nSC2CtrlGlob, 
+                    &scio.nSC2Ctrl, 
                     &scio.nCtrl2SC,
-                    scio.from_SCglob.data(),
+                    scio.from_SCglob.data(), 
                     scio.from_SC[iTurb].data(),
                     &numForcePtsBlade[iTurb],
                     &numForcePtsTwr[iTurb],
@@ -282,7 +282,7 @@ void fast::OpenFAST::solution0() {
         timeZero = false;
 
         if (scStatus) {
-            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
+            std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;            
             //  sc.calcOutputs_n(0.0);
             //  sc.fastSCInputOutput();
         }
@@ -354,7 +354,7 @@ void fast::OpenFAST::step() {
     }
 
     nt_global = nt_global + 1;
-
+    
     if(scStatus) {
         std::cout << "Use of Supercontroller is not supported through the C++ API right now" << std::endl;
         // sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
@@ -939,7 +939,7 @@ hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
             herr_t status = H5Awrite(attr, H5T_NATIVE_INT, &nTurbinesProc);
             status = H5Aclose(attr);
             status = H5Sclose(dataSpace);
-
+            
             dataSpace = H5Screate_simple(1, dims, NULL);
             attr = H5Acreate2(velDataFile, "nTimesteps", H5T_NATIVE_INT, dataSpace, H5P_DEFAULT, H5P_DEFAULT) ;
             status = H5Aclose(attr);

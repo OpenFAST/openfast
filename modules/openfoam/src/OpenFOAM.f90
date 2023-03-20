@@ -332,6 +332,7 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
    ! blade nodes
    DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
       DO J = 1,u_AD%rotors(1)%BladeMotion(k)%nNodes
+
          Node = Node + 1
          OpFM%u%pxVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j)
          OpFM%u%pyVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j)
@@ -1103,8 +1104,6 @@ contains
       endif
    end function Failed2
 END SUBROUTINE OpFM_CreateActForceBladeTowerNodes
-
-
 
 !--------------------------------------------------------------------------
 !> Interpolates the chord distribution to the force nodes
