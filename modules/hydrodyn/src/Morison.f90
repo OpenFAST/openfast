@@ -550,7 +550,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
    real(ReKi)                                  :: ptLoad(6)
    logical                                     :: fillFlag
    type(Morison_MemberType)                    :: mem
-   REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
+   REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, Cb1, Cb2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
    real(ReKi)                                  :: F_B(6, numNodes), F_BF(6, numNodes), F_WMG(6, numNodes)
    
    INTEGER                                     :: ErrStat2
@@ -856,6 +856,8 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
          AxCa2 = members(i)%AxCa(N+1)
          AxCp1 = members(i)%AxCp(1)
          AxCp2 = members(i)%AxCp(N+1)
+         Cb1   = members(i)%Cb(1)
+         Cb2   = members(i)%Cb(N+1)
      
          JAxCd1 = nodes(members(i)%NodeIndx(1  ))%JAxCd
          JAxCd2 = nodes(members(i)%NodeIndx(1+N))%JAxCd
@@ -1051,7 +1053,7 @@ end subroutine Morison_GenerateSimulationNodes
 
 
 !====================================================================================================
-SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp )
+SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
    
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
@@ -1063,6 +1065,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
    REAL(ReKi), INTENT (  OUT)             :: AxCd
    REAL(ReKi), INTENT (  OUT)             :: AxCa
    REAL(ReKi), INTENT (  OUT)             :: AxCp
+   REAL(ReKi), INTENT (  OUT)             :: Cb
    
    INTEGER                 :: I, indx1, indx2
    REAL(ReKi)              :: dd, s
@@ -1106,6 +1109,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       AxCd   = CoefDpths(indx1)%DpthAxCdMG*(1-s) + CoefDpths(indx2)%DpthAxCdMG*s
       AxCa   = CoefDpths(indx1)%DpthAxCaMG*(1-s) + CoefDpths(indx2)%DpthAxCaMG*s
       AxCp   = CoefDpths(indx1)%DpthAxCpMG*(1-s) + CoefDpths(indx2)%DpthAxCpMG*s
+      Cb     = CoefDpths(indx1)%DpthCbMG*(1-s)   + CoefDpths(indx2)%DpthCbMG*s
    else
       Cd     = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthCd*s
       Ca     = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthCa*s
@@ -1113,6 +1117,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       AxCd   = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthAxCd*s
       AxCa   = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthAxCa*s
       AxCp   = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthAxCp*s
+      Cb     = CoefDpths(indx1)%DpthCb*(1-s)     + CoefDpths(indx2)%DpthCb*s
    end if
    
 
@@ -1122,9 +1127,9 @@ END SUBROUTINE SetDepthBasedCoefs
 
 !====================================================================================================
 SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
-                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplMCF, CoefMembers,    &
+                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, nodes, member )   
-!     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
+!     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
    real(ReKi),                             intent(in   )  :: MSL2SWL
@@ -1142,6 +1147,8 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    real(ReKi),                             intent(in   )  :: SimplAxCaMG 
    real(ReKi),                             intent(in   )  :: SimplAxCp
    real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   real(ReKi),                             intent(in   )  :: SimplCb
+   real(ReKi),                             intent(in   )  :: SimplCbMG
    logical,                                intent(in   )  :: SimplMCF
    type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                         intent(in   )  :: NCoefDpth
@@ -1162,7 +1169,8 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%Cp    (i) = SimplCpMG
             member%AxCd  (i) = SimplAxCdMG
             member%AxCa  (i) = SimplAxCaMG
-            member%AxCp  (i) = SimplAxCpMG          
+            member%AxCp  (i) = SimplAxCpMG
+            member%Cb    (i) = SimplCbMG
          else
             member%Cd    (i) = SimplCd
             member%Ca    (i) = SimplCa
@@ -1170,13 +1178,14 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCd  (i) = SimplAxCd
             member%AxCa  (i) = SimplAxCa
             member%AxCp  (i) = SimplAxCp
+            member%Cb    (i) = SimplCb
          end if
       end do
       member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
          CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
-                                    member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i) )
+                                    member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
       end do
       member%PropMCF = CoefDpths(1)%DpthMCF
    CASE (3) ! Member-based model: coefficients set using member-specific coefficient tables
@@ -1190,6 +1199,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCdMG2*s
             member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG2*s
             member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG2*s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCbMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCbMG2*s
          else
             member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCd1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCd2 *s
             member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCa1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCa2 *s
@@ -1197,6 +1207,7 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCd1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCd2  *s
             member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCa1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCa2  *s
             member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCp1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCp2  *s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCb1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCb2 *s
          end if
       end do
       member%propMCF = CoefMembers(MmbrCoefIDIndx)%MemberMCF
@@ -1311,6 +1322,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%AxCd         , member%NElements+1, 'member%AxCd         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCa         , member%NElements+1, 'member%AxCa         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCp         , member%NElements+1, 'member%AxCp         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%Cb           , member%NElements+1, 'member%Cb           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_D    , 6, member%NElements+1, 'memberLoads%F_D'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_A    , 6, member%NElements+1, 'memberLoads%F_A'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_B    , 6, member%NElements+1, 'memberLoads%F_B'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1360,6 +1372,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%AxCd          = 0.0_ReKi
    member%AxCa          = 0.0_ReKi
    member%AxCp          = 0.0_ReKi
+   member%Cb            = 0.0_ReKi
    memberLoads%F_D      = 0.0_ReKi
    memberLoads%F_A      = 0.0_ReKi
    memberLoads%F_B      = 0.0_ReKi
@@ -1486,7 +1499,8 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    end do
 
    call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
-                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%SimplMCF, & 
+                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
+                                   InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
                                    InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
    
    ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
@@ -1955,12 +1969,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    do i = 1, InitInp%NJoints
       InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
       InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
-      InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
-      
-      !InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
-      !InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
-      !InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
-      
+      InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp     
       InitInp%Nodes(i)%JAxFDMod   = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDMod
       InitInp%Nodes(i)%JAxVnCOff  = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxVnCOff
       InitInp%Nodes(i)%JAxFDLoFSc = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDLoFSc
@@ -3116,6 +3125,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                      ! Assign the element load to the lower (1st) node of the member
                      F_B1(1:3) = FbVec
                      F_B1(4:6) = MbVec
+                     F_B1 = F_B1 * mem%Cb(i)
                      m%memberLoads(im)%F_B(:,i) = m%memberLoads(im)%F_B(:,i) + F_B1
                      y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_B1(1:3)
                      y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_B1(4:6)
@@ -3132,6 +3142,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                      MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
                      F_B1(4:6) =    alpha  * MbVec
                      F_B2(4:6) = (1-alpha) * MbVec
+
+                     ! Apply Cb coefficient to nodal loads
+                     F_B1 = F_B1 * mem%Cb(i  )
+                     F_B2 = F_B2 * mem%Cb(i-1)
 
                      ! Add nodal loads to mesh
                      m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
@@ -3169,6 +3183,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   MbVec = MbVec - Cross_Product( k_hat*dl, F_B1(1:3))
                   F_B1(4:6) =    alpha  * MbVec
                   F_B2(4:6) = (1-alpha) * MbVec
+
+                  ! Apply Cb coefficient to nodal loads
+                  F_B1 = F_B1 * mem%Cb(i+1)
+                  F_B2 = F_B2 * mem%Cb(i  )
 
                   ! Add nodal loads to mesh
                   m%memberLoads(im)%F_B(:,i+1) = m%memberLoads(im)%F_B(:,i+1) + F_B1  ! alpha
@@ -3937,20 +3955,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             if ( z2 < Zeta2 ) then
                ! Compute loads on the end plate of node N+1          
-               Fl      =  p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
-               Moment  =  p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
+               Fl      =  p%WtrDens * g * pi *        mem%RMG(N+1)**2 * z2     * mem%Cb(N+1)
+               Moment  =  p%WtrDens * g * pi * 0.25 * mem%RMG(N+1)**4 * sinPhi * mem%Cb(N+1)
                call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
             end if
             if ( z1 < Zeta1 ) then
                ! Compute loads on the end plate of node 1
-               Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
-               Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
+               Fl      = -p%WtrDens * g * pi *        mem%RMG(  1)**2 * z1     * mem%Cb(  1)
+               Moment  = -p%WtrDens * g * pi * 0.25 * mem%RMG(  1)**4 * sinPhi * mem%Cb(  1)
                call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1)))
             end if
          elseif ( (mem%doEndBuoyancy) .and. (z2 < Zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if below free surface
             ! Only compute the buoyancy contribution from the upper end
-            Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
-            Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
+            Fl      = p%WtrDens * g * pi *        mem%RMG(N+1)**2 * z2     * mem%Cb(N+1)
+            Moment  = p%WtrDens * g * pi * 0.25 * mem%RMG(N+1)**4 * sinPhi * mem%Cb(N+1)
             call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
          else
             ! entire member is buried below the seabed

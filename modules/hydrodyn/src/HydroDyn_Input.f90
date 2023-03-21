@@ -609,7 +609,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    CurLine = CurLine + 1
 
 
-   CALL AllocAry( tmpReArray, 12, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
+   CALL AllocAry( tmpReArray, 14, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
       if (Failed())  return
    ! call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
    !    if (Failed())  return;
@@ -629,6 +629,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
    InputFileData%Morison%SimplAxCaMG   = tmpReArray(10)
    InputFileData%Morison%SimplAxCp     = tmpReArray(11)
    InputFileData%Morison%SimplAxCpMG   = tmpReArray(12)
+   InputFileData%Morison%SimplCb       = tmpReArray(13)
+   InputFileData%Morison%SimplCbMG     = tmpReArray(14)
 
    if (allocated(tmpReArray))      deallocate(tmpReArray)
 
@@ -650,7 +652,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
 
    IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 13, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 15, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for depth-based coefficient arrays
@@ -682,6 +684,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          InputFileData%Morison%CoefDpths(I)%DpthAxCaMG   = tmpReArray(11)
          InputFileData%Morison%CoefDpths(I)%DpthAxCp     = tmpReArray(12)
          InputFileData%Morison%CoefDpths(I)%DpthAxCpMG   = tmpReArray(13)
+         InputFileData%Morison%CoefDpths(I)%DpthCb       = tmpReArray(14)
+         InputFileData%Morison%CoefDpths(I)%DpthCbMG     = tmpReArray(15)
       END DO
       
       DO I = 2,InputFileData%Morison%NCoefDpth
@@ -714,7 +718,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
 
    IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 25, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 29, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for Member-based coefficient arrays
@@ -758,6 +762,10 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          InputFileData%Morison%CoefMembers(I)%MemberAxCp2      =      tmpReArray(23)
          InputFileData%Morison%CoefMembers(I)%MemberAxCpMG1    =      tmpReArray(24)
          InputFileData%Morison%CoefMembers(I)%MemberAxCpMG2    =      tmpReArray(25)
+         InputFileData%Morison%CoefMembers(I)%MemberCb1        =      tmpReArray(26)
+         InputFileData%Morison%CoefMembers(I)%MemberCb2        =      tmpReArray(27)
+         InputFileData%Morison%CoefMembers(I)%MemberCbMG1      =      tmpReArray(28)
+         InputFileData%Morison%CoefMembers(I)%MemberCbMG2      =      tmpReArray(29)
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
