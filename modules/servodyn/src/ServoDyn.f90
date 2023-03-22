@@ -385,10 +385,22 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%RotPwr = 0.
    u%HorWindV = 0.
    u%YawAngle = 0.
-   u%LidSpeed(:) = 0.
-   u%MsrPositionsX(:) = 0.
-   u%MsrPositionsY(:) = 0.
-   u%MsrPositionsZ(:) = 0.
+   if (allocated(InitInp%LidSpeed)) then   ! Must allocate
+      allocate(u%LidSpeed(size(InitInp%LidSpeed)))
+      u%LidSpeed  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsX)) then
+      allocate(u%MsrPositionsX(size(InitInp%MsrPositionsX)))
+      u%MsrPositionsX  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsY)) then
+      allocate(u%MsrPositionsY(size(InitInp%MsrPositionsY)))
+      u%MsrPositionsY  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsZ)) then
+      allocate(u%MsrPositionsZ(size(InitInp%MsrPositionsZ)))
+      u%MsrPositionsZ  = 0.
+   endif
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 

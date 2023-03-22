@@ -78,9 +78,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
-    REAL(ReKi)  :: SensorType      !< Lidar sensor type [-]
-    REAL(ReKi)  :: NumBeam      !< Number of beams [-]
-    REAL(ReKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
     REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [-]
     REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
   END TYPE SrvD_InitInputType
@@ -494,10 +494,10 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_NStC_y      !< the start and end indices of nacelle      StC y jacobian [ start/end, instance ] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_TStC_y      !< the start and end indices of tower        StC y jacobian [ start/end, instance ] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_SStC_y      !< the start and end indices of substructure StC y jacobian [ start/end, instance ] [-]
-    REAL(ReKi)  :: SensorType      !< Lidar sensor type [-]
-    REAL(ReKi)  :: NumBeam      !< Number of beams [-]
-    REAL(ReKi)  :: NumPulseGate      !< Number of pulse gates [-]
-    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [-]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
     REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
   END TYPE SrvD_ParameterType
 ! =======================
@@ -550,7 +550,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TStCMotionMesh      !< StC module tower        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: SStCMotionMesh      !< StC module substructure input motion mesh [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speed [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speeds [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
@@ -992,9 +992,9 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsZ upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsZ)  ! MsrPositionsZ
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! SensorType
-      Re_BufSz   = Re_BufSz   + 1  ! NumBeam
-      Re_BufSz   = Re_BufSz   + 1  ! NumPulseGate
+      Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
+      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
       Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
       Re_BufSz   = Re_BufSz   + 1  ! URefLid
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -1364,12 +1364,12 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%SensorType
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NumBeam
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NumPulseGate
-    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PulseSpacing
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%URefLid
@@ -1831,12 +1831,12 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-    OutData%SensorType = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumBeam = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumPulseGate = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%PulseSpacing = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%URefLid = ReKiBuf(Re_Xferred)
@@ -13486,9 +13486,9 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Jac_Idx_SStC_y upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_y)  ! Jac_Idx_SStC_y
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! SensorType
-      Re_BufSz   = Re_BufSz   + 1  ! NumBeam
-      Re_BufSz   = Re_BufSz   + 1  ! NumPulseGate
+      Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
+      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
       Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
       Re_BufSz   = Re_BufSz   + 1  ! URefLid
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -14350,12 +14350,12 @@ ENDIF
         END DO
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%SensorType
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NumBeam
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%NumPulseGate
-    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PulseSpacing
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%URefLid
@@ -15376,12 +15376,12 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%SensorType = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumBeam = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumPulseGate = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%PulseSpacing = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%URefLid = ReKiBuf(Re_Xferred)

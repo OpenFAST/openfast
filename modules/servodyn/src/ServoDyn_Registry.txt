@@ -57,13 +57,13 @@ typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue c
 typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
 typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
 #initial inputs of lidar parameters
-typedef	^	InitInputType	ReKi	LidSpeed        {:}  -  -	"Number of Lidar measurement distances"	-
+typedef	^	InitInputType	ReKi	LidSpeed     	{:}  -	-	"Number of Lidar measurement distances"	-
 typedef	^	InitInputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
 typedef	^	InitInputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
 typedef	^	InitInputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
-typedef	^	InitInputType	ReKi	SensorType   	 -   -	-	"Lidar sensor type" -
-typedef	^	InitInputType	ReKi	NumBeam     	 -   -	-	"Number of beams" -
-typedef	^	InitInputType	ReKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
+typedef	^	InitInputType	IntKi	SensorType   	 -   -	-	"Lidar sensor type" -
+typedef	^	InitInputType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
+typedef	^	InitInputType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
 typedef	^	InitInputType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" -
 typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
@@ -488,11 +488,11 @@ typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {:}{:}    - -  "the start and
 typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {:}{:}    - -  "the start and end indices of tower        StC y jacobian [ start/end, instance ]"  -
 typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and end indices of substructure StC y jacobian [ start/end, instance ]"  -
 # parameters for lidar assisted control
-typedef	^	ParameterType	ReKi	SensorType   	 -   -	-	"Lidar sensor type" -
-typedef	^	ParameterType	ReKi	NumBeam     	 -   -	-	"Number of beams" -
-typedef	^	ParameterType	ReKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
-typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" -
-typedef	^	ParameterType	ReKi	URefLid      	 -   -	-	"Reference average wind speed for the lidar"  m/s
+typedef	^	ParameterType	IntKi	SensorType  	 -   -	-	"Lidar sensor type" -
+typedef	^	ParameterType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
+typedef	^	ParameterType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
+typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" m
+typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 
 
