@@ -901,28 +901,28 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
 
       u_SrvD%WindDir  = ATAN2( y_IfW%VelocityUVW(2,1), y_IfW%VelocityUVW(1,1) )
       u_SrvD%HorWindV = SQRT( y_IfW%VelocityUVW(1,1)**2 + y_IfW%VelocityUVW(2,1)**2 )
-      u_SrvD%LidSpeed =      y_IfW%lidar%LidSpeed
-      u_SrvD%MsrPositionsX = y_IfW%lidar%MsrPositionsX
-      u_SrvD%MsrPositionsY = y_IfW%lidar%MsrPositionsY
-      u_SrvD%MsrPositionsZ = y_IfW%lidar%MsrPositionsZ
+      if (allocated(y_IfW%lidar%LidSpeed     ))  u_SrvD%LidSpeed      = y_IfW%lidar%LidSpeed
+      if (allocated(y_IfW%lidar%MsrPositionsX))  u_SrvD%MsrPositionsX = y_IfW%lidar%MsrPositionsX
+      if (allocated(y_IfW%lidar%MsrPositionsY))  u_SrvD%MsrPositionsY = y_IfW%lidar%MsrPositionsY
+      if (allocated(y_IfW%lidar%MsrPositionsZ))  u_SrvD%MsrPositionsZ = y_IfW%lidar%MsrPositionsZ
 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM )  THEN 
       
       u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
-      u_SrvD%LidSpeed = 0.0
-      u_SrvD%MsrPositionsX = 0.0
-      u_SrvD%MsrPositionsY = 0.0
-      u_SrvD%MsrPositionsz = 0.0
+      if (allocated(u_SrvD%LidSpeed     ))  u_SrvD%LidSpeed      = 0.0
+      if (allocated(u_SrvD%MsrPositionsX))  u_SrvD%MsrPositionsX = 0.0
+      if (allocated(u_SrvD%MsrPositionsY))  u_SrvD%MsrPositionsY = 0.0
+      if (allocated(u_SrvD%MsrPositionsz))  u_SrvD%MsrPositionsz = 0.0
 
    ELSE  ! No wind inflow
 
       u_SrvD%WindDir  = 0.0
       u_SrvD%HorWindV = 0.0
-      u_SrvD%LidSpeed = 0.0
-      u_SrvD%MsrPositionsX = 0.0
-      u_SrvD%MsrPositionsY = 0.0
-      u_SrvD%MsrPositionsz = 0.0
+      if (allocated(u_SrvD%LidSpeed     ))  u_SrvD%LidSpeed      = 0.0
+      if (allocated(u_SrvD%MsrPositionsX))  u_SrvD%MsrPositionsX = 0.0
+      if (allocated(u_SrvD%MsrPositionsY))  u_SrvD%MsrPositionsY = 0.0
+      if (allocated(u_SrvD%MsrPositionsz))  u_SrvD%MsrPositionsz = 0.0
    ENDIF
 
    
