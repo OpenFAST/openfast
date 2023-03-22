@@ -1941,6 +1941,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'SimplAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
+   IF ( InputFileData%Morison%SimplCb < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%Morison%SimplCbMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
    !TODO: Do we need a test for AxCp
 
    !-------------------------------------------------------------------------------------------------
@@ -2016,6 +2024,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
          IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCpMG < 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCpMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefDpths(I)%DpthCb < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefDpths(I)%DpthCbMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
       END DO
@@ -2094,6 +2110,22 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2 < 0 ) THEN 
             CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
       END DO
