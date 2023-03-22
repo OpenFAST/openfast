@@ -103,10 +103,12 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
 typedef   ^                            ^                             ReKi           RMG                      {:}        -        -         "radius at each node including marine growth"   m
+typedef   ^                            ^                             ReKi           RMGB                     {:}        -        -         "radius at each node including marine growth scaled by sqrt(Cb)"   m
 typedef   ^                            ^                             ReKi           Rin                      {:}        -        -         "inner member radius at node, equivalent to radius of water ballast at this node if filled"    m
 typedef   ^                            ^                             ReKi           tMG                      {:}        -        -         "Nodal thickness with marine growth (of member at node location)"    m
 typedef   ^                            ^                             ReKi           MGdensity                {:}        -        -         "Nodal density of marine growth"    kg/m^3
 typedef   ^                            ^                             ReKi           dRdl_mg                  {:}        -        -         "taper dr/dl of outer surface including marine growth of each element"    -
+typedef   ^                            ^                             ReKi           dRdl_mg_b                {:}        -        -         "taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb)"    -
 typedef   ^                            ^                             ReKi           dRdl_in                  {:}        -        -         "taper dr/dl of interior surface of each element"    -
 typedef   ^                            ^                             ReKi           Vinner                   -          -        -         "Member volume without marine growth"   m^3
 typedef   ^                            ^                             ReKi           Vouter                   -          -        -         "Member volume including marine growth"   m^3

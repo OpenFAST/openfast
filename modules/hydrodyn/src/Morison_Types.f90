@@ -148,10 +148,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: Ak      !< matrix of I - kkt [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: R      !< outer member radius at each node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMG      !< radius at each node including marine growth [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMGB      !< radius at each node including marine growth scaled by sqrt(Cb) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Rin      !< inner member radius at node, equivalent to radius of water ballast at this node if filled [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: tMG      !< Nodal thickness with marine growth (of member at node location) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MGdensity      !< Nodal density of marine growth [kg/m^3]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg      !< taper dr/dl of outer surface including marine growth of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg_b      !< taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_in      !< taper dr/dl of interior surface of each element [-]
     REAL(ReKi)  :: Vinner      !< Member volume without marine growth [m^3]
     REAL(ReKi)  :: Vouter      !< Member volume including marine growth [m^3]
@@ -2015,6 +2017,18 @@ IF (ALLOCATED(SrcMemberTypeData%RMG)) THEN
   END IF
     DstMemberTypeData%RMG = SrcMemberTypeData%RMG
 ENDIF
+IF (ALLOCATED(SrcMemberTypeData%RMGB)) THEN
+  i1_l = LBOUND(SrcMemberTypeData%RMGB,1)
+  i1_u = UBOUND(SrcMemberTypeData%RMGB,1)
+  IF (.NOT. ALLOCATED(DstMemberTypeData%RMGB)) THEN 
+    ALLOCATE(DstMemberTypeData%RMGB(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%RMGB.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMemberTypeData%RMGB = SrcMemberTypeData%RMGB
+ENDIF
 IF (ALLOCATED(SrcMemberTypeData%Rin)) THEN
   i1_l = LBOUND(SrcMemberTypeData%Rin,1)
   i1_u = UBOUND(SrcMemberTypeData%Rin,1)
@@ -2062,6 +2076,18 @@ IF (ALLOCATED(SrcMemberTypeData%dRdl_mg)) THEN
     END IF
   END IF
     DstMemberTypeData%dRdl_mg = SrcMemberTypeData%dRdl_mg
+ENDIF
+IF (ALLOCATED(SrcMemberTypeData%dRdl_mg_b)) THEN
+  i1_l = LBOUND(SrcMemberTypeData%dRdl_mg_b,1)
+  i1_u = UBOUND(SrcMemberTypeData%dRdl_mg_b,1)
+  IF (.NOT. ALLOCATED(DstMemberTypeData%dRdl_mg_b)) THEN 
+    ALLOCATE(DstMemberTypeData%dRdl_mg_b(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dRdl_mg_b.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMemberTypeData%dRdl_mg_b = SrcMemberTypeData%dRdl_mg_b
 ENDIF
 IF (ALLOCATED(SrcMemberTypeData%dRdl_in)) THEN
   i1_l = LBOUND(SrcMemberTypeData%dRdl_in,1)
@@ -2488,6 +2514,9 @@ ENDIF
 IF (ALLOCATED(MemberTypeData%RMG)) THEN
   DEALLOCATE(MemberTypeData%RMG)
 ENDIF
+IF (ALLOCATED(MemberTypeData%RMGB)) THEN
+  DEALLOCATE(MemberTypeData%RMGB)
+ENDIF
 IF (ALLOCATED(MemberTypeData%Rin)) THEN
   DEALLOCATE(MemberTypeData%Rin)
 ENDIF
@@ -2499,6 +2528,9 @@ IF (ALLOCATED(MemberTypeData%MGdensity)) THEN
 ENDIF
 IF (ALLOCATED(MemberTypeData%dRdl_mg)) THEN
   DEALLOCATE(MemberTypeData%dRdl_mg)
+ENDIF
+IF (ALLOCATED(MemberTypeData%dRdl_mg_b)) THEN
+  DEALLOCATE(MemberTypeData%dRdl_mg_b)
 ENDIF
 IF (ALLOCATED(MemberTypeData%dRdl_in)) THEN
   DEALLOCATE(MemberTypeData%dRdl_in)
@@ -2653,6 +2685,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! RMG upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%RMG)  ! RMG
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! RMGB allocated yes/no
+  IF ( ALLOCATED(InData%RMGB) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! RMGB upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RMGB)  ! RMGB
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! Rin allocated yes/no
   IF ( ALLOCATED(InData%Rin) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Rin upper/lower bounds for each dimension
@@ -2672,6 +2709,11 @@ ENDIF
   IF ( ALLOCATED(InData%dRdl_mg) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! dRdl_mg upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%dRdl_mg)  ! dRdl_mg
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! dRdl_mg_b allocated yes/no
+  IF ( ALLOCATED(InData%dRdl_mg_b) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dRdl_mg_b upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%dRdl_mg_b)  ! dRdl_mg_b
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! dRdl_in allocated yes/no
   IF ( ALLOCATED(InData%dRdl_in) ) THEN
@@ -2947,6 +2989,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%RMGB) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RMGB,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RMGB,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%RMGB,1), UBOUND(InData%RMGB,1)
+        ReKiBuf(Re_Xferred) = InData%RMGB(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%Rin) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -3004,6 +3061,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%dRdl_mg,1), UBOUND(InData%dRdl_mg,1)
         ReKiBuf(Re_Xferred) = InData%dRdl_mg(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%dRdl_mg_b) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dRdl_mg_b,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dRdl_mg_b,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%dRdl_mg_b,1), UBOUND(InData%dRdl_mg_b,1)
+        ReKiBuf(Re_Xferred) = InData%dRdl_mg_b(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3634,6 +3706,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RMGB not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%RMGB)) DEALLOCATE(OutData%RMGB)
+    ALLOCATE(OutData%RMGB(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RMGB.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%RMGB,1), UBOUND(OutData%RMGB,1)
+        OutData%RMGB(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Rin not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -3703,6 +3793,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%dRdl_mg,1), UBOUND(OutData%dRdl_mg,1)
         OutData%dRdl_mg(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dRdl_mg_b not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dRdl_mg_b)) DEALLOCATE(OutData%dRdl_mg_b)
+    ALLOCATE(OutData%dRdl_mg_b(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dRdl_mg_b.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%dRdl_mg_b,1), UBOUND(OutData%dRdl_mg_b,1)
+        OutData%dRdl_mg_b(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
