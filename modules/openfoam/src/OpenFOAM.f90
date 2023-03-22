@@ -1057,7 +1057,6 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
    allocate(p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade), stat=errStat2);   if (Failed2()) return;
 
    ! Compute uniform spacing.
-   print*, p_OpFM%NodeClusterType
    if (p_OpFM%NodeClusterType .eq. 0) then
        print*, "Using uniform blade force node clustering."
    end if
@@ -1067,7 +1066,12 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
        pUniform(i) = (i-1)*dRforceNodes
    end do
    pUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
-   p_OpFM%forceBldRnodes(:) = pUniform(:)  
+   p_OpFM%forceBldRnodes(:) = pUniform(:)
+
+   !do i = 1, p_OpFM%nNodesForceBlade
+   !   print*, "r(",i,") = ", pUniform(i)
+   !end do
+
 
    ! If non-uniform spacing is called for, compute the spacing.  
    ! We know that if the spacing is proportional to chord, then at each
@@ -1102,10 +1106,6 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
           !use ds = uniform.
           sNonUniform(:) = (p_OpFM%BladeLength)*cNonUniform(:)/(sum(cNonUniform(2:p_OpFM%nNodesForceBlade-1)) + 0.5*(cNonUniform(1)+cNonUniform(p_OpFM%nNodesForceBlade)))
 
-          !do i = 1, p_OpFM%nNodesForceBlade
-          !   print*, "r, c(",i,") = ", pNonUniform(i), cNonUniform(i)
-          !end do
-
           ! set the new blade points based on the new ds.
           do i = 2, p_OpFM%nNodesForceBlade
              pNonUniform(i) = pNonUniform(i-1) + 0.5*(sNonUniform(i-1) + sNonUniform(i))
@@ -1127,6 +1127,10 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
 
           ! increment the iteration counter
           counter = counter + 1
+
+          !do i = 1, p_OpFM%nNodesForceBlade
+          !   print*, "r, c(",i,") = ", pNonUniform(i), cNonUniform(i)
+          !end do
        end do
        print*, "   -converged to ", eSum, " in ", counter," iterations."
    end if
