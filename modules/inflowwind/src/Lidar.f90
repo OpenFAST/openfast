@@ -182,9 +182,9 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       !............................................................................................
 
    p%lidar%LidPosition = InitInp%lidar%HubPosition  
-  DO IBeam = 1,p%lidar%NumBeam    
-    p%lidar%MsrPosition(:,IBeam) = (/ p%lidar%FocalDistanceX(IBeam), p%lidar%FocalDistanceY(IBeam), p%lidar%FocalDistanceZ(IBeam) /) !bjj: todo FIXME  with initial guess of lidar focus.    
-  END DO  
+   DO IBeam = 1,p%lidar%NumBeam
+      p%lidar%MsrPosition(:,IBeam) = (/ p%lidar%FocalDistanceX(IBeam), p%lidar%FocalDistanceY(IBeam), p%lidar%FocalDistanceZ(IBeam) /) !bjj: todo FIXME  with initial guess of lidar focus.    
+   END DO
    u%lidar%PulseLidEl  = 0.0_ReKi
    u%lidar%PulseLidAz  = 0.0_ReKi
    
@@ -197,7 +197,7 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    !   IF (ErrStat >= AbortErrLev) RETURN
    !y%WriteOutput = 0
    
-IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+   IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
       CALL AllocAry( y%lidar%LidSpeed, p%lidar%NumBeam, 'y%lidar%LidSpeed', ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );
 
@@ -215,7 +215,7 @@ IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
       
       CALL AllocAry( y%lidar%MsrPositionsZ, p%lidar%NumBeam, 'y%lidar%MsrPositionsZ', ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ); 
-  ELSE 
+   ELSEIF (p%lidar%NumPulseGate > 0) then    ! the Cray Fortran compiler doesn't like allocating size zero
       CALL AllocAry( y%lidar%LidSpeed, p%lidar%NumPulseGate, 'y%lidar%LidSpeed', ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName );
   
