@@ -1057,10 +1057,6 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
    allocate(p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade), stat=errStat2);   if (Failed2()) return;
 
    ! Compute uniform spacing.
-   if (p_OpFM%NodeClusterType .eq. 0) then
-       print*, "Using uniform blade force node clustering."
-   end if
-
    dRforceNodes = p_OpFM%BladeLength/(p_OpFM%nNodesForceBlade-1)
    do i=1,p_OpFM%nNodesForceBlade-1
        pUniform(i) = (i-1)*dRforceNodes
@@ -1068,9 +1064,12 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
    pUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
    p_OpFM%forceBldRnodes(:) = pUniform(:)
 
-   !do i = 1, p_OpFM%nNodesForceBlade
-   !   print*, "r(",i,") = ", pUniform(i)
-   !end do
+   if (p_OpFM%NodeClusterType .eq. 0) then
+       print*, "Using uniform blade force node clustering."
+      !do i = 1, p_OpFM%nNodesForceBlade
+      !    print*, "r(",i,") = ", pUniform(i)
+      !end do
+   end if
 
 
    ! If non-uniform spacing is called for, compute the spacing.  
@@ -1084,7 +1083,6 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
    ! all neighboring points to see how different they are, and take the
    ! rms of that error as the convergence measure (eSum).
    if (p_OpFM%NodeClusterType .eq. 1) then
-       print*, "Using chord-scaled blade force node clustering."
 
        ! For chord-based clustering (increase resolution in regions of decreased chord), an iterative solution to the grid spacing is used.
        ! The initial guess to the spacing is uniform spacing, so start with that.
@@ -1128,11 +1126,13 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
           ! increment the iteration counter
           counter = counter + 1
 
-          !do i = 1, p_OpFM%nNodesForceBlade
-          !   print*, "r, c(",i,") = ", pNonUniform(i), cNonUniform(i)
-          !end do
        end do
+
+       print*, "Using chord-scaled blade force node clustering."
        print*, "   -converged to ", eSum, " in ", counter," iterations."
+      !do i = 1, p_OpFM%nNodesForceBlade
+      !   print*, "r, c(",i,") = ", pNonUniform(i), cNonUniform(i)
+      !end do
    end if
 
 

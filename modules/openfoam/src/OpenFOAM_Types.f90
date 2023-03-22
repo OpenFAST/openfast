@@ -46,7 +46,7 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) :: BladeLength 
     REAL(KIND=C_FLOAT) :: TowerHeight 
     REAL(KIND=C_FLOAT) :: TowerBaseHeight 
-    LOGICAL(KIND=C_BOOL) :: NodeClusterType 
+    INTEGER(KIND=C_INT) :: NodeClusterType 
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
@@ -57,7 +57,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: BladeLength      !< Blade length [meters]
     REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower Base Height [meters]
-    LOGICAL  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_InitInputType
 ! =======================
 ! =========  OpFM_InitOutputType_C  =======
@@ -120,7 +120,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: BladeLength      !< Blade length (same for all blades) [m]
     REAL(ReKi)  :: TowerHeight      !< Tower height [m]
     REAL(ReKi)  :: TowerBaseHeight      !< Tower base height [m]
-    LOGICAL  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_ParameterType
 ! =======================
 ! =========  OpFM_InputType_C  =======
