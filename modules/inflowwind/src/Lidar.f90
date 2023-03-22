@@ -237,8 +237,8 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
       
    IF (ErrStat >= AbortErrLev) RETURN
-   y%lidar%LidSpeed = 0.0
-   y%lidar%WtTrunc  = 0.0
+   if (allocated(y%lidar%LidSpeed))  y%lidar%LidSpeed = 0.0
+   if (allocated(y%lidar%WtTrunc ))  y%lidar%WtTrunc  = 0.0
                
       !............................................................................................
       ! Define initialization-routine output here:
