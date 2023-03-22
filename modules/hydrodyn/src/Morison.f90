@@ -1287,7 +1287,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    errMSg  = ''
    call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry(member%dRdl_mg_b    , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%dRdl_mg_b    , member%NElements,   'member%dRdl_mg_b'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%alpha        , member%NElements,   'member%alpha'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -3164,10 +3164,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                      F_B1(4:6) =    alpha  * MbVec
                      F_B2(4:6) = (1-alpha) * MbVec
 
-                     ! Apply Cb coefficient to nodal loads
-                     ! F_B1 = F_B1 * mem%Cb(i  )
-                     ! F_B2 = F_B2 * mem%Cb(i-1)
-
                      ! Add nodal loads to mesh
                      m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
                      m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B2  ! 1-alpha
@@ -3204,10 +3200,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   MbVec = MbVec - Cross_Product( k_hat*dl, F_B1(1:3))
                   F_B1(4:6) =    alpha  * MbVec
                   F_B2(4:6) = (1-alpha) * MbVec
-
-                  ! Apply Cb coefficient to nodal loads
-                  ! F_B1 = F_B1 * mem%Cb(i+1)
-                  ! F_B2 = F_B2 * mem%Cb(i  )
 
                   ! Add nodal loads to mesh
                   m%memberLoads(im)%F_B(:,i+1) = m%memberLoads(im)%F_B(:,i+1) + F_B1  ! alpha
@@ -3976,20 +3968,20 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             if ( z2 < Zeta2 ) then
                ! Compute loads on the end plate of node N+1          
-               Fl      =  p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2     ! * mem%Cb(N+1)
-               Moment  =  p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi ! * mem%Cb(N+1)
+               Fl      =  p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2
+               Moment  =  p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi
                call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
             end if
             if ( z1 < Zeta1 ) then
                ! Compute loads on the end plate of node 1
-               Fl      = -p%WtrDens * g * pi *        mem%RMGB(  1)**2 * z1     ! * mem%Cb(  1)
-               Moment  = -p%WtrDens * g * pi * 0.25 * mem%RMGB(  1)**4 * sinPhi ! * mem%Cb(  1)
+               Fl      = -p%WtrDens * g * pi *        mem%RMGB(  1)**2 * z1
+               Moment  = -p%WtrDens * g * pi * 0.25 * mem%RMGB(  1)**4 * sinPhi
                call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1)))
             end if
          elseif ( (mem%doEndBuoyancy) .and. (z2 < Zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if below free surface
             ! Only compute the buoyancy contribution from the upper end
-            Fl      = p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2     ! * mem%Cb(N+1)
-            Moment  = p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi ! * mem%Cb(N+1)
+            Fl      = p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2
+            Moment  = p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi
             call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
          else
             ! entire member is buried below the seabed
