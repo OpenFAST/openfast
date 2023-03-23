@@ -3340,7 +3340,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, SrvD, u_ED, y_ED, y_AD, u_AD
 
    END IF
 
-   if ( p_FAST%CompSub /= Module_None ) then !This also occurs with ExtPtfm (though that's not linearized, yet)
+   if ( p_FAST%CompSub == Module_None ) then !This also occurs with ExtPtfm (though that's not linearized, yet)
       ! HD
       ! parts of dU^{ED}/dy^{HD} and dU^{ED}/dy^{ED}:
       if ( p_FAST%CompHydro == Module_HD ) then ! HydroDyn-{ElastoDyn or SubDyn}

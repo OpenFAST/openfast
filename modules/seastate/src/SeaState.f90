@@ -576,7 +576,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       IF (ALLOCATED(InitInp%WaveElevXY)) THEN
       ! maybe instead of getting these requested points, we just output the grid that SeaState is generated on?
          ALLOCATE(InitOut%WaveElevSeries( 0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)),STAT=ErrStat2)
-         if (ErrStat /= 0) then
+         if (ErrStat2 /= 0) then
             CALL SetErrStat(ErrID_Fatal,"Error allocating InitOut%WaveElevSeries.",ErrStat,ErrMsg,RoutineName)
             CALL CleanUp()
             RETURN
