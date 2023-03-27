@@ -71,6 +71,13 @@ macro(set_fast_fortran)
   elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
     set_fast_intel_fortran()
   endif()
+
+  # If double precision option enabled, set preprocessor define to use
+  # real64 for ReKi reals
+  if (DOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
+  endif()
+
 endmacro(set_fast_fortran)
 
 #
@@ -113,11 +120,10 @@ macro(set_fast_gfortran)
   #   and https://github.com/OpenFAST/openfast/pull/595
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fstack-reuse=none")
 
-  # Deal with Double/Single precision
+  # If double precision, make constants double precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
-  endif (DOUBLE_PRECISION)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8")
+  endif()
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -156,19 +162,19 @@ endmacro(set_fast_intel_fortran)
 #
 macro(set_fast_intel_fortran_posix)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
-  # Deal with Double/Single precision
-  if (DOUBLE_PRECISION)
-    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
-    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double-size 128")
-    else()
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
-    endif()
-  endif (DOUBLE_PRECISION)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all,noarg_temp_created -traceback -init=huge,infinity" )
+  endif()
+
+  # If double precision, make real and double constants 64 bits
+  if (DOUBLE_PRECISION)
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -real-size 64 -double-size 64")
+    else()
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -real_size 64 -double_size 64")
+    endif()
   endif()
 
   # OPENMP
@@ -206,15 +212,14 @@ macro(set_fast_intel_fortran_windows)
   # - 5268: 132 column limit
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp")
 
-  # Deal with Double/Single precision
+  # If double precision, make constants double precision
   if (DOUBLE_PRECISION)
-    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_GREATER "19")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real-size:64 /double-size:128")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real-size:64 /double-size:64")
     else()
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:64")
     endif()
-  endif (DOUBLE_PRECISION)
+  endif()
 
   # increase the default 2MB stack size to 16 MB
   MATH(EXPR stack_size "16 * 1024 * 1024")

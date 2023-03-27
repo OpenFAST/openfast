@@ -241,7 +241,7 @@ approach using the following steps:
 
    .. math::
       \begin{aligned}
-         \Gamma_{ll,j} =\frac{1}{2} C_{l,j}(\alpha_j) \frac{\left[ (\vec{v}_j  \cdot \vec{N})^2 +  (\vec{v}_j  \cdot \vec{T})^2\right]^2\,dA}{
+         \Gamma_{ll,j} =\frac{1}{2} C_{l,j}(\alpha_j) \frac{\left[ (\vec{v}_j  \cdot \vec{N})^2 +  (\vec{v}_j  \cdot \vec{T})^2\right]\,dA}{
          \sqrt{\left[(\vec{v}_j\times \vec{dl})\cdot\vec{N}\right]^2 + \left[(\vec{v}_j\times \vec{dl})\cdot\vec{T}\right]^2}
          }   %\label{eq:}
       ,\quad\text{with}
@@ -278,11 +278,13 @@ approach using the following steps:
 No-flow-through Method
 ^^^^^^^^^^^^^^^^^^^^^^
 
-A Weissinger-L-based representation (:cite:`olaf-Weissinger47_1`)
-of the lifting surface is also
-available (:cite:`olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`). In this
-method, the circulation is solved by satisfying a no-flow through
-condition at the 1/4-chord points.  It is selected with **CircSolvMethod=[2]**.
+A no-flow-through circulation solving method
+(sometimes called Weissinger-L-based method)
+might be implemented in the future
+(:cite:`olaf-Weissinger47_1,olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`).
+In this method, the circulation is solved by satisfying a no-flow through
+condition at the 1/4-chord points.  
+It would be selected with **CircSolvMethod=[2]** but is currently no implemented.
 
 Prescribed Circulation
 ^^^^^^^^^^^^^^^^^^^^^^
