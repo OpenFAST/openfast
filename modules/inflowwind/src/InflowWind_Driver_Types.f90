@@ -104,7 +104,6 @@ MODULE InflowWind_Driver_Types
       TYPE(OutputFile)        :: FFTOutput
       TYPE(OutputFile)        :: PointsVelOutput
       TYPE(OutputFile)        :: PointsAccOutput
-      TYPE(OutputFile)        :: PointsRefOutput
 
    END TYPE IfWDriver_Settings
 

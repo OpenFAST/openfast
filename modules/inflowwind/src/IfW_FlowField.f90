@@ -25,7 +25,9 @@ use IfW_FlowField_Types
 implicit none
 
 public IfW_FlowField_GetVelAcc
-public UniformField_CalcAccel, Grid3DField_CalcAccel
+public IfW_UniformField_CalcAccel, IfW_Grid3DField_CalcAccel
+public IfW_UniformWind_GetOP
+public Grid3D_to_Uniform, Uniform_to_Grid3D
 
 integer(IntKi), parameter  :: WindProfileType_None = -1     !< don't add wind profile; already included in input
 integer(IntKi), parameter  :: WindProfileType_Constant = 0  !< constant wind
@@ -119,7 +121,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! If cubic velocity interp requested, calculate operating point using
       ! cubic interpolation. Otherwise, use linear interpolation
       if (FF%VelInterpCubic) then
-         UFopVel = UniformField_IterpCubic(FF%Uniform, Time)
+         UFopVel = UniformField_InterpCubic(FF%Uniform, Time)
       else
          UFopVel = UniformField_InterpLinear(FF%Uniform, Time)
       end if
@@ -132,7 +134,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          if (FF%VelInterpCubic) then
             UFopAcc = UFopVel
          else
-            UFopAcc = UniformField_IterpCubic(FF%Uniform, Time)
+            UFopAcc = UniformField_InterpCubic(FF%Uniform, Time)
          end if
 
          ! Loop throuh points and calcualate velocity and acceleration
@@ -472,7 +474,7 @@ pure function UniformField_InterpLinear(UF, Time) result(op)
 
 end function
 
-pure function UniformField_IterpCubic(UF, Time) result(op)
+pure function UniformField_InterpCubic(UF, Time) result(op)
 
    type(UniformFieldType), intent(in)  :: UF
    real(DbKi), intent(in)              :: Time
@@ -562,7 +564,7 @@ pure function UniformField_IterpCubic(UF, Time) result(op)
 
 end function
 
-subroutine UniformField_CalcAccel(UF, ErrStat, ErrMsg)
+subroutine IfW_UniformField_CalcAccel(UF, ErrStat, ErrMsg)
    type(UniformFieldType), intent(inout)  :: UF
    integer(IntKi), intent(out)         :: ErrStat
    character(*), intent(out)           :: ErrMsg
@@ -699,6 +701,28 @@ contains
       dy(n) = 0.0_ReKi
 
    end subroutine
+
+end subroutine
+
+!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial
+!! derivative dY/du is returned. This submodule does not follow the modularization framework.
+subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
+   type(UniformFieldType), intent(IN)  :: UF             !< Parameters
+   real(DbKi), intent(IN)              :: t              !< Current simulation time in seconds
+   logical, intent(in)                 :: InterpCubic    !< flag for using cubic interpolation
+   real(ReKi), intent(OUT)             :: OP_out(2)      !< operating point (HWindSpeed and PLexp
+
+   type(UniformField_Interp)           :: op         ! interpolated values of InterpParams
+
+   ! Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
+   if (InterpCubic) then
+      op = UniformField_InterpCubic(UF, t)
+   else
+      op = UniformField_InterpLinear(UF, t)
+   end if
+
+   OP_out(1) = op%VelH
+   OP_out(2) = op%ShrV
 
 end subroutine
 
@@ -1128,7 +1152,7 @@ subroutine Grid3DField_GetVelAccCubic(DTime, VelCell, AccCell, Xi, Is3D, Velocit
 
 end subroutine
 
-subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
+subroutine IfW_Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    type(Grid3DFieldType), intent(inout)   :: G3D
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1152,7 +1176,7 @@ subroutine Grid3DField_CalcAccel(G3D, ErrStat, ErrMsg)
    ! If number of time grids is 1 or 2, set all accelerations to zero, return
    if (G3D%NTGrids < 3) then
       G3D%Acc = 0.0_SiKi
-      return 
+      return
    end if
 
    ! Allocate storage for U used in cubic spline derivative calc
@@ -1383,5 +1407,348 @@ subroutine UserField_GetVel(UF, Time, Position, Velocity, ErrStat, ErrMsg)
    call SetErrStat(ErrID_Fatal, "UserField_GetVel not implemented", ErrStat, ErrMsg, RoutineName)
 
 end subroutine
+
+function CalculateMeanVelocity(G3D, z, y) result(u)
+
+   type(Grid3DFieldType), intent(IN)  :: G3D                 !< Parameters
+   real(ReKi), intent(IN)  :: Z                 ! height
+   real(ReKi), intent(IN)  :: y                 ! lateral location
+   real(ReKi)                                               :: u                 ! mean wind speed at position (y,z)
+
+   select case (G3D%WindProfileType)
+
+   case (WindProfileType_PL)
+
+      U = G3D%MeanWS*(Z/G3D%RefHeight)**G3D%PLExp      ! [IEC 61400-1 6.3.1.2 (10)]
+
+   case (WindProfileType_Log)
+
+      if (.not. EqualRealNos(G3D%RefHeight, G3D%Z0) .and. Z > 0.0_ReKi) then
+         U = G3D%MeanWS*(LOG(Z/G3D%Z0))/(LOG(G3D%RefHeight/G3D%Z0))
+      else
+         U = 0.0_ReKi
+      end if
+
+   case (WindProfileType_Constant)
+
+      U = G3D%MeanWS
+
+   case DEFAULT
+
+      U = 0.0_ReKi
+
+   end select
+
+   if (G3D%VLinShr .ne. 0.0_ReKi) then  ! Add vertical linear shear, if has
+      U = U + G3D%MeanWS*G3D%VLinShr*(Z - G3D%RefHeight)/G3D%RefLength
+   end if
+
+   if (G3D%HLinShr .ne. 0.0_ReKi) then  ! Add horizontal linear shear, if has
+      U = U + G3D%MeanWS*G3D%HLinShr*y/G3D%RefLength
+   end if
+
+end function CalculateMeanVelocity
+
+subroutine Uniform_to_Grid3D(UF, InterpCubic, G3D, ErrStat, ErrMsg)
+
+   type(UniformFieldType), intent(IN)  :: UF                !< UniformWind Parameters
+   logical, intent(in)                 :: InterpCubic       !< Flag to use cubic interpolation
+   type(Grid3DFieldType), intent(OUT)  :: G3D               !< FF Parameters
+   integer(IntKi), intent(OUT)         :: ErrStat           !< error status
+   character(*), intent(OUT)           :: ErrMsg            !< error message
+
+   character(*), parameter             :: RoutineName = 'Uniform_to_FFWind'
+   integer(ReKi), parameter            :: dz = 5.0
+   integer(ReKi), parameter            :: dy = 5.0
+   real(DbKi)                          :: Time
+   real(ReKi)                          :: PositionXYZ(3)
+   type(UniformField_Interp)           :: op
+   integer(IntKi)                      :: n, i, it, iy, iz
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   G3D%WindFileFormat = -1      ! Binary file format description number
+   G3D%NComp = 3                ! Number of wind components
+   G3D%Periodic = .false.
+   G3D%InterpTower = .true.
+   G3D%RefHeight = UF%RefHeight
+   G3D%NTGrids = 0
+   G3D%InvDY = 1.0_ReKi/dy       ! reciprocal of delta y (1/meters)
+   G3D%InvDZ = 1.0_ReKi/dz       ! reciprocal of delta z (1/meters)
+
+   ! Number of points in the lateral (y) direction of the grids
+   n = nint(UF%RefLength*1.1_ReKi*0.5_ReKi/dy)
+   G3D%NYGrids = n*2 + 1
+
+   ! Number of points in the vertical (z) direction of the grids
+   n = nint(UF%RefLength*1.1_ReKi*0.5_ReKi/dz)
+   G3D%NZGrids = nint(G3D%RefHeight/dy) + n + 1
+
+   ! Half the grid width (meters)
+   G3D%YHWid = 0.5_ReKi*dy*(G3D%NYGrids - 1)
+
+   ! Half the grid height (meters)
+   G3D%ZHWid = 0.5_ReKi*dz*(G3D%NZGrids - 1)
+
+   ! Height of the bottom of the grid (meters)
+   G3D%GridBase = G3D%RefHeight + n*dz - G3D%ZHWid*2.0_ReKi
+
+   ! Initial x position of grid (distance in FF is offset) meters)
+   G3D%InitXPosition = 0.0_ReKi
+
+   ! time will be the smallest delta t in this Uniform wind file
+   if (UF%DataSize < 2) then
+      G3D%DTime = 600.0_ReKi     ! doesn't matter what the time step is
+      G3D%NSteps = 2             ! "Number of time steps in the FF array
+   else
+      if (G3D%DTime < 0.0001) then
+         G3D%DTime = minval(UF%Time(2:) - UF%Time(:size(UF%Time) - 1))   ! Delta time (seconds)
+         call SetErrStat(ErrID_Fatal, "Smallest time step in uniform wind file is less that 0.0001 seconds. "// &
+                         "Increase the time step to convert to a FF file.", ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      G3D%NSteps = NINT(UF%Time(UF%DataSize)/G3D%DTime) + 1
+   end if
+
+   G3D%Rate = 1.0_ReKi/G3D%DTime                ! Data rate (1/DTime)
+   G3D%AddMeanAfterInterp = .false.             ! Add the mean wind speed after interpolating at a given height?
+   G3D%WindProfileType = WindProfileType_PL     ! Wind profile type (0=constant;1=logarithmic;2=power law)
+   G3D%PLExp = GetAverageVal(UF%ShrV)           ! Power law exponent (used for PL wind profile type only)
+   G3D%Z0 = 0.0_ReKi                            ! Surface roughness length (used for LOG wind profile type only)
+   G3D%TotalTime = (G3D%NSteps - 1)*G3D%DTime   ! The total time of the simulation (seconds)
+
+   ! Allocate velocity array
+   call AllocAry(G3D%Vel, G3D%NZGrids, G3D%NYGrids, G3D%NComp, G3D%NSteps, 'G3D%Vel', ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Initialize position
+   PositionXYZ = 0.0_ReKi
+
+   ! Loop through time steps
+   do it = 1, G3D%NSteps
+
+      ! Calculate time
+      Time = (it - 1)*G3D%DTime
+
+      ! Get operating point
+      if (InterpCubic) then
+         op = UniformField_InterpCubic(UF, Time)
+      else
+         op = UniformField_InterpLinear(UF, Time)
+      end if
+
+      ! Loop through y grid
+      do iy = 1, G3D%NYGrids
+
+         ! Calculate Y position
+         PositionXYZ(2) = (iy - 1)*dy - G3D%YHWid
+
+         ! Loop through z grid
+         do iz = 1, G3D%NZGrids
+
+            ! Calculate Z position
+            PositionXYZ(3) = (iz - 1)*dz + G3D%GridBase
+
+            ! Calculate velocity at operating point and position, store in grid
+            G3D%Vel(:, iy, iz, it) = real(UniformField_GetVel(UF, op, PositionXYZ), SiKi)
+
+         end do ! iz
+      end do ! iy
+   end do ! it
+
+   ! compute some averages for this simulation
+   G3D%MeanWS = GetAverageVal(UF%VelH)  ! Mean wind speed (advection speed)
+   G3D%InvMWS = 1.0_ReKi/G3D%MeanWS
+
+contains
+
+   function GetAverageVal(Ary) result(Avg)
+      real(ReKi), intent(in)  :: Ary(:)
+      real(ReKi)              :: Avg
+
+      ! If array has one element, average is first value
+      if (UF%DataSize < 2) then
+         Avg = Ary(1)
+         return
+      end if
+
+      Avg = UF%Time(1)*Ary(1) ! in case tData(1) /= 0
+      do i = 2, UF%DataSize
+         Avg = Avg + (UF%Time(i) - UF%Time(i - 1))*(Ary(i) + Ary(i - 1))
+      end do
+      Avg = Avg/(UF%Time(UF%DataSize) - UF%Time(1))/2.0_ReKi
+
+   end function GetAverageVal
+
+end subroutine Uniform_to_Grid3D
+
+subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
+
+   type(Grid3DFieldType), intent(IN)   :: G3D                  !< FF Parameters
+   type(UniformFieldType), intent(OUT) :: UF                   !< UniformWind Parameters
+   integer(IntKi), intent(OUT)         :: ErrStat              !< error status
+   character(*), intent(OUT)           :: ErrMsg               !< error message
+   real(ReKi), optional, intent(IN)    :: SmoothingRadius      !< length of time used for smoothing data, seconds (if omitted, no smoothing will occur)
+
+   character(*), parameter             :: RoutineName = 'FFWind_to_Uniform'
+   integer(IntKi)                      :: i
+   integer(IntKi)                      :: iy_ref, iz_ref, iz_p1
+   integer(IntKi)                      :: iy, iz, ic
+   real(ReKi)                          :: meanVel(3)
+   real(ReKi)                          :: meanWindDir
+   real(ReKi)                          :: u_p1, z_p1
+   real(ReKi)                          :: u_ref, z_ref
+   real(ReKi), parameter               :: HubPositionX = 0.0_ReKi
+   real(ReKi)                          :: radius ! length of time to use for smoothing uniform wind data, seconds
+   integer(IntKi)                      :: ErrStat2
+   character(ErrMsgLen)                :: ErrMsg2
+
+   real(SiKi), allocatable             :: Vel(:, :, :, :)
+   real(ReKi), allocatable             :: tmp(:)
+   real(R8Ki)                          :: transformMat(3, 3)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   if (G3D%RefLength > epsilon(0.0_ReKi)) then
+      UF%RefLength = G3D%VLinShr
+   else
+      UF%RefLength = (G3D%nYGrids - 1)/G3D%InvDY        ! width of the FF wind field
+   end if
+
+   UF%DataSize = G3D%NSteps
+
+   call AllocAry(UF%Time, UF%DataSize, 'time', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%VelH, UF%DataSize, 'horizontal wind speed', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%AngleH, UF%DataSize, 'direction', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%AngleV, UF%DataSize, 'upflow', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%VelV, UF%DataSize, 'vertical wind speed', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%ShrH, UF%DataSize, 'horizontal linear shear', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%ShrV, UF%DataSize, 'vertical power-law shear exponent', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%LinShrV, UF%DataSize, 'vertical linear shear', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(UF%VelGust, UF%DataSize, 'gust velocity', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call AllocAry(Vel, G3D%NZGrids, G3D%NYGrids, G3D%NComp, G3D%NSteps, 'FFData', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(tmp, G3D%NSteps, 'tmp', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   if (ErrStat >= AbortErrLev .or. UF%DataSize < 1) then
+      if (allocated(Vel)) deallocate (Vel)
+      if (allocated(tmp)) deallocate (tmp)
+      return
+   end if
+
+   ! we'll assume these are 0, for simplicity
+   UF%ShrH = G3D%HLinShr
+   UF%LinShrV = G3D%VLinShr
+   UF%VelGust = 0.0_ReKi
+
+   ! fill time array with time at hub position
+   do i = 1, UF%DataSize
+      UF%Time(i) = (G3D%InitXPosition - HubPositionX)*G3D%InvMWS + (i - 1)*G3D%DTime
+   end do
+
+   ! calculate mean velocity at grid point nearest lateral center of grid at reference height:
+   iy_ref = nint(G3D%nYGrids/2.0_ReKi)
+   iz_ref = nint((G3D%RefHeight - G3D%GridBase)*G3D%InvDZ) + 1
+   UF%RefHeight = G3D%GridBase + (iz_ref - 1)/G3D%InvDZ ! make sure RefHt is on the grid
+
+   meanVel = 0.0_ReKi
+   do i = 1, UF%DataSize
+      meanVel = meanVel + G3D%Vel(iz_ref, iy_ref, :, i)
+   end do
+   meanVel = meanVel/UF%DataSize
+
+   ! calculate the average upflow angle
+   UF%AngleV = atan2(meanVel(3), TwoNorm(meanVel(1:2)))
+   meanWindDir = atan2(meanVel(2), meanVel(1))
+
+   ! rotate the FF wind to remove the mean upflow and direction
+   transformMat(1, 1) = cos(meanWindDir)*cos(UF%AngleV(1))
+   transformMat(2, 1) = -sin(meanWindDir)
+   transformMat(3, 1) = -cos(meanWindDir)*sin(UF%AngleV(1))
+
+   transformMat(1, 2) = sin(meanWindDir)*cos(UF%AngleV(1))
+   transformMat(2, 2) = cos(meanWindDir)
+   transformMat(3, 2) = -sin(meanWindDir)*sin(UF%AngleV(1))
+
+   transformMat(1, 3) = sin(UF%AngleV(1))
+   transformMat(2, 3) = 0.0_R8Ki
+   transformMat(3, 3) = cos(UF%AngleV(1))
+
+   do i = 1, size(Vel, 4)
+      do iy = 1, size(Vel, 2)
+         do iz = 1, size(Vel, 1)
+            Vel(iz, iy, :, i) = matmul(transformMat, G3D%Vel(iz, iy, :, i))
+         end do
+      end do
+   end do
+
+   ! make sure we have the correct mean, or the direction will also be off here
+   if (G3D%AddMeanAfterInterp) then
+      Vel(iz_ref, iy_ref, 1, :) = Vel(iz_ref, iy_ref, 1, :) + CalculateMeanVelocity(G3D, UF%RefHeight, 0.0_ReKi)
+   end if
+
+   meanVel = 0.0_ReKi
+   do i = 1, UF%DataSize
+      meanVel = meanVel + Vel(iz_ref, iy_ref, :, i)
+   end do
+   meanVel = meanVel/UF%DataSize
+
+   ! Fill velocity arrays for uniform wind
+   do i = 1, UF%DataSize
+      UF%VelH(i) = TwoNorm(Vel(iz_ref, iy_ref, 1:2, i))
+   end do
+   UF%VelV = Vel(iz_ref, iy_ref, 3, :)
+
+   ! Fill wind direction array
+   do i = 1, UF%DataSize
+      UF%AngleH(i) = -(meanWindDir + atan2(Vel(iz_ref, iy_ref, 2, i), Vel(iz_ref, iy_ref, 1, i)))
+   end do
+
+   ! Now, time average values, if desired:
+   if (present(SmoothingRadius)) then
+      radius = SmoothingRadius
+   else
+      radius = 0.0_ReKi
+   end if
+
+   tmp = UF%VelH; call kernelSmoothing(UF%Time, tmp, kernelType_TRIWEIGHT, radius, UF%VelH)
+   tmp = UF%VelV; call kernelSmoothing(UF%Time, tmp, kernelType_TRIWEIGHT, radius, UF%VelV)
+   tmp = UF%AngleH; call kernelSmoothing(UF%Time, tmp, kernelType_TRIWEIGHT, radius, UF%AngleH)
+
+   ! Calculate averaged power law coefficient:
+   if (G3D%WindProfileType == WindProfileType_PL) then
+      UF%ShrV = G3D%PLExp
+   else
+      iz_p1 = G3D%nZGrids    ! pick a point to compute the power law exponent (least squares would be better than a single point)
+      z_p1 = G3D%GridBase + (iz_p1 - 1)/G3D%InvDZ
+
+      if (G3D%AddMeanAfterInterp) then
+         u_p1 = CalculateMeanVelocity(G3D, z_p1, 0.0_ReKi)
+      else
+         u_p1 = 0.0_ReKi
+         do i = 1, UF%DataSize
+            u_p1 = u_p1 + Vel(iz_p1, iy_ref, 1, i)
+         end do
+         u_p1 = u_p1/UF%DataSize
+      end if
+
+      if (EqualRealNos(meanVel(1), u_p1) .or. EqualRealNos(u_p1, 0.0_ReKi) .or. EqualRealNos(meanVel(1), 0.0_ReKi)) then
+         UF%ShrV = 0.0_ReKi
+      else
+         UF%ShrV = log(u_p1/meanVel(1))/log(z_p1/UF%RefHeight)
+      end if
+   end if
+
+   ! clean up
+
+   if (allocated(Vel)) deallocate (Vel)
+   if (allocated(tmp)) deallocate (tmp)
+
+end subroutine Grid3D_to_Uniform
 
 end module

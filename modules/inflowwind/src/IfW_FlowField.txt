@@ -8,7 +8,7 @@ param    IfW_FlowField  -                      IntKi               Undef_FieldTy
 param    ^              -                      IntKi               Uniform_FieldType   -     1         -     "Uniform FieldType from SteadyWind or Uniform Wind"            -
 param    ^              -                      IntKi               Grid3D_FieldType    -     2         -     "3D Grid FieldType from TurbSim, Bladed, HAWC"                 -
 param    ^              -                      IntKi               Grid4D_FieldType    -     3         -     "4D Grid FieldType from FAST.Farm"                             -
-param    ^              -                      IntKi               Point_FieldType    -     4         -     "Points FieldType from ExtInflow"                              -
+param    ^              -                      IntKi               Point_FieldType     -     4         -     "Points FieldType from ExtInflow"                              -
 param    ^              -                      IntKi               User_FieldType      -     5         -     "User FieldType configured by the user"                        -
 
 #----------------------------------------------------------------------------------------------------------------------------------
@@ -84,23 +84,25 @@ typedef  ^              ^                      IntKi               NTGrids      
 typedef  ^              ^                      IntKi               NSteps              -     0         -     "Number of time steps in the FF array"                         -
 typedef  ^              ^                      ReKi                PLExp               -     0         -     "Power law exponent (used for PL wind profile type only)"         -
 typedef  ^              ^                      ReKi                Z0                  -     0         -     "Surface roughness length (used for LOG wind profile type only)"  -
+typedef  ^              ^                      ReKi                VLinShr             -     0         -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
+typedef  ^              ^                      ReKi                HLinShr             -     0         -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
+
 
 #----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              UserFieldType          SiKi                Dummy               -     -         -     ""            -
-
-#----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              Grid4DFieldType       IntKi               n                   4     -         -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
+typedef  ^              Grid4DFieldType        IntKi               n                   4     -         -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
 typedef  ^              ^                      ReKi                delta               4     -         -     "size between 2 consecutive grid points in each grid direction"            "m,m,m,s"
 typedef  ^              ^                      ReKi                pZero               3     -         -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
 typedef  ^              ^                      SiKi                Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
 typedef  ^              ^                      ReKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
 
 #----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              PointsFieldType      ReKi                Vel                 ::    -         -     "Point velocities populated by external driver [uvw,point]"                  -
+typedef  ^              PointsFieldType        ReKi                Vel                 ::    -         -     "Point velocities populated by external driver [uvw,point]"                  -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              UserFieldType          SiKi                Dummy               -     -         -     ""            -
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
-typedef  ^              ^                      logical             Enabled             -  .true.       -     "" -
 typedef  ^              ^                      ReKi                RefPosition         3     -         -     "Reference position (point where box is rotated)"                 meters
 typedef  ^              ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
 typedef  ^              ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians
@@ -110,7 +112,7 @@ typedef  ^              ^                      logical             AccFieldValid
 typedef  ^              ^                      ReKi                RotToWind         {3}{3}  -         -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
 typedef  ^              ^                      ReKi                RotFromWind       {3}{3}  -         -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
 typedef  ^              ^                      UniformFieldType    Uniform             -     -         -     "Uniform Flow Data"
-typedef  ^              ^                      PointsFieldType     Points              -     -         -     "External Point Flow Data"
 typedef  ^              ^                      Grid3DFieldType     Grid3D              -     -         -     "Grid Field Wind Data"
 typedef  ^              ^                      Grid4DFieldType     Grid4D              -     -         -     "External Grid Flow Data"
+typedef  ^              ^                      PointsFieldType     Points              -     -         -     "External Point Flow Data"
 typedef  ^              ^                      UserFieldType       User                -     -         -     "User Field Wind Data"

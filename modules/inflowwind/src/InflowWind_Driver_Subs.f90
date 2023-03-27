@@ -27,6 +27,8 @@ MODULE InflowWind_Driver_Subs
 
    USE NWTC_Library
    USE InflowWind_Driver_Types
+   USE InflowWind_IO
+   USE IfW_FlowField
    IMPLICIT NONE
 
 
@@ -2417,6 +2419,191 @@ SUBROUTINE PointData_OutputWrite (OutFile, Settings, GridXYZ, GridDat, TIME, IsV
 END SUBROUTINE PointData_OutputWrite
 
 
+subroutine IfW_WriteUniform(FF, FileRootName, ErrStat, ErrMsg)
+
+   type(FlowFieldType), intent(in)  :: FF             !< Parameters
+   character(*), intent(in)         :: FileRootName   !< RootName for output files
+   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
+   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter          :: RoutineName = "IfW_WriteUniform"
+   type(UniformFieldType)           :: UF
+   integer(IntKi)                   :: unit
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Get new unit for writing file
+   call GetNewUnit(unit, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Switch based on field type
+   select case (FF%FieldType)
+
+   case (Uniform_FieldType)
+
+      call Uniform_WriteHH(FF%Uniform, FileRootName, unit, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   case (Grid3D_FieldType)
+
+      call Grid3D_to_Uniform(FF%Grid3D, UF, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat < AbortErrLev) then
+         call Uniform_WriteHH(UF, FileRootName, unit, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
+   case default
+
+      ErrStat = ErrID_Warn
+      ErrMsg = RoutineName//': Field type '//TRIM(Num2LStr(FF%FieldType))// &
+               ' cannot be converted to UniformWind format.'
+   end select
+
+end subroutine IfW_WriteUniform
+
+subroutine IfW_WriteHAWC(FF, FileRootName, ErrStat, ErrMsg)
+
+   type(FlowFieldType), intent(in)  :: FF             !< Parameters
+   character(*), intent(in)         :: FileRootName   !< RootName for output files
+   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
+   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter          :: RoutineName = "IfW_Convert2HAWC"
+   type(Grid3DFieldType)            :: G3D
+   integer(IntKi)                   :: unit
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ! Get new unit for writing file
+   call GetNewUnit(unit, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Switch based on field type
+   select case (FF%FieldType)
+
+   case (Uniform_FieldType)
+
+      call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat < AbortErrLev) then
+         call Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
+   case (Grid3D_FieldType)
+
+      call Grid3D_WriteHAWC(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+
+   case default
+
+      ErrStat = ErrID_Warn
+      ErrMsg = RoutineName//': Field Type '//TRIM(Num2LStr(FF%FieldType))// &
+               ' cannot be converted to HAWC format.'
+
+   end select
+
+end subroutine
+
+subroutine IfW_WriteBladed(FF, FileRootName, ErrStat, ErrMsg)
+
+   type(FlowFieldType), intent(in)  :: FF             !< Parameters
+   character(*), intent(in)         :: FileRootName   !< RootName for output files
+   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
+   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter          :: RoutineName = "IfW_WriteBladed"
+   type(Grid3DFieldType)            :: G3D
+   integer(IntKi)                   :: unit
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Get new unit for writing file
+   call GetNewUnit(unit, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Switch based on field type
+   select case (FF%FieldType)
+
+   case (Uniform_FieldType)
+
+      call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat < AbortErrLev) then
+         call Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
+   case (Grid3D_FieldType)
+
+      call Grid3D_WriteBladed(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+
+   case default
+
+      ErrStat = ErrID_Warn
+      ErrMsg = RoutineName//': Field type '//TRIM(Num2LStr(FF%FieldType))// &
+               ' cannot be converted to Bladed format.'
+
+   end select
+
+end subroutine
+
+
+subroutine IfW_WriteVTK(FF, FileRootName, ErrStat, ErrMsg)
+
+   type(FlowFieldType), intent(in)  :: FF             !< Parameters
+   character(*), intent(in)         :: FileRootName   !< RootName for output files
+   integer(IntKi), intent(out)      :: ErrStat        !< Error status of the operation
+   character(*), intent(out)        :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter          :: RoutineName = "IfW_WriteVTK"
+   type(Grid3DFieldType)            :: G3D
+   integer(IntKi)                   :: unit
+   integer(IntKi)                   :: ErrStat2
+   character(ErrMsgLen)             :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Get new unit for writing file
+   call GetNewUnit(unit, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   ! Switch based on field type
+   select case (FF%FieldType)
+
+   case (Uniform_FieldType)
+
+      call Uniform_to_Grid3D(FF%Uniform, FF%VelInterpCubic, G3D, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat < AbortErrLev) then
+         call Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+
+   case (Grid3D_FieldType)
+
+      call Grid3D_WriteVTK(FF%Grid3D, FileRootName, unit, ErrStat, ErrMsg)
+
+   case default
+
+      ErrStat = ErrID_Warn
+      ErrMsg = RoutineName//': Field type '//TRIM(Num2LStr(FF%FieldType))// &
+               ' cannot be converted to VTK format.'
+
+   end select
+
+end subroutine IfW_WriteVTK
 
 
 !> This routine exists only to support the development of the module.  It will not be needed after the module is complete.
