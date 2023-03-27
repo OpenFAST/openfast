@@ -9,14 +9,18 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.4.0 to OpenFAST dev 
+OpenFAST v3.4.1 to OpenFAST dev 
 ----------------------------------
+
+New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`).
 
 ============================================= ==== ================= ========================================================================================================================================================================================================
 Modified in OpenFAST `dev`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
+OpenFAST                                       13  CompElast         3   CompElast       - Compute structural dynamics (switch) {1=ElastoDyn; 2=ElastoDyn + BeamDyn for blades; 3=Simplified ElastoDyn}
+OpenFAST                                       15  CompAero          3   CompAero        - Compute aerodynamic loads (switch) {0=None; 1=AeroDyn v14; 2=AeroDyn v15; 3=AeroDisk}
 ServoDyn-StructCtrl                            6   StC_DOF_MODE      2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series; 5: Force determined by external DLL}
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
