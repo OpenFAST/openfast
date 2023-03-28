@@ -1259,11 +1259,11 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    !----------------------------------------------------------------------------
 
    G3D%AddMeanAfterInterp = .false.
-   G3D%Z0                 = G3D_InitInp%Z0
-   G3D%PLExp              = G3D_InitInp%PLExp
-   G3D%VLinShr            = G3D_InitInp%VLinShr
-   G3D%HLinShr            = G3D_InitInp%HLinShr
-   G3D%RefLength          = G3D_InitInp%RefLength
+   G3D%Z0 = G3D_InitInp%Z0
+   G3D%PLExp = G3D_InitInp%PLExp
+   G3D%VLinShr = G3D_InitInp%VLinShr
+   G3D%HLinShr = G3D_InitInp%HLinShr
+   G3D%RefLength = G3D_InitInp%RefLength
 
    if (InitInp%NativeBladedFmt) then
 
@@ -2551,15 +2551,15 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    character(*), intent(out)          :: ErrMsg          !< Error message associated with the ErrStat
 
    character(*), parameter       :: RoutineName = 'Grid3D_WriteBladed'
-   real(ReKi), parameter         :: Tolerance = 0.0001   ! The largest difference between two numbers that are assumed to be equal
+   real(SiKi), parameter         :: Tolerance = 0.0001   ! The largest difference between two numbers that are assumed to be equal
    integer(IntKi)                :: ic, it, iy, iz
-   real(ReKi), allocatable       :: MeanVal(:, :)
-   real(ReKi), allocatable       :: SigmaGrid(:, :)
-   real(ReKi)                    :: TI(3)                !< array containing turbulence intensity (for scaling factors)
-   real(ReKi)                    :: Sigma(3)             !< array containing standard deviations (for scaling factors)
-   real(ReKi)                    :: Scl(3)               !< array containing scaling factors
-   real(ReKi)                    :: Off(3)               !< array containing offsets
-   real(ReKi)                    :: Tmp
+   real(SiKi), allocatable       :: MeanVal(:, :)
+   real(SiKi), allocatable       :: SigmaGrid(:, :)
+   real(SiKi)                    :: TI(3)                !< array containing turbulence intensity (for scaling factors)
+   real(SiKi)                    :: Sigma(3)             !< array containing standard deviations (for scaling factors)
+   real(SiKi)                    :: Scl(3)               !< array containing scaling factors
+   real(SiKi)                    :: Off(3)               !< array containing offsets
+   real(SiKi)                    :: Tmp
    real(ReKi)                    :: MeanWS_nonZero       !< advection speed (mean wind speed at hub)
    real(ReKi)                    :: delta(3)
    integer(IntKi)                :: ErrStat2
@@ -2568,7 +2568,7 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   delta = [G3D%MeanWS*G3D%DTime, 1.0_SiKi/G3D%InvDY, 1.0_SiKi/G3D%InvDZ]
+   delta = [G3D%MeanWS*G3D%DTime, 1.0_ReKi/G3D%InvDY, 1.0_ReKi/G3D%InvDZ]
 
    call AllocAry(MeanVal, G3D%NYGrids, G3D%NZGrids, "MeanVal", ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2582,23 +2582,15 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    do ic = 3, 1, -1
 
       ! mean values:
-      MeanVal = 0.0_SiKi
-      do it = 1, G3D%NSteps
-         MeanVal = MeanVal + G3D%Vel(ic, :, :, it)
-      end do
-      MeanVal = MeanVal/real(G3D%NSteps, SiKi)
+      MeanVal = sum(G3D%Vel(ic, :, :, :),dim=3)/G3D%NSteps
 
       ! standard deviations (with 1/N scaling factor):
-      SigmaGrid = 0.0_SiKi
-      do it = 1, size(G3D%Vel, 4)
-         SigmaGrid = SigmaGrid + G3D%Vel(ic, :, :, it)**2
-      end do
-      SigmaGrid = SigmaGrid/G3D%NSteps
-      SigmaGrid = sqrt(max(SigmaGrid - MeanVal**2, 0.0_ReKi))
+      SigmaGrid = sum(G3D%Vel(ic, :, :, :)**2,dim=3)/G3D%NSteps
+      SigmaGrid = sqrt(max(SigmaGrid - MeanVal**2, 0.0_SiKi))
 
       ! now get the average standard deviation for each component:
       Sigma(ic) = sum(SigmaGrid)/size(SigmaGrid) ! get the average sigma over the grid
-      Sigma(ic) = max(100.0_ReKi*Tolerance, Sigma(ic)) ! make sure this scaling isn't too small
+      Sigma(ic) = max(100.0_SiKi*Tolerance, Sigma(ic)) ! make sure this scaling isn't too small
 
    end do
 
@@ -2607,10 +2599,10 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    ! in this BLADED-style binary output.  Tmp is |V-UHub|
    ! Get the range of wind speed values for scaling in BLADED-format .wnd files
    Tmp = max(abs(maxval(G3D%Vel(:, :, 1, :)) - G3D%MeanWS), abs(minval(G3D%Vel(1, :, :, :)) - G3D%MeanWS))
-   Sigma(1) = max(Sigma(1), 0.05_ReKi*Tmp)
+   Sigma(1) = max(Sigma(1), 0.05_SiKi*Tmp)
    do ic = 2, 3
       ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files
-      Sigma(ic) = max(Sigma(ic), 0.05_ReKi*abs(maxVAL(G3D%Vel(ic, :, :, :))), 0.05_ReKi*abs(minval(G3D%Vel(ic, :, :, :))))
+      Sigma(ic) = max(Sigma(ic), 0.05_SiKi*abs(maxVAL(G3D%Vel(ic, :, :, :))), 0.05_SiKi*abs(minval(G3D%Vel(ic, :, :, :))))
    end do
 
    ! Put normalizing factors into the summary file.  The user can use them to
@@ -2663,9 +2655,9 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   write (unit) INT(-99, B2Ki)               ! -99 = New Bladed format
-   write (unit) INT(4, B2Ki)               ! 4 = improved von karman (not used, but needed for next 7 inputs)
-   write (unit) INT(size(G3D%Vel, 3), B4Ki)               ! size(FFWind,3) = 3 = number of wind components
+   write (unit) int(-99, B2Ki)               ! -99 = New Bladed format
+   write (unit) int(4, B2Ki)               ! 4 = improved von karman (not used, but needed for next 7 inputs)
+   write (unit) int(size(G3D%Vel, 3), B4Ki)               ! size(FFWind,3) = 3 = number of wind components
    write (unit) real(45.0_SiKi, SiKi)               ! Latitude (degrees)   (informational, not used in FAST)
    write (unit) real(0.03_SiKi, SiKi)               ! Roughness length (m) (informational, not used in FAST)
    write (unit) real(G3D%RefHeight, SiKi)               ! Reference Height (m) (informational, not used in FAST)
@@ -2676,28 +2668,28 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    write (unit) real(delta(3), SiKi)               ! grid spacing in vertical direction, in m
    write (unit) real(delta(2), SiKi)               ! grid spacing in lateral direction, in m
    write (unit) real(delta(1), SiKi)               ! grid spacing in longitudinal direciton, in m
-   write (unit) INT(G3D%NSteps/2, B4Ki)               ! half the number of points in alongwind direction
+   write (unit) int(G3D%NSteps/2, B4Ki)               ! half the number of points in alongwind direction
    write (unit) real(MeanWS_nonZero, SiKi)               ! the mean wind speed in m/s
    write (unit) real(0, SiKi)               ! the vertical length scale of the longitudinal component in m
    write (unit) real(0, SiKi)               ! the lateral length scale of the longitudinal component in m
    write (unit) real(0, SiKi)               ! the longitudinal length scale of the longitudinal component in m
-   write (unit) INT(0, B4Ki)               ! an unused integer
-   write (unit) INT(0, B4Ki)               ! the random number seed
-   write (unit) INT(G3D%NZGrids, B4Ki)               ! the number of grid points vertically
-   write (unit) INT(G3D%NYGrids, B4Ki)               ! the number of grid points laterally
-   write (unit) INT(0, B4Ki)               ! the vertical length scale of the lateral component, not used
-   write (unit) INT(0, B4Ki)               ! the lateral length scale of the lateral component, not used
-   write (unit) INT(0, B4Ki)               ! the longitudinal length scale of the lateral component, not used
-   write (unit) INT(0, B4Ki)               ! the vertical length scale of the vertical component, not used
-   write (unit) INT(0, B4Ki)               ! the lateral length scale of the vertical component, not used
-   write (unit) INT(0, B4Ki)               ! the longitudinal length scale of the vertical component, not used
+   write (unit) int(0, B4Ki)               ! an unused integer
+   write (unit) int(0, B4Ki)               ! the random number seed
+   write (unit) int(G3D%NZGrids, B4Ki)               ! the number of grid points vertically
+   write (unit) int(G3D%NYGrids, B4Ki)               ! the number of grid points laterally
+   write (unit) int(0, B4Ki)               ! the vertical length scale of the lateral component, not used
+   write (unit) int(0, B4Ki)               ! the lateral length scale of the lateral component, not used
+   write (unit) int(0, B4Ki)               ! the longitudinal length scale of the lateral component, not used
+   write (unit) int(0, B4Ki)               ! the vertical length scale of the vertical component, not used
+   write (unit) int(0, B4Ki)               ! the lateral length scale of the vertical component, not used
+   write (unit) int(0, B4Ki)               ! the longitudinal length scale of the vertical component, not used
 
    ! Scaling value to convert wind speeds to 16-bit integers
    do ic = 1, 3
-      if (.not. EqualRealNos(Sigma(ic), 0.0_ReKi)) then
+      if (.not. EqualRealNos(Sigma(ic), 0.0_SiKi)) then
          Scl(ic) = 1000.0/(Sigma(ic))
       else
-         Scl(ic) = 1.0_ReKi
+         Scl(ic) = 1.0_SiKi
       end if
    end do
 
@@ -2744,14 +2736,13 @@ subroutine Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat, ErrMsg)
    character(ErrMsgLen)                   :: ErrMsg2
 
    call GetPath(FileRootName, RootPathName)
+   RootPathName = trim(RootPathName)//PathSep//"vtk"
+   call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
 
    ! Loop through time steps
    do i = 1, G3D%NSteps
 
       ! Create the output vtk file with naming <WindFilePath>/vtk/DisYZ.t<i>.vtk
-      RootPathName = trim(RootPathName)//PathSep//"vtk"
-      call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
-
       FileName = trim(RootPathName)//PathSep//"DisYZ.t"//trim(num2lstr(i))//".vtp"
 
       ! see WrVTK_SP_header
@@ -2768,7 +2759,7 @@ subroutine Grid3D_WriteVTK(G3D, FileRootName, unit, ErrStat, ErrMsg)
       ! and the right-most dimension is Z (see WrVTK_SP_vectors3D)
       write (unit, '(A,3(i5,1X))') 'DIMENSIONS ', 1, G3D%NYGrids, G3D%NZGrids
       write (unit, '(A,3(f10.2,1X))') 'ORIGIN ', G3D%InitXPosition, -G3D%YHWid, G3D%GridBase
-      write (unit, '(A,3(f10.2,1X))') 'SPACING ', 0.0_ReKi, 1.0_SiKi/G3D%InvDY, 1.0_SiKi/G3D%InvDZ
+      write (unit, '(A,3(f10.2,1X))') 'SPACING ', 0.0_ReKi, 1.0_ReKi/G3D%InvDY, 1.0_ReKi/G3D%InvDZ
       write (unit, '(A,i5)') 'POINT_DATA ', G3D%NYGrids*G3D%NZGrids
       write (unit, '(A)') 'VECTORS DisYZ float'
 
@@ -2796,7 +2787,7 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
    character(*), parameter       :: Comp(3) = (/'u', 'v', 'w'/)
    real(ReKi)                    :: delta(3)
    integer(IntKi)                :: IC, IX, IY, IZ
-   real(ReKi), allocatable       :: MeanVal(:)
+   real(SiKi), allocatable       :: MeanVal(:)
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(1024)               :: RootWithoutPathName
@@ -2863,7 +2854,7 @@ subroutine Grid3D_WriteHAWC(G3D, FileRootName, unit, ErrStat, ErrMsg)
 
       do IX = 1, G3D%NSteps
          do IY = G3D%NYGrids, 1, -1
-            write (unit, IOSTAT=ErrStat2) G3D%Vel(ic, iy, :, ix) - MeanVal
+            write (unit, IOSTAT=ErrStat2) real(G3D%Vel(ic, iy, :, ix) - MeanVal, SiKi)
          end do
       end do
 

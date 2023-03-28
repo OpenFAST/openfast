@@ -1504,8 +1504,8 @@ subroutine Uniform_to_Grid3D(UF, InterpCubic, G3D, ErrStat, ErrMsg)
       G3D%DTime = 600.0_ReKi     ! doesn't matter what the time step is
       G3D%NSteps = 2             ! "Number of time steps in the FF array
    else
+      G3D%DTime = minval(UF%Time(2:) - UF%Time(:size(UF%Time) - 1))   ! Delta time (seconds)
       if (G3D%DTime < 0.0001) then
-         G3D%DTime = minval(UF%Time(2:) - UF%Time(:size(UF%Time) - 1))   ! Delta time (seconds)
          call SetErrStat(ErrID_Fatal, "Smallest time step in uniform wind file is less that 0.0001 seconds. "// &
                          "Increase the time step to convert to a FF file.", ErrStat, ErrMsg, RoutineName)
          return
@@ -1521,7 +1521,7 @@ subroutine Uniform_to_Grid3D(UF, InterpCubic, G3D, ErrStat, ErrMsg)
    G3D%TotalTime = (G3D%NSteps - 1)*G3D%DTime   ! The total time of the simulation (seconds)
 
    ! Allocate velocity array
-   call AllocAry(G3D%Vel, G3D%NZGrids, G3D%NYGrids, G3D%NComp, G3D%NSteps, 'G3D%Vel', ErrStat2, ErrMsg2)
+   call AllocAry(G3D%Vel, G3D%NComp, G3D%NYGrids, G3D%NZGrids, G3D%NSteps, 'G3D%Vel', ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -1553,9 +1553,14 @@ subroutine Uniform_to_Grid3D(UF, InterpCubic, G3D, ErrStat, ErrMsg)
             ! Calculate Z position
             PositionXYZ(3) = (iz - 1)*dz + G3D%GridBase
 
-            ! Calculate velocity at operating point and position, store in grid
-            G3D%Vel(:, iy, iz, it) = real(UniformField_GetVel(UF, op, PositionXYZ), SiKi)
-
+            ! If Z is zero or less
+            if (PositionXYZ(3) <= 0.0_Reki) then
+               ! Set wind velocity to zero
+               G3D%Vel(:, iy, iz, it) = 0.0_SiKi
+            else
+               ! Calculate velocity at operating point and position, store in grid
+               G3D%Vel(:, iy, iz, it) = real(UniformField_GetVel(UF, op, PositionXYZ), SiKi)
+            end if
          end do ! iz
       end do ! iy
    end do ! it
@@ -1656,11 +1661,8 @@ subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
    iz_ref = nint((G3D%RefHeight - G3D%GridBase)*G3D%InvDZ) + 1
    UF%RefHeight = G3D%GridBase + (iz_ref - 1)/G3D%InvDZ ! make sure RefHt is on the grid
 
-   meanVel = 0.0_ReKi
-   do i = 1, UF%DataSize
-      meanVel = meanVel + G3D%Vel(iz_ref, iy_ref, :, i)
-   end do
-   meanVel = meanVel/UF%DataSize
+   ! Calculate mean value for each component through
+   meanVel = sum(G3D%Vel(:, iy_ref, iz_ref, :), dim=2)/UF%DataSize
 
    ! calculate the average upflow angle
    UF%AngleV = atan2(meanVel(3), TwoNorm(meanVel(1:2)))
@@ -1682,7 +1684,7 @@ subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
    do i = 1, size(Vel, 4)
       do iy = 1, size(Vel, 2)
          do iz = 1, size(Vel, 1)
-            Vel(iz, iy, :, i) = matmul(transformMat, G3D%Vel(iz, iy, :, i))
+            Vel(iz, iy, :, i) = matmul(transformMat, G3D%Vel(:, iy, iz, i))
          end do
       end do
    end do
@@ -1743,11 +1745,6 @@ subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
          UF%ShrV = log(u_p1/meanVel(1))/log(z_p1/UF%RefHeight)
       end if
    end if
-
-   ! clean up
-
-   if (allocated(Vel)) deallocate (Vel)
-   if (allocated(tmp)) deallocate (tmp)
 
 end subroutine Grid3D_to_Uniform
 
