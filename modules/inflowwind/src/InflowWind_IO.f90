@@ -715,6 +715,19 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
+      if (G3D%BoxExceedAllowF) then
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
+            'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             given timestep and X,T value. Values above grid are held to top of wind'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             grid value'
+      else
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  False'
+      end if
+
       ! Get IO status for unit
       inquire (SumFileUnit, iostat=TmpErrStat)
       if (TmpErrStat /= 0_IntKi) then
@@ -928,6 +941,19 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
          TRIM(Num2LStr(-G3D%YHWid))//' : '//TRIM(Num2LStr(G3D%YHWid))//' ]'
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
+
+      IF ( G3D%BoxExceedAllowF ) THEN
+         WRITE(SumFileUnit,'(A)')    '     Wind grid exceedence allowed:  '// &
+                     'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         WRITE(SumFileUnit,'(A)')    '                                    '// &
+                     '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         WRITE(SumFileUnit,'(A)')    '                                    '// &
+                     '             given timestep and X,T value. Values above grid are held to top of wind'
+         WRITE(SumFileUnit,'(A)')    '                                    '// &
+                     '             grid value'
+      ELSE
+         WRITE(SumFileUnit,'(A)')    '     Wind grid exceedence allowed:  False'
+      ENDIF
 
       write (SumFileUnit, '(A)') 'Scaling factors used:'
       write (SumFileUnit, '(A)') '  u           v           w       '
@@ -1343,6 +1369,20 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
       else
          write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
+      end if
+
+      if (G3D%BoxExceedAllowF) then
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
+            'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             given timestep and X,T value. Values above grid are held to top of wind'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             grid value'
+      else
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
+            'False'
       end if
 
       ! We are assuming that if the last line was written ok, then all of them were.
@@ -2582,10 +2622,10 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    do ic = 3, 1, -1
 
       ! mean values:
-      MeanVal = sum(G3D%Vel(ic, :, :, :),dim=3)/G3D%NSteps
+      MeanVal = sum(G3D%Vel(ic, :, :, :), dim=3)/G3D%NSteps
 
       ! standard deviations (with 1/N scaling factor):
-      SigmaGrid = sum(G3D%Vel(ic, :, :, :)**2,dim=3)/G3D%NSteps
+      SigmaGrid = sum(G3D%Vel(ic, :, :, :)**2, dim=3)/G3D%NSteps
       SigmaGrid = sqrt(max(SigmaGrid - MeanVal**2, 0.0_SiKi))
 
       ! now get the average standard deviation for each component:

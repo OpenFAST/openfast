@@ -88,6 +88,8 @@ typedef  ^                       ^                 LOGICAL           OutputAccel
 typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^              Grid4D_InitInputType FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 IntKi             BoxExceedAllowIdx    -  -1       -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^                       ^                 LOGICAL           BoxExceedAllowF      -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 
 
 # Init Output
@@ -153,7 +155,8 @@ typedef  ^                    OtherStateType       ReKi              DummyOtherS
 typedef  ^                       MiscVarType       ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
 typedef  ^                       ^                 ReKi              WindAiUVW         ::    -     -     "List of UVW accelerations for wind acceleration measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  m/s^2
-typedef  ^                    MiscVarType          InflowWind_InputType  u_Avg             -     -     -     "inputs for computing rotor-averaged values"  -
-typedef  ^                    MiscVarType          InflowWind_OutputType y_Avg             -     -     -     "outputs for computing rotor-averaged values"  -
-typedef  ^                    MiscVarType          InflowWind_InputType  u_Hub             -     -     -     "inputs for computing hub values"  -
-typedef  ^                    MiscVarType          InflowWind_OutputType y_Hub             -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 InflowWind_InputType  u_Avg         -     -     -     "inputs for computing rotor-averaged values"  -
+typedef  ^                       ^                 InflowWind_OutputType y_Avg         -     -     -     "outputs for computing rotor-averaged values"  -
+typedef  ^                       ^                 InflowWind_InputType  u_Hub         -     -     -     "inputs for computing hub values"  -
+typedef  ^                       ^                 InflowWind_OutputType y_Hub         -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 LOGICAL           BoxExceedWarned   -  .FALSE.  -     "Has a warning been issued for points extrapolated beyond FFWind grid" -

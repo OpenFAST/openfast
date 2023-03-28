@@ -106,6 +106,8 @@ IMPLICIT NONE
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
     REAL(ReKi)  :: RadAvg      !< Radius (from hub) used for averaging wind speed [-]
+    INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -904,6 +906,8 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RadAvg = SrcInitInputData%RadAvg
+    DstInitInputData%BoxExceedAllowIdx = SrcInitInputData%BoxExceedAllowIdx
+    DstInitInputData%BoxExceedAllowF = SrcInitInputData%BoxExceedAllowF
  END SUBROUTINE InflowWind_CopyInitInput
 
  SUBROUTINE InflowWind_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1052,6 +1056,8 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Re_BufSz   = Re_BufSz   + 1  ! RadAvg
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1217,6 +1223,10 @@ ENDIF
       ENDIF
     ReKiBuf(Re_Xferred) = InData%RadAvg
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedAllowF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_PackInitInput
 
  SUBROUTINE InflowWind_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1431,6 +1441,10 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%RadAvg = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BoxExceedAllowF = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedAllowF)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_UnPackInitInput
 
  SUBROUTINE InflowWind_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

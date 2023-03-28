@@ -413,6 +413,8 @@ PROGRAM InflowWind_Driver
    END IF
    InflowWind_InitInp%RootName = trim(InflowWind_InitInp%RootName)//'.IfW'
    InflowWind_InitInp%RadAvg = -1.0_ReKi ! let the IfW code guess what to use
+   InflowWind_InitInp%BoxExceedAllowF  = SettingsFlags%BoxExceedAllowF  ! Set flag for allowing points outside the wind box (alternate interpolation method for FF)
+   if (InflowWind_InitInp%BoxExceedAllowF) InflowWind_InitInp%BoxExceedAllowIdx = 1_IntKi
    
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
