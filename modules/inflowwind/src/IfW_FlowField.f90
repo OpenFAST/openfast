@@ -988,9 +988,13 @@ contains
       ! in distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
       TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
-      ! If field is periodic and time is after total time, remove total time
-      if (G3D%Periodic .and. TimeShifted > G3D%TotalTime) then
-         TimeShifted = TimeShifted - G3D%TotalTime
+      ! If field is periodic
+      if (G3D%Periodic) then
+         TimeShifted = MODULO(TimeShifted, G3D%TotalTime)
+         ! If TimeShifted is a very small negative number, 
+         ! modulo returns the incorrect value due to internal rounding errors.
+         ! See bug report #471
+         if (TimeShifted == G3D%TotalTime) TimeShifted = 0.0_ReKi
       end if
 
       ! Get position on T grid
