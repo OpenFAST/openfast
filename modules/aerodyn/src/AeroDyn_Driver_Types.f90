@@ -144,6 +144,7 @@ IMPLICIT NONE
     LOGICAL  :: basicHAWTFormat      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
     LOGICAL  :: hasTower      !<  [-]
     INTEGER(IntKi)  :: projMod      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
+    INTEGER(IntKi)  :: BEM_Mod      !< Switch for different BEM implementations [-]
     LOGICAL  :: HAWTprojection      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
@@ -2395,6 +2396,7 @@ ENDIF
     DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
     DstWTDataData%hasTower = SrcWTDataData%hasTower
     DstWTDataData%projMod = SrcWTDataData%projMod
+    DstWTDataData%BEM_Mod = SrcWTDataData%BEM_Mod
     DstWTDataData%HAWTprojection = SrcWTDataData%HAWTprojection
     DstWTDataData%motionType = SrcWTDataData%motionType
 IF (ALLOCATED(SrcWTDataData%motion)) THEN
@@ -2690,6 +2692,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! basicHAWTFormat
       Int_BufSz  = Int_BufSz  + 1  ! hasTower
       Int_BufSz  = Int_BufSz  + 1  ! projMod
+      Int_BufSz  = Int_BufSz  + 1  ! BEM_Mod
       Int_BufSz  = Int_BufSz  + 1  ! HAWTprojection
       Int_BufSz  = Int_BufSz  + 1  ! motionType
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
@@ -3004,6 +3007,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%hasTower, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%projMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BEM_Mod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%HAWTprojection, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -3472,6 +3477,8 @@ ENDIF
     OutData%hasTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%hasTower)
     Int_Xferred = Int_Xferred + 1
     OutData%projMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%HAWTprojection = TRANSFER(IntKiBuf(Int_Xferred), OutData%HAWTprojection)
     Int_Xferred = Int_Xferred + 1
