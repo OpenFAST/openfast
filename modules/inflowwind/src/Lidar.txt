@@ -37,18 +37,18 @@ typedef	^	Lidar_ParameterType	ReKi	DeltaP    	     -      -	   -	"the distance b
 typedef	^	Lidar_ParameterType	ReKi	DeltaR    	     -      -	   -	"the FWHM width of the pulse"
 typedef	^	Lidar_ParameterType	ReKi	r_p	             -      -	   -
 typedef	^	Lidar_ParameterType	LOGICAL	LidRadialVel	     -      -      -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef	^       Lidar_ParameterType	ReKi	DisplacementLidarX   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
-typedef	^       Lidar_ParameterType	ReKi	DisplacementLidarY   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
-typedef	^       Lidar_ParameterType	ReKi	DisplacementLidarZ   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
-typedef ^       Lidar_ParameterType     IntKi   NumBeam              -      -      -   "Number of lidar beams"	-
-typedef ^       Lidar_ParameterType     ReKi    FocalDistanceX       :      -      -   "LIDAR LOS focal distance co-ordinates in the x direction" "m"
-typedef ^       Lidar_ParameterType     ReKi    FocalDistanceY       :      -      -   "LIDAR LOS focal distance co-ordinates in the y direction" "m"
-typedef ^       Lidar_ParameterType     ReKi    FocalDistanceZ       :      -      -   "LIDAR LOS focal distance co-ordinates in the z direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarX   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarY   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarZ   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	IntKi	NumBeam              -      -      -   "Number of lidar beams"	-
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceX       :      -      -   "LIDAR LOS focal distance co-ordinates in the x direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceY       :      -      -   "LIDAR LOS focal distance co-ordinates in the y direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceZ       :      -      -   "LIDAR LOS focal distance co-ordinates in the z direction" "m"
 typedef	^	Lidar_ParameterType	ReKi	MsrPosition      {:}{:}     -      -	"Position of the desired wind measurement (was XMsrPt, YMsrPt, ZMsrPt)"	"m"
-typedef ^       Lidar_ParameterType     ReKi    PulseSpacing         -      -      -   "Distance between range gates" "m"
-typedef ^	Lidar_ParameterType	ReKi	URefLid		     -      -      -	"Reference average wind speed for the lidar" "m/s"
-typedef	^       Lidar_ParameterType	IntKi	ConsiderHubMotion    -      -      -	"Flag whether to consider the hub motion's impact on the Lidar measurement"	-
-typedef ^	Lidar_ParameterType	ReKi	MeasurementInterval  -      -      -	"Time steps between lidar measurements" "s"
+typedef	^	Lidar_ParameterType	ReKi	PulseSpacing         -      -      -   "Distance between range gates" "m"
+typedef	^	Lidar_ParameterType	ReKi	URefLid		     -      -      -	"Reference average wind speed for the lidar" "m/s"
+typedef	^	Lidar_ParameterType	IntKi	ConsiderHubMotion    -      -      -	"Flag whether to consider the hub motion's impact on the Lidar measurement"	-
+typedef	^	Lidar_ParameterType	ReKi	MeasurementInterval  -      -      -	"Time steps between lidar measurements" "s"
 typedef	^	Lidar_ParameterType	ReKi	LidPosition	    {3}     -	   -	"Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt)" "m"
 
 
@@ -69,7 +69,7 @@ typedef ^       MiscVarType             ReKi     DummyMiscVar     -     -     - 
 
 
 # ..... LIDAR_InputType data .......................................................................................................
-typedef	^	Lidar_InputType     	ReKi	PulseLidEl	  -	-     -	 "the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis)"
+typedef	^	Lidar_InputType	        ReKi	PulseLidEl	  -	-     -	 "the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis)"
 typedef	^	Lidar_InputType	        ReKi	PulseLidAz	  -	-     -	 "the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis)"
 typedef	^	Lidar_InputType	        ReKi	HubDisplacementX  -	-     -	 "X direction hub displacement of the lidar (from ElastoDyn)" "m"
 typedef	^	Lidar_InputType	        ReKi	HubDisplacementY  -	-     -	 "Y direction hub displacement of the lidar (from ElastoDyn)" "m"
@@ -81,4 +81,4 @@ typedef	^	Lidar_OutputType	ReKi	WtTrunc	         {:}	-     -	 "Contains the frac
 typedef	^	Lidar_OutputType	ReKi	MsrPositionsX	 {:}	-     -	 "Lidar X direction measurement points" "m"
 typedef	^	Lidar_OutputType	ReKi	MsrPositionsY	 {:}	-     -	 "Lidar Y direction measurement points" "m"
 typedef	^	Lidar_OutputType	ReKi	MsrPositionsZ	 {:}	-     -	 "Lidar Z direction measurement points" "m"
-#typedef ^	Lidar_OutputType	IntKi	LidErr	         {:}	-     -	 "Error code; THIS NEEDS TO GET FIXED (no integer outputs)"
+#typedef	^	Lidar_OutputType	IntKi	LidErr	         {:}	-     -	 "Error code; THIS NEEDS TO GET FIXED (no integer outputs)"

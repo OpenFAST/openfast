@@ -95,15 +95,15 @@ typedef  ^                       ^                 CHARACTER(ChanLen) OutList   
 typedef  ^                       ^                 IntKi             SensorType        -     -     -     "Sensor type (for lidar/sensor module)"                  -
 typedef  ^                       ^                 IntKi             NumBeam           -     -     -     "Number of lidar beams"                                  -
 typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "The number of range gates to return wind speeds at"     -
-typedef  ^                       ^                 ReKi              RotorApexOffsetPos {3}  -     -     "Position of the lidar unit relative to the rotor apex of rotation"	m
-typedef  ^                       ^                 ReKi              FocalDistanceX    :     -     -     "LIDAR LOS focal distance co-ordinates in the x direction"	m
-typedef  ^                       ^                 ReKi              FocalDistanceY    :     -     -     "LIDAR LOS focal distance co-ordinates in the y direction"	m
-typedef  ^                       ^                 ReKi              FocalDistanceZ    :     -     -     "LIDAR LOS focal distance co-ordinates in the z direction"	m 
-typedef  ^                       ^                 ReKi              PulseSpacing      -     -     -     "Distance between range gates" 	                  m
-typedef	 ^			 ^                 ReKi	             MeasurementInterval -   -	   -  	 "Time between each measurement"	                  s
-typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar"             m/s 
-typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"                  - 
-typedef	 ^			 ^                 IntKi	     ConsiderHubMotion -     -	   -	 "Flag whether or not the hub motion's impact on the Lidar measurement will be considered"  -
+typedef  ^                       ^                 ReKi              RotorApexOffsetPos {3}  -     -     "Position of the lidar unit relative to the rotor apex of rotation" m
+typedef  ^                       ^                 ReKi              FocalDistanceX    :     -     -     "LIDAR LOS focal distance co-ordinates in the x direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceY    :     -     -     "LIDAR LOS focal distance co-ordinates in the y direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceZ    :     -     -     "LIDAR LOS focal distance co-ordinates in the z direction" m 
+typedef  ^                       ^                 ReKi              PulseSpacing      -     -     -     "Distance between range gates" m
+typedef  ^                       ^                 ReKi              MeasurementInterval -   -    -      "Time between each measurement" s
+typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar" m/s 
+typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate" - 
+typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes]" -
 typedef  ^                       ^                 IfW_FFWind_InitInputType     FF     -     -     -     "scaling data" -
 
 
