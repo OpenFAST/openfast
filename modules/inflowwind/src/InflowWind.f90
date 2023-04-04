@@ -193,11 +193,11 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       EchoFileName  = TRIM(p%RootFileName)//".ech"
       SumFileName   = TRIM(p%RootFileName)//".sum"
 
-         ! these values (and others hard-coded in lidar_init) should be set in the input file, too
-      InputFileData%SensorType = InitInp%lidar%SensorType
-      InputFileData%NumPulseGate = InitInp%lidar%NumPulseGate
-      InputFileData%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
-      InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
+
+
+
+
+
 
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
       CALL GetPath( InitInp%InputFileName, PriPath )
@@ -240,6 +240,20 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       END IF
 
          ! initialize sensor data:   
+         p%lidar%NumBeam = InputFileData%NumBeam
+         p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
+         p%lidar%SensorType = InputFileData%SensorType      
+         p%lidar%LidRadialVel   = InputFileData%LidRadialVel
+         p%lidar%NumPulseGate = InputFileData%NumPulseGate
+         p%lidar%FocalDistanceX =  InputFileData%FocalDistanceX
+         p%lidar%FocalDistanceY =  InputFileData%FocalDistanceY
+         p%lidar%FocalDistanceZ =  InputFileData%FocalDistanceZ
+         p%lidar%MeasurementInterval = InputFileData%MeasurementInterval
+         p%lidar%PulseSpacing = InputFileData%PulseSpacing
+         p%lidar%URefLid = InputFileData%URefLid
+         p%lidar%ConsiderHubMotion = InputFileData%ConsiderHubMotion  
+         
+         
       CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
                        y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
