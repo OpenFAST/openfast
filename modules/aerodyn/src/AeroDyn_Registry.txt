@@ -83,6 +83,7 @@ typedef	^	RotInitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM referenc
 typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference position of nacelle"	m
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
+typedef	^	RotInitInputType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
 
 typedef	^	InitInputType	RotInitInputType rotors	{:}	-	-	"Init Input Types for rotors"	-
 typedef	^	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
@@ -302,7 +303,8 @@ typedef	^	RotMiscVarType	MeshType	TwrBuoyLoadPoint	-	-	-	"point mesh for lumped 
 typedef	^	RotMiscVarType	MeshType	TwrBuoyLoad	-	-	-	"line mesh for per unit length buoyant tower loads"	-
 typedef	^	RotMiscVarType	MeshMapType	T_P_2_T_L	-	-	-	"mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad)"
 typedef	^	RotMiscVarType	Logical	FirstWarn_TowerStrike	-	-	-	"flag to avoid printing tower strike multiple times" -
-typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W"	m/s
+typedef	^	RotMiscVarType	ReKi	AvgDiskVel	{3}	-	-	"disk-averaged U,V,W (undisturbed)"	m/s
+typedef	^	RotMiscVarType	ReKi	AvgDiskVelDist	{3}	-	-	"disk-averaged U,V,W (disturbed)"	m/s
 # TailFin
 typedef	^	RotMiscVarType	ReKi	TFinAlpha	-	-	-	"Angle of attack for tailfin"
 typedef	^	RotMiscVarType	ReKi	TFinRe   	-	-	-	"Reynolds number for tailfin"
@@ -370,6 +372,7 @@ typedef ^   RotParameterType    ReKi    Pvap      -   -   -  "Vapour pressure" P
 typedef ^   RotParameterType    ReKi    WtrDpth -  -   -     "Water depth" m
 typedef ^   RotParameterType    ReKi    MSL2SWL -  -   -     "Offset between still-water level and mean sea level" m
 typedef	^	RotParameterType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
+typedef	^	RotParameterType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
 # parameters for output
 typedef	^	RotParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	RotParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
