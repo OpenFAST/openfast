@@ -750,9 +750,9 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
    IF ( IfWDriver_Verbose >= 5_IntKi )    CALL WrScr(NewLine//'Calling InflowWind_CalcOutput...'//NewLine)
 
 
-   DO ITime =  1, MAX( Settings%NumTimeSteps, 1_IntKi )
+   DO ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
 
-      TimeNow  =  Settings%TStart + Settings%DT*(ITime - 1)
+      TimeNow  =  Settings%TStart + Settings%DT*(ITime)
 
       IF ( SettingsFlags%WindGrid ) THEN
 
