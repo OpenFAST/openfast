@@ -130,6 +130,7 @@ typedef  ^                       ^                 IntKi             NumOuts    
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
 typedef  ^                       ^               lidar_ParameterType lidar             -     -     -     "Lidar parameter data"                                       -
+typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
 
 
 # ..... Inputs ....................................................................................................................
