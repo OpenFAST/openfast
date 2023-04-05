@@ -118,8 +118,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
          !.... Lidar data (unused) ....
       ExternInitData%Tmax = InitInp%TMax
-      ExternInitData%SensorType = SensorType_None
-      ExternInitData%LidRadialVel = .false.
+
       
          !.... supercontroller ....
       if ( InitInp%UseSC ) then

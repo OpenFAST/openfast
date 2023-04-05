@@ -172,11 +172,11 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    EchoFileName  = TRIM(p%RootFileName)//".ech"
    SumFileName   = TRIM(p%RootFileName)//".sum"
 
-   ! these values (and others hard-coded in lidar_init) should be set in the input file, too
-   InputFileData%SensorType = InitInp%lidar%SensorType
-   InputFileData%NumPulseGate = InitInp%lidar%NumPulseGate
-   InputFileData%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
-   InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
+
+
+
+
+
 
    ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
    CALL GetPath( InitInp%InputFileName, PriPath )
@@ -213,28 +213,51 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       InputFileData%VelInterpCubic = .false.
    END IF
 
-   ! initialize sensor data
-   CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
-                     y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
-   
-   ! Validate the InflowWind input file information
-   CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) THEN
-      CALL Cleanup()
-      RETURN
-   ENDIF
-   
-   ! If a summary file was requested, open it and write preliminary data.
-   IF ( InputFileData%SumPrint ) THEN
-      CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
+         ! initialize sensor data:   
+         p%lidar%NumBeam = InputFileData%NumBeam
+         p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
+         p%lidar%SensorType = InputFileData%SensorType      
+         p%lidar%LidRadialVel   = InputFileData%LidRadialVel
+         p%lidar%NumPulseGate = InputFileData%NumPulseGate
+         p%lidar%FocalDistanceX =  InputFileData%FocalDistanceX
+         p%lidar%FocalDistanceY =  InputFileData%FocalDistanceY
+         p%lidar%FocalDistanceZ =  InputFileData%FocalDistanceZ
+         p%lidar%MeasurementInterval = InputFileData%MeasurementInterval
+         p%lidar%PulseSpacing = InputFileData%PulseSpacing
+         p%lidar%URefLid = InputFileData%URefLid
+         p%lidar%ConsiderHubMotion = InputFileData%ConsiderHubMotion  
+         
+         
+      CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
+                       y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
+      
+
+         ! Validate the InflowWind input file information.
+
+      CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         
+      IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       ENDIF
-   ENDIF
+
+
+      
+         ! If a summary file was requested, open it.
+      IF ( InputFileData%SumPrint ) THEN
+
+            ! Open the summary file and write some preliminary info to it
+         CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            ENDIF
+      ELSE
+         SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
+      ENDIF
 
    ! Allocate the array for passing points
    CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )

@@ -85,7 +85,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKCoord    , 'VTKCoord'           ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,sDummy          , 'VTK_fps'            ,''             ,ErrStat2,ErrMsg2); if(Failed())return
-   Inp%DTvtk = Get_DTvtk( sDummy, p%DTaero, Inp%DTfvw )
+   if (Inp%WrVTK==2 .or. Inp%WrVTK==0) then
+      Inp%DTvtk = HUGE(1.0_DbKi)
+   else
+      Inp%DTvtk = Get_DTvtk( sDummy, p%DTaero, Inp%DTfvw )
+   endif
 
    CALL ReadVarWDefault(UnIn,FileName,p%nGridOut      , 'nGridOut'           ,'',     0      ,ErrStat2,ErrMsg2);
    if (ErrStat2/=ErrID_None) then

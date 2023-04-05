@@ -2098,11 +2098,6 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
     real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
     real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
     real(ReKi), intent(inout)   :: cantAngle(n)
-     
-    !dimension       :: f(n),xi(n), sortInd(n), cx(stencilSize),cf(stencilSize), xiIn(stencilSize)
-    !dimension       :: cantAngle(n), fIn(stencilSize), cPrime(n), fPrime(n), indexIn(stencilSize), xiAbs(n)
-    
-
     
     do i = 1,size(xi)
         
