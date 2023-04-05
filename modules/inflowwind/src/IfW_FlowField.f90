@@ -176,7 +176,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          ! If height < zero, set velocity/acceleration to zero, continue
          if (Position(3, i) <= 0.0_ReKi) then
             VelocityUVW(:, i) = 0.0_ReKi
-            AccelUVW(:, i) = 0.0_ReKi
+            if (OutputAccel) AccelUVW(:, i) = 0.0_ReKi
             cycle
          end if
 
