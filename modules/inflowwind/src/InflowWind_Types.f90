@@ -337,6 +337,7 @@ ENDIF
     DstInputFileData%MeasurementInterval = SrcInputFileData%MeasurementInterval
     DstInputFileData%URefLid = SrcInputFileData%URefLid
     DstInputFileData%LidRadialVel = SrcInputFileData%LidRadialVel
+    DstInputFileData%ConsiderHubMotion = SrcInputFileData%ConsiderHubMotion
       CALL InflowWind_IO_Copygrid3d_initinputtype( SrcInputFileData%FF, DstInputFileData%FF, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -374,6 +375,15 @@ IF (ALLOCATED(InputFileData%WindVziList)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceX)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceX)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceY)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceY)
+ENDIF
+IF (ALLOCATED(InputFileData%FocalDistanceZ)) THEN
+  DEALLOCATE(InputFileData%FocalDistanceZ)
 ENDIF
   CALL InflowWind_IO_Destroygrid3d_initinputtype( InputFileData%FF, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -731,7 +741,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL IfW_FFWind_PackInitInput( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, OnlySize ) ! FF 
+    IntKiBuf(Int_Xferred) = InData%ConsiderHubMotion
+    Int_Xferred = Int_Xferred + 1
+      CALL InflowWind_IO_Packgrid3d_initinputtype( Re_Buf, Db_Buf, Int_Buf, InData%FF, ErrStat2, ErrMsg2, OnlySize ) ! FF 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
