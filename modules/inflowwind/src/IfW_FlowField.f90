@@ -42,7 +42,7 @@ contains
 !! Accelerations are only calculated if the AccelUVW array is allocated.
 subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
 
-   type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
+   type(FlowFieldType), intent(inout)        :: FF                !< FlowField data structure
    integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
    real(DbKi), intent(in)                    :: Time              !< Time to evaluate velocities/accelerations
    real(ReKi), intent(in)                    :: PositionXYZ(:, :) !< Array of positions to evaluate velocites/accelerations
@@ -170,31 +170,44 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! Grid3D Flow Field
       !-------------------------------------------------------------------------
 
-      if (OutputAccel) then
+      ! Loop through points
+      do i = 1, NumPoints
 
-         ! Loop through points
-         do i = 1, NumPoints
+         ! If height < zero, set velocity/acceleration to zero, continue
+         if (Position(3, i) <= 0.0_ReKi) then
+            VelocityUVW(:, i) = 0.0_ReKi
+            AccelUVW(:, i) = 0.0_ReKi
+            cycle
+         end if
 
-            ! If height < zero, set velocity/acceleration to zero, continue
-            if (Position(3, i) <= 0.0_ReKi) then
-               VelocityUVW(:, i) = 0.0_ReKi
-               AccelUVW(:, i) = 0.0_ReKi
-               cycle
-            end if
+         ! Is this point allowed beyond the bounds of the wind box?
+         GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
 
-            ! Is this point allowed beyond the bounds of the wind box?
-            GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
+         ! Calculate grid cells for interpolation, returns velocity and acceleration
+         ! components at corners of grid cell containing time and position. Also
+         ! returns interpolation values Xi.
+         call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), OutputAccel, GridExceedAllow, &
+                                  VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
+         if (TmpErrStat >= AbortErrLev) then
+            call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            return
+         end if
 
-            ! Calculate grid cells for interpolation, returns velocity and acceleration
-            ! components at corners of grid cell containing time and position. Also
-            ! returns interpolation values Xi.
-            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), .true., GridExceedAllow, &
-                                     VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
-            if (TmpErrStat >= AbortErrLev) then
-               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               return
-            end if
+         ! Output warning if extrapolation occured
+         if (GridExtrap .and. (.not. FF%Grid3D%BoxExceedWarned)) then
+            call WrScr("WARNING from InflowWind:")
+            call WrScr("------------------------")
+            call WrScr(" Grid point extrapolated beyond bounds of full-field wind grid [position=("// &
+                       TRIM(Num2LStr(PositionXYZ(1, i)))//", "//TRIM(Num2LStr(PositionXYZ(2, i)))//", "// &
+                       TRIM(Num2LStr(PositionXYZ(3, i)))//")  in wind-file coordinates, T="//trim(Num2LStr(Time))//"]."//NewLine// &
+                       "This only occurs for free vortex wake points or LidarSim measurement locations. "// &
+                       "Use a larger full-field wind grid if the simulation yields undesirable results. Further warnings are suppressed.")
+            call WrScr("------------------------")
+            FF%Grid3D%BoxExceedWarned = .true.
+         end if
 
+         ! Calculate velocity and acceleration
+         if (OutputAccel) then
             if (FF%VelInterpCubic) then
                ! Cubic velocity and cubic acceleration
                call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
@@ -205,30 +218,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
                                                Accel=AccelUVW(:, i))
             end if
-
-         end do
-      else
-
-         ! Loop through points
-         do i = 1, NumPoints
-
-            ! If height < zero, set velocity to zero, continue
-            if (Position(3, i) <= 0.0_ReKi) then
-               VelocityUVW(:, i) = 0.0_ReKi
-               cycle
-            end if
-
-            ! is this point allowed beyond the bounds of the wind box?
-            GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
-
-            ! Calculate grid cells for interpolation
-            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), FF%VelInterpCubic, GridExceedAllow, &
-                                     VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
-            if (TmpErrStat >= AbortErrLev) then
-               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               return
-            end if
-
+         else
             if (FF%VelInterpCubic) then
                ! Cubic velocity
                call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
@@ -237,9 +227,9 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                ! Linear velocity
                VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
             end if
+         end if
 
-         end do
-      end if
+      end do
 
       ! Add mean wind speed after interpolation if flag is set
       if (FF%Grid3D%AddMeanAfterInterp) then
@@ -750,7 +740,7 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
    real(ReKi), intent(out)             :: AccCell(8, 3)     !< Acceleration components at corners of grid cell
    real(ReKi), intent(out)             :: Xi(3)             !< isoparametric coord of position in cell (y,z,t) [-1, +1]
    logical, intent(out)                :: Is3D              !< flag indicating if interpolation is 3D or 2D
-   logical, intent(out)                :: Extrapolated      !< Extrapolation outside grid is allowed and point lies outside grid
+   logical, intent(inout)              :: Extrapolated      !< Extrapolation outside grid is allowed and point lies outside grid
    integer(IntKi), intent(out)         :: ErrStat           !< error status
    character(*), intent(out)           :: ErrMsg            !< error message
 

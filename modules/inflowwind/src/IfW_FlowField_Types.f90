@@ -124,6 +124,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
     LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
     INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: BoxExceedWarned = .FALSE.      !< Has a warning been issued for points extrapolated beyond FFWind grid [-]
   END TYPE Grid3DFieldType
 ! =======================
 ! =========  Grid4DFieldType  =======
@@ -1622,6 +1623,7 @@ ENDIF
     DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
     DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
     DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
+    DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
  END SUBROUTINE IfW_FlowField_CopyGrid3DFieldType
 
  SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1759,6 +1761,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HLinShr
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedWarned
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2003,6 +2006,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedAllowF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedWarned, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_FlowField_PackGrid3DFieldType
 
@@ -2271,6 +2276,8 @@ ENDIF
     OutData%BoxExceedAllowF = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedAllowF)
     Int_Xferred = Int_Xferred + 1
     OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BoxExceedWarned = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedWarned)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_FlowField_UnPackGrid3DFieldType
 

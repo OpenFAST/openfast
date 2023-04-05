@@ -938,10 +938,10 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    p%WindType   =  InputFileData%WindType
 
       ! Convert the PropagationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
-   p%FlowField%PropagationDir = D2R * InputFileData%PropagationDir
-   CALL MPi2Pi( p%FlowField%PropagationDir )         ! Shift if necessary so that the value is between -pi and pi
+   m%FlowField%PropagationDir = D2R * InputFileData%PropagationDir
+   CALL MPi2Pi( m%FlowField%PropagationDir )         ! Shift if necessary so that the value is between -pi and pi
 
-   p%FlowField%VFlowAngle = D2R * InputFileData%VFlowAngle  
+   m%FlowField%VFlowAngle = D2R * InputFileData%VFlowAngle  
 
       ! Copy over the list of wind coordinates.  Move the arrays to the new one.
    p%NWindVel   =  InputFileData%NWindVel
@@ -1078,15 +1078,15 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
 
       ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
       ! Included in this rotation is the wind upflow (inclination) angle (rotation about Y axis)
-   p%FlowField%RotToWind(1,:) = [ COS(-p%FlowField%VFlowAngle) * COS(-p%FlowField%PropagationDir),  &
-                                  COS(-p%FlowField%VFlowAngle) * SIN(-p%FlowField%PropagationDir),  &
-                                  -SIN(-p%FlowField%VFlowAngle) ]
-   p%FlowField%RotToWind(2,:) = [ -SIN(-p%FlowField%PropagationDir), &
-                                  COS(-p%FlowField%PropagationDir), &
+   m%FlowField%RotToWind(1,:) = [ COS(-m%FlowField%VFlowAngle) * COS(-m%FlowField%PropagationDir),  &
+                                  COS(-m%FlowField%VFlowAngle) * SIN(-m%FlowField%PropagationDir),  &
+                                  -SIN(-m%FlowField%VFlowAngle) ]
+   m%FlowField%RotToWind(2,:) = [ -SIN(-m%FlowField%PropagationDir), &
+                                  COS(-m%FlowField%PropagationDir), &
                                   0.0_ReKi ]
-   p%FlowField%RotToWind(3,:) = [ SIN(-p%FlowField%VFlowAngle) * COS(-p%FlowField%PropagationDir),  &
-                                  SIN(-p%FlowField%VFlowAngle) * SIN(-p%FlowField%PropagationDir),  &
-                                  COS(-p%FlowField%VFlowAngle) ]
+   m%FlowField%RotToWind(3,:) = [ SIN(-m%FlowField%VFlowAngle) * COS(-m%FlowField%PropagationDir),  &
+                                  SIN(-m%FlowField%VFlowAngle) * SIN(-m%FlowField%PropagationDir),  &
+                                  COS(-m%FlowField%VFlowAngle) ]
 
       ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates: this is the same as a
       ! rotation about the (positive) upflow angle multiplied by a rotation about the (positive) wind direction:
@@ -1094,7 +1094,7 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       ! loal wind = R( -p%VFlowAngle) * R (-p%PropagationDir) [global wind]
       !           = R^T(p%VFlowAngle) * R^T(p%PropagationDir) [global wind]
       !           = (R(p%PropagationDir) * R(p%VFlowAngle))^T [global wind]
-   p%FlowField%RotFromWind =  TRANSPOSE(p%FlowField%RotToWind)
+   m%FlowField%RotFromWind =  TRANSPOSE(m%FlowField%RotToWind)
 
       ! Create the array used for holding the rotated list of WindViXYZ coordinates in the wind reference frame, and populate it
    CALL AllocAry( p%WindViXYZprime, 3, p%NWindVel, 'Array for WindViXYZ coordinates in the wind reference frame', &
@@ -1107,10 +1107,10 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    p%WindViXYZprime   =  0.0_ReKi
       ! set the output points. Note rotation is about the hub height at [0 0 H].  See InflowWind_SetParameters for details.
    DO I = 1,p%NWindVel
-      p%WindViXYZprime(:,I) =  MATMUL( p%FlowField%RotToWind, (p%WindViXYZ(:,I) - p%RefPosition )) + p%RefPosition
+      p%WindViXYZprime(:,I) =  MATMUL( m%FlowField%RotToWind, (p%WindViXYZ(:,I) - p%RefPosition )) + p%RefPosition
    ENDDO
    
-   p%FlowField%RotateWindBox = .not. (EqualRealNos (p%FlowField%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%FlowField%VFlowAngle, 0.0_ReKi))
+   m%FlowField%RotateWindBox = .not. (EqualRealNos (m%FlowField%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (m%FlowField%VFlowAngle, 0.0_ReKi))
    
 END SUBROUTINE InflowWind_SetParameters
 
@@ -1568,14 +1568,14 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
    ErrMsg   = ""
 
    ! Get velocities and accelerations for the given positions
-   CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
+   CALL IfW_FlowField_GetVelAcc(m%FlowField, 0, Time, InputData%PositionXYZ, &
                                  y%VelocityUVW, y%AccelUVW, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF ( ErrStat >= AbortErrLev) RETURN
 
    ! Get velocities and accelerations for OutList variables, no error check
    IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
-      CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, p%WindViXYZ, &
+      CALL IfW_FlowField_GetVelAcc(m%FlowField, 0, Time, p%WindViXYZ, &
                                     m%WindViUVW, m%WindAiUVW, TmpErrStat, TmpErrMsg)
    ENDIF
 
