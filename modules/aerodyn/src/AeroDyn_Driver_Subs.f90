@@ -235,13 +235,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    call Set_Mesh_Motion(0, dvr, ADI, FED, errStat2, errMsg2); if(Failed()) return
 
    ! --- Initialze AD inputs
-   allocate(ADI%u(2),          STAT=errStat2);  if (Failed0("ADI input" )) return      ! set to size two for linear
-   allocate(ADI%x(1),          STAT=errStat2);  if (Failed0("x"         )) return
-   allocate(ADI%xd(1),         STAT=errStat2);  if (Failed0("xd"        )) return
-   allocate(ADI%z(1),          STAT=errStat2);  if (Failed0("z"         )) return
-   allocate(ADI%OtherState(1), STAT=errStat2);  if (Failed0("OtherState")) return
-   call AllocAry( ADI%inputTimes, 2, "InputTimes", ErrStat2, ErrMsg2 );  if (Failed())  return
-   ADI%inputTimes = -999 ! TODO use something better?
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
@@ -272,18 +265,6 @@ contains
       Failed = errStat >= AbortErrLev
       if(Failed) call cleanUp()
    end function Failed
-
-   ! check for failed where /= 0 is fatal
-   logical function Failed0(txt)
-      character(*), intent(in) :: txt
-      if (errStat /= 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Could not allocate "//trim(txt)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
-      endif
-      Failed0 = errStat >= AbortErrLev
-      if(Failed0) call cleanUp()
-   end function Failed0
 
 end subroutine Dvr_InitCase
 
@@ -441,6 +422,19 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
+   ! allocate AeroDyn data storage if not done alread
+   if (.not. allocated(ADI%u         )) then;   allocate(ADI%u(2),          STAT=errStat2);  if (Failed0("ADI input" )) return;  endif      ! set to size two for linear
+   if (.not. allocated(ADI%x         )) then;   allocate(ADI%x(1),          STAT=errStat2);  if (Failed0("x"         )) return;  endif
+   if (.not. allocated(ADI%xd        )) then;   allocate(ADI%xd(1),         STAT=errStat2);  if (Failed0("xd"        )) return;  endif
+   if (.not. allocated(ADI%z         )) then;   allocate(ADI%z(1),          STAT=errStat2);  if (Failed0("z"         )) return;  endif
+   if (.not. allocated(ADI%OtherState)) then;   allocate(ADI%OtherState(1), STAT=errStat2);  if (Failed0("OtherState")) return;  endif
+   if (.not. allocated(ADI%inputTimes)) then
+      call AllocAry( ADI%inputTimes, 2, "InputTimes", ErrStat2, ErrMsg2 )
+      if (Failed())  return
+      ADI%inputTimes = -999 ! TODO use something better?
+   endif
+
+
    needInit=.False.
    if (iCase==1) then
       needInit=.True.
@@ -548,6 +542,18 @@ contains
       if (Failed) call cleanup()
    end function Failed
    
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitCase')
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
+
 end subroutine Init_ADI_ForDriver
 !----------------------------------------------------------------------------------------------------------------------------------
 !>
