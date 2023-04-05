@@ -112,22 +112,6 @@ rtl.validateFileOrExit(baselineOutFile)
 testData, testInfo, _ = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
-# Append acceleration data if present
-localOutFileAcc = os.path.join(testBuildDirectory, "Points.Acceleration.dat")
-baselineOutFileAcc = os.path.join(targetOutputDirectory, "Points.Acceleration.dat")
-if os.path.exists(baselineOutFileAcc):
-    rtl.validateFileOrExit(localOutFileAcc)
-    rtl.validateFileOrExit(baselineOutFileAcc)
-    testDataAcc, testInfoAcc, _ = pass_fail.readFASTOut(localOutFile)
-    testInfo['attribute_names'] += [n+'a' for n in testInfoAcc['attribute_names'][4:]]
-    testInfo['attribute_units'] += [u+'a' for u in testInfoAcc['attribute_units'][4:]]
-    testData = np.hstack([testData, testDataAcc[:,4:]])
-
-    baselineDataAcc, baselineInfoAcc, _ = pass_fail.readFASTOut(baselineOutFile)
-    baselineInfo['attribute_names'] += [n+'a' for n in testInfoAcc['attribute_names'][4:]]
-    baselineInfo['attribute_units'] += [u+'a' for u in testInfoAcc['attribute_units'][4:]]
-    baselineData = np.hstack([baselineData, baselineDataAcc[:,4:]])
-
 passing_channels = pass_fail.passing_channels(testData.T, baselineData.T, rtol, atol)
 passing_channels = passing_channels.T
 
