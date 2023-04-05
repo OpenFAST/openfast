@@ -38,50 +38,57 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-module InflowWind
+MODULE InflowWind
 
-use NWTC_Library
-use InflowWind_Types
-use InflowWind_Subs
-use InflowWind_IO_Types
-use InflowWind_IO
-use IfW_FlowField
 
-use Lidar                      ! module for obtaining sensor data
+   USE                              NWTC_Library
+   USE                              InflowWind_Types
+   USE                              InflowWind_Subs
+   USE                              InflowWind_IO_Types
+   USE                              InflowWind_IO
+   USE                              IfW_FlowField
 
-implicit none
-private
+   USE                              Lidar                      ! module for obtaining sensor data
+   
+   IMPLICIT NONE
+   PRIVATE
 
-type(ProgDesc), parameter            :: IfW_Ver = ProgDesc('InflowWind', '', '')
-integer, parameter            :: NumExtendedInputs = 3 !: V, VShr, PropDir
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', '', '' )
+   integer,        parameter            :: NumExtendedInputs = 3 !: V, VShr, PropDir
 
-! ..... Public Subroutines ...................................................................................................
 
-public :: InflowWind_Init                                   !< Initialization routine
-public :: InflowWind_CalcOutput                             !< Calculate the wind velocities
-public :: InflowWind_End                                    !< Ending routine (includes clean up)
 
-! These routines satisfy the framework, but do nothing at present.
-public :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-public :: InflowWind_CalcConstrStateResidual    !< Tight coupling routine for returning the constraint state residual
-public :: InflowWind_CalcContStateDeriv         !< Tight coupling routine for computing derivatives of continuous states
-public :: InflowWind_UpdateDiscState            !< Tight coupling routine for updating discrete states
 
-! These routines compute Jacobians; only dYdu is defined.
-public :: InflowWind_JacobianPInput             !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+      ! ..... Public Subroutines ...................................................................................................
+
+   PUBLIC :: InflowWind_Init                                   !< Initialization routine
+   PUBLIC :: InflowWind_CalcOutput                             !< Calculate the wind velocities
+   PUBLIC :: InflowWind_End                                    !< Ending routine (includes clean up)
+
+      ! These routines satisfy the framework, but do nothing at present.
+   PUBLIC :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
+   PUBLIC :: InflowWind_CalcConstrStateResidual    !< Tight coupling routine for returning the constraint state residual
+   PUBLIC :: InflowWind_CalcContStateDeriv         !< Tight coupling routine for computing derivatives of continuous states
+   PUBLIC :: InflowWind_UpdateDiscState            !< Tight coupling routine for updating discrete states
+
+
+      ! These routines compute Jacobians; only dYdu is defined.
+   PUBLIC :: InflowWind_JacobianPInput             !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                    !!   (Xd), and constraint - state(Z) functions all with respect to the inputs(u)
-public :: InflowWind_JacobianPContState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+   PUBLIC :: InflowWind_JacobianPContState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                    !!   (Xd), and constraint - state(Z) functions all with respect to the continuous
                                                    !!   states(x)
-public :: InflowWind_JacobianPDiscState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+   PUBLIC :: InflowWind_JacobianPDiscState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                    !!   (Xd), and constraint - state(Z) functions all with respect to the discrete
                                                    !!   states(xd)
-public :: InflowWind_JacobianPConstrState       !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+   PUBLIC :: InflowWind_JacobianPConstrState       !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                    !!   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                    !!   states(z)
-public :: InflowWind_GetOP                      !< Routine to pack the operating point values (for linearization) into arrays
+   PUBLIC :: InflowWind_GetOP                      !< Routine to pack the operating point values (for linearization) into arrays
+   
 
-contains
+
+CONTAINS
 !====================================================================================================
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
@@ -89,80 +96,81 @@ contains
 !! Since this module acts as an interface to other modules, on some things are set before initiating
 !! calls to the lower modules.
 !----------------------------------------------------------------------------------------------------
-subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                           y, m, TimeInterval, InitOutData, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                           y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
 
    ! Initialization data and guesses
-   type(InflowWind_InitInputType), intent(IN)  :: InitInp           !< Input data for initialization
-   type(InflowWind_InputType), intent(OUT)  :: InputGuess        !< An initial guess for the input; the input mesh must be defined
-   type(InflowWind_ParameterType), intent(OUT)  :: p                 !< Parameters
-   type(InflowWind_ContinuousStateType), intent(OUT)  :: ContStates        !< Initial continuous states
-   type(InflowWind_DiscreteStateType), intent(OUT)  :: DiscStates        !< Initial discrete states
-   type(InflowWind_ConstraintStateType), intent(OUT)  :: ConstrStateGuess  !< Initial guess of the constraint states
-   type(InflowWind_OtherStateType), intent(OUT)  :: OtherStates       !< Initial other/optimization states
-   type(InflowWind_OutputType), intent(OUT)  :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-   type(InflowWind_MiscVarType), intent(OUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-   real(DbKi), intent(IN)  :: TimeInterval      !< Coupling time interval in seconds: InflowWind does not change this.
-   type(InflowWind_InitOutputType), intent(OUT)  :: InitOutData       !< Initial output data -- Names, units, and version info.
-   integer(IntKi), intent(OUT)  :: ErrStat           !< Error status of the operation
-   character(*), intent(OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitInp           !< Input data for initialization
+   TYPE(InflowWind_InputType),            INTENT(  OUT)  :: InputGuess        !< An initial guess for the input; the input mesh must be defined
+   TYPE(InflowWind_ParameterType),        INTENT(  OUT)  :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(  OUT)  :: ContStates        !< Initial continuous states
+   TYPE(InflowWind_DiscreteStateType),    INTENT(  OUT)  :: DiscStates        !< Initial discrete states
+   TYPE(InflowWind_ConstraintStateType),  INTENT(  OUT)  :: ConstrStateGuess  !< Initial guess of the constraint states
+   TYPE(InflowWind_OtherStateType),       INTENT(  OUT)  :: OtherStates       !< Initial other/optimization states
+   TYPE(InflowWind_OutputType),           INTENT(  OUT)  :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+   TYPE(InflowWind_MiscVarType),          INTENT(  OUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
+   REAL(DbKi),                            INTENT(IN   )  :: TimeInterval      !< Coupling time interval in seconds: InflowWind does not change this.
+   TYPE(InflowWind_InitOutputType),       INTENT(  OUT)  :: InitOutData       !< Initial output data -- Names, units, and version info.
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    ! Local variables
-   character(*), parameter                               :: RoutineName = "InflowWind_Init"
+   CHARACTER(*), PARAMETER                               :: RoutineName="InflowWind_Init"
 
-   type(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
+   TYPE(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
 
-   type(Steady_InitInputType)                            :: Steady_InitInput
-   type(Uniform_InitInputType)                           :: Uniform_InitInput
-   type(TurbSim_InitInputType)                           :: TurbSim_InitInput
-   type(Bladed_InitInputType)                            :: Bladed_InitInput
-   type(Bladed_InitOutputType)                           :: Bladed_InitOutput
-   type(HAWC_InitInputType)                              :: HAWC_InitInput
-   type(User_InitInputType)                              :: User_InitInput
-   type(Grid4D_InitInputType)                            :: Grid4D_InitInput
-   type(Points_InitInputType)                            :: Points_InitInput
+   Type(Steady_InitInputType)                            :: Steady_InitInput
+   Type(Uniform_InitInputType)                           :: Uniform_InitInput
+   Type(TurbSim_InitInputType)                           :: TurbSim_InitInput
+   Type(Bladed_InitInputType)                            :: Bladed_InitInput
+   Type(Bladed_InitOutputType)                           :: Bladed_InitOutput
+   Type(HAWC_InitInputType)                              :: HAWC_InitInput
+   Type(User_InitInputType)                              :: User_InitInput
+   Type(Grid4D_InitInputType)                            :: Grid4D_InitInput
+   Type(Points_InitInputType)                            :: Points_InitInput
 
-   type(WindFileDat)                                     :: FileDat
+   Type(WindFileDat)                                     :: FileDat
+   
 
    ! TYPE(InflowWind_IO_InitInputType)                      :: FlowField_InitData     !< initialization info
    ! TYPE(InflowWind_IO_InitOutputType)                     :: FlowField_InitOutData  !< initialization output info
 
-   type(FileInfoType)                                    :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
-   character(1024)                                       :: PriPath
+   TYPE(FileInfoType)                                    :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
+   CHARACTER(1024)                                       :: PriPath
 
-   integer(IntKi)                                        :: I, j              !< Generic counter
-   integer(IntKi)                                        :: Lin_indx          !< Generic counter
-   integer(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
-   character(256)                                        :: SumFileName       !< Name of the summary file
-   character(256)                                        :: EchoFileName      !< Name of the summary file
-   character(1), parameter                               :: UVW(3) = (/'U', 'V', 'W'/)
-   character(1), parameter                               :: XYZ(3) = (/'X', 'Y', 'Z'/)
-   integer(IntKi)                                        :: TmpErrStat
-   character(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
+   INTEGER(IntKi)                                        :: I, j              !< Generic counter
+   INTEGER(IntKi)                                        :: Lin_indx          !< Generic counter
+   INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
+   CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
+   CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
+   CHARACTER(1), PARAMETER                               :: UVW(3) = (/'U','V','W'/)
+   CHARACTER(1), PARAMETER                               :: XYZ(3) = (/'X','Y','Z'/)
+   INTEGER(IntKi)                                        :: TmpErrStat
+   CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
 
    !----------------------------------------------------------------------------------------------
    ! Initialize variables and check to see if this module has been initialized before.
    !----------------------------------------------------------------------------------------------
 
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   SumFileUnit = -1_IntKi ! set at beginning in case of error
+   ErrStat        =  ErrID_None
+   ErrMsg         =  ""
+   SumFileUnit    =  -1_IntKi ! set at beginning in case of error
 
    ! Set a few variables.
 
-   p%DT = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
-   call NWTC_Init()
-   call DispNVD(IfW_Ver)
+   p%DT   = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
+   CALL NWTC_Init()
+   CALL DispNVD( IfW_Ver )
 
    !----------------------------------------------------------------------------------------------
    ! Read the input file
    !----------------------------------------------------------------------------------------------
 
    ! Set the names of the files based on the inputfilename
-   p%RootFileName = InitInp%RootName
-   if (LEN_TRIM(p%RootFileName) == 0) call GetRoot(InitInp%InputFileName, p%RootFileName)
-   EchoFileName = TRIM(p%RootFileName)//".ech"
-   SumFileName = TRIM(p%RootFileName)//".sum"
+   p%RootFileName  = InitInp%RootName
+   IF (LEN_TRIM(p%RootFileName) == 0) CALL GetRoot( InitInp%InputFileName, p%RootFileName )
+   EchoFileName  = TRIM(p%RootFileName)//".ech"
+   SumFileName   = TRIM(p%RootFileName)//".sum"
 
    ! these values (and others hard-coded in lidar_init) should be set in the input file, too
    InputFileData%SensorType = InitInp%lidar%SensorType
@@ -171,89 +179,89 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
    InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
 
    ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
-   call GetPath(InitInp%InputFileName, PriPath)
+   CALL GetPath( InitInp%InputFileName, PriPath )
 
-   if (InitInp%UseInputFile) then
-      call ProcessComFile(InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-   else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-   end if
+   IF ( InitInp%UseInputFile ) THEN
+      CALL ProcessComFile( InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF        
+   ELSE
+      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF          
+   ENDIF
 
-   call InflowWind_ParseInputFileInfo(InputFileData, InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, &
-                                      InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+   CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, &
+                                       InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
    ! If wind is Grid4D from FAST.Farm, set input file values
-   if (InitInp%Use4Dext) then
-      InputFileData%WindType = FDext_WindNumber
+   IF (InitInp%Use4Dext) then
+      InputFileData%WindType = FDext_WindNumber      
       InputFileData%PropagationDir = 0.0_ReKi ! wind is in XYZ coordinates (already rotated if necessary), so don't rotate it again
       InputFileData%VFlowAngle = 0.0_ReKi
       InputFileData%VelInterpCubic = .false.
-   end if
+   END IF
 
    ! initialize sensor data
-   call Lidar_Init(InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                   y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
+   CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
+                     y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
+   
    ! Validate the InflowWind input file information
-   call InflowWind_ValidateInput(InitInp, InputFileData, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
-
+   CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+   
    ! If a summary file was requested, open it and write preliminary data.
-   if (InputFileData%SumPrint) then
-      call InflowWind_OpenSumFile(SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-   end if
+   IF ( InputFileData%SumPrint ) THEN
+      CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+   ENDIF
 
    ! Allocate the array for passing points
-   call AllocAry(InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    InputGuess%PositionXYZ = 0.0_ReKi
    InputGuess%HubPosition = 0.0_ReKi
-   call Eye(InputGuess%HubOrientation, TmpErrStat, TmpErrMsg)
+   CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)  
 
    ! Allocate the array for passing velocities out
-   call AllocAry(y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+   CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF (ErrStat>= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
    y%VelocityUVW = 0.0_ReKi
 
    ! If requested, allocate the array for passing accelerations out
-   if (InitInp%OutputAccel) then
-      call AllocAry(y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+   IF ( InitInp%OutputAccel ) THEN
+      CALL AllocAry( y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat>= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
       y%AccelUVW = 0.0_ReKi
-   end if
+   ENDIF
 
    !----------------------------------------------------------------------------
    ! Set flow field input data based on wind type
@@ -261,7 +269,7 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
 
    InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
 
-   select case (InputFileData%WindType)
+   select case(InputFileData%WindType)
 
    case (Steady_WindNumber)
 
@@ -275,7 +283,7 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
    case (Uniform_WindNumber)
 
@@ -292,7 +300,7 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
    case (TSFF_WindNumber)
 
@@ -304,50 +312,50 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
    case (BladedFF_WindNumber)
 
       Bladed_InitInput%TurbineID = InitInp%TurbineID
-      if (InitInp%FixedWindFileRootName) then ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-         if (InitInp%TurbineID == 0) then     ! .TRUE. for the FAST.Farm low-resolution domain
+      IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+         IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
             InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
-         else                                   ! FAST.Farm high-resolution domain(s)
+         ELSE                                   ! FAST.Farm high-resolution domain(s)
             InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-         end if
-      end if
-      Bladed_InitInput%WindType = BladedFF_WindNumber
-      Bladed_InitInput%WindFileName = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
-      Bladed_InitInput%TowerFileExist = InputFileData%BladedFF_TowerFile
-      Bladed_InitInput%NativeBladedFmt = .false.
+         ENDIF
+      ENDIF
+      Bladed_InitInput%WindType           = BladedFF_WindNumber
+      Bladed_InitInput%WindFileName       = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
+      Bladed_InitInput%TowerFileExist     =  InputFileData%BladedFF_TowerFile
+      Bladed_InitInput%NativeBladedFmt    = .false.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
-
+      endif
+      
    case (BladedFF_Shr_WindNumber)
 
-      Bladed_InitInput%WindType = BladedFF_Shr_WindNumber
-      Bladed_InitInput%TurbineID = InitInp%TurbineID
-      Bladed_InitInput%WindFileName = InputFileData%BladedFF_FileName
-      Bladed_InitInput%TowerFileExist = .false.
-      Bladed_InitInput%NativeBladedFmt = .true.
+      Bladed_InitInput%WindType           = BladedFF_Shr_WindNumber
+      Bladed_InitInput%TurbineID          = InitInp%TurbineID
+      Bladed_InitInput%WindFileName       = InputFileData%BladedFF_FileName
+      Bladed_InitInput%TowerFileExist     = .false.
+      Bladed_InitInput%NativeBladedFmt    = .true.
 
       p%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
       ! Overwrite the values of PropagationDir and VFlowAngle with values from the native Bladed file
       InputFileData%PropagationDir = Bladed_InitOutput%PropagationDir
-      InputFileData%VFlowAngle = Bladed_InitOutput%VFlowAngle
+      InputFileData%VFlowAngle     = Bladed_InitOutput%VFlowAngle 
 
    case (HAWC_WindNumber)
 
@@ -376,7 +384,7 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
    case (User_WindNumber)
 
@@ -386,7 +394,7 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
    case (FDext_WindNumber)
 
@@ -395,13 +403,13 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
-      end if
+      endif
 
-      ! case (Point_WindNumber)
+   ! case (Point_WindNumber)
 
-      !    p%FlowField%FieldType = Point_FieldType
+   !    p%FlowField%FieldType = Point_FieldType
 
-   case default
+   case default  
       call SetErrStat(ErrID_Fatal, ' Undefined wind type.', ErrStat, ErrMsg, RoutineName)
       return
    end select
@@ -422,6 +430,13 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
    if (p%FlowField%VelInterpCubic .and. InitInp%Linearize) then
       call WrScr("InflowWind: Cubic interpolation of wind velocity is disabled for linearization")
       p%FlowField%VelInterpCubic = .false.
+   end if
+
+   ! Set box exceed flag and index
+   p%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
+   p%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
+   if (InitInp%BoxExceedAllowF .and. (InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints)) then
+      p%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
    end if
 
    ! Select based on field type
@@ -445,11 +460,9 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
          p%FlowField%AccFieldValid = .true.
       end if
 
-      ! Set box exceedence averaging grid
-      p%FlowField%G3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
-      p%FlowField%G3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
-      if (p%FlowField%G3D%BoxExceedAllowF) then
-         call GenMeanGridProfileTimeSeries(p%FlowField%G3D, TmpErrStat, TmpErrMsg)
+      ! Calculate field average if box is allowed to be exceeded
+      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+         call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end if
@@ -462,54 +475,54 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       end if
       if (p%FlowField%VelInterpCubic) then
          call WrScr(' Cubic velocity interpolation not implemented for WindType '// &
-                    num2LStr(InputFileData%WindType))
+                     num2LStr(InputFileData%WindType))
          p%FlowField%VelInterpCubic = .false.
       end if
    end select
 
    !----------------------------------------------------------------------------
    ! Set the p and OtherStates for InflowWind using the input file information.
-   ! (set this after initializing modules so that we can use PropagationDir
+   ! (set this after initializing modules so that we can use PropagationDir 
    ! and VFlowAng from native-Bladed files
    !----------------------------------------------------------------------------
 
-   call InflowWind_SetParameters(InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
-
+   CALL InflowWind_SetParameters( InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+   
    ! Allocate arrays for the WriteOutput
-   call AllocAry(y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
    y%WriteOutput = 0.0_ReKi
+   
+   CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
-   call AllocAry(InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
-
-   call AllocAry(InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call Cleanup()
-      return
-   end if
+   CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
    InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
-   InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units
+   InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
 
    !----------------------------------------------------------------------------
    ! Linearization
    !----------------------------------------------------------------------------
-
+      
    ! allocate and fill variables for linearization
    if (InitInp%Linearize) then
 
@@ -524,84 +537,85 @@ subroutine InflowWind_Init(InitInp, InputGuess, p, ContStates, DiscStates, Const
       end if
 
       ! also need to add InputGuess%HubOrientation to the u%Linear items
-      call AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      call AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
-
-      do i = 1, InitInp%NumWindPoints
-         do j = 1, 3
-            InitOutData%LinNames_y((i - 1)*3 + j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
-            InitOutData%LinNames_u((i - 1)*3 + j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
+      CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+      
+      do i=1,InitInp%NumWindPoints
+         do j=1,3
+            InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
+            InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
          end do
       end do
 
       ! hub position
       Lin_Indx = InitInp%NumWindPoints*3
-      do j = 1, 3
-         InitOutData%LinNames_y(Lin_Indx + j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
-         InitOutData%LinNames_u(Lin_Indx + j) = XYZ(j)//'-component position of moving hub, m'
+      do j=1,3
+         InitOutData%LinNames_y(Lin_Indx+j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
+         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//'-component position of moving hub, m'
       end do
       Lin_Indx = Lin_Indx + 3
-
+      
       ! hub orientation angles
-      do j = 1, 3
-         InitOutData%LinNames_u(Lin_Indx + j) = XYZ(j)//' orientation of moving hub, rad'
+      do j=1,3
+         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//' orientation of moving hub, rad'
       end do
       Lin_Indx = Lin_Indx + 3
-
+      
       InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
       InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
-      InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'
-
-      do i = 1, p%NumOuts
-         InitOutData%LinNames_y(i + 3*InitInp%NumWindPoints + size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'         
+      
+      do i=1,p%NumOuts
+         InitOutData%LinNames_y(i+3*InitInp%NumWindPoints+size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
       end do
 
       ! IfW inputs and outputs are in the global, not rotating frame
-      InitOutData%RotFrame_u = .false.
-      InitOutData%RotFrame_y = .false.
+      InitOutData%RotFrame_u = .false. 
+      InitOutData%RotFrame_y = .false. 
 
       InitOutData%IsLoad_u = .false. ! IfW inputs for linearization are not loads
-
+      
    end if
-
+               
    ! Set the version information in InitOutData
    InitOutData%Ver = IfW_Ver
 
-   call CleanUp()
+   CALL CleanUp()
 
-contains
+CONTAINS
 
-   subroutine CleanUp()
+   SUBROUTINE CleanUp()
 
       ! add in stuff that we need to dispose of here
-      call InflowWind_DestroyInputFile(InputFileData, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
       ! Ignore error messages from InFileInfo destruction
-      call NWTC_Library_DestroyFileInfoType(InFileInfo, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      call NWTC_Library_DestroyFileInfoType( InFileInfo, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
-      ! Close the summary file if we were writing one
-      if (SumFileUnit > 0) then
-         call InflowWind_CloseSumFile(SumFileUnit, TmpErrStat, TmpErrMsg)
-         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      end if
+         ! Close the summary file if we were writing one
+      IF ( SumFileUnit > 0 ) THEN
+         CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      ENDIF
 
-   end subroutine CleanUp
+   END SUBROUTINE CleanUp
+   
+END SUBROUTINE InflowWind_Init
 
-end subroutine InflowWind_Init
 
 !====================================================================================================
 !> This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
@@ -618,248 +632,263 @@ end subroutine InflowWind_Init
 !! array is then rotated by p%PropagationDir so that it now corresponds the the global coordinate UVW values for wind
 !! with that direction.
 !----------------------------------------------------------------------------------------------------
-subroutine InflowWind_CalcOutput(Time, InputData, p, &
-                                 ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
-                                 OtherStates, OutputData, m, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
+                              ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
+                              OtherStates, OutputData, m, ErrStat, ErrMsg )
 
-   character(*), parameter                     :: RoutineName = "InflowWind_CalcOutput"
+   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_CalcOutput"
 
-   real(DbKi), intent(IN)  :: Time              !< Current simulation time in seconds
-   type(InflowWind_InputType), intent(IN)  :: InputData         !< Inputs at Time
-   type(InflowWind_ParameterType), intent(IN)  :: p                 !< Parameters
-   type(InflowWind_ContinuousStateType), intent(IN)  :: ContStates        !< Continuous states at Time
-   type(InflowWind_DiscreteStateType), intent(IN)  :: DiscStates        !< Discrete states at Time
-   type(InflowWind_ConstraintStateType), intent(IN)  :: ConstrStates      !< Constraint states at Time
-   type(InflowWind_OtherStateType), intent(IN)  :: OtherStates       !< Other/optimization states at Time
-   type(InflowWind_OutputType), intent(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
-   type(InflowWind_MiscVarType), intent(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-   integer(IntKi), intent(OUT)  :: ErrStat           !< Error status of the operation
-   character(*), intent(OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
+   TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
+   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: ContStates        !< Continuous states at Time
+   TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
+   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
+   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other/optimization states at Time
+   TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   ! Local variables
-   integer(IntKi)                                           :: i
-   ! Temporary variables for error handling
-   integer(IntKi)                                           :: TmpErrStat
-   character(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
+      ! Local variables
+   INTEGER(IntKi)                                           :: i
+      ! Temporary variables for error handling
+   INTEGER(IntKi)                                           :: TmpErrStat
+   CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
-   ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
 
-   ! Allocate the velocity array to get out
-   if (.not. ALLOCATED(OutputData%VelocityUVW)) then
-      call AllocAry(OutputData%VelocityUVW, 3, SIZE(InputData%PositionXYZ, DIM=2), &
-                    "Velocity array returned from IfW_CalcOutput", TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-   elseif (SIZE(InputData%PositionXYZ, DIM=2) /= SIZE(OutputData%VelocityUVW, DIM=2)) then
-      call SetErrStat(ErrID_Fatal, " Programming error: Position and Velocity arrays are not sized the same.", &
-                      ErrStat, ErrMsg, RoutineName)
-   end if
+      ! Allocate the velocity array to get out
+   IF ( .NOT. ALLOCATED(OutputData%VelocityUVW) ) THEN
+      CALL AllocAry( OutputData%VelocityUVW, 3, SIZE(InputData%PositionXYZ,DIM=2), &
+                  "Velocity array returned from IfW_CalcOutput", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   ELSEIF ( SIZE(InputData%PositionXYZ,DIM=2) /= SIZE(OutputData%VelocityUVW,DIM=2) ) THEN
+      CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
+            ErrStat, ErrMsg, RoutineName)
+   ENDIF
 
    !-----------------------------
    ! Outputs: OutputData%VelocityUVW
    !-----------------------------
-   call CalculateOutput(Time, InputData, p, ContStates, DiscStates, ConstrStates, &
-                        OtherStates, OutputData, m, .true., TmpErrStat, TmpErrMsg)
+   CALL CalculateOutput( Time, InputData, p, ContStates, DiscStates, ConstrStates, & 
+                     OtherStates, OutputData, m, .TRUE., TmpErrStat, TmpErrMsg )      
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
    !-----------------------------
    ! Output: OutputData%DiskVel
    !-----------------------------
-   call InflowWind_GetSpatialAverage(Time, InputData, p, ContStates, DiscStates, ConstrStates, &
-                                     OtherStates, m, OutputData%DiskVel, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
+   CALL InflowWind_GetSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+                     OtherStates, m, OutputData%DiskVel, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      
    !-----------------------------
    ! Output: OutputData%HubVel
    !-----------------------------
-   call InflowWind_GetHubValues(Time, InputData, p, ContStates, DiscStates, ConstrStates, &
-                                OtherStates, m, OutputData%HubVel, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
+   CALL InflowWind_GetHubValues( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+                     OtherStates, m, OutputData%HubVel, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      
    !-----------------------------
    ! Outputs: OutputData%lidar%LidSpeed and OutputData%lidar%WtTrunc
    !-----------------------------
-
-   ! return sensor values
-   if (p%lidar%SensorType /= SensorType_None) then
-
-      call Lidar_CalcOutput(Time, InputData, p, &
-                            ContStates, DiscStates, ConstrStates, OtherStates, &
-                            OutputData, m, TmpErrStat, TmpErrMsg)
-      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-
-   end if
-
+      
+      ! return sensor values
+   IF (p%lidar%SensorType /= SensorType_None) THEN
+         
+      CALL Lidar_CalcOutput(Time, InputData, p, &
+                           ContStates, DiscStates, ConstrStates, OtherStates, &  
+                           OutputData, m, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+         
+   END IF      
+       
+      
    !-----------------------------
    ! Outputs: OutputData%WriteOutput from m%AllOuts and OutputData%lidar%LidSpeed
    !-----------------------------
 
-   call SetAllOuts(p, OutputData, m, TmpErrStat, TmpErrMsg)
-   call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+   CALL SetAllOuts( p, OutputData, m, TmpErrStat, TmpErrMsg ) 
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   
+      ! Map to the outputs
+   DO I = 1,p%NumOuts  ! Loop through all selected output channels
+      OutputData%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
+   ENDDO             ! I - All selected output channels
 
-   ! Map to the outputs
-   do I = 1, p%NumOuts  ! Loop through all selected output channels
-      OutputData%WriteOutput(I) = p%OutParam(I)%SignM*m%AllOuts(p%OutParam(I)%Indx)
-   end do             ! I - All selected output channels
 
-end subroutine InflowWind_CalcOutput
+END SUBROUTINE InflowWind_CalcOutput
+
+
 
 !====================================================================================================
 !> Clean up the allocated variables and close all open files.  Reset the initialization flag so
 !! that we have to reinitialize before calling the routines again.
-subroutine InflowWind_End(InputData, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                          y, m, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                           y, m, ErrStat, ErrMsg )
 
-   type(InflowWind_InputType), intent(INOUT)  :: InputData         !< Input data for initialization
-   type(InflowWind_ParameterType), intent(INOUT)  :: p                 !< Parameters
-   type(InflowWind_ContinuousStateType), intent(INOUT)  :: ContStates        !< Continuous states
-   type(InflowWind_DiscreteStateType), intent(INOUT)  :: DiscStates        !< Discrete states
-   type(InflowWind_ConstraintStateType), intent(INOUT)  :: ConstrStateGuess  !< Guess of the constraint states
-   type(InflowWind_OtherStateType), intent(INOUT)  :: OtherStates       !< Other/optimization states
-   type(InflowWind_OutputType), intent(INOUT)  :: y                 !< Output data
-   type(InflowWind_MiscVarType), intent(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-   integer(IntKi), intent(OUT)  :: ErrStat           !< error status
-   character(*), intent(OUT)  :: ErrMsg            !< error message
+   TYPE(InflowWind_InputType),               INTENT(INOUT)  :: InputData         !< Input data for initialization
+   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType),     INTENT(INOUT)  :: ContStates        !< Continuous states
+   TYPE(InflowWind_DiscreteStateType),       INTENT(INOUT)  :: DiscStates        !< Discrete states
+   TYPE(InflowWind_ConstraintStateType),     INTENT(INOUT)  :: ConstrStateGuess  !< Guess of the constraint states
+   TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states
+   TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: y                 !< Output data
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
+   INTEGER( IntKi ),                         INTENT(  OUT)  :: ErrStat           !< error status
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< error message
 
-   character(*), parameter                     :: RoutineName = "InflowWind_End"
+   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_End"
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
    ! Reset the wind type so that the initialization routine must be called
-   p%WindType = Undef_WindNumber
+   p%WindType      = Undef_WindNumber
 
    ! Destroy all inflow wind derived types
-   call InflowWind_DestroyInput(InputData, ErrStat, ErrMsg)
-   call InflowWind_DestroyParam(p, ErrStat, ErrMsg, DeallocatePointers=.true.)
-   call InflowWind_DestroyContState(ContStates, ErrStat, ErrMsg)
-   call InflowWind_DestroyDiscState(DiscStates, ErrStat, ErrMsg)
-   call InflowWind_DestroyConstrState(ConstrStateGuess, ErrStat, ErrMsg)
-   call InflowWind_DestroyOtherState(OtherStates, ErrStat, ErrMsg)
-   call InflowWind_DestroyOutput(y, ErrStat, ErrMsg)
-   call InflowWind_DestroyMisc(m, ErrStat, ErrMsg)
+   CALL InflowWind_DestroyInput( InputData, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg, DeallocatePointers=.true. )         
+   CALL InflowWind_DestroyContState( ContStates, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyDiscState( DiscStates, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyConstrState( ConstrStateGuess, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyOtherState( OtherStates, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyOutput( y, ErrStat, ErrMsg )                     
+   CALL InflowWind_DestroyMisc( m, ErrStat, ErrMsg )                     
 
-end subroutine InflowWind_End
+END SUBROUTINE InflowWind_End
+
 
 !====================================================================================================
 ! The following routines were added to satisfy the framework, but do nothing useful.
 !====================================================================================================
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-subroutine InflowWind_UpdateStates(t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-   real(DbKi), intent(IN) :: t               !< Current simulation time in seconds
-   integer(IntKi), intent(IN) :: n               !< Current step of the simulation: t = n*Interval
-   type(InflowWind_InputType), intent(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output only for mesh record-keeping in ExtrapInterp routine)
-   real(DbKi), intent(IN) :: InputTimes(:)   !< Times in seconds associated with Inputs
-   type(InflowWind_ParameterType), intent(IN) :: p               !< Parameters
-   type(InflowWind_ContinuousStateType), intent(INOUT) :: x               !< Input: Continuous states at t;
+   REAL(DbKi),                            INTENT(IN   ) :: t               !< Current simulation time in seconds
+   INTEGER(IntKi),                        INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
+   TYPE(InflowWind_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output only for mesh record-keeping in ExtrapInterp routine)
+   REAL(DbKi),                            INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
+   TYPE(InflowWind_ParameterType),        INTENT(IN   ) :: p               !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(INOUT) :: x               !< Input: Continuous states at t;
                                                                            !!    Output: Continuous states at t + Interval
-   type(InflowWind_DiscreteStateType), intent(INOUT) :: xd              !< Input: Discrete states at t;
+   TYPE(InflowWind_DiscreteStateType),    INTENT(INOUT) :: xd              !< Input: Discrete states at t;
                                                                            !!    Output: Discrete states at t  + Interval
-   type(InflowWind_ConstraintStateType), intent(INOUT) :: z               !< Input: Constraint states at t;
+   TYPE(InflowWind_ConstraintStateType),  INTENT(INOUT) :: z               !< Input: Constraint states at t;
                                                                            !!   Output: Constraint states at t + Interval
-   type(InflowWind_OtherStateType), intent(INOUT) :: OtherState      !< Other states: Other states at t;
+   TYPE(InflowWind_OtherStateType),       INTENT(INOUT) :: OtherState      !< Other states: Other states at t;
                                                                            !!   Output: Other states at t + Interval
-   type(InflowWind_MiscVarType), intent(INOUT) :: m               !< Misc variables for optimization (not copied in glue code)
-   integer(IntKi), intent(OUT) :: ErrStat         !< Error status of the operation
-   character(*), intent(OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
+   TYPE(InflowWind_MiscVarType),          INTENT(INOUT) :: m               !< Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),                        INTENT(  OUT) :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
-   ! Initialize ErrStat
+
+      ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
 
-   x%DummyContState = 0.0_ReKi
-   xd%DummyDiscState = 0.0_ReKi
-   z%DummyConstrState = 0.0_ReKi
+   x%DummyContState     = 0.0_ReKi
+   xd%DummyDiscState    = 0.0_ReKi
+   z%DummyConstrState   = 0.0_ReKi
+      
+   RETURN
 
-   return
 
-end subroutine InflowWind_UpdateStates
+END SUBROUTINE InflowWind_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states
-subroutine InflowWind_CalcContStateDeriv(Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   real(DbKi), intent(IN)  :: Time        !< Current simulation time in seconds
-   type(InflowWind_InputType), intent(IN)  :: u           !< Inputs at Time
-   type(InflowWind_ParameterType), intent(IN)  :: p           !< Parameters
-   type(InflowWind_ContinuousStateType), intent(IN)  :: x           !< Continuous states at Time
-   type(InflowWind_DiscreteStateType), intent(IN)  :: xd          !< Discrete states at Time
-   type(InflowWind_ConstraintStateType), intent(IN)  :: z           !< Constraint states at Time
-   type(InflowWind_OtherStateType), intent(IN)  :: OtherState  !< Other states at Time
-   type(InflowWind_MiscVarType), intent(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(InflowWind_ContinuousStateType), intent(OUT)  :: dxdt        !< Continuous state derivatives at Time
-   integer(IntKi), intent(OUT)  :: ErrStat     !< Error status of the operation
-   character(*), intent(OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
+   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
+   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
+   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
+   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
+   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(InflowWind_ContinuousStateType),     INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   ! Initialize ErrStat
+
+      ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
 
-   ! Compute the first time derivatives of the continuous states here:
+
+      ! Compute the first time derivatives of the continuous states here:
 
    dxdt%DummyContState = 0.0_ReKi
 
-end subroutine InflowWind_CalcContStateDeriv
+
+END SUBROUTINE InflowWind_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for updating discrete states
-subroutine InflowWind_UpdateDiscState(Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-   real(DbKi), intent(IN)  :: Time        !< Current simulation time in seconds
-   type(InflowWind_InputType), intent(IN)  :: u           !< Inputs at Time
-   type(InflowWind_ParameterType), intent(IN)  :: p           !< Parameters
-   type(InflowWind_ContinuousStateType), intent(IN)  :: x           !< Continuous states at Time
-   type(InflowWind_DiscreteStateType), intent(INOUT)  :: xd          !< Input: Discrete states at Time;
+   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
+   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
+   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
+   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(InflowWind_DiscreteStateType),       INTENT(INOUT)  :: xd          !< Input: Discrete states at Time;
                                                                            !! Output: Discrete states at Time + Interval
-   type(InflowWind_ConstraintStateType), intent(IN)  :: z           !< Constraint states at Time
-   type(InflowWind_OtherStateType), intent(IN)  :: OtherState  !< Other states at Time
-   type(InflowWind_MiscVarType), intent(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   integer(IntKi), intent(OUT)  :: ErrStat     !< Error status of the operation
-   character(*), intent(OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
+   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   ! Initialize ErrStat
+
+      ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
 
-   ! Update discrete states here:
+
+      ! Update discrete states here:
 
    ! StateData%DiscState =
 
-end subroutine InflowWind_UpdateDiscState
+END SUBROUTINE InflowWind_UpdateDiscState
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
-subroutine InflowWind_CalcConstrStateResidual(Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg)
+SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 
-   real(DbKi), intent(IN)  :: Time        !< Current simulation time in seconds
-   type(InflowWind_InputType), intent(IN)  :: u           !< Inputs at Time
-   type(InflowWind_ParameterType), intent(IN)  :: p           !< Parameters
-   type(InflowWind_ContinuousStateType), intent(IN)  :: x           !< Continuous states at Time
-   type(InflowWind_DiscreteStateType), intent(IN)  :: xd          !< Discrete states at Time
-   type(InflowWind_ConstraintStateType), intent(IN)  :: z           !< Constraint states at Time (possibly a guess)
-   type(InflowWind_OtherStateType), intent(IN)  :: OtherState  !< Other states at Time
-   type(InflowWind_MiscVarType), intent(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   type(InflowWind_ConstraintStateType), intent(OUT)  :: z_residual  !< Residual of the constraint state equations using
+   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
+   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
+   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
+   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
+   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(InflowWind_ConstraintStateType),     INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using
                                                                            !! the input values described above
-   integer(IntKi), intent(OUT)  :: ErrStat     !< Error status of the operation
-   character(*), intent(OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   ! Initialize ErrStat
+
+      ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrMsg = ""
+   ErrMsg  = ""
 
-   ! Solve for the constraint states here:
+
+      ! Solve for the constraint states here:
 
    z_residual%DummyConstrState = 0
 
-end subroutine InflowWind_CalcConstrStateResidual
+END SUBROUTINE InflowWind_CalcConstrStateResidual
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
@@ -867,38 +896,39 @@ end subroutine InflowWind_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-subroutine InflowWind_JacobianPInput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
 !..................................................................................................................................
 
-   real(DbKi), intent(IN)           :: t          !< Time in seconds at operating point
-   type(InflowWind_InputType), intent(IN)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   type(InflowWind_ParameterType), intent(IN)           :: p          !< Parameters
-   type(InflowWind_ContinuousStateType), intent(IN)           :: x          !< Continuous states at operating point
-   type(InflowWind_DiscreteStateType), intent(IN)           :: xd         !< Discrete states at operating point
-   type(InflowWind_ConstraintStateType), intent(IN)           :: z          !< Constraint states at operating point
-   type(InflowWind_OtherStateType), intent(IN)           :: OtherState !< Other states at operating point
-   type(InflowWind_OutputType), intent(IN)           :: y          !< Output (change to inout if a mesh copy is required);
-                                                                                !!   Output fields are not used by this routine, but type is
-                                                                                !!   available here so that mesh parameter information (i.e.,
+   REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),    INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType),  INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),       INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),           INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                                !!   Output fields are not used by this routine, but type is   
+                                                                                !!   available here so that mesh parameter information (i.e.,  
                                                                                 !!   connectivity) does not have to be recalculated for dYdu.
-   type(InflowWind_MiscVarType), intent(INOUT)           :: m          !< Misc/optimization variables
-   integer(IntKi), intent(OUT)           :: ErrStat    !< Error status of the operation
-   character(*), intent(OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   real(R8Ki), allocatable, optional, intent(INOUT)           :: dYdu(:, :)  !< Partial derivatives of output functions (Y)
+   TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional, intent(INOUT)           :: dXdu(:, :)  !< Partial derivatives of continuous state functions (X)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional, intent(INOUT)           :: dXddu(:, :) !< Partial derivatives of discrete state functions (Xd)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   real(R8Ki), allocatable, optional, intent(INOUT)           :: dZdu(:, :)  !< Partial derivatives of constraint state functions (Z)
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z)  
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-
-   ! local variables:
-   integer(IntKi)                                                 :: ErrStat2
-   character(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
-   character(*), parameter                                        :: RoutineName = 'InflowWind_JacobianPInput'
-
-   real(R8Ki)                                                     :: local_dYdu(3, 3 + NumExtendedInputs)
+ 
+      ! local variables: 
+   INTEGER(IntKi)                                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
+   CHARACTER(*), PARAMETER                                        :: RoutineName = 'InflowWind_JacobianPInput'
+      
+   
+   REAL(R8Ki)                                                     :: local_dYdu(3,3+NumExtendedInputs)
    integer                                                        :: i, n
    integer                                                        :: i_start, i_end  ! indices for input/output start and end
    integer                                                        :: node, comp
@@ -906,174 +936,562 @@ subroutine InflowWind_JacobianPInput(t, u, p, x, xd, z, OtherState, y, m, ErrSta
    integer                                                        :: n_outputs
    integer                                                        :: i_ExtendedInput_start
    integer                                                        :: i_WriteOutput
-
-   ! Initialize ErrStat
+   
+      
+      ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrMsg = ''
+   ErrMsg  = ''
 
-   if (PRESENT(dYdu)) then
 
-      n_outputs = SIZE(u%PositionXYZ) + p%NumOuts + size(y%DiskVel)
-      n_inputs = SIZE(u%PositionXYZ) + size(u%HubPosition) + 3 + NumExtendedInputs ! need to add 3 for u%HubOrientation
+   IF ( PRESENT( dYdu ) ) THEN
+
+      n_outputs = SIZE(u%PositionXYZ)+p%NumOuts + size(y%DiskVel)
+      n_inputs  = SIZE(u%PositionXYZ)+size(u%HubPosition) + 3 + NumExtendedInputs ! need to add 3 for u%HubOrientation
       i_ExtendedInput_start = n_inputs - NumExtendedInputs + 1 ! index for extended inputs starts 2 from end (encompasses 3 values: V, VShr, PropDir)
-      i_WriteOutput = n_outputs - p%NumOuts ! index for where write outputs begin is i_WriteOutput + 1
-
+      i_WriteOutput         = n_outputs - p%NumOuts ! index for where write outputs begin is i_WriteOutput + 1
+      
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-
-      ! outputs are all velocities at all positions plus the WriteOutput values
-      !
+         
+         ! outputs are all velocities at all positions plus the WriteOutput values
+         !
       if (.not. ALLOCATED(dYdu)) then
-         call AllocAry(dYdu, n_outputs, n_inputs, 'dYdu', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         CALL AllocAry( dYdu, n_outputs, n_inputs, 'dYdu', ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
+         
+         
+      SELECT CASE ( p%WindType )
+      CASE (Steady_WindNumber, Uniform_WindNumber)
 
-      select case (p%WindType)
-      case (Steady_WindNumber, Uniform_WindNumber)
-
-         ! note that we are including the propagation direction in the analytical derivative calculated
-         ! inside IfW_UniformWind_JacobianPInput, so no need to transform input position vectors first
-
-         dYdu = 0.0_R8Ki ! initialize all non-diagonal entries to zero (position of node effects the output of only that node)
-
-         n = SIZE(u%PositionXYZ, 2)
-         ! these are the positions used in the module coupling
-         do i = 1, n
+            ! note that we are including the propagation direction in the analytical derivative calculated
+            ! inside IfW_UniformWind_JacobianPInput, so no need to transform input position vectors first
+         
+         dYdu = 0.0_R8Ki ! initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
+         
+         n = SIZE(u%PositionXYZ,2)
+            ! these are the positions used in the module coupling
+         do i=1,n
             ! note that p%FlowField%RotToWind(1,1) = cos(p%PropagationDir) and p%FlowField%RotToWind(2,1) = sin(p%PropagationDir), which are the
             ! values we need to compute the jacobian.
-!!!FIX ME with the propagation values!!!!
-            call IfW_UniformWind_JacobianPInput(p%FlowField%Uniform, t, u%PositionXYZ(:, i), p%FlowField%RotToWind(1, 1), p%FlowField%RotToWind(2, 1), local_dYdu)
-
-            i_end = 3*i
-            i_start = i_end - 2
-
-            dYdu(i_start:i_end, i_start:i_end) = local_dYdu(:, 1:3)
-
-            dYdu(i_start:i_end, i_ExtendedInput_start:) = local_dYdu(:, 4:6) ! extended inputs
-
+!!!FIX ME with the propagation values!!!!         
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, u%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
+            
+            i_end  = 3*i
+            i_start= i_end - 2
+            
+            dYdu(i_start:i_end,i_start:i_end) = local_dYdu(:,1:3)
+            
+            dYdu(i_start:i_end, i_ExtendedInput_start:) = local_dYdu(:,4:6) ! extended inputs
+            
          end do
-
+         
+         
          ! see InflowWind_GetSpatialAverage():
-
+         
          ! location of y%DiskAvg
          i_start = 3*n + 1
-         i_end = i_start + 2
-
-         dYdu(i_start:i_end, :) = 0.0_R8Ki ! initialize because we're going to create averages
-
-         do i = 1, IfW_NumPtsAvg
-            m%u_Avg%PositionXYZ(:, i) = matmul(u%HubOrientation, p%PositionAvg(:, i)) + u%HubPosition
-!!!FIX ME with the propagation values!!!!
-            call IfW_UniformWind_JacobianPInput(p%FlowField%Uniform, t, m%u_Avg%PositionXYZ(:, i), p%FlowField%RotToWind(1, 1), p%FlowField%RotToWind(2, 1), local_dYdu)
-
+         i_end   = i_start + 2
+         
+         dYdu(i_start:i_end,:) = 0.0_R8Ki ! initialize because we're going to create averages
+         
+         do i=1,IfW_NumPtsAvg
+            m%u_Avg%PositionXYZ(:,i) = matmul(u%HubOrientation,p%PositionAvg(:,i)) + u%HubPosition
+!!!FIX ME with the propagation values!!!!         
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, m%u_Avg%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
+         
             ! y%DiskAvg has the same index as u%HubPosition
             ! Also note that partial_(m%u_Avg%PositionXYZ) / partial_(u%HubPosition) is identity, so we can skip that part of the chain rule for these derivatives:
-            dYdu(i_start:i_end, i_start:i_end) = dYdu(i_start:i_end, i_start:i_end) + local_dYdu(:, 1:3)
-            dYdu(i_start:i_end, i_ExtendedInput_start:) = dYdu(i_start:i_end, i_ExtendedInput_start:) + local_dYdu(:, 4:6) ! extended inputs
+            dYdu(i_start:i_end,i_start:i_end)           = dYdu(i_start:i_end, i_start:i_end)          + local_dYdu(:,1:3)
+            dYdu(i_start:i_end, i_ExtendedInput_start:) = dYdu(i_start:i_end, i_ExtendedInput_start:) + local_dYdu(:,4:6) ! extended inputs
          end do
-         dYdu(i_start:i_end, i_start:i_end) = dYdu(i_start:i_end, i_start:i_end)/real(IfW_NumPtsAvg, R8Ki)
-         dYdu(i_start:i_end, i_ExtendedInput_start:) = dYdu(i_start:i_end, i_ExtendedInput_start:)/real(IfW_NumPtsAvg, R8Ki)
+         dYdu(i_start:i_end,i_start:i_end)           = dYdu(i_start:i_end, i_start:i_end)          / REAL(IfW_NumPtsAvg,R8Ki)
+         dYdu(i_start:i_end,i_ExtendedInput_start:)  = dYdu(i_start:i_end, i_ExtendedInput_start:) / REAL(IfW_NumPtsAvg,R8Ki)
 !FIX ME:
          ! need to calculate dXYZdHubOrient = partial_(m%u_Avg%PositionXYZ) / partial_(u%HubOrientation)
          !dYdu(i_start:i_end,(i_start+3):(i_end+3)) = matmul( dYdu(i_start:i_end,i_start:i_end), dXYZdHubOrient )
 
-         ! these are the InflowWind WriteOutput velocities (and note that we may not have all of the components of each point)
+
+            ! these are the InflowWind WriteOutput velocities (and note that we may not have all of the components of each point) 
          ! they do not depend on the inputs, so the derivatives w.r.t. X, Y, Z are all zero
-         do i = 1, p%NumOuts
-            node = p%OutParamLinIndx(1, i) ! output node
-            comp = p%OutParamLinIndx(2, i) ! component of output node
+         do i=1, p%NumOuts
+            node  = p%OutParamLinIndx(1,i) ! output node
+            comp  = p%OutParamLinIndx(2,i) ! component of output node
 
             if (node > 0) then
-!!!FIX ME with the propagation values!!!!
-               call IfW_UniformWind_JacobianPInput(p%FlowField%Uniform, t, p%WindViXYZ(:, node), p%FlowField%RotToWind(1, 1), p%FlowField%RotToWind(2, 1), local_dYdu)
+!!!FIX ME with the propagation values!!!!         
+               call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, p%WindViXYZ(:,node), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
             else
                local_dYdu = 0.0_R8Ki
                comp = 1
             end if
-
-            dYdu(i_WriteOutput + i, i_ExtendedInput_start:) = p%OutParam(i)%SignM*local_dYdu(comp, 4:6)
+            
+            dYdu(i_WriteOutput+i, i_ExtendedInput_start:) = p%OutParam(i)%SignM * local_dYdu( comp , 4:6)
          end do
 
-      case DEFAULT
+      CASE DEFAULT
 
-      end select
+      END SELECT
+                  
+   END IF
 
-   end if
+   IF ( PRESENT( dXdu ) ) THEN
+      if (allocated(dXdu)) deallocate(dXdu) 
+   END IF
 
-   if (PRESENT(dXdu)) then
-      if (allocated(dXdu)) deallocate (dXdu)
-   end if
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu) 
+   END IF
 
-   if (PRESENT(dXddu)) then
-      if (allocated(dXddu)) deallocate (dXddu)
-   end if
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu) 
+   END IF
 
-   if (PRESENT(dZdu)) then
-      if (allocated(dZdu)) deallocate (dZdu)
-   end if
 
-end subroutine InflowWind_JacobianPInput
+END SUBROUTINE InflowWind_JacobianPInput
 !..................................................................................................................................
-!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial
+!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial 
 !! derivative dY/du is returned. This submodule does not follow the modularization framework.
-subroutine IfW_UniformWind_JacobianPInput(UF, t, Position, CosPropDir, SinPropDir, dYdu)
-   use IfW_FlowField, only: UniformField_InterpLinear, UniformField_InterpCubic
+SUBROUTINE IfW_UniformWind_JacobianPInput(UF, t, Position, CosPropDir, SinPropDir, dYdu)
+   USE IfW_FlowField, only : UniformField_InterpLinear, UniformField_InterpCubic
 
-   type(UniformFieldType), intent(IN)  :: UF                !< Uniform field derived type
-   real(DbKi), intent(IN)  :: t                 !< Current simulation time in seconds
-   real(ReKi), intent(IN)  :: Position(3)       !< XYZ Position at which to find velocity (operating point)
-   real(ReKi), intent(IN)  :: CosPropDir        !< cosine of InflowWind propagation direction
-   real(ReKi), intent(IN)  :: SinPropDir        !< sine of InflowWind propagation direction
-   real(R8Ki), intent(INOUT)  :: dYdu(3, 6)         !< Partial derivatives of output functions (Y) with respect to the inputs (u)
+   TYPE(UniformFieldType),    INTENT(IN   )  :: UF                !< Uniform field derived type
+   REAL(DbKi),                INTENT(IN   )  :: t                 !< Current simulation time in seconds
+   REAL(ReKi),                INTENT(IN   )  :: Position(3)       !< XYZ Position at which to find velocity (operating point)
+   REAL(ReKi),                INTENT(IN   )  :: CosPropDir        !< cosine of InflowWind propagation direction
+   REAL(ReKi),                INTENT(IN   )  :: SinPropDir        !< sine of InflowWind propagation direction
+   REAL(R8Ki),                INTENT(INOUT)  :: dYdu(3,6)         !< Partial derivatives of output functions (Y) with respect to the inputs (u)
 
-   type(UniformField_Interp)                 :: op                ! interpolated values of InterpParams
-   real(R8Ki)                                :: RotatePosition(3) !< rotated position
-   real(R8Ki)                                :: dVhdx             ! temporary value to hold partial v_h partial X
-   real(R8Ki)                                :: dVhdy             ! temporary value to hold partial v_h partial Y
-   real(R8Ki)                                :: dVhdz             ! temporary value to hold partial v_h partial Z
-   real(R8Ki)                                :: tmp_du            ! temporary value to hold calculations that are part of multiple components
-   real(R8Ki)                                :: tmp_dv            ! temporary value to hold calculations that are part of multiple components
-   real(R8Ki)                                :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
-   real(R8Ki)                                :: dVhdV             ! temporary value to hold partial v_h partial V
-   real(R8Ki)                                :: Vh                ! temporary value to hold v_h
-   real(R8Ki)                                :: dVhdVShr          ! temporary value to hold partial v_h partial VShr
-   real(R8Ki)                                :: zr
+   TYPE(UniformField_Interp)                 :: op                ! interpolated values of InterpParams
+   REAL(R8Ki)                                :: RotatePosition(3) !< rotated position
+   REAL(R8Ki)                                :: dVhdx             ! temporary value to hold partial v_h partial X   
+   REAL(R8Ki)                                :: dVhdy             ! temporary value to hold partial v_h partial Y   
+   REAL(R8Ki)                                :: dVhdz             ! temporary value to hold partial v_h partial Z   
+   REAL(R8Ki)                                :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
+   REAL(R8Ki)                                :: dVhdV             ! temporary value to hold partial v_h partial V   
+   REAL(R8Ki)                                :: Vh                ! temporary value to hold v_h    
+   REAL(R8Ki)                                :: dVhdVShr          ! temporary value to hold partial v_h partial VShr   
+   REAL(R8Ki)                                :: zr 
 
-   if (Position(3) < 0.0_ReKi .or. EqualRealNos(Position(3), 0.0_ReKi)) then
+   if ( Position(3) < 0.0_ReKi .or. EqualRealNos(Position(3), 0.0_ReKi)) then
       dYdu = 0.0_R8Ki
       return
-   end if
-
+   end if      
+      
    !-------------------------------------------------------------------------------------------------
    !> 1. Interpolate uniform field to get values at operating point
    !-------------------------------------------------------------------------------------------------
 
    op = UniformField_InterpLinear(UF, t)
-
+   
    RotatePosition(1) = Position(1)*cosPropDir - Position(2)*sinPropDir
    RotatePosition(2) = Position(1)*sinPropDir + Position(2)*cosPropDir
    RotatePosition(3) = Position(3)
-
+   
    !-------------------------------------------------------------------------------------------------
-   !> 2. Calculate $ rac{\partial Y_{Output \, Equations}}{\partial u_{inputs}} = egin{bmatrix}
-   !! rac{\partial Vt_u}{\partial X} & rac{\partial Vt_u}{\partial Y} & rac{\partial Vt_u}{\partial Z}    !! rac{\partial Vt_v}{\partial X} & rac{\partial Vt_v}{\partial Y} & rac{\partial Vt_v}{\partial Z}    !! rac{\partial Vt_w}{\partial X} & rac{\partial Vt_w}{\partial Y} & rac{\partial Vt_w}{\partial Z}    !! nd{bmatrix} $
+   !> 2. Calculate \f$ \frac{\partial Y_{Output \, Equations}}{\partial u_{inputs}} = \begin{bmatrix}
+   !! \frac{\partial Vt_u}{\partial X} & \frac{\partial Vt_u}{\partial Y} & \frac{\partial Vt_u}{\partial Z} \\
+   !! \frac{\partial Vt_v}{\partial X} & \frac{\partial Vt_v}{\partial Y} & \frac{\partial Vt_v}{\partial Z} \\
+   !! \frac{\partial Vt_w}{\partial X} & \frac{\partial Vt_w}{\partial Y} & \frac{\partial Vt_w}{\partial Z} \\
+   !! \end{bmatrix} \f$
    !-------------------------------------------------------------------------------------------------
 
    zr = RotatePosition(3)/UF%RefHeight
-   tmp_du = op%VelH*op%ShrH/UF%RefLength*CosPropDir
-   dVhdx = tmp_du*op%SinAngleH
-   dVhdy = tmp_du*op%CosAngleH
-   dVhdz = op%VelH*(op%ShrV/UF%RefHeight*zr**(op%ShrV - 1.0_R8Ki) + op%LinShrV/UF%RefLength)
+   tmp_du = op%VelH * op%ShrH / UF%RefLength * CosPropDir
+   dVhdx  = tmp_du * op%SinAngleH
+   dVhdy  = tmp_du * op%CosAngleH   
+   dVhdz  = op%VelH * ( op%ShrV / UF%RefHeight * zr**(op%ShrV-1.0_R8Ki) + op%LinShrV/UF%RefLength)
 
-   dVhdV = ((RotatePosition(3)/UF%RefHeight)**op%ShrV &                                             ! power-law wind shear
-            + (op%ShrH*(RotatePosition(2)*op%CosAngleH + RotatePosition(1)*op%SinAngleH) &   ! horizontal linear shear
-               + op%LinShrV*(RotatePosition(3) - UF%RefHeight))/UF%RefLength)                      ! vertical linear shear
-   Vh = op%VelH*dVhdV + op%VelGust
+   dVhdV = ( ( RotatePosition(3)/UF%RefHeight ) ** op%ShrV &                                             ! power-law wind shear
+             + ( op%ShrH   * ( RotatePosition(2) * op%CosAngleH + RotatePosition(1) * op%SinAngleH ) &   ! horizontal linear shear
+             +  op%LinShrV * ( RotatePosition(3) - UF%RefHeight ) )/UF%RefLength  )                      ! vertical linear shear   
+   Vh = op%VelH * dVhdV + op%VelGust
 
-   dVhdVShr = op%VelH*zr**op%ShrV*log(zr)
-   dVhdPD = op%VelH*op%ShrH/UF%RefLength*(RotatePosition(1)*op%CosAngleH - RotatePosition(2)*op%SinAngleH)
+   dVhdVShr = op%VelH * zr**op%ShrV * log(zr)
+   dVhdPD   = op%VelH * op%ShrH / UF%RefLength * ( RotatePosition(1) * op%CosAngleH - RotatePosition(2) * op%SinAngleH )
 
-   tmp_du = CosPropDir*op%CosAngleH - SinPropDir*op%SinAngleH
-   tmp_dv = -SinPropDir*op%CosAngleH - CosPropDir*op%SinAngleH
+   tmp_du =  CosPropDir*op%CosAngleH  - SinPropDir*op%SinAngleH
+   tmp_dv = -SinPropDir*op%CosAngleH  - CosPropDir*op%SinAngleH
 
-   !> $ rac{\partial Vt_u}{\partial X} = \left[
+      !> \f$ \frac{\partial Vt_u}{\partial X} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(1,1) = tmp_du*dVhdx
+      !> \f$ \frac{\partial Vt_v}{\partial X} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(2,1) = tmp_dv*dVhdx
+      !> \f$ \frac{\partial Vt_w}{\partial X} = 0 \f$
+   dYdu(3,1) = 0.0_R8Ki
+
+      !> \f$ \frac{\partial Vt_u}{\partial Y} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(1,2) = tmp_du*dVhdy
+      !> \f$ \frac{\partial Vt_v}{\partial Y} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(2,2) = tmp_dv*dVhdy
+      !> \f$ \frac{\partial Vt_w}{\partial Y} = 0 \f$
+   dYdu(3,2) = 0.0_R8Ki
+
+      !> \f$ \frac{\partial Vt_u}{\partial Z} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$
+   dYdu(1,3) = tmp_du*dVhdz 
+      !> \f$ \frac{\partial Vt_v}{\partial Z} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$      
+   dYdu(2,3) = tmp_dv*dVhdz
+      !> \f$ \frac{\partial Vt_w}{\partial Z} = 0 \f$
+   dYdu(3,3) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial V} =  \f$
+   dYdu(1,4) = tmp_du*dVhdV      
+      ! \f$ \frac{\partial Vt_v}{\partial V} =  \f$
+   dYdu(2,4) = tmp_dv*dVhdV
+      !> \f$ \frac{\partial Vt_w}{\partial V} = 0 \f$
+   dYdu(3,4) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial VShr} =  \f$
+   dYdu(1,5) = tmp_du*dVhdVShr
+      ! \f$ \frac{\partial Vt_v}{\partial VShr} =  \f$
+   dYdu(2,5) = tmp_dv*dVhdVShr
+      !> \f$ \frac{\partial Vt_w}{\partial VShr} = 0 \f$
+   dYdu(3,5) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial PropDir} =  \f$
+   dYdu(1,6) = tmp_dv*Vh + tmp_du*dVhdPD
+      ! \f$ \frac{\partial Vt_v}{\partial PropDir} =  \f$
+   dYdu(2,6) = -tmp_du*Vh + tmp_dv*dVhdPD
+      !> \f$ \frac{\partial Vt_w}{\partial PropDir} = 0 \f$
+   dYdu(3,6) = 0.0_R8Ki
+
+END SUBROUTINE IfW_UniformWind_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
+SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+!..................................................................................................................................
+
+   REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),    INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType),  INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),       INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),           INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                                !!   Output fields are not used by this routine, but type is   
+                                                                                !!   available here so that mesh parameter information (i.e.,  
+                                                                                !!   connectivity) does not have to be recalculated for dYdx.
+   TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
+                                                                                !!   (Y) with respect to the continuous
+                                                                                !!   states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
+                                                                                !!   functions (X) with respect to
+                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
+                                                                                !!   functions (Xd) with respect to
+                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
+                                                                                !!   functions (Z) with respect to
+                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+
+   IF ( PRESENT( dYdx ) ) THEN
+
+      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+
+      ! allocate and set dYdx
+
+   END IF
+
+   IF ( PRESENT( dXdx ) ) THEN
+
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+
+      ! allocate and set dXdx
+
+   END IF
+
+   IF ( PRESENT( dXddx ) ) THEN
+
+      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
+
+      ! allocate and set dXddx
+
+   END IF
+
+   IF ( PRESENT( dZdx ) ) THEN
+
+
+      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
+
+      ! allocate and set dZdx
+
+   END IF
+
+
+END SUBROUTINE InflowWind_JacobianPContState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd are returned.
+SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
+!..................................................................................................................................
+
+   REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),    INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType),  INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),       INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),           INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                                !!   Output fields are not used by this routine, but type is   
+                                                                                !!   available here so that mesh parameter information (i.e.,  
+                                                                                !!   connectivity) does not have to be recalculated for dYdxd.
+   TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+                                                                                !!  (Y) with respect to the discrete
+                                                                                !!  states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+                                                                                !!   functions (X) with respect to the
+                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddxd(:,:) !< Partial derivatives of discrete state
+                                                                                !!   functions (Xd) with respect to the
+                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+                                                                                !!   functions (Z) with respect to the
+                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+   IF ( PRESENT( dYdxd ) ) THEN
+
+      ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
+
+      ! allocate and set dYdxd
+
+   END IF
+
+   IF ( PRESENT( dXdxd ) ) THEN
+
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
+
+      ! allocate and set dXdxd
+
+   END IF
+
+   IF ( PRESENT( dXddxd ) ) THEN
+
+      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
+
+      ! allocate and set dXddxd
+
+   END IF
+
+   IF ( PRESENT( dZdxd ) ) THEN
+
+      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
+
+      ! allocate and set dZdxd
+
+   END IF
+
+
+END SUBROUTINE InflowWind_JacobianPDiscState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
+SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
+!..................................................................................................................................
+
+   REAL(DbKi),                            INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),            INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),        INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),    INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType),  INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),       INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),           INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                                !!   Output fields are not used by this routine, but type is   
+                                                                                !!   available here so that mesh parameter information (i.e.,  
+                                                                                !!   connectivity) does not have to be recalculated for dYdz.
+   TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+                                                                                !!  functions (Y) with respect to the
+                                                                                !!  constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+                                                                                !!  state functions (X) with respect to
+                                                                                !!  the constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+                                                                                !!  functions (Xd) with respect to the
+                                                                                !!  constraint states (z) [intent in to avoid deallocation]
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+                                                                                !! state functions (Z) with respect to
+                                                                                !!  the constraint states (z) [intent in to avoid deallocation]
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( PRESENT( dYdz ) ) THEN
+
+         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
+
+      ! allocate and set dYdz
+
+   END IF
+
+   IF ( PRESENT( dXdz ) ) THEN
+
+         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
+
+      ! allocate and set dXdz
+
+   END IF
+
+   IF ( PRESENT( dXddz ) ) THEN
+
+         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
+
+      ! allocate and set dXddz
+
+   END IF
+
+   IF ( PRESENT( dZdz ) ) THEN
+
+         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
+
+      ! allocate and set dZdz
+
+   END IF
+
+
+END SUBROUTINE InflowWind_JacobianPConstrState
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),           INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),       INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType), INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),   INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType), INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),      INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),          INTENT(IN   )           :: y          !< Output at operating point
+   TYPE(InflowWind_MiscVarType),         INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+
+   
+   INTEGER(IntKi)                                    :: index, i, j
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'InflowWind_GetOP'
+   
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( PRESENT( u_op ) ) THEN
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, size(u%PositionXYZ) + size(u%HubPosition) + 3 + NumExtendedInputs, 'u_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
+         
+      index = 0
+      do i=1,size(u%PositionXYZ,2)
+         do j=1,size(u%PositionXYZ,1)
+            index = index + 1 !(i-1)*size(u%PositionXYZ,1)+j
+            u_op(index) = u%PositionXYZ(j,i)
+         end do            
+      end do  
+      
+      do i=1,3
+         index = index + 1
+         u_op(index) = u%HubPosition(i)
+      end do
+      
+      u_op((index+1):(index+3)) = EulerExtract(u%HubOrientation)
+      index = index + 3
+      
+      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op(index+1:index+2) )
+      u_op(index + 3) = p%FlowField%PropagationDir
+      
+   END IF
+
+   IF ( PRESENT( y_op ) ) THEN
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts+3, 'y_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
+      index = 0
+      do i=1,size(u%PositionXYZ,2)
+         do j=1,size(u%PositionXYZ,1)
+            index = index + 1 !(i-1)*size(u%PositionXYZ,1)+j
+            y_op(index) = y%VelocityUVW(j,i)
+         end do
+      end do
+         
+      do j=1,size(y%DiskVel)
+         index = index + 1
+         y_op(index) = y%DiskVel(j)
+      end do
+      
+      do i=1,p%NumOuts
+         y_op(i+index) = y%WriteOutput( i )
+      end do
+         
+   END IF
+
+   IF ( PRESENT( x_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( dx_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( xd_op ) ) THEN
+
+   END IF
+   
+   IF ( PRESENT( z_op ) ) THEN
+
+   END IF
+
+END SUBROUTINE InflowWind_GetOP
+
+END MODULE InflowWind

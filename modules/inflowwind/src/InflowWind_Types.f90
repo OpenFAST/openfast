@@ -188,6 +188,7 @@ IMPLICIT NONE
     TYPE(InflowWind_OutputType)  :: y_Avg      !< outputs for computing rotor-averaged values [-]
     TYPE(InflowWind_InputType)  :: u_Hub      !< inputs for computing hub values [-]
     TYPE(InflowWind_OutputType)  :: y_Hub      !< outputs for computing hub values [-]
+    LOGICAL  :: BoxExceedWarned = .FALSE.      !< Has a warning been issued for points extrapolated beyond FFWind grid [-]
   END TYPE InflowWind_MiscVarType
 ! =======================
 CONTAINS
@@ -4289,6 +4290,7 @@ ENDIF
       CALL InflowWind_CopyOutput( SrcMiscData%y_Hub, DstMiscData%y_Hub, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+    DstMiscData%BoxExceedWarned = SrcMiscData%BoxExceedWarned
  END SUBROUTINE InflowWind_CopyMisc
 
  SUBROUTINE InflowWind_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -4450,6 +4452,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedWarned
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4644,6 +4647,8 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedWarned, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_PackMisc
 
  SUBROUTINE InflowWind_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4898,6 +4903,8 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    OutData%BoxExceedWarned = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedWarned)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_UnPackMisc
 
 

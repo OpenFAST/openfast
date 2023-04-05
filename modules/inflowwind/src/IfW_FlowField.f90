@@ -58,12 +58,16 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    real(ReKi), allocatable                   :: Position(:, :)
    integer(IntKi)                            :: TmpErrStat
    character(ErrMsgLen)                      :: TmpErrMsg
+
    ! Uniform Field
    type(UniformField_Interp)                 :: UFopVel, UFopAcc
+
    ! Grid3D Field
    real(ReKi)                                :: Xi(3)
    real(ReKi)                                :: VelCell(8, 3), AccCell(8, 3)
    logical                                   :: Is3D
+   logical                                   :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
+   logical                                   :: GridExtrap        ! did this point fall outside the wind box and get extrapolated?
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -178,9 +182,14 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                cycle
             end if
 
-            ! Calculate grid cells for interpolation
-            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), .true., &
-                                     VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
+            ! Is this point allowed beyond the bounds of the wind box?
+            GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
+
+            ! Calculate grid cells for interpolation, returns velocity and acceleration
+            ! components at corners of grid cell containing time and position. Also
+            ! returns interpolation values Xi.
+            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), .true., GridExceedAllow, &
+                                     VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
             if (TmpErrStat >= AbortErrLev) then
                call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
                return
@@ -209,9 +218,12 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                cycle
             end if
 
+            ! is this point allowed beyond the bounds of the wind box?
+            GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
+
             ! Calculate grid cells for interpolation
-            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), FF%VelInterpCubic, &
-                                     VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
+            call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), FF%VelInterpCubic, GridExceedAllow, &
+                                     VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
             if (TmpErrStat >= AbortErrLev) then
                call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
                return
@@ -726,149 +738,382 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
 
 end subroutine
 
-subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
+subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
+                               VelCell, AccCell, Xi, Is3D, Extrapolated, ErrStat, ErrMsg)
 
-   type(Grid3DFieldType), intent(in)   :: G3D            !< 3D Grid-Field data
-   real(DbKi), intent(in)              :: Time           !< time (s)
-   real(ReKi), intent(in)              :: Position(3)    !< position X,Y,Z to get value
-   logical, intent(in)                 :: CalcAccel      !< flag to populat AccCell
-   real(ReKi), intent(out)             :: VelCell(8, 3)  !<
-   real(ReKi), intent(out)             :: AccCell(8, 3)  !<
-   real(ReKi), intent(out)             :: Xi(3)          !< isoparametric coord of position in cell (y,z,t) [-1, +1]
-   logical, intent(out)                :: Is3D           !<
-   integer(IntKi), intent(out)         :: ErrStat        !< error status
-   character(*), intent(out)           :: ErrMsg         !< error message
+   type(Grid3DFieldType), intent(in)   :: G3D               !< 3D Grid-Field data
+   real(DbKi), intent(in)              :: Time              !< time (s)
+   real(ReKi), intent(in)              :: Position(3)       !< position X,Y,Z to get value
+   logical, intent(in)                 :: CalcAccel         !< flag to populat AccCell
+   logical, intent(in)                 :: AllowExtrap       !< is this point allowed to exceed bounds of wind grid
+   real(ReKi), intent(out)             :: VelCell(8, 3)     !< Velocity components at corners of grid cell
+   real(ReKi), intent(out)             :: AccCell(8, 3)     !< Acceleration components at corners of grid cell
+   real(ReKi), intent(out)             :: Xi(3)             !< isoparametric coord of position in cell (y,z,t) [-1, +1]
+   logical, intent(out)                :: Is3D              !< flag indicating if interpolation is 3D or 2D
+   logical, intent(out)                :: Extrapolated      !< Extrapolation outside grid is allowed and point lies outside grid
+   integer(IntKi), intent(out)         :: ErrStat           !< error status
+   character(*), intent(out)           :: ErrMsg            !< error message
 
-   character(*), parameter    :: RoutineName = "Grid3DField_GetSmoothInterp"
-   integer(IntKi)             :: IY_Lo, IY_Hi
-   integer(IntKi)             :: IZ_Lo, IZ_Hi
-   integer(IntKi)             :: IT_Lo, IT_Hi
-   logical                    :: OnGrid
-   real(ReKi)                 :: TimeShifted
+   character(*), parameter             :: RoutineName = "Grid3DField_GetCell"
+   integer(IntKi), parameter           :: ExtrapNone = 0
+   integer(IntKi), parameter           :: ExtrapYmin = 1
+   integer(IntKi), parameter           :: ExtrapYmax = 2
+   integer(IntKi), parameter           :: ExtrapZmin = 4
+   integer(IntKi), parameter           :: ExtrapZmax = 8
+   integer(IntKi)                      :: AllExtrap
+   integer(IntKi)                      :: IY_Lo, IY_Hi
+   integer(IntKi)                      :: IZ_Lo, IZ_Hi
+   integer(IntKi)                      :: IT_Lo, IT_Hi
+   logical                             :: InGrid
 
    ErrStat = ErrID_None
    ErrMsg = ""
+
+   ! Initialize to no extrapolation (modified in bounds routines)
+   AllExtrap = ExtrapNone
 
    !----------------------------------------------------------------------------
    ! Find grid bounds in Time and Z
    !----------------------------------------------------------------------------
 
    ! Get grid time bounds
-   call Grid3DField_GetBoundsT(Position(1), Xi(3))
+   call GetBoundsT(Position(1), Xi(3))
    if (ErrStat >= AbortErrLev) return
 
    ! Get grid Z bounds
-   call Grid3DField_GetBoundsZ(Position(3), Xi(2))
+   call GetBoundsZ(Position(3), Xi(2))
    if (ErrStat >= AbortErrLev) return
 
+   ! Get grid Y bounds
+   call GetBoundsY(Position(2), Xi(1))
+   if (ErrStat >= AbortErrLev) return
+
+   ! Set flag indicating if extrapolation occured
+   Extrapolated = AllExtrap /= ExtrapNone
+
    !----------------------------------------------------------------------------
-   ! Extract cells from grids
+   ! Extract interpolation cells from grids based on poisiont
    !----------------------------------------------------------------------------
 
-   if (OnGrid) then
+   ! If position is inside grid
+   if (InGrid) then
 
-      ! Get grid Y bounds
-      call Grid3DField_GetBoundsY(Position(2), Xi(1))
-      if (ErrStat >= AbortErrLev) return
-
+      ! Set flag to use 3D interpolation
       Is3D = .true.
 
-      ! Get velocities from the grid
-      VelCell(1, :) = G3D%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
-      VelCell(2, :) = G3D%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
-      VelCell(3, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
-      VelCell(4, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
-      VelCell(5, :) = G3D%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
-      VelCell(6, :) = G3D%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
-      VelCell(7, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
-      VelCell(8, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
+      ! Interpolate within grid (or top, left, right if extrapolation enabled)
+      call GetCellInGrid(VelCell, G3D%Vel, G3D%VelAvg)
 
-      ! Get accelerations from the grid
+      ! If acceleration requested, get cell values
       if (CalcAccel) then
-         AccCell(1, :) = G3D%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
-         AccCell(2, :) = G3D%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
-         AccCell(3, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
-         AccCell(4, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
-         AccCell(5, :) = G3D%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
-         AccCell(6, :) = G3D%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
-         AccCell(7, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
-         AccCell(8, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
+         call GetCellInGrid(AccCell, G3D%Acc, G3D%AccAvg)
       end if
 
-   else if (G3D%InterpTower) then
+   else if (G3D%NTGrids > 0) then
 
-      ! Get grid Y bounds
-      call Grid3DField_GetBoundsY(Position(2), Xi(1))
-      if (ErrStat >= AbortErrLev) return
+      ! Interpolation is 2D
+      Is3D = .false.
 
-      Is3D = .true.
+      ! Tower grids present and position is below main grid
+      if (.not. AllowExtrap) then
 
-      ! Get velocities from the grid
-      VelCell(1, :) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Lo)
-      VelCell(2, :) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Lo)
-      VelCell(3, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Lo)
-      VelCell(4, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Lo)
-      VelCell(5, :) = 0.0_ReKi ! GF%Vel(:, IY_Lo, IZ_Lo, IT_Hi)
-      VelCell(6, :) = 0.0_ReKi ! GF%Vel(:, IY_Hi, IZ_Lo, IT_Hi)
-      VelCell(7, :) = G3D%Vel(:, IY_Lo, IZ_Hi, IT_Hi)
-      VelCell(8, :) = G3D%Vel(:, IY_Hi, IZ_Hi, IT_Hi)
+         ! Get cell without extrapolation
+         call GetCellInTowerNoExtrap(VelCell, G3D%VelTower)
 
-      ! Get accelerations from the grid
-      if (CalcAccel) then
-         AccCell(1, :) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Lo)
-         AccCell(2, :) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Lo)
-         AccCell(3, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Lo)
-         AccCell(4, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Lo)
-         AccCell(5, :) = 0.0_ReKi ! GF%Acc(:, IY_Lo, IZ_Lo, IT_Hi)
-         AccCell(6, :) = 0.0_ReKi ! GF%Acc(:, IY_Hi, IZ_Lo, IT_Hi)
-         AccCell(7, :) = G3D%Acc(:, IY_Lo, IZ_Hi, IT_Hi)
-         AccCell(8, :) = G3D%Acc(:, IY_Hi, IZ_Hi, IT_Hi)
+         ! If acceleration requested, get cell values
+         if (CalcAccel) then
+            call GetCellInTowerNoExtrap(AccCell, G3D%AccTower)
+         end if
+
+      else
+
+         ! Get cell with extrapolation
+         call GetCellInTower(VelCell, G3D%Vel, G3D%VelAvg, G3D%VelTower)
+
+         ! If acceleration requested, get cell values
+         if (CalcAccel) then
+            call GetCellInTower(AccCell, G3D%Acc, G3D%AccAvg, G3D%AccTower)
+         end if
+
       end if
 
    else
 
-      Is3D = .false.
+      ! Set flag to use 3D interpolation
+      Is3D = .true.
 
-      ! In tower grid
-      if (IZ_HI <= G3D%NTGrids) then
-         VelCell(1, :) = G3D%VelTower(:, IZ_LO, IT_LO)
-         VelCell(2, :) = G3D%VelTower(:, IZ_HI, IT_LO)
-         VelCell(3, :) = G3D%VelTower(:, IZ_LO, IT_HI)
-         VelCell(4, :) = G3D%VelTower(:, IZ_HI, IT_HI)
+      ! Tower interpolation without tower grids
+      call GetCellBelowGrid(VelCell, G3D%Vel, G3D%VelAvg)
 
-         if (CalcAccel) then
-            AccCell(1, :) = G3D%AccTower(:, IZ_LO, IT_LO)
-            AccCell(2, :) = G3D%AccTower(:, IZ_HI, IT_LO)
-            AccCell(3, :) = G3D%AccTower(:, IZ_LO, IT_HI)
-            AccCell(4, :) = G3D%AccTower(:, IZ_HI, IT_HI)
-         end if
-
-      else  ! Between tower grid and ground
-
-         VelCell(1, :) = G3D%VelTower(:, IZ_LO, IT_LO)
-         VelCell(2, :) = 0.0_ReKi
-         VelCell(3, :) = G3D%VelTower(:, IZ_LO, IT_HI)
-         VelCell(4, :) = 0.0_ReKi
-
-         if (CalcAccel) then
-            AccCell(1, :) = G3D%AccTower(:, IZ_LO, IT_LO)
-            AccCell(2, :) = 0.0_ReKi
-            AccCell(3, :) = G3D%AccTower(:, IZ_LO, IT_HI)
-            AccCell(4, :) = 0.0_ReKi
-         end if
-
+      ! If acceleration requested, get cell values
+      if (CalcAccel) then
+         call GetCellBelowGrid(AccCell, G3D%Acc, G3D%AccAvg)
       end if
 
    end if
 
 contains
 
-   subroutine Grid3DField_GetBoundsY(PosY, DY)
+   subroutine GetCellInGrid(cell, grid, gridAvg)
 
-      real(ReKi), intent(in)              :: PosY
-      real(ReKi), intent(out)             :: DY
+      real(ReKi), intent(out) :: cell(8, 3)
+      real(SiKi), intent(in)  :: grid(:, :, :, :)
+      real(SiKi), intent(in)  :: gridAvg(:, :, :)
 
-      real(ReKi)                          :: Y_Grid
+      ! Select based on extrapolation flags
+      select case (AllExtrap)
+
+      case (ExtrapNone)                   ! No extrapolation
+
+         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+
+      case (ior(ExtrapZmax, ExtrapYmax))   ! Extrapolate top right corner
+
+         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = gridAvg(:, IZ_Lo, IT_Lo)
+         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = gridAvg(:, IZ_Lo, IT_Hi)
+         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
+         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
+
+      case (ior(ExtrapZmax, ExtrapYmin))! Extrapolate top left corner
+
+         cell(1, :) = gridAvg(:, IZ_Lo, IT_Lo)
+         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(5, :) = gridAvg(:, IZ_Lo, IT_Hi)
+         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
+         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
+
+      case (ExtrapZmax)   ! Extrapolate above grid only
+
+         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
+         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
+
+      case (ExtrapYmax)   ! Extrapolate to the right of grid only
+
+         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = gridAvg(:, IZ_Lo, IT_Lo)
+         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = gridAvg(:, IZ_Lo, IT_Hi)
+         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
+
+      case (ExtrapYmin)   ! Extrapolate to the left of grid only
+
+         cell(1, :) = gridAvg(:, IZ_Lo, IT_Lo)
+         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(5, :) = gridAvg(:, IZ_Lo, IT_Hi)
+         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
+         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+
+      end select
+
+   end subroutine
+
+   subroutine GetCellBelowGrid(cell, grid, gridAvg)
+
+      real(ReKi), intent(out) :: cell(8, 3)
+      real(SiKi), intent(in)  :: grid(:, :, :, :)
+      real(SiKi), intent(in)  :: gridAvg(:, :, :)
+
+      ! Select based on extrapolation flags
+      select case (AllExtrap)
+
+      case (ExtrapNone)
+
+         cell(1, :) = 0.0_ReKi                           ! Ground
+         cell(2, :) = 0.0_ReKi                           ! Ground
+         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(5, :) = 0.0_ReKi                           ! Ground
+         cell(6, :) = 0.0_ReKi                           ! Ground
+         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+
+      case (ExtrapYmin) ! Extrap to bottom left of grid
+
+         cell(1, :) = 0.0_ReKi                           ! Ground
+         cell(2, :) = 0.0_ReKi                           ! Ground
+         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(5, :) = 0.0_ReKi                           ! Ground
+         cell(6, :) = 0.0_ReKi                           ! Ground
+         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
+         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+
+      case (ExtrapYmax) ! Extrap to bottom right of grid
+
+         cell(1, :) = 0.0_ReKi                           ! Ground
+         cell(2, :) = 0.0_ReKi                           ! Ground
+         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
+         cell(5, :) = 0.0_ReKi                           ! Ground
+         cell(6, :) = 0.0_ReKi                           ! Ground
+         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
+
+      end select
+
+   end subroutine
+
+   subroutine GetCellInTowerNoExtrap(cell, tower)
+
+      real(ReKi), intent(out) :: cell(8, 3)
+      real(SiKi), intent(in)  :: tower(:, :, :)
+
+      if (IZ_HI <= G3D%NTGrids) then      ! In tower grid
+
+         cell(1, :) = tower(:, IZ_LO, IT_LO)
+         cell(2, :) = tower(:, IZ_HI, IT_LO)
+         cell(3, :) = tower(:, IZ_LO, IT_HI)
+         cell(4, :) = tower(:, IZ_HI, IT_HI)
+
+      else                                ! Between tower grid and ground
+
+         cell(1, :) = tower(:, IZ_LO, IT_LO)
+         cell(2, :) = 0.0_ReKi
+         cell(3, :) = tower(:, IZ_LO, IT_HI)
+         cell(4, :) = 0.0_ReKi
+
+      end if
+
+   end subroutine
+
+   subroutine GetCellInTower(cell, grid, gridAvg, tower)
+
+      real(ReKi), intent(out) :: cell(8, 3)
+      real(SiKi), intent(in)  :: grid(:, :, :, :)
+      real(SiKi), intent(in)  :: gridAvg(:, :, :)
+      real(SiKi), intent(in)  :: tower(:, :, :)
+
+      real(ReKi)        :: GridVal(3, 2)
+      real(ReKi)        :: TowerVal(3, 2)
+      real(ReKi)        :: vc(2, 3, 2)
+      real(ReKi)        :: N(2)
+      real(ReKi)        :: Xv(3), Yv(3), Wv(3), Px, Py
+      real(ReKi)        :: denom
+      integer(IntKi)    :: ic, it
+
+      if (abs(Position(2)) >= 2.0_ReKi*G3D%YHWid) then   ! Extrapolation allowed and Y beyond interp
+
+         ! Interp between ground and bottom of grid average
+         Xi(2) = 2.0_ReKi*Position(3)/G3D%GridBase - 1.0_ReKi
+         cell(1, :) = 0.0_ReKi
+         cell(2, :) = gridAvg(:, 1, IT_LO)
+         cell(3, :) = 0.0_ReKi
+         cell(4, :) = gridAvg(:, 1, IT_HI)
+
+      else              ! Extrapolation allowed and Y within interp range
+
+         ! Distance from tower (Y)
+         Px = Position(2)
+         Xv(1) = 0.0_ReKi                          ! Tower
+         Xv(2) = Position(2)                       ! Grid bottom
+         Xv(3) = sign(2.0*G3D%YHWid, Position(2))  ! Ground
+
+         ! Elevation from ground (Z)
+         Py = Position(3)
+         Yv(1) = Position(3)                       ! Tower
+         Yv(2) = G3D%GridBase                      ! Grid bottom
+         Yv(3) = 0.0_ReKi                          ! Ground
+
+         ! Barycentric weights
+         denom = ((Yv(2) - Yv(3))*(Xv(1) - Xv(3)) + &
+                  (Xv(3) - Xv(2))*(Yv(1) - Yv(3)))
+         Wv(1) = ((Yv(2) - Yv(3))*(Px - Xv(3)) + &
+                  (Xv(3) - Xv(2))*(Py - Yv(3)))/denom
+         Wv(2) = ((Yv(3) - Yv(1))*(Px - Xv(3)) + &
+                  (Xv(1) - Xv(3))*(Py - Yv(3)))/denom
+
+         ! Interpolate grid
+         N(1) = (1.0_ReKi - Xi(1))/2.0_ReKi
+         N(2) = (1.0_ReKi + Xi(1))/2.0_ReKi
+
+         select case (AllExtrap)
+         case (ExtrapNone)
+            vc(1, :, 1) = grid(:, IY_Lo, 1, IT_Lo)
+            vc(2, :, 1) = grid(:, IY_Hi, 1, IT_Lo)
+            vc(1, :, 2) = grid(:, IY_Lo, 1, IT_Hi)
+            vc(2, :, 2) = grid(:, IY_Hi, 1, IT_Hi)
+         case (ExtrapYmin)
+            vc(1, :, 1) = gridAvg(:, 1, IT_Lo)
+            vc(2, :, 1) = grid(:, IY_Lo, 1, IT_Lo)
+            vc(1, :, 2) = gridAvg(:, 1, IT_Hi)
+            vc(2, :, 2) = grid(:, IY_Lo, 1, IT_Hi)
+         case (ExtrapYmax)
+            vc(1, :, 1) = grid(:, IY_Hi, 1, IT_Lo)
+            vc(2, :, 1) = gridAvg(:, 1, IT_Lo)
+            vc(1, :, 2) = grid(:, IY_Hi, 1, IT_Hi)
+            vc(2, :, 2) = gridAvg(:, 1, IT_Hi)
+         end select
+
+         do it = 1, 2
+            do ic = 1, 3
+               GridVal(ic, it) = dot_product(vc(:, ic, it), N)
+            end do
+         end do
+
+         ! Interpolate tower
+         N(1) = (1.0_ReKi - Xi(2))/2.0_ReKi
+         N(2) = (1.0_ReKi + Xi(2))/2.0_ReKi
+
+         if (IZ_HI <= G3D%NTGrids) then
+            vc(1, :, 1) = tower(:, IZ_Lo, IT_Lo)
+            vc(2, :, 1) = tower(:, IZ_Hi, IT_Lo)
+            vc(1, :, 2) = tower(:, IZ_Lo, IT_Hi)
+            vc(2, :, 2) = tower(:, IZ_Hi, IT_Hi)
+         else
+            vc(1, :, 1) = tower(:, IZ_Lo, IT_Lo)
+            vc(2, :, 1) = 0.0_ReKi
+            vc(1, :, 2) = tower(:, IZ_Lo, IT_Hi)
+            vc(2, :, 2) = 0.0_ReKi
+         end if
+
+         do it = 1, 2
+            do ic = 1, 3
+               TowerVal(ic, it) = dot_product(vc(:, ic, it), N)
+            end do
+         end do
+
+         ! Populate cell
+         cell(1, :) = Wv(1)*TowerVal(:, 1) + Wv(2)*GridVal(:, 1)
+         cell(2, :) = cell(1, :)
+         cell(3, :) = Wv(1)*TowerVal(:, 2) + Wv(2)*GridVal(:, 2)
+         cell(4, :) = cell(3, :)
+
+      end if
+
+   end subroutine
+
+   subroutine GetBoundsY(PosY, DY)
+
+      real(ReKi), intent(in)     :: PosY
+      real(ReKi), intent(out)    :: DY
+
+      real(ReKi)                 :: Y_Grid
 
       ! Calculate position on Y grid
       Y_Grid = (PosY + G3D%YHWid)*G3D%InvDY + 1
@@ -890,22 +1135,36 @@ contains
          IY_LO = G3D%NYGrids - 1
          IY_HI = G3D%NYGrids
          DY = 1.0_ReKi
+      else if (AllowExtrap) then
+         if (IY_LO <= 0) then
+            ! Clamp value at grid width below the low side of grid
+            DY = 2.0_ReKi*max(PosY/G3D%YHWid + 2.0_ReKi, 0.0_Reki) - 1.0_ReKi
+            IY_LO = 1
+            IY_HI = 1
+            AllExtrap = ior(AllExtrap, ExtrapYmin)
+         else if (IY_LO >= G3D%NYGrids) then
+            ! Clamp value at grid width above the high side of grid
+            DY = 2.0_ReKi*min(PosY/G3D%YHWid - 1.0_ReKi, 1.0_Reki) - 1.0_ReKi
+            IY_LO = G3D%NYGrids
+            IY_HI = G3D%NYGrids
+            AllExtrap = ior(AllExtrap, ExtrapYmax)
+         end if
       else
          ! Position outside
          call SetErrStat(ErrID_Fatal, ' GF wind array boundaries violated: Grid too small in Y direction. Y='// &
-                         TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*G3D%YHWid))// &
+                         TRIM(Num2LStr(PosY))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*G3D%YHWid))// &
                          ', '//TRIM(Num2LStr(G3D%YHWid))//']', &
                          ErrStat, ErrMsg, RoutineName)
       end if
 
    end subroutine
 
-   subroutine Grid3DField_GetBoundsZ(PosZ, DZ)
+   subroutine GetBoundsZ(PosZ, DZ)
 
-      real(ReKi), intent(in)              :: PosZ
-      real(ReKi), intent(out)             :: DZ
+      real(ReKi), intent(in)     :: PosZ
+      real(ReKi), intent(out)    :: DZ
 
-      real(ReKi)                          :: Z_GRID
+      real(ReKi)                 :: Z_GRID
 
       ! Calculate position on Z grid
       Z_GRID = (PosZ - G3D%GridBase)*G3D%InvDZ + 1
@@ -917,25 +1176,29 @@ contains
       ! Position location within interval [-1,1]
       DZ = Z_GRID - aint(Z_GRID)
 
-      ! If indices are within grid, set on grid to true
+      ! If indices are within grid, set in grid to true
       if (IZ_LO >= 1 .and. IZ_HI <= G3D%NZGrids) then
-         OnGrid = .true.
+         InGrid = .true.
          DZ = 2.0_ReKi*DZ - 1.0_ReKi
-      else if (IZ_LO < 1) then
+         return
+      end if
+
+      ! If below grid
+      if (IZ_LO < 1) then
          if (IZ_LO == 0 .and. DZ >= 1.0_ReKi - GridTol) then
-            OnGrid = .true.
+            InGrid = .true.
             IZ_LO = 1
             IZ_HI = 2
             DZ = -1.0_ReKi
          else if (G3D%InterpTower) then
             ! Interp from bottom of grid to ground (zero velocity)
-            OnGrid = .false.
+            InGrid = .false.
             IZ_LO = 0
             IZ_HI = 1
             DZ = 2.0_ReKi*(PosZ/G3D%GridBase) - 1.0_ReKi
          else if (G3D%NTGrids > 0) then
             ! Interpolate with tower grid
-            OnGrid = .false.
+            InGrid = .false.
             ! Tower grid is reversed (lowest index is top of tower)
             IZ_LO = int(-(Z_GRID - 1)) + 1
             if (IZ_LO >= G3D%NTGrids) then
@@ -947,37 +1210,56 @@ contains
                DZ = 2.0_ReKi*(real(2 - IZ_LO, ReKi) - Z_GRID) - 1.0_ReKi
             end if
             IZ_HI = IZ_LO + 1
+         else if (AllowExtrap) then
+            InGrid = .true.
+            IZ_LO = 1
+            IZ_HI = 1
+            DZ = 2.0_ReKi*max(PosZ/G3D%GridBase, 0.0_Reki) - 1.0_ReKi
+            AllExtrap = ior(AllExtrap, ExtrapZmin)
          else
             ! Position below grid
-            call SetErrStat(ErrID_Fatal, ' GF wind array boundaries violated. '// &
+            call SetErrStat(ErrID_Fatal, ' G3D wind array boundaries violated. '// &
                             'Grid too small in Z direction '// &
                             '(height (Z='//TRIM(Num2LStr(Position(3)))// &
                             ' m) is below the grid and no tower points are defined).', &
                             ErrStat, ErrMsg, RoutineName)
          end if
-      else if (IZ_HI > G3D%NZGrids) then ! Above Grid
+         return
+      end if
+
+      ! If above grid
+      if (IZ_HI > G3D%NZGrids) then
          if (IZ_HI == G3D%NZGrids + 1 .and. DZ <= GridTol) then
-            OnGrid = .true.
+            InGrid = .true.
             IZ_LO = G3D%NZGrids - 1
             IZ_HI = G3D%NZGrids
             DZ = 1.0_ReKi
+         else if (AllowExtrap) then
+            InGrid = .true.
+            IZ_LO = G3D%NZGrids
+            IZ_HI = G3D%NZGrids
+            ! Calculate interpolation, limit to value at grid width above top of grid
+            DZ = 2.0_ReKi*min((Position(3) - (G3D%GridBase + 2*G3D%ZHWid))/G3D%ZHWid, 1.0_ReKi) - 1.0_ReKi
+            AllExtrap = ior(AllExtrap, ExtrapZmax)
          else
             ! Position above grid
-            call SetErrStat(ErrID_Fatal, ' GF wind array boundaries violated. '// &
+            call SetErrStat(ErrID_Fatal, ' G3D wind array boundaries violated. '// &
                             'Grid too small in Z direction '// &
                             '(Z='//TRIM(Num2LStr(Position(3)))//' m is above grid.)', &
                             ErrStat, ErrMsg, RoutineName)
          end if
+         return
       end if
 
    end subroutine
 
-   subroutine Grid3DField_GetBoundsT(PosX, DT)
+   subroutine GetBoundsT(PosX, DT)
 
-      real(ReKi), intent(in)              :: PosX
-      real(ReKi), intent(out)             :: DT
+      real(ReKi), intent(in)     :: PosX
+      real(ReKi), intent(out)    :: DT
 
-      real(ReKi)                          :: T_GRID
+      real(ReKi)                 :: TimeShifted
+      real(ReKi)                 :: T_GRID
 
       ! Perform the time shift. At time=0, a point half the grid width downstream
       ! (p%YHWid) will index into the zero time slice. If we did not do this,
@@ -985,13 +1267,13 @@ contains
       ! index outside of the array. This all assumes the grid width is at least as
       ! large as the rotor. If it isn't, then the interpolation will not work.
 
-      ! in distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
+      ! In distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
       TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
       ! If field is periodic
       if (G3D%Periodic) then
          TimeShifted = MODULO(TimeShifted, G3D%TotalTime)
-         ! If TimeShifted is a very small negative number, 
+         ! If TimeShifted is a very small negative number,
          ! modulo returns the incorrect value due to internal rounding errors.
          ! See bug report #471
          if (TimeShifted == G3D%TotalTime) TimeShifted = 0.0_ReKi
@@ -1269,6 +1551,52 @@ contains
       end do
 
    end subroutine
+
+end subroutine
+
+!> This subroutine generates the mean wind vector timeseries for each height above the ground.  This
+!! is essentially compressing the Y dimension of the wind box leaving a Z-T plane of vectors.  The
+!! resulting dimensions will be (NZGrids, NYGrids, NFFComp, NFFSteps)
+subroutine IfW_Grid3DField_CalcVelAvgProfile(G3D, CalcAccel, ErrStat, ErrMsg)
+
+   type(Grid3DFieldType), intent(inout)   :: G3D         !< Parameters
+   logical, intent(inout)                 :: CalcAccel   !< Flag to calculate acceleration
+   integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
+   character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter    :: RoutineName = 'IfW_Grid3DField_CalcVelAvgProfile'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Allocate velocity array
+   if (.not. allocated(G3D%VelAvg)) then
+      call AllocAry(G3D%VelAvg, G3D%NComp, G3D%NZGrids, G3D%NSteps, &
+                    'Full-field average wind velocity timeseries data array.', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      G3D%VelAvg = 0.0_SiKi
+   end if
+
+   ! Calculate average velocity for each component across grid (Y)
+   G3D%VelAvg = sum(G3D%Vel, dim=2)/G3D%NYGrids
+
+   ! If acceleration calculation not requested, return
+   if (.not. CalcAccel) return
+
+   ! Allocate acceleration array
+   if (.not. allocated(G3D%AccAvg)) then
+      call AllocAry(G3D%AccAvg, G3D%NComp, G3D%NZGrids, G3D%NSteps, &
+                    'Full-field average wind acceleration timeseries data array.', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      G3D%AccAvg = 0.0_SiKi
+   end if
+
+   ! Calculate average acceleration for each component across grid (Y)
+   G3D%AccAvg = sum(G3D%Acc, dim=2)/G3D%NYGrids
 
 end subroutine
 
@@ -1610,7 +1938,6 @@ subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
    real(ReKi)                          :: meanVel(3)
    real(ReKi)                          :: meanWindDir
    real(ReKi)                          :: u_p1, z_p1
-   real(ReKi)                          :: u_ref, z_ref
    real(ReKi), parameter               :: HubPositionX = 0.0_ReKi
    real(ReKi)                          :: radius ! length of time to use for smoothing uniform wind data, seconds
    integer(IntKi)                      :: ErrStat2
@@ -1685,17 +2012,18 @@ subroutine Grid3D_to_Uniform(G3D, UF, ErrStat, ErrMsg, SmoothingRadius)
    transformMat(2, 3) = 0.0_R8Ki
    transformMat(3, 3) = cos(UF%AngleV(1))
 
-   do i = 1, size(Vel, 4)
+   do ic = 1, size(Vel, 4)
       do iy = 1, size(Vel, 2)
          do iz = 1, size(Vel, 1)
-            Vel(iz, iy, :, i) = matmul(transformMat, G3D%Vel(:, iy, iz, i))
+            Vel(iz, iy, :, ic) = real(matmul(transformMat, G3D%Vel(:, iy, iz, i)), SiKi)
          end do
       end do
    end do
 
    ! make sure we have the correct mean, or the direction will also be off here
    if (G3D%AddMeanAfterInterp) then
-      Vel(iz_ref, iy_ref, 1, :) = Vel(iz_ref, iy_ref, 1, :) + CalculateMeanVelocity(G3D, UF%RefHeight, 0.0_ReKi)
+      Vel(iz_ref, iy_ref, 1, :) = Vel(iz_ref, iy_ref, 1, :) + &
+                                  real(CalculateMeanVelocity(G3D, UF%RefHeight, 0.0_ReKi), SiKi)
    end if
 
    meanVel = 0.0_ReKi

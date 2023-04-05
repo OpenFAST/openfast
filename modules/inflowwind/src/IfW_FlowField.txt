@@ -66,6 +66,8 @@ typedef  ^              ^                      SiKi                Vel          
 typedef  ^              ^                      SiKi                Acc                 ::::  -         -     "Array of field accelerations"                                 -
 typedef  ^              ^                      SiKi                VelTower            :::   -         -     "Array of tower velocities"                                    -
 typedef  ^              ^                      SiKi                AccTower            :::   -         -     "Array of tower accelerations"                                 -
+typedef  ^              ^                      SiKi                VelAvg              :::   -         -     "Average velocity profile by Z and time"                       -
+typedef  ^              ^                      SiKi                AccAvg              :::   -         -     "Average acceleration profile by Z and time"                       -
 typedef  ^              ^                      ReKi                DTime               -     0         -     "Delta time"                                                   seconds
 typedef  ^              ^                      ReKi                Rate                -     0         -     "Data rate (1/FFDTime)"                                         Hertz
 typedef  ^              ^                      ReKi                YHWid               -     0         -     "Half the grid width"                                          meters
@@ -86,7 +88,6 @@ typedef  ^              ^                      ReKi                PLExp        
 typedef  ^              ^                      ReKi                Z0                  -     0         -     "Surface roughness length (used for LOG wind profile type only)"  -
 typedef  ^              ^                      ReKi                VLinShr             -     0         -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
 typedef  ^              ^                      ReKi                HLinShr             -     0         -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
-typedef  ^              ^                      SiKi                VelAvg              :::   -         -     "Average velocity profile by Z and time"                       -
 typedef  ^              ^                      LOGICAL             BoxExceedAllowF     -  .FALSE.      -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 typedef  ^              ^                      IntKi               BoxExceedAllowIdx   -    -1         -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 

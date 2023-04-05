@@ -100,6 +100,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Acc      !< Array of field accelerations [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: VelTower      !< Array of tower velocities [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AccTower      !< Array of tower accelerations [-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: VelAvg      !< Average velocity profile by Z and time [-]
+    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AccAvg      !< Average acceleration profile by Z and time [-]
     REAL(ReKi)  :: DTime = 0      !< Delta time [seconds]
     REAL(ReKi)  :: Rate = 0      !< Data rate (1/FFDTime) [Hertz]
     REAL(ReKi)  :: YHWid = 0      !< Half the grid width [meters]
@@ -120,6 +122,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
     REAL(ReKi)  :: VLinShr = 0      !< Vertical linear wind shear coefficient (used for vertical linear wind profile type only) [-]
     REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
+    LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
   END TYPE Grid3DFieldType
 ! =======================
 ! =========  Grid4DFieldType  =======
@@ -1564,6 +1568,38 @@ IF (ALLOCATED(SrcGrid3DFieldTypeData%AccTower)) THEN
   END IF
     DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
 ENDIF
+IF (ALLOCATED(SrcGrid3DFieldTypeData%VelAvg)) THEN
+  i1_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
+  i1_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
+  i2_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
+  i2_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
+  i3_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
+  i3_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
+  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%VelAvg)) THEN 
+    ALLOCATE(DstGrid3DFieldTypeData%VelAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelAvg.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
+ENDIF
+IF (ALLOCATED(SrcGrid3DFieldTypeData%AccAvg)) THEN
+  i1_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
+  i1_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
+  i2_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
+  i2_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
+  i3_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
+  i3_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
+  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%AccAvg)) THEN 
+    ALLOCATE(DstGrid3DFieldTypeData%AccAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccAvg.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
+ENDIF
     DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
     DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
     DstGrid3DFieldTypeData%YHWid = SrcGrid3DFieldTypeData%YHWid
@@ -1584,6 +1620,8 @@ ENDIF
     DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
     DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
     DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
+    DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
+    DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
  END SUBROUTINE IfW_FlowField_CopyGrid3DFieldType
 
  SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1618,6 +1656,12 @@ IF (ALLOCATED(Grid3DFieldTypeData%VelTower)) THEN
 ENDIF
 IF (ALLOCATED(Grid3DFieldTypeData%AccTower)) THEN
   DEALLOCATE(Grid3DFieldTypeData%AccTower)
+ENDIF
+IF (ALLOCATED(Grid3DFieldTypeData%VelAvg)) THEN
+  DEALLOCATE(Grid3DFieldTypeData%VelAvg)
+ENDIF
+IF (ALLOCATED(Grid3DFieldTypeData%AccAvg)) THEN
+  DEALLOCATE(Grid3DFieldTypeData%AccAvg)
 ENDIF
  END SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType
 
@@ -1683,6 +1727,16 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! AccTower upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AccTower)  ! AccTower
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! VelAvg allocated yes/no
+  IF ( ALLOCATED(InData%VelAvg) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! VelAvg upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%VelAvg)  ! VelAvg
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AccAvg allocated yes/no
+  IF ( ALLOCATED(InData%AccAvg) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AccAvg upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AccAvg)  ! AccAvg
+  END IF
       Re_BufSz   = Re_BufSz   + 1  ! DTime
       Re_BufSz   = Re_BufSz   + 1  ! Rate
       Re_BufSz   = Re_BufSz   + 1  ! YHWid
@@ -1703,6 +1757,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Z0
       Re_BufSz   = Re_BufSz   + 1  ! VLinShr
       Re_BufSz   = Re_BufSz   + 1  ! HLinShr
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
+      Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1854,6 +1910,56 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%VelAvg) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VelAvg,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VelAvg,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%VelAvg,3), UBOUND(InData%VelAvg,3)
+        DO i2 = LBOUND(InData%VelAvg,2), UBOUND(InData%VelAvg,2)
+          DO i1 = LBOUND(InData%VelAvg,1), UBOUND(InData%VelAvg,1)
+            ReKiBuf(Re_Xferred) = InData%VelAvg(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AccAvg) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccAvg,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccAvg,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AccAvg,3), UBOUND(InData%AccAvg,3)
+        DO i2 = LBOUND(InData%AccAvg,2), UBOUND(InData%AccAvg,2)
+          DO i1 = LBOUND(InData%AccAvg,1), UBOUND(InData%AccAvg,1)
+            ReKiBuf(Re_Xferred) = InData%AccAvg(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     ReKiBuf(Re_Xferred) = InData%DTime
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Rate
@@ -1894,6 +2000,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%HLinShr
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%BoxExceedAllowF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_FlowField_PackGrid3DFieldType
 
  SUBROUTINE IfW_FlowField_UnPackGrid3DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2062,6 +2172,62 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VelAvg not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VelAvg)) DEALLOCATE(OutData%VelAvg)
+    ALLOCATE(OutData%VelAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VelAvg.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%VelAvg,3), UBOUND(OutData%VelAvg,3)
+        DO i2 = LBOUND(OutData%VelAvg,2), UBOUND(OutData%VelAvg,2)
+          DO i1 = LBOUND(OutData%VelAvg,1), UBOUND(OutData%VelAvg,1)
+            OutData%VelAvg(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AccAvg not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AccAvg)) DEALLOCATE(OutData%AccAvg)
+    ALLOCATE(OutData%AccAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AccAvg.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AccAvg,3), UBOUND(OutData%AccAvg,3)
+        DO i2 = LBOUND(OutData%AccAvg,2), UBOUND(OutData%AccAvg,2)
+          DO i1 = LBOUND(OutData%AccAvg,1), UBOUND(OutData%AccAvg,1)
+            OutData%AccAvg(i1,i2,i3) = REAL(ReKiBuf(Re_Xferred), SiKi)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
     OutData%DTime = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%Rate = ReKiBuf(Re_Xferred)
@@ -2102,6 +2268,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%HLinShr = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%BoxExceedAllowF = TRANSFER(IntKiBuf(Int_Xferred), OutData%BoxExceedAllowF)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE IfW_FlowField_UnPackGrid3DFieldType
 
  SUBROUTINE IfW_FlowField_CopyGrid4DFieldType( SrcGrid4DFieldTypeData, DstGrid4DFieldTypeData, CtrlCode, ErrStat, ErrMsg )
