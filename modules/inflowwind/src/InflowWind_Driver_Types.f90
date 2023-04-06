@@ -66,7 +66,7 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: Dz                   = .FALSE.      !< specified a resolution in z
 
       LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in
-      LOGICAL                 :: OutputAccel            = .FALSE.      !< flag to calculate and output wind acceleration in addition to velocity
+      LOGICAL                 :: OutputAccel          = .FALSE.      !< flag to calculate and output wind acceleration in addition to velocity
 
       LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
       LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting

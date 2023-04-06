@@ -805,26 +805,11 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
       Is3D = .false.
 
       ! Tower grids present and position is below main grid
-      if (.not. AllowExtrap) then
+      call GetCellInTower(VelCell, G3D%Vel, G3D%VelAvg, G3D%VelTower)
 
-         ! Get cell without extrapolation
-         call GetCellInTowerNoExtrap(VelCell, G3D%VelTower)
-
-         ! If acceleration requested, get cell values
-         if (CalcAccel) then
-            call GetCellInTowerNoExtrap(AccCell, G3D%AccTower)
-         end if
-
-      else
-
-         ! Get cell with extrapolation
-         call GetCellInTower(VelCell, G3D%Vel, G3D%VelAvg, G3D%VelTower)
-
-         ! If acceleration requested, get cell values
-         if (CalcAccel) then
-            call GetCellInTower(AccCell, G3D%Acc, G3D%AccAvg, G3D%AccTower)
-         end if
-
+      ! If acceleration requested, get cell values
+      if (CalcAccel) then
+         call GetCellInTower(AccCell, G3D%Acc, G3D%AccAvg, G3D%AccTower)
       end if
 
    else
@@ -833,44 +818,44 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
       Is3D = .true.
 
       ! Tower interpolation without tower grids
-      call GetCellBelowGrid(VelCell, G3D%Vel, G3D%VelAvg)
+      call GetCellBelowGrid(VelCell, G3D%Vel)
 
       ! If acceleration requested, get cell values
       if (CalcAccel) then
-         call GetCellBelowGrid(AccCell, G3D%Acc, G3D%AccAvg)
+         call GetCellBelowGrid(AccCell, G3D%Acc)
       end if
 
    end if
 
 contains
 
-   subroutine GetCellInGrid(cell, grid, gridAvg)
+   subroutine GetCellInGrid(cell, gridVal, gridAvg)
 
-      real(ReKi), intent(out) :: cell(8, 3)
-      real(SiKi), intent(in)  :: grid(:, :, :, :)
-      real(SiKi), intent(in)  :: gridAvg(:, :, :)
+      real(ReKi), intent(out)             :: cell(8, 3)
+      real(SiKi), intent(in)              :: gridVal(:, :, :, :)
+      real(SiKi), intent(in), allocatable :: gridAvg(:, :, :)
 
       ! Select based on extrapolation flags
       select case (AllExtrap)
 
       case (ExtrapNone)                   ! No extrapolation
 
-         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
-         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
-         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
-         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
-         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
-         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
-         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
-         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+         cell(1, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(3, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(4, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(5, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(7, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(8, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Hi)
 
       case (ior(ExtrapZmax, ExtrapYmax))   ! Extrapolate top right corner
 
-         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(1, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Lo)
          cell(2, :) = gridAvg(:, IZ_Lo, IT_Lo)
          cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
          cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(5, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Hi)
          cell(6, :) = gridAvg(:, IZ_Lo, IT_Hi)
          cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
          cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
@@ -878,235 +863,245 @@ contains
       case (ior(ExtrapZmax, ExtrapYmin))! Extrapolate top left corner
 
          cell(1, :) = gridAvg(:, IZ_Lo, IT_Lo)
-         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(2, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Lo)
          cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
          cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
          cell(5, :) = gridAvg(:, IZ_Lo, IT_Hi)
-         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(6, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Hi)
          cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
          cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
 
       case (ExtrapZmax)   ! Extrapolate above grid only
 
-         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
-         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(1, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(2, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Lo)
          cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
          cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
-         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(5, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(6, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Hi)
          cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
          cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
 
       case (ExtrapYmax)   ! Extrapolate to the right of grid only
 
-         cell(1, :) = grid(:, IY_Lo, IZ_Lo, IT_Lo)
+         cell(1, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Lo)
          cell(2, :) = gridAvg(:, IZ_Lo, IT_Lo)
-         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
+         cell(3, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Lo)
          cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(5, :) = grid(:, IY_Lo, IZ_Lo, IT_Hi)
+         cell(5, :) = gridVal(:, IY_Lo, IZ_Lo, IT_Hi)
          cell(6, :) = gridAvg(:, IZ_Lo, IT_Hi)
-         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
+         cell(7, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Hi)
          cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
 
       case (ExtrapYmin)   ! Extrapolate to the left of grid only
 
          cell(1, :) = gridAvg(:, IZ_Lo, IT_Lo)
-         cell(2, :) = grid(:, IY_Hi, IZ_Lo, IT_Lo)
+         cell(2, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Lo)
          cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
+         cell(4, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Lo)
          cell(5, :) = gridAvg(:, IZ_Lo, IT_Hi)
-         cell(6, :) = grid(:, IY_Hi, IZ_Lo, IT_Hi)
+         cell(6, :) = gridVal(:, IY_Hi, IZ_Lo, IT_Hi)
          cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
-         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
+         cell(8, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Hi)
+
+      case (ExtrapZmin)   ! Extrapolate below grid
+
+         cell(1, :) = 0.0_ReKi                        ! Ground
+         cell(2, :) = 0.0_ReKi                        ! Ground
+         cell(3, :) = gridVal(:, IY_Lo, 1, IT_Lo)
+         cell(4, :) = gridVal(:, IY_Hi, 1, IT_Lo)
+         cell(5, :) = 0.0_ReKi                        ! Ground
+         cell(6, :) = 0.0_ReKi                        ! Ground
+         cell(7, :) = gridVal(:, IY_Lo, 1, IT_Hi)
+         cell(8, :) = gridVal(:, IY_Hi, 1, IT_Hi)
+
+      case (ior(ExtrapZmin, ExtrapYmin))   ! Extrapolate lower left of grid
+
+         cell(1, :) = 0.0_ReKi                        ! Ground
+         cell(2, :) = 0.0_ReKi                        ! Ground
+         cell(3, :) = gridAvg(:, 1, IT_Lo)            ! Average
+         cell(4, :) = gridVal(:, 1, 1, IT_Lo)
+         cell(5, :) = 0.0_ReKi                        ! Ground
+         cell(6, :) = 0.0_ReKi                        ! Ground
+         cell(7, :) = gridAvg(:, 1, IT_Hi)            ! Average
+         cell(8, :) = gridVal(:, 1, 1, IT_Hi)
+
+      case (ior(ExtrapZmin, ExtrapYmax))   ! Extrapolate lower right of grid
+
+         cell(1, :) = 0.0_ReKi                        ! Ground
+         cell(2, :) = 0.0_ReKi                        ! Ground
+         cell(3, :) = gridVal(:, G3D%NYGrids, 1, IT_Lo)
+         cell(4, :) = gridAvg(:, 1, IT_Lo)            ! Average
+         cell(5, :) = 0.0_ReKi                        ! Ground
+         cell(6, :) = 0.0_ReKi                        ! Ground
+         cell(7, :) = gridVal(:, G3D%NYGrids, 1, IT_Hi)
+         cell(8, :) = gridAvg(:, 1, IT_Hi)            ! Average
 
       end select
 
    end subroutine
 
-   subroutine GetCellBelowGrid(cell, grid, gridAvg)
+   !> GetCellBelowGrid interpolates between bottom of grid and ground. This
+   !! is only called if G3D%InterpTower == .true.
+   subroutine GetCellBelowGrid(cell, gridVal)
 
       real(ReKi), intent(out) :: cell(8, 3)
-      real(SiKi), intent(in)  :: grid(:, :, :, :)
-      real(SiKi), intent(in)  :: gridAvg(:, :, :)
+      real(SiKi), intent(in)  :: gridVal(:, :, :, :)
 
-      ! Select based on extrapolation flags
-      select case (AllExtrap)
-
-      case (ExtrapNone)
-
-         cell(1, :) = 0.0_ReKi                           ! Ground
-         cell(2, :) = 0.0_ReKi                           ! Ground
-         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
-         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
-         cell(5, :) = 0.0_ReKi                           ! Ground
-         cell(6, :) = 0.0_ReKi                           ! Ground
-         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
-         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
-
-      case (ExtrapYmin) ! Extrap to bottom left of grid
-
-         cell(1, :) = 0.0_ReKi                           ! Ground
-         cell(2, :) = 0.0_ReKi                           ! Ground
-         cell(3, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(4, :) = grid(:, IY_Hi, IZ_Hi, IT_Lo)
-         cell(5, :) = 0.0_ReKi                           ! Ground
-         cell(6, :) = 0.0_ReKi                           ! Ground
-         cell(7, :) = gridAvg(:, IZ_Hi, IT_Hi)
-         cell(8, :) = grid(:, IY_Hi, IZ_Hi, IT_Hi)
-
-      case (ExtrapYmax) ! Extrap to bottom right of grid
-
-         cell(1, :) = 0.0_ReKi                           ! Ground
-         cell(2, :) = 0.0_ReKi                           ! Ground
-         cell(3, :) = grid(:, IY_Lo, IZ_Hi, IT_Lo)
-         cell(4, :) = gridAvg(:, IZ_Hi, IT_Lo)
-         cell(5, :) = 0.0_ReKi                           ! Ground
-         cell(6, :) = 0.0_ReKi                           ! Ground
-         cell(7, :) = grid(:, IY_Lo, IZ_Hi, IT_Hi)
-         cell(8, :) = gridAvg(:, IZ_Hi, IT_Hi)
-
-      end select
+      cell(1, :) = 0.0_ReKi                           ! Ground
+      cell(2, :) = 0.0_ReKi                           ! Ground
+      cell(3, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Lo)
+      cell(4, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Lo)
+      cell(5, :) = 0.0_ReKi                           ! Ground
+      cell(6, :) = 0.0_ReKi                           ! Ground
+      cell(7, :) = gridVal(:, IY_Lo, IZ_Hi, IT_Hi)
+      cell(8, :) = gridVal(:, IY_Hi, IZ_Hi, IT_Hi)
 
    end subroutine
 
-   subroutine GetCellInTowerNoExtrap(cell, tower)
+   subroutine GetCellInTower(cell, gridVal, gridAvg, towerVal)
 
-      real(ReKi), intent(out) :: cell(8, 3)
-      real(SiKi), intent(in)  :: tower(:, :, :)
+      real(ReKi), intent(out)             :: cell(8, 3)
+      real(SiKi), intent(in)              :: gridVal(:, :, :, :)
+      real(SiKi), intent(in), allocatable :: gridAvg(:, :, :)
+      real(SiKi), intent(in), allocatable :: towerVal(:, :, :)
 
-      if (IZ_HI <= G3D%NTGrids) then      ! In tower grid
+      real(ReKi)        :: Y(0:5), Z(0:5), W(4), Py, Pz
+      real(ReKi)        :: V(3, 4, 2)
+      real(ReKi)        :: alpha
+      integer(IntKi)    :: ic, i
 
-         cell(1, :) = tower(:, IZ_LO, IT_LO)
-         cell(2, :) = tower(:, IZ_HI, IT_LO)
-         cell(3, :) = tower(:, IZ_LO, IT_HI)
-         cell(4, :) = tower(:, IZ_HI, IT_HI)
+      !-------------------------------------------------------------------------
+      ! If extrapolation is not allowed, apply tower values to all Y positions
+      !-------------------------------------------------------------------------
 
-      else                                ! Between tower grid and ground
-
-         cell(1, :) = tower(:, IZ_LO, IT_LO)
-         cell(2, :) = 0.0_ReKi
-         cell(3, :) = tower(:, IZ_LO, IT_HI)
-         cell(4, :) = 0.0_ReKi
-
+      if (.not. AllowExtrap) then
+         if (IZ_HI <= G3D%NTGrids) then      ! In tower grid
+            cell(1, :) = towerVal(:, IZ_LO, IT_LO)
+            cell(2, :) = towerVal(:, IZ_HI, IT_LO)
+            cell(3, :) = towerVal(:, IZ_LO, IT_HI)
+            cell(4, :) = towerVal(:, IZ_HI, IT_HI)
+         else                                ! Between tower grid and ground
+            cell(1, :) = towerVal(:, IZ_LO, IT_LO)
+            cell(2, :) = 0.0_ReKi
+            cell(3, :) = towerVal(:, IZ_LO, IT_HI)
+            cell(4, :) = 0.0_ReKi
+         end if
+         return
       end if
 
-   end subroutine
+      !-------------------------------------------------------------------------
+      ! If Y is beyond grid width from the tower (clamped),
+      ! interp between ground and bottom of grid average
+      !-------------------------------------------------------------------------
 
-   subroutine GetCellInTower(cell, grid, gridAvg, tower)
-
-      real(ReKi), intent(out) :: cell(8, 3)
-      real(SiKi), intent(in)  :: grid(:, :, :, :)
-      real(SiKi), intent(in)  :: gridAvg(:, :, :)
-      real(SiKi), intent(in)  :: tower(:, :, :)
-
-      real(ReKi)        :: GridUVW(3, 2)
-      real(ReKi)        :: TowerUVW(3, 2)
-      real(ReKi)        :: vc(2, 3, 2)
-      real(ReKi)        :: N(2)
-      real(ReKi)        :: Xv(3), Yv(3), Wv(3), Px, Py
-      real(ReKi)        :: denom
-      integer(IntKi)    :: ic, it
-
-      ! If Y is beyond the grid width from the tower (clamped)
-      if (abs(Position(2)) >= 2.0_ReKi*G3D%YHWid) then   
-
-         ! Interp between ground and bottom of grid average
+      if (abs(Position(2)) >= 2.0_ReKi*G3D%YHWid) then
          Xi(2) = 2.0_ReKi*Position(3)/G3D%GridBase - 1.0_ReKi
          cell(1, :) = 0.0_ReKi
          cell(2, :) = gridAvg(:, 1, IT_LO)
          cell(3, :) = 0.0_ReKi
          cell(4, :) = gridAvg(:, 1, IT_HI)
-
-      else     ! Position is below grid and within +- 2*GridWidth from tower
-
-         ! Interpolate grid (wind components on bottom of grid at Position(2))
-         N(1) = (1.0_ReKi - Xi(1))/2.0_ReKi
-         N(2) = (1.0_ReKi + Xi(1))/2.0_ReKi
-
-         select case (AllExtrap)
-         case (ExtrapNone)
-            vc(1, :, 1) = grid(:, IY_Lo, 1, IT_Lo)
-            vc(2, :, 1) = grid(:, IY_Hi, 1, IT_Lo)
-            vc(1, :, 2) = grid(:, IY_Lo, 1, IT_Hi)
-            vc(2, :, 2) = grid(:, IY_Hi, 1, IT_Hi)
-         case (ExtrapYmin)
-            vc(1, :, 1) = gridAvg(:, 1, IT_Lo)
-            vc(2, :, 1) = grid(:, IY_Lo, 1, IT_Lo)
-            vc(1, :, 2) = gridAvg(:, 1, IT_Hi)
-            vc(2, :, 2) = grid(:, IY_Lo, 1, IT_Hi)
-         case (ExtrapYmax)
-            vc(1, :, 1) = grid(:, IY_Hi, 1, IT_Lo)
-            vc(2, :, 1) = gridAvg(:, 1, IT_Lo)
-            vc(1, :, 2) = grid(:, IY_Hi, 1, IT_Hi)
-            vc(2, :, 2) = gridAvg(:, 1, IT_Hi)
-         end select
-
-         do it = 1, 2
-            do ic = 1, 3
-               GridUVW(ic, it) = dot_product(vc(:, ic, it), N)
-            end do
-         end do
-
-         ! Interpolate tower (wind components on tower at Position(3))
-         N(1) = (1.0_ReKi - Xi(2))/2.0_ReKi
-         N(2) = (1.0_ReKi + Xi(2))/2.0_ReKi
-
-         if (IZ_HI <= G3D%NTGrids) then
-            vc(1, :, 1) = tower(:, IZ_Lo, IT_Lo)
-            vc(2, :, 1) = tower(:, IZ_Hi, IT_Lo)
-            vc(1, :, 2) = tower(:, IZ_Lo, IT_Hi)
-            vc(2, :, 2) = tower(:, IZ_Hi, IT_Hi)
-         else
-            vc(1, :, 1) = tower(:, IZ_Lo, IT_Lo)
-            vc(2, :, 1) = 0.0_ReKi
-            vc(1, :, 2) = tower(:, IZ_Lo, IT_Hi)
-            vc(2, :, 2) = 0.0_ReKi
-         end if
-
-         do it = 1, 2
-            do ic = 1, 3
-               TowerUVW(ic, it) = dot_product(vc(:, ic, it), N)
-            end do
-         end do
-
-         !----------------------------------------------------------------------
-         ! Use Barycentric interpolation to blend grid, tower, and ground wind
-         ! components at Position. Construct triangle where Point 1 is on the 
-         ! Tower, Point 2 is on the bottom of the grid, Point 3 is on the ground
-         ! at grid width away from tower. Position will always be within this
-         ! triangle. Only the weights for Point 1 and Point 2 are calculated
-         ! as the velocities at Point 3 (ground) are always zero.
-         !----------------------------------------------------------------------
-
-         ! Distance from tower (Y)
-         Px = abs(Position(2))
-         Xv(1) = 0.0_ReKi        ! Tower
-         Xv(2) = Position(2)     ! Grid bottom
-         Xv(3) = 2.0*G3D%YHWid   ! Ground
-
-         ! Elevation from ground (Z)
-         Py = Position(3)
-         Yv(1) = Position(3)     ! Tower
-         Yv(2) = G3D%GridBase    ! Grid bottom
-         Yv(3) = 0.0_ReKi        ! Ground
-
-         ! Barycentric weights
-         denom = ((Yv(2) - Yv(3))*(Xv(1) - Xv(3)) + &
-                  (Xv(3) - Xv(2))*(Yv(1) - Yv(3)))
-         Wv(1) = ((Yv(2) - Yv(3))*(Px - Xv(3)) + &
-                  (Xv(3) - Xv(2))*(Py - Yv(3)))/denom
-         Wv(2) = ((Yv(3) - Yv(1))*(Px - Xv(3)) + &
-                  (Xv(1) - Xv(3))*(Py - Yv(3)))/denom
-
-         ! Interpolate wind components and populate cell at IT_Lo and IT_Hi
-         cell(1, :) = Wv(1)*TowerUVW(:, 1) + Wv(2)*GridUVW(:, 1)
-         cell(2, :) = cell(1, :)
-         cell(3, :) = Wv(1)*TowerUVW(:, 2) + Wv(2)*GridUVW(:, 2)
-         cell(4, :) = cell(3, :)
-
+         return
       end if
 
+      !-------------------------------------------------------------------------
+      ! Otherwise, position is below grid and within +- 2*GridWidth from tower
+      ! This section uses Barycentric interpolation between four points to get
+      ! the wind components at the desired Position.
+      !
+      ! Points are ordered counter clockwise. Points on left side of tower
+      ! are reflected to the right side.
+      !-------------------------------------------------------------------------
+
+      ! Point 1 (ground @ grid width away from tower)
+      Y(1) = 2.0_ReKi*G3D%YHWid
+      Z(1) = 0.0_Reki
+      V(:, 1, :) = 0.0_ReKi
+
+      ! Point 2 (grid bottom point)
+      Y(2) = abs(Position(2))
+      Z(2) = G3D%GridBase
+
+      select case (AllExtrap)
+      case (ExtrapNone)
+
+         ! Interpolate between grid points
+         alpha = (Xi(1) + 1.0_ReKi)/2.0_ReKi
+         V(:, 2, 1) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Lo) + &
+                      alpha*gridVal(:, IY_Hi, 1, IT_Lo)
+         V(:, 2, 2) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Hi) + &
+                      alpha*gridVal(:, IY_Hi, 1, IT_Hi)
+
+      case (ExtrapYmin, ExtrapYmax)
+
+         ! Interpolate between edge of grid and grid average
+         alpha = abs(Position(2))/G3D%YHWid - 1.0_ReKi
+         V(:, 2, 1) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Lo) + &
+                      alpha*gridAvg(:, 1, IT_Lo)
+         V(:, 2, 2) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Hi) + &
+                      alpha*gridAvg(:, 1, IT_Hi)
+
+      end select
+
+      ! Point 3 (upper tower point)
+      Y(3) = 0.0_ReKi
+      Z(3) = G3D%GridBase - real(IZ_Lo - 1, ReKi)/G3D%InvDZ
+      V(:, 3, 1) = towerVal(:, IZ_Lo, IT_Lo)
+      V(:, 3, 2) = towerVal(:, IZ_Lo, IT_Hi)
+
+      ! Point 4 (lower tower point)
+      Y(4) = 0.0_ReKi
+      if (IZ_HI <= G3D%NTGrids) then   ! Lower point above ground
+         Z(4) = G3D%GridBase - real(IZ_Hi - 1, ReKi)/G3D%InvDZ
+         V(:, 4, 1) = towerVal(:, IZ_Hi, IT_Lo)
+         V(:, 4, 2) = towerVal(:, IZ_Hi, IT_Hi)
+      else                             ! Lower point on ground
+         Z(4) = 0.0_ReKi
+         V(:, 4, :) = 0.0_ReKi
+      end if
+
+      !-------------------------------------------------------------------------
+      ! Calculate Barycentric weights for quadrilateral
+      !-------------------------------------------------------------------------
+
+      ! Get interpolation point
+      Py = abs(Position(2))
+      Pz = Position(3)
+
+      ! Copy start and end coords for easier indexing when calculating weights
+      Y(0) = Y(4)
+      Y(5) = Y(1)
+      Z(0) = Z(4)
+      Z(5) = Z(1)
+
+      ! Calculate weights
+      do i = 1, 4
+         W(i) = TriangleArea([Y(i - 1), Y(i), Y(i + 1)], [Z(i - 1), Z(i), Z(i + 1)])/ &
+                (TriangleArea([Py, Y(i - 1), Y(i)], [Pz, Z(i - 1), Z(i)])* &
+                 TriangleArea([Py, Y(i), Y(i + 1)], [Pz, Z(i), Z(i + 1)]))
+      end do
+
+      ! Normalize Weights so they sum to 1.0
+      W = W/sum(W)
+
+      ! Interpolate wind components based on weights
+      do ic = 1, 3
+         cell(1, ic) = dot_product(V(ic, :, 1), W)
+         cell(3, ic) = dot_product(V(ic, :, 2), W)
+      end do
+      cell(2, :) = cell(1, :)
+      cell(4, :) = cell(3, :)
+
    end subroutine
+
+   !> TriangleArea returns the signed area of a triangle.
+   function TriangleArea(x, y) result(A)
+      real(ReKi)  :: x(3), y(3)
+      real(ReKi)  :: A
+      A = (x(1)*(y(2) - y(3)) + &
+           x(2)*(y(3) - y(1)) + &
+           x(3)*(y(1) - y(2)))/2.0_ReKi
+   end function
 
    subroutine GetBoundsY(PosY, DY)
 
@@ -1120,7 +1115,7 @@ contains
 
       ! Calculate bounding grid indices
       IY_LO = floor(Y_Grid, IntKi)
-      IY_HI = ceiling(Y_Grid, IntKi)
+      IY_HI = IY_LO + 1
 
       ! Position location within interval [0,1]
       DY = Y_Grid - aint(Y_Grid)
@@ -1171,7 +1166,7 @@ contains
 
       ! Calculate bounding grid indices
       IZ_LO = floor(Z_GRID, IntKi)
-      IZ_HI = ceiling(Z_GRID, IntKi)
+      IZ_HI = IZ_LO + 1
 
       ! Position location within interval [-1,1]
       DZ = Z_GRID - aint(Z_GRID)

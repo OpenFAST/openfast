@@ -330,11 +330,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "UNIFORM"   )   THEN
             CLFlags%WrUniform    = .TRUE.
+            RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "BOXEXCEEDALLOW"   )   THEN
             CLFlags%BoxExceedAllowF = .TRUE.
-            RETURN
-         ELSEIF   ( TRIM(ThisArgUC) == "ACCEL"   )   THEN
-            CLFlags%OutputAccel    = .TRUE.
             RETURN
          ELSEIF   ( TRIM(ThisArgUC) == "ACCEL"   )   THEN
             CLFlags%OutputAccel    = .TRUE.
