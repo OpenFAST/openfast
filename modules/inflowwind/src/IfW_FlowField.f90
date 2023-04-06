@@ -999,15 +999,16 @@ contains
       real(SiKi), intent(in)  :: gridAvg(:, :, :)
       real(SiKi), intent(in)  :: tower(:, :, :)
 
-      real(ReKi)        :: GridVal(3, 2)
-      real(ReKi)        :: TowerVal(3, 2)
+      real(ReKi)        :: GridUVW(3, 2)
+      real(ReKi)        :: TowerUVW(3, 2)
       real(ReKi)        :: vc(2, 3, 2)
       real(ReKi)        :: N(2)
       real(ReKi)        :: Xv(3), Yv(3), Wv(3), Px, Py
       real(ReKi)        :: denom
       integer(IntKi)    :: ic, it
 
-      if (abs(Position(2)) >= 2.0_ReKi*G3D%YHWid) then   ! Extrapolation allowed and Y beyond interp
+      ! If Y is beyond the grid width from the tower (clamped)
+      if (abs(Position(2)) >= 2.0_ReKi*G3D%YHWid) then   
 
          ! Interp between ground and bottom of grid average
          Xi(2) = 2.0_ReKi*Position(3)/G3D%GridBase - 1.0_ReKi
@@ -1016,29 +1017,9 @@ contains
          cell(3, :) = 0.0_ReKi
          cell(4, :) = gridAvg(:, 1, IT_HI)
 
-      else              ! Extrapolation allowed and Y within interp range
+      else     ! Position is below grid and within +- 2*GridWidth from tower
 
-         ! Distance from tower (Y)
-         Px = Position(2)
-         Xv(1) = 0.0_ReKi                          ! Tower
-         Xv(2) = Position(2)                       ! Grid bottom
-         Xv(3) = sign(2.0*G3D%YHWid, Position(2))  ! Ground
-
-         ! Elevation from ground (Z)
-         Py = Position(3)
-         Yv(1) = Position(3)                       ! Tower
-         Yv(2) = G3D%GridBase                      ! Grid bottom
-         Yv(3) = 0.0_ReKi                          ! Ground
-
-         ! Barycentric weights
-         denom = ((Yv(2) - Yv(3))*(Xv(1) - Xv(3)) + &
-                  (Xv(3) - Xv(2))*(Yv(1) - Yv(3)))
-         Wv(1) = ((Yv(2) - Yv(3))*(Px - Xv(3)) + &
-                  (Xv(3) - Xv(2))*(Py - Yv(3)))/denom
-         Wv(2) = ((Yv(3) - Yv(1))*(Px - Xv(3)) + &
-                  (Xv(1) - Xv(3))*(Py - Yv(3)))/denom
-
-         ! Interpolate grid
+         ! Interpolate grid (wind components on bottom of grid at Position(2))
          N(1) = (1.0_ReKi - Xi(1))/2.0_ReKi
          N(2) = (1.0_ReKi + Xi(1))/2.0_ReKi
 
@@ -1062,11 +1043,11 @@ contains
 
          do it = 1, 2
             do ic = 1, 3
-               GridVal(ic, it) = dot_product(vc(:, ic, it), N)
+               GridUVW(ic, it) = dot_product(vc(:, ic, it), N)
             end do
          end do
 
-         ! Interpolate tower
+         ! Interpolate tower (wind components on tower at Position(3))
          N(1) = (1.0_ReKi - Xi(2))/2.0_ReKi
          N(2) = (1.0_ReKi + Xi(2))/2.0_ReKi
 
@@ -1084,14 +1065,43 @@ contains
 
          do it = 1, 2
             do ic = 1, 3
-               TowerVal(ic, it) = dot_product(vc(:, ic, it), N)
+               TowerUVW(ic, it) = dot_product(vc(:, ic, it), N)
             end do
          end do
 
-         ! Populate cell
-         cell(1, :) = Wv(1)*TowerVal(:, 1) + Wv(2)*GridVal(:, 1)
+         !----------------------------------------------------------------------
+         ! Use Barycentric interpolation to blend grid, tower, and ground wind
+         ! components at Position. Construct triangle where Point 1 is on the 
+         ! Tower, Point 2 is on the bottom of the grid, Point 3 is on the ground
+         ! at grid width away from tower. Position will always be within this
+         ! triangle. Only the weights for Point 1 and Point 2 are calculated
+         ! as the velocities at Point 3 (ground) are always zero.
+         !----------------------------------------------------------------------
+
+         ! Distance from tower (Y)
+         Px = abs(Position(2))
+         Xv(1) = 0.0_ReKi        ! Tower
+         Xv(2) = Position(2)     ! Grid bottom
+         Xv(3) = 2.0*G3D%YHWid   ! Ground
+
+         ! Elevation from ground (Z)
+         Py = Position(3)
+         Yv(1) = Position(3)     ! Tower
+         Yv(2) = G3D%GridBase    ! Grid bottom
+         Yv(3) = 0.0_ReKi        ! Ground
+
+         ! Barycentric weights
+         denom = ((Yv(2) - Yv(3))*(Xv(1) - Xv(3)) + &
+                  (Xv(3) - Xv(2))*(Yv(1) - Yv(3)))
+         Wv(1) = ((Yv(2) - Yv(3))*(Px - Xv(3)) + &
+                  (Xv(3) - Xv(2))*(Py - Yv(3)))/denom
+         Wv(2) = ((Yv(3) - Yv(1))*(Px - Xv(3)) + &
+                  (Xv(1) - Xv(3))*(Py - Yv(3)))/denom
+
+         ! Interpolate wind components and populate cell at IT_Lo and IT_Hi
+         cell(1, :) = Wv(1)*TowerUVW(:, 1) + Wv(2)*GridUVW(:, 1)
          cell(2, :) = cell(1, :)
-         cell(3, :) = Wv(1)*TowerVal(:, 2) + Wv(2)*GridVal(:, 2)
+         cell(3, :) = Wv(1)*TowerUVW(:, 2) + Wv(2)*GridUVW(:, 2)
          cell(4, :) = cell(3, :)
 
       end if

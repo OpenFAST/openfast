@@ -1,8 +1,3 @@
-!>  This module uses grid-field binary wind files to determine the wind inflow.
-!!  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
-!!  and that all units are specified in the metric system (using meters and seconds).
-!!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X
-!!  direction actually starts at -1*p%YHWid meters).
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2022  National Renewable Energy Laboratory
@@ -41,19 +36,9 @@ integer(IntKi), parameter :: ScaleMethod_None = 0, &           !< no scaling
                              ScaleMethod_Direct = 1, &         !< direct scaling factors
                              ScaleMethod_StdDev = 2            !< requested standard deviation
 
-type :: TurbSimHeaderType
-   integer(B2Ki)  :: FileID
-   integer(B4Ki)  :: NZGrids, NYGrids, NTGrids, NSteps
-   real(SiKi)     :: dz, dy, dt
-   real(SiKi)     :: mws, ref_height, grid_base_height
-   real(SiKi)     :: VslopeX, VoffsetX
-   real(SiKi)     :: VslopeY, VoffsetY
-   real(SiKi)     :: VslopeZ, VoffsetZ
-   integer(B4Ki)  :: DescLen
-end type
-
 contains
 
+!> IfW_SteadyWind_Init initializes a Uniform field with with one set of values.
 subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    type(Steady_InitInputType), intent(in)  :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
@@ -134,8 +119,9 @@ subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMs
 
 end subroutine
 
+!> IfW_UniformWind_Init initializes a Uniform field from file.
 subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
-   type(Uniform_InitInputType), intent(in)    :: InitInp
+   type(Uniform_InitInputType), intent(in)   :: InitInp
    integer(IntKi), intent(in)                :: SumFileUnit
    type(UniformFieldType), intent(out)       :: UF
    type(WindFileDat), intent(out)            :: FileDat
@@ -343,6 +329,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
 
 end subroutine
 
+!> UniformWind_AllocArrays allocates the data arrays in the Uniform field.
 subroutine UniformWind_AllocArrays(UF, ErrStat, ErrMsg)
    type(UniformFieldType), intent(inout)     :: UF
    integer(IntKi), intent(out)               :: ErrStat
@@ -411,6 +398,7 @@ subroutine UniformWind_AllocArrays(UF, ErrStat, ErrMsg)
 
 end subroutine
 
+!> Uniform_WriteHH writes a Uniform field hub-height wind file.
 subroutine Uniform_WriteHH(UF, FileRootName, unit, ErrStat, ErrMsg)
 
    type(UniformFieldType), intent(in)  :: UF             !< Parameter
@@ -472,6 +460,17 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    integer(IntKi)                :: TmpErrStat        ! temporary error status
    character(ErrMsgLen)          :: TmpErrMsg         ! temporary error message
 
+   type :: TurbSimHeaderType
+      integer(B2Ki)  :: FileID
+      integer(B4Ki)  :: NZGrids, NYGrids, NTGrids, NSteps
+      real(SiKi)     :: dz, dy, dt
+      real(SiKi)     :: mws, ref_height, grid_base_height
+      real(SiKi)     :: VslopeX, VoffsetX
+      real(SiKi)     :: VslopeY, VoffsetY
+      real(SiKi)     :: VslopeZ, VoffsetZ
+      integer(B4Ki)  :: DescLen
+   end type
+
    type(TurbSimHeaderType) :: header
 
    !----------------------------------------------------------------------------
@@ -507,19 +506,19 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    ! Populate parameter data from header
    !----------------------------------------------------------------------------
 
-   G3D%WindFileFormat = header%FileID    ! file format identifier
-   G3D%Periodic = header%FileID == 8     ! 7 is used for non-periodic wind files; 8 is periodic wind
-   G3D%InterpTower = .false.             ! wind should not be interpolated at tower
-   G3D%AddMeanAfterInterp = .false.      ! do not add mean wind speed after interpolation
+   G3D%WindFileFormat = header%FileID     ! file format identifier
+   G3D%Periodic = header%FileID == 8      ! 7 is used for non-periodic wind files; 8 is periodic wind
+   G3D%InterpTower = .false.              ! wind should not be interpolated at tower
+   G3D%AddMeanAfterInterp = .false.       ! do not add mean wind speed after interpolation
 
-   G3D%DTime = real(header%dt, ReKi)     ! grid spacing in time (dt), m/s
-   G3D%Rate = 1.0_ReKi/G3D%DTime           ! Data rate (1/DTime), Hertz
+   G3D%DTime = real(header%dt, ReKi)      ! grid spacing in time (dt), m/s
+   G3D%Rate = 1.0_ReKi/G3D%DTime          ! Data rate (1/DTime), Hertz
 
-   G3D%NComp = 3                         ! TurbSim file file contains 3 wind components
-   G3D%NYGrids = header%NYGrids          ! the number of grid points laterally
-   G3D%NZGrids = header%NZGrids          ! the number of grid points vertically
-   G3D%NTGrids = header%NTGrids          ! the number of tower points
-   G3D%NSteps = header%NSteps          ! the number of time steps
+   G3D%NComp = 3                          ! TurbSim file file contains 3 wind components
+   G3D%NYGrids = header%NYGrids           ! the number of grid points laterally
+   G3D%NZGrids = header%NZGrids           ! the number of grid points vertically
+   G3D%NTGrids = header%NTGrids           ! the number of tower points
+   G3D%NSteps = header%NSteps             ! the number of time steps
 
    G3D%InvDY = 1.0_ReKi/real(header%dy, ReKi)     ! 1/dy
    G3D%YHWid = 0.5_ReKi*(G3D%NYGrids - 1)/G3D%InvDY   ! half the grid width (m)
@@ -740,7 +739,7 @@ end subroutine
 
 subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
 
-   type(HAWC_InitInputType), intent(in)    :: InitInp
+   type(HAWC_InitInputType), intent(in)   :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
    type(Grid3DFieldType), intent(out)     :: G3D
    type(WindFileDat), intent(out)         :: FileDat
@@ -749,12 +748,10 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
 
    character(*), parameter       :: RoutineName = "Read_HAWC"
    integer(IntKi)                :: WindFileUnit
-   real(SiKi), allocatable       :: VelRaw(:, :)   ! grid-field data for one timestep
+   real(SiKi), allocatable       :: VelRaw(:, :)      ! grid-field data for one timestep
    integer                       :: IC                ! Loop counter for the number of wind components
    integer                       :: IX, IY, IZ        ! Loop counters for the number of grid points in the X,Y,Z directions
    real(DbKi)                    :: vMean             ! average wind speeds over time at target position
-   real(DbKi)                    :: vSum2             ! sum of wind speeds squared
-   real(ReKi)                    :: ActualSigma       ! computed standard deviation
    real(ReKi)                    :: ScaleFactors(3)   ! scale factors
    integer(IntKi)                :: TmpErrStat        ! temporary error status
    character(ErrMsgLen)          :: TmpErrMsg
@@ -882,8 +879,6 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
 
          ! Reorganize raw data into grid-field array (reverse Y indices)
          do IZ = 1, G3D%NZGrids
-            ! Vel(NComp, NYGrids, NZGrids, NSteps)
-            ! VelRaw(NZGrids, NYGrids)
             G3D%Vel(IC, :, IZ, IX) = VelRaw(IZ, G3D%NYGrids:1:-1)
          end do
       end do
@@ -942,18 +937,18 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
-      IF ( G3D%BoxExceedAllowF ) THEN
-         WRITE(SumFileUnit,'(A)')    '     Wind grid exceedence allowed:  '// &
-                     'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
-         WRITE(SumFileUnit,'(A)')    '                                    '// &
-                     '             Out of bounds values are linearly interpolated to mean at Z loction for'
-         WRITE(SumFileUnit,'(A)')    '                                    '// &
-                     '             given timestep and X,T value. Values above grid are held to top of wind'
-         WRITE(SumFileUnit,'(A)')    '                                    '// &
-                     '             grid value'
-      ELSE
-         WRITE(SumFileUnit,'(A)')    '     Wind grid exceedence allowed:  False'
-      ENDIF
+      if (G3D%BoxExceedAllowF) then
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
+            'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             Out of bounds values are linearly interpolated to mean at Z loction for'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             given timestep and X,T value. Values above grid are held to top of wind'
+         write (SumFileUnit, '(A)') '                                    '// &
+            '             grid value'
+      else
+         write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  False'
+      end if
 
       write (SumFileUnit, '(A)') 'Scaling factors used:'
       write (SumFileUnit, '(A)') '  u           v           w       '
@@ -2474,7 +2469,6 @@ subroutine Grid3D_ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
    real(ReKi)                 :: ActualSigma(3)    ! computed standard deviation
 
    integer                    :: ic                ! Loop counter for wind component
-   integer                    :: it                ! Loop counter for t
    integer                    :: iy                ! Loop counter for y
    integer                    :: iz                ! Loop counter for z
 
@@ -2638,7 +2632,7 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    ! and ensure that 32.767*sigma_u >= |V-UHub| so that we don't get values out of the range of our scaling values
    ! in this BLADED-style binary output.  Tmp is |V-UHub|
    ! Get the range of wind speed values for scaling in BLADED-format .wnd files
-   Tmp = max(abs(maxval(G3D%Vel(:, :, 1, :)) - G3D%MeanWS), abs(minval(G3D%Vel(1, :, :, :)) - G3D%MeanWS))
+   Tmp = real(max(abs(maxval(G3D%Vel(:, :, 1, :)) - G3D%MeanWS), abs(minval(G3D%Vel(1, :, :, :)) - G3D%MeanWS)), SiKi)
    Sigma(1) = max(Sigma(1), 0.05_SiKi*Tmp)
    do ic = 2, 3
       ! put the abs() after the maxval() and minval() to avoid stack-overflow issues with large wind files
@@ -2653,7 +2647,7 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
       MeanWS_nonZero = G3D%MeanWS
    end if
 
-   TI = Sigma/MeanWS_nonZero
+   TI = real(Sigma/MeanWS_nonZero, SiKi)
 
    !----------------------------------------------------------------------------
    ! The summary file
@@ -2740,7 +2734,7 @@ subroutine Grid3D_WriteBladed(G3D, FileRootName, unit, ErrStat, ErrMsg)
    if (G3D%AddMeanAfterInterp) then ! Note that this will not take into account any shear!!!
       Off(1) = 0.0
    else
-      Off(1) = G3D%MeanWS*Scl(1)
+      Off(1) = real(G3D%MeanWS*Scl(1), SiKi)
    end if
    Off(2) = 0.0
    Off(3) = 0.0
