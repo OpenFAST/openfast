@@ -2928,48 +2928,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_IMG = 0.0_ReKi
       m%memberLoads(im)%F_If = 0.0_ReKi
 
-      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
+      !---------------- Marine growth and Buoyancy: Sides: Only if member not modeled with potential flow theory ----------------  
+      IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
+         DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
-         ! calculate instantaneous incline angle and heading, and related trig values
-         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
+            ! calculate instantaneous incline angle and heading, and related trig values
+            ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-         pos2(3) = pos2(3) - p%MSL2SWL
+            pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+            pos1(3) = pos1(3) - p%MSL2SWL
+            pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
+            pos2(3) = pos2(3) - p%MSL2SWL
 
-         call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
-         call Morison_DirCosMtrx( pos1, pos2, CMatrix )
-         CTrans  = transpose(CMatrix)
-         ! save some commonly used variables   
-         dl        = mem%dl
-         z1        = pos1(3)          ! get node z locations from input mesh
-         z2        = pos2(3)
-         r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
-         r2        = mem%RMG(i+1)
-         r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
-         r2b       = mem%RMGB(i+1)
-         dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
-         dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
-         a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
-         alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
-         omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
-         a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
-         alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
-         omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
-         
-         IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
-            ! should i_floor theshold be applied to below calculations to avoid wasting time on computing zero-valued things? <<<<<
-            ! should lumped half-element coefficients get combined at initialization? <<<
+            call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
+            call Morison_DirCosMtrx( pos1, pos2, CMatrix )
+            CTrans  = transpose(CMatrix)
+            ! save some commonly used variables   
+            dl        = mem%dl
+            z1        = pos1(3)          ! get node z locations from input mesh
+            z2        = pos2(3)
+            r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
+            r2        = mem%RMG(i+1)
+            r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+            r2b       = mem%RMGB(i+1)
+            dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
+            dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+            a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
+            alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
+            omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
+            a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
+            alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
+            omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
               
             ! ------------------ marine growth: Sides: Section 4.1.2 --------------------  
             F_WMG = 0.0_ReKi
 
             ! lower node
-            !m%F_WMG(3, mem%NodeIndx(i  )) = m%F_WMG(3, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
-            !m%F_WMG(4, mem%NodeIndx(i  )) = m%F_WMG(4, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * sinBeta! weight force
-            !m%F_WMG(5, mem%NodeIndx(i  )) = m%F_WMG(5, mem%NodeIndx(i  )) + mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * cosBeta! weight force
-            
             F_WMG(3) = - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
             F_WMG(4) = - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * sinBeta! weight force
             F_WMG(5) =   mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * cosBeta! weight force
@@ -2978,9 +2972,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_WMG(4:6)
             
             ! upper node
-            !m%F_WMG(3, mem%NodeIndx(i+1)) = m%F_WMG(3, mem%NodeIndx(i+1)) - mem%m_mg_u(i)*g ! weight force  : Note: this is a constant 
-            !m%F_WMG(4, mem%NodeIndx(i+1)) = m%F_WMG(4, mem%NodeIndx(i+1)) - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * sinBeta! weight force
-            !m%F_WMG(5, mem%NodeIndx(i+1)) = m%F_WMG(5, mem%NodeIndx(i+1)) + mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * cosBeta! weight force
             F_WMG(3) = - mem%m_mg_u(i)*g ! weight force  : Note: this is a constant 
             F_WMG(4) = - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * sinBeta! weight force
             F_WMG(5) =   mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * cosBeta! weight force
@@ -2996,11 +2987,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_l(i) * k_hat
             iTerm     = ( -a_s1 - cross_product(omega_s1, cross_product(omega_s1,iArm )) - cross_product(alpha_s1,iArm) ) * mem%m_mg_l(i)
-            !m%F_IMG(1:3, mem%NodeIndx(i  )) = m%F_IMG(1:3, mem%NodeIndx(i  )) + iTerm
-            !m%F_IMG(4:6, mem%NodeIndx(i  )) = m%F_IMG(4:6, mem%NodeIndx(i  )) &
-            !                                  - cross_product(a_s1 * mem%m_mg_l(i), mem%h_cmg_l(i) * k_hat) &
-            !                                  + matmul(Imat, alpha_s1)  &
-            !                                  - cross_product(omega_s1,matmul(Imat,omega_s1))
             F_IMG(1:3) = iTerm
             F_IMG(4:6) = - cross_product(a_s1 * mem%m_mg_l(i), mem%h_cmg_l(i) * k_hat) + matmul(Imat, alpha_s1)  &
                          - cross_product(omega_s1,matmul(Imat,omega_s1))
@@ -3016,11 +3002,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_u(i) * k_hat
             iTerm     = ( -a_s2 - cross_product(omega_s2, cross_product(omega_s2,iArm )) - cross_product(alpha_s2,iArm) ) * mem%m_mg_u(i)
-            !m%F_IMG(1:3, mem%NodeIndx(i+1)) = m%F_IMG(1:3, mem%NodeIndx(i+1)) + iTerm
-            !m%F_IMG(4:6, mem%NodeIndx(i+1)) = m%F_IMG(4:6, mem%NodeIndx(i+1)) &
-            !                                  - cross_product(a_s2 * mem%m_mg_u(i), mem%h_cmg_u(i) * k_hat) &
-            !                                  + matmul(Imat, alpha_s2) &
-            !                                  - cross_product(omega_s2,matmul(Imat,omega_s2))
             F_IMG(1:3) = iTerm
             F_IMG(4:6) = - cross_product(a_s2 * mem%m_mg_u(i), mem%h_cmg_u(i) * k_hat) + matmul(Imat, alpha_s2) &
                          - cross_product(omega_s2,matmul(Imat,omega_s2))
@@ -3030,8 +3011,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
             IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
-               CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-               CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+               CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
+               CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
             ELSE ! Without wave stretching, compute buoyancy based on SWL
                Zeta1 = 0.0_ReKi
@@ -3041,12 +3022,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             IF ( z1 < Zeta1 ) THEN  ! If element is at least partially submerged
 
                IF (z2 >= Zeta2) THEN  ! Partially submerged element
-
-                  ! Check that this is not the 1st element of the member
-                  ! IF (( i == 1 ) .AND. (z2 > Zeta2)) THEN
-                  !   CALL SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )
-                  !   RETURN
-                  ! END IF
 
                   ! Submergence ratio
                   SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
@@ -3060,16 +3035,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
                   ! Estimate the free-surface normal at the free-surface intersection, n_hat
                   IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute free surface normal
-                     CALL GetTotalWaveElev( Time, (/FSInt(1)+rh,FSInt(2)/), ZetaP, ErrStat2, ErrMsg2 )
-                     CALL GetTotalWaveElev( Time, (/FSInt(1)-rh,FSInt(2)/), ZetaM, ErrStat2, ErrMsg2 )
+                     CALL GetFreeSurfaceNormal( Time, FSInt, rh, n_hat, ErrStat2, ErrMsg2 )
                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                     dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)+rh/), ZetaP, ErrStat2, ErrMsg2 )
-                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)-rh/), ZetaM, ErrStat2, ErrMsg2 )
-                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                     dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                     n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-                     n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
                   ELSE ! Without wave stretching, use the normal of the SWL
                      n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
                   END IF
@@ -3210,13 +3177,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
 
                END IF  ! submergence cases
-
             END IF ! element at least partially submerged
+         END DO ! i = max(mem%i_floor,1), N    ! loop through member elements that are not fully buried in the seabed
+      END IF ! NOT Modeled with Potential flow theory
 
-         END IF ! NOT Modeled with Potential flow theory
-      
+      ! --------------------------- flooded ballast: sides: Always compute regardless of PropPot setting ------------------------------
+      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
+         
+         ! calculate instantaneous incline angle and heading, and related trig values
+         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
+
+         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+         pos1(3) = pos1(3) - p%MSL2SWL
+         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
+         pos2(3) = pos2(3) - p%MSL2SWL
+
+         call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
+         call Morison_DirCosMtrx( pos1, pos2, CMatrix )
+         CTrans  = transpose(CMatrix)
+         ! save some commonly used variables   
+         dl        = mem%dl
+         z1        = pos1(3)          ! get node z locations from input mesh
+         z2        = pos2(3)
+         r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
+         r2        = mem%RMG(i+1)
+         r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+         r2b       = mem%RMGB(i+1)
+         dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
+         dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+         a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
+         alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
+         omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
+         a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
+         alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
+         omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
+
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
-
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
@@ -3224,11 +3220,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          Imat(3,3) = mem%I_lfb_l(i) - Ioffset
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
-         !m%F_If(1:3, mem%NodeIndx(i  )) = m%F_If(1:3, mem%NodeIndx(i  )) + iTerm
-         !m%F_If(4:6, mem%NodeIndx(i  )) = m%F_If(4:6, mem%NodeIndx(i  )) &
-         !                                 - cross_product(a_s1 * mem%m_fb_l(i), mem%h_cfb_l(i) * k_hat) &
-         !                                 + matmul(Imat, alpha_s1) &
-         !                                 - cross_product(omega_s1,matmul(Imat,omega_s1)) 
          F_If(1:3) =  iTerm
          F_If(4:6) =  - cross_product(a_s1 * mem%m_fb_l(i), mem%h_cfb_l(i) * k_hat) + matmul(Imat, alpha_s1) &
                       - cross_product(omega_s1,matmul(Imat,omega_s1)) 
@@ -3236,18 +3227,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_If(1:3)
          y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_If(4:6)
          
-        ! upper node
+         ! upper node
          Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
          Imat(1,1) = mem%I_rfb_u(i) - Ioffset
          Imat(2,2) = mem%I_rfb_u(i) - Ioffset
          Imat(3,3) = mem%I_lfb_u(i) - Ioffset
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
-         !m%F_If(1:3, mem%NodeIndx(i+1)) = m%F_If(1:3, mem%NodeIndx(i+1)) + iTerm
-         !m%F_If(4:6, mem%NodeIndx(i+1)) = m%F_If(4:6, mem%NodeIndx(i+1)) &
-         !                                 - cross_product(a_s2 * mem%m_fb_u(i), mem%h_cfb_u(i) * k_hat) &
-         !                                 + matmul(Imat, alpha_s2) &
-         !                                 - cross_product(omega_s2,matmul(Imat,omega_s2)) 
          F_If(1:3) = iTerm
          F_If(4:6) = - cross_product(a_s2 * mem%m_fb_u(i), mem%h_cfb_u(i) * k_hat) + matmul(Imat, alpha_s2) &
                      - cross_product(omega_s2,matmul(Imat,omega_s2)) 
@@ -3883,8 +3869,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
          ! Get free surface elevation vertically above or below the end nodes
          IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to the instantaneous free surface
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
+            CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
          ELSE ! Without wave stretching, compute buoyancy up to the SWL
             Zeta1 = 0.0_ReKi
@@ -3895,16 +3881,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          !-------- End plate of node 1 --------
          IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
             ! Estimate the free-surface normal vertically above or below node 1, n_hat
-            CALL GetTotalWaveElev( Time, (/pos1(1)+r1,pos1(2)/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos1(1)-r1,pos1(2)/), ZetaM, ErrStat2, ErrMsg2 )
+            CALL GetFreeSurfaceNormal( Time, pos1, r1, n_hat, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
          ELSE ! Without wave stretching, use normal of SWL
             n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
          END IF
@@ -3931,16 +3909,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          !-------- End plate of node N+1 --------
          IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
             ! Estimate the free-surface normal vertically above or below node N+1, n_hat
-            CALL GetTotalWaveElev( Time, (/pos2(1)+r2,pos2(2)/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1)-r2,pos2(2)/), ZetaM, ErrStat2, ErrMsg2 )
+            CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)+r2/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)-r2/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
          ELSE ! Without wave stretching, use normal of SWL
             n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
          END IF
@@ -4085,19 +4055,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
 
    CONTAINS
-   SUBROUTINE GetTotalWaveElev( Time, positionXY, Zeta, ErrStat, ErrMsg )
+   SUBROUTINE GetTotalWaveElev( Time, pos, Zeta, ErrStat, ErrMsg )
       REAL(DbKi),      INTENT( IN    ) :: Time
-      REAL(ReKi),      INTENT( IN    ) :: positionXY(2)
-      REAL(ReKi),      INTENT(   OUT ) :: Zeta
-      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat     ! Error status of the operation
-      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg      ! Error message if errStat /= ErrID_None
+      REAL(ReKi),      INTENT( IN    ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT(   OUT ) :: Zeta    ! Total free-surface elevation with first- and second-order contribution (if present)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
       ErrStat   = ErrID_None
       ErrMsg    = ""
-      Zeta = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+      Zeta = SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
       IF (associated(p%WaveElev2)) THEN
-         Zeta = Zeta + SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+         Zeta = Zeta + SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
       END IF
    END SUBROUTINE GetTotalWaveElev
+
+   SUBROUTINE GetFreeSurfaceNormal( Time, pos, r, n, ErrStat, ErrMsg)
+      REAL(DbKi),      INTENT( In    ) :: Time
+      REAL(ReKi),      INTENT( In    ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT( In    ) :: r       ! Distance for central differencing
+      REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: ZetaP,ZetaM,dZetadz,dZetady
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+
+      CALL GetTotalWaveElev( Time, (/pos(1)+r,pos(2)/), ZetaP, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1)-r,pos(2)/), ZetaM, ErrStat, ErrMsg )
+      dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+      
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r/), ZetaP, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r/), ZetaM, ErrStat, ErrMsg )
+      dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+      
+      n = (/-dZetadx,-dZetady,1.0_ReKi/)
+      n = n / SQRT(Dot_Product(n,n))
+   END SUBROUTINE GetFreeSurfaceNormal
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
