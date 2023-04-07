@@ -276,15 +276,6 @@ PROGRAM InflowWind_Driver
       INQUIRE( file=TRIM(Settings%PointsVelOutput%Name), exist=TempFileExist )
       IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsVelOutput%Name))
 
-      ! If wind accelerations were requested, create/open file, print overwrite warning of applicable
-      IF (SettingsFlags%OutputAccel) then
-         CALL GetRoot( Settings%PointsFileName, Settings%PointsAccOutput%Name )
-         Settings%PointsAccOutput%Name = TRIM(Settings%PointsAccOutput%Name)//'.Acceleration.dat'
-         CALL WrScr(NewLine//"Results output to '"//TRIM(Settings%PointsAccOutput%Name)//"'.")
-         INQUIRE( file=TRIM(Settings%PointsAccOutput%Name), exist=TempFileExist )
-         IF ( TempFileExist .eqv. .TRUE. ) CALL ProgWarn( "Overwriting file "//TRIM(Settings%PointsAccOutput%Name))
-      END IF
-
    ENDIF
 
 
@@ -649,22 +640,15 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
       ENDIF
 
          ! Now create the velocity output file.  Write header information
-      CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, InflowWind_u2%PositionXYZ, &
-                                  InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+      CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, &
+                                  InflowWind_u2%PositionXYZ, &
+                                  InflowWind_y2%VelocityUVW, &
+                                  InflowWind_y2%AccelUVW, &
+                                  TimeNow, .true., ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL DriverCleanup()
          CALL ProgAbort( 'Error creating point data velocity output file: '//trim(Settings%PointsVelOutput%Name) )
       ENDIF
-
-         ! If point acceleration calculate was requested, create file and write header
-      IF ( SettingsFlags%OutputAccel ) THEN
-         CALL PointData_OutputWrite( Settings%PointsAccOutput, Settings, InflowWind_u2%PositionXYZ, &
-                                     InflowWind_y2%AccelUVW, TimeNow, .false., ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-            CALL DriverCleanup()
-            CALL ProgAbort( 'Error creating point data acceleration output file: '//trim(Settings%PointsAccOutput%Name) )
-         ENDIF
-      END IF
 
    ENDIF
 
@@ -794,21 +778,14 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
          ENDIF
    
          ! Output the Points results for this timestep
-         CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, InflowWind_u2%PositionXYZ, &
-                                     InflowWind_y2%VelocityUVW, TimeNow, .true., ErrStat, ErrMsg )
+         CALL PointData_OutputWrite( Settings%PointsVelOutput, Settings, &
+                                     InflowWind_u2%PositionXYZ, &
+                                     InflowWind_y2%VelocityUVW, &
+                                     InflowWind_y2%AccelUVW, &
+                                     TimeNow, .true., ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
-         END IF
-
-         ! If acceleration at points was requested, output values
-         IF ( SettingsFlags%OutputAccel ) then
-            CALL PointData_OutputWrite( Settings%PointsAccOutput, Settings, InflowWind_u2%PositionXYZ, &
-                                        InflowWind_y2%AccelUVW, TimeNow, .false., ErrStat, ErrMsg )
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL DriverCleanup()
-               CALL ProgAbort( ErrMsg )
-            END IF
          END IF
    
       END IF
@@ -959,7 +936,6 @@ CONTAINS
          ! Close output files that may have been opened
       if (Settings%WindGridOutput%Unit  > -1_IntKi ) CLOSE( Settings%WindGridOutput%Unit )
       if (Settings%PointsVelOutput%Unit > -1_IntKi ) CLOSE( Settings%PointsVelOutput%Unit )
-      if (Settings%PointsAccOutput%Unit > -1_IntKi ) CLOSE( Settings%PointsAccOutput%Unit )
       if (Settings%FFTOutput%Unit       > -1_IntKi ) CLOSE( Settings%FFTOutput%Unit )
 
          ! Find out how long this actually took

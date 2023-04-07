@@ -14,6 +14,7 @@ InflowWind driver input file.
    DEFAULT     DT             -- timestep size for driver to take (s, or DEFAULT for what the file contains)
    t           Summary        -- Summarize the data extents in the windfile (flag)
    t           SummaryFile    -- Write summary to file (.dvr.sum) (flag)
+   f           BoxExceedAllow -- Allow point sampling outside grid
 ----  Points file input (output given as POINTSFILENAME.Velocity.dat) --------
    f           PointsFile     -- read in a list of output points from a file (flag)
 "Test005.txt"  PointsFileName -- name of points file (-) (comma separated x,y,z coordinates, # symbol for comments)
