@@ -23,7 +23,7 @@ param    ^                       -                 IntKi             HAWC_WindNu
 param    ^                       -                 IntKi             User_WindNumber      -     6     -     "User defined wind."                                                       -
 param    ^                       -                 IntKi             BladedFF_Shr_WindNumber  - 7     -     "Native Bladed binary full-field file."      -
 param    ^                       -                 IntKi             FDext_WindNumber     -     8     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
-param    ^                       -                 IntKi             Point_WindNumber     -     9     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
+param    ^                       -                 IntKi             Point_WindNumber     -     9     -     "1D wind components from ExtInflow"                                                       -
 param    ^                       -                 IntKi             Highest_WindNumber   -     9     -     "Highest wind number supported."                                           -
 
 param    ^                       -                 IntKi             IfW_NumPtsAvg        -     144    -     "Number of points averaged for rotor-average wind speed"                                           -
