@@ -89,4 +89,4 @@ typedef  ^              ^                     ReKi                    delta     
 typedef  ^              ^                     ReKi                    pZero                   3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))"    "m"
 
 #----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              Points_InitInputType  IntKi                   Dummy                   -     -     -     "Point field initialization input dummy value"                     -
+typedef  ^              Points_InitInputType  IntKi                   NumWindPoints           -     -     -     "Number of points where wind components will be provided"                     -

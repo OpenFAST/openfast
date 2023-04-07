@@ -44,7 +44,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: User_WindNumber = 6      ! User defined wind. [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BladedFF_Shr_WindNumber = 7      ! Native Bladed binary full-field file. [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: FDext_WindNumber = 8      ! 4D wind from external souce (i.e., FAST.Farm). [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber = 9      ! 4D wind from external souce (i.e., FAST.Farm). [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Point_WindNumber = 9      ! 1D wind components from ExtInflow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Highest_WindNumber = 9      ! Highest wind number supported. [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg = 144      ! Number of points averaged for rotor-average wind speed [-]
 ! =========  InflowWind_InputFile  =======
@@ -138,6 +138,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
+    TYPE(FlowFieldType)  :: FlowField      !< Parameters from Full-Field [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PositionAvg      !< (non-rotated) positions of points used for averaging wind speed [meters]
     REAL(ReKi)  :: ReferenceHeight      !< Height of the wind turbine [meters]
     REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
@@ -192,7 +193,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViUVW      !< List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ [meters/second]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAiUVW      !< List of UVW accelerations for wind acceleration measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ [m/s^2]
-    TYPE(FlowFieldType)  :: FlowField      !< Parameters from Full-Field [-]
     TYPE(InflowWind_InputType)  :: u_Avg      !< inputs for computing rotor-averaged values [-]
     TYPE(InflowWind_OutputType)  :: y_Avg      !< outputs for computing rotor-averaged values [-]
     TYPE(InflowWind_InputType)  :: u_Hub      !< inputs for computing hub values [-]
@@ -2393,6 +2393,9 @@ IF (ALLOCATED(SrcParamData%WindViXYZ)) THEN
   END IF
     DstParamData%WindViXYZ = SrcParamData%WindViXYZ
 ENDIF
+      CALL IfW_FlowField_Copyflowfieldtype( SrcParamData%FlowField, DstParamData%FlowField, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
 IF (ALLOCATED(SrcParamData%PositionAvg)) THEN
   i1_l = LBOUND(SrcParamData%PositionAvg,1)
   i1_u = UBOUND(SrcParamData%PositionAvg,1)
@@ -2474,6 +2477,8 @@ ENDIF
 IF (ALLOCATED(ParamData%WindViXYZ)) THEN
   DEALLOCATE(ParamData%WindViXYZ)
 ENDIF
+  CALL IfW_FlowField_Destroyflowfieldtype( ParamData%FlowField, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%PositionAvg)) THEN
   DEALLOCATE(ParamData%PositionAvg)
 ENDIF
@@ -2539,6 +2544,24 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! WindViXYZ upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WindViXYZ)  ! WindViXYZ
   END IF
+   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
+      Int_BufSz   = Int_BufSz + 3  ! FlowField: size of buffers for each call to pack subtype
+      CALL IfW_FlowField_Packflowfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, .TRUE. ) ! FlowField 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! FlowField
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! FlowField
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! FlowField
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   Int_BufSz   = Int_BufSz   + 1     ! PositionAvg allocated yes/no
   IF ( ALLOCATED(InData%PositionAvg) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PositionAvg upper/lower bounds for each dimension
@@ -2551,7 +2574,6 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
   IF ( ALLOCATED(InData%OutParam) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! OutParam upper/lower bounds for each dimension
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
       Int_BufSz   = Int_BufSz + 3  ! OutParam: size of buffers for each call to pack subtype
       CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
@@ -2670,6 +2692,34 @@ ENDIF
         END DO
       END DO
   END IF
+      CALL IfW_FlowField_Packflowfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, OnlySize ) ! FlowField 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
   IF ( .NOT. ALLOCATED(InData%PositionAvg) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2875,6 +2925,46 @@ ENDIF
         END DO
       END DO
   END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL IfW_FlowField_Unpackflowfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%FlowField, ErrStat2, ErrMsg2 ) ! FlowField 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PositionAvg not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -4391,9 +4481,6 @@ IF (ALLOCATED(SrcMiscData%WindAiUVW)) THEN
   END IF
     DstMiscData%WindAiUVW = SrcMiscData%WindAiUVW
 ENDIF
-      CALL IfW_FlowField_Copyflowfieldtype( SrcMiscData%FlowField, DstMiscData%FlowField, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
       CALL InflowWind_CopyInput( SrcMiscData%u_Avg, DstMiscData%u_Avg, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -4438,8 +4525,6 @@ ENDIF
 IF (ALLOCATED(MiscData%WindAiUVW)) THEN
   DEALLOCATE(MiscData%WindAiUVW)
 ENDIF
-  CALL IfW_FlowField_Destroyflowfieldtype( MiscData%FlowField, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL InflowWind_DestroyInput( MiscData%u_Avg, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL InflowWind_DestroyOutput( MiscData%y_Avg, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
@@ -4501,23 +4586,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%WindAiUVW)  ! WindAiUVW
   END IF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! FlowField: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packflowfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, .TRUE. ) ! FlowField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! FlowField
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! FlowField
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! FlowField
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
       Int_BufSz   = Int_BufSz + 3  ! u_Avg: size of buffers for each call to pack subtype
       CALL InflowWind_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u_Avg, ErrStat2, ErrMsg2, .TRUE. ) ! u_Avg 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4668,34 +4736,6 @@ ENDIF
         END DO
       END DO
   END IF
-      CALL IfW_FlowField_Packflowfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, OnlySize ) ! FlowField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
       CALL InflowWind_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%u_Avg, ErrStat2, ErrMsg2, OnlySize ) ! u_Avg 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -4902,46 +4942,6 @@ ENDIF
         END DO
       END DO
   END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL IfW_FlowField_Unpackflowfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%FlowField, ErrStat2, ErrMsg2 ) ! FlowField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN

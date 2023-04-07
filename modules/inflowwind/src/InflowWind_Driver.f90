@@ -449,7 +449,7 @@ PROGRAM InflowWind_Driver
 
       ! Convert InflowWind file to HAWC format
    IF (SettingsFlags%WrHAWC) THEN
-      CALL IfW_WriteHAWC( InflowWind_MiscVars%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
+      CALL IfW_WriteHAWC( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       IF (ErrStat > ErrID_None) THEN
          CALL WrScr( TRIM(ErrMsg) )
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -466,7 +466,7 @@ PROGRAM InflowWind_Driver
 
       ! Convert InflowWind file to Native Bladed format
    IF (SettingsFlags%WrBladed) THEN
-      CALL IfW_WriteBladed( InflowWind_MiscVars%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
+      CALL IfW_WriteBladed( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       IF (ErrStat > ErrID_None) THEN
          CALL WrScr( TRIM(ErrMsg) )
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -481,7 +481,7 @@ PROGRAM InflowWind_Driver
    END IF
 
    IF (SettingsFlags%WrVTK) THEN
-      CALL IfW_WriteVTK( InflowWind_MiscVars%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
+      CALL IfW_WriteVTK( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       IF (ErrStat > ErrID_None) THEN
          CALL WrScr( TRIM(ErrMsg) )
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -498,7 +498,7 @@ PROGRAM InflowWind_Driver
    
    
    IF (SettingsFlags%WrUniform) THEN
-      CALL IfW_WriteUniform( InflowWind_MiscVars%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
+      CALL IfW_WriteUniform( InflowWind_p%FlowField, InflowWind_InitInp%RootName, ErrStat, ErrMsg )
       IF (ErrStat > ErrID_None) THEN
          CALL WrScr( TRIM(ErrMsg) )
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -711,7 +711,7 @@ if (SettingsFlags%WindGrid .or. SettingsFlags%PointsFile .or. SettingsFlags%FFTc
       ! Report the rotation of the coordinates.
    IF ( IfWDriver_Verbose >= 10_IntKi .and. InflowWind_p%NumOuts > 0 )   THEN
       CALL WrScr(NewLine//NewLine//'  Rotation of coordinates to prime (wind file) coordinates by rotating '//   &
-                  TRIM(Num2LStr(R2D*InflowWind_MiscVars%FlowField%PropagationDir))// &
+                  TRIM(Num2LStr(R2D*InflowWind_p%FlowField%PropagationDir))// &
                   ' degrees (meteorological wind direction change) ...'//NewLine)
       if (InflowWind_p%NWindVel > 0_IntKi) then
          CALL WrScr('          ------ WindViXYZ ---------    ----- WindViXYZprime -----')

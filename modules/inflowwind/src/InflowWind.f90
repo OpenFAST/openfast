@@ -300,8 +300,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Steady_InitInput%RefHt = InputFileData%Steady_RefHt
       Steady_InitInput%PLExp = InputFileData%Steady_PLexp
 
-      m%FlowField%FieldType = Uniform_FieldType
-      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, m%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = Uniform_FieldType
+      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -317,8 +317,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Uniform_InitInput%UseInputFile = InitInp%WindType2UseInputFile
       Uniform_InitInput%PassedFileData = InitInp%WindType2Data
 
-      m%FlowField%FieldType = Uniform_FieldType
-      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, m%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = Uniform_FieldType
+      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -329,8 +329,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
 
-      m%FlowField%FieldType = Grid3D_FieldType
-      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, m%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -352,8 +352,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%TowerFileExist     =  InputFileData%BladedFF_TowerFile
       Bladed_InitInput%NativeBladedFmt    = .false.
 
-      m%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, m%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -368,8 +368,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       Bladed_InitInput%TowerFileExist     = .false.
       Bladed_InitInput%NativeBladedFmt    = .true.
 
-      m%FlowField%FieldType = Grid3D_FieldType
-      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, m%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -401,8 +401,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       HAWC_InitInput%G3D%Z0 = InputFileData%FF%Z0
       HAWC_InitInput%G3D%XOffset = InputFileData%FF%XOffset
 
-      m%FlowField%FieldType = Grid3D_FieldType
-      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, m%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -411,8 +411,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
    case (User_WindNumber)
 
-      m%FlowField%FieldType = User_FieldType
-      call IfW_User_Init(User_InitInput, SumFileUnit, m%FlowField%User, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = User_FieldType
+      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, FileDat, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -421,16 +421,22 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
    case (FDext_WindNumber)
 
-      m%FlowField%FieldType = Grid4D_FieldType
-      call IfW_Grid4D_Init(InitInp%FDext, m%FlowField%Grid4D, FileDat, TmpErrStat, TmpErrMsg)
+      p%FlowField%FieldType = Grid4D_FieldType
+      call IfW_Grid4D_Init(InitInp%FDext, p%FlowField%Grid4D, TmpErrStat, TmpErrMsg)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       endif
 
-   ! case (Point_WindNumber)
+   case (Point_WindNumber)
 
-   !    m%FlowField%FieldType = Point_FieldType
+      p%FlowField%FieldType = Point_FieldType
+      Points_InitInput%NumWindPoints = InitInp%NumWindPoints
+      call IfW_Points_Init(Points_InitInput, p%FlowField%Points, TmpErrStat, TmpErrMsg)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
 
    case default  
       call SetErrStat(ErrID_Fatal, ' Undefined wind type.', ErrStat, ErrMsg, RoutineName)
@@ -442,50 +448,50 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    !----------------------------------------------------------------------------
 
    ! Reset flag indicating that acceleration field is valid
-   m%FlowField%AccFieldValid = .false.
+   p%FlowField%AccFieldValid = .false.
 
    ! Copy flag for enabling cubic velocity interpolation
-   m%FlowField%VelInterpCubic = InputFileData%VelInterpCubic
+   p%FlowField%VelInterpCubic = InputFileData%VelInterpCubic
 
    ! If cubic velocity interpolation requested and linearization is performed,
    ! display message that cubic interpolation is incompatible with linearization
    ! and will be disabled
-   if (m%FlowField%VelInterpCubic .and. InitInp%Linearize) then
+   if (p%FlowField%VelInterpCubic .and. InitInp%Linearize) then
       call WrScr("InflowWind: Cubic interpolation of wind velocity is disabled for linearization")
-      m%FlowField%VelInterpCubic = .false.
+      p%FlowField%VelInterpCubic = .false.
    end if
 
    ! Set box exceed flag and index
-   m%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
-   m%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
+   p%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
+   p%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
    if (InitInp%BoxExceedAllowF .and. (InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints)) then
-      m%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
+      p%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
    end if
 
    ! Select based on field type
-   select case (m%FlowField%FieldType)
+   select case (p%FlowField%FieldType)
    case (Uniform_FieldType)
 
-      if (InitInp%OutputAccel .or. m%FlowField%VelInterpCubic) then
-         call IfW_UniformField_CalcAccel(m%FlowField%Uniform, TmpErrStat, TmpErrMsg)
+      if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
+         call IfW_UniformField_CalcAccel(p%FlowField%Uniform, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-         m%FlowField%AccFieldValid = .true.
+         p%FlowField%AccFieldValid = .true.
       end if
 
    case (Grid3D_FieldType)
 
       ! Calculate acceleration
-      if (InitInp%OutputAccel .or. m%FlowField%VelInterpCubic) then
-         call IfW_Grid3DField_CalcAccel(m%FlowField%Grid3D, TmpErrStat, TmpErrMsg)
+      if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
+         call IfW_Grid3DField_CalcAccel(p%FlowField%Grid3D, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-         m%FlowField%AccFieldValid = .true.
+         p%FlowField%AccFieldValid = .true.
       end if
 
       ! Calculate field average if box is allowed to be exceeded
-      if (m%FlowField%Grid3D%BoxExceedAllowF .and. m%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
-         call IfW_Grid3DField_CalcVelAvgProfile(m%FlowField%Grid3D, m%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
+      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+         call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end if
@@ -493,13 +499,13 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    case default
       if (InitInp%OutputAccel) then
          call SetErrStat(ErrID_Fatal, "Acceleration not implemented for field type "// &
-                         num2LStr(m%FlowField%FieldType), ErrStat, ErrMsg, RoutineName)
+                         num2LStr(p%FlowField%FieldType), ErrStat, ErrMsg, RoutineName)
          return
       end if
-      if (m%FlowField%VelInterpCubic) then
+      if (p%FlowField%VelInterpCubic) then
          call WrScr(' Cubic velocity interpolation not implemented for WindType '// &
                      num2LStr(InputFileData%WindType))
-         m%FlowField%VelInterpCubic = .false.
+         p%FlowField%VelInterpCubic = .false.
       end if
    end select
 
@@ -551,8 +557,8 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! If field is uniform and there is any nonzero upflow, return error
       ! Math needs work before this can be implemented
-      if (m%FlowField%FieldType == Uniform_FieldType) then
-         if (any(m%FlowField%Uniform%AngleV /= 0.0_ReKi)) then
+      if (p%FlowField%FieldType == Uniform_FieldType) then
+         if (any(p%FlowField%Uniform%AngleV /= 0.0_ReKi)) then
             call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
             call Cleanup()
             return
@@ -995,10 +1001,10 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          n = SIZE(u%PositionXYZ,2)
             ! these are the positions used in the module coupling
          do i=1,n
-            ! note that m%FlowField%RotToWind(1,1) = cos(p%PropagationDir) and m%FlowField%RotToWind(2,1) = sin(p%PropagationDir), which are the
+            ! note that p%FlowField%RotToWind(1,1) = cos(p%PropagationDir) and p%FlowField%RotToWind(2,1) = sin(p%PropagationDir), which are the
             ! values we need to compute the jacobian.
 !!!FIX ME with the propagation values!!!!         
-            call IfW_UniformWind_JacobianPInput( m%FlowField%Uniform, t, u%PositionXYZ(:,i), m%FlowField%RotToWind(1,1), m%FlowField%RotToWind(2,1), local_dYdu )
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, u%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
             
             i_end  = 3*i
             i_start= i_end - 2
@@ -1021,7 +1027,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          do i=1,IfW_NumPtsAvg
             m%u_Avg%PositionXYZ(:,i) = matmul(u%HubOrientation,p%PositionAvg(:,i)) + u%HubPosition
 !!!FIX ME with the propagation values!!!!         
-            call IfW_UniformWind_JacobianPInput( m%FlowField%Uniform, t, m%u_Avg%PositionXYZ(:,i), m%FlowField%RotToWind(1,1), m%FlowField%RotToWind(2,1), local_dYdu )
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, m%u_Avg%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
          
             ! y%DiskAvg has the same index as u%HubPosition
             ! Also note that partial_(m%u_Avg%PositionXYZ) / partial_(u%HubPosition) is identity, so we can skip that part of the chain rule for these derivatives:
@@ -1043,7 +1049,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 
             if (node > 0) then
 !!!FIX ME with the propagation values!!!!         
-               call IfW_UniformWind_JacobianPInput( m%FlowField%Uniform, t, p%WindViXYZ(:,node), m%FlowField%RotToWind(1,1), m%FlowField%RotToWind(2,1), local_dYdu )
+               call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, p%WindViXYZ(:,node), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
             else
                local_dYdu = 0.0_R8Ki
                comp = 1
@@ -1468,8 +1474,8 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       u_op((index+1):(index+3)) = EulerExtract(u%HubOrientation)
       index = index + 3
       
-      call IfW_UniformWind_GetOP( m%FlowField%Uniform, t, m%FlowField%VelInterpCubic, u_op(index+1:index+2) )
-      u_op(index + 3) = m%FlowField%PropagationDir
+      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op(index+1:index+2) )
+      u_op(index + 3) = p%FlowField%PropagationDir
       
    END IF
 

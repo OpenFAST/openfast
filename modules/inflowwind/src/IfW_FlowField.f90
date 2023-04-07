@@ -42,7 +42,7 @@ contains
 !! Accelerations are only calculated if the AccelUVW array is allocated.
 subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
 
-   type(FlowFieldType), intent(inout)        :: FF                !< FlowField data structure
+   type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
    integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
    real(DbKi), intent(in)                    :: Time              !< Time to evaluate velocities/accelerations
    real(ReKi), intent(in)                    :: PositionXYZ(:, :) !< Array of positions to evaluate velocites/accelerations

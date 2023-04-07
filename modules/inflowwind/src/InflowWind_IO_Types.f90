@@ -136,7 +136,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Points_InitInputType  =======
   TYPE, PUBLIC :: Points_InitInputType
-    INTEGER(IntKi)  :: Dummy      !< Point field initialization input dummy value [-]
+    INTEGER(IntKi)  :: NumWindPoints      !< Number of points where wind components will be provided [-]
   END TYPE Points_InitInputType
 ! =======================
 CONTAINS
@@ -2082,7 +2082,7 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstPoints_InitInputTypeData%Dummy = SrcPoints_InitInputTypeData%Dummy
+    DstPoints_InitInputTypeData%NumWindPoints = SrcPoints_InitInputTypeData%NumWindPoints
  END SUBROUTINE InflowWind_IO_CopyPoints_InitInputType
 
  SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType( Points_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2143,7 +2143,7 @@ CONTAINS
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! Dummy
+      Int_BufSz  = Int_BufSz  + 1  ! NumWindPoints
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2171,7 +2171,7 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = InData%Dummy
+    IntKiBuf(Int_Xferred) = InData%NumWindPoints
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_IO_PackPoints_InitInputType
 
@@ -2201,7 +2201,7 @@ CONTAINS
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%Dummy = IntKiBuf(Int_Xferred)
+    OutData%NumWindPoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE InflowWind_IO_UnPackPoints_InitInputType
 

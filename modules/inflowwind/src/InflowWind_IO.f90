@@ -26,9 +26,20 @@ use IfW_FlowField
 
 implicit none
 private
-public :: IfW_SteadyWind_Init, IfW_UniformWind_Init, IfW_TurbSim_Init, IfW_Bladed_Init, &
-          IfW_HAWC_Init, IfW_User_Init, IfW_Grid4D_Init
-public :: Uniform_WriteHH, Grid3D_WriteBladed, Grid3D_WriteHAWC, Grid3D_WriteVTK
+
+public :: IfW_SteadyWind_Init, &
+          IfW_UniformWind_Init, &
+          IfW_TurbSim_Init, &
+          IfW_Bladed_Init, &
+          IfW_HAWC_Init, &
+          IfW_User_Init, &
+          IfW_Grid4D_Init, &
+          IfW_Points_Init
+
+public :: Uniform_WriteHH, &
+          Grid3D_WriteBladed, &
+          Grid3D_WriteHAWC, &
+          Grid3D_WriteVTK
 
 type(ProgDesc), parameter :: InflowWind_IO_Ver = ProgDesc('InflowWind_IO', '', '')
 
@@ -38,16 +49,34 @@ integer(IntKi), parameter :: ScaleMethod_None = 0, &           !< no scaling
 
 contains
 
+subroutine IfW_Points_Init(InitInp, PF, ErrStat, ErrMsg)
+   type(Points_InitInputType), intent(in) :: InitInp
+   type(PointsFieldType), intent(out)     :: PF
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter                :: RoutineName = 'IfW_Points_Init'
+   integer(IntKi)                         :: TmpErrStat
+   character(ErrMsgLen)                   :: TmpErrMsg
+
+   ! UVW components at points
+   call AllocAry(PF%Vel, 3, InitInp%NumWindPoints, &
+                 'Point Velocity Array', TmpErrStat, TmpErrMsg)
+   call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+end subroutine
+
 !> IfW_SteadyWind_Init initializes a Uniform field with with one set of values.
 subroutine IfW_SteadyWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
-   type(Steady_InitInputType), intent(in)  :: InitInp
+   type(Steady_InitInputType), intent(in) :: InitInp
    integer(IntKi), intent(in)             :: SumFileUnit
    type(UniformFieldType), intent(out)    :: UF
    type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = 'SteadyWind_ReadFile'
+   character(*), parameter                :: RoutineName = 'IfW_SteadyWind_Init'
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
 
@@ -128,7 +157,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter                   :: RoutineName = 'UniformWind_ReadFile'
+   character(*), parameter                   :: RoutineName = 'IfW_UniformWind_Init'
    integer(IntKi), parameter                 :: MaxNumCols = 9
    integer(IntKi), parameter                 :: MaxTries = 100
    integer(IntKi)                            :: NumCols
@@ -447,7 +476,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
-   character(*), parameter       :: RoutineName = "TurbSim_Init"
+   character(*), parameter       :: RoutineName = "IfW_TurbSim_Init"
    integer(IntKi)                :: WindFileUnit
    integer(B2Ki), allocatable    :: VelRaw(:, :, :)   ! raw grid-field velocity data at one time step
    integer(B2Ki), allocatable    :: TwrRaw(:, :)      ! raw towrer velocity data at one time step
@@ -746,7 +775,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter       :: RoutineName = "Read_HAWC"
+   character(*), parameter       :: RoutineName = "IfW_HAWC_Init"
    integer(IntKi)                :: WindFileUnit
    real(SiKi), allocatable       :: VelRaw(:, :)      ! grid-field data for one timestep
    integer                       :: IC                ! Loop counter for the number of wind components
@@ -968,7 +997,7 @@ subroutine IfW_User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = "User_Init"
+   character(*), parameter                :: RoutineName = "IfW_User_Init"
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -981,16 +1010,15 @@ subroutine IfW_User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
 
 end subroutine
 
-!> Grid4D_Init initializes a wind field defined by a 4D grid.
-subroutine IfW_Grid4D_Init(InitInp, G4D, FileDat, ErrStat, ErrMsg)
+!> IfW_Grid4D_Init initializes a wind field defined by a 4D grid.
+subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
 
    type(Grid4D_InitInputType), intent(in) :: InitInp
    type(Grid4DFieldType), intent(out)     :: G4D
-   type(WindFileDat), intent(out)         :: FileDat
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = "Grid4D_Init"
+   character(*), parameter                :: RoutineName = "IfW_Grid4D_Init"
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
 
@@ -1024,7 +1052,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    integer(IntKi), intent(out)               :: ErrStat  !< determines if an error has been encountered
    character(*), intent(out)                 :: ErrMsg   !< Message about errors
 
-   character(*), parameter    :: RoutineName = "Bladed_Init"
+   character(*), parameter    :: RoutineName = "IfW_Bladed_Init"
    real(ReKi)                 :: TI(3)             ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
    type(Grid3D_InitInputType) :: G3D_InitInp       ! initialization input for grid 3d field
    real(ReKi)                 :: BinTI(3)          ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
@@ -1391,38 +1419,29 @@ end subroutine IfW_Bladed_Init
 
 subroutine Bladed_ReadTurbSimSummary(UnitWind, FileName, CWise, ZCenter, TI, UBar, RefHt, Periodic, LHR, ErrStat, ErrMsg)
 
-   character(*), parameter                     :: RoutineName = "Bladed_ReadTurbSimSummary"
+   integer(IntKi), intent(in)    :: UnitWind       !< unit number for the file to open
+   character(*), intent(in)      :: FileName       !< name of the summary file
+   logical, intent(out)          :: CWise          !< rotation (for reading the order of the binary data)
+   real(ReKi), intent(out)       :: ZCenter        !< the height at the center of the grid
+   real(ReKi), intent(out)       :: TI(3)    !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
+   real(ReKi), intent(out)       :: UBar           !< mean (advection) wind speed
+   real(ReKi), intent(out)       :: RefHt          !< Reference height
+   logical, intent(out)          :: Periodic       !< rotation (for reading the order of the binary data)
+   logical, intent(out)          :: LHR            !< Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
+   integer(IntKi), intent(out)   :: ErrStat        !< returns 0 if no error encountered in the subroutine
+   character(*), intent(out)     :: ErrMsg         !< holds the error messages
 
-   ! Passed variables
-   integer(IntKi), intent(in)  :: UnitWind       !< unit number for the file to open
-   character(*), intent(in)  :: FileName       !< name of the summary file
-   logical, intent(out)  :: CWise          !< rotation (for reading the order of the binary data)
-   real(ReKi), intent(out)  :: ZCenter        !< the height at the center of the grid
-   real(ReKi), intent(out)  :: TI(3)    !< turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-   real(ReKi), intent(out)  :: UBar           !< mean (advection) wind speed
-   real(ReKi), intent(out)  :: RefHt          !< Reference height
-   logical, intent(out)  :: Periodic       !< rotation (for reading the order of the binary data)
-   logical, intent(out)  :: LHR            !< Left-hand rule for Bladed files (is the v component aligned along *negative* Y?)
-   integer(IntKi), intent(out)  :: ErrStat        !< returns 0 if no error encountered in the subroutine
-   character(*), intent(out)  :: ErrMsg         !< holds the error messages
-
-   ! Local variables
-   real(ReKi)                                         :: ZGOffset       ! The vertical offset of the turbine on rectangular grid (allows turbulence not centered on turbine hub)
-
-   integer, parameter                                 :: NumStrings = 7 ! number of strings to be looking for in the file
-
-   integer(IntKi)                                     :: FirstIndx      ! The first character of a line where data is located
-   integer(IntKi)                                     :: I              ! A loop counter
-   integer(IntKi)                                     :: LastIndx       ! The last  character of a line where data is located
-   integer(IntKi)                                     :: LineCount      ! Number of lines that have been read in the file
-
-   logical                                            :: StrNeeded(NumStrings)   ! if the string has been found
-
-   character(1024)                                    :: LINE           ! temporary storage for reading a line from the file
-
-   ! Temporary variables for error handling
-   integer(IntKi)                                     :: TmpErrStat     ! temporary error status
-   character(ErrMsgLen)                               :: TmpErrMsg      ! temporary error message
+   character(*), parameter       :: RoutineName = "Bladed_ReadTurbSimSummary"
+   integer(IntKi)                :: TmpErrStat     ! temporary error status
+   character(ErrMsgLen)          :: TmpErrMsg      ! temporary error message
+   real(ReKi)                    :: ZGOffset       ! The vertical offset of the turbine on rectangular grid (allows turbulence not centered on turbine hub)
+   integer, parameter            :: NumStrings = 7 ! number of strings to be looking for in the file
+   integer(IntKi)                :: FirstIndx      ! The first character of a line where data is located
+   integer(IntKi)                :: I              ! A loop counter
+   integer(IntKi)                :: LastIndx       ! The last  character of a line where data is located
+   integer(IntKi)                :: LineCount      ! Number of lines that have been read in the file
+   logical                       :: StrNeeded(NumStrings)   ! if the string has been found
+   character(1024)               :: LINE           ! temporary storage for reading a line from the file
 
    !----------------------------------------------------------------------------------------------
    ! Initialize some variables
@@ -1669,19 +1688,19 @@ subroutine Bladed_ReadNativeSummary(FileName, PLExp, VLinShr, HLinShr, RefLength
    character(*), intent(out)        :: ErrMsg         !< holds the error messages
 
    character(*), parameter          :: RoutineName = "Bladed_ReadNativeSummary"
-   integer(IntKi), parameter        :: UnEc = -1      ! echo file unit number (set to something else > 0 for debugging)
-   integer(IntKi)                   :: CurLine        ! Current line to parse in FileInfo data structure
    integer(IntKi)                   :: ErrStat2       ! temporary error status
    character(ErrMsgLen)             :: ErrMsg2        ! temporary error message
+   integer(IntKi), parameter        :: UnEc = -1      ! echo file unit number (set to something else > 0 for debugging)
+   integer(IntKi)                   :: CurLine        ! Current line to parse in FileInfo data structure
 
    type(FileInfoType)               :: FileInfo       ! The derived type for holding the file information.
 
    ErrStat = ErrID_None
    ErrMsg = ''
 
-!----------------------------------------------------------------------------
-! Open and read the summary file; store data in FileInfo structure.
-!----------------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Open and read the summary file; store data in FileInfo structure.
+   !----------------------------------------------------------------------------
 
    call ProcessComFile(FileName, FileInfo, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1690,9 +1709,9 @@ subroutine Bladed_ReadNativeSummary(FileName, PLExp, VLinShr, HLinShr, RefLength
       return
    end if
 
-!----------------------------------------------------------------------------
-! Process the lines stored in FileInfo
-!----------------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Process the lines stored in FileInfo
+   !----------------------------------------------------------------------------
 
    CurLine = 1
 
@@ -1750,9 +1769,9 @@ subroutine Bladed_ReadNativeSummary(FileName, PLExp, VLinShr, HLinShr, RefLength
       XOffset = 0.0_ReKi ! this will be the default if offset is not in the file
    end if
 
-!----------------------------------------------------------------------------
-! Clean FileInfo data structure (including pointers and allocatable arrays)
-!----------------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Clean FileInfo data structure (including pointers and allocatable arrays)
+   !----------------------------------------------------------------------------
 
    call Cleanup()
 
@@ -1765,9 +1784,9 @@ contains
 end subroutine Bladed_ReadNativeSummary
 
 !>   Reads the binary headers from the turbulence files of the old Bladed variety.  Note that
-   !!   because of the normalization, neither ParamData%FF%NZGrids or ParamData%FF%NYGrids are larger than 32 points.
-   !!   21-Sep-2009 - B. Jonkman, NREL/NWTC.
-   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+!!   because of the normalization, neither ParamData%FF%NZGrids or ParamData%FF%NYGrids are larger than 32 points.
+!!   21-Sep-2009 - B. Jonkman, NREL/NWTC.
+!!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 subroutine Bladed_ReadHeader0(WindFileUnit, G3D, NativeBladedFmt, ErrStat, ErrMsg)
 
    integer(IntKi), intent(in)             :: WindFileUnit      !< unit number of already-opened wind file
@@ -2034,13 +2053,13 @@ subroutine Bladed_ReadGrids(UnitWind, NativeBladedFmt, CWise, LHR, TI, G3D, ErrS
    character(*), intent(out)              :: ErrMsg            !< error message
 
    character(*), parameter    :: RoutineName = "Bladed_ReadGrids"
+   integer(IntKi)             :: TmpErrStat
+   character(ErrMsgLen)       :: TmpErrMsg
    real(ReKi)                 :: FF_Scale(3)    !< used for "un-normalizing" the data
    real(ReKi)                 :: FF_Offset(3)   !< used for "un-normalizing" the data
    integer(B2Ki), allocatable :: raw_ff(:, :, :)
    integer(IntKi)             :: CFirst, CLast, CStep
    integer(IntKi)             :: IC, IR, IT
-   integer(IntKi)             :: TmpErrStat
-   character(ErrMsgLen)       :: TmpErrMsg
 
    ErrMsg = ""
    ErrStat = ErrID_None
@@ -2188,14 +2207,14 @@ subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
    end type
 
    character(*), parameter    :: RoutineName = "Bladed_ReadTower"
+   integer(IntKi)             :: TmpErrStat     ! IOSTAT value.
+   character(ErrMsgLen)       :: TmpErrMsg
    real(ReKi), parameter      :: FF_Offset(3) = (/1.0, 0.0, 0.0/)  ! used for "un-normalizing" the data
    real(ReKi), parameter      :: TOL = 1E-4     ! tolerence for wind file comparisons
    integer(IntKi)             :: IC, IT         ! loop counters
    real(SiKi)                 :: TI(3)          ! scaling values for "un-normalizing the data" [approx. turbulence intensities of the wind components]
    integer(B2Ki), allocatable :: raw_twr(:, :)  ! holds tower velocity for one timestep
    type(HeaderType)           :: header
-   integer(IntKi)             :: TmpErrStat     ! IOSTAT value.
-   character(ErrMsgLen)       :: TmpErrMsg
 
    ErrMsg = ''
    ErrStat = ErrID_None
@@ -2343,11 +2362,11 @@ end subroutine Bladed_ReadTower
 
 subroutine Grid3D_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower, FileDat)
 
-   type(Grid3DFieldType), intent(in)  :: Grid3DField
-   character(*), intent(in)         :: FileName
-   integer(IntKi), intent(in)       :: WindType
-   logical, intent(in)              :: HasTower
-   type(WindFileDat), intent(out)   :: FileDat
+   type(Grid3DFieldType), intent(in)   :: Grid3DField
+   character(*), intent(in)            :: FileName
+   integer(IntKi), intent(in)          :: WindType
+   logical, intent(in)                 :: HasTower
+   type(WindFileDat), intent(out)      :: FileDat
 
    FileDat%FileName = FileName
    FileDat%WindType = WindType
@@ -2388,14 +2407,14 @@ end subroutine
 
 subroutine Grid3D_AddMeanVelocity(InitInp, G3D)
 
-   type(Grid3D_InitInputType), intent(in)  :: InitInp  !< Initialization input data passed to the module
-   type(Grid3DFieldType), intent(inout)   :: G3D      !< Initialization input data passed to the module
+   type(Grid3D_InitInputType), intent(in)    :: InitInp  !< Initialization input data passed to the module
+   type(Grid3DFieldType), intent(inout)      :: G3D      !< Initialization input data passed to the module
 
-   real(ReKi)              :: Z                 ! height
-   real(ReKi)              :: Y                 ! distance from centre in horizontal direction
-   real(ReKi)              :: U                 ! mean wind speed
-   integer(IntKi)          :: iz, iy            ! loop counter
-   integer(IntKi)          :: centre_y          ! index of centre in y direction
+   real(ReKi)        :: Z           ! height
+   real(ReKi)        :: Y           ! distance from centre in horizontal direction
+   real(ReKi)        :: U           ! mean wind speed
+   integer(IntKi)    :: iz, iy      ! loop counter
+   integer(IntKi)    :: centre_y    ! index of centre in y direction
 
    ! Loop through grid elevations
    do iz = 1, G3D%NZGrids
@@ -2459,10 +2478,7 @@ subroutine Grid3D_ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
    integer(IntKi), intent(out)             :: ErrStat           !< determines if an error has been encountered
    character(*), intent(out)               :: ErrMsg            !< Message about errors
 
-   ! Local Variables:
-   ! note that the variables used to compute statistics use double precision:
-   character(*), parameter    :: RoutineName = 'ScaleTurbulence'
-   real(DbKi)                 :: v(3)              ! instanteanous wind speed at target position
+   character(*), parameter    :: RoutineName = 'Grid3D_ScaleTurbulence'
    real(DbKi)                 :: vMean(3)          ! average wind speeds over time at target position
    real(DbKi)                 :: vSum(3)           ! sum over time of wind speeds at target position
    real(DbKi)                 :: vSum2(3)          ! sum of wind speeds squared
@@ -2542,7 +2558,7 @@ subroutine Grid3D_ValidateInput(InitInp, NComp, ErrStat, ErrMsg)
    type(Grid3D_InitInputType), intent(in)    :: InitInp     !< Initialization input data passed to the module
    integer(IntKi), intent(in)                :: NComp       !< number of full-field wind components (normally 3)
 
-   character(*), parameter                   :: RoutineName = 'Grid3DField_ValidateInput'
+   character(*), parameter                   :: RoutineName = 'Grid3D_ValidateInput'
    integer(IntKi), intent(out)               :: ErrStat     !< determines if an error has been encountered
    character(*), intent(out)                 :: ErrMsg      !< Message about errors
 
