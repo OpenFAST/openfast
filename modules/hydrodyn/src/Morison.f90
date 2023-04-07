@@ -2660,6 +2660,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
 
+   REAL(ReKi)               :: theta1, theta2
+
    ! Initialize errStat
    errStat = ErrID_None         
    errMsg  = ""               
@@ -4076,17 +4078,19 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
-      REAL(ReKi)                       :: ZetaP,ZetaM,dZetadz,dZetady
+      REAL(ReKi)                       :: r1,ZetaP,ZetaM,dZetadz,dZetady
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL GetTotalWaveElev( Time, (/pos(1)+r,pos(2)/), ZetaP, ErrStat, ErrMsg )
-      CALL GetTotalWaveElev( Time, (/pos(1)-r,pos(2)/), ZetaM, ErrStat, ErrMsg )
-      dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+      r1 = MAX(r,1.0e-6)
+
+      CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat, ErrMsg )
+      dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
       
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r/), ZetaP, ErrStat, ErrMsg )
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r/), ZetaM, ErrStat, ErrMsg )
-      dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r1/), ZetaP, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r1/), ZetaM, ErrStat, ErrMsg )
+      dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
       
       n = (/-dZetadx,-dZetady,1.0_ReKi/)
       n = n / SQRT(Dot_Product(n,n))
