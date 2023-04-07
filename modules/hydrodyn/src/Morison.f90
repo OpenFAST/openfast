@@ -4096,6 +4096,72 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       n = n / SQRT(Dot_Product(n,n))
    END SUBROUTINE GetFreeSurfaceNormal
 
+   SUBROUTINE GetSectionUnitVectors( k, y, z )
+      REAL(ReKi),      INTENT( In    ) :: k(3)
+      REAL(ReKi),      INTENT(   OUT ) :: y(3)
+      REAL(ReKi),      INTENT(   OUT ) :: z(3)
+      IF ( ABS(k(3)) > 0.999999_ReKi ) THEN ! k is effectively vertical
+         y = (/0.0,1.0,0.0/)
+      ELSE
+         y = (/-k(2),k(1),0.0/)
+         y = y / SQRT(Dot_Product(y,y))      
+      ENDIF
+      z = cross_product(k,y)
+      IF ( z(3) < 0.0 ) THEN
+         y = -y;
+         z = -z;
+      END IF
+   END SUBROUTINE GetSectionUnitVectors
+
+   SUBROUTINE GetSectionFreeSurfaceIntersects( Time, pos0, R, k_hat, theta1, theta2, ErrStat, ErrMsg)
+      REAL(DbKi),      INTENT( In    ) :: Time
+      REAL(ReKi),      INTENT( In    ) :: pos0(3)
+      REAL(ReKi),      INTENT( In    ) :: R
+      REAL(ReKi),      INTENT( In    ) :: k_hat(3)
+      REAL(ReKi),      INTENT(   OUT ) :: theta1
+      REAL(ReKi),      INTENT(   OUT ) :: theta2
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: Zeta0
+      REAL(ReKi)                       :: a, b, c, d, d2
+      REAL(ReKi)                       :: alpha, beta
+      REAL(ReKi)                       :: tmp
+      REAL(ReKi)                       :: y_hat(3), z_hat(3), nFS(3)
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+
+      CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat, ErrMsg )
+      CALL GetFreeSurfaceNormal( Time, pos0, R, nFS, ErrStat, ErrMsg )
+      CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
+      a  = R * dot_product(y_hat,nFS)
+      b  = R * dot_product(z_hat,nFS)
+      c  = (Zeta0-pos0(3)) * nFS(3)
+      d2 = a*a+b*b
+      IF ( d2 >= c*c ) THEN ! Has intersection
+         d = SQRT(d2)
+         IF (b>=0.0) THEN
+            alpha =  ACOS(a/d)
+         ELSE
+            alpha = -ACOS(a/d)
+         END IF
+         beta   = ACOS(c/d)
+         theta1 = alpha - beta
+         theta2 = alpha + beta
+         IF ( dot_product( (cos(theta2)-cos(theta1))*z_hat-(sin(theta2)-sin(theta1))*y_hat, nFS) < 0.0 ) THEN
+            tmp    = theta1
+            theta1 = theta2
+            theta2 = tmp + 2.0*PI
+         END IF
+      ELSE IF (Zeta0 > pos0(3)) THEN ! Section is fully submerged
+         theta1 = -1.5*PI
+         theta2 =  0.5*PI
+      ELSE ! Section is above water
+         theta1 = -0.5*PI
+         theta2 = -0.5*PI
+      END IF
+
+   END SUBROUTINE GetSectionFreeSurfaceIntersects
+
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
