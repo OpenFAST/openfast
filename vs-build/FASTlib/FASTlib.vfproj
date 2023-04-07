@@ -1371,11 +1371,6 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\IfW_FFWind_Base.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\IfW_HAWCWind.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\IfW_TSFFWind.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\IfW_UniformWind.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\IfW_UserWind.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Subs.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\Lidar.f90"/></Filter>

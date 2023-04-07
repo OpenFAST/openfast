@@ -164,6 +164,14 @@
 		<File RelativePath="..\..\modules\InflowWind\src\IfW_FlowField.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\IfW_FlowField_Types.f90"/>
 		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\InflowWind\src\InflowWind.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration>
