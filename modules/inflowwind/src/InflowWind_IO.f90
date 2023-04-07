@@ -59,6 +59,9 @@ subroutine IfW_Points_Init(InitInp, PF, ErrStat, ErrMsg)
    integer(IntKi)                         :: TmpErrStat
    character(ErrMsgLen)                   :: TmpErrMsg
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
    ! UVW components at points
    call AllocAry(PF%Vel, 3, InitInp%NumWindPoints, &
                  'Point Velocity Array', TmpErrStat, TmpErrMsg)
