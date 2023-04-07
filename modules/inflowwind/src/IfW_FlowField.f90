@@ -193,19 +193,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             return
          end if
 
-         ! Output warning if extrapolation occured
-         if (GridExtrap .and. (.not. FF%Grid3D%BoxExceedWarned)) then
-            call WrScr("WARNING from InflowWind:")
-            call WrScr("------------------------")
-            call WrScr(" Grid point extrapolated beyond bounds of full-field wind grid [position=("// &
-                       TRIM(Num2LStr(PositionXYZ(1, i)))//", "//TRIM(Num2LStr(PositionXYZ(2, i)))//", "// &
-                       TRIM(Num2LStr(PositionXYZ(3, i)))//")  in wind-file coordinates, T="//trim(Num2LStr(Time))//"]."//NewLine// &
-                       "This only occurs for free vortex wake points or LidarSim measurement locations. "// &
-                       "Use a larger full-field wind grid if the simulation yields undesirable results. Further warnings are suppressed.")
-            call WrScr("------------------------")
-            FF%Grid3D%BoxExceedWarned = .true.
-         end if
-
          ! Calculate velocity and acceleration
          if (OutputAccel) then
             if (FF%VelInterpCubic) then
@@ -972,10 +959,11 @@ contains
       integer(IntKi)    :: ic, i
 
       !-------------------------------------------------------------------------
-      ! If extrapolation is not allowed, apply tower values to all Y positions
+      ! If extrapolation is not allowed or Y is nearly zero, only interpolate
+      ! along the tower
       !-------------------------------------------------------------------------
 
-      if (.not. AllowExtrap) then
+      if (.not. AllowExtrap .or. EqualRealNos(Position(2), 0.0_ReKi)) then
          if (IZ_HI <= G3D%NTGrids) then      ! In tower grid
             cell(1, :) = towerVal(:, IZ_LO, IT_LO)
             cell(2, :) = towerVal(:, IZ_HI, IT_LO)
@@ -1103,6 +1091,8 @@ contains
            x(3)*(y(1) - y(2)))/2.0_ReKi
    end function
 
+   !> GetBoundsY populates IY_Lo, IY_Hi, and the interpolant [-1,1]. It also
+   !! adds ExtrapYmin or ExtrapYmax to AllExtrap if applicable.
    subroutine GetBoundsY(PosY, DY)
 
       real(ReKi), intent(in)     :: PosY
@@ -1154,6 +1144,8 @@ contains
 
    end subroutine
 
+   !> GetBoundsZ populates IZ_Lo, IZ_Hi, and the interpolant [-1,1]. It also
+   !! adds ExtrapZmin or ExtrapZmax to AllExtrap if applicable.
    subroutine GetBoundsZ(PosZ, DZ)
 
       real(ReKi), intent(in)     :: PosZ
@@ -1248,6 +1240,7 @@ contains
 
    end subroutine
 
+   !> GetBoundsT populates IT_Lo, IT_Hi, and the interpolant [-1,1].
    subroutine GetBoundsT(PosX, DT)
 
       real(ReKi), intent(in)     :: PosX
