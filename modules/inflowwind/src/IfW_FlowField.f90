@@ -952,17 +952,18 @@ contains
       real(SiKi), intent(in), allocatable :: gridAvg(:, :, :)
       real(SiKi), intent(in), allocatable :: towerVal(:, :, :)
 
-      real(ReKi)        :: Y(0:5), Z(0:5), W(4), Py, Pz
-      real(ReKi)        :: V(3, 4, 2)
-      real(ReKi)        :: alpha
-      integer(IntKi)    :: ic, i
+      real(ReKi), dimension(2)            :: P, P1, P2, P3, V0, V1, V2
+      real(ReKi)                          :: d00, d01, d11, d20, d21
+      real(ReKi)                          :: V(3, 3, 2), W(3)
+      real(ReKi)                          :: alpha, omalpha, denom
+      integer(IntKi)                      :: ic
 
       !-------------------------------------------------------------------------
       ! If extrapolation is not allowed or Y is nearly zero, only interpolate
       ! along the tower
       !-------------------------------------------------------------------------
 
-      if (.not. AllowExtrap .or. EqualRealNos(Position(2), 0.0_ReKi)) then
+      if (.not. AllowExtrap) then
          if (IZ_HI <= G3D%NTGrids) then      ! In tower grid
             cell(1, :) = towerVal(:, IZ_LO, IT_LO)
             cell(2, :) = towerVal(:, IZ_HI, IT_LO)
@@ -991,108 +992,84 @@ contains
          return
       end if
 
+      !-------------------------------------------------------------------------
+      ! Otherwise, position is below grid and within +- 2*GridWidth from tower
+      ! This section uses Barycentric interpolation of a triangle to get
+      ! the wind components at the desired Position. The components on the 
+      ! bottom of the grid and on the tower are interpolated to get the first
+      ! two points. The third point is on the ground at the GridWidth away
+      ! from the tower.
+      !-------------------------------------------------------------------------
+
       ! Get grid Y bounds
       call GetBoundsY(Position(2), Xi(1))
       if (ErrStat >= AbortErrLev) return
 
-      !-------------------------------------------------------------------------
-      ! Otherwise, position is below grid and within +- 2*GridWidth from tower
-      ! This section uses Barycentric interpolation between four points to get
-      ! the wind components at the desired Position.
-      !
-      ! Points are ordered counter clockwise. Points on left side of tower
-      ! are reflected to the right side.
-      !-------------------------------------------------------------------------
+      ! Get interpolation point
+      P = [abs(Position(2)), Position(3)]
 
-      ! Point 1 (ground @ grid width away from tower)
-      Y(1) = 2.0_ReKi*G3D%YHWid
-      Z(1) = 0.0_Reki
-      V(:, 1, :) = 0.0_ReKi
-
-      ! Point 2 (grid bottom point)
-      Y(2) = abs(Position(2))
-      Z(2) = G3D%GridBase
-
+      ! Point 1 (grid bottom point)
+      P1 = [abs(Position(2)), G3D%GridBase]
       select case (AllExtrap)
       case (ExtrapNone)
-
          ! Interpolate between grid points
          alpha = (Xi(1) + 1.0_ReKi)/2.0_ReKi
-         V(:, 2, 1) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Lo) + &
+         omalpha = 1.0_ReKi - alpha
+         V(:, 1, 1) = omalpha*gridVal(:, IY_Lo, 1, IT_Lo) + &
                       alpha*gridVal(:, IY_Hi, 1, IT_Lo)
-         V(:, 2, 2) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Hi) + &
+         V(:, 1, 2) = omalpha*gridVal(:, IY_Lo, 1, IT_Hi) + &
                       alpha*gridVal(:, IY_Hi, 1, IT_Hi)
-
       case (ExtrapYmin, ExtrapYmax)
-
          ! Interpolate between edge of grid and grid average
          alpha = abs(Position(2))/G3D%YHWid - 1.0_ReKi
-         V(:, 2, 1) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Lo) + &
+         omalpha = 1.0_ReKi - alpha
+         V(:, 1, 1) = omalpha*gridVal(:, IY_Lo, 1, IT_Lo) + &
                       alpha*gridAvg(:, 1, IT_Lo)
-         V(:, 2, 2) = (1.0_ReKi - alpha)*gridVal(:, IY_Lo, 1, IT_Hi) + &
+         V(:, 1, 2) = omalpha*gridVal(:, IY_Lo, 1, IT_Hi) + &
                       alpha*gridAvg(:, 1, IT_Hi)
-
       end select
 
-      ! Point 3 (upper tower point)
-      Y(3) = 0.0_ReKi
-      Z(3) = G3D%GridBase - real(IZ_Lo - 1, ReKi)/G3D%InvDZ
-      V(:, 3, 1) = towerVal(:, IZ_Lo, IT_Lo)
-      V(:, 3, 2) = towerVal(:, IZ_Lo, IT_Hi)
-
-      ! Point 4 (lower tower point)
-      Y(4) = 0.0_ReKi
+      ! Point 2 (tower point)
+      P2 = [0.0_ReKi, Position(3)]
+      alpha = (Xi(2) + 1.0_ReKi)/2.0_ReKi
+      omalpha = 1.0_ReKi - alpha
       if (IZ_HI <= G3D%NTGrids) then   ! Lower point above ground
-         Z(4) = G3D%GridBase - real(IZ_Hi - 1, ReKi)/G3D%InvDZ
-         V(:, 4, 1) = towerVal(:, IZ_Hi, IT_Lo)
-         V(:, 4, 2) = towerVal(:, IZ_Hi, IT_Hi)
+         V(:, 2, 1) = omalpha*towerVal(:, IZ_Lo, IT_Lo) + &
+                      alpha*towerVal(:, IZ_Hi, IT_Lo)
+         V(:, 2, 2) = omalpha*towerVal(:, IZ_Lo, IT_Hi) + &
+                      alpha*towerVal(:, IZ_Hi, IT_Hi)
       else                             ! Lower point on ground
-         Z(4) = 0.0_ReKi
-         V(:, 4, :) = 0.0_ReKi
+         V(:, 2, 1) = omalpha*towerVal(:, IZ_Lo, IT_Lo)
+         V(:, 2, 2) = omalpha*towerVal(:, IZ_Lo, IT_Hi)
       end if
 
-      !-------------------------------------------------------------------------
-      ! Calculate Barycentric weights for quadrilateral
-      !-------------------------------------------------------------------------
+      ! Point 3 (ground @ grid width away from tower)
+      P3 = [2.0_ReKi*G3D%YHWid, 0.0_Reki]
+      ! V(:, 3, :) = 0.0_ReKi ! Not used
 
-      ! Get interpolation point
-      Py = abs(Position(2))
-      Pz = Position(3)
-
-      ! Copy start and end coords for easier indexing when calculating weights
-      Y(0) = Y(4)
-      Y(5) = Y(1)
-      Z(0) = Z(4)
-      Z(5) = Z(1)
-
-      ! Calculate weights
-      do i = 1, 4
-         W(i) = TriangleArea([Y(i - 1), Y(i), Y(i + 1)], [Z(i - 1), Z(i), Z(i + 1)])/ &
-                (TriangleArea([Py, Y(i - 1), Y(i)], [Pz, Z(i - 1), Z(i)])* &
-                 TriangleArea([Py, Y(i), Y(i + 1)], [Pz, Z(i), Z(i + 1)]))
-      end do
-
-      ! Normalize Weights so they sum to 1.0
-      W = W/sum(W)
+      ! Calculate Barycentric weights for triangle
+      V0 = P1 - P3
+      V1 = P2 - P3
+      V2 = P - P3
+      d00 = dot_product(v0, v0)
+      d01 = dot_product(v0, v1)
+      d11 = dot_product(v1, v1)
+      d20 = dot_product(v2, v0)
+      d21 = dot_product(v2, v1)
+      denom = d00*d11 - d01*d01
+      W(1) = (d11*d20 - d01*d21)/denom
+      W(2) = (d00*d21 - d01*d20)/denom
+      ! W(3) = 1.0_ReKi - W(1) - W(2) ! Not used
 
       ! Interpolate wind components based on weights
       do ic = 1, 3
-         cell(1, ic) = dot_product(V(ic, :, 1), W)
-         cell(3, ic) = dot_product(V(ic, :, 2), W)
+         cell(1, ic) = V(ic, 1, 1) * W(1) + V(ic, 2, 1) * W(2)
+         cell(3, ic) = V(ic, 1, 2) * W(1) + V(ic, 2, 2) * W(2)
       end do
       cell(2, :) = cell(1, :)
       cell(4, :) = cell(3, :)
 
    end subroutine
-
-   !> TriangleArea returns the signed area of a triangle.
-   function TriangleArea(x, y) result(A)
-      real(ReKi)  :: x(3), y(3)
-      real(ReKi)  :: A
-      A = (x(1)*(y(2) - y(3)) + &
-           x(2)*(y(3) - y(1)) + &
-           x(3)*(y(1) - y(2)))/2.0_ReKi
-   end function
 
    !> GetBoundsY populates IY_Lo, IY_Hi, and the interpolant [-1,1]. It also
    !! adds ExtrapYmin or ExtrapYmax to AllExtrap if applicable.
