@@ -4082,7 +4082,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      r1 = MAX(r,1.0e-6)
+      r1 = MAX(r,1.0e-6) ! In case r is zero
 
       CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat, ErrMsg )
       CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat, ErrMsg )
@@ -4130,8 +4130,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat, ErrMsg )
-      CALL GetFreeSurfaceNormal( Time, pos0, R, nFS, ErrStat, ErrMsg )
+      IF (p%WaveStMod > 0) THEN
+         CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat, ErrMsg )
+         CALL GetFreeSurfaceNormal( Time, pos0, R, nFS, ErrStat, ErrMsg )
+      ELSE
+         Zeta0 = 0.0
+         nFS   = (/0.0,0.0,1.0/)
+      END IF
+
       CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
       a  = R * dot_product(y_hat,nFS)
       b  = R * dot_product(z_hat,nFS)
