@@ -67,7 +67,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    real(ReKi)                                :: VelCell(8, 3), AccCell(8, 3)
    logical                                   :: Is3D
    logical                                   :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
-   logical                                   :: GridExtrap        ! did this point fall outside the wind box and get extrapolated?
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -187,7 +186,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          ! components at corners of grid cell containing time and position. Also
          ! returns interpolation values Xi.
          call Grid3DField_GetCell(FF%Grid3D, Time, Position(:, i), OutputAccel, GridExceedAllow, &
-                                  VelCell, AccCell, Xi, Is3D, GridExtrap, TmpErrStat, TmpErrMsg)
+                                  VelCell, AccCell, Xi, Is3D, TmpErrStat, TmpErrMsg)
          if (TmpErrStat >= AbortErrLev) then
             call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             return
@@ -716,7 +715,7 @@ subroutine IfW_UniformWind_GetOP(UF, t, InterpCubic, OP_out)
 end subroutine
 
 subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
-                               VelCell, AccCell, Xi, Is3D, Extrapolated, ErrStat, ErrMsg)
+                               VelCell, AccCell, Xi, Is3D, ErrStat, ErrMsg)
 
    type(Grid3DFieldType), intent(in)   :: G3D               !< 3D Grid-Field data
    real(DbKi), intent(in)              :: Time              !< time (s)
@@ -727,7 +726,6 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
    real(ReKi), intent(out)             :: AccCell(8, 3)     !< Acceleration components at corners of grid cell
    real(ReKi), intent(out)             :: Xi(3)             !< isoparametric coord of position in cell (y,z,t) [-1, +1]
    logical, intent(out)                :: Is3D              !< flag indicating if interpolation is 3D or 2D
-   logical, intent(inout)              :: Extrapolated      !< Extrapolation outside grid is allowed and point lies outside grid
    integer(IntKi), intent(out)         :: ErrStat           !< error status
    character(*), intent(out)           :: ErrMsg            !< error message
 
@@ -761,13 +759,6 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
    call GetBoundsZ(Position(3), Xi(2))
    if (ErrStat >= AbortErrLev) return
 
-   ! Get grid Y bounds
-   call GetBoundsY(Position(2), Xi(1))
-   if (ErrStat >= AbortErrLev) return
-
-   ! Set flag indicating if extrapolation occured
-   Extrapolated = AllExtrap /= ExtrapNone
-
    !----------------------------------------------------------------------------
    ! Extract interpolation cells from grids based on poisiont
    !----------------------------------------------------------------------------
@@ -777,6 +768,10 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
 
       ! Set flag to use 3D interpolation
       Is3D = .true.
+
+      ! Get grid Y bounds
+      call GetBoundsY(Position(2), Xi(1))
+      if (ErrStat >= AbortErrLev) return
 
       ! Interpolate within grid (or top, left, right if extrapolation enabled)
       call GetCellInGrid(VelCell, G3D%Vel, G3D%VelAvg)
@@ -803,6 +798,10 @@ subroutine Grid3DField_GetCell(G3D, Time, Position, CalcAccel, AllowExtrap, &
 
       ! Set flag to use 3D interpolation
       Is3D = .true.
+
+      ! Get grid Y bounds
+      call GetBoundsY(Position(2), Xi(1))
+      if (ErrStat >= AbortErrLev) return
 
       ! Tower interpolation without tower grids
       call GetCellBelowGrid(VelCell, G3D%Vel)
@@ -991,6 +990,10 @@ contains
          cell(4, :) = gridAvg(:, 1, IT_HI)
          return
       end if
+
+      ! Get grid Y bounds
+      call GetBoundsY(Position(2), Xi(1))
+      if (ErrStat >= AbortErrLev) return
 
       !-------------------------------------------------------------------------
       ! Otherwise, position is below grid and within +- 2*GridWidth from tower
