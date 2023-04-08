@@ -804,7 +804,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDp
          READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,   InputFileData%Morison%InpMembers(I)%MJointID1,    &
                                      InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
                                      InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MDivSize,     &
-                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%PropPot
+                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
+                                     InputFileData%Morison%InpMembers(I)%PropPot
          IF ( ErrStat2 /= 0 ) THEN
             ErrStat2 = ErrID_Fatal
             ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
@@ -2272,11 +2273,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             END IF
          END IF
 
+         IF ( InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 1 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 1 for column-type hydrostatic load calculation or 2 for ship-like calculation.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
          IF ( InputFileData%Morison%InpMembers(I)%PropPot .AND. InputFileData%PotMod == 0  ) THEN
             CALL SetErrStat( ErrID_Fatal,'A member cannot have PropPot set to TRUE if PotMod = 0 in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
-
 
          
       END DO

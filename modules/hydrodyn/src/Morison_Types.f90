@@ -107,6 +107,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MPropSetID2Indx      !< Index into the Property table for the end of this member [-]
     REAL(ReKi)  :: MDivSize      !< User-specified desired member discretization size for the final element [m]
     INTEGER(IntKi)  :: MCoefMod      !< Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based] [-]
+    INTEGER(IntKi)  :: MHstLMod      !< Which hydrostatic model is being used for this member [1=column-type, 2=ship-type] [-]
     INTEGER(IntKi)  :: MmbrCoefIDIndx      !< Index into the appropriate coefs table for this member's properties [-]
     INTEGER(IntKi)  :: MmbrFilledIDIndx      !< Index into the filled group table if this is a filled member [-]
     LOGICAL  :: PropPot      !< Flag T/F for whether the member is modeled with potential flow theory [-]
@@ -201,6 +202,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MCoefMod      !< Coefs model for member: 1 = simple, 2 =depth, 3 = member-based  [-]
     INTEGER(IntKi)  :: MmbrCoefIDIndx      !< If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table [-]
     INTEGER(IntKi)  :: MmbrFilledIDIndx      !< If this member is part of a fill group, this is the index into the master fill group table, if not = -1 [-]
+    INTEGER(IntKi)  :: MHstLMod      !< Hydrostatic model for member [1=column-type, 2=ship-type] [-]
     REAL(ReKi)  :: FillFSLoc      !< Z-location of the filled free-surface [m]
     REAL(ReKi)  :: FillDens      !< Filled fluid density [kg/m^3]
     LOGICAL  :: PropPot      !< Is this element/member modeled with potential flow theory T/F [-]
@@ -1466,6 +1468,7 @@ ENDIF
     DstMemberInputTypeData%MPropSetID2Indx = SrcMemberInputTypeData%MPropSetID2Indx
     DstMemberInputTypeData%MDivSize = SrcMemberInputTypeData%MDivSize
     DstMemberInputTypeData%MCoefMod = SrcMemberInputTypeData%MCoefMod
+    DstMemberInputTypeData%MHstLMod = SrcMemberInputTypeData%MHstLMod
     DstMemberInputTypeData%MmbrCoefIDIndx = SrcMemberInputTypeData%MmbrCoefIDIndx
     DstMemberInputTypeData%MmbrFilledIDIndx = SrcMemberInputTypeData%MmbrFilledIDIndx
     DstMemberInputTypeData%PropPot = SrcMemberInputTypeData%PropPot
@@ -1552,6 +1555,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! MPropSetID2Indx
       Re_BufSz   = Re_BufSz   + 1  ! MDivSize
       Int_BufSz  = Int_BufSz  + 1  ! MCoefMod
+      Int_BufSz  = Int_BufSz  + 1  ! MHstLMod
       Int_BufSz  = Int_BufSz  + 1  ! MmbrCoefIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! MmbrFilledIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
@@ -1622,6 +1626,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MDivSize
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MCoefMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHstLMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MmbrCoefIDIndx
     Int_Xferred = Int_Xferred + 1
@@ -1705,6 +1711,8 @@ ENDIF
     OutData%MDivSize = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%MCoefMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHstLMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%MmbrCoefIDIndx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -2477,6 +2485,7 @@ ENDIF
     DstMemberTypeData%MCoefMod = SrcMemberTypeData%MCoefMod
     DstMemberTypeData%MmbrCoefIDIndx = SrcMemberTypeData%MmbrCoefIDIndx
     DstMemberTypeData%MmbrFilledIDIndx = SrcMemberTypeData%MmbrFilledIDIndx
+    DstMemberTypeData%MHstLMod = SrcMemberTypeData%MHstLMod
     DstMemberTypeData%FillFSLoc = SrcMemberTypeData%FillFSLoc
     DstMemberTypeData%FillDens = SrcMemberTypeData%FillDens
     DstMemberTypeData%PropPot = SrcMemberTypeData%PropPot
@@ -2886,6 +2895,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! MCoefMod
       Int_BufSz  = Int_BufSz  + 1  ! MmbrCoefIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! MmbrFilledIDIndx
+      Int_BufSz  = Int_BufSz  + 1  ! MHstLMod
       Re_BufSz   = Re_BufSz   + 1  ! FillFSLoc
       Re_BufSz   = Re_BufSz   + 1  ! FillDens
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
@@ -3575,6 +3585,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%MmbrCoefIDIndx
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MmbrFilledIDIndx
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHstLMod
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FillFSLoc
     Re_Xferred = Re_Xferred + 1
@@ -4403,6 +4415,8 @@ ENDIF
     OutData%MmbrCoefIDIndx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%MmbrFilledIDIndx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHstLMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%FillFSLoc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1

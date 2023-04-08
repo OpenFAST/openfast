@@ -1579,13 +1579,14 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
     ! Check the member does not exhibit any of the following conditions
    if (.not. member%PropPot) then 
-      if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
-         call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      if (member%MHstLMod == 1) then
+         if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
+            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         end if
+         if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
+            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         end if
       end if
-      if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
-         call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
-      end if
-      
       if ( ( Za < -WtrDepth .and. Zb >= -WtrDepth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
          call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
       end if
@@ -1851,6 +1852,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       p%Members(i)%dl        = InitInp%InpMembers(i)%dl
       p%Members(i)%NElements = InitInp%InpMembers(i)%NElements
       p%Members(i)%PropPot   = InitInp%InpMembers(i)%PropPot
+      p%Members(i)%MHstLMod  = InitInp%InpMembers(i)%MHstLMod
       ! p%Members(i)%MCF       = InitInp%InpMembers(i)%MCF
       
       call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2)
@@ -2632,7 +2634,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: Imat(3,3)
    real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
    real(ReKi)               :: C_1, C_2, a0b0, h, h_c_AM, deltal_AM
-   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
+   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6), F_B_End(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
@@ -2660,7 +2662,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
 
-   REAL(ReKi)               :: theta1, theta2
+   REAL(ReKi)               :: theta1, theta2, dFdl(3), dMdl(3), y_hat(3), z_hat(3)
 
    ! Initialize errStat
    errStat = ErrID_None         
@@ -3012,6 +3014,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_IMG(4:6)
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
+            IF (mem%MHstLMod == 1) THEN
             IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
                CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
                CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
@@ -3180,8 +3183,44 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
                END IF  ! submergence cases
             END IF ! element at least partially submerged
+            END IF
          END DO ! i = max(mem%i_floor,1), N    ! loop through member elements that are not fully buried in the seabed
       END IF ! NOT Modeled with Potential flow theory
+
+      !---------------- Alternative Hydrostatic Load Calculation ----------------
+      IF ( .NOT. mem%PropPot .AND. mem%MHstLMod == 2) THEN
+         k_hat = mem%k
+         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
+
+            pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+            pos1(3) = pos1(3) - p%MSL2SWL
+
+            ! save some commonly used variables   
+            r1b       = mem%RMGB(i)    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+            IF (i == 1) THEN
+               dl        = 0.5 * mem%dl
+               dRdl_mg_b = mem%dRdl_mg_b(1) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+            ELSE IF ( i > 1 .AND. i < (N+1)) THEN
+               dl        = mem%dl
+               dRdl_mg_b = 0.5 * ( mem%dRdl_mg_b(i-1) + mem%dRdl_mg_b(i) )
+            ELSE
+               dl        = 0.5 * mem%dl
+               dRdl_mg_b = mem%dRdl_mg_b(N)
+            END IF
+            
+            CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1b, theta1, theta2, ErrStat, ErrMsg)
+            CALL GetSectionHstLds(pos1, k_hat, y_hat, z_hat, r1b, dRdl_mg_b, theta1, theta2, dFdl, dMdl, ErrStat, ErrMsg)
+
+            F_B1(1:3) = dFdl * dl
+            F_B1(4:6) = dMdl * dl
+            
+            ! Add nodal loads to mesh
+            m%memberLoads(im)%F_B(:,i) = m%memberLoads(im)%F_B(:,i) + F_B1
+            y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_B1(1:3)
+            y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_B1(4:6)
+         END DO
+      END IF
 
       ! --------------------------- flooded ballast: sides: Always compute regardless of PropPot setting ------------------------------
       DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
@@ -3857,104 +3896,46 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! --- no inertia loads from water ballast modeled on ends
 
       !---------------------------------- external buoyancy loads: starts ----------------------------------!
-      if ( .not. mem%PropPot ) then
+      if ( (.not. mem%PropPot) .AND. (mem%MHstLMod /= 0) ) then
 
          ! Get positions of member end nodes
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1  )) + u%Mesh%Position(:, mem%NodeIndx(1  )) 
          pos1(3) = pos1(3) - p%MSL2SWL
-         z1      = pos1(3)
-         r1      = mem%RMG(1  )
+         r1      = mem%RMGB(1  )
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
-         z2      = pos2(3)
-         r2      = mem%RMG(N+1)
-
-         ! Get free surface elevation vertically above or below the end nodes
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to the instantaneous free surface
-            CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         ELSE ! Without wave stretching, compute buoyancy up to the SWL
-            Zeta1 = 0.0_ReKi
-            Zeta2 = 0.0_ReKi
-         END IF
-
-         !----------------------- Check if the end plates are partially wetted: Start -----------------------!
-         !-------- End plate of node 1 --------
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
-            ! Estimate the free-surface normal vertically above or below node 1, n_hat
-            CALL GetFreeSurfaceNormal( Time, pos1, r1, n_hat, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         ELSE ! Without wave stretching, use normal of SWL
-            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
-         END IF
-         
-         ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat1,n_hat)
-         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
-         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat1(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat1(2),k_hat1(1),0.0_ReKi/)   
-               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
-            ELSE ! k_hat is close to vertical (0,0,1)
-               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
-            END IF
-         ELSE
-            t_hat = t_hat / sinGamma
-         END IF
-         r_hat = Cross_Product(t_hat,k_hat1)
-         IF ( ABS((Zeta1-z1)*n_hat(3)) < r1*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-         END IF
-
-         !-------- End plate of node N+1 --------
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
-            ! Estimate the free-surface normal vertically above or below node N+1, n_hat
-            CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         ELSE ! Without wave stretching, use normal of SWL
-            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
-         END IF
-         
-         ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat2,n_hat)
-         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
-         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat2(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat2(2),k_hat2(1),0.0_ReKi/)   
-               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
-            ELSE ! k_hat is close to vertical (0,0,1)
-               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
-            END IF
-         ELSE
-            t_hat = t_hat / sinGamma
-         END IF
-         r_hat = Cross_Product(t_hat,k_hat2)
-         IF ( ABS((Zeta2-z2)*n_hat(3)) < r2*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-         END IF
-         !------------------------ Check if the end plates are partially wetted: End ------------------------!
-      
+         r2      = mem%RMGB(N+1)
+         k_hat = mem%k
+         CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
          if (mem%i_floor == 0) then  ! both ends above or at seabed
-            if ( z2 < Zeta2 ) then
-               ! Compute loads on the end plate of node N+1          
-               Fl      =  p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2
-               Moment  =  p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi
-               call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
-            end if
-            if ( z1 < Zeta1 ) then
-               ! Compute loads on the end plate of node 1
-               Fl      = -p%WtrDens * g * pi *        mem%RMGB(  1)**2 * z1
-               Moment  = -p%WtrDens * g * pi * 0.25 * mem%RMGB(  1)**4 * sinPhi
-               call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1)))
-            end if
-         elseif ( (mem%doEndBuoyancy) .and. (z2 < Zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if below free surface
-            ! Only compute the buoyancy contribution from the upper end
-            Fl      = p%WtrDens * g * pi *        mem%RMGB(N+1)**2 * z2
-            Moment  = p%WtrDens * g * pi * 0.25 * mem%RMGB(N+1)**4 * sinPhi
-            call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
+            ! Compute loads on the end plate of node 1
+            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, ErrStat, ErrMsg)
+            CALL GetEndPlateHstLds(pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+               END IF
+            END IF
+            ! Compute loads on the end plate of node N+1
+            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat, ErrMsg)
+            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+               END IF
+            END IF
+         elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
+            ! Only compute the loads on the end plate of node N+1
+            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat, ErrMsg)
+            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
+               END IF
+            END IF
          else
             ! entire member is buried below the seabed
          end if
@@ -4113,11 +4094,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
    END SUBROUTINE GetSectionUnitVectors
 
-   SUBROUTINE GetSectionFreeSurfaceIntersects( Time, pos0, R, k_hat, theta1, theta2, ErrStat, ErrMsg)
+   SUBROUTINE GetSectionFreeSurfaceIntersects( Time, pos0, k_hat, y_hat, z_hat, R, theta1, theta2, ErrStat, ErrMsg)
       REAL(DbKi),      INTENT( In    ) :: Time
       REAL(ReKi),      INTENT( In    ) :: pos0(3)
-      REAL(ReKi),      INTENT( In    ) :: R
       REAL(ReKi),      INTENT( In    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: R
       REAL(ReKi),      INTENT(   OUT ) :: theta1
       REAL(ReKi),      INTENT(   OUT ) :: theta2
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
@@ -4126,10 +4109,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi)                       :: a, b, c, d, d2
       REAL(ReKi)                       :: alpha, beta
       REAL(ReKi)                       :: tmp
-      REAL(ReKi)                       :: y_hat(3), z_hat(3), nFS(3)
+      REAL(ReKi)                       :: nFS(3)
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
+      ! CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
       IF (p%WaveStMod > 0) THEN
          CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat, ErrMsg )
          CALL GetFreeSurfaceNormal( Time, pos0, R, nFS, ErrStat, ErrMsg )
@@ -4137,8 +4121,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          Zeta0 = 0.0
          nFS   = (/0.0,0.0,1.0/)
       END IF
-
-      CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
       a  = R * dot_product(y_hat,nFS)
       b  = R * dot_product(z_hat,nFS)
       c  = (Zeta0-pos0(3)) * nFS(3)
@@ -4167,6 +4149,117 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
 
    END SUBROUTINE GetSectionFreeSurfaceIntersects
+
+   SUBROUTINE GetSectionHstLds(pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl, dMdl, ErrStat, ErrMsg)
+
+      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: R
+      REAL(ReKi),      INTENT( IN    ) :: dRdl
+      REAL(ReKi),      INTENT( IN    ) :: theta1
+      REAL(ReKi),      INTENT( IN    ) :: theta2
+      REAL(ReKi),      INTENT(   OUT ) :: dFdl(3)
+      REAL(ReKi),      INTENT(   OUT ) :: dMdl(3)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: C0, C1, C2
+      REAL(ReKi)                       :: Z0, dTheta, sinTheta1, sinTheta2, cosTheta1, cosTheta2, cosPhi
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+      
+      Z0 = pos0(3)
+      dTheta = theta2 - theta1
+      sinTheta1 = SIN(theta1)
+      sinTheta2 = SIN(theta2)
+      cosTheta1 = COS(theta1)
+      cosTheta2 = COS(theta2)
+      cosPhi    = SQRT(k_hat(1)**2+k_hat(2)**2)
+
+      C0 = Z0*dTheta                +     R*cosPhi*(cosTheta1   -cosTheta2)
+      C1 = Z0*(sinTheta2-sinTheta1) + 0.5*R*cosPhi*(cosTheta2**2-cosTheta1**2)
+      C2 = Z0*(cosTheta1-cosTheta2) + 0.5*R*cosPhi*(dTheta-sinTheta2*cosTheta2+sinTheta1*cosTheta1)
+
+      dFdl = -R*C0*dRdl*k_hat + R*C1*y_hat + R*C2*z_hat
+      dFdl = dFdl * p%WtrDens * g
+
+      dMdl = -R**2*dRdl*C2*y_hat + R**2*dRdl*C1*z_hat
+      dMdl = dMdl * p%WtrDens * g
+
+   END SUBROUTINE GetSectionHstLds
+
+   SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F, M, ErrStat, ErrMsg)
+
+      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: R
+      REAL(ReKi),      INTENT( IN    ) :: theta1
+      REAL(ReKi),      INTENT( IN    ) :: theta2
+      REAL(ReKi),      INTENT(   OUT ) :: F(3)
+      REAL(ReKi),      INTENT(   OUT ) :: M(3)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: C0, C1, C2, a, b, tmp1, tmp2, tmp3
+      REAL(ReKi)                       :: Z0, dTheta
+      REAL(ReKi)                       :: y1, y2, y1_2, y2_2, y1_3, y2_3, y1_4, y2_4
+      REAL(ReKi)                       :: z1, z2, z1_2, z2_2, z1_3, z2_3, z1_4, z2_4
+      REAL(ReKi)                       :: dy, dy_3, dz, dz_2, dz_3, dz_4, sz
+      REAL(ReKi)                       :: R_2, R_4
+      REAL(ReKi)                       :: Fk, My, Mz
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+
+      Z0     = pos0(3)
+      cosPhi = SQRT(k_hat(1)**2+k_hat(2)**2)
+      dTheta = theta2-theta1;
+      y1     = R*COS(theta1)
+      z1     = R*SIN(theta1)
+      y2     = R*COS(theta2)
+      z2     = R*SIN(theta2)
+      z1_2   = z1*z1
+      z1_3   = z1*z1_2
+      z1_4   = z1*z1_3
+      z2_2   = z2*z2
+      z2_3   = z2*z2_2
+      z2_4   = z2*z2_3
+      R_2    = R*R
+      R_4    = R_2*R_2
+      dy     = y2-y1
+      sz     = z1+z2
+      dy_3   = y2*y2*y2-y1*y1*y1
+      dz_2   = z2_2-z1_2
+      dz_3   = z2_3-z1_3
+      dz_4   = z2_4-z1_4
+      tmp1   = y1*z2-y2*z1
+      tmp2   = z1_2+z1*z2+z2_2
+
+      ! End plate force
+      Fk = -0.5*Z0*(R_2*dTheta-tmp1) + cosPhi/6.0*( 2.0*dy_3 + z1*z2*(y1-y2) - z1_2*(y2+2.0*y1) + z2_2*(y1+2.0*y2) )
+      F  = p%WtrDens * g * Fk * k_hat
+print *,dy_3
+      ! End plate moment
+      My = Z0/6.0*( 2.0*dy_3 + 2.0*dy*tmp2 + 3.0*tmp1*sz ) &    ! y_hat component
+           + cosPhi/24.0*( -3.0*R_4*dTheta + 3.0*y1*z1*(2.0*z1_2-R_2) - 3.0*y2*z2*(2.0*z2_2-R_2) &
+                                                          + 6.0*dy*sz*(z1_2+z2_2)+8.0*tmp1*tmp2  )
+      IF (EqualRealNos(z1, z2)) THEN
+         Mz = 0.0
+      ELSE
+         dz = z2-z1
+         a  = dy/dz
+         b  = tmp1/dz
+         tmp1 = a*a+1.0
+         tmp2 = a*b
+         tmp3 = b*b-R_2
+         Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &  ! z_hat component
+              -cosPhi/24.0*(3.0*tmp1*dz_4 + 8.0*tmp2*dz_3 + 6.0*tmp3*dz_2)
+      END IF
+      M = p%WtrDens * g * (My*y_hat + Mz*z_hat)
+
+   END SUBROUTINE GetEndPlateHstLds
+
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
