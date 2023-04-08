@@ -2662,7 +2662,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
 
-   REAL(ReKi)               :: theta1, theta2, dFdl(3), dMdl(3), y_hat(3), z_hat(3)
+   REAL(ReKi)               :: theta1, theta2, dFdl(6), y_hat(3), z_hat(3)
 
    ! Initialize errStat
    errStat = ErrID_None         
@@ -3209,11 +3209,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             END IF
             
             CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1b, theta1, theta2, ErrStat, ErrMsg)
-            CALL GetSectionHstLds(pos1, k_hat, y_hat, z_hat, r1b, dRdl_mg_b, theta1, theta2, dFdl, dMdl, ErrStat, ErrMsg)
+            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1b, theta1, theta2, ErrStat2, ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetSectionHstLds(pos1, k_hat, y_hat, z_hat, r1b, dRdl_mg_b, theta1, theta2, dFdl)
 
-            F_B1(1:3) = dFdl * dl
-            F_B1(4:6) = dMdl * dl
+            F_B1 = dFdl * dl
             
             ! Add nodal loads to mesh
             m%memberLoads(im)%F_B(:,i) = m%memberLoads(im)%F_B(:,i) + F_B1
@@ -3909,8 +3909,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
-            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, ErrStat, ErrMsg)
-            CALL GetEndPlateHstLds(pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            CALL GetSectionFreeSurfaceIntersects( Time, pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, ErrStat2, ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
@@ -3918,8 +3919,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                END IF
             END IF
             ! Compute loads on the end plate of node N+1
-            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat, ErrMsg)
-            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat2, ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
@@ -3928,8 +3930,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             END IF
          elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
             ! Only compute the loads on the end plate of node N+1
-            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat, ErrMsg)
-            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End(1:3), F_B_End(4:6), ErrStat, ErrMsg)
+            CALL GetSectionFreeSurfaceIntersects( Time, pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, ErrStat2, ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
@@ -4044,12 +4047,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT(   OUT ) :: Zeta    ! Total free-surface elevation with first- and second-order contribution (if present)
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetTotalWaveElev'
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
-      Zeta = SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+      Zeta = SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (associated(p%WaveElev2)) THEN
-         Zeta = Zeta + SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+         Zeta = Zeta + SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
+      
    END SUBROUTINE GetTotalWaveElev
 
    SUBROUTINE GetFreeSurfaceNormal( Time, pos, r, n, ErrStat, ErrMsg)
@@ -4060,27 +4069,35 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
       REAL(ReKi)                       :: r1,ZetaP,ZetaM,dZetadz,dZetady
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetFreeSurfaceNormal'
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
       r1 = MAX(r,1.0e-6) ! In case r is zero
 
-      CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat, ErrMsg )
-      CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
       
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r1/), ZetaP, ErrStat, ErrMsg )
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r1/), ZetaM, ErrStat, ErrMsg )
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
       
       n = (/-dZetadx,-dZetady,1.0_ReKi/)
       n = n / SQRT(Dot_Product(n,n))
+
    END SUBROUTINE GetFreeSurfaceNormal
 
    SUBROUTINE GetSectionUnitVectors( k, y, z )
-      REAL(ReKi),      INTENT( In    ) :: k(3)
-      REAL(ReKi),      INTENT(   OUT ) :: y(3)
-      REAL(ReKi),      INTENT(   OUT ) :: z(3)
+      REAL(ReKi),      INTENT( In    ) :: k(3) ! Member axial unit vector
+      REAL(ReKi),      INTENT(   OUT ) :: y(3) ! Horizontal unit vector perpendicular to k
+      REAL(ReKi),      INTENT(   OUT ) :: z(3) ! Unit vector perpendicular to k and y with positive vertical component
       IF ( ABS(k(3)) > 0.999999_ReKi ) THEN ! k is effectively vertical
          y = (/0.0,1.0,0.0/)
       ELSE
@@ -4088,7 +4105,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          y = y / SQRT(Dot_Product(y,y))      
       ENDIF
       z = cross_product(k,y)
-      IF ( z(3) < 0.0 ) THEN
+      IF ( z(3) < 0.0 ) THEN ! Flip y and z so z points upward
          y = -y;
          z = -z;
       END IF
@@ -4109,21 +4126,25 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi)                       :: a, b, c, d, d2
       REAL(ReKi)                       :: alpha, beta
       REAL(ReKi)                       :: tmp
-      REAL(ReKi)                       :: nFS(3)
+      REAL(ReKi)                       :: n_hat(3)
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetSectionFreeSurfaceIntersects'
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      ! CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
       IF (p%WaveStMod > 0) THEN
-         CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat, ErrMsg )
-         CALL GetFreeSurfaceNormal( Time, pos0, R, nFS, ErrStat, ErrMsg )
+         CALL GetTotalWaveElev( Time, pos0, Zeta0, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL GetFreeSurfaceNormal( Time, pos0, R, n_hat, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ELSE
          Zeta0 = 0.0
-         nFS   = (/0.0,0.0,1.0/)
+         n_hat = (/0.0,0.0,1.0/)
       END IF
-      a  = R * dot_product(y_hat,nFS)
-      b  = R * dot_product(z_hat,nFS)
-      c  = (Zeta0-pos0(3)) * nFS(3)
+      a  = R * dot_product(y_hat,n_hat)
+      b  = R * dot_product(z_hat,n_hat)
+      c  = (Zeta0-pos0(3)) * n_hat(3)
       d2 = a*a+b*b
       IF ( d2 >= c*c ) THEN ! Has intersection
          d = SQRT(d2)
@@ -4135,7 +4156,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          beta   = ACOS(c/d)
          theta1 = alpha - beta
          theta2 = alpha + beta
-         IF ( dot_product( (cos(theta2)-cos(theta1))*z_hat-(sin(theta2)-sin(theta1))*y_hat, nFS) < 0.0 ) THEN
+         IF ( dot_product( (cos(theta2)-cos(theta1))*z_hat-(sin(theta2)-sin(theta1))*y_hat, n_hat) < 0.0 ) THEN
             tmp    = theta1
             theta1 = theta2
             theta2 = tmp + 2.0*PI
@@ -4143,14 +4164,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ELSE IF (Zeta0 > pos0(3)) THEN ! Section is fully submerged
          theta1 = -1.5*PI
          theta2 =  0.5*PI
-      ELSE ! Section is above water
+      ELSE ! Section is completely dry
          theta1 = -0.5*PI
          theta2 = -0.5*PI
       END IF
 
    END SUBROUTINE GetSectionFreeSurfaceIntersects
 
-   SUBROUTINE GetSectionHstLds(pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl, dMdl, ErrStat, ErrMsg)
+   SUBROUTINE GetSectionHstLds(pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl)
 
       REAL(ReKi),      INTENT( IN    ) :: pos0(3)
       REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
@@ -4160,17 +4181,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT( IN    ) :: dRdl
       REAL(ReKi),      INTENT( IN    ) :: theta1
       REAL(ReKi),      INTENT( IN    ) :: theta2
-      REAL(ReKi),      INTENT(   OUT ) :: dFdl(3)
-      REAL(ReKi),      INTENT(   OUT ) :: dMdl(3)
-      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
-      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi),      INTENT(   OUT ) :: dFdl(6)
       REAL(ReKi)                       :: C0, C1, C2
       REAL(ReKi)                       :: Z0, dTheta, sinTheta1, sinTheta2, cosTheta1, cosTheta2, cosPhi
-      ErrStat   = ErrID_None
-      ErrMsg    = ""
       
-      Z0 = pos0(3)
-      dTheta = theta2 - theta1
+      Z0        = pos0(3)
+      dTheta    = theta2 - theta1
       sinTheta1 = SIN(theta1)
       sinTheta2 = SIN(theta2)
       cosTheta1 = COS(theta1)
@@ -4181,15 +4197,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       C1 = Z0*(sinTheta2-sinTheta1) + 0.5*R*cosPhi*(cosTheta2**2-cosTheta1**2)
       C2 = Z0*(cosTheta1-cosTheta2) + 0.5*R*cosPhi*(dTheta-sinTheta2*cosTheta2+sinTheta1*cosTheta1)
 
-      dFdl = -R*C0*dRdl*k_hat + R*C1*y_hat + R*C2*z_hat
+      dFdl(1:3) = -R   *dRdl*C0*k_hat + R*C1*y_hat + R*C2*z_hat
+      dFdl(4:6) = -R**2*dRdl*C2*y_hat + R**2*dRdl*C1*z_hat
       dFdl = dFdl * p%WtrDens * g
-
-      dMdl = -R**2*dRdl*C2*y_hat + R**2*dRdl*C1*z_hat
-      dMdl = dMdl * p%WtrDens * g
 
    END SUBROUTINE GetSectionHstLds
 
-   SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F, M, ErrStat, ErrMsg)
+   SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F)
 
       REAL(ReKi),      INTENT( IN    ) :: pos0(3)
       REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
@@ -4198,23 +4212,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT( IN    ) :: R
       REAL(ReKi),      INTENT( IN    ) :: theta1
       REAL(ReKi),      INTENT( IN    ) :: theta2
-      REAL(ReKi),      INTENT(   OUT ) :: F(3)
-      REAL(ReKi),      INTENT(   OUT ) :: M(3)
-      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
-      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi),      INTENT(   OUT ) :: F(6)
       REAL(ReKi)                       :: C0, C1, C2, a, b, tmp1, tmp2, tmp3
-      REAL(ReKi)                       :: Z0, dTheta
-      REAL(ReKi)                       :: y1, y2, y1_2, y2_2, y1_3, y2_3, y1_4, y2_4
+      REAL(ReKi)                       :: Z0, cosPhi, dTheta
+      REAL(ReKi)                       :: y1, y2
       REAL(ReKi)                       :: z1, z2, z1_2, z2_2, z1_3, z2_3, z1_4, z2_4
       REAL(ReKi)                       :: dy, dy_3, dz, dz_2, dz_3, dz_4, sz
       REAL(ReKi)                       :: R_2, R_4
       REAL(ReKi)                       :: Fk, My, Mz
-      ErrStat   = ErrID_None
-      ErrMsg    = ""
 
       Z0     = pos0(3)
       cosPhi = SQRT(k_hat(1)**2+k_hat(2)**2)
-      dTheta = theta2-theta1;
+      dTheta = theta2-theta1
       y1     = R*COS(theta1)
       z1     = R*SIN(theta1)
       y2     = R*COS(theta2)
@@ -4236,15 +4245,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       tmp1   = y1*z2-y2*z1
       tmp2   = z1_2+z1*z2+z2_2
 
-      ! End plate force
-      Fk = -0.5*Z0*(R_2*dTheta-tmp1) + cosPhi/6.0*( 2.0*dy_3 + z1*z2*(y1-y2) - z1_2*(y2+2.0*y1) + z2_2*(y1+2.0*y2) )
-      F  = p%WtrDens * g * Fk * k_hat
-print *,dy_3
-      ! End plate moment
-      My = Z0/6.0*( 2.0*dy_3 + 2.0*dy*tmp2 + 3.0*tmp1*sz ) &    ! y_hat component
-           + cosPhi/24.0*( -3.0*R_4*dTheta + 3.0*y1*z1*(2.0*z1_2-R_2) - 3.0*y2*z2*(2.0*z2_2-R_2) &
-                                                          + 6.0*dy*sz*(z1_2+z2_2)+8.0*tmp1*tmp2  )
-      IF (EqualRealNos(z1, z2)) THEN
+      ! End plate force in the k_hat direction
+      Fk     = -0.5*Z0*(R_2*dTheta-tmp1) + cosPhi/6.0*( 2.0*dy_3 - z1*z2*dy - z1_2*(y2+2.0*y1) + z2_2*(y1+2.0*y2) )
+      F(1:3) = p%WtrDens * g * Fk * k_hat
+
+      ! End plate moment in the y_hat and z_hat direction
+      My     = Z0/6.0*( 2.0*dy_3 + 2.0*dy*tmp2 + 3.0*tmp1*sz ) &    ! y_hat component
+               + cosPhi/24.0*( -3.0*R_4*dTheta + 3.0*y1*z1*(2.0*z1_2-R_2) - 3.0*y2*z2*(2.0*z2_2-R_2) &
+                                                            + 6.0*dy*sz*(z1_2+z2_2) + 8.0*tmp1*tmp2  )
+      IF (EqualRealNos(z1, z2)) THEN ! z_hat component (Nonzero only when z1 /= z2)
          Mz = 0.0
       ELSE
          dz = z2-z1
@@ -4253,10 +4262,10 @@ print *,dy_3
          tmp1 = a*a+1.0
          tmp2 = a*b
          tmp3 = b*b-R_2
-         Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &  ! z_hat component
+         Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &
               -cosPhi/24.0*(3.0*tmp1*dz_4 + 8.0*tmp2*dz_3 + 6.0*tmp3*dz_2)
       END IF
-      M = p%WtrDens * g * (My*y_hat + Mz*z_hat)
+      F(4:6) = p%WtrDens * g * (My*y_hat + Mz*z_hat)
 
    END SUBROUTINE GetEndPlateHstLds
 
