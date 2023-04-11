@@ -14,7 +14,7 @@
 
 mexname = 'FAST_SFunc'; % base name of the resulting mex file
 
-built_with_visualStudio = true; %if the libraries were built with cmake, set to false
+built_with_visualStudio = false; %if the libraries were built with cmake, set to false
 
 
 if (ispc && built_with_visualStudio)   
@@ -47,12 +47,12 @@ else
         % If there are shared libraries does it work for outDir to be the local directory?
     else
         installDir = '../../../install';
-        outDir = fullfile(installDir, 'lib');
+        outDir = '.';
     end
 
     libDir = fullfile(installDir, 'lib');
     includeDir = fullfile(installDir, 'include');
-    libName = 'openfastlib';
+    libName = 'openfastlib_mex';
 end
 
 %% BUILD COMMAND
@@ -76,9 +76,14 @@ if ispc () % Windows PC
 else % mac/unix
 
     mex('-largeArrayDims', ...
-        '-v', ... %add this line for "verbose" output (for debugging)
+        ... '-v', ... %add this line for "verbose" output (for debugging)
         ['-L', libDir], ...
         ['-l', libName], ...
+        '-lgfortran', ...
+        '-lquadmath', ...
+        '-llapack', ...
+        '-lblas', ...
+        '-ldl', ...
         ['-I', includeDir], ...
         '-outdir', outDir, ...
         ['CFLAGS=$CFLAGS -DS_FUNCTION_NAME=' mexname], ...
