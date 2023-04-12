@@ -127,7 +127,7 @@ if (USE_LOCAL_STATIC_LAPACK)
 endif()
 
 add_library(nwtclibs_obj OBJECT ${NWTCLIBS_SOURCES})
-target_link_libraries(nwtclibs_obj nwtcbaselib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(nwtclibs_obj nwtcbaselib_obj nwtcsyslib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 if (USE_LOCAL_STATIC_LAPACK)
   add_dependencies(nwtclibs_obj lapack)
 endif()
