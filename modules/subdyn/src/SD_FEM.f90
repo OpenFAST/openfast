@@ -41,7 +41,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 11                    ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ, Optional:JMXY,JMXZ,JMYZ,CGX,CGY,CGZ)
   ! Indices in Members table
   INTEGER(IntKi),   PARAMETER  :: iMType= 6 ! Index in Members table where the type is stored
-  INTEGER(IntKi),   PARAMETER  ::  iMDirCosID = 7 ! Index in Members table where the type is stored
+  INTEGER(IntKi),   PARAMETER  :: iMDirCosID = 7 ! Index in Members table where the type is stored
   INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored
 
   ! Indices in Joints table
@@ -56,10 +56,10 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idJointBall       = 4
 
   ! ID for member types
-  INTEGER(IntKi),   PARAMETER  :: idMemberBeam       = 1
+  INTEGER(IntKi),   PARAMETER  :: idMemberBeamCirc   = 1
   INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
   INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
-  INTEGER(IntKi),   PARAMETER  :: idMemberX    = 4
+  INTEGER(IntKi),   PARAMETER  :: idMemberBeamArb    = 4
 
   ! Types of Boundary Conditions
   INTEGER(IntKi),   PARAMETER  :: idBC_Fixed    = 11 ! Fixed BC
@@ -382,8 +382,8 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       ! NOTE: this index has different meaning depending on the member type !
       DO n=iMProp,iMProp+1
 
-         if (mType==idMemberBeam) then
-            sType='Member x-section property'
+         if (mType==idMemberBeamCirc) then
+            sType='Member circular cross-section property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsB(:,1), Init%Members(iMem, n) ) 
          else if (mType==idMemberCable) then
             sType='Cable property'
@@ -391,8 +391,8 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          else if (mType==idMemberRigid) then
             sType='Rigid property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsR(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idMemberX) then
-            sType='Anisotropic beam property'
+         else if (mType==idMemberBeamArb) then
+            sType='Member arbitrary cross-section property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsX(:,1), Init%Members(iMem, n) )
          else
             ! Should not happen
@@ -400,9 +400,10 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
             STOP
          end if
          ! Test that the two properties match for non-beam 
-         if (mType/=idMemberBeam) then
+         if (mType/=idMemberBeamCirc) then
              if (Init%Members(iMem, iMProp)/=Init%Members(iMem, iMProp+1)) then
-                call Fatal('Property IDs should be the same at each joint for anisotropic beams, rigid links, and cables. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
+                ! NOTE: for non circular beams, we could just check that E, rho, G are the same for both properties
+                call Fatal('Property IDs should be the same at both joint for non circular beams, rigid links, and cables. Check member with ID: '//TRIM(Num2LStr(Init%Members(iMem,1))))
                 return
              endif
          endif
@@ -453,7 +454,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: iDirCos
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: CreateNewProp
-   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeam, nMemberX !< Number of memebers per type
+   INTEGER(IntKi)                :: nMemberCable, nMemberRigid, nMemberBeamCirc, nMemberBeamArb !< Number of memebers per type
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(ErrMsgLen)          :: ErrMsg2
@@ -468,17 +469,17 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ENDIF
    
    ! --- Total number of element   
-   nMemberBeam  = count(Init%Members(:,iMType) == idMemberBeam)
-   nMemberCable = count(Init%Members(:,iMType) == idMemberCable)
-   nMemberRigid = count(Init%Members(:,iMType) == idMemberRigid)
-   nMemberX = count(Init%Members(:,iMType) == idMemberX)
-   Init%NElem = (nMemberBeam + nMemberX)*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
-   IF ( (nMemberBeam+nMemberRigid+nMemberCable+nMemberX) /= size(Init%Members,1)) then
+   nMemberBeamCirc = count(Init%Members(:,iMType) == idMemberBeamCirc)
+   nMemberCable    = count(Init%Members(:,iMType) == idMemberCable)
+   nMemberRigid    = count(Init%Members(:,iMType) == idMemberRigid)
+   nMemberBeamArb  = count(Init%Members(:,iMType) == idMemberBeamArb)
+   Init%NElem = (nMemberBeamCirc + nMemberBeamArb)*Init%NDiv + nMemberCable + nMemberRigid  ! NOTE: only Beams are divided
+   IF ( (nMemberBeamCirc+nMemberRigid+nMemberCable+nMemberBeamArb) /= size(Init%Members,1)) then
       CALL Fatal(' Member list contains an element which is not a beam, a cable or a rigid link'); return
    ENDIF
 
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeam + nMemberX)
+   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeamCirc + nMemberBeamArb)
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
@@ -506,22 +507,25 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           return
        endif
 
-       if (eType==idMemberBeam) then
+       if (eType==idMemberBeamCirc) then
           if  ( ( .not. EqualRealNos(Init%PropSetsB(Prop1, 2),Init%PropSetsB(Prop2, 2) ) ) &
            .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 3),Init%PropSetsB(Prop2, 3) ) ) &
            .or. ( .not. EqualRealNos(Init%PropSetsB(Prop1, 4),Init%PropSetsB(Prop2, 4) ) ) ) then
              call Fatal(' Material E, G and rho in a member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
              return
           endif
+       else if (eType==idMemberBeamArb) then
+          if  (Prop1 /= Prop2 ) then
+             call Fatal(' Members using arbitrary cross section properties must have the same properties on both ends. See member at position '//trim(num2lstr(I))//' in member list)')
+             return
+          endif
+          !if  ( ( .not. EqualRealNos(Init%PropSetsX(Prop1, 2),Init%PropSetsX(Prop2, 2) ) ) &
+          ! .or. ( .not. EqualRealNos(Init%PropSetsX(Prop1, 3),Init%PropSetsX(Prop2, 3) ) ) &
+          ! .or. ( .not. EqualRealNos(Init%PropSetsX(Prop1, 4),Init%PropSetsX(Prop2, 4) ) ) ) then
+          !   call Fatal(' Material E, G and rho in a member must be the same (See member at position '//trim(num2lstr(I))//' in member list)')
+          !   return
+          !endif
        endif ! is beam
-
-       if (eType==idMemberX) then
-         if  (Prop1 /= Prop2 ) then
-            call Fatal(' Members using X properties must have the same properties at the (See member at position '//trim(num2lstr(I))//' in member list)')
-            return
-         endif
-      endif ! is beam
-
     enddo
 
   
@@ -541,7 +545,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
 
        ! Initialize Temp arrays that will contain user inputs + input from the subdivided members
        !  We don't know how many properties will be needed, so allocated to size MaxNProp
-       MaxNProp   = Init%NPropSetsB + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
+       ! TODO add Init%NPropSetsX and use PropSetXCol in the future or allocate a new TempProps
+       MaxNProp   = Init%NPropSetsB  + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
        CALL AllocAry(TempMembers, p%NMembers,    MembersCol , 'TempMembers', ErrStat2, ErrMsg2); if(Failed()) return
        CALL AllocAry(TempProps,  MaxNProp,      PropSetsBCol,'TempProps',  ErrStat2, ErrMsg2); if(Failed()) return
        TempProps = -9999.
@@ -590,7 +595,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           dy = ( y2 - y1 )/Init%NDiv
           dz = ( z2 - z1 )/Init%NDiv
 
-          if (eType == idMemberBeam) then
+          if (eType == idMemberBeamCirc) then
 
             d1 = TempProps(Prop1, 5)
             t1 = TempProps(Prop1, 6)
@@ -605,9 +610,10 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
            
             CreateNewProp = .NOT. ( EqualRealNos( dd , 0.0_ReKi ) .AND.  EqualRealNos( dt , 0.0_ReKi ) ) 
 
-          elseif (eType == idMemberX) then
+          elseif (eType == idMemberBeamArb) then
     
             CreateNewProp = .FALSE.
+            CALL WrScr('[WARNING] Members with non-circular cross-sections are currently not divided (member at position '//TRIM(Num2LStr(I))//' ).')
          
           endif
 
@@ -874,7 +880,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%T0      = -9.99e+36
 
       ! --- Properties that are specific to some elements
-      if (eType==idMemberBeam) then
+      if (eType==idMemberBeamCirc) then
          E   = Init%PropsB(P1, 2) ! TODO E2 
          G   = Init%PropsB(P1, 3) ! TODO G2
          rho = Init%PropsB(P1, 4) ! TODO rho2
@@ -921,7 +927,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Rho    = rho
          p%ElemProps(i)%D      = (/D1, D2/)
 
-      else if (eType==idMemberX) then
+      else if (eType==idMemberBeamArb) then
 
          p%ElemProps(i)%eType  = 1
          if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
@@ -930,9 +936,13 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
             Shear = .true.
          endif
          ! Storing Beam specific properties
+         ! Here we are averaging the values at both extremities which is different from what is done for regular beams.
+         ! The averaging should have no effect for the material properties because the beam is assumed to be isotropic (E, G, rho constant).
          E   = (Init%PropSetsX(P1, 2) + Init%PropSetsX(P2, 2)) / 2
          G   = (Init%PropSetsX(P1, 3) + Init%PropSetsX(P2, 3)) / 2
          rho = (Init%PropSetsX(P1, 4) + Init%PropSetsX(P2, 4)) / 2
+         ! Averaging will have an impact on geometry, shear and inertia
+         ! but we are currently forcing the property ID to be the same, so no effect.
          A   = (Init%PropSetsX(P1, 5) + Init%PropSetsX(P2, 5)) / 2
          Kappa_x   = (Init%PropSetsX(P1, 6) + Init%PropSetsX(P2, 6)) / 2 / A
          Kappa_y   = (Init%PropSetsX(P1, 7) + Init%PropSetsX(P2, 7)) / 2 / A
@@ -2252,7 +2262,7 @@ SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(FEKi), INTENT(OUT)        :: Me(12, 12)
    REAL(FEKi) :: L0, Eps0
-   if (ep%eType==idMemberBeam) then
+   if (ep%eType==idMemberBeamCirc) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
 
@@ -2275,7 +2285,7 @@ SUBROUTINE ElemK(ep, Ke)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(FEKi), INTENT(OUT)        :: Ke(12, 12)
 
-   if (ep%eType==idMemberBeam) then
+   if (ep%eType==idMemberBeamCirc) then
       CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%Kappa_x, eP%Kappa_y, eP%YoungE, eP%ShearG, eP%DirCos, Ke)
 
    else if (ep%eType==idMemberCable) then
@@ -2291,7 +2301,7 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    REAL(ReKi), INTENT(IN)     :: gravity       !< acceleration of gravity
    REAL(FEKi), INTENT(OUT)    :: Fg(12)
    REAL(FEKi), INTENT(OUT)    :: Fo(12)
-   if (ep%eType==idMemberBeam) then
+   if (ep%eType==idMemberBeamCirc) then
       Fo(1:12)=0.0_FEKi
    else if (ep%eType==idMemberCable) then
       CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)

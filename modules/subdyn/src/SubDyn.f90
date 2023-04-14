@@ -1191,8 +1191,8 @@ ENDDO
 
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                 ' Member X-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1203,8 +1203,8 @@ DO I = 1, Init%NPropSetsB
 ENDDO   
 IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                  'Member X-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3758,7 +3758,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
        mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
        IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
-        if (mType==idMemberBeam) then
+        if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
            mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
@@ -3776,6 +3776,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+         else if (mType==idMemberBeamArb) then
+           iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
+           mMass= -1 ! TODO compute mass for arbitrary beams
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif

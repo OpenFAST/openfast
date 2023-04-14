@@ -1708,6 +1708,7 @@ ENDIF
     DstElemPropTypeData%Jzz = SrcElemPropTypeData%Jzz
     DstElemPropTypeData%Shear = SrcElemPropTypeData%Shear
     DstElemPropTypeData%Kappa_x = SrcElemPropTypeData%Kappa_x
+    DstElemPropTypeData%Kappa_y = SrcElemPropTypeData%Kappa_y
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
     DstElemPropTypeData%D = SrcElemPropTypeData%D
@@ -1781,7 +1782,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Iyy
       Re_BufSz   = Re_BufSz   + 1  ! Jzz
       Int_BufSz  = Int_BufSz  + 1  ! Shear
-      Re_BufSz   = Re_BufSz   + 1  ! Kappa
+      Re_BufSz   = Re_BufSz   + 1  ! Kappa_x
+      Re_BufSz   = Re_BufSz   + 1  ! Kappa_y
       Re_BufSz   = Re_BufSz   + 1  ! YoungE
       Re_BufSz   = Re_BufSz   + 1  ! ShearG
       Re_BufSz   = Re_BufSz   + SIZE(InData%D)  ! D
@@ -1829,6 +1831,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Shear, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Kappa_x
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Kappa_y
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YoungE
     Re_Xferred = Re_Xferred + 1
@@ -1893,6 +1897,8 @@ ENDIF
     OutData%Shear = TRANSFER(IntKiBuf(Int_Xferred), OutData%Shear)
     Int_Xferred = Int_Xferred + 1
     OutData%Kappa_x = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Kappa_y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%YoungE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3691,7 +3697,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! COSMs allocated yes/no
   IF ( ALLOCATED(InData%COSMs) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! COSMs upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%COSMs)  ! COSMs
+      Db_BufSz   = Db_BufSz   + SIZE(InData%COSMs)  ! COSMs
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! CMass allocated yes/no
   IF ( ALLOCATED(InData%CMass) ) THEN
@@ -3979,8 +3985,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%COSMs,2), UBOUND(InData%COSMs,2)
         DO i1 = LBOUND(InData%COSMs,1), UBOUND(InData%COSMs,1)
-          ReKiBuf(Re_Xferred) = InData%COSMs(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%COSMs(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -4599,8 +4605,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%COSMs,2), UBOUND(OutData%COSMs,2)
         DO i1 = LBOUND(OutData%COSMs,1), UBOUND(OutData%COSMs,1)
-          OutData%COSMs(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%COSMs(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
