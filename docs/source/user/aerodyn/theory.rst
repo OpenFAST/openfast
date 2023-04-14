@@ -163,7 +163,8 @@ pressure over the wetted area of each element. For the blades, loads are applied
 at a user-specified center of buoyancy. For the tower, loads are applied at the
 centerline. When applicable, end effects are accounted for by calculating the
 fluid pressure on the exposed axial face of the element. The tower is assumed to
-be embedded into the seabed, such that no end effects at the tower base are needed.
+be either embedded into the seabed or attached to another support structure member,
+such that no end effects at the tower base are needed.
 
 The buoyancy calculation for the blades and tower is completed according to the following steps:
 
