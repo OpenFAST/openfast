@@ -479,7 +479,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ENDIF
 
    ! Total number of nodes - Depends on division and number of nodes per element
-   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeamCirc + nMemberBeamArb)
+   p%nNodes = Init%NJoints + ( Init%NDiv - 1 )*(nMemberBeamCirc) ! TODO add nMemberBeamArb when support for division provided
    
    ! check the number of interior modes
    IF ( p%nDOFM > 6*(p%nNodes - p%nNodes_I - p%nNodes_C) ) THEN
@@ -927,25 +927,6 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Rho    = rho
          p%ElemProps(i)%D      = (/D1, D2/)
 
-         print*,'p%ElemProps(i)%YoungE ',p%ElemProps(i)%YoungE 
-         print*,'p%ElemProps(i)%ShearG ',p%ElemProps(i)%ShearG 
-         print*,'p%ElemProps(i)%Rho    ',p%ElemProps(i)%Rho    
-         print*,'p%ElemProps(i)%Area   ',p%ElemProps(i)%Area   
-
-         print*,''
-         print*,'p%ElemProps(i)%Kappa_x',p%ElemProps(i)%Kappa_x*A
-         print*,'p%ElemProps(i)%Kappa_y',p%ElemProps(i)%Kappa_y*A
-         print*,''
-
-         print*,'p%ElemProps(i)%Ixx    ',p%ElemProps(i)%Ixx    
-         print*,'p%ElemProps(i)%Iyy    ',p%ElemProps(i)%Iyy    
-         print*,'p%ElemProps(i)%Jzz    ',p%ElemProps(i)%Jzz    
-         print*,''
-
-         print*,'p%ElemProps(i)%Shear  ',p%ElemProps(i)%Shear  
-         print*,'p%ElemProps(i)%D      ',p%ElemProps(i)%D      
-
-
       else if (eType==idMemberBeamArb) then
 
          p%ElemProps(i)%eType  = 1
@@ -980,25 +961,6 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Area   = A
          p%ElemProps(i)%Rho    = rho
          p%ElemProps(i)%D      = (/D1, D2/)
-
-         print*,'p%ElemProps(i)%YoungE ',p%ElemProps(i)%YoungE 
-         print*,'p%ElemProps(i)%ShearG ',p%ElemProps(i)%ShearG 
-         print*,'p%ElemProps(i)%Rho    ',p%ElemProps(i)%Rho    
-         print*,'p%ElemProps(i)%Area   ',p%ElemProps(i)%Area   
-
-         print*,''
-         print*,'p%ElemProps(i)%Kappa_x',p%ElemProps(i)%Kappa_x*A
-         print*,'p%ElemProps(i)%Kappa_y',p%ElemProps(i)%Kappa_y*A
-         print*,''
-
-         print*,'p%ElemProps(i)%Ixx    ',p%ElemProps(i)%Ixx    
-         print*,'p%ElemProps(i)%Iyy    ',p%ElemProps(i)%Iyy    
-         print*,'p%ElemProps(i)%Jzz    ',p%ElemProps(i)%Jzz    
-         print*,''
-
-         print*,'p%ElemProps(i)%Shear  ',p%ElemProps(i)%Shear  
-         print*,'p%ElemProps(i)%D      ',p%ElemProps(i)%D      
-
 
       else if (eType==idMemberCable) then
          if (DEV_VERSION) then
