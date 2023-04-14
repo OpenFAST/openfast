@@ -5438,6 +5438,10 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
       ! Calculate Quadrature point values needed
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
 
+      ! Reset QP values
+   CALL BD_QPData_mEta_rho(p, m)
+   CALL BD_QPDataVelocity(p, x, m)
+
       ! set misc vars, particularly m%RHS
    CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

@@ -29,15 +29,13 @@ else()
     # Add a sphinx-only HTML target to avoid building doxygen while developing documentation
     add_custom_target(sphinx-html
         COMMAND ${SPHINX_EXECUTABLE} -M html
-        "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
-        -c ${CMAKE_CURRENT_SOURCE_DIR})
+        "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
 
     # PDF documentation generation using sphinx -> latex -> pdflatex
     find_package(LATEX COMPONENTS PDFLATEX BIBTEX)
     if (LATEX_FOUND)
         add_custom_target(sphinx-pdf
             COMMAND ${SPHINX_EXECUTABLE} -M latexpdf
-            "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
-            -c ${CMAKE_CURRENT_BINARY_DIR})
+            "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 endif()

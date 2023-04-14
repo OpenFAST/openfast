@@ -36,21 +36,19 @@ MODULE SysSubs
    INTERFACE NWTC_ERF ! Returns the ERF value of its argument
       MODULE PROCEDURE NWTC_ERFR4
       MODULE PROCEDURE NWTC_ERFR8
-      MODULE PROCEDURE NWTC_ERFR16
    END INTERFACE   
 
    INTERFACE NWTC_gamma ! Returns the gamma value of its argument
          ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
       MODULE PROCEDURE NWTC_gammaR4
       MODULE PROCEDURE NWTC_gammaR8
-      MODULE PROCEDURE NWTC_gammaR16
    END INTERFACE
 
 !=======================================================================
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
 
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
@@ -175,19 +173,6 @@ FUNCTION NWTC_ERFR8( x )
 
 END FUNCTION NWTC_ERFR8
 !=======================================================================
-!> \copydoc syssubs::nwtc_erfr4
-FUNCTION NWTC_ERFR16( x )
-
-   ! Returns the ERF value of its argument. The result has a value equal  
-   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
-
-   REAL(QuKi), INTENT(IN)     :: x             ! input 
-   REAL(QuKi)                 :: NWTC_ERFR16   ! result
-   
-   NWTC_ERFR16 = ERF( x )
-
-END FUNCTION NWTC_ERFR16
-!=======================================================================
 !> Returns the gamma value of its argument. The result has a value equal  
 !! to a processor-dependent approximation to the gamma function of x:
 !! \f{equation}{
@@ -214,16 +199,6 @@ FUNCTION NWTC_GammaR8( x )
    NWTC_GammaR8 = gamma( x )
 
 END FUNCTION NWTC_GammaR8
-!=======================================================================
-!> \copydoc syssubs::nwtc_gammar4
-FUNCTION NWTC_GammaR16( x )
-
-   REAL(QuKi), INTENT(IN)     :: x             ! input 
-   REAL(QuKi)                 :: NWTC_GammaR16  ! result
-   
-   NWTC_GammaR16 = gamma( x )
-
-END FUNCTION NWTC_GammaR16
 !=======================================================================
 !> This routine creates a given directory if it does not already exist.
 SUBROUTINE MKDIR ( new_directory_path )

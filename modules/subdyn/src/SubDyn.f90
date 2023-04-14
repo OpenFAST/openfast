@@ -1290,7 +1290,7 @@ IF (Check( Init%nCMass < 0     , 'NCMass must be >=0')) return
 
 !---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
 CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                                            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SSSum'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SumPrint'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ! --- Reading OutCBModes and OutFEM Modes (temporary backward compatibility if missing)
 !CALL ReadIVar( UnIn, SDInputFile, p%OutCBModes  , 'OutCBModes'  , 'Output of CB Modes'  , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
 read(UnIn,'(A)',iostat=ErrStat2) Line

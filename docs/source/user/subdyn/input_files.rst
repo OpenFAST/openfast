@@ -599,7 +599,7 @@ Output: Summary and Outfile
 In this section of the input file, the user sets flags and switches for
 the desired output behavior.
 
-Specifying **SDSum** = TRUE causes SubDyn to generate a summary file
+Specifying **SumPrint** = TRUE causes SubDyn to generate a summary file
 with name **OutRootName**.SD.sum*. **OutRootName** is either
 specified in the SUBDYN section of the driver input file when running
 SubDyn in stand-alone mode, or in the FAST input file when running a

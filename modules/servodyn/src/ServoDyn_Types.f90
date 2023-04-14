@@ -74,6 +74,15 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: InterpOrder      !< Interpolation order from glue code -- required to set m%u_xStC sizes [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Initial global inputs to the controller [from the supercontroller] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Initial turbine specific inputs to the controller [from the supercontroller] [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Number of Lidar measurement distances [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [-]
+    REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
   END TYPE SrvD_InitInputType
 ! =======================
 ! =========  SrvD_InitOutputType  =======
@@ -239,6 +248,15 @@ IMPLICIT NONE
     REAL(ReKi)  :: LSShftFxa      !< Rotating low-speed shaft force x [N]
     REAL(ReKi)  :: LSShftFys      !< Nonrotating low-speed shaft force y [N]
     REAL(ReKi)  :: LSShftFzs      !< Nonrotating low-speed shaft force z [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speed [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    INTEGER(IntKi)  :: PulseSpacing      !< Distance between range gates [-]
+    INTEGER(IntKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
     REAL(DbKi)  :: DLL_DT      !< interval for calling DLL (integer multiple number of DT) [s]
     CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -476,6 +494,11 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_NStC_y      !< the start and end indices of nacelle      StC y jacobian [ start/end, instance ] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_TStC_y      !< the start and end indices of tower        StC y jacobian [ start/end, instance ] [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_Idx_SStC_y      !< the start and end indices of substructure StC y jacobian [ start/end, instance ] [-]
+    INTEGER(IntKi)  :: SensorType      !< Lidar sensor type [-]
+    INTEGER(IntKi)  :: NumBeam      !< Number of beams [-]
+    INTEGER(IntKi)  :: NumPulseGate      !< Number of pulse gates [-]
+    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
+    REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
   END TYPE SrvD_ParameterType
 ! =======================
 ! =========  SrvD_InputType  =======
@@ -527,6 +550,10 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: NStCMotionMesh      !< StC module nacelle      input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: TStCMotionMesh      !< StC module tower        input motion mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: SStCMotionMesh      !< StC module substructure input motion mesh [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: LidSpeed      !< Lidar measured wind speeds [m/s]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsX      !< Lidar X direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsY      !< Lidar Y direction measurement points [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MsrPositionsZ      !< Lidar Z direction measurement points [m]
   END TYPE SrvD_InputType
 ! =======================
 ! =========  SrvD_OutputType  =======
@@ -707,6 +734,59 @@ IF (ALLOCATED(SrcInitInputData%fromSC)) THEN
   END IF
     DstInitInputData%fromSC = SrcInitInputData%fromSC
 ENDIF
+IF (ALLOCATED(SrcInitInputData%LidSpeed)) THEN
+  i1_l = LBOUND(SrcInitInputData%LidSpeed,1)
+  i1_u = UBOUND(SrcInitInputData%LidSpeed,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%LidSpeed)) THEN 
+    ALLOCATE(DstInitInputData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%LidSpeed = SrcInitInputData%LidSpeed
+ENDIF
+IF (ALLOCATED(SrcInitInputData%MsrPositionsX)) THEN
+  i1_l = LBOUND(SrcInitInputData%MsrPositionsX,1)
+  i1_u = UBOUND(SrcInitInputData%MsrPositionsX,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%MsrPositionsX)) THEN 
+    ALLOCATE(DstInitInputData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%MsrPositionsX = SrcInitInputData%MsrPositionsX
+ENDIF
+IF (ALLOCATED(SrcInitInputData%MsrPositionsY)) THEN
+  i1_l = LBOUND(SrcInitInputData%MsrPositionsY,1)
+  i1_u = UBOUND(SrcInitInputData%MsrPositionsY,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%MsrPositionsY)) THEN 
+    ALLOCATE(DstInitInputData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%MsrPositionsY = SrcInitInputData%MsrPositionsY
+ENDIF
+IF (ALLOCATED(SrcInitInputData%MsrPositionsZ)) THEN
+  i1_l = LBOUND(SrcInitInputData%MsrPositionsZ,1)
+  i1_u = UBOUND(SrcInitInputData%MsrPositionsZ,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%MsrPositionsZ)) THEN 
+    ALLOCATE(DstInitInputData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitInputData%MsrPositionsZ = SrcInitInputData%MsrPositionsZ
+ENDIF
+    DstInitInputData%SensorType = SrcInitInputData%SensorType
+    DstInitInputData%NumBeam = SrcInitInputData%NumBeam
+    DstInitInputData%NumPulseGate = SrcInitInputData%NumPulseGate
+    DstInitInputData%PulseSpacing = SrcInitInputData%PulseSpacing
+    DstInitInputData%URefLid = SrcInitInputData%URefLid
  END SUBROUTINE SrvD_CopyInitInput
 
  SUBROUTINE SrvD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -755,6 +835,18 @@ IF (ALLOCATED(InitInputData%fromSCGlob)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%fromSC)) THEN
   DEALLOCATE(InitInputData%fromSC)
+ENDIF
+IF (ALLOCATED(InitInputData%LidSpeed)) THEN
+  DEALLOCATE(InitInputData%LidSpeed)
+ENDIF
+IF (ALLOCATED(InitInputData%MsrPositionsX)) THEN
+  DEALLOCATE(InitInputData%MsrPositionsX)
+ENDIF
+IF (ALLOCATED(InitInputData%MsrPositionsY)) THEN
+  DEALLOCATE(InitInputData%MsrPositionsY)
+ENDIF
+IF (ALLOCATED(InitInputData%MsrPositionsZ)) THEN
+  DEALLOCATE(InitInputData%MsrPositionsZ)
 ENDIF
  END SUBROUTINE SrvD_DestroyInitInput
 
@@ -880,6 +972,31 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%fromSC)  ! fromSC
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  IF ( ALLOCATED(InData%LidSpeed) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsX allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsX) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsX upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsX)  ! MsrPositionsX
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsY allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsY) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsY upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsY)  ! MsrPositionsY
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsZ allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsZ) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsZ upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsZ)  ! MsrPositionsZ
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
+      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
+      Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
+      Re_BufSz   = Re_BufSz   + 1  ! URefLid
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1187,6 +1304,76 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LidSpeed,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LidSpeed,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LidSpeed,1), UBOUND(InData%LidSpeed,1)
+        ReKiBuf(Re_Xferred) = InData%LidSpeed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsX) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsX,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsX,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsX,1), UBOUND(InData%MsrPositionsX,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsX(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsY) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsY,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsY,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsY,1), UBOUND(InData%MsrPositionsY,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsY(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsZ) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsZ,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsZ,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsZ,1), UBOUND(InData%MsrPositionsZ,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsZ(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PulseSpacing
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%URefLid
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_PackInitInput
 
  SUBROUTINE SrvD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1572,6 +1759,88 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LidSpeed)) DEALLOCATE(OutData%LidSpeed)
+    ALLOCATE(OutData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LidSpeed,1), UBOUND(OutData%LidSpeed,1)
+        OutData%LidSpeed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsX not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsX)) DEALLOCATE(OutData%MsrPositionsX)
+    ALLOCATE(OutData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsX,1), UBOUND(OutData%MsrPositionsX,1)
+        OutData%MsrPositionsX(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsY not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsY)) DEALLOCATE(OutData%MsrPositionsY)
+    ALLOCATE(OutData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsY,1), UBOUND(OutData%MsrPositionsY,1)
+        OutData%MsrPositionsY(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsZ not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsZ)) DEALLOCATE(OutData%MsrPositionsZ)
+    ALLOCATE(OutData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsZ,1), UBOUND(OutData%MsrPositionsZ,1)
+        OutData%MsrPositionsZ(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PulseSpacing = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%URefLid = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackInitInput
 
  SUBROUTINE SrvD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -3526,6 +3795,59 @@ ENDIF
     DstBladedDLLTypeData%LSShftFxa = SrcBladedDLLTypeData%LSShftFxa
     DstBladedDLLTypeData%LSShftFys = SrcBladedDLLTypeData%LSShftFys
     DstBladedDLLTypeData%LSShftFzs = SrcBladedDLLTypeData%LSShftFzs
+IF (ALLOCATED(SrcBladedDLLTypeData%LidSpeed)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%LidSpeed,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%LidSpeed,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%LidSpeed)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%LidSpeed = SrcBladedDLLTypeData%LidSpeed
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%MsrPositionsX)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%MsrPositionsX,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%MsrPositionsX,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%MsrPositionsX)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%MsrPositionsX = SrcBladedDLLTypeData%MsrPositionsX
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%MsrPositionsY)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%MsrPositionsY,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%MsrPositionsY,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%MsrPositionsY)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%MsrPositionsY = SrcBladedDLLTypeData%MsrPositionsY
+ENDIF
+IF (ALLOCATED(SrcBladedDLLTypeData%MsrPositionsZ)) THEN
+  i1_l = LBOUND(SrcBladedDLLTypeData%MsrPositionsZ,1)
+  i1_u = UBOUND(SrcBladedDLLTypeData%MsrPositionsZ,1)
+  IF (.NOT. ALLOCATED(DstBladedDLLTypeData%MsrPositionsZ)) THEN 
+    ALLOCATE(DstBladedDLLTypeData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladedDLLTypeData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstBladedDLLTypeData%MsrPositionsZ = SrcBladedDLLTypeData%MsrPositionsZ
+ENDIF
+    DstBladedDLLTypeData%SensorType = SrcBladedDLLTypeData%SensorType
+    DstBladedDLLTypeData%NumBeam = SrcBladedDLLTypeData%NumBeam
+    DstBladedDLLTypeData%NumPulseGate = SrcBladedDLLTypeData%NumPulseGate
+    DstBladedDLLTypeData%PulseSpacing = SrcBladedDLLTypeData%PulseSpacing
+    DstBladedDLLTypeData%URefLid = SrcBladedDLLTypeData%URefLid
     DstBladedDLLTypeData%DLL_DT = SrcBladedDLLTypeData%DLL_DT
     DstBladedDLLTypeData%DLL_InFile = SrcBladedDLLTypeData%DLL_InFile
     DstBladedDLLTypeData%RootName = SrcBladedDLLTypeData%RootName
@@ -3797,6 +4119,18 @@ ENDIF
 IF (ALLOCATED(BladedDLLTypeData%BlPitchInput)) THEN
   DEALLOCATE(BladedDLLTypeData%BlPitchInput)
 ENDIF
+IF (ALLOCATED(BladedDLLTypeData%LidSpeed)) THEN
+  DEALLOCATE(BladedDLLTypeData%LidSpeed)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%MsrPositionsX)) THEN
+  DEALLOCATE(BladedDLLTypeData%MsrPositionsX)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%MsrPositionsY)) THEN
+  DEALLOCATE(BladedDLLTypeData%MsrPositionsY)
+ENDIF
+IF (ALLOCATED(BladedDLLTypeData%MsrPositionsZ)) THEN
+  DEALLOCATE(BladedDLLTypeData%MsrPositionsZ)
+ENDIF
 IF (ALLOCATED(BladedDLLTypeData%GenSpd_TLU)) THEN
   DEALLOCATE(BladedDLLTypeData%GenSpd_TLU)
 ENDIF
@@ -3974,6 +4308,31 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFxa
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFys
       Re_BufSz   = Re_BufSz   + 1  ! LSShftFzs
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  IF ( ALLOCATED(InData%LidSpeed) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsX allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsX) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsX upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsX)  ! MsrPositionsX
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsY allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsY) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsY upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsY)  ! MsrPositionsY
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsZ allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsZ) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsZ upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsZ)  ! MsrPositionsZ
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
+      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
+      Int_BufSz  = Int_BufSz  + 1  ! PulseSpacing
+      Int_BufSz  = Int_BufSz  + 1  ! URefLid
       Db_BufSz   = Db_BufSz   + 1  ! DLL_DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InFile)  ! DLL_InFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -4309,6 +4668,76 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%LSShftFzs
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LidSpeed,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LidSpeed,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LidSpeed,1), UBOUND(InData%LidSpeed,1)
+        ReKiBuf(Re_Xferred) = InData%LidSpeed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsX) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsX,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsX,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsX,1), UBOUND(InData%MsrPositionsX,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsX(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsY) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsY,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsY,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsY,1), UBOUND(InData%MsrPositionsY,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsY(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsZ) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsZ,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsZ,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsZ,1), UBOUND(InData%MsrPositionsZ,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsZ(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%PulseSpacing
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%URefLid
+    Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DLL_DT
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%DLL_InFile)
@@ -4917,6 +5346,88 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%LSShftFzs = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LidSpeed)) DEALLOCATE(OutData%LidSpeed)
+    ALLOCATE(OutData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LidSpeed,1), UBOUND(OutData%LidSpeed,1)
+        OutData%LidSpeed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsX not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsX)) DEALLOCATE(OutData%MsrPositionsX)
+    ALLOCATE(OutData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsX,1), UBOUND(OutData%MsrPositionsX,1)
+        OutData%MsrPositionsX(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsY not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsY)) DEALLOCATE(OutData%MsrPositionsY)
+    ALLOCATE(OutData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsY,1), UBOUND(OutData%MsrPositionsY,1)
+        OutData%MsrPositionsY(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsZ not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsZ)) DEALLOCATE(OutData%MsrPositionsZ)
+    ALLOCATE(OutData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsZ,1), UBOUND(OutData%MsrPositionsZ,1)
+        OutData%MsrPositionsZ(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PulseSpacing = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%URefLid = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%DLL_DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%DLL_InFile)
@@ -12474,6 +12985,11 @@ IF (ALLOCATED(SrcParamData%Jac_Idx_SStC_y)) THEN
   END IF
     DstParamData%Jac_Idx_SStC_y = SrcParamData%Jac_Idx_SStC_y
 ENDIF
+    DstParamData%SensorType = SrcParamData%SensorType
+    DstParamData%NumBeam = SrcParamData%NumBeam
+    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
+    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
+    DstParamData%URefLid = SrcParamData%URefLid
  END SUBROUTINE SrvD_CopyParam
 
  SUBROUTINE SrvD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -12970,6 +13486,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! Jac_Idx_SStC_y upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Jac_Idx_SStC_y)  ! Jac_Idx_SStC_y
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! SensorType
+      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
+      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
+      Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
+      Re_BufSz   = Re_BufSz   + 1  ! URefLid
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -13829,6 +14350,16 @@ ENDIF
         END DO
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%SensorType
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBeam
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumPulseGate
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PulseSpacing
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%URefLid
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_PackParam
 
  SUBROUTINE SrvD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -14845,6 +15376,16 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%SensorType = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBeam = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PulseSpacing = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%URefLid = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SrvD_UnPackParam
 
  SUBROUTINE SrvD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -15064,6 +15605,54 @@ IF (ALLOCATED(SrcInputData%SStCMotionMesh)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+IF (ALLOCATED(SrcInputData%LidSpeed)) THEN
+  i1_l = LBOUND(SrcInputData%LidSpeed,1)
+  i1_u = UBOUND(SrcInputData%LidSpeed,1)
+  IF (.NOT. ALLOCATED(DstInputData%LidSpeed)) THEN 
+    ALLOCATE(DstInputData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%LidSpeed = SrcInputData%LidSpeed
+ENDIF
+IF (ALLOCATED(SrcInputData%MsrPositionsX)) THEN
+  i1_l = LBOUND(SrcInputData%MsrPositionsX,1)
+  i1_u = UBOUND(SrcInputData%MsrPositionsX,1)
+  IF (.NOT. ALLOCATED(DstInputData%MsrPositionsX)) THEN 
+    ALLOCATE(DstInputData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%MsrPositionsX = SrcInputData%MsrPositionsX
+ENDIF
+IF (ALLOCATED(SrcInputData%MsrPositionsY)) THEN
+  i1_l = LBOUND(SrcInputData%MsrPositionsY,1)
+  i1_u = UBOUND(SrcInputData%MsrPositionsY,1)
+  IF (.NOT. ALLOCATED(DstInputData%MsrPositionsY)) THEN 
+    ALLOCATE(DstInputData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%MsrPositionsY = SrcInputData%MsrPositionsY
+ENDIF
+IF (ALLOCATED(SrcInputData%MsrPositionsZ)) THEN
+  i1_l = LBOUND(SrcInputData%MsrPositionsZ,1)
+  i1_u = UBOUND(SrcInputData%MsrPositionsZ,1)
+  IF (.NOT. ALLOCATED(DstInputData%MsrPositionsZ)) THEN 
+    ALLOCATE(DstInputData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%MsrPositionsZ = SrcInputData%MsrPositionsZ
+ENDIF
  END SUBROUTINE SrvD_CopyInput
 
  SUBROUTINE SrvD_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -15142,6 +15731,18 @@ DO i1 = LBOUND(InputData%SStCMotionMesh,1), UBOUND(InputData%SStCMotionMesh,1)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputData%SStCMotionMesh)
+ENDIF
+IF (ALLOCATED(InputData%LidSpeed)) THEN
+  DEALLOCATE(InputData%LidSpeed)
+ENDIF
+IF (ALLOCATED(InputData%MsrPositionsX)) THEN
+  DEALLOCATE(InputData%MsrPositionsX)
+ENDIF
+IF (ALLOCATED(InputData%MsrPositionsY)) THEN
+  DEALLOCATE(InputData%MsrPositionsY)
+ENDIF
+IF (ALLOCATED(InputData%MsrPositionsZ)) THEN
+  DEALLOCATE(InputData%MsrPositionsZ)
 ENDIF
  END SUBROUTINE SrvD_DestroyInput
 
@@ -15365,6 +15966,26 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
+  IF ( ALLOCATED(InData%LidSpeed) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsX allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsX) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsX upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsX)  ! MsrPositionsX
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsY allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsY) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsY upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsY)  ! MsrPositionsY
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsZ allocated yes/no
+  IF ( ALLOCATED(InData%MsrPositionsZ) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsZ upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsZ)  ! MsrPositionsZ
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -15781,6 +16402,66 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LidSpeed,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LidSpeed,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%LidSpeed,1), UBOUND(InData%LidSpeed,1)
+        ReKiBuf(Re_Xferred) = InData%LidSpeed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsX) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsX,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsX,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsX,1), UBOUND(InData%MsrPositionsX,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsX(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsY) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsY,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsY,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsY,1), UBOUND(InData%MsrPositionsY,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsY(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%MsrPositionsZ) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsZ,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsZ,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%MsrPositionsZ,1), UBOUND(InData%MsrPositionsZ,1)
+        ReKiBuf(Re_Xferred) = InData%MsrPositionsZ(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SrvD_PackInput
 
@@ -16300,6 +16981,78 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LidSpeed)) DEALLOCATE(OutData%LidSpeed)
+    ALLOCATE(OutData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%LidSpeed,1), UBOUND(OutData%LidSpeed,1)
+        OutData%LidSpeed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsX not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsX)) DEALLOCATE(OutData%MsrPositionsX)
+    ALLOCATE(OutData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsX,1), UBOUND(OutData%MsrPositionsX,1)
+        OutData%MsrPositionsX(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsY not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsY)) DEALLOCATE(OutData%MsrPositionsY)
+    ALLOCATE(OutData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsY,1), UBOUND(OutData%MsrPositionsY,1)
+        OutData%MsrPositionsY(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsZ not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%MsrPositionsZ)) DEALLOCATE(OutData%MsrPositionsZ)
+    ALLOCATE(OutData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%MsrPositionsZ,1), UBOUND(OutData%MsrPositionsZ,1)
+        OutData%MsrPositionsZ(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE SrvD_UnPackInput
 
@@ -17715,6 +18468,30 @@ IF (ALLOCATED(u_out%SStCMotionMesh) .AND. ALLOCATED(u1%SStCMotionMesh)) THEN
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
 END IF ! check if allocated
+IF (ALLOCATED(u_out%LidSpeed) .AND. ALLOCATED(u1%LidSpeed)) THEN
+  DO i1 = LBOUND(u_out%LidSpeed,1),UBOUND(u_out%LidSpeed,1)
+    b = -(u1%LidSpeed(i1) - u2%LidSpeed(i1))
+    u_out%LidSpeed(i1) = u1%LidSpeed(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsX) .AND. ALLOCATED(u1%MsrPositionsX)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsX,1),UBOUND(u_out%MsrPositionsX,1)
+    b = -(u1%MsrPositionsX(i1) - u2%MsrPositionsX(i1))
+    u_out%MsrPositionsX(i1) = u1%MsrPositionsX(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsY) .AND. ALLOCATED(u1%MsrPositionsY)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsY,1),UBOUND(u_out%MsrPositionsY,1)
+    b = -(u1%MsrPositionsY(i1) - u2%MsrPositionsY(i1))
+    u_out%MsrPositionsY(i1) = u1%MsrPositionsY(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsZ) .AND. ALLOCATED(u1%MsrPositionsZ)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsZ,1),UBOUND(u_out%MsrPositionsZ,1)
+    b = -(u1%MsrPositionsZ(i1) - u2%MsrPositionsZ(i1))
+    u_out%MsrPositionsZ(i1) = u1%MsrPositionsZ(i1) + b * ScaleFactor
+  END DO
+END IF ! check if allocated
  END SUBROUTINE SrvD_Input_ExtrapInterp1
 
 
@@ -17949,6 +18726,34 @@ IF (ALLOCATED(u_out%SStCMotionMesh) .AND. ALLOCATED(u1%SStCMotionMesh)) THEN
       CALL MeshExtrapInterp2(u1%SStCMotionMesh(i1), u2%SStCMotionMesh(i1), u3%SStCMotionMesh(i1), tin, u_out%SStCMotionMesh(i1), tin_out, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    ENDDO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%LidSpeed) .AND. ALLOCATED(u1%LidSpeed)) THEN
+  DO i1 = LBOUND(u_out%LidSpeed,1),UBOUND(u_out%LidSpeed,1)
+    b = (t(3)**2*(u1%LidSpeed(i1) - u2%LidSpeed(i1)) + t(2)**2*(-u1%LidSpeed(i1) + u3%LidSpeed(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%LidSpeed(i1) + t(3)*u2%LidSpeed(i1) - t(2)*u3%LidSpeed(i1) ) * scaleFactor
+    u_out%LidSpeed(i1) = u1%LidSpeed(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsX) .AND. ALLOCATED(u1%MsrPositionsX)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsX,1),UBOUND(u_out%MsrPositionsX,1)
+    b = (t(3)**2*(u1%MsrPositionsX(i1) - u2%MsrPositionsX(i1)) + t(2)**2*(-u1%MsrPositionsX(i1) + u3%MsrPositionsX(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%MsrPositionsX(i1) + t(3)*u2%MsrPositionsX(i1) - t(2)*u3%MsrPositionsX(i1) ) * scaleFactor
+    u_out%MsrPositionsX(i1) = u1%MsrPositionsX(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsY) .AND. ALLOCATED(u1%MsrPositionsY)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsY,1),UBOUND(u_out%MsrPositionsY,1)
+    b = (t(3)**2*(u1%MsrPositionsY(i1) - u2%MsrPositionsY(i1)) + t(2)**2*(-u1%MsrPositionsY(i1) + u3%MsrPositionsY(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%MsrPositionsY(i1) + t(3)*u2%MsrPositionsY(i1) - t(2)*u3%MsrPositionsY(i1) ) * scaleFactor
+    u_out%MsrPositionsY(i1) = u1%MsrPositionsY(i1) + b  + c * t_out
+  END DO
+END IF ! check if allocated
+IF (ALLOCATED(u_out%MsrPositionsZ) .AND. ALLOCATED(u1%MsrPositionsZ)) THEN
+  DO i1 = LBOUND(u_out%MsrPositionsZ,1),UBOUND(u_out%MsrPositionsZ,1)
+    b = (t(3)**2*(u1%MsrPositionsZ(i1) - u2%MsrPositionsZ(i1)) + t(2)**2*(-u1%MsrPositionsZ(i1) + u3%MsrPositionsZ(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%MsrPositionsZ(i1) + t(3)*u2%MsrPositionsZ(i1) - t(2)*u3%MsrPositionsZ(i1) ) * scaleFactor
+    u_out%MsrPositionsZ(i1) = u1%MsrPositionsZ(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE SrvD_Input_ExtrapInterp2
 

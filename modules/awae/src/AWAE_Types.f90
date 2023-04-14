@@ -236,6 +236,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vy_wake      !< Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vz_wake      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes for each turbine [m]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k_mt      !< Scaling factor k_mt(r,x) for wake-added turbulence [-]
   END TYPE AWAE_InputType
 ! =======================
 CONTAINS
@@ -7093,6 +7094,22 @@ IF (ALLOCATED(SrcInputData%D_wake)) THEN
   END IF
     DstInputData%D_wake = SrcInputData%D_wake
 ENDIF
+IF (ALLOCATED(SrcInputData%WAT_k_mt)) THEN
+  i1_l = LBOUND(SrcInputData%WAT_k_mt,1)
+  i1_u = UBOUND(SrcInputData%WAT_k_mt,1)
+  i2_l = LBOUND(SrcInputData%WAT_k_mt,2)
+  i2_u = UBOUND(SrcInputData%WAT_k_mt,2)
+  i3_l = LBOUND(SrcInputData%WAT_k_mt,3)
+  i3_u = UBOUND(SrcInputData%WAT_k_mt,3)
+  IF (.NOT. ALLOCATED(DstInputData%WAT_k_mt)) THEN 
+    ALLOCATE(DstInputData%WAT_k_mt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%WAT_k_mt.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%WAT_k_mt = SrcInputData%WAT_k_mt
+ENDIF
  END SUBROUTINE AWAE_CopyInput
 
  SUBROUTINE AWAE_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -7133,6 +7150,9 @@ IF (ALLOCATED(InputData%Vz_wake)) THEN
 ENDIF
 IF (ALLOCATED(InputData%D_wake)) THEN
   DEALLOCATE(InputData%D_wake)
+ENDIF
+IF (ALLOCATED(InputData%WAT_k_mt)) THEN
+  DEALLOCATE(InputData%WAT_k_mt)
 ENDIF
  END SUBROUTINE AWAE_DestroyInput
 
@@ -7200,6 +7220,11 @@ ENDIF
   IF ( ALLOCATED(InData%D_wake) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! D_wake upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%D_wake)  ! D_wake
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WAT_k_mt allocated yes/no
+  IF ( ALLOCATED(InData%WAT_k_mt) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WAT_k_mt upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_k_mt)  ! WAT_k_mt
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -7385,6 +7410,31 @@ ENDIF
         DO i1 = LBOUND(InData%D_wake,1), UBOUND(InData%D_wake,1)
           ReKiBuf(Re_Xferred) = InData%D_wake(i1,i2)
           Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WAT_k_mt) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%WAT_k_mt,3), UBOUND(InData%WAT_k_mt,3)
+        DO i2 = LBOUND(InData%WAT_k_mt,2), UBOUND(InData%WAT_k_mt,2)
+          DO i1 = LBOUND(InData%WAT_k_mt,1), UBOUND(InData%WAT_k_mt,1)
+            ReKiBuf(Re_Xferred) = InData%WAT_k_mt(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
@@ -7595,6 +7645,34 @@ ENDIF
         DO i1 = LBOUND(OutData%D_wake,1), UBOUND(OutData%D_wake,1)
           OutData%D_wake(i1,i2) = ReKiBuf(Re_Xferred)
           Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WAT_k_mt not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WAT_k_mt)) DEALLOCATE(OutData%WAT_k_mt)
+    ALLOCATE(OutData%WAT_k_mt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k_mt.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%WAT_k_mt,3), UBOUND(OutData%WAT_k_mt,3)
+        DO i2 = LBOUND(OutData%WAT_k_mt,2), UBOUND(OutData%WAT_k_mt,2)
+          DO i1 = LBOUND(OutData%WAT_k_mt,1), UBOUND(OutData%WAT_k_mt,1)
+            OutData%WAT_k_mt(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
         END DO
       END DO
   END IF
