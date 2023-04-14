@@ -427,7 +427,7 @@ A member is one of the three following types (see :numref:`SD_FEM`):
 
 - Rigid link (*MType=3*)
 
-**COSMID** refers to the IDs of the members’ cosine matrices for
+**COSMID** refers to the IDs of the members' cosine matrices for
 noncircular members; the current release uses SubDyn's default direction
  cosine convention if it's not present or when COSMID values are -1.
 
