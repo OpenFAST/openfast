@@ -18,6 +18,8 @@ if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.12.0")
   cmake_policy(SET CMP0074 NEW)
 endif()
 
+enable_language(CXX Fortran)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -38,26 +40,108 @@ include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
-  src/OpenFAST.cpp src/SC.cpp)
+  src/OpenFAST.cpp 
+  src/SC.cpp
+  $<TARGET_OBJECTS:openfastlib_common_obj>
+  $<TARGET_OBJECTS:openfast_prelib_obj>
+  $<TARGET_OBJECTS:maplib_obj>
+  $<TARGET_OBJECTS:mapcpplib_obj>
+  $<TARGET_OBJECTS:nwtcbaselib_obj> 
+  $<TARGET_OBJECTS:nwtcsyslib_obj>
+  $<TARGET_OBJECTS:nwtclibs_obj>
+  $<TARGET_OBJECTS:ifwlib_obj>
+  $<TARGET_OBJECTS:fvwlib_obj>
+  $<TARGET_OBJECTS:uaaerolib_obj>
+  $<TARGET_OBJECTS:afinfolib_obj>
+  $<TARGET_OBJECTS:aeroacoustics_obj>
+  $<TARGET_OBJECTS:aerodynlib_obj>
+  $<TARGET_OBJECTS:aerodyn14lib_obj>
+  $<TARGET_OBJECTS:servodynlib_obj>
+  $<TARGET_OBJECTS:elastodynlib_obj>
+  $<TARGET_OBJECTS:beamdynlib_obj>
+  $<TARGET_OBJECTS:subdynlib_obj>
+  $<TARGET_OBJECTS:hydrodynlib_obj>
+  $<TARGET_OBJECTS:orcaflexlib_obj>
+  $<TARGET_OBJECTS:extptfm_mckflib_obj>
+  $<TARGET_OBJECTS:openfoamtypeslib_obj>
+  $<TARGET_OBJECTS:foamfastlib_obj>
+  $<TARGET_OBJECTS:scdataextypeslib_obj>
+  $<TARGET_OBJECTS:scdataexlib_obj>
+  $<TARGET_OBJECTS:feamlib_obj>
+  $<TARGET_OBJECTS:moordynlib_obj>
+  $<TARGET_OBJECTS:icedynlib_obj>
+  $<TARGET_OBJECTS:icefloelib_obj>
+  $<TARGET_OBJECTS:openfast_postlib_obj>
+  $<TARGET_OBJECTS:versioninfolib_obj>
+)
+
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+# note the use of ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}. This is to ensure the compiler 
+# links to the required fortran libraries (e.g. libgfortran). Because the library is 
+# entirely made up of objects cmake cannot reliably detect that it is a fortran library 
+# and must be informed of the correct libraries to link to or else there can be undefined 
+# symbol errors
 target_link_libraries(openfastcpplib
-  openfastlib
+  openfastlib_common_obj
+  openfast_prelib_obj
+  maplib_obj
+  mapcpplib_obj
+  nwtcbaselib_obj
+  nwtcsyslib_obj
+  nwtclibs_obj
+  ifwlib_obj
+  fvwlib_obj
+  uaaerolib_obj
+  afinfolib_obj
+  aeroacoustics_obj
+  aerodynlib_obj
+  aerodyn14lib_obj
+  servodynlib_obj
+  elastodynlib_obj
+  beamdynlib_obj
+  subdynlib_obj
+  hydrodynlib_obj
+  orcaflexlib_obj
+  extptfm_mckflib_obj
+  openfoamtypeslib_obj
+  foamfastlib_obj
+  scdataextypeslib_obj
+  scdataexlib_obj
+  feamlib_obj
+  moordynlib_obj
+  icedynlib_obj
+  icefloelib_obj
+  openfast_postlib_obj
+  versioninfolib_obj
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
   ${MPI_LIBRARIES}
-  ${CMAKE_DL_LIBS})
+  ${CMAKE_DL_LIBS}
+  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
+)
 
 add_executable(openfastcpp src/FAST_Prog.cpp)
-target_link_libraries(openfastcpp openfastcpplib openfastlib
+target_link_libraries(openfastcpp 
+  openfastcpplib
   ${MPI_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
-  ${CMAKE_DL_LIBS})
+  ${CMAKE_DL_LIBS}
+)
+
+if (OPENMP)
+  find_package(OpenMP)
+  if(OpenMP_CXX_FOUND)
+    target_link_libraries(openfastcpplib OpenMP::OpenMP_CXX)
+    target_link_libraries(openfastcpp OpenMP::OpenMP_CXX)
+  endif()
+endif(OPENMP)
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES

@@ -29,7 +29,10 @@ set(MOORDYN_LIBS_SOURCES
   src/MoorDyn_Types.f90
 )
 
-add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
+add_library(moordynlib_obj OBJECT ${MOORDYN_LIBS_SOURCES})
+target_link_libraries(moordynlib_obj nwtclibs_obj)
+
+add_library(moordynlib $<TARGET_OBJECTS:moordynlib_obj>)
 target_link_libraries(moordynlib nwtclibs)
 
 # c-bindings interface library
@@ -40,7 +43,7 @@ if(APPLE OR UNIX)
 endif()
 
 
-install(TARGETS moordynlib
+install(TARGETS moordynlib moordynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib

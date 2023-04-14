@@ -91,12 +91,20 @@ typedef  ^                       ^                 ReKi              HAWC_dy    
 typedef  ^                       ^                 ReKi              HAWC_dz           -     -     -     "HAWC -- distance between points in z direction"         meters
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
-typedef  ^                       ^                 CHARACTER(ChanLen) OutList           :     -     -     "List of user-requested output channels"                 -
-typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
-typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
-typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
-typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data" -
+typedef  ^                       ^                 CHARACTER(ChanLen) OutList          :     -     -     "List of user-requested output channels"                 -
+typedef  ^                       ^                 IntKi             SensorType        -     -     -     "Sensor type (for lidar/sensor module)"                  -
+typedef  ^                       ^                 IntKi             NumBeam           -     -     -     "Number of lidar beams"                                  -
+typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "The number of range gates to return wind speeds at"     -
+typedef  ^                       ^                 ReKi              RotorApexOffsetPos {3}  -     -     "Position of the lidar unit relative to the rotor apex of rotation" m
+typedef  ^                       ^                 ReKi              FocalDistanceX    :     -     -     "LIDAR LOS focal distance co-ordinates in the x direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceY    :     -     -     "LIDAR LOS focal distance co-ordinates in the y direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceZ    :     -     -     "LIDAR LOS focal distance co-ordinates in the z direction" m 
+typedef  ^                       ^                 ReKi              PulseSpacing      -     -     -     "Distance between range gates" m
+typedef  ^                       ^                 ReKi              MeasurementInterval -   -    -      "Time between each measurement" s
+typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar" m/s 
+typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate" - 
+typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes]" -
+typedef  ^                       ^                 IfW_FFWind_InitInputType     FF     -     -     -     "scaling data" -
 
 
 
@@ -109,14 +117,14 @@ typedef  ^                       ^                 LOGICAL           FixedWindFi
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^                 CHARACTER(1024)   RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
-typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
-typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
+typedef  ^                       ^                 LOGICAL           WindType2UseInputFile   -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
+typedef  ^                       ^                 FileInfoType      WindType2Data     -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
 typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
-typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
-typedef  ^                       ^                 IntKi             MHK               -   -   -         "MHK turbine type switch"   -
-typedef  ^                       ^                 ReKi              WtrDpth           -   -   -         "Water depth" m
-typedef  ^                       ^                 ReKi              MSL2SWL           -   -   -         "Mean sea level to still water level" m
+typedef  ^                       ^                 ReKi              RadAvg            -     -     -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 IntKi             MHK               -     -     -     "MHK turbine type switch"   -
+typedef  ^                       ^                 ReKi              WtrDpth           -     -     -     "Water depth" m
+typedef  ^                       ^                 ReKi              MSL2SWL           -     -     -     "Mean sea level to still water level" m
 
 # Init Output
 typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :   -   -    "Names of output-to-file channels"                       -

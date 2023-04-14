@@ -729,7 +729,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          !----------------------------------------------------------------------
          !> 6. Set zero values for unused outputs.  This is mostly so that the
-         !!    compiler does not complain.
+         !!    compiler does not complain.  Also set misc vars
          !----------------------------------------------------------------------
       x%DummyContState           = 0.0_SiKi
       xd%DummyDiscState          = 0.0_SiKi
@@ -737,6 +737,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL AllocAry( m%LastIndWave, p%NBody, 'm%LastIndWave', ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       m%LastIndWave              = 1_IntKi
+      call AllocAry(m%F_Waves2, 6*p%NBody, 'm%F_Waves2', ErrStatTmp, ErrMsgTmp)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
       OtherState%DummyOtherState = 0
 
@@ -4024,7 +4026,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Now that we know how many frequencies and wave directions there are, we can allocate the array
          ! for saving the sorted data.
-      ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+      ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataSet to store '// &
                               'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -4038,7 +4040,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ENDIF
 
          ! Allocate the logical array for storing the mask for which points are valid. Set to .FALSE.
-      ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+      ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataMask to store '// &
                               'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -4130,6 +4132,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
             ! Find which force component this belongs to
          TmpCoord(4) = NINT(RawData3D(I,4))
+            ! Check that it is a valid force component
+         if (TmpCoord(4) < 1 .or. TmpCoord(4) > 6*Data3D%NumBodies) then
+            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
+                           ' contains force component '//TRIM(Num2LStr(TmpCoord(4)))//' which is outside the expected force '// &
+                           ' range of 1 to '//TRIM(Num2Lstr(6*Data3D%NumBodies))//' for a '//TRIM(Num2LStr(Data3D%NumBodies))// &
+                           ' body system.', ErrStat, ErrMsg, RoutineName)
+            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         endif
+
 
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
@@ -4164,7 +4181,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
                         ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
-                        'given earlier in the file for the same values of wave frequency and wave direction.', &
+                        'given earlier in the file for the same values of wave frequency and wave direction '// &
+                        '(force dimension = '//TRIM(Num2LStr(TmpCoord(4)))//').', &
                         ErrStat, ErrMsg, RoutineName )
                IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -4860,7 +4878,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Now that we know how many frequencies and wave directions there are, we can allocate the array
          ! for saving the sorted data.
-      ALLOCATE( Data4D%DataSet( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+      ALLOCATE( Data4D%DataSet( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6*Data4D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataSet to store '// &
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -4875,7 +4893,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ENDIF
 
          ! Allocate the logical array for storing the mask for which points are valid. Set to .FALSE.
-      ALLOCATE( Data4D%DataMask( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+      ALLOCATE( Data4D%DataMask( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6*Data4D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataMask to store '// &
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -4988,6 +5006,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
             ! Find which force component this belongs to
          TmpCoord(5) = NINT(RawData4D(I,5))
+            ! Check that it is a valid force component
+         if (TmpCoord(5) < 1 .or. TmpCoord(5) > 6*Data4D%NumBodies) then
+            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
+                           ' contains force component '//TRIM(Num2LStr(TmpCoord(5)))//' which is outside the expected force '// &
+                           ' range of 1 to '//TRIM(Num2Lstr(6*Data4D%NumBodies))//' for a '//TRIM(Num2LStr(Data4D%NumBodies))// &
+                           ' body system.', ErrStat, ErrMsg, RoutineName)
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         endif
 
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
@@ -5022,7 +5055,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
                         ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
-                        'given earlier in the file for the same values of wave frequency and wave direction.', &
+                        'given earlier in the file for the same values of wave frequency and wave direction '// &
+                        '(force dimension = '//TRIM(Num2LStr(TmpCoord(5)))//').', &
                         ErrStat, ErrMsg, RoutineName )
                IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -6014,10 +6048,10 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
 
 
       ! Now allocate the storage arrays
-   ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+   ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataSet to store '// &
                            'the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
-   ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
+   ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataMask to store '// &
                            'the information on the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
    CALL AllocAry( Data3D%WvFreq1, Data3D%NumWvFreq1, 'Data3D WvFreq array', ErrStatTmp, ErrMsgTmp )

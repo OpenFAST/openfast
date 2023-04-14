@@ -453,6 +453,89 @@ SUBROUTINE InflowWind_ParseInputFileInfo( InputFileData, InFileInfo, PriPath, In
 
    CALL ParseVarWDefault( InFileInfo, CurLine, "XOffset", InputFileData%FF%XOffset, 0.0_ReKi, TmpErrStat, TmpErrMsg, UnEc )
    if (Failed()) return
+   
+   !-------------------------------------------------------------------------------------------------
+   !> Read the _Parameters for LIDAR section
+   !------------------------------------------------------------------------------------------------- 
+   
+  CurLine = CurLine + 1  ! Skip section break
+  
+      ! LIDAR Sensor Type
+   CALL ParseVar( InFileInfo, CurLine, "SensorType", InputFileData%SensorType, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+
+     ! Number of Range Gates
+   CALL ParseVar( InFileInfo, CurLine, "NumPulseGate", InputFileData%NumPulseGate, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+     
+     ! Pulse Gate Spacing
+   CALL ParseVar( InFileInfo, CurLine, "PulseSpacing", InputFileData%PulseSpacing, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+
+     ! NumBeam: Number of points to output the lidar measured wind velocity (1 to 5)
+   CALL ParseVar( InFileInfo, CurLine, "NumBeam", InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
+
+     ! Before proceeding, make sure that NumBeam makes sense
+   IF ((InputFileData%SensorType == 1) .and. (InputFileData%NumBeam < 1 .OR. InputFileData%NumBeam > 5)) THEN
+      CALL SetErrStat( ErrID_Fatal, 'NumBeam must be greater than or equal to one and less than 6.', &
+                        ErrStat, ErrMsg, RoutineName )
+      RETURN   
+   ELSE   
+            ! Allocate space for the output location arrays:
+      CALL AllocAry( InputFileData%FocalDistanceX, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceY, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry( InputFileData%FocalDistanceZ, InputFileData%NumBeam, 'NumBeam', TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+      if (Failed()) return
+   ENDIF
+    
+    ! Focal Distance X
+   CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceX', InputFileData%FocalDistanceX, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
+ 
+    ! Focal Distance Y
+   CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceY', InputFileData%FocalDistanceY, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
+
+    ! Focal Distance Z
+   CALL ParseAry( InFileInfo, CurLine, 'FocalDistanceZ', InputFileData%FocalDistanceZ, InputFileData%NumBeam, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
+
+    ! Rotor Apex Offset Position
+   CALL ParseAry( InFileInfo, CurLine, "RotorApexOffsetPos", InputFileData%RotorApexOffsetPos, 1, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+   
+    ! URefIni
+   CALL ParseVar( InFileInfo, CurLine, "URefLid", InputFileData%URefLid, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN 
+ 
+    ! Measurement Interval
+   CALL ParseVar( InFileInfo, CurLine, "MeasurementInterval", InputFileData%MeasurementInterval, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+   
+    ! Lidar Radial Vel
+   CALL ParseLoVar( InFileInfo, CurLine, "LidRadialVel", InputFileData%LidRadialVel, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+     
+    ! Consider Hub Motion
+   CALL ParseVar( InFileInfo, CurLine, "ConsiderHubMotion", InputFileData%ConsiderHubMotion, TmpErrStat, TmpErrMsg, UnEc )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+   IF (Failed()) RETURN
+   
 
    !----------------------------------------------------------------------------------------------
    !> Read the _OUTPUT_ subsection
@@ -1154,10 +1237,17 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( WindVelMag(I) ) =  .TRUE.
       InvalidOutput( WindAngXY( I) ) =  .TRUE.
    END DO   
-      
+
+IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+   DO I=p%lidar%NumBeam+1,5
+      InvalidOutput( WindMeas(I) ) = .TRUE.
+   END DO
+ELSE
    DO I=p%lidar%NumPulseGate+1,5
       InvalidOutput( WindMeas(I) ) = .TRUE.
    END DO
+   
+ END IF
 
 !   ................. End of validity checking .................
 
@@ -1373,9 +1463,15 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
    
       !FIXME:  Add in Wind1Dir etc.  -- although those can be derived outside of FAST.
 
-   DO I = 1,MIN(5, p%lidar%NumPulseGate )
-      m%AllOuts( WindMeas(I) ) = y%lidar%lidSpeed(I)
-   END DO   
+IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
+     DO I = 1,MIN(5, p%lidar%NumBeam )
+         m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+      END DO 
+   ELSE 
+      DO I = 1,MIN(5, p%lidar%NumPulseGate )
+        m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+     END DO  
+   END IF  
 
 END SUBROUTINE SetAllOuts
 

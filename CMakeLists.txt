@@ -14,13 +14,16 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
 project(OpenFAST CXX C Fortran)
 
 include(${CMAKE_SOURCE_DIR}/cmake/OpenfastCmakeUtils.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/OpenfastFortranOptions.cmake)
+include (FindPackageHandleStandardArgs)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/ftnmods)
 
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
@@ -38,6 +41,7 @@ option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
 option(OPENMP "Enable OpenMP support" off)
+option(USE_LOCAL_STATIC_LAPACK "Enable downloading and building static LAPACK and BLAS libs" off)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   # Configure the default install path to openfast/install
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "OpenFAST install directory" FORCE)
@@ -107,10 +111,33 @@ if (MKL_FOUND)
   set(BLAS_LIBRARIES ${MKL_LIBRARIES})
   set(LAPACK_LIBRARIES ${MKL_LIBRARIES})
   set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "ifport;ifcore;imf;svml;m;ipgo;intlc;c;irc_s;dl;c")
-else()
-  find_package(BLAS REQUIRED)
-  find_package(LAPACK REQUIRED)
-endif()
+else(MKL_FOUND)
+  if (USE_LOCAL_STATIC_LAPACK)
+
+      message(STATUS "--> Reference LAPACK and BLAS will be downloaded and build as static libraries for linking with openfast")
+      include(ExternalProject)
+      ExternalProject_Add(
+		lapack
+		URL http://www.netlib.org/lapack/lapack.tgz
+		CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
+        PREFIX ${CMAKE_BINARY_DIR}/dependencies
+      )
+	  if (UNIX)
+         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/liblapack.a ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.a CACHE STRING "LAPACK library" FORCE)
+	  else (UNIX) # On Windows
+         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/libliblapack.lib ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.lib CACHE STRING "LAPACK library" FORCE)
+      endif (UNIX)
+
+      install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
+
+  else(USE_LOCAL_STATIC_LAPACK)
+
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
+
+  endif(USE_LOCAL_STATIC_LAPACK)
+
+endif(MKL_FOUND)
 
 # Set the RPATH after configuring the install prefix
 include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
@@ -210,3 +237,4 @@ option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
   add_subdirectory(docs)
 endif()
+
