@@ -10,7 +10,6 @@ True          Echo               - Echo the input to "<rootname>.AD.ech"?  (flag
 False         TwrAero            - Calculate tower aerodynamic loads? (flag)
 False         FrozenWake         - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
 False         CavitCheck         - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
-False         Buoyancy           - Include buoyancy effects? (flag)
 False         CompAA             - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
 "unused"      AA_InputFile       - Aeroacoustics input file
 ======  Environmental Conditions  ===================================================================
@@ -62,15 +61,15 @@ True          UseBlCm            - Include aerodynamic pitching moment in calcul
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(1)        - Name of file containing distributed aerodynamic properties for Blade #1 (-)
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(2)        - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
 "Test01_UAE_AeroDyn_blade.dat"    ADBlFile(3)        - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
-======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
         0.0   VolHub             - Hub volume (m^3)
         0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2]
         0.0   VolNac             - Nacelle volume (m^3)
 0.0, 0.0, 0.0 NacCenB            - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
-======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-TwrElev        TwrDiam        TwrCd          TwrTI (used only with TwrShadow=2)  TwrCb (used only with Buoyancy=True)
+======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+          5   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+TwrElev        TwrDiam        TwrCd          TwrTI (used only with TwrShadow=2)  TwrCb (used only with MHK=1 or 2)
 (m)            (m)            (-)            (-)                                 (-)
 0.0000000E+00  6.0000000E+00  0.0000000E+00  1.0000000E-01                       0.0
 2.0000000E+01  5.5000000E+00  0.0000000E+00  1.0000000E-01                       0.0

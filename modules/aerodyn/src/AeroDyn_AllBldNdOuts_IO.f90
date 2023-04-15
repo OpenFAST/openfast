@@ -1437,7 +1437,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 
 !   ..... Developer must add checking for invalid inputs here: .....
 
-   if (.not. p%Buoyancy) then
+   if ( p%MHK == 0 ) then
       InvalidOutput( BldNd_Fbn ) = .true.
       InvalidOutput( BldNd_Fbt ) = .true.
       InvalidOutput( BldNd_Fbs ) = .true.

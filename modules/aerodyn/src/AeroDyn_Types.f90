@@ -196,7 +196,6 @@ IMPLICIT NONE
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
-    LOGICAL  :: Buoyancy      !< Include buoyancy effects? [flag]
     LOGICAL  :: CompAA      !< Compute AeroAcoustic noise [flag]
     CHARACTER(1024)  :: AA_InputFile      !< AeroAcoustics input file name [quoted strings]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: ADBlFile      !< AD blade file (NumBl filenames) [quoted strings]
@@ -402,7 +401,6 @@ IMPLICIT NONE
     LOGICAL  :: TwrAero      !< Calculate tower aerodynamic loads? [flag]
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
-    LOGICAL  :: Buoyancy      !< Include buoyancy effects? [flag]
     INTEGER(IntKi)  :: MHK      !< MHK [flag]
     LOGICAL  :: CompAA      !< Compute AeroAcoustic noise [flag]
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
@@ -5232,7 +5230,6 @@ ENDIF
     DstInputFileData%TwrAero = SrcInputFileData%TwrAero
     DstInputFileData%FrozenWake = SrcInputFileData%FrozenWake
     DstInputFileData%CavitCheck = SrcInputFileData%CavitCheck
-    DstInputFileData%Buoyancy = SrcInputFileData%Buoyancy
     DstInputFileData%CompAA = SrcInputFileData%CompAA
     DstInputFileData%AA_InputFile = SrcInputFileData%AA_InputFile
 IF (ALLOCATED(SrcInputFileData%ADBlFile)) THEN
@@ -5425,7 +5422,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! TwrAero
       Int_BufSz  = Int_BufSz  + 1  ! FrozenWake
       Int_BufSz  = Int_BufSz  + 1  ! CavitCheck
-      Int_BufSz  = Int_BufSz  + 1  ! Buoyancy
       Int_BufSz  = Int_BufSz  + 1  ! CompAA
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AA_InputFile)  ! AA_InputFile
   Int_BufSz   = Int_BufSz   + 1     ! ADBlFile allocated yes/no
@@ -5554,8 +5550,6 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FrozenWake, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CavitCheck, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Buoyancy, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAA, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -5802,8 +5796,6 @@ ENDIF
     OutData%FrozenWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%FrozenWake)
     Int_Xferred = Int_Xferred + 1
     OutData%CavitCheck = TRANSFER(IntKiBuf(Int_Xferred), OutData%CavitCheck)
-    Int_Xferred = Int_Xferred + 1
-    OutData%Buoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Buoyancy)
     Int_Xferred = Int_Xferred + 1
     OutData%CompAA = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAA)
     Int_Xferred = Int_Xferred + 1
@@ -13457,7 +13449,6 @@ ENDIF
     DstRotParameterTypeData%TwrAero = SrcRotParameterTypeData%TwrAero
     DstRotParameterTypeData%FrozenWake = SrcRotParameterTypeData%FrozenWake
     DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
-    DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
     DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
     DstRotParameterTypeData%CompAA = SrcRotParameterTypeData%CompAA
     DstRotParameterTypeData%AirDens = SrcRotParameterTypeData%AirDens
@@ -13805,7 +13796,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! TwrAero
       Int_BufSz  = Int_BufSz  + 1  ! FrozenWake
       Int_BufSz  = Int_BufSz  + 1  ! CavitCheck
-      Int_BufSz  = Int_BufSz  + 1  ! Buoyancy
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! CompAA
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
@@ -14322,8 +14312,6 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%FrozenWake, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CavitCheck, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Buoyancy, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
@@ -15009,8 +14997,6 @@ ENDIF
     OutData%FrozenWake = TRANSFER(IntKiBuf(Int_Xferred), OutData%FrozenWake)
     Int_Xferred = Int_Xferred + 1
     OutData%CavitCheck = TRANSFER(IntKiBuf(Int_Xferred), OutData%CavitCheck)
-    Int_Xferred = Int_Xferred + 1
-    OutData%Buoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Buoyancy)
     Int_Xferred = Int_Xferred + 1
     OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

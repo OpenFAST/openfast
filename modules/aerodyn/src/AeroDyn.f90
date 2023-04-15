@@ -385,7 +385,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Calculate buoyancy parameters
       !............................................................................................
    do iR = 1, nRotors
-      if ( p%rotors(iR)%Buoyancy ) then 
+      if ( p%rotors(iR)%MHK > 0 ) then 
          call SetBuoyancyParameters( InputFileData%rotors(iR), u%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if
@@ -703,7 +703,7 @@ end if
    
    if (ErrStat >= AbortErrLev) RETURN
    
-   if (p%Buoyancy) then
+   if (p%MHK > 0) then
          ! Point mesh for blade buoyant loads
       allocate(m%BladeBuoyLoadPoint(p%NumBlades), Stat = ErrStat2)
       if (ErrStat2 /= 0) then
@@ -911,7 +911,7 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    errMsg  = ""
    
          
-   if (p%TwrAero .or. p%Buoyancy .and. p%NumTwrNds > 0) then
+   if (p%TwrAero .or. p%MHK > 0 .and. p%NumTwrNds > 0) then
             
       call MeshCopy ( SrcMesh  = u%TowerMotion    &
                     , DestMesh = y%TowerLoad      &
@@ -1270,7 +1270,6 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
-   p%Buoyancy         = InputFileData%Buoyancy
    
 
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
@@ -1289,17 +1288,17 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       p%NumBlNds         = 0
    endif
 
-   if (p%NumBlades>0 .and. p%Buoyancy) then
+   if (p%NumBlades>0 .and. p%MHK > 0) then
       call AllocAry( p%BlCenBn, p%NumBlNds, p%NumBlades, 'BlCenBn', ErrStat2, ErrMsg2 )
       call AllocAry( p%BlCenBt, p%NumBlNds, p%NumBlades, 'BlCenBt', ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
 
-   if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. .not. p%Buoyancy ) then
+   if (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%MHK == 0 ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .and. RotData%NumTwrNds <= 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%MHK > 0 .and. RotData%NumTwrNds <= 0 ) then
       p%NumTwrNds     = 0
-   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%Buoyancy .and. RotData%NumTwrNds > 0 ) then
+   elseif (p%TwrPotent == TwrPotent_none .and. p%TwrShadow == TwrShadow_none .and. .not. p%TwrAero .and. p%MHK > 0 .and. RotData%NumTwrNds > 0 ) then
       p%NumTwrNds     = RotData%NumTwrNds
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
@@ -1315,7 +1314,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrCb,   p%TwrCb )
    end if
 
-   if (p%Buoyancy) then
+   if (p%MHK > 0) then
       do k = 1,p%NumBlades
          p%BlCenBn(:,k) = RotData%BladeProps(k)%BlCenBn
          p%BlCenBt(:,k) = RotData%BladeProps(k)%BlCenBt
@@ -1707,7 +1706,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
    ! Calculate buoyant loads
    do iR = 1,size(p%rotors)
-      if ( p%rotors(iR)%Buoyancy ) then 
+      if ( p%rotors(iR)%MHK > 0 ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -3485,7 +3484,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    endif
    
    if (InitInp%MHK == 0 .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
-   if (InitInp%MHK == 0 .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    do iR = 1,size(NumBl)
       if (InitInp%MHK == 1 .and. InputFileData%rotors(iR)%TFinAero .or. InitInp%MHK == 2 .and. InputFileData%rotors(iR)%TFinAero) call SetErrStat ( ErrID_Fatal, 'A tail fin cannot be modeled for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
@@ -3566,8 +3564,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end do ! j=nodes
       end do ! k=blades
 
-      ! If the Buoyancy flag is True, check that the blade buoyancy coefficients are >= 0.
-      if ( InputFileData%Buoyancy )  then
+      ! If the MHK flag is set to 1 or 2, check that the blade buoyancy coefficients are >= 0.
+      if ( InitInp%MHK > 0 )  then
          do k=1,NumBl(iR)
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
                if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) < 0.0_ReKi )  then
@@ -3583,7 +3581,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! check tower mesh data:
       ! .............................   
    do iR = 1,size(NumBl)
-      if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero .or. InputFileData%Buoyancy .and. InputFileData%rotors(iR)%NumTwrNds > 0 ) then
+      if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow /= TwrShadow_none .or. InputFileData%TwrAero .or. InitInp%MHK > 0 .and. InputFileData%rotors(iR)%NumTwrNds > 0 ) then
          if (InputFileData%rotors(iR)%NumTwrNds < 2) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes on the tower.',ErrStat, ErrMsg, RoutineName )
          
             ! Check that the tower diameter is > 0.
@@ -3609,8 +3607,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
             end if
          end do ! j=nodes
 
-         ! If the Buoyancy flag is True, check that the tower buoyancy coefficients are >= 0.
-         if ( InputFileData%Buoyancy .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
+         ! If the MHK flag is set to 1 or 2, check that the tower buoyancy coefficients are >= 0.
+         if ( InitInp%MHK > 0 .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
             do j=1,InputFileData%rotors(iR)%NumTwrNds
                if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
@@ -3626,7 +3624,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! .............................
       ! check hub mesh data:
       ! .............................
-   if ( InputFileData%Buoyancy )  then
+   if ( InitInp%MHK > 0 )  then
 
          ! Check that the hub volume is >= 0.
       do iR = 1,size(NumBl)
@@ -3640,7 +3638,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       ! .............................
       ! check nacelle mesh data:
       ! .............................
-   if ( InputFileData%Buoyancy )  then
+   if ( InitInp%MHK > 0 )  then
 
          ! Check that the nacelle volume is >= 0.
       do iR = 1,size(NumBl)

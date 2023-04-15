@@ -175,7 +175,7 @@ CONTAINS
          m%AllOuts( TwNFdx( beta) ) = m%X_Twr(j)         
          m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       
-         if ( p%Buoyancy ) then
+         if ( p%MHK > 0 ) then
             tmp = matmul( u%TowerMotion%Orientation(:,:,j) , m%TwrBuoyLoad%Force(:,j) )
             m%AllOuts( TwNFbx(beta) ) = tmp(1)
             m%AllOuts( TwNFby(beta) ) = tmp(2)
@@ -190,7 +190,7 @@ CONTAINS
       end do ! out nodes
    
          ! hub outputs
-      if ( p%Buoyancy ) then
+      if ( p%MHK > 0 ) then
          tmpHubFB = matmul( u%HubMotion%Orientation(:,:,1) , m%HubFB )
          m%AllOuts( HbFbx ) = tmpHubFB(1)
          m%AllOuts( HbFby ) = tmpHubFB(2)
@@ -203,7 +203,7 @@ CONTAINS
       end if
    
          ! nacelle outputs
-      if ( p%Buoyancy ) then
+      if ( p%MHK > 0 ) then
          tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
          m%AllOuts( NcFbx ) = tmp(1)
          m%AllOuts( NcFby ) = tmp(2)
@@ -240,7 +240,7 @@ CONTAINS
             m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
             m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
 
-            if ( p%Buoyancy ) then
+            if ( p%MHK > 0 ) then
                tmp = matmul( u%BladeMotion(k)%Orientation(:,:,j), m%BladeBuoyLoad(k)%Force(:,j) )
                m%AllOuts( BNFbn(beta,k) ) = tmp(1)
                m%AllOuts( BNFbt(beta,k) ) = tmp(2)
@@ -701,9 +701,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! CavitCheck - Perform cavitation check? (flag) [AFAeroMod must be 1 when CavitCheck=true]
    call ParseVar( FileInfo_In, CurLine, "CavitCheck", InputFileData%CavitCheck, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-      ! Buoyancy - Include buoyancy effects? (flag)
-   call ParseVar( FileInfo_In, CurLine, "Buoyancy", InputFileData%Buoyancy, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
       ! CompAA - Flag to compute AeroAcoustics calculation [only used when WakeMod=1 or 2]
    call ParseVar( FileInfo_In, CurLine, "CompAA", InputFileData%CompAA, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
@@ -853,7 +850,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       IF ( PathIsRelative( InputFileData%ADBlFile(I) ) ) InputFileData%ADBlFile(I) = TRIM(PriPath)//TRIM(InputFileData%ADBlFile(I))
    enddo
 
-   !======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+   !======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
@@ -865,7 +862,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (Failed()) return
    end do
 
-   !======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+   !======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
@@ -892,11 +889,11 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       endif
    enddo
 
-   !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+   !======  Tower Influence and Aerodynamics ============================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
    do iR = 1,size(NumBlades) ! Loop on rotors
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
-         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+         ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
       call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
          !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb
@@ -1379,15 +1376,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    end if   
    WRITE (UnSu,Ec_LgFrmt) p%CavitCheck, 'CavitCheck', 'Perform cavitation check? '//TRIM(Msg)
 
-      ! Buoyancy
-   if (p%Buoyancy) then
-      Msg = 'Yes'
-   else
-      Msg = 'No'
-   end if   
-   WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
-
-
    if (p_AD%WakeMod/=WakeMod_none) then
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
       
@@ -1629,7 +1617,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( DBEMTau1 ) = .true.
    end if
 
-   if (.not. p%Buoyancy) then  ! Invalid buoyant loads
+   if ( p%MHK == 0 ) then  ! Invalid buoyant loads
       InvalidOutput( HbFbx ) = .true.
       InvalidOutput( HbFby ) = .true.
       InvalidOutput( HbFbz ) = .true.

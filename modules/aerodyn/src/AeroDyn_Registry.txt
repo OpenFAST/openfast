@@ -168,7 +168,6 @@ typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind ba
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef ^   AD_InputFile    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	CHARACTER(1024)	ADBlFile {:}	-	-	"AD blade file (NumBl filenames)"	"quoted strings"
@@ -363,7 +362,6 @@ typedef	^	RotParameterType	IntKi	TwrShadow	-	-	-	"Type of tower influence on win
 typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
 typedef ^   RotParameterType    IntKi   MHK         -   -   -   "MHK" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
