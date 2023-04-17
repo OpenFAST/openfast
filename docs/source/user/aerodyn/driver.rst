@@ -381,16 +381,16 @@ An example is given below for two turbines:
 
 .. code::
 
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
     7.0   VolHub             - Hub volume (m^3)
     0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
-    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    ======  Hub Properties ============================================================================== [used only when MHK=1 or 2]
     5.0   VolHub             - Hub volume (m^3)
     0.2   HubCenBx           - Hub center of buoyancy x direction offset (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2]
     32.0  VolNac             - Nacelle volume (m^3)
     0.3, 0.0, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
-    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    ======  Nacelle Properties ========================================================================== [used only when MHK=1 or 2]
     30.0  VolNac             - Nacelle volume (m^3)
     0.5, 0.1, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
 
@@ -406,14 +406,14 @@ An example is given below for two turbines:
 
 .. code::
 
-    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
     TwrElev TwrDiam  TwrCd    TwrTI   TwrCb
     (m)       (m)     (-)     (-)     (-)
      0.0      2.0     1.0    0.1      0.0
     10.0      1.0     1.0    0.1      0.0
-    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
-    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
+    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
     TwrElev TwrDiam  TwrCd   TwrTI   TwrCb
     (m)       (m)     (-)    (-)     (-)
      0.0      4.0     1.0    0.1     0.0
