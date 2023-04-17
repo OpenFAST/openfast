@@ -33,7 +33,8 @@ typedef  ^   ElemPropType  ReKi    Ixx      -  -  -  "Moment of inertia of an el
 typedef  ^   ElemPropType  ReKi    Iyy      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  ReKi    Jzz      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  LOGICAL Shear    -  -  -  "Use timoshenko (true) E-B (false)"
-typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_x    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_y    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
@@ -90,7 +91,7 @@ typedef  ^  SD_InitType   ReKi               PropSetsB {:}{:} - -     "Property 
 typedef  ^  SD_InitType   ReKi               PropSetsC {:}{:} - -     "Property ID and values for cables" 
 typedef  ^  SD_InitType   ReKi               PropSetsR {:}{:} - -     "Property ID and values for rigid link" 
 typedef  ^  SD_InitType   ReKi               PropSetsX {:}{:} - -     "Extended property sets" 
-typedef  ^  SD_InitType   ReKi               COSMs {:}{:} - -         "Independent direction cosine matrices" 
+typedef  ^  SD_InitType   R8Ki               COSMs {:}{:} - -         "Independent direction cosine matrices" 
 typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentrated mass information" 
 typedef  ^  SD_InitType   ReKi               JDampings {:} - -        "Damping coefficients for internal modes" 
 typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]" 

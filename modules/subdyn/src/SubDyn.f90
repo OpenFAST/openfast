@@ -851,7 +851,7 @@ CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold 
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
-LOGICAL                      :: bNumeric
+LOGICAL                      :: bNumeric, bInteger
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
@@ -1149,20 +1149,50 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,E
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
 Init%Members(:,:) = 0.0_ReKi
-if (LegacyFormat) then
-   nColumns = 5
-   Init%Members(:,iMType) = idMemberBeam ! Important, in legacy all members are beams
-else
-   nColumns = MembersCol
+
+nColumns=MembersCol
+
+if (p%NMembers == 0) then
+   CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
+   return
 endif
-DO I = 1, p%NMembers
+
+CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
+CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
+if (ErrStat2/=0) then
+   ! We try with one column less (legacy format)
+   nColumns = MembersCol-1
+   deallocate(StrArray)
+   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
+   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members.\
+   The directional cosines will be computed based on the member nodes for all members.')
+   Init%Members(:,7) = -1
+endif
+! Extract fields from first line
+DO I = 1, nColumns
+   bInteger = is_integer(StrArray(I), Init%Members(1,I)) ! Convert from string to float
+   if (.not.bInteger) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+ENDDO
+
+if (allocated(StrArray)) then
+   deallocate(StrArray)
+endif
+
+! ! Read remaining lines
+DO I = 2, p%NMembers
    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
    Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
-ENDDO   
+ENDDO 
+
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                 ' Member X-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1173,8 +1203,8 @@ DO I = 1, Init%NPropSetsB
 ENDDO   
 IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                  'Member X-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -3662,7 +3692,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       DummyArray(i,9) = p%ElemProps(i)%Rho  ! density  kg/m^3
       DummyArray(i,10) = p%ElemProps(i)%YoungE ! Young modulus
       DummyArray(i,11) = p%ElemProps(i)%ShearG ! G
-      DummyArray(i,12) = p%ElemProps(i)%Kappa ! Shear coefficient
+      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear coefficient
       DummyArray(i,13) = p%ElemProps(i)%Ixx   ! Moment of inertia
       DummyArray(i,14) = p%ElemProps(i)%Iyy   ! Moment of inertia
       DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
@@ -3728,7 +3758,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
        mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
        IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
-        if (mType==idMemberBeam) then
+        if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
            mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
@@ -3746,6 +3776,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+         else if (mType==idMemberBeamArb) then
+           iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
+           mMass= -1 ! TODO compute mass for arbitrary beams
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
@@ -3766,7 +3802,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '("#",I9,9(ES11.3E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
     
@@ -4134,6 +4170,19 @@ FUNCTION is_numeric(string, x)
    READ(string,fmt,IOSTAT=e) x
    is_numeric = e == 0
 END FUNCTION is_numeric
+
+FUNCTION is_integer(string, x)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   INTEGER(IntKi), INTENT(OUT) :: x
+   LOGICAL :: is_integer
+   INTEGER :: e, n
+   x = 0
+   n=LEN_TRIM(string)
+   READ(string,*,IOSTAT=e) x
+   is_integer = e == 0
+END FUNCTION is_integer
+
 FUNCTION is_logical(string, b)
    IMPLICIT NONE
    CHARACTER(len=*), INTENT(IN) :: string

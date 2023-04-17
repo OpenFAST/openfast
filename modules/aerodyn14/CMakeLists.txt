@@ -29,10 +29,13 @@ set(AD14_LIBS_SOURCES
   src/DWM_Types.f90
 )
 
-add_library(aerodyn14lib ${AD14_LIBS_SOURCES})
+add_library(aerodyn14lib_obj OBJECT ${AD14_LIBS_SOURCES})
+target_link_libraries(aerodyn14lib_obj ifwlib_obj nwtclibs_obj)
+
+add_library(aerodyn14lib $<TARGET_OBJECTS:aerodyn14lib_obj>)
 target_link_libraries(aerodyn14lib ifwlib nwtclibs)
 
-install(TARGETS aerodyn14lib
+install(TARGETS aerodyn14lib aerodyn14lib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

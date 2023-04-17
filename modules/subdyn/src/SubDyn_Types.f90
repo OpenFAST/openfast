@@ -69,7 +69,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Iyy      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Jzz      !< Moment of inertia of an element [-]
     LOGICAL  :: Shear      !< Use timoshenko (true) E-B (false) [-]
-    REAL(ReKi)  :: Kappa      !< Shear coefficient [-]
+    REAL(ReKi)  :: Kappa_x      !< Shear coefficient [-]
+    REAL(ReKi)  :: Kappa_y      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE      !< Young's modulus [-]
     REAL(ReKi)  :: ShearG      !< Shear modulus [N/m^2]
     REAL(ReKi) , DIMENSION(1:2)  :: D      !< Diameter at node 1 and 2, for visualization only [m]
@@ -130,7 +131,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsX      !< Extended property sets [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMass      !< Concentrated mass information [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: JDampings      !< Damping coefficients for internal modes [-]
     INTEGER(IntKi)  :: GuyanDampMod      !< Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix] [-]
@@ -1706,7 +1707,8 @@ ENDIF
     DstElemPropTypeData%Iyy = SrcElemPropTypeData%Iyy
     DstElemPropTypeData%Jzz = SrcElemPropTypeData%Jzz
     DstElemPropTypeData%Shear = SrcElemPropTypeData%Shear
-    DstElemPropTypeData%Kappa = SrcElemPropTypeData%Kappa
+    DstElemPropTypeData%Kappa_x = SrcElemPropTypeData%Kappa_x
+    DstElemPropTypeData%Kappa_y = SrcElemPropTypeData%Kappa_y
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
     DstElemPropTypeData%D = SrcElemPropTypeData%D
@@ -1780,7 +1782,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Iyy
       Re_BufSz   = Re_BufSz   + 1  ! Jzz
       Int_BufSz  = Int_BufSz  + 1  ! Shear
-      Re_BufSz   = Re_BufSz   + 1  ! Kappa
+      Re_BufSz   = Re_BufSz   + 1  ! Kappa_x
+      Re_BufSz   = Re_BufSz   + 1  ! Kappa_y
       Re_BufSz   = Re_BufSz   + 1  ! YoungE
       Re_BufSz   = Re_BufSz   + 1  ! ShearG
       Re_BufSz   = Re_BufSz   + SIZE(InData%D)  ! D
@@ -1827,7 +1830,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Shear, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Kappa
+    ReKiBuf(Re_Xferred) = InData%Kappa_x
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Kappa_y
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%YoungE
     Re_Xferred = Re_Xferred + 1
@@ -1891,7 +1896,9 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Shear = TRANSFER(IntKiBuf(Int_Xferred), OutData%Shear)
     Int_Xferred = Int_Xferred + 1
-    OutData%Kappa = ReKiBuf(Re_Xferred)
+    OutData%Kappa_x = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%Kappa_y = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%YoungE = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -3690,7 +3697,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! COSMs allocated yes/no
   IF ( ALLOCATED(InData%COSMs) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! COSMs upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%COSMs)  ! COSMs
+      Db_BufSz   = Db_BufSz   + SIZE(InData%COSMs)  ! COSMs
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! CMass allocated yes/no
   IF ( ALLOCATED(InData%CMass) ) THEN
@@ -3978,8 +3985,8 @@ ENDIF
 
       DO i2 = LBOUND(InData%COSMs,2), UBOUND(InData%COSMs,2)
         DO i1 = LBOUND(InData%COSMs,1), UBOUND(InData%COSMs,1)
-          ReKiBuf(Re_Xferred) = InData%COSMs(i1,i2)
-          Re_Xferred = Re_Xferred + 1
+          DbKiBuf(Db_Xferred) = InData%COSMs(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -4598,8 +4605,8 @@ ENDIF
     END IF
       DO i2 = LBOUND(OutData%COSMs,2), UBOUND(OutData%COSMs,2)
         DO i1 = LBOUND(OutData%COSMs,1), UBOUND(OutData%COSMs,1)
-          OutData%COSMs(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
+          OutData%COSMs(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
