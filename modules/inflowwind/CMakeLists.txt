@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2023 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
 endif()
 
-add_library(ifwlib 
+add_library(ifwlib_obj OBJECT 
   src/IfW_FlowField_Types.f90
   src/IfW_FlowField.f90
   src/InflowWind_IO_Types.f90
@@ -30,10 +30,7 @@ add_library(ifwlib
   src/InflowWind_Types.f90
   src/InflowWind.f90 
   src/Lidar_Types.f90
-  src/Lidar.f90
-)
-
-add_library(ifwlib_obj OBJECT ${IFW_SOURCES})
+  src/Lidar.f90)
 target_link_libraries(ifwlib_obj nwtclibs_obj)
 
 add_library(ifwlib $<TARGET_OBJECTS:ifwlib_obj>)
