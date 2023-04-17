@@ -1299,7 +1299,7 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ErrMsg   =  ""
 
    ! Finalize output file
-   if (WrOutputsData%fileFmt > idFmtNone) then
+   if (WrOutputsData%fileFmt > idFmtNone .and. allocated(WrOutputsData%unOutFile)) then
       ! Close the output file
       if (WrOutputsData%fileFmt==idFmtBoth .or. WrOutputsData%fileFmt == idFmtAscii) then
          do iWT=1,Sim%numTurbines
