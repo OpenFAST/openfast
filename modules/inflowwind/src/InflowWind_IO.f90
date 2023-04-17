@@ -2418,13 +2418,18 @@ subroutine Grid3D_AddMeanVelocity(InitInp, G3D)
    real(ReKi)        :: U           ! mean wind speed
    integer(IntKi)    :: iz, iy      ! loop counter
    integer(IntKi)    :: centre_y    ! index of centre in y direction
+   integer(IntKi)    :: first_positive_iz ! index of first height that is above ground
 
    ! Loop through grid elevations
+   first_positive_iz = 1
    do iz = 1, G3D%NZGrids
 
       ! calculate height
       Z = G3D%GridBase + (iz - 1)/G3D%InvDZ
-      if (Z <= 0.0_ReKi) cycle
+      if (Z <= 0.0_ReKi) then
+         first_positive_iz = iz + 1
+         cycle
+      end if
 
       ! Calculate wind speed to add based on profile
       select case (G3D%WindProfileType)
@@ -2457,8 +2462,8 @@ subroutine Grid3D_AddMeanVelocity(InitInp, G3D)
 
    end do
 
-   ! Add horizontal linear shear, if nonzero
-   if (InitInp%HLinShr /= 0.0_ReKi) then
+   ! Add horizontal linear shear, if nonzero (only to the points above the ground)
+   if (InitInp%HLinShr /= 0.0_ReKi .and. first_positive_iz <= G3D%NZGrids) then
 
       ! find the center point of the grid (if we don't have an odd number of grid points, we'll pick the point closest to the center)
       centre_y = (G3D%NYGrids + 1)/2 ! integer division
@@ -2467,7 +2472,7 @@ subroutine Grid3D_AddMeanVelocity(InitInp, G3D)
       do iy = 1, G3D%NYGrids
          Y = (iy - centre_y)/G3D%InvDY
          U = G3D%MeanWS*InitInp%HLinShr*Y/G3D%RefLength
-         G3D%Vel(1, iy, :, :) = real(G3D%Vel(1, iy, :, :) + U, SiKi)
+         G3D%Vel(1, iy, first_positive_iz:, :) = real(G3D%Vel(1, iy, first_positive_iz:, :) + U, SiKi)
       end do
    end if
 
