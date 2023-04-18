@@ -118,13 +118,8 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
-:IfW_TSFFWind
-:IfW_HAWCWind
-:IfW_BladedFFWind
-:IfW_UserWind
-:IfW_4Dext
-:IfW_FFWind_Base
-:IfW_UniformWind
+:IfW_FlowField
+:InflowWind_IO
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"

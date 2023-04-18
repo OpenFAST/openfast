@@ -44,7 +44,7 @@ contains
         PriPath = ""
 
         InFileInfo = getInputFileData()
-        InFileInfo%Lines(64:66) = (/ &
+        InFileInfo%Lines(65:67) = (/ &
             'True          SumPrint     - Print summary data to <RootName>.IfW.sum (flag)                                                                                   ', &
             '              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)', &
             '"Wind1VelX,Wind1VelY"      - Wind velocity at point WindVxiList(1),WindVyiList(1),WindVziList(1).  X, Y, and Z direction components.                           ' &

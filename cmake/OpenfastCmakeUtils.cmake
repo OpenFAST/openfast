@@ -42,13 +42,11 @@
 function(generate_f90_types regfile outfile)
   get_filename_component(input ${regfile} ABSOLUTE)
   get_filename_component(outdir ${outfile} DIRECTORY)
-
   add_custom_command(
     OUTPUT ${outfile}
     DEPENDS openfast_registry ${input}
-    COMMAND ${CMAKE_BINARY_DIR}/modules/openfast-registry/openfast_registry ${input} "-O" "${outdir}" ${OPENFAST_REGISTRY_INCLUDES} ${ARGN}
+    COMMAND ${CMAKE_BINARY_DIR}/modules/openfast-registry/openfast_registry ${input} "-O" ${outdir} ${OPENFAST_REGISTRY_INCLUDES} ${ARGN}
   )
-  set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
 endfunction(generate_f90_types)
 
 #

@@ -560,6 +560,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%RootName         = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))
       Init%InData_IfW%UseInputFile     = .TRUE.
       Init%InData_IfW%FixedWindFileRootName = .FALSE.
+      Init%InData_IfW%OutputAccel      = p_FAST%MHK > 0
 
       Init%InData_IfW%NumWindPoints = 0
       IF ( p_FAST%CompServo == Module_SrvD ) Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + 1
@@ -568,6 +569,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
          ! Number of Wind points from AeroDyn, see AeroDyn.f90
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD_NumWindPoints(AD%Input(1), AD%OtherSt(STATE_CURR))
+         ! Wake -- we allow the wake positions to exceed the wind box
+         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
+            Init%InData_IfW%BoxExceedAllowF = .true.
+            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+         endif
       END IF
 
       ! lidar
