@@ -33,7 +33,7 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(mapcpplib_obj OBJECT ${MAP_CLIB_SOURCES} src/MAP_Types.f90 src/MAP_Fortran_Types.f90)
+add_library(mapcpplib_obj OBJECT ${MAP_CLIB_SOURCES})
 
 target_include_directories(mapcpplib_obj PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
@@ -52,7 +52,7 @@ set(MAP_F_SOURCES
   src/MAP_Fortran_Types.f90
 )
 
-add_library(maplib_obj OBJECT src/map.f90)
+add_library(maplib_obj OBJECT ${MAP_F_SOURCES})
 target_link_libraries(maplib_obj mapcpplib_obj nwtclibs_obj)
 
 add_library(maplib $<TARGET_OBJECTS:mapcpplib_obj> $<TARGET_OBJECTS:maplib_obj>)
