@@ -19,7 +19,6 @@
 #===============================================================================
 
 function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABEL)
-  file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
 
   file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
   file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
@@ -55,7 +54,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
   endif()
   
   add_test(
-    ${TESTNAME} ${PYTHON_EXECUTABLE}
+    ${TESTNAME} ${Python_EXECUTABLE}
        ${TEST_SCRIPT}
        ${TESTDIR}
        ${EXECUTABLE}
@@ -149,7 +148,7 @@ endfunction(ad_regression)
 # aerodyn-Py
 function(py_ad_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodynPyRegressionCase.py")
-  set(AERODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(AERODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -187,7 +186,7 @@ endfunction(hd_regression)
 # py_hydrodyn
 function(py_hd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynPyRegressionCase.py")
-  set(HYDRODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(HYDRODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -214,7 +213,7 @@ endfunction(ifw_regression)
 # py_inflowwind
 function(py_ifw_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindPyRegressionCase.py")
-  set(INFLOWWIND_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(INFLOWWIND_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -232,7 +231,7 @@ endfunction(md_regression)
 # py_moordyn c-bindings interface
 function(py_md_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynPyRegressionCase.py")
-  set(MOORDYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(MOORDYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
   regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -242,7 +241,7 @@ endfunction(py_md_regression)
 # function(py_openfast_library_regression TESTNAME LABEL)
 #   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
 #   set(input_file "${CMAKE_SOURCE_DIR}/reg_tests/r-test/glue-codes/openfast/5MW_OC4Jckt_ExtPtfm/5MW_OC4Jckt_ExtPtfm.fst")
-#   add_test(${TESTNAME} ${PYTHON_EXECUTABLE} ${test_module} ${input_file} )
+#   add_test(${TESTNAME} ${Python_EXECUTABLE} ${test_module} ${input_file} )
 # endfunction(py_openfast_library_regression)
 
 

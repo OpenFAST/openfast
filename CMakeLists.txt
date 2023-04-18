@@ -226,6 +226,12 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
 if(BUILD_TESTING)
   include(CTest)
 
+  # Find python
+  find_package (Python COMPONENTS Interpreter)
+  if(NOT ${Python_FOUND})
+    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
+  endif()
+
   # regression tests
   add_subdirectory(reg_tests)
 
