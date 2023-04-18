@@ -1166,8 +1166,8 @@ if (ErrStat2/=0) then
    deallocate(StrArray)
    CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
-   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members.\
-   The directional cosines will be computed based on the member nodes for all members.')
+   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
+   &The directional cosines will be computed based on the member nodes for all members.')
    Init%Members(:,7) = -1
 endif
 ! Extract fields from first line
