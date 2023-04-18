@@ -949,6 +949,8 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          Ixx   = (Init%PropSetsX(P1, 8) + Init%PropSetsX(P2, 8)) / 2
          Iyy   = (Init%PropSetsX(P1, 9) + Init%PropSetsX(P2, 9)) / 2
          Jzz   = (Init%PropSetsX(P1, 10) + Init%PropSetsX(P2, 10)) / 2
+         D1 = 2._ReKi*(A/PI)**0.5 !Approximation, this value should not be used
+         D2 = D1
 
          p%ElemProps(i)%Ixx    = Ixx
          p%ElemProps(i)%Iyy    = Iyy

@@ -310,6 +310,12 @@ contains
       type(Grid3DFieldType), intent(in)  :: GF
       real(ReKi), intent(in)           :: PosZ
       real(ReKi)                       :: U
+      
+      if  (PosZ <= 0.0_ReKi) then
+         U = 0.0_ReKi
+         return
+      end if
+      
       select case (GF%WindProfileType)
       case (WindProfileType_None)
          U = 0.0_ReKi
@@ -326,6 +332,8 @@ contains
       case default
          U = 0.0_ReKi
       end select
+      
+      !bjj: is there a reason we aren't adding the mean vertical and/or horizontal shear here, as in CalculateMeanVelocity() and Grid3D_AddMeanVelocity()?
    end function
 
 end subroutine
@@ -1715,6 +1723,11 @@ function CalculateMeanVelocity(G3D, z, y) result(u)
    real(ReKi), intent(IN)  :: y                 ! lateral location
    real(ReKi)                                               :: u                 ! mean wind speed at position (y,z)
 
+   if  (Z <= 0.0_ReKi) then
+      U = 0.0_ReKi
+      return
+   end if
+   
    select case (G3D%WindProfileType)
 
    case (WindProfileType_PL)
