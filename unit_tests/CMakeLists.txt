@@ -27,7 +27,7 @@ include(CTest)
 include(ExternalProject)
 
 set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
-set(PFUNIT_LIB_PATH ${PROJECT_BINARY_DIR}/pfunit/lib/libpfunit${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(PFUNIT_LIB_PATH ${PROJECT_BINARY_DIR}/pfunit/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pfunit${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
 set(pfunit_directory ${PFUNIT_INSTALL})

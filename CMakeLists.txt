@@ -110,7 +110,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 # (see https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors)
 find_package(LAPACK)
 if (LAPACK_FOUND)
-  message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+  add_link_options(${LAPACK_LINKER_FLAGS})
 elseif (USE_LOCAL_STATIC_LAPACK)
   message(STATUS "Downloading and building LAPACK as static libraries for linking with OpenFAST")
   include(ExternalProject)
@@ -120,13 +120,14 @@ elseif (USE_LOCAL_STATIC_LAPACK)
     PREFIX ${CMAKE_BINARY_DIR}/dependencies
   )
   set(LAPACK_LIBRARIES 
-      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/liblapack${CMAKE_STATIC_LIBRARY_SUFFIX} 
-      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas${CMAKE_STATIC_LIBRARY_SUFFIX} 
+      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX} 
+      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}blas${CMAKE_STATIC_LIBRARY_SUFFIX} 
       CACHE STRING "LAPACK library" FORCE)
   install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
 else()
   message(FATAL_ERROR "Unable to find BLAS and LAPACK")
 endif()
+message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 ########################################################################
 # Build rules for OpenFAST Registry
