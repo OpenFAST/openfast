@@ -113,16 +113,16 @@ if (LAPACK_FOUND)
   add_link_options(${LAPACK_LINKER_FLAGS})
 elseif (USE_LOCAL_STATIC_LAPACK)
   message(STATUS "Downloading and building LAPACK as static libraries for linking with OpenFAST")
+  set(BLAS_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}blas${CMAKE_STATIC_LIBRARY_SUFFIX} )
+  set(LAPACK_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX})
   include(ExternalProject)
   ExternalProject_Add(lapack
     URL http://www.netlib.org/lapack/lapack.tgz
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
     PREFIX ${CMAKE_BINARY_DIR}/dependencies
+    BUILD_BYPRODUCTS ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH}
   )
-  set(LAPACK_LIBRARIES 
-      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX} 
-      ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}blas${CMAKE_STATIC_LIBRARY_SUFFIX} 
-      CACHE STRING "LAPACK library" FORCE)
+  set(LAPACK_LIBRARIES ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH} CACHE STRING "LAPACK library" FORCE)
   install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
 else()
   message(FATAL_ERROR "Unable to find BLAS and LAPACK")
