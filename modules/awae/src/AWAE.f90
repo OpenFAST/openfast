@@ -1078,14 +1078,25 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
          call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%lidar%LidSpeed, size(m%y_IfW_Low%lidar%LidSpeed), 'm%y_IfW_High%lidar%LidSpeed', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%lidar%MsrPositionsX, size(m%y_IfW_High%lidar%MsrPositionsX), 'm%y_IfW_High%lidar%MsrPositionsX', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%lidar%MsrPositionsY, size(m%y_IfW_High%lidar%MsrPositionsY), 'm%y_IfW_High%lidar%MsrPositionsY', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%lidar%MsrPositionsZ, size(m%y_IfW_High%lidar%MsrPositionsZ), 'm%y_IfW_High%lidar%MsrPositionsZ', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if (allocated(m%y_IfW_Low%lidar%LidSpeed)) then
+            call AllocAry(m%y_IfW_High%lidar%LidSpeed,      size(m%y_IfW_Low%lidar%LidSpeed      ), 'm%y_IfW_High%lidar%LidSpeed',      ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsX)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsX, size(m%y_IfW_High%lidar%MsrPositionsX), 'm%y_IfW_High%lidar%MsrPositionsX', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsY)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsY, size(m%y_IfW_High%lidar%MsrPositionsY), 'm%y_IfW_High%lidar%MsrPositionsY', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsZ)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsZ, size(m%y_IfW_High%lidar%MsrPositionsZ), 'm%y_IfW_High%lidar%MsrPositionsZ', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+
+
+
       END IF
       if (errStat2 >= AbortErrLev) then
             return
