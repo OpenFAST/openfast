@@ -71,14 +71,6 @@ set(CTEST_INFLOWWIND_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/inflowwind/inflowwi
 # Set the MoorDyn executable configuration option and default
 set(CTEST_MOORDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/moordyn/moordyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the MoorDyn driver executable to use in testing.")
 
-# Set the python executable configuration option and default
-if(NOT EXISTS ${PYTHON_EXECUTABLE})
-  find_program(PYTHON_EXECUTABLE NAMES python3 python py)
-  if(NOT EXISTS ${PYTHON_EXECUTABLE})
-    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
-  endif()
-endif()
-
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
 set(CTEST_RTEST_ATOL "1.9" CACHE STRING "Set the absolute orders of magnitude to consider as testable values; any deviations smaller than this always pass.")
