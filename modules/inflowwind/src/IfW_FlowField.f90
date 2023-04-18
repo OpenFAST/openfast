@@ -333,6 +333,7 @@ contains
          U = 0.0_ReKi
       end select
       
+      !bjj: is there a reason we aren't adding the mean vertical and/or horizontal shear here, as in CalculateMeanVelocity() and Grid3D_AddMeanVelocity()?
    end function
 
 end subroutine
