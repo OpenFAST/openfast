@@ -1302,16 +1302,20 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       p%NumTwrNds     = RotData%NumTwrNds
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
-      call move_alloc( RotData%TwrCd,   p%TwrCd )      
-      call move_alloc( RotData%TwrTI,   p%TwrTI )   
-      call move_alloc( RotData%TwrCb,   p%TwrCb ) 
+      call move_alloc( RotData%TwrCd  , p%TwrCd   )      
+      call move_alloc( RotData%TwrTI  , p%TwrTI   )   
+      call move_alloc( RotData%TwrCb  , p%TwrCb   ) 
+      call move_alloc( RotData%TwrCpt , p%TwrCpt  ) 
+      call move_alloc( RotData%TwrCat , p%TwrCat  ) 
    else
       p%NumTwrNds     = RotData%NumTwrNds
       
       call move_alloc( RotData%TwrDiam, p%TwrDiam )
-      call move_alloc( RotData%TwrCd,   p%TwrCd )      
-      call move_alloc( RotData%TwrTI,   p%TwrTI )   
-      call move_alloc( RotData%TwrCb,   p%TwrCb )
+      call move_alloc( RotData%TwrCd  , p%TwrCd   )      
+      call move_alloc( RotData%TwrTI  , p%TwrTI   )   
+      call move_alloc( RotData%TwrCb  , p%TwrCb   ) 
+      call move_alloc( RotData%TwrCpt , p%TwrCpt  ) 
+      call move_alloc( RotData%TwrCat , p%TwrCat  ) 
    end if
 
    if (p%MHK > 0) then
@@ -1708,6 +1712,15 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%MHK > 0 ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+   end do  
+
+   ! Calculate added mass and inertia loads
+   do iR = 1,size(p%rotors)
+      if ( p%rotors(iR)%MHK > 0 ) then 
+         call CalcAddedMassInertiaLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
@@ -2314,6 +2327,42 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    y%NacelleLoad%Moment(:,1) = NacMBtmp
 
 end subroutine CalcBuoyantLoads
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates added mass and inertia loads on an MHK turbine.
+subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
+   TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
+   TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
+   TYPE(RotOutputType),                            INTENT(INOUT)  :: y                !< Outputs computed at t 
+   INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                                   :: k                !< Loop counter for blades
+   INTEGER(IntKi)                                   :: j                !< Loop counter for nodes
+   CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcAddedMassInertiaLoads'
+
+
+      ! Initialize variables for this routine
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+      ! Blades
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+
+            ! Convert fluid acceleration at node to local blade coordinates
+
+            ! Calculate per-unit-length inertia forces at node
+
+            ! Convert inertia forces to global coordinates
+
+            ! ...
+         
+      end do
+   end do
+end subroutine CalcAddedMassInertiaLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
@@ -3564,12 +3613,28 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          end do ! j=nodes
       end do ! k=blades
 
-      ! If the MHK flag is set to 1 or 2, check that the blade buoyancy coefficients are >= 0.
+      ! If the MHK flag is set to 1 or 2, check that the blade buoyancy and added mass coefficients are >= 0.
       if ( InitInp%MHK > 0 )  then
          do k=1,NumBl(iR)
             do j=1,InputFileData%rotors(iR)%BladeProps(k)%NumBlNds
                if ( InputFileData%rotors(iR)%BladeProps(k)%BlCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%t_c(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The thickness to chord ratio for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCac(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The chordwise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCae(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The edgewise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                                 //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCap(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The pitch added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
             end do ! j=nodes
@@ -3607,11 +3672,15 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
             end if
          end do ! j=nodes
 
-         ! If the MHK flag is set to 1 or 2, check that the tower buoyancy coefficients are >= 0.
+         ! If the MHK flag is set to 1 or 2, check that the tower buoyancy and added mass coefficients are >= 0.
          if ( InitInp%MHK > 0 .and. InputFileData%rotors(iR)%NumTwrNds > 0 )  then
             do j=1,InputFileData%rotors(iR)%NumTwrNds
                if ( InputFileData%rotors(iR)%TwrCb(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
+               endif
+
+               if ( InputFileData%rotors(iR)%TwrCat(j) < 0.0_ReKi )  then
+                  call SetErrStat( ErrID_Fatal, 'The added mass coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
             end do ! j=nodes
          end if
