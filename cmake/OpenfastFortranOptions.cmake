@@ -42,8 +42,9 @@ macro(set_fast_fortran)
 
   # Abort if we do not have gfortran or Intel Fortran Compiler.
   if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
-        ${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel"))
-    message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}.")
+        ${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel" OR
+        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+    message(FATAL_ERROR "OpenFAST requires GFortran, Intel, or Flang Compiler. Compiler detected by CMake: ${FCNAME}.")
   endif()
 
   # Verify proper compiler versions are available
@@ -70,6 +71,8 @@ macro(set_fast_fortran)
     set_fast_gfortran()
   elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
     set_fast_intel_fortran()
+  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
+    set_fast_flang()
   endif()
 
   # If double precision option enabled, set preprocessor define to use
@@ -238,3 +241,24 @@ macro(set_fast_intel_fortran_windows)
 
   check_f2008_features()
 endmacro(set_fast_intel_fortran_windows)
+
+#
+# set_fast_flang - Customizations for GNU Fortran compiler
+#
+macro(set_fast_flang)
+
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fno-backslash -cpp -fPIC")
+
+  # Deal with Double/Single precision
+  if (DOUBLE_PRECISION)
+    add_definitions(-DOPENFAST_DOUBLE_PRECISION)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
+  endif (DOUBLE_PRECISION)
+
+  # OPENMP
+  if (OPENMP)
+     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
+  endif()
+
+  check_f2008_features()
+endmacro(set_fast_flang)

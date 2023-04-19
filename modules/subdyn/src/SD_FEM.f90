@@ -1791,8 +1791,11 @@ SUBROUTINE DirectElimination(Init, p, ErrStat, ErrMsg)
    nDOF = p%nDOF_red
    if (p%reduced) then
       ! Temporary backup of M and K of full system
-      call move_alloc(Init%M,  MM)
-      call move_alloc(Init%K,  KK)
+      CALL AllocAry(KK, size(Init%K,1), size(Init%K,2), 'KK',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+      CALL AllocAry(MM, size(Init%M,1), size(Init%M,2), 'MM',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+      KK = Init%K
+      MM = Init%M
+      deallocate(Init%K, Init%M)
       !  Reallocating
       CALL AllocAry( Init%K,      nDOF, nDOF,       'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
       CALL AllocAry( Init%M,      nDOF, nDOF,       'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
