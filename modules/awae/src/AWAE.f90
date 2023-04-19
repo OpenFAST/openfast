@@ -1147,7 +1147,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
    allocate ( u%WAT_k_mt  (0:p%NumRadii-1, 0:p%NumPlanes-1, 1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%k_mt.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   if (errStat >= AbortErrLev) return
 
    u%Vx_wake=0.0_ReKi
    u%Vy_wake=0.0_ReKi
