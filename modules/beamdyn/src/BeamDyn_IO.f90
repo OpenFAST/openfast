@@ -1109,6 +1109,10 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    DO i=1,BladeInputFileData%station_total
+      if (i > 1) then
+         CALL ReadCom(UnIn,BldFile,'blank line after mass matrix',ErrStat2,ErrMsg2,UnEc)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      end if
 
       CALL ReadVar(UnIn,BldFile,BladeInputFileData%station_eta(i),'station_eta','Station '//trim(num2lstr(i))//' Eta',ErrStat2,ErrMsg2,UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1122,7 +1126,8 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
          return
       end if
       BladeInputFileData%stiff0(:,:,i) = temp66
-
+      CALL ReadCom(UnIn,BldFile,'blank line after stiffness matrix',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       DO j=1,6
          CALL ReadAry(UnIn,BldFile,temp66(j,:),6,'mass_matrix','Blade C/S mass matrix',ErrStat2,ErrMsg2,UnEc)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
