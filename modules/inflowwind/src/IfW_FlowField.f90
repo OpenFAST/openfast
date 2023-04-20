@@ -215,14 +215,12 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             end if
          end if
 
-      end do
+         ! Add mean wind speed after interpolation if flag is set
+         if (FF%Grid3D%AddMeanAfterInterp) then
+            VelocityUVW(1, i) = VelocityUVW(1, i) + CalculateMeanVelocity(FF%Grid3D, Position(3, i), Position(2, i))
+         end if
 
-      ! Add mean wind speed after interpolation if flag is set
-      if (FF%Grid3D%AddMeanAfterInterp) then
-         do i = 1, NumPoints
-            VelocityUVW(1, i) = VelocityUVW(1, i) + GetMeanVelocity(FF%Grid3D, Position(3, i))
-         end do
-      end if
+      end do
 
    case (Grid4D_FieldType)
 
@@ -304,36 +302,6 @@ contains
       real(ReKi), dimension(3), intent(in)      :: Pos
       real(ReKi), dimension(3)                  :: PrimePos
       PrimePos = matmul(FF%RotToWind, (Pos - FF%RefPosition)) + FF%RefPosition
-   end function
-
-   function GetMeanVelocity(GF, PosZ) result(U)
-      type(Grid3DFieldType), intent(in)  :: GF
-      real(ReKi), intent(in)           :: PosZ
-      real(ReKi)                       :: U
-      
-      if  (PosZ <= 0.0_ReKi) then
-         U = 0.0_ReKi
-         return
-      end if
-      
-      select case (GF%WindProfileType)
-      case (WindProfileType_None)
-         U = 0.0_ReKi
-      case (WindProfileType_PL)
-         U = GF%MeanWS*(PosZ/GF%RefHeight)**GF%PLExp ! [IEC 61400-1 6.3.1.2 (10)]
-      case (WindProfileType_Log)
-         if (.not. EqualRealNos(GF%RefHeight, GF%Z0) .and. PosZ > 0.0_ReKi) then
-            U = GF%MeanWS*log(PosZ/GF%Z0)/log(GF%RefHeight/GF%Z0)
-         else
-            U = 0.0_ReKi
-         end if
-      case (WindProfileType_Constant)
-         U = GF%MeanWS
-      case default
-         U = 0.0_ReKi
-      end select
-      
-      !bjj: is there a reason we aren't adding the mean vertical and/or horizontal shear here, as in CalculateMeanVelocity() and Grid3D_AddMeanVelocity()?
    end function
 
 end subroutine
@@ -1718,10 +1686,10 @@ end subroutine
 
 function CalculateMeanVelocity(G3D, z, y) result(u)
 
-   type(Grid3DFieldType), intent(IN)  :: G3D                 !< Parameters
-   real(ReKi), intent(IN)  :: Z                 ! height
-   real(ReKi), intent(IN)  :: y                 ! lateral location
-   real(ReKi)                                               :: u                 ! mean wind speed at position (y,z)
+   type(Grid3DFieldType), intent(IN)   :: G3D   !< Parameters
+   real(ReKi), intent(IN)              :: Z     ! height
+   real(ReKi), intent(IN)              :: y     ! lateral location
+   real(ReKi)                          :: u     ! mean wind speed at position (y,z)
 
    if  (Z <= 0.0_ReKi) then
       U = 0.0_ReKi
