@@ -1085,7 +1085,7 @@ Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 do I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading reaction line'; if (Failed()) return
-   j = index(line, achar(13))
+   j = index(line, achar(13))       ! Remove any carriage returns in this line (required by the Flang compiler)
    do while (j > 0)
       line(j:j) = " "
       j = index(line, achar(13))
@@ -1128,7 +1128,7 @@ p%Nodes_I(:,1) = -1 ! First column is node, initalize to wrong value for safety
 ! Reading interface lines one by one, allowing for 1 or 7 columns (cannot use ReadIAry)
 DO I = 1, p%nNodes_I
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Error reading interface line'; if (Failed()) return
-   j = index(line, achar(13))
+   j = index(line, achar(13))    ! Remove any carriage returns in this line (required by the Flang compiler)
    do while (j > 0)
       line(j:j) = " "
       j = index(line, achar(13))
