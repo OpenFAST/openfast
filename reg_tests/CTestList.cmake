@@ -282,6 +282,7 @@ of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf"
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
+of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
@@ -331,6 +332,7 @@ ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
 ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem;mhk")
+ad_regression("ad_MHK_RM1_Floating          "aerodyn;bem;mhk")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
