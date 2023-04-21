@@ -92,7 +92,8 @@ if not os.path.isdir(inputsDirectory):
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
     os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,"*inp")):
+    for file in (glob.glob(os.path.join(inputsDirectory,"*inp")) +
+                 glob.glob(os.path.join(inputsDirectory,"*bts"))):
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 

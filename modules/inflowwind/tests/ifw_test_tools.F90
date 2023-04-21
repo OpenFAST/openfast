@@ -13,7 +13,7 @@ contains
         INTEGER                             :: ErrStat
         CHARACTER(ErrMsgLen)                :: ErrMsg
         TYPE(FileInfoType)                  :: getInputFileData
-        CHARACTER(1024), DIMENSION(68)      :: data = (/ &
+        CHARACTER(1024), DIMENSION(69)      :: data = (/ &
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
@@ -21,6 +21,7 @@ contains
             '          1   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &
+            '      false   VelInterpCubic - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]                                              ', &
             '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
             '          0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
             '          0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
@@ -93,7 +94,7 @@ contains
         INTEGER                             :: ErrStat
         CHARACTER(ErrMsgLen)                :: ErrMsg
         TYPE(FileInfoType)                  :: getInputFileDataWindType2
-        CHARACTER(1024), DIMENSION(68)      :: data = (/ &
+        CHARACTER(1024), DIMENSION(69)      :: data = (/ &
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
@@ -101,6 +102,7 @@ contains
             '          2   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &
+            '      false   VelInterpCubic - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]                                              ', &
             '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
             '          0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
             '          0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &

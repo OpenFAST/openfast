@@ -58,16 +58,23 @@ MODULE NWTC_Base
    
    INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 5                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
    
+#ifdef FLANG_COMPILER
+   TYPE(C_FUNPTR), PARAMETER     :: NULL_PROC_ADDR(NWTC_MAX_DLL_PROC) = C_NULL_FUNPTR  !< this is a hack so the Flang compiler will initialize ProcAddr to C_NULL_FUNPTR in DLL_Type (remove if no longer needed)
+#endif
 
       !> Type definition for dynamically loaded libraries:
       !! Note that changes here may need to be reflected in DLLTypePack() (nwtc_io::dlltypepack) DLLTypeUnPack() (nwtc_io::dlltypeunpack), 
       !! and the FAST Registry executable.
-   
+
    TYPE DLL_Type 
 
       INTEGER(C_INTPTR_T)       :: FileAddr  = INT(0,C_INTPTR_T)                   !< The address of file FileName.         (RETURN value from LoadLibrary ) [Windows]
       TYPE(C_PTR)               :: FileAddrX = C_NULL_PTR                          !< The address of file FileName.         (RETURN value from dlopen ) [Linux]
-      TYPE(C_FUNPTR)            :: ProcAddr(NWTC_MAX_DLL_PROC)  = C_NULL_FUNPTR    !< The address of procedure ProcName.    (RETURN value from GetProcAddress or dlsym) [initialized to Null for pack/unpack]
+#ifdef FLANG_COMPILER
+      TYPE(C_FUNPTR)            :: ProcAddr(NWTC_MAX_DLL_PROC) = NULL_PROC_ADDR    !< The address of procedure ProcName.    (RETURN value from GetProcAddress or dlsym) [initialized to Null for pack/unpack]
+#else
+      TYPE(C_FUNPTR)            :: ProcAddr(NWTC_MAX_DLL_PROC) = C_NULL_FUNPTR     !< The address of procedure ProcName.    (RETURN value from GetProcAddress or dlsym) [initialized to Null for pack/unpack]
+#endif
 
       CHARACTER(1024)           :: FileName                                        !< The name of the DLL file including the full path to the current working directory.
       CHARACTER(1024)           :: ProcName(NWTC_MAX_DLL_PROC)  = ""               !< The name of the procedure in the DLL that will be called.
