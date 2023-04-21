@@ -134,6 +134,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: Vel      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
     REAL(ReKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
+    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
   END TYPE Grid4DFieldType
 ! =======================
 ! =========  PointsFieldType  =======
@@ -143,7 +144,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UserFieldType  =======
   TYPE, PUBLIC :: UserFieldType
-    REAL(SiKi)  :: Dummy      !<  [-]
+    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
   END TYPE UserFieldType
 ! =======================
 ! =========  FlowFieldType  =======
@@ -2324,6 +2325,7 @@ IF (ALLOCATED(SrcGrid4DFieldTypeData%Vel)) THEN
     DstGrid4DFieldTypeData%Vel = SrcGrid4DFieldTypeData%Vel
 ENDIF
     DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
+    DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
  END SUBROUTINE IfW_FlowField_CopyGrid4DFieldType
 
  SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType( Grid4DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2396,6 +2398,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! TimeStart
+      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2471,6 +2474,8 @@ ENDIF
       END DO
   END IF
     ReKiBuf(Re_Xferred) = InData%TimeStart
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RefHeight
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_PackGrid4DFieldType
 
@@ -2562,6 +2567,8 @@ ENDIF
       END DO
   END IF
     OutData%TimeStart = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%RefHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_UnPackGrid4DFieldType
 
@@ -2779,7 +2786,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstUserFieldTypeData%Dummy = SrcUserFieldTypeData%Dummy
+    DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
  END SUBROUTINE IfW_FlowField_CopyUserFieldType
 
  SUBROUTINE IfW_FlowField_DestroyUserFieldType( UserFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2840,7 +2847,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! Dummy
+      Re_BufSz   = Re_BufSz   + 1  ! RefHeight
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2868,7 +2875,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    ReKiBuf(Re_Xferred) = InData%Dummy
+    ReKiBuf(Re_Xferred) = InData%RefHeight
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_PackUserFieldType
 
@@ -2898,7 +2905,7 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%Dummy = REAL(ReKiBuf(Re_Xferred), SiKi)
+    OutData%RefHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE IfW_FlowField_UnPackUserFieldType
 

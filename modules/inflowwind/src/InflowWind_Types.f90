@@ -140,8 +140,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
     TYPE(FlowFieldType)  :: FlowField      !< Parameters from Full-Field [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PositionAvg      !< (non-rotated) positions of points used for averaging wind speed [meters]
-    REAL(ReKi)  :: ReferenceHeight      !< Height of the wind turbine [meters]
-    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
     INTEGER(IntKi)  :: NWindVel      !< Number of points in the wind velocity list [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of parameters in the output list (number of outputs requested) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -2410,8 +2408,6 @@ IF (ALLOCATED(SrcParamData%PositionAvg)) THEN
   END IF
     DstParamData%PositionAvg = SrcParamData%PositionAvg
 ENDIF
-    DstParamData%ReferenceHeight = SrcParamData%ReferenceHeight
-    DstParamData%RefPosition = SrcParamData%RefPosition
     DstParamData%NWindVel = SrcParamData%NWindVel
     DstParamData%NumOuts = SrcParamData%NumOuts
 IF (ALLOCATED(SrcParamData%OutParam)) THEN
@@ -2567,8 +2563,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! PositionAvg upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PositionAvg)  ! PositionAvg
   END IF
-      Re_BufSz   = Re_BufSz   + 1  ! ReferenceHeight
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RefPosition)  ! RefPosition
       Int_BufSz  = Int_BufSz  + 1  ! NWindVel
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
@@ -2740,12 +2734,6 @@ ENDIF
         END DO
       END DO
   END IF
-    ReKiBuf(Re_Xferred) = InData%ReferenceHeight
-    Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%RefPosition,1), UBOUND(InData%RefPosition,1)
-      ReKiBuf(Re_Xferred) = InData%RefPosition(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     IntKiBuf(Int_Xferred) = InData%NWindVel
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
@@ -2988,14 +2976,6 @@ ENDIF
         END DO
       END DO
   END IF
-    OutData%ReferenceHeight = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%RefPosition,1)
-    i1_u = UBOUND(OutData%RefPosition,1)
-    DO i1 = LBOUND(OutData%RefPosition,1), UBOUND(OutData%RefPosition,1)
-      OutData%RefPosition(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
     OutData%NWindVel = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
