@@ -260,5 +260,7 @@ macro(set_fast_flang)
      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
   endif()
 
+  add_definitions(-DFLANG_COMPILER)
+
   check_f2008_features()
 endmacro(set_fast_flang)
