@@ -4222,10 +4222,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetSectionHstLds
 
-   SUBROUTINE GetElementHstLds( pos1, pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
+   SUBROUTINE GetElementHstLds( pos1In, pos2In, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
       
-      REAL(ReKi),      INTENT( IN    ) :: pos1(3)
-      REAL(ReKi),      INTENT( IN    ) :: pos2(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos1In(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos2In(3)
       REAL(ReKi),      INTENT( IN    ) :: FSPt(3)
       REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
       REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
@@ -4240,17 +4240,32 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
       REAL(ReKi)                       :: dRdl, theta1, theta2
       REAL(ReKi)                       :: dFdl1(6), dFdlMid(6), dFdl2(6), F_B(6)
-      REAL(ReKi)                       :: i, rMid, posMid(3)
+      REAL(ReKi)                       :: i, rMid, posMid(3), pos1(3), pos2(3)
       INTEGER(IntKi)                   :: secStat1, secStatMid, secStat2
       CHARACTER(*),    PARAMETER       :: routineName = "GetElementHstLds"
       INTEGER(IntKi)                   :: errStat2
       CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
-      ErrMsg    = ""
-
+      ErrMsg    = ""  
+  
+      pos1   = pos1In
+      pos2   = pos2In
       dRdl   = (r2-r1)/dl
       rMid   = 0.5*(  r1+  r2)
-      posMid = 0.5*(pos1+pos2)
+      posMid = 0.5*(pos1In+pos2In)
+      
+      ! Avoid sections coincident with the SWL
+      IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
+         IF ( EqualRealNos( pos1In(3), 0.0 ) ) THEN
+            pos1(3) = pos1In(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( pos2In(3), 0.0 ) ) THEN
+            pos2(3) = pos2In(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( posMid(3), 0.0 ) ) THEN
+            posMid(3) = posMid(3) - 1.0E-6 * dl
+         END IF
+      END IF
 
       ! Section load at node 1
       CALL GetSectionFreeSurfaceIntersects( pos1,   FSPt, k_hat, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat1)
@@ -4312,7 +4327,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       INTEGER(IntKi)                   :: secStatMidL, secStatMidR
       REAL(ReKi),      PARAMETER       :: RelTol      = 1.0E-6
       REAL(ReKi),      PARAMETER       :: AbsTol      = 1.0E-8
-      INTEGER(IntKi),  PARAMETER       :: maxRecurLvl = 200
+      INTEGER(IntKi),  PARAMETER       :: maxRecurLvl = 50
       CHARACTER(*),    PARAMETER       :: RoutineName = "RefineElementHstLds"
       
       ErrStat = ErrID_None
@@ -4322,6 +4337,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       posMidR = 0.5*(posMid+pos2)
       rMidL   = 0.5*(r1+rMid)
       rMidR   = 0.5*(rMid+r2)
+
+      ! Avoid sections coincident with the SWL
+      IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
+         IF ( EqualRealNos( posMidL(3), 0.0 ) ) THEN
+            posMidL(3) = posMidL(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( posMidR(3), 0.0 ) ) THEN
+            posMidR(3) = posMidR(3) - 1.0E-6 * dl
+         END IF
+      END IF
 
       ! Total hydrostatic load on the element (Simpsons Rule)
       F_B_3pt = (dFdl1 + 4.0*dFdlMid + dFdl2) * dl/6.0
