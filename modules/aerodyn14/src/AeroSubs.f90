@@ -1264,13 +1264,13 @@ DO NFOILID = 1, p%AirFoil%NUMFOIL
 
       IF ( p%PMOMENT ) THEN
 
-         READ( NUNIT,*,END=150 ) m%AirFoil%AL(NFOILID,I), &
+         READ( NUNIT,*,END=150,ERR=150 ) m%AirFoil%AL(NFOILID,I), &
              (m%AirFoil%CL(NFOILID,I,IPHI), m%AirFoil%CD(NFOILID,I,IPHI), &
               m%AirFoil%CM(NFOILID,I,IPHI), IPHI = 1, p%AirFoil%NTables(NFOILID))
 
       ELSE
 
-         READ( NUNIT,*,END=150 ) m%AirFoil%AL(NFOILID,I), &
+         READ( NUNIT,*,END=150,ERR=150 ) m%AirFoil%AL(NFOILID,I), &
              (m%AirFoil%CL(NFOILID,I,IPHI), m%AirFoil%CD(NFOILID,I,IPHI), &
               IPHI = 1, p%AirFoil%NTables(NFOILID))
 

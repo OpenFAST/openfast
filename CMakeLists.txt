@@ -124,10 +124,10 @@ elseif (USE_LOCAL_STATIC_LAPACK)
   )
   set(LAPACK_LIBRARIES ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH} CACHE STRING "LAPACK library" FORCE)
   install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
+  message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 else()
   message(FATAL_ERROR "Unable to find BLAS and LAPACK")
 endif()
-message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 
 ########################################################################
 # Build rules for OpenFAST Registry
@@ -214,8 +214,9 @@ if(BUILD_TESTING)
   include(CTest)
 
   # Find python
+  cmake_policy(SET CMP0094 NEW) # Search for python by LOCATION
   find_package (Python COMPONENTS Interpreter)
-  if(NOT ${Python_FOUND})
+  if(NOT ${Python_Interpreter_FOUND})
     message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
   endif()
 
@@ -223,7 +224,9 @@ if(BUILD_TESTING)
   add_subdirectory(reg_tests)
 
   # unit tests
-  add_subdirectory(unit_tests)
+  if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+    add_subdirectory(unit_tests)
+  endif()
 endif()
 
 option(BUILD_DOCUMENTATION "Build documentation." OFF)
