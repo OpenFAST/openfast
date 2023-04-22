@@ -54,8 +54,9 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    character(*), parameter                   :: RoutineName = "IfW_FlowField_GetVelAcc"
    integer(IntKi)                            :: i
    integer(IntKi)                            :: NumPoints
-   logical                                   :: OutputAccel
+   logical                                   :: OutputAccel, AddMeanAfterInterp
    real(ReKi), allocatable                   :: Position(:, :)
+   integer(IntKi)                            :: Grid3D_AccelInterp
    integer(IntKi)                            :: TmpErrStat
    character(ErrMsgLen)                      :: TmpErrMsg
 
@@ -89,15 +90,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       return
    end if
 
-   ! Copy positions or transform based on wind box rotation
-   if (FF%RotateWindBox) then
-      do i = 1, NumPoints
-         Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
-      end do
-   else
-      Position = PositionXYZ
-   end if
-
    !----------------------------------------------------------------------------
    !  Wind speed coordinate transforms from Wind file coordinates to global
    !----------------------------------------------------------------------------
@@ -112,6 +104,19 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    ! the wind at XYZ after translation from the U'V'W' wind velocity components
    ! in the X'Y'Z' (wind file) coordinate frame.
    ! NOTE: rotations are about the hub at [ 0 0 H ].
+
+   ! Copy positions or transform based on wind box rotation
+   if (FF%RotateWindBox) then
+      do i = 1, NumPoints
+         Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
+      end do
+   else
+      Position = PositionXYZ
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Get velocities/accelerations based on flow field type
+   !----------------------------------------------------------------------------
 
    ! Switch based on flow type
    select case (FF%FieldType)
@@ -169,6 +174,25 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! Grid3D Flow Field
       !-------------------------------------------------------------------------
 
+      ! Determine select case value for calculating acceleration and 
+      ! interpolation so it doesn't have to be done in the loop (optimization)
+      if (OutputAccel) then
+         if (FF%VelInterpCubic) then
+            Grid3D_AccelInterp = 1     ! Output accel, cubic interp
+         else
+            Grid3D_AccelInterp = 2     ! Output accel, linear interp
+         end if
+      else 
+         if (FF%VelInterpCubic) then
+            Grid3D_AccelInterp = 3     ! No accel, cubic interp
+         else
+            Grid3D_AccelInterp = 4     ! No accel, linear interp
+         end if
+      end if
+
+      ! Store flag value since it doesn't change during loop
+      AddMeanAfterInterp = FF%Grid3D%AddMeanAfterInterp
+
       ! Loop through points
       do i = 1, NumPoints
 
@@ -192,37 +216,29 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             return
          end if
 
-         ! Calculate velocity and acceleration
-         if (OutputAccel) then
-            if (FF%VelInterpCubic) then
-               ! Cubic velocity and cubic acceleration
-               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
-                                               Velocity=VelocityUVW(:, i), Accel=AccelUVW(:, i))
-            else
-               ! Linear velocity and cubic acceleration
-               VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
-               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
-                                               Accel=AccelUVW(:, i))
-            end if
-         else
-            if (FF%VelInterpCubic) then
-               ! Cubic velocity
-               call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
-                                               Velocity=VelocityUVW(:, i))
-            else
-               ! Linear velocity
-               VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
-            end if
+         ! Switch based on if acceleration is output and velocity interpolation is cubic
+         select case(Grid3D_AccelInterp)
+         case (1)    ! Cubic velocity and cubic acceleration
+            call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                            Velocity=VelocityUVW(:, i), Accel=AccelUVW(:, i))
+         case (2)    ! Linear velocity and cubic acceleration
+            VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
+            call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                            Accel=AccelUVW(:, i))
+         case (3)    ! Cubic velocity and no acceleration
+            call Grid3DField_GetVelAccCubic(FF%Grid3D%DTime, VelCell, AccCell, Xi, Is3D, &
+                                            Velocity=VelocityUVW(:, i))
+         case (4)    ! Linear velocity and no acceleration
+            VelocityUVW(:, i) = Grid3DField_GetVelLinear(VelCell, Xi, Is3D)
+         end select
+
+         ! Add mean wind speed after interpolation if flag is set
+         if (AddMeanAfterInterp) then
+            VelocityUVW(1, i) = VelocityUVW(1, i) + &
+                                CalculateMeanVelocity(FF%Grid3D, Position(3, i), Position(2, i))
          end if
 
       end do
-
-      ! Add mean wind speed after interpolation if flag is set
-      if (FF%Grid3D%AddMeanAfterInterp) then
-         do i = 1, NumPoints
-            VelocityUVW(1, i) = VelocityUVW(1, i) + GetMeanVelocity(FF%Grid3D, Position(3, i))
-         end do
-      end if
 
    case (Grid4D_FieldType)
 
@@ -304,36 +320,6 @@ contains
       real(ReKi), dimension(3), intent(in)      :: Pos
       real(ReKi), dimension(3)                  :: PrimePos
       PrimePos = matmul(FF%RotToWind, (Pos - FF%RefPosition)) + FF%RefPosition
-   end function
-
-   function GetMeanVelocity(GF, PosZ) result(U)
-      type(Grid3DFieldType), intent(in)  :: GF
-      real(ReKi), intent(in)           :: PosZ
-      real(ReKi)                       :: U
-      
-      if  (PosZ <= 0.0_ReKi) then
-         U = 0.0_ReKi
-         return
-      end if
-      
-      select case (GF%WindProfileType)
-      case (WindProfileType_None)
-         U = 0.0_ReKi
-      case (WindProfileType_PL)
-         U = GF%MeanWS*(PosZ/GF%RefHeight)**GF%PLExp ! [IEC 61400-1 6.3.1.2 (10)]
-      case (WindProfileType_Log)
-         if (.not. EqualRealNos(GF%RefHeight, GF%Z0) .and. PosZ > 0.0_ReKi) then
-            U = GF%MeanWS*log(PosZ/GF%Z0)/log(GF%RefHeight/GF%Z0)
-         else
-            U = 0.0_ReKi
-         end if
-      case (WindProfileType_Constant)
-         U = GF%MeanWS
-      case default
-         U = 0.0_ReKi
-      end select
-      
-      !bjj: is there a reason we aren't adding the mean vertical and/or horizontal shear here, as in CalculateMeanVelocity() and Grid3D_AddMeanVelocity()?
    end function
 
 end subroutine
@@ -1718,10 +1704,10 @@ end subroutine
 
 function CalculateMeanVelocity(G3D, z, y) result(u)
 
-   type(Grid3DFieldType), intent(IN)  :: G3D                 !< Parameters
-   real(ReKi), intent(IN)  :: Z                 ! height
-   real(ReKi), intent(IN)  :: y                 ! lateral location
-   real(ReKi)                                               :: u                 ! mean wind speed at position (y,z)
+   type(Grid3DFieldType), intent(IN)   :: G3D   !< Parameters
+   real(ReKi), intent(IN)              :: Z     ! height
+   real(ReKi), intent(IN)              :: y     ! lateral location
+   real(ReKi)                          :: u     ! mean wind speed at position (y,z)
 
    if  (Z <= 0.0_ReKi) then
       U = 0.0_ReKi

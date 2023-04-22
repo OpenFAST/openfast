@@ -308,6 +308,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          return
       endif
 
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
+
    case (Uniform_WindNumber)
 
       Uniform_InitInput%WindFileName = InputFileData%Uniform_FileName
@@ -325,6 +328,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          return
       endif
 
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
+
    case (TSFF_WindNumber)
 
       TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
@@ -336,6 +342,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          call Cleanup()
          return
       endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
 
    case (BladedFF_WindNumber)
 
@@ -359,6 +368,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          call Cleanup()
          return
       endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
       
    case (BladedFF_Shr_WindNumber)
 
@@ -379,6 +391,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       ! Overwrite the values of PropagationDir and VFlowAngle with values from the native Bladed file
       InputFileData%PropagationDir = Bladed_InitOutput%PropagationDir
       InputFileData%VFlowAngle     = Bladed_InitOutput%VFlowAngle 
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
 
    case (HAWC_WindNumber)
 
@@ -409,6 +424,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          return
       endif
 
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
    case (User_WindNumber)
 
       p%FlowField%FieldType = User_FieldType
@@ -419,6 +437,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          return
       endif
 
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%User%RefHeight]
+
    case (FDext_WindNumber)
 
       p%FlowField%FieldType = Grid4D_FieldType
@@ -427,6 +448,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          call Cleanup()
          return
       endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid4D%RefHeight]
 
    case (Point_WindNumber)
 
@@ -437,6 +461,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          call Cleanup()
          return
       endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = 0.0_ReKi
 
    case default  
       call SetErrStat(ErrID_Fatal, ' Undefined wind type.', ErrStat, ErrMsg, RoutineName)
@@ -470,6 +497,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
    ! Select based on field type
    select case (p%FlowField%FieldType)
+
    case (Uniform_FieldType)
 
       if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
@@ -497,6 +525,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       end if
 
    case default
+
       if (InitInp%OutputAccel) then
          call SetErrStat(ErrID_Fatal, "Acceleration not implemented for field type "// &
                          num2LStr(p%FlowField%FieldType), ErrStat, ErrMsg, RoutineName)
@@ -507,6 +536,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
                      num2LStr(InputFileData%WindType))
          p%FlowField%VelInterpCubic = .false.
       end if
+
    end select
 
    !----------------------------------------------------------------------------

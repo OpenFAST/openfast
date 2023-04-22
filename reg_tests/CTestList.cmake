@@ -382,6 +382,8 @@ sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore")
 
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
+ifw_regression("ifw_uniform"                                  "inflowwind")
+ifw_regression("ifw_nativeBladed"                             "inflowwind")
 ifw_regression("ifw_BoxExceed"                                "inflowwind")
 ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
 

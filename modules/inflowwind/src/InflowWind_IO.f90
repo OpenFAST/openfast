@@ -1005,10 +1005,10 @@ subroutine IfW_User_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   UF%Dummy = 1
+   UF%RefHeight = 0.0_Reki
 
    if (SumFileUnit > 0) then
-      write (SumFileUnit, '(A)') InitInp%Dummy
+      write (SumFileUnit, '(A)') UF%RefHeight
    end if
 
 end subroutine
@@ -1033,6 +1033,7 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    G4D%delta = InitInp%delta
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
+   G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)
 
    ! uvw velocity components at x,y,z,t coordinates
    call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
@@ -1063,7 +1064,6 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
    real(ReKi)                 :: UBar
    real(ReKi)                 :: ZCenter
    real(ReKi)                 :: ScaleFactors(3)   ! turbulence scaling factors
-   real(ReKi)                 :: SigmaF(3)         ! Turbulence standard deviation
    integer(IntKi)             :: UnitWind          ! Unit number for the InflowWind input file
    integer(B2Ki)              :: Dum_Int2
    integer(IntKi)             :: I
@@ -1082,8 +1082,8 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
 
    if (InitInp%NativeBladedFmt) then
 
-      call Bladed_ReadNativeSummary(InitInp%WindFileName, G3D%PLExp, G3D%VLinShr, &
-                                    G3D%HLinShr, G3D_InitInp%RefLength, NatTI, G3D%MeanWS, &
+      call Bladed_ReadNativeSummary(InitInp%WindFileName, G3D_InitInp%PLExp, G3D_InitInp%VLinShr, &
+                                    G3D_InitInp%HLinShr, G3D_InitInp%RefLength, NatTI, G3D%MeanWS, &
                                     G3D%RefHeight, InitOut%PropagationDir, InitOut%VFlowAngle, &
                                     BinFileName, G3D_InitInp%XOffset, TmpErrStat, TmpErrMsg)
       call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
@@ -1109,7 +1109,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
 
       G3D_InitInp%ScaleMethod = ScaleMethod_StdDev
       G3D_InitInp%SigmaF = NatTI*G3D%MeanWS
-      G3D_InitInp%SF = SigmaF
+      G3D_InitInp%SF = G3D_InitInp%SigmaF
 
       ! it could also have logarithmic, but I'm going to leave that off for now
       G3D_InitInp%RefHt = G3D%RefHeight
@@ -1321,6 +1321,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
 
       G3D%InterpTower = .true.
       G3D%AddMeanAfterInterp = .true.
+      G3D%WindProfileType = G3D_InitInp%WindProfileType
 
       ! Validate scaling data if we've got native-Bladed format
       call Grid3D_ValidateInput(G3D_InitInp, G3D%NComp, TmpErrStat, TmpErrMsg)
@@ -2504,9 +2505,9 @@ subroutine Grid3D_ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   nz = size(Vel, 1)
+   nc = size(Vel, 1)
    ny = size(Vel, 2)
-   nc = size(Vel, 3)
+   nz = size(Vel, 3)
    nt = size(Vel, 4)
 
    ! If scaling method is none, set factors to 1 and return (no scaling)
