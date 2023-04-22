@@ -1138,13 +1138,11 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
                TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN 
-
-   p%RefPosition = (/ 0.0_ReKi, 0.0_ReKi, p%ReferenceHeight /)
-   
+ 
    p%WindViXYZprime   =  0.0_ReKi
       ! set the output points. Note rotation is about the hub height at [0 0 H].  See InflowWind_SetParameters for details.
    DO I = 1,p%NWindVel
-      p%WindViXYZprime(:,I) =  MATMUL( p%FlowField%RotToWind, (p%WindViXYZ(:,I) - p%RefPosition )) + p%RefPosition
+      p%WindViXYZprime(:,I) =  MATMUL( p%FlowField%RotToWind, (p%WindViXYZ(:,I) - p%FlowField%RefPosition )) + p%FlowField%RefPosition
    ENDDO
    
    p%FlowField%RotateWindBox = .not. (EqualRealNos (p%FlowField%PropagationDir, 0.0_ReKi) .AND. EqualRealNos (p%FlowField%VFlowAngle, 0.0_ReKi))

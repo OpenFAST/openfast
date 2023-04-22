@@ -99,16 +99,17 @@ typedef  ^              ^                      ReKi                delta        
 typedef  ^              ^                      ReKi                pZero               3     -         -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
 typedef  ^              ^                      SiKi                Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
 typedef  ^              ^                      ReKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
+typedef  ^              ^                      ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              PointsFieldType        ReKi                Vel                 ::    -         -     "Point velocities populated by external driver [uvw,point]"                  -
 
 #----------------------------------------------------------------------------------------------------------------------------------
-typedef  ^              UserFieldType          SiKi                Dummy               -     -         -     ""            -
+typedef  ^              UserFieldType          ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
 
 #----------------------------------------------------------------------------------------------------------------------------------
 typedef  ^              FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
-typedef  ^              ^                      ReKi                RefPosition         3     -         -     "Reference position (point where box is rotated)"                 meters
+typedef  ^              ^                      ReKi                RefPosition         3     0.0_ReKi  -     "Reference position (point where box is rotated)"                 meters
 typedef  ^              ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
 typedef  ^              ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians
 typedef  ^              ^                      logical             VelInterpCubic      -  .false.      -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
