@@ -149,14 +149,14 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    END IF
 
 
-   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, ErrStat2, ErrMsg2 )
+   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, InitInp%MHK, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL ED_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL ED_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -760,10 +760,18 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j1(K,         :) )*R2D
          m%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j2(K,         :) )*R2D
          ! There is no sense computing AllOuts( TipRDzc(K) ) here since it is always zero for FAST simulation results.
-         IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
-         ELSE                          ! Tip of blade K is below the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+         IF ( p%MHK == 2 ) THEN
+            IF ( rOSTipzn < 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
+         ELSE
+            IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
          ENDIF
       END IF      
 
@@ -1168,10 +1176,10 @@ END IF
       ! Integrate to find FrcFGagT and MomFGagT using all of the nodes / elements above the current strain gage location:
       DO J = ( p%TwrGagNd(I) + 1 ),p%TwrNodes ! Loop through tower nodes / elements above strain gage node
          TmpVec2  = FTTower(:,J) - p%MassT(J)*( p%Gravity*m%CoordSys%z2 + LinAccET(:,J) )           ! Portion of FrcFGagT associated with element J
-         FrcFGagT = FrcFGagT + TmpVec2*p%DHNodes(J)
+         FrcFGagT = FrcFGagT + TmpVec2*abs(p%DHNodes(J))
 
          TmpVec = CROSS_PRODUCT( m%RtHS%rZT(:,J) - m%RtHS%rZT(:,p%TwrGagNd(I)), TmpVec2 )                          ! Portion of MomFGagT associated with element J
-         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*p%DHNodes(J)
+         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*abs(p%DHNodes(J))
       ENDDO ! J -Tower nodes / elements above strain gage node
 
       ! Add the effects of 1/2 the strain gage element:
@@ -1181,12 +1189,12 @@ END IF
 
       TmpVec2  = FTTower(:,p%TwrGagNd(I)) - p%MassT(p%TwrGagNd(I))*( p%Gravity*m%CoordSys%z2 + LinAccET(:,p%TwrGagNd(I)))
 
-      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       FrcFGagT = 0.001*FrcFGagT  ! Convert the local force to kN
 
       TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DHNodes( p%TwrGagNd(I)) )*m%CoordSys%a2, TmpVec2 )              ! Portion of MomFGagT associated with 1/2 of the strain gage element
       TmpVec   = TmpVec   + MFHydro(:,p%TwrGagNd(I))
-      MomFGagT = MomFGagT + TmpVec * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      MomFGagT = MomFGagT + TmpVec * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       MomFGagT = 0.001*MomFGagT  ! Convert the local moment to kN-m
 
       m%AllOuts( TwHtFLxt(I) ) =     DOT_PRODUCT( FrcFGagT, m%CoordSys%t1(p%TwrGagNd(I),:) )
@@ -2037,9 +2045,10 @@ END SUBROUTINE ED_CalcConstrStateResidual
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData
-SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE ED_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
+   TYPE(ED_InitInputType),   INTENT(IN   )    :: InitInp        !< Input data for initialization routine
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
    TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
@@ -2058,7 +2067,7 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
 
       ! Set parameters from primary input file
-   CALL SetPrimaryParameters( p, InputFileData, ErrStat2, ErrMsg2  )
+   CALL SetPrimaryParameters( InitInp, p, InputFileData, ErrStat2, ErrMsg2  )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -3206,6 +3215,9 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
       p%StiffTFA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAStif, InterpInd, InputFileData%NTwInpSt )
       p%StiffTSS  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSSStif, InterpInd, InputFileData%NTwInpSt )
    END DO ! J
+   p%MassT = abs(p%MassT)
+   p%StiffTFA = abs(p%StiffTFA)
+   p%StiffTSS = abs(p%StiffTSS)
 
 
    !...............................................................................................................................
@@ -3363,11 +3375,12 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the primary input file data and sets the corresponding parameters.
-SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
+SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
 !..................................................................................................................................
 
       ! Passed variables
 
+   TYPE(ED_InitInputType),   INTENT(IN   )  :: InitInp                      !< Input data for initialization routine
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
@@ -3392,6 +3405,7 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%HubRad    = InputFileData%HubRad
    p%method    = InputFileData%method
    p%TwrNodes  = InputFileData%TwrNodes
+   p%MHK       = InitInp%MHK
 
    p%PtfmCMxt = InputFileData%PtfmCMxt
    p%PtfmCMyt = InputFileData%PtfmCMyt   
@@ -3399,9 +3413,15 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%DT        = InputFileData%DT
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
-   p%TowerHt   = InputFileData%TowerHt
-   p%TowerBsHt = InputFileData%TowerBsHt
-   p%PtfmRefzt = InputFileData%PtfmRefzt
+   IF ( InitInp%MHK == 1 ) THEN
+      p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
+      p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
+      p%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
+   ELSE
+      p%TowerHt   = InputFileData%TowerHt
+      p%TowerBsHt = InputFileData%TowerBsHt
+      p%PtfmRefzt = InputFileData%PtfmRefzt
+   END IF
    
    p%HubMass   = InputFileData%HubMass
    p%GenIner   = InputFileData%GenIner
@@ -3482,7 +3502,11 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
-   p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   IF ( InitInp%MHK == 1 ) THEN
+      p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
+   ELSE
+      p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   END IF
 
    !...............................................................................................................................
    ! set cosine and sine of Precone and Delta3 angles:
@@ -5009,7 +5033,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
 
       ! Calculate the mass of the current element
 
-      p%TElmntMass(J)    = p%MassT(J)*p%DHNodes(J)     ! Mass of tower element J
+      p%TElmntMass(J)    = p%MassT(J)*abs(p%DHNodes(J))     ! Mass of tower element J
 
 
       ! Integrate to find the tower mass which will be output in .fsm
@@ -5083,8 +5107,8 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       ! Integrate to find the generalized stiffness of the tower (not including gravitational
       !    effects).
 
-      ElStffFA       = p%StiffTFA(J)*p%DHNodes(J)                        ! Fore-aft stiffness of tower element J
-      ElStffSS       = p%StiffTSS(J)*p%DHNodes(J)                        ! Side-to-side stiffness of tower element J
+      ElStffFA       = p%StiffTFA(J)*abs(p%DHNodes(J))                        ! Fore-aft stiffness of tower element J
+      ElStffSS       = p%StiffTSS(J)*abs(p%DHNodes(J))                        ! Side-to-side stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          DO L = 1,2  ! Loop through all tower DOFs in one direction
@@ -5098,7 +5122,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       !   Ignore the cross-correlation terms of KTFAGrav (i.e. KTFAGrav(i,j) where i /= j)
       !   and KTSSGrav since these terms will never be used.
 
-      ElmntStff      = -TMssAbvNd(J)*p%DHNodes(J)*p%Gravity              ! Gravitational stiffness of tower element J
+      ElmntStff      = -TMssAbvNd(J)*abs(p%DHNodes(J))*p%Gravity              ! Gravitational stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          KTFAGrav(I,I) = KTFAGrav(I,I) + ElmntStff*p%TwrFASF(I,J,1)**2
@@ -7750,42 +7774,42 @@ DO K = 1,p%NumBl ! Loop through all blades
 !.....................................
    
    DO J=1,p%TwrNodes
-      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/p%DHNodes(J) &
+      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/p%DHNodes(J) &
+                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   )
-      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/p%DHNodes(J) &
+      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/p%DHNodes(J) &
+                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Y ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
@@ -7835,19 +7859,19 @@ DO K = 1,p%NumBl ! Loop through all blades
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
+         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J)) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
          TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                 ! The portion of PMomX0Trb associated with tower element J
-         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J)             ! The added moment applied at tower element J
+         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J))             ! The added moment applied at tower element J
 
          RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) + TmpVec1
          RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) + TmpVec2 + TmpVec3
 
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
       TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                                 ! The portion of MomX0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)                                      ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))                                      ! The external moment applied to tower element J
 
       RtHSdat%FrcT0Trbt = RtHSdat%FrcT0Trbt + TmpVec1
 
@@ -8115,16 +8139,16 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
             AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L)) = AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L))  &
                                                   + p%TElmntMass(J)   *DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PLinVelET(J,p%DOFs%PTTE(L),0,:) ) &   ! [C(q,t)]T + [C(q,t)]HydroT
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PFTHydro (:,J,p%DOFs%PTTE(L)  ) ) &
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PMFHydro (:,J,p%DOFs%PTTE(L)  ) )
          ENDDO                 ! I - All active (enabled) tower DOFs greater than or equal to L
       ENDDO                    ! L - All active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)             ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))             ! The external moment applied to tower element J
       DO I = 1,p%DOFs%NPTTE    ! Loop through all active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
             AugMat(p%DOFs%PTTE(I),        p%NAug) = AugMat(p%DOFs%PTTE(I),   p%NAug)                         &                 ! {-f(qd,q,t)}T + {-f(qd,q,t)}GravT + {-f(qd,q,t)}AeroT + {-f(qd,q,t)}HydroT
                                                   +  DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:), TmpVec1        ) &  ! NOTE: TmpVec1 is still the portion of FrcT0Trbt associated with tower element J

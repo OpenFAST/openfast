@@ -473,6 +473,9 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
                
 
 
+   IF ( p_FAST%MHK==1 .or. p_FAST%MHK==2 ) THEN
+      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
+   ENDIF
 
 END SUBROUTINE IfW_InputSolve
 

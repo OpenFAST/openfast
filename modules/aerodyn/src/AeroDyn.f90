@@ -70,8 +70,10 @@ contains
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
 !! FAST or AeroDyn_Driver)   
-subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
+subroutine AD_SetInitOut(MHK, WtrDpth, p, p_AD, InputFileData, InitOut, errStat, errMsg)
 
+   integer(IntKi),                intent(in   )  :: MHK              ! MHK flag
+   real(ReKi),                    intent(in   )  :: WtrDpth          ! water depth
    type(RotInitOutputType),       intent(  out)  :: InitOut          ! output data
    type(RotInputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
    type(RotParameterType),        intent(in   )  :: p                ! Parameters
@@ -185,7 +187,11 @@ subroutine AD_SetInitOut(p, p_AD, InputFileData, InitOut, errStat, errMsg)
          CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
-      InitOut%TwrElev(:) = InputFileData%TwrElev(:)
+      IF ( MHK == 1 ) THEN
+         InitOut%TwrElev(:) = InputFileData%TwrElev(:) - WtrDpth
+      ELSE      
+         InitOut%TwrElev(:) = InputFileData%TwrElev(:)
+      END IF
 
       ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
       IF (ErrStat2 /= 0) THEN
@@ -372,7 +378,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Define and initialize inputs here 
       !............................................................................................
    do iR = 1, nRotors
-      call Init_u( u%rotors(iR), p%rotors(iR), p, InputFileData%rotors(iR), InitInp%rotors(iR), errStat2, errMsg2 ) 
+      call Init_u( u%rotors(iR), p%rotors(iR), p, InputFileData%rotors(iR), InitInp%MHK, InitInp%WtrDpth, InitInp%rotors(iR), errStat2, errMsg2 ) 
       if (Failed()) return;
    enddo
 
@@ -465,7 +471,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
    InitOut%Ver = AD_Ver
    do iR = 1, nRotors
-      call AD_SetInitOut(p%rotors(iR), p, InputFileData%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
+      call AD_SetInitOut(InitInp%MHK, InitInp%WtrDpth, p%rotors(iR), p, InputFileData%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
       if (Failed()) return;
    enddo
    
@@ -1000,13 +1006,15 @@ subroutine Init_y(y, u, p, errStat, errMsg)
 end subroutine Init_y
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes AeroDyn meshes and input array variables for use during the simulation.
-subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
+subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, errMsg )
 !..................................................................................................................................
 
    type(RotInputType),           intent(  out)  :: u                 !< Input data
    type(RotParameterType),       intent(in   )  :: p                 !< Parameters
    type(AD_ParameterType),       intent(in   )  :: p_AD              !< Parameters
    type(RotInputFile),           intent(in   )  :: InputFileData     !< Data stored in the module's input file
+   integer(IntKi),               intent(in   )  :: MHK               ! MHK flag
+   real(ReKi),                   intent(in   )  :: WtrDpth           ! water depth
    type(RotInitInputType),       intent(in   )  :: InitInp           !< Input data for AD initialization routine
    integer(IntKi),               intent(  out)  :: errStat           !< Error status of the operation
    character(*),                 intent(  out)  :: errMsg            !< Error message if ErrStat /= ErrID_None
@@ -1075,7 +1083,11 @@ subroutine Init_u( u, p, p_AD, InputFileData, InitInp, errStat, errMsg )
          ! set node initial position/orientation
       position = 0.0_ReKi
       do j=1,p%NumTwrNds         
-         position(3) = InputFileData%TwrElev(j)
+         IF ( MHK == 1 ) THEN
+            position(3) = InputFileData%TwrElev(j) - WtrDpth
+         ELSE
+            position(3) = InputFileData%TwrElev(j)
+         END IF
          
          call MeshPositionNode(u%TowerMotion, j, position, errStat2, errMsg2)  ! orientation is identity by default
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -1251,6 +1263,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrMsg   = ""
 
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   p%MHK              = InitInp%MHK
    
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
@@ -1313,6 +1326,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%HubCenBx = RotData%HubCenBx
    p%VolNac = RotData%VolNac
    p%NacCenB = RotData%NacCenB
+   p%VolBl            = 0.0_ReKi
+   p%VolTwr           = 0.0_ReKi
    
    p%Gravity          = InitInp%Gravity
    p%AirDens          = InputFileData%AirDens          
@@ -1380,12 +1395,15 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: j                !< Loop counter for nodes
    REAL(ReKi), DIMENSION(3)                     :: posCBu           !< Global undisplaced position of the center of buoyancy of node j
    REAL(ReKi), DIMENSION(3)                     :: posCBuplus       !< Global undisplaced position of the center of buoyancy of node j+1
+   REAL(ReKi), DIMENSION(3)                     :: tempVolBl        !< Individual blade buoyancy volume
+
    CHARACTER(*), PARAMETER                      :: RoutineName = 'SetBuoyancyParameters'
 
 
       ! Initialize variables for this routine
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   tempVolBl = 0.0_ReKi
 
    
       ! Allocate buoyancy parameters
@@ -1426,7 +1444,9 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
          else
             p%BlAxCent(j,k) = ( p%BlRad(j,k)**2 + 2.0_ReKi*p%BlRad(j,k)*p%BlRad(j+1,k) + 3.0_ReKi*p%BlRad(j+1,k)**2 ) / ( 4.0_ReKi*( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2) ) ! fractional axial centroid of element j
          end if
+         tempVolBl(k) = tempVolBl(k) + pi/3.0_ReKi * ( p%BlRad(j,k)**2 + p%BlRad(j,k)*p%BlRad(j+1,k) + p%BlRad(j+1,k)**2 ) * p%BlDL(j,k)
       end do ! j = nodes
+      p%VolBl = p%VolBl + tempVolBl(k)
 
    end do ! k = blades
 
@@ -1437,13 +1457,14 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
       end do ! j = nodes
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
-         p%TwrDL(j) = InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j) ! element j undisplaced length
+         p%TwrDL(j) = abs(InputFileData%TwrElev(j+1) - InputFileData%TwrElev(j)) ! element j undisplaced length
          p%TwrTaper(j) = ( p%TwrRad(j+1) - p%TwrRad(j) ) / p%TwrDL(j) ! element j taper
          if ( p%TwrRad(j) == 0.0_ReKi .and. p%TwrRad(j+1) == 0.0_ReKi ) then
             p%TwrAxCent(j) = 0.0_ReKi ! Trap NaN case and set to zero
          else
             p%TwrAxCent(j) = ( p%TwrRad(j)**2 + 2.0_ReKi*p%TwrRad(j)*p%TwrRad(j+1) + 3.0_ReKi*p%TwrRad(j+1)**2 ) / ( 4.0_ReKi*( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2) ) ! fractional axial centroid of element j
          end if
+         p%VolTwr = p%VolTwr + pi/3.0_ReKi * ( p%TwrRad(j)**2 + p%TwrRad(j)*p%TwrRad(j+1) + p%TwrRad(j+1)**2 ) * p%TwrDL(j)
       end do ! j = nodes
    end if
 
@@ -1689,6 +1710,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%Buoyancy ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
       end if
    end do  
 
@@ -1882,9 +1905,9 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
 
                if ( EqualRealNos( Vreltemp, 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Vrel cannot be zero to do a cavitation check', ErrStat, ErrMsg, 'AD_CavtCrit' ) 
                   if ( ErrStat >= AbortErrLev ) return
-      
-               SigmaCavit = -1 * Cpmintemp  ! Local cavitation number on node j                                               
-               SigmaCavitCrit = ( p%rotors(iR)%Patm + ( p%rotors(iR)%Gravity * ( p%rotors(iR)%WtrDpth - ( u%rotors(iR)%BladeMotion(j)%Position(3,i) + u%rotors(iR)%BladeMotion(j)%TranslationDisp(3,i) ) ) * p%rotors(iR)%airDens ) - p%rotors(iR)%Pvap ) / ( 0.5_ReKi * p%rotors(iR)%airDens * Vreltemp**2 )  ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+                                                 
+               SigmaCavit = -1 * Cpmintemp  ! Local cavitation number on node j
+               SigmaCavitCrit = ( p%rotors(iR)%Patm + ( p%rotors(iR)%Gravity * ( abs( u%rotors(iR)%BladeMotion(j)%Position(3,i) + u%rotors(iR)%BladeMotion(j)%TranslationDisp(3,i) ) + p%rotors(iR)%MSL2SWL ) * p%rotors(iR)%airDens ) - p%rotors(iR)%Pvap ) / ( 0.5_ReKi * p%rotors(iR)%airDens * Vreltemp**2 )  ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
                                                                         
                if ( ( SigmaCavitCrit < SigmaCavit ) .and. ( .not. ( m%rotors(iR)%CavitWarnSet(i,j) ) ) ) then     
                   call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
@@ -1917,16 +1940,16 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
    REAL(ReKi), DIMENSION(3)                         :: BlglobCBplus     !< Global offset between aerodynamic center and center of buoyancy of blade node j+1
    REAL(ReKi), DIMENSION(3)                         :: HubglobCB        !< Global offset between aerodynamic center and center of buoyancy of hub node
    REAL(ReKi), DIMENSION(3)                         :: NacglobCB        !< Global offset between nacelle reference position and center of buoyancy of nacelle node
-   REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPos        !< Global position of tower node j, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPosplus    !< Global position of tower node j+1, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: HubtmpPos        !< Global position of hub node, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: NactmpPos        !< Global position of nacelle node, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Blposroot        !< Global position of the center of buoyancy of blade root, adjusted to place the origin at the MSL
-   REAL(ReKi), DIMENSION(3)                         :: Twrpostop        !< Global position of the center of buoyancy of tower top, adjusted to place the origin at the MSL
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPos         !< Global position of blade node j
+   REAL(ReKi), DIMENSION(3)                         :: BltmpPosplus     !< Global position of blade node j+1
+   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPos        !< Global position of tower node j
+   REAL(ReKi), DIMENSION(3)                         :: TwrtmpPosplus    !< Global position of tower node j+1
+   REAL(ReKi), DIMENSION(3)                         :: HubtmpPos        !< Global position of hub node
+   REAL(ReKi), DIMENSION(3)                         :: NactmpPos        !< Global position of nacelle node
+   REAL(ReKi), DIMENSION(3)                         :: BlposCB          !< Global position of the center of buoyancy of blade node j
+   REAL(ReKi), DIMENSION(3)                         :: BlposCBplus      !< Global position of the center of buoyancy of blade node j+1
+   REAL(ReKi), DIMENSION(3,p%NumBlades)             :: Blposroot        !< Global position of the center of buoyancy of blade root
+   REAL(ReKi), DIMENSION(3)                         :: Twrpostop        !< Global position of the center of buoyancy of tower top
    REAL(ReKi)                                       :: BlheadAng        !< Heading angle of blade element j
    REAL(ReKi)                                       :: BlinclAng        !< Inclination angle of blade element j
    REAL(ReKi)                                       :: TwrheadAng       !< Heading angle of tower element j
@@ -1994,22 +2017,23 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       do j = 1,p%NumBlNds ! loop through all nodes
 
             ! Check that blade nodes do not go beneath the seabed or pierce the free surface
-         if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%WtrDpth + p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= 0.0_ReKi ) &
+         if ( u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%BladeMotion(k)%Position(3,j) + u%BladeMotion(k)%TranslationDisp(3,j) <= -p%WtrDpth ) &
             call SetErrStat( ErrID_Fatal, 'Blades cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            if ( ErrStat >= AbortErrLev ) return
 
       end do ! j = nodes
 
       do j = 1,p%NumBlNds - 1 ! loop through all nodes, except the last
 
-            ! Global position of blade node, adjusted to place the origin at the MSL
-         BltmpPos = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
-         BltmpPosplus = u%BladeMotion(k)%Position(:,j+1) + u%BladeMotion(k)%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+            ! Global position of blade node
+         BltmpPos = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
+         BltmpPosplus = u%BladeMotion(k)%Position(:,j+1) + u%BladeMotion(k)%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
 
             ! Global offset between aerodynamic center and center of buoyancy of blade node
          BlglobCB = matmul( [p%BlCenBn(j,k), p%BlCenBt(j,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j) )
          BlglobCBplus = matmul( [p%BlCenBn(j+1,k), p%BlCenBt(j+1,k), 0.0_ReKi ], u%BladeMotion(k)%Orientation(:,:,j+1) )
          
-            ! Global position of the center of buoyancy of blade node, adjusted to place the origin at the MSL
+            ! Global position of the center of buoyancy of blade node
          BlposCB = BltmpPos + BlglobCB
          BlposCBplus = BltmpPosplus + BlglobCBplus
 
@@ -2109,14 +2133,15 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
 
       do j = 1,p%NumTwrNds ! loop through all nodes
             ! Check that tower nodes do not go beneath the seabed or pierce the free surface
-         if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%WtrDpth + p%MSL2SWL .OR. u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < 0.0_ReKi ) &
+         if ( u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) >= p%MSL2SWL .OR. u%TowerMotion%Position(3,j) + u%TowerMotion%TranslationDisp(3,j) < -p%WtrDpth ) &
             call SetErrStat( ErrID_Fatal, 'The tower cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+            if ( ErrStat >= AbortErrLev ) return
       end do
 
       do j = 1,p%NumTwrNds - 1 ! loop through all nodes, except the last
-            ! Global position of tower node, adjusted to place the origin at the MSL
-         TwrtmpPos = u%TowerMotion%Position(:,j) + u%TowerMotion%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
-         TwrtmpPosplus = u%TowerMotion%Position(:,j+1) + u%TowerMotion%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+            ! Global position of tower node
+         TwrtmpPos = u%TowerMotion%Position(:,j) + u%TowerMotion%TranslationDisp(:,j) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
+         TwrtmpPosplus = u%TowerMotion%Position(:,j+1) + u%TowerMotion%TranslationDisp(:,j+1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
          
             ! Heading and inclination angles of tower element
          TwrheadAng = atan2( TwrtmpPosplus(2) - TwrtmpPos(2), TwrtmpPosplus(1) - TwrtmpPos(1) )
@@ -2198,11 +2223,12 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%HubMB = HubMBtmp
    else
          ! Check that hub node does not go beneath the seabed or pierce the free surface
-      if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
+      if ( u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%HubMotion%Position(3,1) + u%HubMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
          call SetErrStat( ErrID_Fatal, 'The hub cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         if ( ErrStat >= AbortErrLev ) return
 
-         ! Global position of hub node, adjusted to place the origin at the MSL
-      HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+         ! Global position of hub node
+      HubtmpPos = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
 
          ! Global offset between hub center and center of buoyancy of hub node
       HubglobCB = matmul( [p%HubCenBx, 0.0_ReKi, 0.0_ReKi ], u%HubMotion%Orientation(:,:,1) )
@@ -2250,11 +2276,12 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%NacMB = NacMBtmp
    else
          ! Check that nacelle node does not go beneath the seabed or pierce the free surface
-      if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%WtrDpth + p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= 0.0_ReKi ) &
+      if ( u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) >= p%MSL2SWL .OR. u%NacelleMotion%Position(3,1) + u%NacelleMotion%TranslationDisp(3,1) <= -p%WtrDpth ) &
          call SetErrStat( ErrID_Fatal, 'The nacelle cannot go beneath the seabed or pierce the free surface', ErrStat, ErrMsg, 'CalcBuoyantLoads' ) 
+         if ( ErrStat >= AbortErrLev ) return
 
-         ! Global position of nacelle node, adjusted to place the origin at the MSL
-      NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%WtrDpth + p%MSL2SWL /)
+         ! Global position of nacelle node
+      NactmpPos = u%NacelleMotion%Position(:,1) + u%NacelleMotion%TranslationDisp(:,1) - (/ 0.0_ReKi, 0.0_ReKi, p%MSL2SWL /)
 
          ! Global offset between nacelle reference position and center of buoyancy of nacelle node
       NacglobCB = matmul( p%NacCenB, u%NacelleMotion%Orientation(:,:,1) )
@@ -3461,7 +3488,10 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InitInp%MHK == 0 .and. InputFileData%CavitCheck) call SetErrStat ( ErrID_Fatal, 'A cavitation check can only be performed for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 0 .and. InputFileData%Buoyancy) call SetErrStat ( ErrID_Fatal, 'Buoyancy can only be calculated for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%MHK == 1 .and. InputFileData%CompAA .or. InitInp%MHK == 2 .and. InputFileData%CompAA) call SetErrStat ( ErrID_Fatal, 'The aeroacoustics module cannot be used with an MHK turbine.', ErrStat, ErrMsg, RoutineName )
-
+   do iR = 1,size(NumBl)
+      if (InitInp%MHK == 1 .and. InputFileData%rotors(iR)%TFinAero .or. InitInp%MHK == 2 .and. InputFileData%rotors(iR)%TFinAero) call SetErrStat ( ErrID_Fatal, 'A tail fin cannot be modeled for an MHK turbine.', ErrStat, ErrMsg, RoutineName )
+   enddo
+   
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The density of the working fluid must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
@@ -3567,9 +3597,16 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          
             ! check that the elevation is increasing:
          do j=2,InputFileData%rotors(iR)%NumTwrNds
-            if ( InputFileData%rotors(iR)%TwrElev(j) <= InputFileData%rotors(iR)%TwrElev(j-1) )  then
-               call SetErrStat( ErrID_Fatal, 'The tower nodes must be entered in increasing elevation.', ErrStat, ErrMsg, RoutineName )
-               exit
+            if ( InitInp%MHK /= 2 ) then
+               if ( InputFileData%rotors(iR)%TwrElev(j) <= InputFileData%rotors(iR)%TwrElev(j-1) )  then
+                  call SetErrStat( ErrID_Fatal, 'The tower nodes must be entered in increasing elevation.', ErrStat, ErrMsg, RoutineName )
+                  exit
+               end if
+            else if ( InitInp%MHK == 2 ) then
+               if ( InputFileData%rotors(iR)%TwrElev(j) >= InputFileData%rotors(iR)%TwrElev(j-1) )  then
+                  call SetErrStat( ErrID_Fatal, 'The tower nodes must be entered in decreasing elevation for a floating MHK turbine.', ErrStat, ErrMsg, RoutineName )
+                  exit
+               end if
             end if
          end do ! j=nodes
 
@@ -4132,6 +4169,8 @@ SUBROUTINE Init_OLAF( InputFileData, u_AD, u, p, x, xd, z, OtherState, m, ErrSta
 
       InitInp%numBladeNodes  = p%rotors(iR)%numBlNds ! TODO TODO TODO per wing
       InitInp%KinVisc        = p%rotors(iR)%KinVisc
+      InitInp%MHK            = p%rotors(iR)%MHK
+      InitInp%WtrDpth        = p%rotors(iR)%WtrDpth
       InitInp%RootName       = p%RootName(1:len_trim(p%RootName)-2) ! Removing "AD"
 
       ! Blades/Wings

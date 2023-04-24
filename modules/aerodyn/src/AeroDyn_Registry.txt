@@ -340,6 +340,8 @@ typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
+typedef	^	RotParameterType	ReKi	VolBl       -	-	-	"Buoyancy volume of all blades" m^3
+typedef	^	RotParameterType	ReKi	VolTwr       -	-	-	"Buoyancy volume of the tower" m^3
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
@@ -362,6 +364,7 @@ typedef	^	RotParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic lo
 typedef	^	RotParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	RotParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef ^   RotParameterType    Logical Buoyancy    -   -   -   "Include buoyancy effects?" flag
+typedef ^   RotParameterType    IntKi   MHK         -   -   -   "MHK" flag
 typedef	^	RotParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	RotParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	RotParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s

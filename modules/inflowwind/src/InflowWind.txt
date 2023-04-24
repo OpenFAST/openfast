@@ -96,6 +96,9 @@ typedef  ^                       ^                 LOGICAL           OutputAccel
 typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^              Grid4D_InitInputType FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg            -     -     -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 IntKi             MHK               -     -     -     "MHK turbine type switch"   -
+typedef  ^                       ^                 ReKi              WtrDpth           -     -     -     "Water depth" m
+typedef  ^                       ^                 ReKi              MSL2SWL           -     -     -     "Mean sea level to still water level" m
 typedef  ^                       ^                 IntKi             BoxExceedAllowIdx    -  -1       -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 typedef  ^                       ^                 LOGICAL           BoxExceedAllowF      -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 

@@ -364,6 +364,8 @@ subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    p%nWings       = size(InitInp%WingsMesh)
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
+   p%MHK          = InitInp%MHK             ! MHK flag
+   p%WtrDpth      = InitInp%WtrDpth         ! Water depth
    call FVW_SetRootName(InitInp%RootName, p)
 
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.

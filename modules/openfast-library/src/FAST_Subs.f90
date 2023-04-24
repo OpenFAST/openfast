@@ -249,6 +249,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
    Init%InData_ED%Gravity       = p_FAST%Gravity
 
+   Init%InData_ED%MHK           = p_FAST%MHK
+   Init%InData_ED%WtrDpth       = p_FAST%WtrDpth
+
    CALL ED_Init( Init%InData_ED, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
                   ED%y, ED%m, p_FAST%dt_module( MODULE_ED ), Init%OutData_ED, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -484,7 +487,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_AD%MHK                = p_FAST%MHK
       if ( p_FAST%MHK == 0 ) then
          Init%InData_AD%defFldDens      = p_FAST%AirDens
-      elseif ( p_FAST%MHK == 1 ) then
+      elseif ( p_FAST%MHK == 1 .or. p_FAST%MHK == 2 ) then
          Init%InData_AD%defFldDens      = p_FAST%WtrDens
       end if
       Init%InData_AD%defKinVisc         = p_FAST%KinVisc
@@ -561,6 +564,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%UseInputFile     = .TRUE.
       Init%InData_IfW%FixedWindFileRootName = .FALSE.
       Init%InData_IfW%OutputAccel      = p_FAST%MHK > 0
+
+      Init%InData_IfW%MHK              = p_FAST%MHK
+      Init%InData_IfW%WtrDpth          = p_FAST%WtrDpth
 
       Init%InData_IfW%NumWindPoints = 0
       IF ( p_FAST%CompServo == Module_SrvD ) Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + 1
@@ -1900,8 +1906,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    if (p%CompInflow == MODULE_OpFM .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when OpenFOAM is used. Change CompAero or CompInflow in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
    IF (p%MHK /= 0 .and. p%MHK /= 1 .and. p%MHK /= 2) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
-
-   IF (p%MHK == 2) CALL SetErrStat( ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK == 1 .and. p%CompAero == Module_AD14 .or. p%MHK == 2 .and. p%CompAero == Module_AD14) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 

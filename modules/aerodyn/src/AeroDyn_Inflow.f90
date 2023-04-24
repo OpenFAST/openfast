@@ -68,6 +68,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%dt         = interval
    p%storeHHVel = InitInp%storeHHVel
    p%WrVTK      = InitInp%WrVTK
+   p%MHK        = InitInp%AD%MHK
+   p%WtrDpth    = InitInp%AD%WtrDpth
 
    ! --- Initialize AeroDyn
    if (allocated(InitOut%WriteOutputHdr)) deallocate(InitOut%WriteOutputHdr)
@@ -404,8 +406,9 @@ subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr,
 end subroutine concatOutputHeaders
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Solve for the wind speed at the location necessary for AeroDyn
-subroutine ADI_ADIW_Solve(t, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, errMsg)
+subroutine ADI_ADIW_Solve(t, p_AD, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, errMsg)
    real(DbKi),                   intent(in   ) :: t             ! Time of evaluation
+   type(ADI_ParameterType),      intent(in   ) :: p_AD          ! Parameters
    type(AD_InputType),           intent(inout) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
    type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
@@ -419,7 +422,7 @@ subroutine ADI_ADIW_Solve(t, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, err
    errMsg  = ''
 
    ! Set u_ifW%PositionXYZ
-   call ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
+   call ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
    ! Compute IW%y%VelocityUVW
    call ADI_CalcOutput_IW(t, u_IfW, IW, errStat2, errMsg2); if(Failed()) return
    ! Set u_AD%..%InflowOnBlade, u_AD%..%InflowOnTower, etc
@@ -433,7 +436,8 @@ contains
 end subroutine ADI_ADIW_Solve
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set inputs for inflow wind
-subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
+subroutine ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
+   type(ADI_ParameterType),      intent(in   ) :: p_AD          ! Parameters
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
    type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
@@ -453,7 +457,9 @@ subroutine ADI_Set_IW_Inputs(u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
       enddo
    endif
    call AD_SetExternalWindPositions(u_AD, o_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
-
+   if ( p_AD%MHK == 1 .or. p_AD%MHK == 2 ) then
+      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_AD%WtrDpth
+   endif 
 end subroutine ADI_Set_IW_Inputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -523,8 +529,9 @@ end subroutine ADI_AD_InputSolve_IfW
 !> Initialize the mesh mappings between the structure and aerodyn
 !! Also adjust the tower mesh so that is is aligned with the tower base and tower top
 !! Similar to FAST_Solver.f90, InitModuleMappings
-subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
+subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
    type(FED_Data), target,       intent(inout) :: FED       ! Elastic wind turbine data (Fake ElastoDyn)
+   type(ADI_ParameterType),      intent(   in) :: p             ! Parameters
    type(AD_InputType),           intent(inout) :: uAD           ! AeroDyn input data 
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
@@ -576,12 +583,24 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
          if (y_ED%hasTower) then
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes)-uAD%rotors(iWT)%TowerMotion%Position(3,1)
             ! Check tower height
-            if (twrHeightAD<0) then
-               errStat=ErrID_Fatal
-               errMsg='First AeroDyn tower height should be smaller than last AD tower height'
+            if ( p%MHK==2 ) then
+               if (twrHeightAD>0) then
+                  errStat=ErrID_Fatal
+                  errMsg='First AeroDyn tower height should be larger than last AD tower height for a floating MHK turbine'
+               endif
+            else
+               if (twrHeightAD<0) then
+                  errStat=ErrID_Fatal
+                  errMsg='First AeroDyn tower height should be smaller than last AD tower height'
+               endif
             endif
 
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
+            if ( p%MHK==1 ) then
+               twrHeightAD = twrHeightAD + p%WtrDpth
+            elseif ( p%MHK==2 ) then
+               twrHeightAD = abs(twrHeightAD)
+            endif
 
             twrHeight=TwoNorm(y_ED%NacelleMotion%Position(:,1) - y_ED%TwrPtMesh%Position(:,1)  )
             ! KEEP ME, in summary file
@@ -595,9 +614,17 @@ subroutine Init_MeshMap_For_ADI(FED, uAD, errStat, errMsg)
             ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
             Pbase = y_ED%TwrPtMesh%Position(:,1)
             Ptop = y_ED%NacelleMotion%Position(:,1)
-            DeltaP = Ptop-Pbase
+            if ( p%MHK==2 ) then
+               DeltaP = Pbase-Ptop
+            else
+               DeltaP = Ptop-Pbase
+            endif
             do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
-               zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               if ( p%MHK==1 ) then
+                  zBar = (uAD%rotors(iWT)%TowerMotion%Position(3,i) + p%WtrDpth) / twrHeight
+               else
+                  zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
+               endif
                uAD%rotors(iWT)%TowerMotion%Position(:,i)= Pbase+ zBar * DeltaP
                uAD%rotors(iWT)%TowerMotion%RefOrientation(:,:,i)= y_ED%TwrPtMesh%RefOrientation(:,:,1)
             enddo

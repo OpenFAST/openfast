@@ -1409,12 +1409,13 @@ CONTAINS
 END SUBROUTINE ED_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine validates the input file data
-SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
+SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, MHK, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData       !< Data stored in the module's input file
    LOGICAL,                  INTENT(IN)       :: BD4Blades           !< Determines if we should validate the blade values (true=don't validate; use BeamDyn for blades instead)
    LOGICAL,                  INTENT(IN)       :: Linearize           !< Flag indicating glue code wants to linearize this module
+   INTEGER(IntKi),           INTENT(IN)       :: MHK                 !< MHK turbine type switch
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat             !< The error status code
    CHARACTER(*),             INTENT(OUT)      :: ErrMsg              !< The error message, if an error occurred
 
@@ -1430,7 +1431,7 @@ SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, ErrStat, ErrMs
    ErrMsg  = ''
 
       ! validate the primary input data
-   CALL ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat2, ErrMsg2 )
+   CALL ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -3102,48 +3103,48 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-      ! TowerHt - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerHt - Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! TowerBsHt - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerBsHt - Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMxt - Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMxt - Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMyt - Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMzt", "Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMyt - Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMyt", "Lateral distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMzt - Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! PtfmRefzt - Vertical distance from the ground ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmRefzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -4114,7 +4115,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the primary input file.
 !! note that all angles are assumed to be in radians in this routine:
-SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
+SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
@@ -4122,6 +4123,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                       !< All the data in the ElastoDyn input file
    LOGICAL,                  INTENT(IN)     :: BD4Blades                           !< Use BeamDyn for blades, thus ignore ElastoDyn blade info 
    LOGICAL,                  INTENT(IN)     :: Linearize                           !< Flag indicating glue code wants to linearize this module
+   INTEGER(IntKi),           INTENT(IN)     :: MHK                                 !< MHK turbine type switch
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
 
@@ -4181,8 +4183,12 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    IF ( InputFileData%YawBrMass < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'YawBrMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%NacMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'NacMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%HubMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubMass must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF ( InputFileData%Twr2Shft  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
-   
+   IF ( MHK /= 2 ) THEN
+      IF ( InputFileData%Twr2Shft  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
+   ELSEIF ( MHK == 2 ) THEN
+      IF ( InputFileData%Twr2Shft  > 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be positive for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
+   ENDIF
+      
    DO K=1,InputFileData%NumBl
       IF ( InputFileData%TipMass(K) < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'TipMass('//TRIM( Num2LStr( K ) )//') must not be negative.',ErrStat,ErrMsg,RoutineName)
    ENDDO ! K
@@ -4192,7 +4198,11 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    IF ( InputFileData%HubIner  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubIner must not be negative.',ErrStat,ErrMsg,RoutineName)
 
       ! Check that TowerHt is in the range [0,inf):
-   IF ( InputFileData%TowerHt <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
+   IF ( MHK /= 2 ) THEN
+      IF ( InputFileData%TowerHt <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
+   ELSEIF ( MHK == 2 ) THEN
+      IF ( InputFileData%TowerHt >= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be less than zero for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName )
+   ENDIF
 
       ! Check that these integers are in appropriate ranges:
    IF ( InputFileData%TwrNodes < 1_IntKi ) CALL SetErrStat( ErrID_Fatal, 'TwrNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
@@ -4231,22 +4241,37 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
       END IF
    ENDIF
 
-   IF ( InputFileData%TowerBsHt >= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be less than TowerHt.',ErrStat,ErrMsg,RoutineName)
+   IF ( MHK /= 2 ) THEN
 
-   IF ( InputFileData%PtfmCMzt  > InputFileData%TowerBsHt ) &
-      CALL SetErrStat( ErrID_Fatal, 'PtfmCMzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+      IF ( InputFileData%TowerBsHt >= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be less than TowerHt.',ErrStat,ErrMsg,RoutineName)
+
+      IF ( InputFileData%PtfmCMzt  > InputFileData%TowerBsHt ) &
+         CALL SetErrStat( ErrID_Fatal, 'PtfmCMzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
    
-   IF ( InputFileData%PtfmRefzt  > InputFileData%TowerBsHt ) &
-      CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+      IF ( InputFileData%PtfmRefzt  > InputFileData%TowerBsHt ) &
+         CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+
+   ELSEIF ( MHK == 2 ) THEN
+
+      IF ( InputFileData%TowerBsHt <= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be greater than TowerHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
+         
+   ENDIF
      
    IF (.NOT. BD4Blades ) THEN
       IF (InputFileData%HubRad >= InputFileData%TipRad ) &
       CALL SetErrStat( ErrID_Fatal, 'HubRad must be less than TipRad.',ErrStat,ErrMsg,RoutineName)
 
-      IF ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
-                                 <= InputFileData%TipRad )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
-      END IF
+      IF ( MHK /= 2 ) THEN
+         IF ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
+                                    <= InputFileData%TipRad )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ELSEIF ( MHK == 2 ) THEN
+         IF ( -InputFileData%TowerHt - InputFileData%Twr2Shft - InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
+                                    <= InputFileData%TipRad )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ENDIF
    END IF
 
 

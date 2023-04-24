@@ -114,6 +114,9 @@ IMPLICIT NONE
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
     REAL(ReKi)  :: RadAvg      !< Radius (from hub) used for averaging wind speed [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL      !< Mean sea level to still water level [m]
     INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
     LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
   END TYPE InflowWind_InitInputType
@@ -1102,6 +1105,9 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%RadAvg = SrcInitInputData%RadAvg
+    DstInitInputData%MHK = SrcInitInputData%MHK
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
     DstInitInputData%BoxExceedAllowIdx = SrcInitInputData%BoxExceedAllowIdx
     DstInitInputData%BoxExceedAllowF = SrcInitInputData%BoxExceedAllowF
  END SUBROUTINE InflowWind_CopyInitInput
@@ -1252,6 +1258,9 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Re_BufSz   = Re_BufSz   + 1  ! RadAvg
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowIdx
       Int_BufSz  = Int_BufSz  + 1  ! BoxExceedAllowF
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -1418,6 +1427,12 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     ReKiBuf(Re_Xferred) = InData%RadAvg
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%BoxExceedAllowIdx
     Int_Xferred = Int_Xferred + 1
@@ -1636,6 +1651,12 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%RadAvg = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%BoxExceedAllowIdx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

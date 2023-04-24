@@ -72,6 +72,8 @@ IMPLICIT NONE
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
     INTEGER(IntKi)  :: WrVTK = 0      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 1      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -116,6 +118,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Total number of WriteOutput outputs [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -1344,6 +1348,8 @@ CONTAINS
     DstInitInputData%storeHHVel = SrcInitInputData%storeHHVel
     DstInitInputData%WrVTK = SrcInitInputData%WrVTK
     DstInitInputData%WrVTK_Type = SrcInitInputData%WrVTK_Type
+    DstInitInputData%MHK = SrcInitInputData%MHK
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
  END SUBROUTINE ADI_CopyInitInput
 
  SUBROUTINE ADI_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1447,6 +1453,8 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1540,6 +1548,10 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WrVTK_Type
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_PackInitInput
 
  SUBROUTINE ADI_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1658,6 +1670,10 @@ CONTAINS
     Int_Xferred = Int_Xferred + 1
     OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_UnPackInitInput
 
  SUBROUTINE ADI_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -3365,6 +3381,8 @@ ENDIF
     DstParamData%wrVTK = SrcParamData%wrVTK
     DstParamData%WrVTK_Type = SrcParamData%WrVTK_Type
     DstParamData%NumOuts = SrcParamData%NumOuts
+    DstParamData%MHK = SrcParamData%MHK
+    DstParamData%WtrDpth = SrcParamData%WtrDpth
  END SUBROUTINE ADI_CopyParam
 
  SUBROUTINE ADI_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -3450,6 +3468,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! wrVTK
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3515,6 +3535,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_PackParam
 
  SUBROUTINE ADI_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3593,6 +3617,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ADI_UnPackParam
 
  SUBROUTINE ADI_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
