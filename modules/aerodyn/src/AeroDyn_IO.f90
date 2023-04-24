@@ -1270,7 +1270,7 @@ END SUBROUTINE ReadTailFinInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
-
+   use YAML, only: yaml_write_var
       ! passed variables
    TYPE(AD_InputFile),        INTENT(IN)  :: InputFileData                        ! Input-file data
    TYPE(RotParameterType),    INTENT(IN)  :: p                                    ! Parameters
@@ -1559,10 +1559,10 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 
    ! Buoyancy parameters
    WRITE (UnSu,'(//,A,/)')  'Buoyancy parameters:'
-   WRITE (UnSu,FmtDat ) '    Hub volume                     (m^3)', p%VolHub ! Buoyancy volume of the hub
-   WRITE (UnSu,FmtDat ) '    Nacelle volume                 (m^3)', p%VolNac ! Buoyancy volume of the nacelle
-   WRITE (UnSu,FmtDat ) '    Total blade volume, calculated (m^3)', p%VolBl  ! Buoyancy volume of all blades
-   WRITE (UnSu,FmtDat ) '    Tower volume, calculated       (m^3)', p%VolTwr ! Buoyancy volume of the tower
+   call yaml_write_var ( UnSu , 'Hub volume (m^3)' , p%VolHub , 'F15.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the hub
+   call yaml_write_var ( UnSu , 'Nacelle volume (m^3)' , p%VolNac , 'F11.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the nacelle
+   call yaml_write_var ( UnSu , 'Total blade volume (m^3)' , p%VolBl  , 'F7.3' , ErrStat , ErrMsg ) ! Buoyancy volume of all blades
+   call yaml_write_var ( UnSu , 'Tower volume (m^3)' , p%VolTwr , 'F13.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the tower
 
    CLOSE(UnSu)
 
