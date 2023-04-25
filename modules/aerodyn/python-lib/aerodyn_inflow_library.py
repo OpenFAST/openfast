@@ -109,12 +109,15 @@ class AeroDynInflowLib(CDLL):
         self.VTKNacDim   = np.array([-2.5,-2.5,0,10,5,5], dtype="float32")        # default nacelle dimension for VTK surface rendering [x0,y0,z0,Lx,Ly,Lz] (m)
         self.VTKHubRad   = 1.5        # default hub radius for VTK surface rendering
 
+        # Output file
+        self.wrOuts      = 0          # wrOuts -- file format for writing outputs
+        self.DT_Outs     = 0.0        # DT_Outs -- timestep for outputs to file
+
         # Interpolation order (must be 1: linear, or 2: quadratic)
         self.InterpOrder = 1          # default of linear interpolation
 
         # Initial time related variables
         self.dt          = 0.1        # typical default for HD
-        self.t_start     = 0.0        # initial time 
         self.tmax        = 600.0      # typical default for HD waves FFT
         #FIXME: check tmax/total_time and note exactly what is different between them.
         self.total_time  = 0.0        # may be longer than tmax
@@ -174,7 +177,6 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # MSL2SWL
             POINTER(c_int),                     # AeroProjMod
             POINTER(c_int),                     # InterpOrder 
-            POINTER(c_double),                  # t_initial 
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax 
             POINTER(c_bool),                    # storeHHVel
@@ -183,6 +185,8 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # WrVTK_Type
             POINTER(c_float),                   # VTKNacDim
             POINTER(c_float),                   # VTKHubRad
+            POINTER(c_int),                     # wrOuts -- file format for writing outputs
+            POINTER(c_double),                  # DT_Outs -- timestep for outputs to file
             POINTER(c_float),                   # initHubPos
             POINTER(c_double),                  # initHubOrient_flat
             POINTER(c_float),                   # initNacellePos
@@ -327,7 +331,6 @@ class AeroDynInflowLib(CDLL):
             byref(c_float(self.MSL2SWL)),           # IN: MSL2SWL
             byref(c_int(self.AeroProjMod)),         # IN: AeroProjMod
             byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
-            byref(c_double(self.t_start)),          # IN: time initial 
             byref(c_double(self.dt)),               # IN: time step (dt)
             byref(c_double(self.tmax)),             # IN: tmax
             byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
@@ -336,6 +339,8 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.WrVTK_Type)),          # IN: WrVTK_Type
             VTKNacDim_c,                            # IN: VTKNacDim
             byref(c_float(self.VTKHubRad)),         # IN: VTKHubRad
+            byref(c_int(self.wrOuts)),              # IN: wrOuts -- file format for writing outputs
+            byref(c_double(self.DT_Outs)),          # IN: DT_Outs -- timestep for outputs to file
             initHubPos_c,                           # IN: initHubPos -- initial hub position
             initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
             initNacellePos_c,                       # IN: initNacellePos -- initial hub position
@@ -365,7 +370,6 @@ class AeroDynInflowLib(CDLL):
     #
     #    # call AeroDyn_Inflow_C_ReInit
     #    self.AeroDyn_Inflow_C_ReInit(
-    #        byref(c_double(self.t_start)),          # IN: time initial 
     #        byref(c_double(self.dt)),               # IN: time step (dt)
     #        byref(c_double(self.tmax)),             # IN: tmax
     #        byref(self.error_status_c),             # OUT: ErrStat_C

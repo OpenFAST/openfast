@@ -9,7 +9,7 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.4.1 to OpenFAST dev 
+OpenFAST v3.5.0 to OpenFAST dev 
 ----------------------------------
 
 New modules AeroDisk (see :numref:`ADsk`) and Simplified-ElastoDyn (see :numref:`SED`).
@@ -25,8 +25,36 @@ ServoDyn-StructCtrl                            6   StC_DOF_MODE      2   StC_DOF
 ============================================= ==== ================= ========================================================================================================================================================================================================
 
 
+OpenFAST v3.4.1 to OpenFAST dev 
+----------------------------------
 
-OpenFAST v3.4.1 to OpenFAST v3.4.1 
+Updated the CMake build system.  Now requires CMake v3.12 or higher.
+
+============================================= ==== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name           Example Value
+============================================= ==== ==================== ========================================================================================================================================================================================================
+ServoDyn-StructCtrl                            6   StC_DOF_MODE         2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series; 5: Force determined by external DLL}
+InflowWind                                     8   VelInterpCubic              true   VelInterpCubic      - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]
+InflowWind                                     51                       ================== LIDAR Parameters ===========================================================================
+InflowWind                                     52  SensorType                     0   SensorType          - Switch for lidar configuration (0 = None, 1 = Single Point Beam(s), 2 = Continuous, 3 = Pulsed)
+InflowWind                                     53  NumPulseGate                   0   NumPulseGate        - Number of lidar measurement gates (used when SensorType = 3)
+InflowWind                                     54  PulseSpacing                  30   PulseSpacing        - Distance between range gates (m) (used when SensorType = 3)
+InflowWind                                     55  NumBeam                        0   NumBeam             - Number of lidar measurement beams (0-5)(used when SensorType = 1)
+InflowWind                                     56  FocalDistanceX              -200   FocalDistanceX      - Focal distance co-ordinates of the lidar beam in the x direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     57  FocalDistanceY                 0   FocalDistanceY      - Focal distance co-ordinates of the lidar beam in the y direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     58  FocalDistanceZ                 0   FocalDistanceZ      - Focal distance co-ordinates of the lidar beam in the z direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     59  RotorApexOffsetPos   0.0 0.0 0.0   RotorApexOffsetPos  - Offset of the lidar from hub height (m)
+InflowWind                                     60  URefLid                       17   URefLid             - Reference average wind speed for the lidar[m/s]
+InflowWind                                     61  MeasurementInterval         0.25   MeasurementInterval - Time between each measurement [s]
+InflowWind                                     62  LidRadialVel               False   LidRadialVel        - TRUE => return radial component, FALSE => return 'x' direction estimate
+InflowWind                                     63  ConsiderHubMotion              1   ConsiderHubMotion   - Flag whether to consider the hub motion's impact on Lidar measurements
+============================================= ==== ==================== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v3.4.0 to OpenFAST v3.4.1 
 ----------------------------------
 
 Restored the AeroDyn channel names with `Aero` in the name.  These had be

@@ -41,9 +41,12 @@
 MODULE InflowWind
 
 
-   USE                              InflowWind_Types
    USE                              NWTC_Library
+   USE                              InflowWind_Types
    USE                              InflowWind_Subs
+   USE                              InflowWind_IO_Types
+   USE                              InflowWind_IO
+   USE                              IfW_FlowField
 
    USE                              Lidar                      ! module for obtaining sensor data
    
@@ -61,12 +64,6 @@ MODULE InflowWind
    PUBLIC :: InflowWind_Init                                   !< Initialization routine
    PUBLIC :: InflowWind_CalcOutput                             !< Calculate the wind velocities
    PUBLIC :: InflowWind_End                                    !< Ending routine (includes clean up)
-
-   PUBLIC :: InflowWind_Convert2HAWC               !< An extension of the FAST framework, this routine converts an InflowWind data structure to HAWC format wind files
-   PUBLIC :: InflowWind_Convert2Bladed             !< An extension of the FAST framework, this routine converts an InflowWind data structure to Bladed format wind files (with shear already included)
-   PUBLIC :: InflowWind_Convert2VTK                !< An extension of the FAST framework, this routine converts an InflowWind data structure to VTK format wind files
-   PUBLIC :: InflowWind_Convert2Uniform            !< An extension of the FAST framework, this routine converts an InflowWind data structure to Uniform Wind formatted text files
-
 
       ! These routines satisfy the framework, but do nothing at present.
    PUBLIC :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
@@ -99,672 +96,563 @@ CONTAINS
 !! Since this module acts as an interface to other modules, on some things are set before initiating
 !! calls to the lower modules.
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,    ConstrStateGuess,    OtherStates,   &
-                     y,    m,   TimeInterval,  InitOutData, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
+                           y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
 
-      IMPLICIT                                                 NONE
+   ! Initialization data and guesses
+   TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitInp           !< Input data for initialization
+   TYPE(InflowWind_InputType),            INTENT(  OUT)  :: InputGuess        !< An initial guess for the input; the input mesh must be defined
+   TYPE(InflowWind_ParameterType),        INTENT(  OUT)  :: p                 !< Parameters
+   TYPE(InflowWind_ContinuousStateType),  INTENT(  OUT)  :: ContStates        !< Initial continuous states
+   TYPE(InflowWind_DiscreteStateType),    INTENT(  OUT)  :: DiscStates        !< Initial discrete states
+   TYPE(InflowWind_ConstraintStateType),  INTENT(  OUT)  :: ConstrStateGuess  !< Initial guess of the constraint states
+   TYPE(InflowWind_OtherStateType),       INTENT(  OUT)  :: OtherStates       !< Initial other/optimization states
+   TYPE(InflowWind_OutputType),           INTENT(  OUT)  :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
+   TYPE(InflowWind_MiscVarType),          INTENT(  OUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
+   REAL(DbKi),                            INTENT(IN   )  :: TimeInterval      !< Coupling time interval in seconds: InflowWind does not change this.
+   TYPE(InflowWind_InitOutputType),       INTENT(  OUT)  :: InitOutData       !< Initial output data -- Names, units, and version info.
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-      CHARACTER(*),              PARAMETER                  :: RoutineName="InflowWind_Init"
+   ! Local variables
+   CHARACTER(*), PARAMETER                               :: RoutineName="InflowWind_Init"
 
-         ! Initialization data and guesses
+   TYPE(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
 
-      TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitInp           !< Input data for initialization
-      TYPE(InflowWind_InputType),            INTENT(  OUT)  :: InputGuess        !< An initial guess for the input; the input mesh must be defined
-      TYPE(InflowWind_ParameterType),        INTENT(  OUT)  :: p                 !< Parameters
-      TYPE(InflowWind_ContinuousStateType),  INTENT(  OUT)  :: ContStates        !< Initial continuous states
-      TYPE(InflowWind_DiscreteStateType),    INTENT(  OUT)  :: DiscStates        !< Initial discrete states
-      TYPE(InflowWind_ConstraintStateType),  INTENT(  OUT)  :: ConstrStateGuess  !< Initial guess of the constraint states
-      TYPE(InflowWind_OtherStateType),       INTENT(  OUT)  :: OtherStates       !< Initial other/optimization states
-      TYPE(InflowWind_OutputType),           INTENT(  OUT)  :: y                 !< Initial output (outputs are not calculated; only the output mesh is initialized)
-      TYPE(InflowWind_MiscVarType),          INTENT(  OUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-      REAL(DbKi),                            INTENT(IN   )  :: TimeInterval      !< Coupling time interval in seconds: InflowWind does not change this.
-      TYPE(InflowWind_InitOutputType),       INTENT(  OUT)  :: InitOutData       !< Initial output data -- Names, units, and version info.
+   Type(Steady_InitInputType)                            :: Steady_InitInput
+   Type(Uniform_InitInputType)                           :: Uniform_InitInput
+   Type(TurbSim_InitInputType)                           :: TurbSim_InitInput
+   Type(Bladed_InitInputType)                            :: Bladed_InitInput
+   Type(Bladed_InitOutputType)                           :: Bladed_InitOutput
+   Type(HAWC_InitInputType)                              :: HAWC_InitInput
+   Type(User_InitInputType)                              :: User_InitInput
+   Type(Grid4D_InitInputType)                            :: Grid4D_InitInput
+   Type(Points_InitInputType)                            :: Points_InitInput
 
+   Type(WindFileDat)                                     :: FileDat
+   
 
-         ! Error Handling
+   ! TYPE(InflowWind_IO_InitInputType)                      :: FlowField_InitData     !< initialization info
+   ! TYPE(InflowWind_IO_InitOutputType)                     :: FlowField_InitOutData  !< initialization output info
 
-      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< Error status of the operation
-      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   TYPE(FileInfoType)                                    :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
+   CHARACTER(1024)                                       :: PriPath
 
+   INTEGER(IntKi)                                        :: I, j              !< Generic counter
+   INTEGER(IntKi)                                        :: Lin_indx          !< Generic counter
+   INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
+   CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
+   CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
+   CHARACTER(1), PARAMETER                               :: UVW(3) = (/'U','V','W'/)
+   CHARACTER(1), PARAMETER                               :: XYZ(3) = (/'X','Y','Z'/)
+   INTEGER(IntKi)                                        :: TmpErrStat
+   CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
 
-         ! Local variables
+   !----------------------------------------------------------------------------------------------
+   ! Initialize variables and check to see if this module has been initialized before.
+   !----------------------------------------------------------------------------------------------
 
-      TYPE(InflowWind_InputFile)                            :: InputFileData        !< Data from input file
+   ErrStat        =  ErrID_None
+   ErrMsg         =  ""
+   SumFileUnit    =  -1_IntKi ! set at beginning in case of error
 
-      TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData     !< initialization info
-      TYPE(IfW_UniformWind_InitOutputType)                  :: Uniform_InitOutData  !< initialization output info
+   ! Set a few variables.
 
-      TYPE(IfW_TSFFWind_InitInputType)                      :: TSFF_InitData        !< initialization info
-      TYPE(IfW_TSFFWind_InitOutputType)                     :: TSFF_InitOutData     !< initialization output info
+   p%DT   = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
+   CALL NWTC_Init()
+   CALL DispNVD( IfW_Ver )
 
-      TYPE(IfW_HAWCWind_InitInputType)                      :: HAWC_InitData        !< initialization info
-      TYPE(IfW_HAWCWind_InitOutputType)                     :: HAWC_InitOutData     !< initialization output info
+   !----------------------------------------------------------------------------------------------
+   ! Read the input file
+   !----------------------------------------------------------------------------------------------
 
-      TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData    !< initialization info
-      TYPE(IfW_BladedFFWind_InitOutputType)                 :: BladedFF_InitOutData !< initialization output info
-
-      TYPE(IfW_UserWind_InitInputType)                      :: User_InitData        !< initialization info
-      TYPE(IfW_UserWind_InitOutputType)                     :: User_InitOutData     !< initialization info
-
-      TYPE(IfW_4Dext_InitOutputType)                        :: FDext_InitOutData    !< initialization info
-
-      TYPE(FileInfoType)                                    :: InFileInfo    !< The derived type for holding the full input file for parsing -- we may pass this in the future
-!!!     TYPE(CTBladed_Backgr)                                        :: BackGrndValues
-
-
-         ! Temporary variables for error handling
-      INTEGER(IntKi)                                        :: TmpErrStat
-      CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
-      CHARACTER(1024)                                       :: PriPath
-
-         ! Local Variables
-      INTEGER(IntKi)                                        :: I, j              !< Generic counter
-      INTEGER(IntKi)                                        :: Lin_indx          !< Generic counter
-      INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
-      CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
-      CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
-      CHARACTER(1), PARAMETER                               :: UVW(3) = (/'U','V','W'/)
-      CHARACTER(1), PARAMETER                               :: XYZ(3) = (/'X','Y','Z'/)
-
-         !----------------------------------------------------------------------------------------------
-         ! Initialize variables and check to see if this module has been initialized before.
-         !----------------------------------------------------------------------------------------------
-
-      ErrStat        =  ErrID_None
-      ErrMsg         =  ""
-      SumFileUnit    =  -1_IntKi ! set at beginning in case of error
-
-         ! Set a few variables.
-
-      p%DT   = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
-      CALL NWTC_Init()
-      CALL DispNVD( IfW_Ver )
+   ! Set the names of the files based on the inputfilename
+   p%RootFileName  = InitInp%RootName
+   IF (LEN_TRIM(p%RootFileName) == 0) CALL GetRoot( InitInp%InputFileName, p%RootFileName )
+   EchoFileName  = TRIM(p%RootFileName)//".ech"
+   SumFileName   = TRIM(p%RootFileName)//".sum"
 
 
 
-         !----------------------------------------------------------------------------------------------
-         ! Read the input file
-         !----------------------------------------------------------------------------------------------
 
 
-         ! Set the names of the files based on the inputfilename
-      p%RootFileName  = InitInp%RootName
-      IF (LEN_TRIM(p%RootFileName) == 0) CALL GetRoot( InitInp%InputFileName, p%RootFileName )
-      EchoFileName  = TRIM(p%RootFileName)//".ech"
-      SumFileName   = TRIM(p%RootFileName)//".sum"
 
-         ! these values (and others hard-coded in lidar_init) should be set in the input file, too
-      InputFileData%SensorType = InitInp%lidar%SensorType
-      InputFileData%NumPulseGate = InitInp%lidar%NumPulseGate
-      InputFileData%RotorApexOffsetPos = InitInp%lidar%RotorApexOffsetPos
-      InputFileData%LidRadialVel = InitInp%lidar%LidRadialVel
 
-         ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
-      CALL GetPath( InitInp%InputFileName, PriPath )
+   ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
+   CALL GetPath( InitInp%InputFileName, PriPath )
 
-      IF ( InitInp%UseInputFile ) THEN
-         CALL ProcessComFile( InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg )
-         ! For diagnostic purposes, the following can be used to display the contents
-         ! of the InFileInfo data structure.
-         ! call Print_FileInfo_Struct( CU, InFileInfo ) ! CU is the screen -- different number on different systems.
-
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-                        
-      ELSE
-         CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF          
-         
-      ENDIF
-
-      CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
-
+   IF ( InitInp%UseInputFile ) THEN
+      CALL ProcessComFile( InitInp%InputFileName, InFileInfo, TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
-         CALL InflowWind_DestroyInputFile( InputFileData, TmpErrStat, TmpErrMsg )
          RETURN
-      ENDIF
-         ! let's tell InflowWind if an external module (e.g., FAST.Farm) is going to set the velocity grids.
-      
-      IF ( InitInp%Use4Dext) then
-         InputFileData%WindType = FDext_WindNumber      
-         InputFileData%PropagationDir = 0.0_ReKi ! wind is in XYZ coordinates (already rotated if necessary), so don't rotate it again
-      END IF
-
-         ! initialize sensor data:   
-      CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
-                       y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
-      
-
-         ! Validate the InflowWind input file information.
-
-      CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-      IF ( ErrStat>= AbortErrLev ) THEN
+      ENDIF        
+   ELSE
+      CALL NWTC_Library_CopyFileInfoType( InitInp%PassedFileData, InFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
-      ENDIF
+      ENDIF          
+   ENDIF
 
+   CALL InflowWind_ParseInputFileInfo( InputFileData,  InFileInfo, PriPath, InitInp%InputFileName, EchoFileName, &
+                                       InitInp%FixedWindFileRootName, InitInp%TurbineID, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
 
-      
-         ! If a summary file was requested, open it.
-      IF ( InputFileData%SumPrint ) THEN
+   ! If wind is Grid4D from FAST.Farm, set input file values
+   IF (InitInp%Use4Dext) then
+      InputFileData%WindType = FDext_WindNumber      
+      InputFileData%PropagationDir = 0.0_ReKi ! wind is in XYZ coordinates (already rotated if necessary), so don't rotate it again
+      InputFileData%VFlowAngle = 0.0_ReKi
+      InputFileData%VelInterpCubic = .false.
+   END IF
 
-            ! Open the summary file and write some preliminary info to it
-         CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            ENDIF
-      ELSE
-         SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
-      ENDIF
-
-
-      ! Allocate the arrays for passing points in and velocities out
-      CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   ! initialize sensor data:   
+   p%lidar%NumBeam = InputFileData%NumBeam
+   p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
+   p%lidar%SensorType = InputFileData%SensorType      
+   p%lidar%LidRadialVel   = InputFileData%LidRadialVel
+   p%lidar%NumPulseGate = InputFileData%NumPulseGate
+   p%lidar%FocalDistanceX =  InputFileData%FocalDistanceX
+   p%lidar%FocalDistanceY =  InputFileData%FocalDistanceY
+   p%lidar%FocalDistanceZ =  InputFileData%FocalDistanceZ
+   p%lidar%MeasurementInterval = InputFileData%MeasurementInterval
+   p%lidar%PulseSpacing = InputFileData%PulseSpacing
+   p%lidar%URefLid = InputFileData%URefLid
+   p%lidar%ConsiderHubMotion = InputFileData%ConsiderHubMotion  
          
-      CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-      InputGuess%PositionXYZ = 0.0_ReKi
-      InputGuess%HubPosition = 0.0_ReKi
-      CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)
-      
-      y%VelocityUVW = 0.0_ReKi
-
-
-      !-----------------------------------------------------------------
-      ! Initialize the submodules based on the WindType
-      !-----------------------------------------------------------------
-
-      
-      InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
-
-      SELECT CASE ( InputFileData%WindType )
-
-
-         CASE ( Steady_WindNumber )
-
-               !  This is a simplified case of the Uniform wind.  For this, we set the OtherStates data manually and don't
-               !  call UniformWind_Init.  We do however call it for the calculations.
-
-
-               ! Set InitInp information -- It isn't necessary to do this since that information is only used in the Uniform_Init routine, which is not called.
-
-               ! Set the Otherstates information
-            p%UniformWind%NumDataLines     =  1_IntKi
-
-            CALL AllocAry( p%UniformWind%Tdata, p%UniformWind%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          
-            CALL AllocAry( p%UniformWind%V, p%UniformWind%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%Delta, p%UniformWind%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%Upflow, p%UniformWind%NumDataLines, 'Uniform wind upflow angle', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%VZ, p%UniformWind%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%HShr, p%UniformWind%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%VShr, p%UniformWind%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         
-            CALL AllocAry( p%UniformWind%VLinShr, p%UniformWind%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-               
-            CALL AllocAry( p%UniformWind%VGust, p%UniformWind%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-
-               ! Set the array information
-            
-            p%UniformWind%Tdata(  :)       = 0.0_ReKi
-            p%UniformWind%V(      :)       = InputFileData%Steady_HWindSpeed
-            p%UniformWind%Delta(  :)       = 0.0_ReKi
-            p%UniformWind%Upflow( :)       = 0.0_ReKi
-            p%UniformWind%VZ(     :)       = 0.0_ReKi
-            p%UniformWind%HShr(   :)       = 0.0_ReKi
-            p%UniformWind%VShr(   :)       = InputFileData%Steady_PLexp
-            p%UniformWind%VLinShr(:)       = 0.0_ReKi
-            p%UniformWind%VGust(  :)       = 0.0_ReKi
-
-
-               ! Now we have in effect initialized the IfW_UniformWind module, so set the parameters
-            p%UniformWind%RefLength        =  max(1.0_ReKi, InputFileData%Uniform_RefLength)    ! This is not used since no shear gusts are used.  Set to 1.0 so calculations don't bomb. 
-            p%UniformWind%RefHt            =  InputFileData%Steady_RefHt
-            m%UniformWind%TimeIndex        =  1_IntKi
-
-            p%ReferenceHeight = p%UniformWind%RefHt
-            
-               ! Store wind file metadata
-            InitOutData%WindFileInfo%FileName         =  ""
-            InitOutData%WindFileInfo%WindType         =  Steady_WindNumber
-            InitOutData%WindFileInfo%RefHt            =  InputFileData%Steady_RefHt
-            InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
-            InitOutData%WindFileInfo%DT               =  0.0_ReKi
-            InitOutData%WindFileInfo%NumTSteps        =  1_IntKi
-            InitOutData%WindFileInfo%ConstantDT       =  .FALSE.
-            InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.                             ! This is constant
-            InitOutData%WindFileInfo%YRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileInfo%YRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in y-direction
-            InitOutData%WindFileInfo%ZRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
-            InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
-            InitOutData%WindFileInfo%IsBinary         =  .FALSE.
-            InitOutData%WindFileInfo%TI               =  0.0_ReKi
-            InitOutData%WindFileInfo%TI_listed        =  .FALSE.
-            InitOutData%WindFileInfo%MWS              = InputFileData%Steady_HWindSpeed
-
-               ! Write summary file information
-            IF ( SumFileUnit > 0 ) THEN
-               WRITE(SumFileUnit,'(A)',IOSTAT=TmpErrStat)
-               WRITE(SumFileUnit,'(A80)',IOSTAT=TmpErrStat)          'Steady wind -- Constant wind profile for entire simulation. No windfile read in.'
-               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Reference height:                  ',p%UniformWind%RefHt
-               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Horizontal velocity:               ',p%UniformWind%V
-               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Vertical sheer power law exponent: ',p%UniformWind%VShr
-
-                  ! We are assuming that if the last line was written ok, then all of them were.
-               IF (TmpErrStat /= 0_IntKi) THEN
-                  CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,RoutineName)
-                  CALL Cleanup
-                  RETURN
-               ENDIF   
-            ENDIF 
-
-
-         CASE ( Uniform_WindNumber )
-
-               ! Set InitInp information
-            Uniform_InitData%ReferenceHeight          =  InputFileData%Uniform_RefHt
-            Uniform_InitData%RefLength                =  InputFileData%Uniform_RefLength 
-            Uniform_InitData%WindFileName             =  InputFileData%Uniform_FileName
-            Uniform_InitData%SumFileUnit              =  SumFileUnit
-
-            Uniform_InitData%UseInputFile             =  InitInp%WindType2UseInputFile
-            Uniform_InitData%PassedFileData           =  InitInp%WindType2Data
-
-               ! Initialize the UniformWind module
-            CALL IfW_UniformWind_Init(Uniform_InitData, p%UniformWind, &
-                        m%UniformWind, Uniform_InitOutData,  TmpErrStat, TmpErrMsg)
-
-               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-               
-            if (InitInp%Linearize) then
-                  ! we'd have to redo the math to get this correct, so for now we are disabling upflow for linearization:
-               if (any(p%UniformWind%upflow /= 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
-                  CALL Cleanup()
-                  return
-               end if
-            end if
-
-
-            p%ReferenceHeight = p%UniformWind%RefHt
-
-               ! Store wind file metadata
-            InitOutData%WindFileInfo%FileName         =  InputFileData%Uniform_FileName
-            InitOutData%WindFileInfo%WindType         =  Uniform_WindNumber
-            InitOutData%WindFileInfo%RefHt            =  p%UniformWind%RefHt
-            InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
-            InitOutData%WindFileInfo%DT               =  Uniform_InitOutData%WindFileDT
-            InitOutData%WindFileInfo%NumTSteps        =  Uniform_InitOutData%WindFileNumTSteps
-            InitOutData%WindFileInfo%ConstantDT       =  Uniform_InitOutData%WindFileConstantDT
-            InitOutData%WindFileInfo%TRange           =  Uniform_InitOutData%WindFileTRange
-            InitOutData%WindFileInfo%TRange_Limited   = .FALSE.                              ! UniformWind sets to limit of file if outside time bounds
-            InitOutData%WindFileInfo%YRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileInfo%YRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in y-direction
-            InitOutData%WindFileInfo%ZRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
-            InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
-            InitOutData%WindFileInfo%IsBinary         =  .FALSE.
-            InitOutData%WindFileInfo%TI               =  0.0_ReKi
-            InitOutData%WindFileInfo%TI_listed        =  .FALSE.
-
-            if (p%UniformWind%NumDataLines == 1) then
-               InitOutData%WindFileInfo%MWS = p%UniformWind%V(1)
-            else
-               InitOutData%WindFileInfo%MWS = 0.0_ReKi               
-               do i=2,p%UniformWind%NumDataLines
-                  InitOutData%WindFileInfo%MWS = InitOutData%WindFileInfo%MWS + &
-                                                 0.5_ReKi*(p%UniformWind%V(i)+p%UniformWind%V(i-1))*&
-                                                          (p%UniformWind%Tdata(i)-p%UniformWind%Tdata(i-1))
-               end do
-               InitOutData%WindFileInfo%MWS = InitOutData%WindFileInfo%MWS / &
-                           ( p%UniformWind%Tdata(p%UniformWind%NumDataLines) - p%UniformWind%Tdata(1) )
-            end if
-            
-            
-               ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
-            IF ( ( .NOT. EqualRealNos (p%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
-                 ( .NOT. EqualRealNos (p%PropagationDir, 0.0_ReKi)       ) ) THEN
-               CALL SetErrStat( ErrID_Warn,' Possible double rotation of wind field! Uniform wind file starts with a wind direction of '// &
-                        TRIM(Num2LStr(p%UniformWind%Delta(1)*R2D))//                       &
-                        ' degrees and the InflowWind input file specifies a PropagationDir of '//  &
-                        TRIM(Num2LStr(p%PropagationDir*R2D))//' degrees.',                 &
-                        ErrStat,ErrMsg,RoutineName )
-            ENDIF
-
-
-
-         CASE ( TSFF_WindNumber )
-
-               ! Set InitInp information
-            TSFF_InitData%WindFileName                   =  InputFileData%TSFF_FileName
-            TSFF_InitData%SumFileUnit                    =  SumFileUnit
-
-               ! Initialize the TSFFWind module
-            CALL IfW_TSFFWind_Init(TSFF_InitData, p%TSFFWind, &
-                           m%TSFFWind, TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
-            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-
-               ! Store wind file metadata
-            InitOutData%WindFileInfo%FileName            =  InputFileData%TSFF_FileName
-            
-            CALL SetFFInitOutData(p%TSFFWind%FF)
-            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
-
-
-         CASE ( BladedFF_WindNumber, BladedFF_Shr_WindNumber )
-
-               ! Set InitInp information
-            BladedFF_InitData%SumFileUnit                =  SumFileUnit
-            BladedFF_InitData%FixedWindFileRootName      = InitInp%FixedWindFileRootName
-            BladedFF_InitData%TurbineID                  = InitInp%TurbineID
-            
-            if (InputFileData%WindType /= BladedFF_Shr_WindNumber) then  
-               IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
-                  IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
-                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
-                  ELSE                                   ! FAST.Farm high-resolution domain(s)
-                     InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
-                  ENDIF
-               ENDIF
-               
-               BladedFF_InitData%WindFileName            = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
-               BladedFF_InitData%TowerFileExist          =  InputFileData%BladedFF_TowerFile
-               BladedFF_InitData%NativeBladedFmt         = .false.
-            else
-               BladedFF_InitData%WindFileName            =  InputFileData%BladedFF_FileName
-               BladedFF_InitData%TowerFileExist          = .false.
-               BladedFF_InitData%NativeBladedFmt         = .true.
-               !call IfW_FFWind_CopyInitInput( InputFileData%FF, BladedFF_InitData%FF, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
-            end if
-                        
-               ! Initialize the BladedFFWind module
-            CALL IfW_BladedFFWind_Init(BladedFF_InitData, p%BladedFFWind, m%BladedFFWind, &
-                                        BladedFF_InitOutData,  TmpErrStat, TmpErrMsg)
-            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-
-               ! Store wind file metadata
-            InitOutData%WindFileInfo%FileName            =  InputFileData%BladedFF_FileName
-            
-            CALL SetFFInitOutData(p%BladedFFWind%FF)
-
-            InitOutData%WindFileInfo%TI               =  BladedFF_InitOutData%TI
-            InitOutData%WindFileInfo%TI_listed        =  .TRUE.   ! This must be listed in the file someplace
-            
-            if (InputFileData%WindType == BladedFF_Shr_WindNumber) then
-               InputFileData%WindType = BladedFF_WindNumber
-               ! this overwrites the values of PropagationDir and VFlowAngle with values from the native Bladed file
-               InputFileData%PropagationDir = BladedFF_InitOutData%PropagationDir
-               InputFileData%VFlowAngle     = BladedFF_InitOutData%VFlowAngle 
-            end if
-            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
-
-            
-         CASE ( HAWC_WindNumber )
-            
-               ! Set InitInp information
-            HAWC_InitData%WindFileName(1)    = InputFileData%HAWC_FileName_u
-            HAWC_InitData%WindFileName(2)    = InputFileData%HAWC_FileName_v
-            HAWC_InitData%WindFileName(3)    = InputFileData%HAWC_FileName_w
-            HAWC_InitData%SumFileUnit        = SumFileUnit
-            HAWC_InitData%nx                 = InputFileData%HAWC_nx
-            HAWC_InitData%ny                 = InputFileData%HAWC_ny
-            HAWC_InitData%nz                 = InputFileData%HAWC_nz
-
-            HAWC_InitData%dx                 = InputFileData%HAWC_dx
-            HAWC_InitData%dy                 = InputFileData%HAWC_dy
-            HAWC_InitData%dz                 = InputFileData%HAWC_dz
-
-            call IfW_FFWind_CopyInitInput( InputFileData%FF, HAWC_InitData%FF, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
-                   
-            
-               ! Initialize the HAWCWind module
-            CALL IfW_HAWCWind_Init(HAWC_InitData, p%HAWCWind, m%HAWCWind, &
-                                   TimeInterval,  HAWC_InitOutData,  TmpErrStat, TmpErrMsg)
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-
-
-               ! Store wind file metadata
-            CALL SetFFInitOutData(p%HAWCWind%FF)
-            InitOutData%WindFileInfo%FileName            =  InputFileData%HAWC_FileName_u
-            p%ReferenceHeight = InitOutData%WindFileInfo%RefHt
-
-            
-         CASE (User_WindNumber)
-
-               ! Initialize the UserWind module
-            CALL IfW_UserWind_Init(User_InitData, p%UserWind, m%UserWind, &
-                        TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-            
-            p%ReferenceHeight = InputFileData%Steady_RefHt ! FIXME!!!!
-            
-         CASE ( FDext_WindNumber )
-            
-               ! Initialize the UserWind module
-            CALL IfW_4Dext_Init(InitInp%FDext, p%FDext, m%FDext, TimeInterval, FDext_InitOutData, TmpErrStat, TmpErrMsg)
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) THEN
-                  CALL Cleanup()
-                  RETURN
-               ENDIF
-            p%ReferenceHeight = p%FDext%pZero(3) + (p%FDext%n(3)/2) * p%FDext%delta(3) ! should be middle of grid, right???? FIXME
-            
-         CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
-            CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_Init()')
-
-
-
-
-      END SELECT
-                  
-
-      !IF ( InputFileData%CTTS_Flag ) THEN
-      !   ! Initialize the CTTS_Wind module
-      !ENDIF
-
-
-      !............................................
-      ! Set the p and OtherStates for InflowWind using the input file information.
-      ! (set this after initializing modules so that we can use propagationDir and VFlowAng from native-Bladed files
-      !............................................
-
-      CALL InflowWind_SetParameters( InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-
-            
-
-!!!         !----------------------------------------------------------------------------------------------
-!!!         ! Check for coherent turbulence file (KH superimposed on a background wind file)
-!!!         ! Initialize the CTWind module and initialize the module of the other wind type.
-!!!         !----------------------------------------------------------------------------------------------
-!!!
-!!!      IF ( p%WindType == CTP_WindNumber ) THEN
-!!!
-!!!!FIXME: remove this error message when we add CTP_Wind in
-!!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the CTP_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
-!!!            RETURN
-!!!
-!!!         CALL CTTS_Init(UnWind, p%WindFileName, BackGrndValues, ErrStat, ErrMsg)
-!!!         IF (ErrStat /= 0) THEN
-!!!            p%WindType = Undef_Wind
-!!!            ErrStat  = ErrID_Fatal
-!!!            RETURN
-!!!         END IF
-!!!
-!!!   !FIXME: check this
-!!!         p%WindFileName = BackGrndValues%WindFile
-!!!         p%WindType = BackGrndValues%WindType
-!!!   !      CTTS_Flag  = BackGrndValues%CoherentStr
-!!!         p%CTTS_Flag  = BackGrndValues%CoherentStr    ! This might be wrong
-!!!
-!!!      ELSE
-!!!
-!!!         p%CTTS_Flag  = .FALSE.
-!!!
-!!!      END IF
-!!!
-
-
-
-      
-         ! Allocate arrays for the WriteOutput
-
-      CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-      y%WriteOutput = 0.0_ReKi
-      
-      CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
+   CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
+                    y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
    
-      InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
-      InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
-       
 
-      ! allocate and fill variables for linearization:
-      if (InitInp%Linearize) then
-         ! also need to add InputGuess%HubOrientation to the u%Linear items
-         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      ! Validate the InflowWind input file information.
+
+   CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+   
+      ! If a summary file was requested, open it.
+   IF ( InputFileData%SumPrint ) THEN
+
+         ! Open the summary file and write some preliminary info to it
+      CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, InputFileData%WindType, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
          ENDIF
-         
-         do i=1,InitInp%NumWindPoints
-            do j=1,3
-               InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
-               InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
-            end do
-         end do
+   ELSE
+      SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
+   ENDIF
 
-         ! hub position
-         Lin_Indx = InitInp%NumWindPoints*3
-         do j=1,3
-            InitOutData%LinNames_y(Lin_Indx+j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
-            InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//'-component position of moving hub, m'
-         end do
-         Lin_Indx = Lin_Indx + 3
-         
-         ! hub orientation angles
-         do j=1,3
-            InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//' orientation of moving hub, rad'
-         end do
-         Lin_Indx = Lin_Indx + 3
-         
-         
-         InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
-         InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
-         InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'         
-         
-         do i=1,p%NumOuts
-            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints+size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-         end do
+   ! Allocate the array for passing points
+   CALL AllocAry( InputGuess%PositionXYZ, 3, InitInp%NumWindPoints, "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   InputGuess%PositionXYZ = 0.0_ReKi
+   InputGuess%HubPosition = 0.0_ReKi
+   CALL Eye(InputGuess%HubOrientation,TmpErrStat,TmpErrMsg)  
 
-         ! IfW inputs and outputs are in the global, not rotating frame
-         InitOutData%RotFrame_u = .false. 
-         InitOutData%RotFrame_y = .false. 
-
-         InitOutData%IsLoad_u = .false. ! IfW inputs for linearization are not loads
-         
-         !InitOutData%PropagationDir = -p%PropagationDir
-         !InitOutData%RefHt = p%UniformWind%RefHt
-         !InitOutData%RefLength = p%UniformWind%RefLength
-         
-      end if
-                  
-
-         ! Set the version information in InitOutData
-      InitOutData%Ver   = IfW_Ver
-
-
-      CALL CleanUp()
-
-
+   ! Allocate the array for passing velocities out
+   CALL AllocAry( y%VelocityUVW, 3, InitInp%NumWindPoints, "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF (ErrStat>= AbortErrLev) THEN
+      CALL Cleanup()
       RETURN
+   ENDIF
+   y%VelocityUVW = 0.0_ReKi
 
+   ! If requested, allocate the array for passing accelerations out
+   IF ( InitInp%OutputAccel ) THEN
+      CALL AllocAry( y%AccelUVW, 3, InitInp%NumWindPoints, "Array of wind accelerations returned by InflowWind", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat>= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+      y%AccelUVW = 0.0_ReKi
+   ENDIF
 
-   !----------------------------------------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Set flow field input data based on wind type
+   !----------------------------------------------------------------------------
+
+   InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
+
+   select case(InputFileData%WindType)
+
+   case (Steady_WindNumber)
+
+      Steady_InitInput%HWindSpeed = InputFileData%Steady_HWindSpeed
+      Steady_InitInput%RefHt = InputFileData%Steady_RefHt
+      Steady_InitInput%PLExp = InputFileData%Steady_PLexp
+
+      p%FlowField%FieldType = Uniform_FieldType
+      call IfW_SteadyWind_Init(Steady_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
+
+   case (Uniform_WindNumber)
+
+      Uniform_InitInput%WindFileName = InputFileData%Uniform_FileName
+      Uniform_InitInput%RefHt = InputFileData%Uniform_RefHt
+      Uniform_InitInput%RefLength = InputFileData%Uniform_RefLength
+      Uniform_InitInput%PropagationDir = InputFileData%PropagationDir
+      Uniform_InitInput%UseInputFile = InitInp%WindType2UseInputFile
+      Uniform_InitInput%PassedFileData = InitInp%WindType2Data
+
+      p%FlowField%FieldType = Uniform_FieldType
+      call IfW_UniformWind_Init(Uniform_InitInput, SumFileUnit, p%FlowField%Uniform, FileDat, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
+
+   case (TSFF_WindNumber)
+
+      TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
+
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_TurbSim_Init(TurbSim_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
+   case (BladedFF_WindNumber)
+
+      Bladed_InitInput%TurbineID = InitInp%TurbineID
+      IF ( InitInp%FixedWindFileRootName ) THEN ! .TRUE. when FAST.Farm uses multiple instances of InflowWind for ambient wind data
+         IF ( InitInp%TurbineID == 0 ) THEN     ! .TRUE. for the FAST.Farm low-resolution domain
+            InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'Low'
+         ELSE                                   ! FAST.Farm high-resolution domain(s)
+            InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//TRIM(PathSep)//'HighT'//TRIM(Num2Lstr(InitInp%TurbineID))
+         ENDIF
+      ENDIF
+      Bladed_InitInput%WindType           = BladedFF_WindNumber
+      Bladed_InitInput%WindFileName       = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
+      Bladed_InitInput%TowerFileExist     =  InputFileData%BladedFF_TowerFile
+      Bladed_InitInput%NativeBladedFmt    = .false.
+
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+      
+   case (BladedFF_Shr_WindNumber)
+
+      Bladed_InitInput%WindType           = BladedFF_Shr_WindNumber
+      Bladed_InitInput%TurbineID          = InitInp%TurbineID
+      Bladed_InitInput%WindFileName       = InputFileData%BladedFF_FileName
+      Bladed_InitInput%TowerFileExist     = .false.
+      Bladed_InitInput%NativeBladedFmt    = .true.
+
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_Bladed_Init(Bladed_InitInput, SumFileUnit, Bladed_InitOutput, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)   
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Overwrite the values of PropagationDir and VFlowAngle with values from the native Bladed file
+      InputFileData%PropagationDir = Bladed_InitOutput%PropagationDir
+      InputFileData%VFlowAngle     = Bladed_InitOutput%VFlowAngle 
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
+   case (HAWC_WindNumber)
+
+      HAWC_InitInput%WindFileName(1) = InputFileData%HAWC_FileName_u
+      HAWC_InitInput%WindFileName(2) = InputFileData%HAWC_FileName_v
+      HAWC_InitInput%WindFileName(3) = InputFileData%HAWC_FileName_w
+      HAWC_InitInput%nx = InputFileData%HAWC_nx
+      HAWC_InitInput%ny = InputFileData%HAWC_ny
+      HAWC_InitInput%nz = InputFileData%HAWC_nz
+      HAWC_InitInput%dx = InputFileData%HAWC_dx
+      HAWC_InitInput%dy = InputFileData%HAWC_dy
+      HAWC_InitInput%dz = InputFileData%HAWC_dz
+      HAWC_InitInput%G3D%RefHt = InputFileData%FF%RefHt
+      HAWC_InitInput%G3D%ScaleMethod = InputFileData%FF%ScaleMethod
+      HAWC_InitInput%G3D%SF = InputFileData%FF%SF
+      HAWC_InitInput%G3D%SigmaF = InputFileData%FF%SigmaF
+      HAWC_InitInput%G3D%URef = InputFileData%FF%URef
+      HAWC_InitInput%G3D%WindProfileType = InputFileData%FF%WindProfileType
+      HAWC_InitInput%G3D%PLExp = InputFileData%FF%PLExp
+      HAWC_InitInput%G3D%Z0 = InputFileData%FF%Z0
+      HAWC_InitInput%G3D%XOffset = InputFileData%FF%XOffset
+
+      p%FlowField%FieldType = Grid3D_FieldType
+      call IfW_HAWC_Init(HAWC_InitInput, SumFileUnit, p%FlowField%Grid3D, FileDat, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
+   case (User_WindNumber)
+
+      p%FlowField%FieldType = User_FieldType
+      call IfW_User_Init(User_InitInput, SumFileUnit, p%FlowField%User, FileDat, TmpErrStat, TmpErrMsg)
+      call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%User%RefHeight]
+
+   case (FDext_WindNumber)
+
+      p%FlowField%FieldType = Grid4D_FieldType
+      call IfW_Grid4D_Init(InitInp%FDext, p%FlowField%Grid4D, TmpErrStat, TmpErrMsg)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid4D%RefHeight]
+
+   case (Point_WindNumber)
+
+      p%FlowField%FieldType = Point_FieldType
+      Points_InitInput%NumWindPoints = InitInp%NumWindPoints
+      call IfW_Points_Init(Points_InitInput, p%FlowField%Points, TmpErrStat, TmpErrMsg)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      endif
+
+      ! Set reference position for wind rotation
+      p%FlowField%RefPosition = 0.0_ReKi
+
+   case default  
+      call SetErrStat(ErrID_Fatal, ' Undefined wind type.', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+
+   !----------------------------------------------------------------------------
+   ! Initialization by Field Type
+   !----------------------------------------------------------------------------
+
+   ! Reset flag indicating that acceleration field is valid
+   p%FlowField%AccFieldValid = .false.
+
+   ! Copy flag for enabling cubic velocity interpolation
+   p%FlowField%VelInterpCubic = InputFileData%VelInterpCubic
+
+   ! If cubic velocity interpolation requested and linearization is performed,
+   ! display message that cubic interpolation is incompatible with linearization
+   ! and will be disabled
+   if (p%FlowField%VelInterpCubic .and. InitInp%Linearize) then
+      call WrScr("InflowWind: Cubic interpolation of wind velocity is disabled for linearization")
+      p%FlowField%VelInterpCubic = .false.
+   end if
+
+   ! Set box exceed flag and index
+   p%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
+   p%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
+   if (InitInp%BoxExceedAllowF .and. (InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints)) then
+      p%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
+   end if
+
+   ! Select based on field type
+   select case (p%FlowField%FieldType)
+
+   case (Uniform_FieldType)
+
+      if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
+         call IfW_UniformField_CalcAccel(p%FlowField%Uniform, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+         p%FlowField%AccFieldValid = .true.
+      end if
+
+   case (Grid3D_FieldType)
+
+      ! Calculate acceleration
+      if (InitInp%OutputAccel .or. p%FlowField%VelInterpCubic) then
+         call IfW_Grid3DField_CalcAccel(p%FlowField%Grid3D, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+         p%FlowField%AccFieldValid = .true.
+      end if
+
+      ! Calculate field average if box is allowed to be exceeded
+      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+         call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
+         call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end if
+
+   case default
+
+      if (InitInp%OutputAccel) then
+         call SetErrStat(ErrID_Fatal, "Acceleration not implemented for field type "// &
+                         num2LStr(p%FlowField%FieldType), ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+      if (p%FlowField%VelInterpCubic) then
+         call WrScr(' Cubic velocity interpolation not implemented for WindType '// &
+                     num2LStr(InputFileData%WindType))
+         p%FlowField%VelInterpCubic = .false.
+      end if
+
+   end select
+
+   !----------------------------------------------------------------------------
+   ! Set the p and OtherStates for InflowWind using the input file information.
+   ! (set this after initializing modules so that we can use PropagationDir 
+   ! and VFlowAng from native-Bladed files
+   !----------------------------------------------------------------------------
+
+   CALL InflowWind_SetParameters( InitInp, InputFileData, p, m, TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+   
+   ! Allocate arrays for the WriteOutput
+   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+   y%WriteOutput = 0.0_ReKi
+   
+   CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+   CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   IF ( ErrStat>= AbortErrLev ) THEN
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+   InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
+   InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+      
+   ! allocate and fill variables for linearization
+   if (InitInp%Linearize) then
+
+      ! If field is uniform and there is any nonzero upflow, return error
+      ! Math needs work before this can be implemented
+      if (p%FlowField%FieldType == Uniform_FieldType) then
+         if (any(p%FlowField%Uniform%AngleV /= 0.0_ReKi)) then
+            call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
+            call Cleanup()
+            return
+         end if
+      end if
+
+      ! also need to add InputGuess%HubOrientation to the u%Linear items
+      CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      ENDIF
+      
+      do i=1,InitInp%NumWindPoints
+         do j=1,3
+            InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
+            InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
+         end do
+      end do
+
+      ! hub position
+      Lin_Indx = InitInp%NumWindPoints*3
+      do j=1,3
+         InitOutData%LinNames_y(Lin_Indx+j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
+         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//'-component position of moving hub, m'
+      end do
+      Lin_Indx = Lin_Indx + 3
+      
+      ! hub orientation angles
+      do j=1,3
+         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//' orientation of moving hub, rad'
+      end do
+      Lin_Indx = Lin_Indx + 3
+      
+      InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
+      InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
+      InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'         
+      
+      do i=1,p%NumOuts
+         InitOutData%LinNames_y(i+3*InitInp%NumWindPoints+size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      end do
+
+      ! IfW inputs and outputs are in the global, not rotating frame
+      InitOutData%RotFrame_u = .false. 
+      InitOutData%RotFrame_y = .false. 
+
+      InitOutData%IsLoad_u = .false. ! IfW inputs for linearization are not loads
+      
+   end if
+               
+   ! Set the version information in InitOutData
+   InitOutData%Ver = IfW_Ver
+
+   CALL CleanUp()
+
 CONTAINS
 
    SUBROUTINE CleanUp()
@@ -775,6 +663,7 @@ CONTAINS
 
       ! Ignore error messages from InFileInfo destruction
       call NWTC_Library_DestroyFileInfoType( InFileInfo, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
          ! Close the summary file if we were writing one
       IF ( SumFileUnit > 0 ) THEN
@@ -782,45 +671,7 @@ CONTAINS
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       ENDIF
 
-
    END SUBROUTINE CleanUp
-
-
-   SUBROUTINE SetFFInitOutData(FFp)
-   
-      TYPE(IfW_FFWind_ParameterType),              INTENT(IN   )  :: FFp                !< Parameters
-
-   
-            InitOutData%WindFileInfo%WindType            =  p%WindType
-            InitOutData%WindFileInfo%RefHt               =  FFp%RefHt
-            InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
-            InitOutData%WindFileInfo%DT                  =  FFp%FFDTime
-            InitOutData%WindFileInfo%NumTSteps           =  FFp%NFFSteps
-            InitOutData%WindFileInfo%ConstantDT          =  .TRUE.
-            IF ( FFp%Periodic ) THEN
-               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, FFp%TotalTime /)
-               InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.
-            ELSE  ! Shift the time range to compensate for the shifting of the wind grid
-               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, FFp%TotalTime /)  -  FFp%InitXPosition*FFp%InvMFFWS
-               InitOutData%WindFileInfo%TRange_Limited   =  .TRUE.
-            ENDIF
-            InitOutData%WindFileInfo%YRange              =  (/ -FFp%FFYHWid, FFp%FFYHWid /)
-            InitOutData%WindFileInfo%YRange_Limited      =  .TRUE.      ! Hard boundaries enforced in y-direction
-            IF ( p%TSFFWind%FF%NTGrids > 0 ) THEN        ! have tower data
-               InitOutData%WindFileInfo%ZRange           =  (/ 0.0_Reki,  FFp%RefHt + FFp%FFZHWid /)
-            ELSE
-               InitOutData%WindFileInfo%ZRange           =  (/ FFp%GridBase,    &
-                                                               FFp%GridBase + FFp%FFZHWid*2.0 /)
-            ENDIF
-            InitOutData%WindFileInfo%ZRange_Limited      =  .TRUE.
-            InitOutData%WindFileInfo%BinaryFormat        =  FFp%WindFileFormat
-            InitOutData%WindFileInfo%IsBinary            =  .TRUE.
-            InitOutData%WindFileInfo%MWS                 = FFp%MeanFFWS
-
-            InitOutData%WindFileInfo%TI                  =  0.0_ReKi
-            InitOutData%WindFileInfo%TI_listed           =  .FALSE.
-                  
-   END SUBROUTINE SetFFInitOutData
    
 END SUBROUTINE InflowWind_Init
 
@@ -844,13 +695,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
                               ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
                               OtherStates, OutputData, m, ErrStat, ErrMsg )
 
-
-   IMPLICIT                                                    NONE
-
    CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_CalcOutput"
-
-
-      ! Inputs / Outputs
 
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
@@ -861,10 +706,8 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other/optimization states at Time
    TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
    TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-
 
       ! Local variables
    INTEGER(IntKi)                                           :: i
@@ -872,12 +715,8 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    INTEGER(IntKi)                                           :: TmpErrStat
    CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
-
-
-      ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
-
 
       ! Allocate the velocity array to get out
    IF ( .NOT. ALLOCATED(OutputData%VelocityUVW) ) THEN
@@ -947,81 +786,36 @@ END SUBROUTINE InflowWind_CalcOutput
 !> Clean up the allocated variables and close all open files.  Reset the initialization flag so
 !! that we have to reinitialize before calling the routines again.
 SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                       y, m, ErrStat, ErrMsg )
-
-   IMPLICIT                                                    NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_End"
-
-      ! Initialization data and guesses
+                           y, m, ErrStat, ErrMsg )
 
    TYPE(InflowWind_InputType),               INTENT(INOUT)  :: InputData         !< Input data for initialization
-   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p         !< Parameters
+   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p                 !< Parameters
    TYPE(InflowWind_ContinuousStateType),     INTENT(INOUT)  :: ContStates        !< Continuous states
    TYPE(InflowWind_DiscreteStateType),       INTENT(INOUT)  :: DiscStates        !< Discrete states
    TYPE(InflowWind_ConstraintStateType),     INTENT(INOUT)  :: ConstrStateGuess  !< Guess of the constraint states
    TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states
-   TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: y           !< Output data
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m          !< Misc variables for optimization (not copied in glue code)
-
-
-      ! Error Handling
-
+   TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: y                 !< Output data
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
    INTEGER( IntKi ),                         INTENT(  OUT)  :: ErrStat           !< error status
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< error message
 
+   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_End"
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
-      ! End the sub-modules (deallocates their arrays and closes their files):
+   ! Reset the wind type so that the initialization routine must be called
+   p%WindType      = Undef_WindNumber
 
-   SELECT CASE ( p%WindType )
-
-      CASE (Steady_WindNumber, Uniform_WindNumber)         ! The Steady wind is a simple wrapper for the UniformWind module.
-         CALL IfW_UniformWind_End( p%UniformWind, m%UniformWind, ErrStat, ErrMsg )
-
-      CASE (TSFF_WindNumber)
-         CALL IfW_TSFFWind_End( p%TSFFWind, m%TSFFWind, ErrStat, ErrMsg )
-
-      CASE (BladedFF_WindNumber)
-         CALL IfW_BladedFFWind_End( p%BladedFFWind, m%BladedFFWind, ErrStat, ErrMsg )
-
-      CASE (HAWC_WindNumber)
-         CALL IfW_HAWCWind_End( p%HAWCWind, m%HAWCWind, ErrStat, ErrMsg )
-
-      CASE (User_WindNumber)
-         CALL IfW_UserWind_End( p%UserWind, m%UserWind, ErrStat, ErrMsg )
-
-      CASE (FDext_WindNumber)
-         CALL IfW_4Dext_End( p%FDext, m%FDext, ErrStat, ErrMsg )
-         
-      CASE ( Undef_WindNumber )
-         ! Do nothing
-
-      CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
-         CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,RoutineName)
-
-   END SELECT
-
-!!!  !   IF (CTTS_Flag) CALL CTTS_Terminate( ErrStat ) !FIXME: should it be this line or the next?
-!!!         CALL CTTS_Terminate( ErrStat, ErrMsg )
-
-
+   ! Destroy all inflow wind derived types
    CALL InflowWind_DestroyInput( InputData, ErrStat, ErrMsg )         
-   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg )         
+   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg, DeallocatePointers=.true. )         
    CALL InflowWind_DestroyContState( ContStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyDiscState( DiscStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyConstrState( ConstrStateGuess, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyOtherState( OtherStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyOutput( y, ErrStat, ErrMsg )                     
    CALL InflowWind_DestroyMisc( m, ErrStat, ErrMsg )                     
-      
-      
-      ! Reset the wind type so that the initialization routine must be called
-   p%WindType      = Undef_WindNumber
-   p%CTTS_Flag     = .FALSE.
-
 
 END SUBROUTINE InflowWind_End
 
@@ -1237,10 +1031,10 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          n = SIZE(u%PositionXYZ,2)
             ! these are the positions used in the module coupling
          do i=1,n
-            ! note that p%RotToWind(1,1) = cos(p%PropagationDir) and p%RotToWind(2,1) = sin(p%PropagationDir), which are the
+            ! note that p%FlowField%RotToWind(1,1) = cos(p%PropagationDir) and p%FlowField%RotToWind(2,1) = sin(p%PropagationDir), which are the
             ! values we need to compute the jacobian.
 !!!FIX ME with the propagation values!!!!         
-            call IfW_UniformWind_JacobianPInput( t, u%PositionXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, u%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
             
             i_end  = 3*i
             i_start= i_end - 2
@@ -1263,7 +1057,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          do i=1,IfW_NumPtsAvg
             m%u_Avg%PositionXYZ(:,i) = matmul(u%HubOrientation,p%PositionAvg(:,i)) + u%HubPosition
 !!!FIX ME with the propagation values!!!!         
-            call IfW_UniformWind_JacobianPInput( t, m%u_Avg%PositionXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
+            call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, m%u_Avg%PositionXYZ(:,i), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
          
             ! y%DiskAvg has the same index as u%HubPosition
             ! Also note that partial_(m%u_Avg%PositionXYZ) / partial_(u%HubPosition) is identity, so we can skip that part of the chain rule for these derivatives:
@@ -1285,7 +1079,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 
             if (node > 0) then
 !!!FIX ME with the propagation values!!!!         
-               call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
+               call IfW_UniformWind_JacobianPInput( p%FlowField%Uniform, t, p%WindViXYZ(:,node), p%FlowField%RotToWind(1,1), p%FlowField%RotToWind(2,1), local_dYdu )
             else
                local_dYdu = 0.0_R8Ki
                comp = 1
@@ -1314,6 +1108,121 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 
 
 END SUBROUTINE InflowWind_JacobianPInput
+!..................................................................................................................................
+!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial 
+!! derivative dY/du is returned. This submodule does not follow the modularization framework.
+SUBROUTINE IfW_UniformWind_JacobianPInput(UF, t, Position, CosPropDir, SinPropDir, dYdu)
+   USE IfW_FlowField, only : UniformField_InterpLinear, UniformField_InterpCubic
+
+   TYPE(UniformFieldType),    INTENT(IN   )  :: UF                !< Uniform field derived type
+   REAL(DbKi),                INTENT(IN   )  :: t                 !< Current simulation time in seconds
+   REAL(ReKi),                INTENT(IN   )  :: Position(3)       !< XYZ Position at which to find velocity (operating point)
+   REAL(ReKi),                INTENT(IN   )  :: CosPropDir        !< cosine of InflowWind propagation direction
+   REAL(ReKi),                INTENT(IN   )  :: SinPropDir        !< sine of InflowWind propagation direction
+   REAL(R8Ki),                INTENT(INOUT)  :: dYdu(3,6)         !< Partial derivatives of output functions (Y) with respect to the inputs (u)
+
+   TYPE(UniformField_Interp)                 :: op                ! interpolated values of InterpParams
+   REAL(R8Ki)                                :: RotatePosition(3) !< rotated position
+   REAL(R8Ki)                                :: dVhdx             ! temporary value to hold partial v_h partial X   
+   REAL(R8Ki)                                :: dVhdy             ! temporary value to hold partial v_h partial Y   
+   REAL(R8Ki)                                :: dVhdz             ! temporary value to hold partial v_h partial Z   
+   REAL(R8Ki)                                :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
+   REAL(R8Ki)                                :: dVhdV             ! temporary value to hold partial v_h partial V   
+   REAL(R8Ki)                                :: Vh                ! temporary value to hold v_h    
+   REAL(R8Ki)                                :: dVhdVShr          ! temporary value to hold partial v_h partial VShr   
+   REAL(R8Ki)                                :: zr 
+
+   if ( Position(3) < 0.0_ReKi .or. EqualRealNos(Position(3), 0.0_ReKi)) then
+      dYdu = 0.0_R8Ki
+      return
+   end if      
+      
+   !-------------------------------------------------------------------------------------------------
+   !> 1. Interpolate uniform field to get values at operating point
+   !-------------------------------------------------------------------------------------------------
+
+   op = UniformField_InterpLinear(UF, t)
+   
+   RotatePosition(1) = Position(1)*cosPropDir - Position(2)*sinPropDir
+   RotatePosition(2) = Position(1)*sinPropDir + Position(2)*cosPropDir
+   RotatePosition(3) = Position(3)
+   
+   !-------------------------------------------------------------------------------------------------
+   !> 2. Calculate \f$ \frac{\partial Y_{Output \, Equations}}{\partial u_{inputs}} = \begin{bmatrix}
+   !! \frac{\partial Vt_u}{\partial X} & \frac{\partial Vt_u}{\partial Y} & \frac{\partial Vt_u}{\partial Z} \\
+   !! \frac{\partial Vt_v}{\partial X} & \frac{\partial Vt_v}{\partial Y} & \frac{\partial Vt_v}{\partial Z} \\
+   !! \frac{\partial Vt_w}{\partial X} & \frac{\partial Vt_w}{\partial Y} & \frac{\partial Vt_w}{\partial Z} \\
+   !! \end{bmatrix} \f$
+   !-------------------------------------------------------------------------------------------------
+
+   zr = RotatePosition(3)/UF%RefHeight
+   tmp_du = op%VelH * op%ShrH / UF%RefLength * CosPropDir
+   dVhdx  = tmp_du * op%SinAngleH
+   dVhdy  = tmp_du * op%CosAngleH   
+   dVhdz  = op%VelH * ( op%ShrV / UF%RefHeight * zr**(op%ShrV-1.0_R8Ki) + op%LinShrV/UF%RefLength)
+
+   dVhdV = ( ( RotatePosition(3)/UF%RefHeight ) ** op%ShrV &                                             ! power-law wind shear
+             + ( op%ShrH   * ( RotatePosition(2) * op%CosAngleH + RotatePosition(1) * op%SinAngleH ) &   ! horizontal linear shear
+             +  op%LinShrV * ( RotatePosition(3) - UF%RefHeight ) )/UF%RefLength  )                      ! vertical linear shear   
+   Vh = op%VelH * dVhdV + op%VelGust
+
+   dVhdVShr = op%VelH * zr**op%ShrV * log(zr)
+   dVhdPD   = op%VelH * op%ShrH / UF%RefLength * ( RotatePosition(1) * op%CosAngleH - RotatePosition(2) * op%SinAngleH )
+
+   tmp_du =  CosPropDir*op%CosAngleH  - SinPropDir*op%SinAngleH
+   tmp_dv = -SinPropDir*op%CosAngleH  - CosPropDir*op%SinAngleH
+
+      !> \f$ \frac{\partial Vt_u}{\partial X} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(1,1) = tmp_du*dVhdx
+      !> \f$ \frac{\partial Vt_v}{\partial X} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(2,1) = tmp_dv*dVhdx
+      !> \f$ \frac{\partial Vt_w}{\partial X} = 0 \f$
+   dYdu(3,1) = 0.0_R8Ki
+
+      !> \f$ \frac{\partial Vt_u}{\partial Y} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(1,2) = tmp_du*dVhdy
+      !> \f$ \frac{\partial Vt_v}{\partial Y} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(2,2) = tmp_dv*dVhdy
+      !> \f$ \frac{\partial Vt_w}{\partial Y} = 0 \f$
+   dYdu(3,2) = 0.0_R8Ki
+
+      !> \f$ \frac{\partial Vt_u}{\partial Z} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$
+   dYdu(1,3) = tmp_du*dVhdz 
+      !> \f$ \frac{\partial Vt_v}{\partial Z} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$      
+   dYdu(2,3) = tmp_dv*dVhdz
+      !> \f$ \frac{\partial Vt_w}{\partial Z} = 0 \f$
+   dYdu(3,3) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial V} =  \f$
+   dYdu(1,4) = tmp_du*dVhdV      
+      ! \f$ \frac{\partial Vt_v}{\partial V} =  \f$
+   dYdu(2,4) = tmp_dv*dVhdV
+      !> \f$ \frac{\partial Vt_w}{\partial V} = 0 \f$
+   dYdu(3,4) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial VShr} =  \f$
+   dYdu(1,5) = tmp_du*dVhdVShr
+      ! \f$ \frac{\partial Vt_v}{\partial VShr} =  \f$
+   dYdu(2,5) = tmp_dv*dVhdVShr
+      !> \f$ \frac{\partial Vt_w}{\partial VShr} = 0 \f$
+   dYdu(3,5) = 0.0_R8Ki
+
+      ! \f$ \frac{\partial Vt_u}{\partial PropDir} =  \f$
+   dYdu(1,6) = tmp_dv*Vh + tmp_du*dVhdPD
+      ! \f$ \frac{\partial Vt_v}{\partial PropDir} =  \f$
+   dYdu(2,6) = -tmp_du*Vh + tmp_dv*dVhdPD
+      !> \f$ \frac{\partial Vt_w}{\partial PropDir} = 0 \f$
+   dYdu(3,6) = 0.0_R8Ki
+
+END SUBROUTINE IfW_UniformWind_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
@@ -1595,8 +1504,8 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
       u_op((index+1):(index+3)) = EulerExtract(u%HubOrientation)
       index = index + 3
       
-      call IfW_UniformWind_GetOP( t, p%UniformWind, m%UniformWind, u_op(index+1:index+2) )
-      u_op(index + 3) = p%PropagationDir
+      call IfW_UniformWind_GetOP( p%FlowField%Uniform, t, p%FlowField%VelInterpCubic, u_op(index+1:index+2) )
+      u_op(index + 3) = p%FlowField%PropagationDir
       
    END IF
 
@@ -1643,252 +1552,5 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    END IF
 
 END SUBROUTINE InflowWind_GetOP
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-!====================================================================================================
-SUBROUTINE InflowWind_Convert2HAWC( FileRootName, p, m, ErrStat, ErrMsg )
-
-   USE IfW_FFWind_Base
-   IMPLICIT NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_Convert2HAWC"
-
-      ! Subroutine arguments
-
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc/optimization variables
-   CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files
-
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-
-
-      ! Local variables
-   TYPE(IfW_FFWind_ParameterType)                           :: p_ff              !< FF Parameters
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
-
-
-      ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
-   SELECT CASE ( p%WindType )
-         
-   CASE (Steady_WindNumber, Uniform_WindNumber)
-
-      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-      IF (ErrStat < AbortErrLev) THEN
-         CALL ConvertFFWind_to_HAWC2(FileRootName, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      END IF
-            
-      CALL IfW_FFWind_DestroyParam(p_ff,ErrStat2,ErrMsg2)
-   
-   CASE (TSFF_WindNumber)
-
-      CALL ConvertFFWind_to_HAWC2(FileRootName, p%TSFFWind%FF, ErrStat, ErrMsg)
-
-   CASE (BladedFF_WindNumber)
-
-      CALL ConvertFFWind_to_HAWC2(FileRootName, p%BladedFFWind%FF, ErrStat, ErrMsg)
-
-   CASE ( HAWC_WindNumber )
-
-      CALL ConvertFFWind_to_HAWC2(FileRootName, p%HAWCWind%FF, ErrStat, ErrMsg)
-
-   CASE DEFAULT ! User_WindNumber
-
-      ErrStat = ErrID_Warn
-      ErrMsg  = 'Wind type '//TRIM(Num2LStr(p%WindType))//' cannot be converted to HAWC format.'
-
-   END SELECT
-   
-END SUBROUTINE InflowWind_Convert2HAWC
-
-!====================================================================================================
-SUBROUTINE InflowWind_Convert2Bladed( FileRootName, p, m, ErrStat, ErrMsg )
-
-   USE IfW_FFWind_Base
-   IMPLICIT NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_Convert2Bladed"
-
-      ! Subroutine arguments
-
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc/optimization variables
-   CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files
-
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
-   TYPE(IfW_FFWind_ParameterType)                           :: p_ff              !< FF Parameters
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-      ! Local variables
-
-      ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
-   SELECT CASE ( p%WindType )
-         
-   CASE (Steady_WindNumber, Uniform_WindNumber)
-
-      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-      IF (ErrStat < AbortErrLev) THEN
-         CALL ConvertFFWind_to_Bladed(FileRootName, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      END IF
-            
-      CALL IfW_FFWind_DestroyParam(p_ff,ErrStat2,ErrMsg2)
-
-   CASE (TSFF_WindNumber)
-
-      CALL ConvertFFWind_to_Bladed(FileRootName, p%TSFFWind%FF, ErrStat, ErrMsg)
-
-   CASE (BladedFF_WindNumber)
-
-      CALL ConvertFFWind_to_Bladed(FileRootName, p%BladedFFWind%FF, ErrStat, ErrMsg)
-
-   CASE ( HAWC_WindNumber )
-
-      CALL ConvertFFWind_to_Bladed(FileRootName, p%HAWCWind%FF, ErrStat, ErrMsg)
-
-   CASE DEFAULT ! User_WindNumber
-
-      ErrStat = ErrID_Warn
-      ErrMsg  = 'Wind type '//TRIM(Num2LStr(p%WindType))//' cannot be converted to Bladed format.'
-
-   END SELECT
-   
-END SUBROUTINE InflowWind_Convert2Bladed
-
-!====================================================================================================
-SUBROUTINE InflowWind_Convert2Uniform( FileRootName, p, m, ErrStat, ErrMsg )
-
-   USE IfW_FFWind_Base
-   IMPLICIT NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_Convert2Uniform"
-
-      ! Subroutine arguments
-
-   TYPE(InflowWind_ParameterType),           INTENT(INOUT)  :: p                 !< Parameters
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc/optimization variables
-   CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files
-
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-
-
-      ! Local variables
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-
-      ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
-   SELECT CASE ( p%WindType )
-         
-   CASE (Steady_WindNumber, Uniform_WindNumber)
-       ! no need to convert anything here
-   
-   CASE (TSFF_WindNumber)
-      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%TSFFWind%FF, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-   CASE (BladedFF_WindNumber)
-      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%BladedFFWind%FF, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-   CASE ( HAWC_WindNumber )
-
-      CALL FFWind_to_Uniform(p%UniformWind, m%UniformWind, p%HAWCWind%FF, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-   CASE DEFAULT ! User_WindNumber
-
-      ErrStat = ErrID_Warn
-      ErrMsg  = RoutineName//': Wind type '//TRIM(Num2LStr(p%WindType))//' cannot be converted to UniformWind format.'
-      RETURN
-      
-   END SELECT
-   IF (ErrStat >= AbortErrLev) RETURN
-   
-   CALL WrUniformWind(FileRootName, p%UniformWind, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-END SUBROUTINE InflowWind_Convert2Uniform
-
-!====================================================================================================
-SUBROUTINE InflowWind_Convert2VTK( FileRootName, p, m, ErrStat, ErrMsg )
-
-   USE IfW_FFWind_Base
-   IMPLICIT NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_Convert2VTK"
-
-      ! Subroutine arguments
-
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc/optimization variables
-   CHARACTER(*),                             INTENT(IN   )  :: FileRootName      !< RootName for output files
-
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
-   TYPE(IfW_FFWind_ParameterType)                           :: p_ff              !< FF Parameters
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-      ! Local variables
-
-      ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
-   SELECT CASE ( p%WindType )
-         
-   CASE (Steady_WindNumber, Uniform_WindNumber)
-
-      CALL Uniform_to_FFWind(p%UniformWind, m%UniformWind, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
-      IF (ErrStat < AbortErrLev) THEN
-         CALL ConvertFFWind_toVTK(FileRootName, p_ff, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      END IF
-            
-      CALL IfW_FFWind_DestroyParam(p_ff,ErrStat2,ErrMsg2)
-
-   CASE (TSFF_WindNumber)
-
-      CALL ConvertFFWind_toVTK(FileRootName, p%TSFFWind%FF, ErrStat, ErrMsg)
-
-   CASE (BladedFF_WindNumber)
-
-      CALL ConvertFFWind_toVTK(FileRootName, p%BladedFFWind%FF, ErrStat, ErrMsg)
-
-   CASE ( HAWC_WindNumber )
-
-      CALL ConvertFFWind_toVTK(FileRootName, p%HAWCWind%FF, ErrStat, ErrMsg)
-
-   CASE DEFAULT ! User_WindNumber
-
-      ErrStat = ErrID_Warn
-      ErrMsg  = 'Wind type '//TRIM(Num2LStr(p%WindType))//' cannot be converted to VTK format.'
-
-   END SELECT
-   
-END SUBROUTINE InflowWind_Convert2VTK
-!====================================================================================================
 END MODULE InflowWind

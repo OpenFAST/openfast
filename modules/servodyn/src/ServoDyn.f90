@@ -385,6 +385,22 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    u%RotPwr = 0.
    u%HorWindV = 0.
    u%YawAngle = 0.
+   if (allocated(InitInp%LidSpeed)) then   ! Must allocate
+      allocate(u%LidSpeed(size(InitInp%LidSpeed)))
+      u%LidSpeed  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsX)) then
+      allocate(u%MsrPositionsX(size(InitInp%MsrPositionsX)))
+      u%MsrPositionsX  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsY)) then
+      allocate(u%MsrPositionsY(size(InitInp%MsrPositionsY)))
+      u%MsrPositionsY  = 0.
+   endif
+   if (allocated(InitInp%MsrPositionsZ)) then
+      allocate(u%MsrPositionsZ(size(InitInp%MsrPositionsZ)))
+      u%MsrPositionsZ  = 0.
+   endif
    m%dll_data%ElecPwr_prev = 0.
    m%dll_data%GenTrq_prev = 0.
 
@@ -482,6 +498,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
       p%AirDens      = InitInp%AirDens
       p%AvgWindSpeed = InitInp%AvgWindSpeed
+      
+      p%SensorType   = InitInp%SensorType
+      p%NumBeam      = InitInp%NumBeam
+      p%NumPulseGate = InitInp%NumPulseGate
+      p%PulseSpacing = InitInp%PulseSpacing
+      p%URefLid      = InitInp%URefLid
       
       CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, InitInp, StC_CtrlChanInitInfo, UnSum, ErrStat2, ErrMsg2 )
          if (Failed())  return;

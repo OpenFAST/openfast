@@ -56,7 +56,16 @@ typedef	^	InitInputType	IntKi	InterpOrder	-	-	-	"Interpolation order from glue c
 #ADD in the TMD submodule input file passing here
 typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
 typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
-
+#initial inputs of lidar parameters
+typedef	^	InitInputType	ReKi	LidSpeed     	{:}  -	-	"Number of Lidar measurement distances"	-
+typedef	^	InitInputType	ReKi	MsrPositionsX	{:}  -	-	"Lidar X direction measurement points" m
+typedef	^	InitInputType	ReKi	MsrPositionsY	{:}  -	-	"Lidar Y direction measurement points" m
+typedef	^	InitInputType	ReKi	MsrPositionsZ	{:}  -	-	"Lidar Z direction measurement points" m
+typedef	^	InitInputType	IntKi	SensorType   	 -   -	-	"Lidar sensor type" -
+typedef	^	InitInputType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
+typedef	^	InitInputType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
+typedef	^	InitInputType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" -
+typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 # Define outputs from the initialization routine here:
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
@@ -226,6 +235,15 @@ typedef	^	BladedDLLType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment ca
 typedef	^	BladedDLLType	ReKi	LSShftFxa	-	-	-	"Rotating low-speed shaft force x"	N
 typedef	^	BladedDLLType	ReKi	LSShftFys	-	-	-	"Nonrotating low-speed shaft force y"	N
 typedef	^	BladedDLLType	ReKi	LSShftFzs	-	-	-	"Nonrotating low-speed shaft force z"	N
+typedef	^	BladedDLLType	ReKi	LidSpeed       {:}	-	-	"Lidar measured wind speed"	        m/s
+typedef	^	BladedDLLType	ReKi	MsrPositionsX  {:}      -	-	"Lidar X direction measurement points"  m
+typedef	^	BladedDLLType	ReKi	MsrPositionsY  {:}      -	-	"Lidar Y direction measurement points"  m
+typedef	^	BladedDLLType	ReKi	MsrPositionsZ  {:}      -	-	"Lidar Z direction measurement points"  m
+typedef	^	BladedDLLType	IntKi	SensorType      -       -	-	"Lidar sensor type" -
+typedef	^	BladedDLLType	IntKi	NumBeam     	-       -	-	"Number of beams" -
+typedef	^	BladedDLLType	IntKi	NumPulseGate	-       -	-	"Number of pulse gates" -
+typedef	^	BladedDLLType	IntKi	PulseSpacing	-       -	-	"Distance between range gates" -
+typedef	^	BladedDLLType	IntKi	URefLid         -       -	-	"Reference average wind speed for the lidar"  m/s
 ## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
 typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
 typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
@@ -469,6 +487,12 @@ typedef  ^  ParameterType  Integer  Jac_Idx_BStC_y {:}{:}{:} - -  "the start and
 typedef  ^  ParameterType  Integer  Jac_Idx_NStC_y {:}{:}    - -  "the start and end indices of nacelle      StC y jacobian [ start/end, instance ]"  -
 typedef  ^  ParameterType  Integer  Jac_Idx_TStC_y {:}{:}    - -  "the start and end indices of tower        StC y jacobian [ start/end, instance ]"  -
 typedef  ^  ParameterType  Integer  Jac_Idx_SStC_y {:}{:}    - -  "the start and end indices of substructure StC y jacobian [ start/end, instance ]"  -
+# parameters for lidar assisted control
+typedef	^	ParameterType	IntKi	SensorType  	 -   -	-	"Lidar sensor type" -
+typedef	^	ParameterType	IntKi	NumBeam     	 -   -	-	"Number of beams" -
+typedef	^	ParameterType	IntKi	NumPulseGate	 -   -	-	"Number of pulse gates" -
+typedef	^	ParameterType	ReKi	PulseSpacing	 -   -	-	"Distance between range gates" m
+typedef	^	ParameterType	ReKi	URefLid     	 -   -	-	"Reference average wind speed for the lidar"  m/s
 
 
 
@@ -521,6 +545,10 @@ typedef	^	InputType	MeshType	BStCMotionMesh	{:}{:}	-	-	"StC module blade        
 typedef	^	InputType	MeshType	NStCMotionMesh	{:}	-	-	"StC module nacelle      input motion mesh" -
 typedef	^	InputType	MeshType	TStCMotionMesh	{:}	-	-	"StC module tower        input motion mesh" -
 typedef	^	InputType	MeshType	SStCMotionMesh	{:}	-	-	"StC module substructure input motion mesh" -
+typedef	^	InputType	ReKi	LidSpeed	{:}     -       -	"Lidar measured wind speeds"	       m/s
+typedef	^	InputType	ReKi	MsrPositionsX	{:}     -	-	"Lidar X direction measurement points" m
+typedef	^	InputType	ReKi	MsrPositionsY	{:}     -	-	"Lidar Y direction measurement points" m
+typedef	^	InputType	ReKi	MsrPositionsZ	{:}     -	-	"Lidar Z direction measurement points" m
 
 
 # ..... Outputs ...................................................................................................................

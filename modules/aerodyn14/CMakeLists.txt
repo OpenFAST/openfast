@@ -29,25 +29,28 @@ set(AD14_LIBS_SOURCES
   src/DWM_Types.f90
 )
 
-add_library(aerodyn14lib ${AD14_LIBS_SOURCES})
+add_library(aerodyn14lib_obj OBJECT ${AD14_LIBS_SOURCES})
+target_link_libraries(aerodyn14lib_obj ifwlib_obj nwtclibs_obj)
+
+add_library(aerodyn14lib $<TARGET_OBJECTS:aerodyn14lib_obj>)
 target_link_libraries(aerodyn14lib ifwlib nwtclibs)
 
-install(TARGETS aerodyn14lib
+install(TARGETS aerodyn14lib aerodyn14lib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
-set(DWM_SOURCES
-  src/DWM_driver_wind_farm_mod.f90
-  src/DWM_driver_wind_farm_sub.f90
-  src/DWM_driver_wind_farm.f90
-)
+# set(DWM_SOURCES
+#   src/DWM_driver_wind_farm_mod.f90
+#   src/DWM_driver_wind_farm_sub.f90
+#   src/DWM_driver_wind_farm.f90
+# )
 
-add_executable(dwm_driver_wind_farm ${DWM_SOURCES})
-target_link_libraries(dwm_driver_wind_farm aerodyn14lib versioninfolib)
+# add_executable(dwm_driver_wind_farm ${DWM_SOURCES})
+# target_link_libraries(dwm_driver_wind_farm aerodyn14lib versioninfolib)
 
-install(TARGETS dwm_driver_wind_farm
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+# install(TARGETS dwm_driver_wind_farm
+#   RUNTIME DESTINATION bin
+#   LIBRARY DESTINATION lib
+#   ARCHIVE DESTINATION lib)

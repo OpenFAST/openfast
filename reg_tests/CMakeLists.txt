@@ -77,14 +77,6 @@ set(CTEST_AERODISK_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/aerodisk/aerodisk_dri
 # Set the SED executable configuration option and default
 set(CTEST_SED_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/simple-elastodyn/sed_driver" CACHE FILEPATH "Specify the SED driver executable to use in testing.")
 
-# Set the python executable configuration option and default
-if(NOT EXISTS ${PYTHON_EXECUTABLE})
-  find_program(PYTHON_EXECUTABLE NAMES python3 python py)
-  if(NOT EXISTS ${PYTHON_EXECUTABLE})
-    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
-  endif()
-endif()
-
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
 set(CTEST_RTEST_ATOL "1.9" CACHE STRING "Set the absolute orders of magnitude to consider as testable values; any deviations smaller than this always pass.")

@@ -19,12 +19,12 @@ set(NWTCLIBS_SOURCES
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
   src/ModMesh_Types.f90
-  src/NWTC_Base.f90
+  
   src/NWTC_IO.f90
   src/NWTC_Library.f90
   src/NWTC_Num.f90
   src/NWTC_RandomNumber.f90
-  src/SingPrec.f90
+
   src/NWTC_Library_Types.f90
   src/VTK.f90
   src/YAML.f90
@@ -91,52 +91,88 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
          endif()
       endif()
    endif()
-endif() 
+endif()
 
-
-if(BUILD_OPENFAST_SIMULINK_API)
-
-  if (APPLE OR UNIX)
-    if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-      set(NWTC_SYS_FILE src/SysMatlabLinuxGnu.f90)
-    elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
-      set(NWTC_SYS_FILE src/SysMatlabLinuxIntel.f90)
-    endif()
-  elseif (WIN32)
-    set(NWTC_SYS_FILE src/SysMatlabWindows.f90)
-  endif()
-
-elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   if (WIN32)
     set(NWTC_SYS_FILE src/SysGnuWin.f90)
+    set(NWTC_SYS_FILE_MATLAB src/SysMatlabWindows.f90)
   elseif (APPLE OR UNIX OR CYGWIN)
     set(NWTC_SYS_FILE src/SysGnuLinux.f90)
+    set(NWTC_SYS_FILE_MATLAB src/SysMatlabLinuxGnu.f90)
   endif ()
 elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
+    set(NWTC_SYS_FILE_MATLAB src/SysMatlabLinuxIntel.f90)
   elseif (WIN32)
     set(NWTC_SYS_FILE src/SysIVF.f90)
+    set(NWTC_SYS_FILE_MATLAB src/SysMatlabWindows.f90)
   endif (APPLE OR UNIX)
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
+  if(APPLE OR UNIX)
+    set(NWTC_SYS_FILE src/SysFlangLinux.f90)
+  endif()
 endif ()
 
 if (NWTC_SYS_FILE)
   message("-- Setting system file as: ${NWTC_SYS_FILE}")
-  list(APPEND NWTCLIBS_SOURCES ${NWTC_SYS_FILE})
 else (NWTC_SYS_FILE)
   message(FATAL_ERROR "Cannot determine system file used with NWTC_Library")
 endif (NWTC_SYS_FILE)
 
-add_library(nwtclibs ${NWTCLIBS_SOURCES})
 
-if(BUILD_OPENFAST_SIMULINK_API)
-  find_package(Matlab REQUIRED)
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
-else()
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+add_library(nwtcbaselib_obj OBJECT src/NWTC_Base.f90 src/SingPrec.f90)
+
+add_library(nwtcsyslib_obj OBJECT ${NWTC_SYS_FILE})
+target_link_libraries(nwtcsyslib_obj nwtcbaselib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtcsyslib_obj lapack)
 endif()
 
-install(TARGETS nwtclibs
+add_library(nwtclibs_obj OBJECT ${NWTCLIBS_SOURCES})
+target_link_libraries(nwtclibs_obj nwtcbaselib_obj nwtcsyslib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtclibs_obj lapack)
+endif()
+
+add_library(nwtclibs $<TARGET_OBJECTS:nwtclibs_obj> $<TARGET_OBJECTS:nwtcbaselib_obj> $<TARGET_OBJECTS:nwtcsyslib_obj>)
+target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+add_dependencies (nwtclibs nwtclibs_obj nwtcsyslib_obj)
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtclibs lapack)
+endif()
+
+
+if(BUILD_OPENFAST_SIMULINK_API)
+
+  if (NWTC_SYS_FILE_MATLAB)
+    message("-- Setting Matlab system file as: ${NWTC_SYS_FILE_MATLAB}")
+  else (NWTC_SYS_FILE_MATLAB)
+    message(FATAL_ERROR "Cannot determine Matlab system file used with NWTC_Library")
+  endif (NWTC_SYS_FILE_MATLAB)
+
+  # Append the matlab mex libraries to the target
+  find_package(Matlab REQUIRED)
+
+  message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
+
+  add_library(nwtcsyslib_matlab_obj OBJECT ${NWTC_SYS_FILE_MATLAB})
+  target_link_libraries(nwtcsyslib_matlab_obj nwtclibs_obj nwtcbaselib_obj ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
+
+  if (USE_LOCAL_STATIC_LAPACK)
+    add_dependencies(nwtcsyslib_matlab_obj lapack)
+  endif()
+
+  install(TARGETS nwtcsyslib_matlab_obj
+    EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
+
+endif(BUILD_OPENFAST_SIMULINK_API)
+
+install(TARGETS nwtclibs nwtclibs_obj nwtcsyslib_obj nwtcbaselib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+

@@ -81,37 +81,58 @@ set(ADI_LIB_SOURCES
 )
 
 # UnsteadyAero lib
-add_library(uaaerolib ${UA_LIBS_SOURCES})
+add_library(uaaerolib_obj OBJECT ${UA_LIBS_SOURCES})
+target_link_libraries(uaaerolib_obj afinfolib_obj nwtclibs_obj)
+
+add_library(uaaerolib $<TARGET_OBJECTS:uaaerolib_obj>)
 target_link_libraries(uaaerolib afinfolib nwtclibs)
 
 # AirfoilInfo lib
-add_library(afinfolib ${AFINFO_LIBS_SOURCES})
+add_library(afinfolib_obj OBJECT ${AFINFO_LIBS_SOURCES})
+target_link_libraries(afinfolib_obj nwtclibs_obj)
+
+add_library(afinfolib $<TARGET_OBJECTS:afinfolib_obj>)
 target_link_libraries(afinfolib nwtclibs)
 
 # this lib is only for the ctest
-add_library(fvwlib ${FVW_LIBS_SOURCES})
+add_library(fvwlib_obj OBJECT ${FVW_LIBS_SOURCES})
+target_link_libraries(fvwlib_obj uaaerolib_obj afinfolib_obj nwtclibs_obj)
+
+add_library(fvwlib $<TARGET_OBJECTS:fvwlib_obj>)
 target_link_libraries(fvwlib uaaerolib afinfolib nwtclibs)
 
 # Aero acoustics
-add_library(aeroacoustics ${AEROACOUSTIC_SOURCES})
+add_library(aeroacoustics_obj OBJECT ${AEROACOUSTIC_SOURCES})
+target_link_libraries(aeroacoustics_obj afinfolib_obj nwtclibs_obj)
+
+add_library(aeroacoustics $<TARGET_OBJECTS:aeroacoustics_obj>)
 target_link_libraries(aeroacoustics afinfolib nwtclibs)
 
-add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacoustics)
+
+add_library(aerodynlib_obj OBJECT ${AD_LIBS_SOURCES})
+target_link_libraries(aerodynlib_obj uaaerolib_obj afinfolib_obj fvwlib_obj aeroacoustics_obj nwtclibs_obj)
+
+add_library(aerodynlib $<TARGET_OBJECTS:aerodynlib_obj>  $<TARGET_OBJECTS:uaaerolib_obj>  $<TARGET_OBJECTS:afinfolib_obj>  $<TARGET_OBJECTS:fvwlib_obj>  $<TARGET_OBJECTS:aeroacoustics_obj>)
+target_link_libraries(aerodynlib nwtclibs)
 
 # ADI lib
 add_library(adilib ${ADI_LIB_SOURCES})
 target_link_libraries(adilib aerodynlib ifwlib nwtclibs versioninfolib)
 
 # AeroDyn driver
-set(AD_DRIVER_SOURCES
-  src/AeroDyn_Driver.f90
+set(AD_DRIVER_LIB_SOURCES
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90
 )
+add_library(addvrlib ${AD_DRIVER_LIB_SOURCES})
+target_link_libraries(addvrlib adilib ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+
+set(AD_DRIVER_SOURCES
+  src/AeroDyn_Driver.f90
+)
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver adilib ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver addvrlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 
 # UnsteadyAero driver
@@ -128,13 +149,13 @@ set(ADI_C_SOURCES
   src/AeroDyn_Inflow_C_Binding.f90
 )
 add_library(aerodyn_inflow_c_binding SHARED ${ADI_C_SOURCES})
-target_link_libraries(aerodyn_inflow_c_binding adilib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_inflow_c_binding addvrlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
 endif()
 
 
-install(TARGETS unsteadyaero_driver aerodyn_driver adilib aerodynlib fvwlib uaaerolib afinfolib aeroacoustics aerodyn_inflow_c_binding
+install(TARGETS unsteadyaero_driver aerodyn_driver addvrlib adilib aerodynlib fvwlib uaaerolib afinfolib aeroacoustics aerodyn_inflow_c_binding aerodynlib_obj fvwlib_obj uaaerolib_obj afinfolib_obj aeroacoustics_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

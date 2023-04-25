@@ -29,7 +29,10 @@ set(SUBDYN_SOURCES
   src/SubDyn_Types.f90
 )
 
-add_library(subdynlib ${SUBDYN_SOURCES})
+add_library(subdynlib_obj OBJECT ${SUBDYN_SOURCES})
+target_link_libraries(subdynlib_obj nwtclibs_obj)
+
+add_library(subdynlib $<TARGET_OBJECTS:subdynlib_obj>)
 target_link_libraries(subdynlib nwtclibs)
 
 set(SUBDYN_DRIVER_SOURCES
@@ -38,7 +41,7 @@ set(SUBDYN_DRIVER_SOURCES
 add_executable(subdyn_driver ${SUBDYN_DRIVER_SOURCES})
 target_link_libraries(subdyn_driver subdynlib nwtclibs versioninfolib)
 
-install(TARGETS subdynlib subdyn_driver
+install(TARGETS subdynlib subdynlib_obj subdyn_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
