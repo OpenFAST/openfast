@@ -467,6 +467,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       InitInp%IW_InitInp%RefHt      = dvr%IW_InitInp%RefHt
       InitInp%IW_InitInp%PLExp      = dvr%IW_InitInp%PLExp
       InitInp%IW_InitInp%UseInputFile = .true.     ! read input file instead of passed file data
+      InitInp%IW_InitInp%MHK        = dvr%MHK
       ! AeroDyn
       InitInp%AD%Gravity   = 9.80665_ReKi
       InitInp%AD%RootName  = dvr%out%Root ! 'C:/Work/XFlow/'

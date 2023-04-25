@@ -36,6 +36,7 @@ typedef    ^        ^                  IntKi                            CompInfl
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
 typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
 typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
@@ -48,7 +49,6 @@ typedef    ^        ^                  Character(1024)                  RootName
 typedef    ^        ^                  Logical                          storeHHVel       -  .false.   -   "If True, hub height velocity will be computed by infow wind"	-
 typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef    ^        ^                  IntKi                            WrVTK_Type       -     1      -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
-typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
 typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
 
 # ..... InitOut ...................................................................................................................

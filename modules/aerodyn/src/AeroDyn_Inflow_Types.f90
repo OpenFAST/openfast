@@ -59,6 +59,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
     REAL(ReKi)  :: RefHt      !< RefHeight [-]
     REAL(ReKi)  :: PLExp      !< PLExp [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or is it passed in? [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
@@ -72,7 +73,6 @@ IMPLICIT NONE
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
     INTEGER(IntKi)  :: WrVTK = 0      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 1      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
-    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
   END TYPE ADI_InitInputType
 ! =======================
@@ -1075,6 +1075,7 @@ CONTAINS
     DstIW_InputDataData%HWindSpeed = SrcIW_InputDataData%HWindSpeed
     DstIW_InputDataData%RefHt = SrcIW_InputDataData%RefHt
     DstIW_InputDataData%PLExp = SrcIW_InputDataData%PLExp
+    DstIW_InputDataData%MHK = SrcIW_InputDataData%MHK
     DstIW_InputDataData%UseInputFile = SrcIW_InputDataData%UseInputFile
       CALL NWTC_Library_Copyfileinfotype( SrcIW_InputDataData%PassedFileData, DstIW_InputDataData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
@@ -1147,6 +1148,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
       Re_BufSz   = Re_BufSz   + 1  ! RefHt
       Re_BufSz   = Re_BufSz   + 1  ! PLExp
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! PassedFileData: size of buffers for each call to pack subtype
@@ -1206,6 +1208,8 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PLExp
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
       CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileData 
@@ -1278,6 +1282,8 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     OutData%PLExp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%UseInputFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseInputFile)
     Int_Xferred = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
@@ -1348,7 +1354,6 @@ CONTAINS
     DstInitInputData%storeHHVel = SrcInitInputData%storeHHVel
     DstInitInputData%WrVTK = SrcInitInputData%WrVTK
     DstInitInputData%WrVTK_Type = SrcInitInputData%WrVTK_Type
-    DstInitInputData%MHK = SrcInitInputData%MHK
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
  END SUBROUTINE ADI_CopyInitInput
 
@@ -1453,7 +1458,6 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! storeHHVel
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK_Type
-      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1547,8 +1551,6 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%WrVTK
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WrVTK_Type
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
@@ -1669,8 +1671,6 @@ CONTAINS
     OutData%WrVTK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WrVTK_Type = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
