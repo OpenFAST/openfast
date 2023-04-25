@@ -2,7 +2,11 @@ module FVW_Wings
 
    use NWTC_Library
    use FVW_Types
-   use FVW_Subs
+   use FVW_BiotSavart, only: ui_quad_n1
+   use FVW_VortexTools, only: tic, toc
+   use FVW_Subs, only: DEV_VERSION, OLAF_PROFILING
+   use FVW_Subs, only: idCircPrescribed, idCircPolarData, idCircNoFlowThrough
+   use FVW_Subs, only: LiftingLineInducedVelocities
    use AirFoilInfo,   only : AFI_ComputeAirfoilCoefs
  
    implicit none
@@ -63,10 +67,10 @@ contains
    !!  - s_CP       : Dimensionless spanwise coordinate of LL CP 
    !!  - chord_LL   : chord on LL nodes
    !!  - chord_CP   : chord on LL control points (CP)
-   subroutine Wings_Panelling_Init(Meshes, p, m, ErrStat, ErrMsg )
+   subroutine Wings_Panelling_Init(Meshes, p, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
       type(FVW_ParameterType),         intent(inout)  :: p              !< Parameters
-      type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
+      !type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       ! Local
@@ -234,15 +238,15 @@ contains
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculation(t, z, z_prev, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+   subroutine Wings_ComputeCirculation(t, z, z_prev, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       type(FVW_ConstraintStateType),   intent(inout)  :: z            !< z%W%Gamma_LL
       type(FVW_ConstraintStateType),   intent(in   )  :: z_prev       !< z_prev%W%Gamma_LL
       !real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       !real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
-      type(FVW_InputType),             intent(in   )  :: u              !< Parameters
+      !type(FVW_InputType),             intent(in   )  :: u              !< Inputs
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-      type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
+      type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Continuous States
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)      !< The airfoil parameter data
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -255,14 +259,14 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      if (t<p%FullCirculationStart) then
+      if (t<p%FullCircStart) then
          ! The circulation is ramped up progressively, starting from 0 
          if (t<=0.0_DbKi) then
             GammaScale=0.0_ReKi
          else
-            s=t/p%FullCirculationStart
+            s=t/p%FullCircStart
             ! If we have at least 10 points we use a smooth Heavyside, otherwise we use a simple linear scaling
-            if (p%FullCirculationStart/p%DTfvw >= 9) then
+            if (p%FullCircStart/p%DTfvw >= 9) then
                ! Smooth approximations of the Heavyside function
                ! Example 1: 1/2 (1+2/pi arctan(k x) )  x \in ]-infty,+infty [
                ! Example 2: 1/(1+exp(k x) )            x \in ]-infty,+infty [
@@ -277,18 +281,18 @@ contains
          GammaScale=1.0_ReKi
       endif
 
-      if (p%CirculationMethod==idCircPrescribed) then 
+      if (p%CircSolvMethod==idCircPrescribed) then 
          do iW = 1, p%nWings !Loop over lifting lines
             z%W(iW)%Gamma_LL(1:p%W(iW)%nSpan) = p%W(iW)%PrescribedCirculation(1:p%W(iW)%nSpan)
             m%W(iW)%Vind_CP=-9999._ReKi !< Safety 
             m%W(iW)%Vtot_CP=-9999._ReKi !< Safety 
          enddo
 
-      else if (p%CirculationMethod==idCircPolarData) then 
+      else if (p%CircSolvMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
          CALL Wings_ComputeCirculationPolarData(z, z_prev, p, x, m, AFInfo, GammaScale, ErrStat, ErrMsg, iLabel)
 
-      else if (p%CirculationMethod==idCircNoFlowThrough) then 
+      else if (p%CircSolvMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
          ErrMsg='Circulation method nor implemented'; ErrStat=ErrID_Fatal; return ! should never happen
       else
@@ -333,6 +337,7 @@ contains
       ! Error handling
       integer(IntKi)           :: ErrStat2
       character(ErrMsgLen)     :: ErrMsg2
+
 
       ! Initialize ErrStat
       ErrStat = ErrID_None
@@ -380,7 +385,9 @@ contains
       ! Set induced velocity from Known wake only (after iNWStart+1)
       ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
       ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+      if (OLAF_PROFILING) call tic('LLUI')
       call LiftingLineInducedVelocities(p, x, p%InductionAtCP, p%iNWStart+1, m, ErrStat2, ErrMsg2);  if(Failed()) return;
+      if (OLAF_PROFILING) call toc()
 
       kCP=0
       do iW=1,p%nWings
@@ -406,6 +413,7 @@ contains
       endif
 
       ! --- Convergence loop until near wake gives induction coherent with circulation
+      if (OLAF_PROFILING) call tic('Convergence loop')
       bConverged=.false.
       iIter=0
       do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
@@ -457,6 +465,7 @@ contains
           bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
 
       end do ! convergence loop
+      if (OLAF_PROFILING) call toc()
       if (iIter==p%CircSolvMaxIter) then
          if (DEV_VERSION) then
             print'(A,I0,A,I0,A)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter, ' <<< Max reached'

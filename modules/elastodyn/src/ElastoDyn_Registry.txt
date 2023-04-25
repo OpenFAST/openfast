@@ -24,6 +24,8 @@ typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn i
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
+typedef ^   InitInputType   ReKi WtrDpth -  -   -    "Water depth" m
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -62,17 +64,6 @@ typedef	^	BladeInputData	ReKi	StrcTwst	{:}	-	-	"Structural twist for distributed
 typedef	^	BladeInputData	ReKi	BMassDen	{:}	-	-	"Blade mass density for distributed input data"
 typedef	^	BladeInputData	ReKi	FlpStff	{:}	-	-	"Blade flap stiffness for distributed input data"
 typedef	^	BladeInputData	ReKi	EdgStff	{:}	-	-	"Blade edge stiffness for distributed input data"
-typedef	^	BladeInputData	ReKi	GJStff	{:}	-	-	"Blade torsional stiffness for a given input station"
-typedef	^	BladeInputData	ReKi	EAStff	{:}	-	-	"Blade extensional stiffness for a given input station"
-typedef	^	BladeInputData	ReKi	Alpha	{:}	-	-	"Blade coupling coefficient between flap and twist for a given input station"
-typedef	^	BladeInputData	ReKi	FlpIner	{:}	-	-	"Blade flap (about local structural yb-axis) mass inertia per unit length for a given input station"
-typedef	^	BladeInputData	ReKi	EdgIner	{:}	-	-	"Blade edge (about local structural xb-axis) mass inertia per unit length for a given input station"
-typedef	^	BladeInputData	ReKi	PrecrvRef	{:}	-	-	"Offset for defining the reference axis from the pitch axis for precurved blades at a given input station"
-typedef	^	BladeInputData	ReKi	PreswpRef	{:}	-	-	"Offset for defining the reference axis from the pitch axis for preswept blades at a given input station"
-typedef	^	BladeInputData	ReKi	FlpcgOf	{:}	-	-	"Blade flap (along local aerodynamic xb-axis) mass cg offset for a given input station"
-typedef	^	BladeInputData	ReKi	EdgcgOf	{:}	-	-	"Blade edge (along local aerodynamic yb-axis) mass cg offset for a given input station"
-typedef	^	BladeInputData	ReKi	FlpEAOf	{:}	-	-	"Blade flap (along local aerodynamic xb-axis) elastic axis offset for a given input station"
-typedef	^	BladeInputData	ReKi	EdgEAOf	{:}	-	-	"Blade edge (along local aerodynamic yb-axis) elastic axis offset for a given input station"
 typedef	^	BladeInputData	ReKi	BldFlDmp	2	-	-	"Blade structural damping ratios in flapwise direction"
 typedef	^	BladeInputData	ReKi	BldEdDmp	1	-	-	"Blade structural damping ratios in edgewise direction"
 typedef	^	BladeInputData	ReKi	FlStTunr	2	-	-	"Blade flapwise modal stiffness tuners (input)"
@@ -142,12 +133,12 @@ typedef	^	ED_InputFile	ReKi	NcIMUxn	-	-	-	"Downwind distance from the tower-top 
 typedef	^	ED_InputFile	ReKi	NcIMUyn	-	-	-	"Lateral distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	Twr2Shft	-	-	-	"Vertical distance from the tower-top to the rotor shaft"	meters
-typedef	^	ED_InputFile	ReKi	TowerHt	-	-	-	"Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
-typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"	meters
+typedef	^	ED_InputFile	ReKi	TowerHt	    -	-	-	"Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"	meters
 typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
 typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
 typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"	"kg m^2"
@@ -204,13 +195,6 @@ typedef	^	ED_InputFile	ReKi	TwFAM1Sh	{:}	-	-	"Tower fore-aft mode-1 shape coeffi
 typedef	^	ED_InputFile	ReKi	TwFAM2Sh	{:}	-	-	"Tower fore-aft mode-2 shape coefficients"	-
 typedef	^	ED_InputFile	ReKi	TwSSM1Sh	{:}	-	-	"Tower side-to-side mode-1 shape coefficients"	-
 typedef	^	ED_InputFile	ReKi	TwSSM2Sh	{:}	-	-	"Tower side-to-side mode-2 shape coefficients"	-
-# ..... Tower Input file data (ADAMS only) ...........................................................................................................
-typedef	^	ED_InputFile	ReKi	TwGJStif	{:}	-	-	"Tower torsional stiffness for a given input station"	Nm^2
-typedef	^	ED_InputFile	ReKi	TwEAStif	{:}	-	-	"Tower extensional stiffness for a given input station"	N
-typedef	^	ED_InputFile	ReKi	TwFAIner	{:}	-	-	"Tower fore-aft (about yt-axis) mass inertia per unit length for a given input station"	"kg m"
-typedef	^	ED_InputFile	ReKi	TwSSIner	{:}	-	-	"Tower side-to-side (about xt-axis) mass inertia per unit length for a given input station"	"kg m"
-typedef	^	ED_InputFile	ReKi	TwFAcgOf	{:}	-	-	"Tower fore-aft (along the xt-axis) mass cg offset for a given input station"	meters
-typedef	^	ED_InputFile	ReKi	TwSScgOf	{:}	-	-	"Tower fore-aft (along the yt-axis) mass cg offset for a given input station"	meters
 # ..... Furling Input file data ...........................................................................................................
 typedef	^	ED_InputFile	LOGICAL	RFrlDOF	-	-	-	"Rotor-furl DOF"	-
 typedef	^	ED_InputFile	LOGICAL	TFrlDOF	-	-	-	"Tail-furl DOF"	-
@@ -587,7 +571,7 @@ typedef	^	ParameterType	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to n
 typedef	^	ParameterType	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
 typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
 typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
-typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"
+typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"
 typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
 typedef	^	ParameterType	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"
 typedef	^	ParameterType	ReKi	rVDxn	-	-	-	"xn-component of position vector Rvd"
@@ -621,8 +605,8 @@ typedef	^	ParameterType	R8Ki	STFrlTilt	-	-	-	"Sine of the tail-furl axis tilt an
 typedef	^	ParameterType	R8Ki	STFrlTlt2	-	-	-	"Sine-squared of the tail-furl axis tilt angle"
 typedef	^	ParameterType	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"
 typedef	^	ParameterType	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
-typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
-typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
+typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
 typedef	^	ParameterType	ReKi	UndSling	-	-	-	"Undersling length"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of turbine blades"	-
 typedef	^	ParameterType	ReKi	AxRedTFA	{:}{:}{:}	-	-	"The axial-reduction terms for the fore-aft tower mode shapes"
@@ -641,13 +625,8 @@ typedef	^	ParameterType	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible por
 typedef	^	ParameterType	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
 typedef	^	ParameterType	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
 typedef	^	ParameterType	IntKi	TwrNodes	-	-	-	"Number of tower nodes used in the analysis"
-typedef	^	ParameterType	ReKi	InerTFA	{:}	-	-	"Interpolated tower fore-aft (about yt-axis) mass inertia per unit length"
-typedef	^	ParameterType	ReKi	InerTSS	{:}	-	-	"Interpolated tower side-to-side (about xt-axis) mass inertia per unit length"
-typedef	^	ParameterType	ReKi	StiffTGJ	{:}	-	-	"Interpolated tower torsional stiffness"
-typedef	^	ParameterType	ReKi	StiffTEA	{:}	-	-	"Interpolated tower extensional stiffness"
+typedef	^	ParameterType	IntKi   MHK         -   -   -   "MHK turbine type switch"   -
 typedef	^	ParameterType	ReKi	StiffTFA	{:}	-	-	"Interpolated fore-aft tower stiffness"
-typedef	^	ParameterType	ReKi	cgOffTFA	{:}	-	-	"Interpolated tower fore-aft mass cg offset"
-typedef	^	ParameterType	ReKi	cgOffTSS	{:}	-	-	"Interpolated tower side-to-side mass cg offset"
 typedef	^	ParameterType	ReKi	AtfaIner	-	-	-	"Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass"
 typedef	^	ParameterType	ReKi	BldCG	{:}	-	-	"Blade center of mass wrt the blade root"
 typedef	^	ParameterType	ReKi	BldMass	{:}	-	-	"Blade masses"
@@ -680,37 +659,26 @@ typedef	^	ParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^	ParameterType	ReKi	PitchAxis	{:}{:}	-	-	"Pitch axis for analysis nodes"	-
 typedef	^	ParameterType	ReKi	AeroTwst	{:}	-	-	"Aerodynamic twist of the blade at the analysis nodes"
 typedef	^	ParameterType	ReKi	AxRedBld	{:}{:}{:}{:}	-	-	"The axial-reduction terms of the blade shape function"
-typedef	^	ParameterType	ReKi	BAlpha	{:}{:}	-	-	"Interpolated blade coupling coefficient between flap and twist"
 typedef	^	ParameterType	ReKi	BldEDamp	{:}{:}	-	-	"Blade edgewise damping coefficients"
 typedef	^	ParameterType	ReKi	BldFDamp	{:}{:}	-	-	"Blade flapwise damping coefficients"
 typedef	^	ParameterType	ReKi	BldFlexL	-	-	-	"Flexible blade length"
 typedef	^	ParameterType	ReKi	CAeroTwst	{:}	-	-	"Cosine of the aerodynamic twist of the blade at the analysis nodes"
 typedef	^	ParameterType	ReKi	CBE	{:}{:}{:}	-	-	"Generalized edgewise damping of the blades"
 typedef	^	ParameterType	ReKi	CBF	{:}{:}{:}	-	-	"Generalized flapwise damping of the blades"
-typedef	^	ParameterType	ReKi	cgOffBEdg	{:}{:}	-	-	"Interpolated blade edge (along local aerodynamic yb-axis) mass cg offset"
-typedef	^	ParameterType	ReKi	cgOffBFlp	{:}{:}	-	-	"Interpolated blade flap (along local aerodynamic xb-axis) mass cg offset"
 typedef	^	ParameterType	ReKi	Chord	{:}	-	-	"Chord of the blade at the analysis nodes"
 typedef	^	ParameterType	R8Ki	CThetaS	{:}{:}	-	-	"COS( ThetaS )"
 typedef	^	ParameterType	ReKi	DRNodes	{:}	-	-	"Length of variable-spaced blade elements"
-typedef	^	ParameterType	ReKi	EAOffBEdg	{:}{:}	-	-	"Interpolated blade edge (along local aerodynamic yb-axis) elastic axis offset"
-typedef	^	ParameterType	ReKi	EAOffBFlp	{:}{:}	-	-	"Interpolated blade flap (along local aerodynamic xb-axis) elastic axis offset"
 typedef	^	ParameterType	ReKi	FStTunr	{:}{:}	-	-	"Blade flapwise modal stiffness tuners (stored for all blades)"
-typedef	^	ParameterType	ReKi	InerBEdg	{:}{:}	-	-	"Interpolated blade edge (about local structural xb-axis) mass inertia per unit length"
-typedef	^	ParameterType	ReKi	InerBFlp	{:}{:}	-	-	"Interpolated blade flap (about local structural yb-axis) mass inertia per unit length"
 typedef	^	ParameterType	ReKi	KBE	{:}{:}{:}	-	-	"Generalized edgewise stiffness of the blades"
 typedef	^	ParameterType	ReKi	KBF	{:}{:}{:}	-	-	"Generalized flapwise stiffness of the blades"
 typedef	^	ParameterType	ReKi	MassB	{:}{:}	-	-	"Interpolated lineal blade mass density"
-typedef	^	ParameterType	ReKi	RefAxisxb	{:}{:}	-	-	"Interpolated Offset for defining the reference axis from the pitch axis for precurved blades at a given input station (along xb-axis)"
-typedef	^	ParameterType	ReKi	RefAxisyb	{:}{:}	-	-	"Interpolated Offset for defining the reference axis from the pitch axis for preswept blades at a given input station (along yb-axis)"
 typedef	^	ParameterType	ReKi	RNodes	{:}	-	-	"Radius to analysis nodes relative to hub ( 0 < RNodes(:) < BldFlexL )"
 typedef	^	ParameterType	ReKi	RNodesNorm	{:}	-	-	"Normalized radius to analysis nodes relative to hub ( 0 < RNodesNorm(:) < 1 )"
 typedef	^	ParameterType	ReKi	rSAerCenn1	{:}{:}	-	-	"Distance from point S on a blade to the aerodynamic center in the n1 direction (m)"
 typedef	^	ParameterType	ReKi	rSAerCenn2	{:}{:}	-	-	"Distance from point S on a blade to the aerodynamic center in the n2 direction (m)"
 typedef	^	ParameterType	ReKi	SAeroTwst	{:}	-	-	"Sine of the aerodynamic twist of the blade at the analysis nodes"
 typedef	^	ParameterType	ReKi	StiffBE	{:}{:}	-	-	"Interpolated edgewise blade stiffness"
-typedef	^	ParameterType	ReKi	StiffBEA	{:}{:}	-	-	"Interpolated blade extensional stiffness"
 typedef	^	ParameterType	ReKi	StiffBF	{:}{:}	-	-	"Interpolated flapwise blade stiffness"
-typedef	^	ParameterType	ReKi	StiffBGJ	{:}{:}	-	-	"Interpolated blade torsional stiffness"
 typedef	^	ParameterType	R8Ki	SThetaS	{:}{:}	-	-	"SIN( ThetaS )"
 typedef	^	ParameterType	ReKi	ThetaS	{:}{:}	-	-	"Structural twist for analysis nodes"	radians
 typedef	^	ParameterType	ReKi	TwistedSF	{:}{:}{:}{:}{:}	-	-	"Interpolated lineal blade mass density"
@@ -765,8 +733,8 @@ typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	ParameterType	ReKi	BElmntMass	{:}{:}	-	-	"Mass of the blade elements"
 typedef	^	ParameterType	ReKi	TElmntMass	{:}	-	-	"Mass of the tower elements"
 typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
-typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
 # .... ED_AllBlNds option ........................................................................................................

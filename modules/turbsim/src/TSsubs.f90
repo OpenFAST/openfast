@@ -1284,15 +1284,14 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-!bjj: I have no idea why it is necessary to be a factor of 4, so I'm removing it for now:      ! Make sure it is a multiple of 2 too.
+      ! If we are starting from user-defined points, we can subtract values to try to get it to match the values entered there.
 
    IF ( p_grid%Periodic ) THEN
       p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
 
          ! make sure NumSteps is an even number and a product of small primes
       NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
-      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumSteps + 1 - MOD(NumSteps-1,2) >= NumSteps
-      !p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9, subtract=p_usr%NPoints > 0)  ! >= 2*NumSteps2 = NumSteps + 1 - MOD(NumSteps-1,2) >= NumSteps
       
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
@@ -1300,17 +1299,10 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
       
          ! make sure NumSteps is an even number and a product of small primes      
-!      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
       NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
-      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumOutSteps + 1 - MOD(NumOutSteps-1,2) >= NumOutSteps
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9, subtract=p_usr%NPoints > 0 )  ! >= 2*NumSteps2 = NumOutSteps + 1 - MOD(NumOutSteps-1,2) >= NumOutSteps
       
    END IF
-
-   !IF (p_grid%NumSteps < 2 )  THEN
-   !   CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
-   !                    'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, RoutineName )
-   !   RETURN
-   !END IF
    
    p_grid%NumFreq = p_grid%NumSteps / 2
    DelF           = 1.0_DbKi/( p_grid%NumSteps*p_grid%TimeStep )
@@ -1320,7 +1312,8 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       ! IF ( .NOT. EqualRealNos( DelF, p_usr%f(1) ) .or. .not. EqualRealNos(p_grid%AnalysisTime,p_usr%f(1)*p_usr%NFreq ) .or. p_grid%NumFreq > size(p_usr%f) ) THEN
       IF ( .NOT. EqualRealNos( DelF, p_usr%DelF ) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Delta frequency in the user-input time series must be the same as the delta frequency in the simulated series. '//&
-            'Change AnalysisTime or number of rows entered in user-defined time series file.', ErrStat, ErrMsg,RoutineName)
+            'Change AnalysisTime or number of rows entered in user-defined time series file.'//NewLine//'AnalysisTime uses '//trim(num2lstr(p_grid%NumSteps))//&
+            ' steps; user-input time series uses '//trim(num2lstr(p_usr%nFreq*2))//' steps.', ErrStat, ErrMsg,RoutineName)
          RETURN
       END IF      
       
@@ -2409,7 +2402,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    DO iVec=1,p%usr%nComp
       DO iPoint=1,p%usr%NPoints    
 
-         work = p%usr%v(:,iPoint,iVec)
+         work = p%usr%v(1:NumSteps,iPoint,iVec)
          
             ! perform forward FFT
 

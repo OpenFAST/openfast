@@ -13,23 +13,24 @@ Command-line syntax for InflowWind driver:
         options:  /ifw           --   treat <filename> as name of InflowWind input file (no driver input file)
 
         The following options will override values in the driver input file:
-                  /DT[#]         --   timestep
-                  /TStart[#]     --   start time
-                  /TSteps[#]     --   number of timesteps
-                  /xrange[#:#]   --   range of x (#'s are reals)
-                  /yrange[#:#]   --   range of y
-                  /zrange[#:#]   --   range in z (ground = 0.0)
-                  /Dx[#]         --   spacing in x
-                  /Dy[#]         --   spacing in y
-                  /Dz[#]         --   spacing in z
-                  /points[FILE]  --   calculates at x,y,z coordinates specified in a white space delimited FILE
-                  /v             --   verbose output
-                  /vv            --   very verbose output
-                  /hawc          --   convert wind file specified in InflowWind to HAWC format
-                  /bladed        --   convert wind file specified in InflowWind to Bladed format
-                  /uniform       --   convert wind file specified in InflowWind to Uniform-wind format
-                  /vtk           --   convert wind file specified in InflowWind to VTK format
-                  /help          --   print this help menu and exit
+                  /DT[#]          --  timestep
+                  /TStart[#]      --  start time
+                  /TSteps[#]      --  number of timesteps
+                  /xrange[#:#]    --  range of x (#'s are reals)
+                  /yrange[#:#]    --  range of y
+                  /zrange[#:#]    --  range in z (ground = 0.0)
+                  /Dx[#]          --  spacing in x
+                  /Dy[#]          --  spacing in y
+                  /Dz[#]          --  spacing in z
+                  /points[FILE]   --  calculates at x,y,z coordinates specified in a white space delimited FILE
+                  /v              --  verbose output
+                  /vv             --  very verbose output
+                  /hawc           --  convert wind file specified in InflowWind to HAWC format
+                  /bladed         --  convert wind file specified in InflowWind to Bladed format
+                  /vtk            --  convert wind file specified in InflowWind to VTK format
+                  /accel          --  output acceleration when processing a points file
+                  /BoxExceedAllow --  set flag to extrapolate values of points outside FF wind box
+                  /help           --  print this help menu and exit
 
 ::
 
@@ -138,3 +139,99 @@ When converting from a full-field wind format to a uniform wind file, the follow
   
   1. The power-law exponent specified in InflowWind (if a power law wind profile is used to add to the turbulence with native-Bladed or HAWC2 files), or
   2. Calculated by using the mean wind speeds at two points: the reference (hub) height and the uppermost height on the grid.
+
+accel flag
+-------------------
+
+The ability to calculate the acceleration of the flow field was added to InflowWind
+to support the analysis of MHK, underwater, turbines. The acceleration is needed
+to calculate the mass effects of the fluid interacting with the rotor. Calculation of the
+acceleration is supported for Uniform/Steady Wind and grid based wind profiles (Turbsim,
+HAWC, and Bladed files). Enabling this flag causes the driver to output the flow field
+acceleration for points defined in the Points file in addition to the velocities at those
+same points.
+
+
+BoxExceedAllow flag
+-------------------
+
+A feature was added to InflowWind to all for some requested points to lie
+outside the full field wind grid. This allows for a continuous exptrapolation of
+values beyond the grid that approaches an average level.
+
+Purpose
+~~~~~~~
+
+When InflowWind is coupled to OpenFAST, wind points corresponding to the free
+vortex wake module (OLAF) in AeroDyn 15 and LidarSim module may be outside the
+full-field wind data.  No other wind data points may be outside the grid
+(AeroDyn15 blades must be within the wind box).  The wake from OLAF may over
+time stray outside the full-field wind box, in which case it should be
+sufficiently far from the turbine that any inacuracies in the reported wind
+value should have little to no effect on the turbine.  The method employed here
+should allow the wake to continue evolving without flow reversals or other
+oddities due to a discontinuity at the wind grid boundary.  However, to limit
+the impact of the approximation used, the wake should not be allowed to exit the
+box until far from the turbine.
+
+The other use case is when the LidarSim requests data far from the turbine that
+may lie outside the wind box, such as a yawed, or floating turbine where the
+sensing beam periodically exits the wind box.
+
+Method
+~~~~~~
+
+During initialization, a flag and corresponding index are passed to tell IfW to
+allow points in the requested position array to lie outside the full-field wind
+and tower grids starting at this index.  The values for these points are then
+extrapolated using the data from the full-field wind as follows:
+
+   1. The average wind value at each Z height at each timestep is calculated and
+      stored during initialization (averaged across the Y dimension).
+   2. Wind above the full field wind grid is linearly interpolated between the
+      value at the top of the grid the average of the top of the grid.  This
+      linear interpolation zone extends from the top of grid to the top of the
+      grid + one half grid height (``FFZHWid``).  Values beyond that are held
+      constant.
+   3. Values beyond the +/-Y grid edges are linearly interpolated between the
+      value at the edge of the grid and the average for that Z elevation in the
+      grid.  The interpolation zone is between the edge of the grid and one half
+      grid width further along Y at ``+/-2*FFYHWid``.
+   4. When no tower data is present, the values below the grid are linearly
+      interpolated between the bottom of the grid and 0 at the ground.
+   5. When tower data is present, points below the grid are interpolated between
+      the tower and grid and the ground (0 value at ``+/-2*FFYHWid``).  Linear
+      interpolation is then used beyond the edge of the grid.
+
+
+Testing with driver
+~~~~~~~~~~~~~~~~~~~
+
+To test this feature, the driver accepts the flag ``BoxExceedAllow`` and will
+signal to InflowWind that all windgrid points may be beyond the edge of the
+grid.  To use this, setup a driver input file with an output wind grid that is
+larger than the full-field grid from the wind file referenced in the
+corresponding InflowWind input file.  Then the following command can be used
+(Linux syntax, Windows is slightly different):
+
+.. code-block:: bash
+	
+    > inflowwind_driver -BoxExceedAllow MyDriverFile.inp
+
+For a single YZ plane from the resulting wind grid output file at time T, the
+results for extrapolated data points can be plotted and should show
+characteristics similar to the following plots.
+
+
+.. figure:: figs/FFWindExtrap--NoTower.png
+   :width: 90%
+           
+   Extrapolation of wind values beyond the full field wind grid when no tower data is present. The semi-transparent red planes indicate the edges of the full-field wind grid, and the red points are the locations of wind grid data in this example case. All other points shown on the surface are interpolated/extrapolated.
+  
+
+.. figure:: figs/FFWindExtrap--Tower.png
+   :width: 90%
+
+   Extrapolation of wind values beyond the full field wind grid when tower data is present. The semi-transparent red planes indicate the edges of th e full-field wind grid, blue semi-transparent plane indicates the tower grid, and the red points indcate the data points from the wind grid and tower.  All other points shown on the surface are interpolated/extrapolated.
+
+

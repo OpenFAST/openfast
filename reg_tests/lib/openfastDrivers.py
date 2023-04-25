@@ -54,6 +54,23 @@ def _runGenericCase(inputFile, executable, verbose=False, log=True):
     
     return returnCode
 
+def _runUACase(inputFile, executable, verbose=False, log=True):
+    stdout = sys.stdout if verbose else open(os.devnull, 'w')
+    
+    rtl.validateFileOrExit(inputFile)
+    rtl.validateExeOrExit(executable)
+
+    if verbose:
+        logFile = None
+    else:
+        logFile = os.path.splitext(inputFile)[0]+'.log'
+    
+    returnCode = _runCase(executable, inputFile, logFile, stdout)
+    print("COMPLETE with code {}".format(returnCode), flush=True)    
+    
+    return returnCode
+
+
 def runOpenfastCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
@@ -61,6 +78,11 @@ def runAerodynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
+
+def runUnsteadyAeroDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.dirname(inputFile)
+    os.chdir(caseDirectory)
+    return _runUACase(inputFile, executable, verbose)
 
 def runBeamdynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
@@ -83,6 +105,12 @@ def runInflowwindDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
+
+def runMoordynDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+
 
 def runSeaStateDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])

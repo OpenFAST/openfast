@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2023 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,45 +15,31 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
+  generate_f90_types(src/IfW_FlowField.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_FlowField_Types.f90 -noextrap)
+  generate_f90_types(src/InflowWind_IO.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_IO_Types.f90 -noextrap)
   generate_f90_types(src/Lidar.txt ${CMAKE_CURRENT_LIST_DIR}/src/Lidar_Types.f90)
-  generate_f90_types(src/IfW_BladedFFWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_BladedFFWind_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_4Dext.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_4Dext_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_HAWCWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_HAWCWind_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_TSFFWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_TSFFWind_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_UniformWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UniformWind_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_UserWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UserWind_Types.f90 -noextrap)
-  generate_f90_types(src/IfW_FFWind_Base.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_FFWind_Base_Types.f90 -noextrap)
+  generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
 endif()
 
-set(IFW_SOURCES
-  src/IfW_BladedFFWind.f90
-  src/IfW_4Dext.f90
-  src/IfW_HAWCWind.f90
-  src/IfW_TSFFWind.f90
-  src/IfW_UserWind.f90
-  src/IfW_UniformWind.f90
+add_library(ifwlib_obj OBJECT 
+  src/IfW_FlowField_Types.f90
+  src/IfW_FlowField.f90
+  src/InflowWind_IO_Types.f90
+  src/InflowWind_IO.f90
   src/InflowWind_Subs.f90
-  src/InflowWind.f90 
-  src/Lidar.f90
-  src/IfW_FFWind_Base.f90
-  src/IfW_FFWind_Base_Types.f90
-  src/IfW_BladedFFWind_Types.f90
-  src/IfW_4Dext_Types.f90
-  src/IfW_HAWCWind_Types.f90
-  src/IfW_TSFFWind_Types.f90
-  src/IfW_UserWind_Types.f90
-  src/IfW_UniformWind_Types.f90
   src/InflowWind_Types.f90
+  src/InflowWind.f90 
   src/Lidar_Types.f90
-)
+  src/Lidar.f90)
+target_link_libraries(ifwlib_obj nwtclibs_obj)
 
-add_library(ifwlib ${IFW_SOURCES})
+add_library(ifwlib $<TARGET_OBJECTS:ifwlib_obj>)
 target_link_libraries(ifwlib nwtclibs)
 
 # C-bound interface library
-add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90)
-target_link_libraries(ifw_c_binding ifwlib versioninfolib ${CMAKE_DL_LIBS})
+add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90 $<TARGET_OBJECTS:ifwlib_obj>)
+target_link_libraries(ifw_c_binding nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+
 if(APPLE OR UNIX)
    target_compile_definitions(ifw_c_binding PUBLIC -DIMPLICIT_DLLEXPORT)
 endif()
@@ -65,9 +51,9 @@ set(IFW_DRIVER_SOURCES
 )
 
 add_executable(inflowwind_driver ${IFW_DRIVER_SOURCES})
-target_link_libraries(inflowwind_driver ifwlib versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(inflowwind_driver ifwlib versioninfolib)
 
-install(TARGETS inflowwind_driver ifwlib ifw_c_binding
+install(TARGETS inflowwind_driver ifwlib ifw_c_binding ifwlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

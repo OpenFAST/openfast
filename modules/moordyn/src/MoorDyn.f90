@@ -34,7 +34,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.a27', '2022-07-20' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2022-12-08' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -162,8 +162,8 @@ CONTAINS
       CALL DispNVD( MD_ProgDesc )
       InitOut%Ver = MD_ProgDesc
 
-      CALL WrScr('   This is an alpha version of MoorDyn-F v2, with significant input file changes from v1.')  
-      CALL WrScr('   Copyright: (C) 2021 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
+      CALL WrScr('   Copyright: (C) 2022 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
       !---------------------------------------------------------------------------------------------
@@ -1456,10 +1456,8 @@ CONTAINS
             !-------------------------------------------------------------------------------------------
             else if (INDEX(Line, "FAILURE") > 0) then ! if failure conditions header
 
-               IF (wordy > 0) print *, "   Reading failure conditions: (not implemented yet) ";
+               CALL WrScr("   Warning: Failure capabilities are not yet implemented in MoorDyn.")
                
-               ! TODO: add stuff <<<<<<<<
-
                ! skip following two lines (label line and unit line)
                Line = NextLine(i)
                Line = NextLine(i)
@@ -1470,9 +1468,9 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
                   
-                  
-                     READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
-                        m%LineList(l)%N, tempString2, tempString3, LineOutString
+                  ! TODO: Failure capabilities still need to be completed
+                  READ(Line,*,IOSTAT=ErrStat2) m%LineList(l)%IdNum, tempString1, m%LineList(l)%UnstrLen, &
+                       m%LineList(l)%N, tempString2, tempString3, LineOutString
                   
                END DO
                
@@ -1807,7 +1805,7 @@ CONTAINS
             CALL MeshConstructElement(u%CoupledKinematics(iTurb), ELEMENT_POINT, ErrStat2, ErrMsg2, J)
             
             ! lastly, do this to set the attached line endpoint positions:
-            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), DBLE(rRef), m%zeros6, m%zeros6, 0.0_DbKi, m)
+            CALL Rod_SetKinematics(m%RodList(m%CpldRodIs(l,iTurb)), REAL(rRef,R8Ki), m%zeros6, m%zeros6, 0.0_DbKi, m)
          END DO 
 
          DO l = 1,p%nCpldCons(iTurb)   ! keeping this one simple for now, positioning at whatever is specified by glue code <<<
@@ -2001,7 +1999,7 @@ CONTAINS
 
       ! --------------------------------------------------------------------
       !          open output file(s) and write header lines
-      CALL MDIO_OpenOutput( p, m, InitOut, ErrStat2, ErrMsg2 )
+      CALL MDIO_OpenOutput( MD_ProgDesc, p, m, InitOut, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       ! --------------------------------------------------------------------

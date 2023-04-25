@@ -85,6 +85,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    CALL AllocAry(misc%SDWrOutput       , p%NumOuts + p%OutAllInt*p%OutAllDims, 'SDWrOutupt' , ErrStat2, ErrMsg2) ; if(Failed()) return
    ! Allocate WriteOuput  
    CALL AllocAry(y%WriteOutput         , p%NumOuts + p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
+   allocate(misc%AllOuts(0:MaxOutPts + p%OutAllInt*p%OutAllDims)) ! Need to start at 0... 
    ! Header, and Units, copy of data already available in the OutParam data structure ! TODO TODO TODO remove copy
    CALL AllocAry(InitOut%WriteOutputHdr, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputHdr', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(InitOut%WriteOutputUnt, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputUnt', ErrStat2, ErrMsg2); if(Failed()) return

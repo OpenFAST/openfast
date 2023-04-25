@@ -354,7 +354,8 @@ CONTAINS
 
       ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
 
-          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
+          !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
+          call WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
 
 !          print *, "Node positions: "
 
@@ -583,8 +584,8 @@ CONTAINS
 
             IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
                ErrStat = ErrID_Warn
-               ErrMsg =  ' Unstretched mooring line length too large. '// &
-                            ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+               !ErrMsg =  ' Unstretched mooring line length too large. '// &
+               !             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
                return
             END IF
 
@@ -1262,7 +1263,7 @@ CONTAINS
                   
                   call scalevector(Mforce_im1, Kurvi*Line%EI/Line%lstr(N), Mforce_im1)  ! scale force direction vectors by desired moment force magnitudes to get resulting forces on adjacent nodes
                   
-                  Mforce_i =  Mforce_im1                                         ! set force on node i to cancel out forces on adjacent nodes
+                  Mforce_i =  -Mforce_im1                                         ! set force on node i to cancel out forces on adjacent nodes
                   
                   ! apply these forces to the node forces
                   Line%Bs(:,i-1) = Line%Bs(:,i-1) +  Mforce_im1

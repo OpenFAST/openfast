@@ -195,7 +195,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    else
       ! Should never happen
    endif
-   dvr%numSteps = ceiling(dvr%tMax/dvr%dt)
+   dvr%numSteps = ceiling(dvr%tMax/dvr%dt) ! TODO I believe we need a plus one here
 
    ! Validate the inputs
    call ValidateInputs(dvr, errStat2, errMsg2) ; if(Failed()) return     
@@ -223,7 +223,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
 
    ! --- Initialize meshes
    if (iCase==1) then
-      call Init_MeshMap_For_ADI(FED, ADI%u(1)%AD, errStat2, errMsg2); if(Failed()) return
+      call Init_MeshMap_For_ADI(FED, ADI%p, ADI%u(1)%AD, errStat2, errMsg2); if(Failed()) return
    endif
 
    ! Copy AD input here because tower is modified in ADMeshMap
@@ -239,7 +239,7 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
+      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    END DO              
    ! --- AeroDyn + Inflow at T=0
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
@@ -292,7 +292,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! u(1) is at nt, u(2) is at nt-1.  Set inputs for nt timestep
    call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
+   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
 
    time = ADI%inputTimes(2)
 
@@ -429,10 +429,15 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
    else
       ! UA does not like changes of dt between cases
       if ( .not. EqualRealNos(ADI%p%AD%DT, dt) ) then
-         call WrScr('Info: dt is changing between cases, AeroDyn will be re-initialized')
-         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
-         !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+         call WrScr('[INFO] dt is changing between cases, AeroDyn will be re-initialized')
          needInit=.true.
+      endif
+      if (ADI%p%AD%WakeMod == WakeMod_FVW) then
+         call WrScr('[INFO] OLAF is used, AeroDyn will be re-initialized')
+         needInit=.true.
+      endif
+      if (needInit) then
+         call ADI_End( ADI%u(1:1), ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Init_ADI_ForDriver'); if(Failed()) return
       endif
    endif
 
@@ -484,7 +489,8 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          else
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
-         !call WrScr('>>> Using projection method '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod)))
+         InitInp%AD%rotors(iWT)%AeroBEM_Mod = wt%BEM_Mod
+         !call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroBEM_Mod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -503,6 +509,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
       endif
    else
       ! --- Reinit
+      ! TODO change rootname, but that's a parameter..
       call ADI_ReInit(ADI%p, ADI%x, ADI%xd, ADI%z, ADI%OtherState, ADI%m, dt, errStat2, errMsg2); if(Failed()) return
    endif
 
@@ -973,8 +980,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       call ParseVar(FileInfo_In, CurLine, 'ProjMod'//sWT    , wt%projMod       , errStat2, errMsg2, unEc);
       if (errStat2==ErrID_Fatal) then
          wt%projMod = -1
+         wt%BEM_Mod = -1
       else
-         call WrScr('>>> ProjMod is present in AeroDyn driver input file. ProjMod: '//trim(num2lstr(wt%projMod)))
+         call ParseVar(FileInfo_In, CurLine, 'BEM_Mod'//sWT    , wt%BEM_Mod     , errStat2, errMsg2, unEc); if(Failed()) return
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 
@@ -986,6 +994,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (wt%BasicHAWTFormat) then
          ! --- Basic Geometry
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT , wt%originInit , 3 , errStat2, errMsg2 , unEc); if(Failed()) return
+         if ( dvr%MHK == 1 ) then
+            wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
+         end if
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT      , wt%numBlades      , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'hubRad'//sWT         , hubRad            , errStat2, errMsg2 , unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'hubHt'//sWT          , hubHt             , errStat2, errMsg2 , unEc); if(Failed()) return
@@ -1021,6 +1032,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! --- Advanced geometry
          ! Rotor origin and orientation
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
+         if ( dvr%MHK == 1 ) then
+            wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
+         end if
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'hasTower'//sWT           , wt%hasTower              , errStat2, errMsg2, unEc); if(Failed()) return
          call ParseVar(FileInfo_In, CurLine, 'HAWTprojection'//sWT     , wt%HAWTprojection        , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1305,7 +1319,6 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
    if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
-   if (dvr%MHK == 2) call SetErrStat(ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName)
    
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return

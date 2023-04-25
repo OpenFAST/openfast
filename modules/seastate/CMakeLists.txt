@@ -38,7 +38,10 @@ set(SEAST_SOURCES
   src/SeaState_Types.f90
 )
 
-add_library(seastlib ${SEAST_SOURCES})
+add_library(seastlib_obj OBJECT ${SEAST_SOURCES})
+target_link_libraries(seastlib_obj nwtclibs_obj versioninfolib_obj)
+
+add_library(seastlib $<TARGET_OBJECTS:seastlib_obj>)
 target_link_libraries(seastlib nwtclibs versioninfolib)
 
 set(SEAST_DRIVER_SOURCES
@@ -48,7 +51,7 @@ set(SEAST_DRIVER_SOURCES
 add_executable(seastate_driver ${SEAST_DRIVER_SOURCES})
 target_link_libraries(seastate_driver seastlib ${CMAKE_DL_LIBS})
 
-install(TARGETS seastate_driver seastlib
+install(TARGETS seastate_driver seastlib seastlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

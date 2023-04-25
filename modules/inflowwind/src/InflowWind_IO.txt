@@ -1,0 +1,92 @@
+#----------------------------------------------------------------------------------------------------------------------------------
+# Registry for IfW_Interp, creates MODULE IfW_Interp_Types
+# Module IfW_Interp_Types contains all of the user-defined types needed in IfW_FF. It also contains copy, destroy, pack, and
+# unpack routines associated with each defined data types.
+#----------------------------------------------------------------------------------------------------------------------------------
+# keyword <Module>              <TypeName>        <FieldType>     <FieldName>     <Dims>    <Ctrl>  <DNA ME>  <DESCRIP> <UNITS>
+#----------------------------------------------------------------------------------------------------------------------------------
+
+include Registry_NWTC_Library.txt
+usefrom IfW_FlowField.txt
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  InflowWind_IO  WindFileDat           character(1024)         FileName                -     -     -     "Name of the windfile retrieved"                               -
+typedef  ^              ^                     IntKi                   WindType                -     0     -     "Type of the windfile"                                         -
+typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "Reference height given in file"                               meters
+typedef  ^              ^                     Logical                 RefHt_Set               -     -     -     "Reference height was given in file"                           -
+typedef  ^              ^                     DbKi                    DT                      -     -     -     "TimeStep of the wind file -- zero value for none"             seconds
+typedef  ^              ^                     IntKi                   NumTSteps               -     -     -     "Number of timesteps in the time range of wind file"           -
+typedef  ^              ^                     Logical                 ConstantDT              -     -     -     "Timesteps are the same throughout file"                       -
+typedef  ^              ^                     ReKi                    TRange                  {2}   -     -     "Time range of the wind file"                                  seconds
+typedef  ^              ^                     Logical                 TRange_Limited          -     -     -     "TRange limits strictly enforced"                              -
+typedef  ^              ^                     ReKi                    YRange                  {2}   -     -     "Range in y direction"                                         meters
+typedef  ^              ^                     Logical                 YRange_Limited          -     -     -     "YRange limits strictly enforced"                              -
+typedef  ^              ^                     ReKi                    ZRange                  {2}   -     -     "Range in z direction"                                         meters
+typedef  ^              ^                     Logical                 ZRange_Limited          -     -     -     "ZRange limits strictly enforced"                              -
+typedef  ^              ^                     IntKi                   BinaryFormat            -     -     -     "Binary format identifier"                                     -
+typedef  ^              ^                     Logical                 IsBinary                -     -     -     "Windfile is a binary file"                                    -
+typedef  ^              ^                     ReKi                    TI                      {3}   -     -     "Turbulence intensity (U,V,W)"                                 -
+typedef  ^              ^                     Logical                 TI_listed               -     -     -     "Turbulence intesity given in file"                            -
+typedef  ^              ^                     ReKi                    MWS                     -     -     -     "Approximate mean wind speed"                                  -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Steady_InitInputType  ReKi                    HWindSpeed              -     -     -     "Horizontal wind speed"                                         m/s
+typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "Reference height for horizontal wind speed"                    meters
+typedef  ^              ^                     ReKi                    PLExp                   -     -     -     "Power law exponent"                                            -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Uniform_InitInputType character(1024)         WindFileName            -     -     -     "Name of the wind file to use"                                  -
+typedef  ^              ^                     ReKi                    RefHt                   -     -     -     "Reference height for horizontal wind speed"                    meters
+typedef  ^              ^                     ReKi                    RefLength               -     -     -     "Reference length for linear horizontal and vertical sheer"     -
+typedef  ^              ^                     ReKi                    PropagationDir          -     -     -     "Direction of wind propagation"                                 radians
+typedef  ^              ^                     logical                 UseInputFile            -   .true.  -     "Flag for toggling file based IO in wind type 2."               -
+typedef  ^              ^                     FileInfoType            PassedFileData          -     -     -     "Optional slot for wind type 2 data if file IO is not used."    -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Grid3D_InitInputType  IntKi                   ScaleMethod             -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
+typedef  ^              ^                     ReKi                    SF                      3     0     -     "Turbulence scaling factor for each direction [ScaleMethod=1]"   -
+typedef  ^              ^                     ReKi                    SigmaF                  3     0     -     "Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2]"   -
+typedef  ^              ^                     IntKi                   WindProfileType         -    -1     -     "Wind profile type (0=constant;1=logarithmic;2=power law)" -
+typedef  ^              ^                     ReKi                    RefHt                   -     0     -     "Reference (hub) height of the grid"                        meters
+typedef  ^              ^                     ReKi                    URef                    -     0     -     "Mean u-component wind speed at the reference height"       meters
+typedef  ^              ^                     ReKi                    PLExp                   -     0     -     "Power law exponent (used for PL wind profile type only)"   -
+typedef  ^              ^                     ReKi                    VLinShr                 -     0     -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
+typedef  ^              ^                     ReKi                    HLinShr                 -     0     -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
+typedef  ^              ^                     ReKi                    RefLength               -     1     -     "Reference (rotor) length of the grid (used for horizontal wind profile type only)"   -
+typedef  ^              ^                     ReKi                    Z0                      -     0     -     "Surface roughness length (used for LOG wind profile type only)"  -
+typedef  ^              ^                     ReKi                    XOffset                 -     0     -     "distance offset for FF wind files"  m
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              TurbSim_InitInputType character(1024)         WindFileName            -     -     -     "Name of the wind file to use"                              -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Bladed_InitInputType  character(1024)         WindFileName            -     -     -     "Root filename"                                             -
+typedef  ^              ^                     IntKi                   WindType                -     -     -     "Whether this is native Bladed (needs wind profile and TI scaling) or not" -
+typedef  ^              ^                     logical                 NativeBladedFmt         -     -     -     "Whether this is native Bladed (needs wind profile and TI scaling) or not" -
+typedef  ^              ^                     logical                 TowerFileExist          -     -     -     "Tower file exists"                                            -
+typedef  ^              ^                     IntKi                   TurbineID               -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
+typedef  ^              ^                     logical                 FixedWindFileRootName   -  .false.  -     "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
+
+typedef  ^              Bladed_InitOutputType ReKi                    PropagationDir          -     -     -     "Propogation direction from native Bladed format" degrees  
+typedef  ^              ^                     ReKi                    VFlowAngle              -     -     -     "Vertical flow angle from native Bladed format" degrees        
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              HAWC_InitInputType    character(1024)         WindFileName            {3}   -     -     "Name of the wind file to use"                                    -
+typedef  ^              ^                     IntKi                   nx                      -     0     -     "Number of grids in the x direction (in the 3 files above)"       -
+typedef  ^              ^                     IntKi                   ny                      -     0     -     "Number of grids in the y direction (in the 3 files above)"       -
+typedef  ^              ^                     IntKi                   nz                      -     0     -     "Number of grids in the z direction (in the 3 files above)"       -
+typedef  ^              ^                     ReKi                    dx                      -     0     -     "size of grids in the x direction (in the 3 files above)"         -
+typedef  ^              ^                     ReKi                    dy                      -     0     -     "size of grids in the y direction (in the 3 files above)"         -
+typedef  ^              ^                     ReKi                    dz                      -     0     -     "size of grids in the z direction (in the 3 files above)"         -
+typedef  ^              ^                     Grid3D_InitInputType    G3D                     -     -     -     "Grid3D initialization input" -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              User_InitInputType    SiKi                    Dummy                   -     -     -     "User field initialization input dummy value"                     -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Grid4D_InitInputType  IntKi                   n                       4     -     -     "number of grid points in the x, y, z, and t directions"                     -
+typedef  ^              ^                     ReKi                    delta                   4     -     -     "size between 2 consecutive grid points in each grid direction"               "m,m,m,s"
+typedef  ^              ^                     ReKi                    pZero                   3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))"    "m"
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Points_InitInputType  IntKi                   NumWindPoints           -     -     -     "Number of points where wind components will be provided"                     -

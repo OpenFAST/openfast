@@ -67,20 +67,24 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
    IF (ErrStat >= AbortErrLev) RETURN
 
 
-      ! Sanity check that a reasonable number of nodes are used in AD15 (at least 60% as many nodes)
-   if (0.25 * Opfm%p%nNodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
+      ! The accuracy of the AD15 to CFD coupling is expected to diminish if an insufficient number of AD15 nodes
+      ! is used.  Long term the AD15 nodes will be experted directly, but in the short term we will do a couple
+      ! quick sanity checks.
+   ! If the number of nodes requested from CFD (nNodesForceBlade) is more than 4x the number of AD15 blade nodes
+   ! we expect a lot of innacuracies.  The user should increase the number of nodes in AD15
+   if (Opfm%p%nNodesForceBlade > 4 * u_AD%rotors(1)%BladeMotion(1)%NNodes) then
       ErrMsg2=trim(Num2LStr(Opfm%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
             //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points. ' &
-            //'Increase number of AD15 mesh points to at least 60% as many points as the CFD requested.'
+            //'Increase number of AD15 mesh points to at least 50% as many points as the CFD requested.'
       call WrScr('OpFM Error: '//trim(ErrMsg2))
       call SetErrStat(ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       return
-   endif
-   if (0.60 * Opfm%p%nNodesForceBlade >  u_AD%rotors(1)%BladeMotion(k)%NNodes) then
+   ! if the number of nodes requested from CFD (nNodesForceBlade) is more than double the number of nodes in AD15, issue a warning.
+   elseif (Opfm%p%nNodesForceBlade > 2 * u_AD%rotors(1)%BladeMotion(1)%NNodes) then
       ErrMsg2=trim(Num2LStr(Opfm%p%nNodesForceBlade))//' blade points requested from CFD.  AD15 only uses ' &
             //trim(Num2LStr(u_AD%rotors(1)%BladeMotion(k)%NNodes))//' mesh points.  This may result in inacurate loads.'
       call WrScr('OpFM WARNING: '//trim(ErrMsg2))
-      call SetErrStat(ErrID_Severe, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 
       !---------------------------
@@ -454,7 +458,7 @@ SUBROUTINE SetOpFMForces(p_FAST, u_AD, y_AD, OpFM, ErrStat, ErrMsg)
 #ifdef DEBUG_OPENFOAM
    CALL GetNewUnit( aerodynForcesFile )
    open(unit=aerodynForcesFile,file='fast_aerodyn_velocity_forces.csv')
-   write(aerodynForcesFile,*) '#x, y, z, fx, fy, fz'
+   write(aerodynForcesFile,*) '#x, y, z, u, v, w, fx, fy, fz'
 
    CALL GetNewUnit( actForcesFile )
    open(unit=actForcesFile,file='fast_actuator_forces.csv')
@@ -464,8 +468,8 @@ SUBROUTINE SetOpFMForces(p_FAST, u_AD, y_AD, OpFM, ErrStat, ErrMsg)
    DO K = 1,OpFM%p%NumBl
 
 #ifdef DEBUG_OPENFOAM
-      DO J = 1,u_AD%BladeMotion(k)%NNodes
-        write(aerodynForcesFile,*) u_AD%BladeMotion(k)%TranslationDisp(1,j) + u_AD%BladeMotion(k)%Position(1,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(2,j) + u_AD%BladeMotion(k)%Position(2,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(3,j) + u_AD%BladeMotion(k)%Position(3,j), ', ', OpFM%y%u(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(1,j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(2,j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(2,j)
+      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%NNodes
+        write(aerodynForcesFile,*) u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j), ', ', u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j), ', ', u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j), ', ', OpFM%y%u(1 + (k-1)*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + (k-1)*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + (k-1)*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(1,j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(2,j), ', ', y_AD%rotors(1)%BladeLoad(k)%Force(2,j)
       END DO
 #endif
 
@@ -497,7 +501,7 @@ SUBROUTINE SetOpFMForces(p_FAST, u_AD, y_AD, OpFM, ErrStat, ErrMsg)
       DO K = OpFM%p%NumBl+1,OpFM%p%NMappings
 #ifdef DEBUG_OPENFOAM
       DO J = 1,u_AD%rotors(1)%TowerMotion%NNodes
-         write(aerodynForcesFile,*) u_AD%rotors(1)%TowerMotion%TranslationDisp(1,j) + u_AD%rotors(1)%TowerMotion%Position(1,j), ', ', u_AD%rotors(1)%TowerMotion%TranslationDisp(2,j) + u_AD%rotors(1)%TowerMotion%Position(2,j), ', ', u_AD%TowerMotion%TranslationDisp(3,j) + u_AD%TowerMotion%Position(3,j), ', ', OpFM%y%u(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%rotors(1)%TowerLoad%Force(1,j), ', ', y_AD%rotors(1)%TowerLoad%Force(2,j), ', ', y_AD%rotors(1)%TowerLoad%Force(2,j)
+         write(aerodynForcesFile,*) u_AD%rotors(1)%TowerMotion%TranslationDisp(1,j) + u_AD%rotors(1)%TowerMotion%Position(1,j), ', ', u_AD%rotors(1)%TowerMotion%TranslationDisp(2,j) + u_AD%rotors(1)%TowerMotion%Position(2,j), ', ', u_AD%rotors(1)%TowerMotion%TranslationDisp(3,j) + u_AD%rotors(1)%TowerMotion%Position(3,j), ', ', OpFM%y%u(1 + OpFM%p%NumBl*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + OpFM%p%NumBl*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + OpFM%p%NumBl*u_AD%rotors(1)%BladeMotion(k)%NNodes + j), ', ', y_AD%rotors(1)%TowerLoad%Force(1,j), ', ', y_AD%rotors(1)%TowerLoad%Force(2,j), ', ', y_AD%rotors(1)%TowerLoad%Force(2,j)
       END DO
 #endif
 

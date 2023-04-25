@@ -7,15 +7,18 @@ InflowWind driver input file.
  false         WrHAWC         -- Convert all data to HAWC2 format? (flag)
  false         WrBladed       -- Convert all data to Bladed format? (flag)
  false         WrVTK          -- Convert all data to VTK format? (flag)
+ false         WrUniform      -- Convert data to Uniform wind format? (flag)
 =====================  Tests of Interpolation Options =========================
    DEFAULT     NumTSteps      -- number of timesteps to run (DEFAULT for all) (-)
    0.0         TStart         -- Start time (s)
    DEFAULT     DT             -- timestep size for driver to take (s, or DEFAULT for what the file contains)
    t           Summary        -- Summarize the data extents in the windfile (flag)
    t           SummaryFile    -- Write summary to file (.dvr.sum) (flag)
+   f           BoxExceedAllow -- Allow point sampling outside grid
 ----  Points file input (output given as POINTSFILENAME.Velocity.dat) --------
    f           PointsFile     -- read in a list of output points from a file (flag)
 "Test005.txt"  PointsFileName -- name of points file (-) (comma separated x,y,z coordinates, # symbol for comments)
+   f           CalcAccel      -- calculate and output acceleration at points in addition to velocity
 ----  Output grid (Points below ground will simply be ignored) ---------------
    t           WindGrid       -- report wind data at set of X,Y,Z coordinat            (flag)
    6,0,15      GridCtrCoord   -- coordinate of center of grid                          (m)

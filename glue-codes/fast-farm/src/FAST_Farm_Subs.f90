@@ -44,6 +44,7 @@ MODULE FAST_Farm_Subs
 
     
    integer, parameter :: maxOutputPoints = 9
+   integer, parameter :: maxOutputPlanes = 99      ! Allow up to 99 outpt planes
    
    CONTAINS
  
@@ -1112,7 +1113,19 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
            AWAE_InitInp%Mod_Projection=1
       endif
    endif
-
+   !----------------------- WAKE-ADDED TURBULENCE ------------------------------------------
+   ! Read WAT variables
+   WD_InitInp%WAT_k_Def  =1.0_ReKi
+   WD_InitInp%WAT_k_Grad =1.0_ReKi
+   WD_InitInp%WAT = .false.   ! initialize to false to avoid segfault
+   !CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadVar( UnIn, InputFile, WD_InitInp%WAT, "WAT", "Switch for turning on and off wake-added turbulence", ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !CALL ReadCom( UnIn, InputFile, 'dummy predef', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadCom( UnIn, InputFile, 'dummy user', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadCom( UnIn, InputFile, 'dummy userdx', ErrStat2, ErrMsg2, UnEc )
+   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def,     "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   !IF ( PathIsRelative( p%File ) )p%File = TRIM(PriPath)//TRIM(p%File)
 
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
@@ -1127,7 +1140,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
       
       ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1150,7 +1163,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if
       
       ! NOutDisWindYZ - Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1173,7 +1186,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
       end if      
       
       ! NOutDisWindXZ - Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 99]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1500,16 +1513,23 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
       END IF
    END IF
    
-   IF (WD_InitInp%FilterInit < 0  ) CALL SetErrStat(ErrID_Fatal,'FilterInit needs to >= 0',ErrStat,ErrMsg,RoutineName)
-   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
-      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
-   END IF
+
    
    IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
       CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
+   
+   ! --- CURL
+   IF (WD_InitInp%FilterInit < 0  ) CALL SetErrStat(ErrID_Fatal,'FilterInit needs to >= 0',ErrStat,ErrMsg,RoutineName)
+   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
+      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
+   END IF
    IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
          
+   ! --- WAT      
+   IF (WD_InitInp%WAT_k_Def  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (WD_InitInp%WAT_k_Grad <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+   
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -1526,9 +1546,9 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    AWAE_InitInp%WrDisDT =  p%DT_low * n_disDT_dt
    
    
-   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPlanes ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 99].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) then
       CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    else

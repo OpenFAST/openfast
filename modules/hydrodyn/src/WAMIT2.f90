@@ -4717,6 +4717,21 @@ END SUBROUTINE WAMIT2_Init
             RETURN
          endif
 
+            ! Check that it is a valid force component
+         if (TmpCoord(5) < 1 .or. TmpCoord(5) > 6*Data4D%NumBodies) then
+            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
+                           ' contains force component '//TRIM(Num2LStr(TmpCoord(5)))//' which is outside the expected force '// &
+                           ' range of 1 to '//TRIM(Num2Lstr(6*Data4D%NumBodies))//' for a '//TRIM(Num2LStr(Data4D%NumBodies))// &
+                           ' body system.', ErrStat, ErrMsg, RoutineName)
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         endif
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
             !! is a partial dimensionalization since the wave amplitudes are not included (this is done later

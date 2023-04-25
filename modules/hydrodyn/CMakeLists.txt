@@ -45,7 +45,10 @@ set(HYDRODYN_SOURCES
   src/WAMIT2_Types.f90
 )
 
-add_library(hydrodynlib ${HYDRODYN_SOURCES})
+add_library(hydrodynlib_obj OBJECT ${HYDRODYN_SOURCES})
+target_link_libraries(hydrodynlib_obj seastlib_obj nwtclibs_obj)
+
+add_library(hydrodynlib $<TARGET_OBJECTS:hydrodynlib_obj>)
 target_link_libraries(hydrodynlib seastlib nwtclibs)
 
 # c-bindings interface library
@@ -67,7 +70,7 @@ target_link_libraries(hydrodyn_driver hydrodynlib seastlib nwtclibs versioninfol
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
-install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding
+install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding hydrodynlib_obj
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

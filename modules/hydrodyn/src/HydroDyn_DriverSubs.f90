@@ -81,11 +81,11 @@ MODULE HydroDynDriverSubs
       REAL(DbKi)                       :: TMax
       INTEGER                          :: PRPInputsMod
       CHARACTER(1024)                  :: PRPInputsFile
-      REAL(ReKi)                       :: uPRPInSteady(6)
-      REAL(ReKi)                       :: uDotPRPInSteady(6)
-      REAL(ReKi)                       :: uDotDotPRPInSteady(6)
-      REAL(ReKi), ALLOCATABLE          :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
-      REAL(ReKi), ALLOCATABLE          :: PRPinTime(:)         ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
+      REAL(R8Ki)                       :: uPRPInSteady(6)
+      REAL(R8Ki)                       :: uDotPRPInSteady(6)
+      REAL(R8Ki)                       :: uDotDotPRPInSteady(6)
+      REAL(R8Ki), ALLOCATABLE          :: PRPin(:,:)           ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
+      REAL(R8Ki), ALLOCATABLE          :: PRPinTime(:)         ! Variable for storing time, forces, and body velocities, in m/s or rad/s for PRP
       INTEGER(IntKi)                   :: NBody                ! Number of WAMIT bodies to work with if prescribing kinematics on each body (PRPInputsMod<0)
       REAL(ReKi)                       :: PtfmRefzt
       TYPE(HD_Drvr_OutputFile)         :: OutData
@@ -650,7 +650,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
    integer(IntKi)                                   :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
    character(*), parameter                          :: RoutineName = 'SetHDInputs_Constant'
-   real(ReKi)                                       :: yInterp(size(drvrData%PRPin,2))
+   real(R8Ki)                                       :: yInterp(size(drvrData%PRPin,2))
    integer(intKi)                                   :: indxHigh, indxMid, indxLow
    integer(intKi)                                   :: i
    
@@ -659,7 +659,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
 
    ! PRPInputsMod 2: Reads time series of positions, velocities, and accelerations for the platform reference point
    IF ( drvrData%PRPInputsMod == 2 ) THEN
-      call InterpStpMat( real(time,ReKi), drvrData%PRPinTime, drvrData%PRPin, mappingData%Ind, size(drvrData%PRPinTime), yInterp )
+      call InterpStpMat( time, drvrData%PRPinTime, drvrData%PRPin, mappingData%Ind, size(drvrData%PRPinTime), yInterp )
       
       u_HD%PRPMesh%TranslationDisp(:,1)   = yInterp(1:3) 
 
@@ -685,7 +685,7 @@ SUBROUTINE SetHDInputs(time, n, u_HD, mappingData, drvrData, ErrStat, ErrMsg)
       ! The number of bodies is the negative of PRPInputsMod.
       
       i = min(n,drvrData%NSteps)
-      if (n <= drvrData%NSteps .and. .not. EqualRealNos( REAL(time,ReKi), drvrData%PRPinTime(i) ) ) then
+      if (n <= drvrData%NSteps .and. .not. EqualRealNos( time, drvrData%PRPinTime(i) ) ) then
          call SetErrStat(ErrID_Fatal, 'time does not match PRP input file data', ErrStat, ErrMsg, RoutineName)
          return
       end if

@@ -100,7 +100,6 @@ if not os.path.isdir(testBuildDirectory):
         filename = file.split(os.path.sep)[-1]
         shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
 
-    
 ### Run MoorDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "md_driver.inp")
