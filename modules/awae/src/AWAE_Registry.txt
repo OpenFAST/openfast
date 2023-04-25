@@ -204,6 +204,7 @@ typedef  ^  ParameterType  CHARACTER(1024)  OutFileVTKRoot     -  - -   "The roo
 typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number of characters for VTK timestamp outputs" -
 #typedef  ^  ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
 #wake added turbulence
+#typedef  ^  ParameterType  IntKi            WAT                 -  - - "Switch for turning on and off wake-added turbulence" -
 #typedef  ^  ParameterType  POINTER          WAT_V_Box          -  - -   "Pointer to unit turbulence box for WAT (3, nxb, nyb, nzb)" m/s
 typedef  ^  ParameterType  ReKi              WAT_d_box        {3} - -   "Spacing (delta x, delta y, delta z) of unit turbulence box for WAT" m
 

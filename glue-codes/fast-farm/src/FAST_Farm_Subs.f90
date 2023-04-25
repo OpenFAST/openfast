@@ -231,14 +231,20 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ENDIF
    
    !...............................................................................................................................  
-   ! step 3: initialize SC, AWAE, and WD (a, b, and c can be done in parallel)
+   ! step 3: initialize WAT, AWAE, SC, and WD (b, c, and d can be done in parallel)
    !...............................................................................................................................  
-   
+
       !-------------------
-      ! a. CALL AWAE_Init
-   
+      ! a. read WAT input files using InflowWind
+   if (farm%p%WAT /= 0_IntKi) then
+      call WAT_init( farm%p, farm%WAT_IfW, ErrStat2, ErrMsg2 )
+   endif
+
+      !-------------------
+      ! b. CALL AWAE_Init
+
    AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
-   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low 
+   AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
    AWAE_InitInput%InputFileData%NumPlanes    = WD_InitInput%InputFileData%NumPlanes
@@ -268,7 +274,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
    
       !-------------------
-      ! b. CALL SC_Init
+      ! c. CALL SC_Init
    if ( farm%p%useSC ) then
       SC_InitInp%nTurbines = farm%p%NumTurbines
       call SC_Init(SC_InitInp, farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
@@ -298,7 +304,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    end if
    
       !-------------------
-      ! c. initialize WD (one instance per turbine, each can be done in parallel, too)
+      ! d. initialize WD (one instance per turbine, each can be done in parallel, too)
       
    call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -372,6 +378,241 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE Farm_Initialize
+
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes all instances of WakeDynamics.
+!! This also sets the WAT InflowWind data storage -- this will be changed later when IfW uses pointers
+SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
+   type(farm_ParameterType), intent(inout) :: p                   !< farm parameters data
+   type(WAT_IfW_data),       intent(inout) :: IfW                 !< InflowWind data
+   integer(IntKi),           intent(  out) :: ErrStat             !< Error status of the operation
+   character(*),             intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+
+   type(InflowWind_InitInputType)          :: IfW_InitInp
+   type(InflowWind_InitOutputType)         :: IfW_InitOut
+   character(1024)                         :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
+   character(6)                            :: FileEnding(3)
+   integer(IntKi)                          :: Nxyz(3)
+   real(ReKi)                              :: Dxyz(3)
+   integer(IntKi)                          :: ErrStat2
+   character(ErrMsgLen)                    :: ErrMsg2
+   character(*), parameter                 :: RoutineName = 'WAT_init'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   ! Initialize InflowWind
+   IfW_InitInp%FixedWindFileRootName = .false.
+   IfW_InitInp%NumWindPoints         = 1        ! just some random number for the moment
+   IfW_InitInp%RadAvg                = 0.25 * p%nZ_low * p%dX_low     ! arbitrary garbage, just must be bigger than zero, but not bigger than grid (IfW will complain if this isn't set when it tries to calculate disk average vel)
+
+   ! Set InputFile data
+   IfW_InitInp%FilePassingMethod                =  2_IntKi  ! passing the IfW%InputFile structure
+   IfW_InitInp%PassedFileData%EchoFlag          =  .false.  ! don't echo anything
+   IfW_InitInp%PassedFileData%WindType          =  5        ! HAWC wind type
+   IfW_InitInp%PassedFileData%PropagationDir    =  0.0      ! set to straight from left
+   IfW_InitInp%PassedFileData%VFlowAngle        =  0.0      ! no upflow
+   IfW_InitInp%PassedFileData%NWindVel          =  0        ! no output points
+
+   ! Input file
+   call SplitFileName (p%WAT_BoxFile, BoxFileRoot, FileEnding, ErrStat2, ErrMsg2);  if (Failed()) return
+   IfW_InitInp%PassedFileData%HAWC_FileName_u   =  trim(BoxFileRoot)//trim(FileEnding(1))
+   IfW_InitInp%PassedFileData%HAWC_FileName_v   =  trim(BoxFileRoot)//trim(FileEnding(2))
+   IfW_InitInp%PassedFileData%HAWC_FileName_w   =  trim(BoxFileRoot)//trim(FileEnding(3))
+
+   ! HAWC grid
+   if (p%WAT == 1_IntKi) then       ! from libary of WAT files
+      call MannLibDims(BoxFileRoot, p%RotorDiamRef, Nxyz, Dxyz, ErrStat2, ErrMsg2);  if (Failed()) return
+      IfW_InitInp%PassedFileData%HAWC_nx           =  Nxyz(1)
+      IfW_InitInp%PassedFileData%HAWC_ny           =  Nxyz(2)
+      IfW_InitInp%PassedFileData%HAWC_nz           =  Nxyz(3)
+      IfW_InitInp%PassedFileData%HAWC_dx           =  Dxyz(1)
+      IfW_InitInp%PassedFileData%HAWC_dy           =  Dxyz(2)
+      IfW_InitInp%PassedFileData%HAWC_dz           =  Dxyz(3)
+   elseif (p%WAT == 2_IntKi) then   ! user specified
+      IfW_InitInp%PassedFileData%HAWC_nx           =  p%WAT_UserNxNyNz(1)
+      IfW_InitInp%PassedFileData%HAWC_ny           =  p%WAT_UserNxNyNz(2)
+      IfW_InitInp%PassedFileData%HAWC_nz           =  p%WAT_UserNxNyNz(3)
+      IfW_InitInp%PassedFileData%HAWC_dx           =  p%WAT_UserDxDyDz(1)
+      IfW_InitInp%PassedFileData%HAWC_dy           =  p%WAT_UserDxDyDz(2)
+      IfW_InitInp%PassedFileData%HAWC_dz           =  p%WAT_UserDxDyDz(3)
+   endif
+
+   IfW_InitInp%PassedFileData%FF%RefHt          =  0.5_ReKi * p%WAT_UserNxNyNz(3)*p%WAT_UserDxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
+
+   ! HAWC turbulence scaling
+   IfW_InitInp%PassedFileData%FF%SF(1:3)        =  1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
+
+   ! HAWC wind profile
+   IfW_InitInp%PassedFileData%FF%URef           =  0.0_ReKi    ! Mean u-component wind speed at the reference height (m/s)
+   IfW_InitInp%PassedFileData%FF%WindProfileType=  0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
+   IfW_InitInp%PassedFileData%FF%XOffset        =  0.0_ReKi    ! Initial offset in +x direction (shift of wind box)
+
+   IfW_InitInp%PassedFileData%SumPrint          =  .false.
+   IfW_InitInp%PassedFileData%NumOuts           =  0
+
+   ! Note: there are other variables form the input file that we simply don't set as they don't apply to this type of HAWC file
+
+   call WrScr("Reading Wake added turbulence files: "//trim(p%WAT_BoxFile))
+   call InflowWind_Init( IfW_InitInp, IfW%u, IfW%p, IfW%x, IfW%xd, IfW%z, IfW%OtherSt, IfW%y, IfW%m, p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) THEN
+         call Cleanup()
+         RETURN
+      END IF
+
+   call Cleanup()
+   return
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call Cleanup()
+   end function Failed
+   subroutine Cleanup()
+      call InflowWind_DestroyInitInput(IfW_InitInp, ErrStat2, ErrMsg2)
+      call InflowWind_DestroyInitOutput(IfW_InitOut, ErrStat2, ErrMsg2)
+   end subroutine Cleanup
+
+   !  Split out the ending of .u or u.bin from the filename.
+   !  If none given, then append ending and check for file existance
+   subroutine SplitFileName(FileName, BaseName, Ending, ErrStat3, ErrMsg3)
+      character(1024),  intent(in   ) :: FileName
+      character(1024),  intent(  out) :: BaseName
+      character(6),     intent(  out) :: Ending(3)
+      integer(IntKi),   intent(  out) :: ErrStat3
+      character(*),     intent(  out) :: ErrMsg3
+      integer(IntKi)                  :: i,l
+      logical                         :: foundFile
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+      ! check if passed filename ends in .u or u.bin
+      l=len_trim(FileName)
+      if (index(FileName,'.u')>0) then
+         BaseName = FileName(1:l-2)
+         Ending(1)= '.u'
+         inquire(file=trim(FileName)//trim(Ending(1)), exist=foundfile)
+         if (.not. foundFile) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//trim(Ending(1))
+         endif
+         Ending(2)= '.v'
+         Ending(3)= '.w'
+         return
+      elseif (index(FileName,'u.bin') > 0) then
+         BaseName = FileName(1:l-4)
+         Ending(1)= 'u.bin'
+         inquire(file=trim(FileName)//trim(Ending(1)), exist=foundfile)
+         if (.not. foundFile) then
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//trim(Ending(1))
+         endif
+         Ending(2)= 'v.bin'
+         Ending(3)= 'w.bin'
+         return
+      else  ! Ending not included in filename, so try figure it out
+         BaseName = trim(FileName)
+         ! is it .u for file ending
+         Ending(1)= '.u'
+         Ending(2)= '.v'
+         Ending(3)= '.w'
+         inquire(file=trim(FileName)//trim(Ending(1)),  exist=foundFile)
+         if (foundFile) return
+         ! is it u.bin for file ending
+         Ending(1)= 'u.bin'
+         Ending(2)= 'v.bin'
+         Ending(3)= 'w.bin'
+         inquire(file=trim(FileName)//trim(Ending(1)),  exist=foundFile)
+         if (foundFile) return
+         ! didn't find file, so error out
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//'.u '//' or '//trim(FileName)//'u.bin '
+      endif
+   end subroutine SplitFileName
+   !> If it is a filename of a library, expect following format: FFDB_512x512x64.u where:
+   !!     512x512x64  -- Number of grid points in X,Y,Z -- Nx, Ny, Nz
+   !! TODO: this is a clumsy looking routine. There are more elegant ways to do this.
+   subroutine MannLibDims(BoxFileRoot,RotorDiamRef,Nxyz,Dxyz,ErrStat3,ErrMsg3)
+      character(1024),  intent(in   ) :: BoxFileroot
+      real(ReKi),       intent(in   ) :: RotorDiamRef    ! reference rotordiam
+      integer(IntKi),   intent(  out) :: Nxyz(3)
+      real(ReKi),       intent(  out) :: Dxyz(3)         ! derived based on rotor diameter
+      integer(IntKi),   intent(  out) :: ErrStat3
+      character(*),     intent(  out) :: ErrMsg3
+      integer(IntKi)                  :: D               ! rotor diameter from file name
+      integer(IntKi)                  :: idxX(2)         ! indices for the "X" in the sizing string
+      integer(IntKi)                  :: i               ! generic indexing stuff
+      integer(IntKi)                  :: nDig            ! number of digits
+      character(1)                    :: C0, C1, C2      ! characters for testing
+      real(ReKi), parameter           :: ScaleFact=0.03  ! scale ifactor for Dx,Dy,Dz based on rotor diameter
+      character(1024)                 :: NameUC          ! upper case of name
+      character(10)                   :: TmpStr          ! assume no more than 10 digits per dimension -- it would be silly to have more
+      integer(IntKi)                  :: ErrStat4
+      character(10)                   :: CharNums="1234567890"
+      character(1024)                 :: ErrMsgFail
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+      ErrMsgFail = "Could not find information on number of grid points in filename "//trim(BoxFileRoot)// &
+                   ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
+
+      ! Set Dxyz
+      Dxyz=real(RotorDiamRef,ReKi)*ScaleFact
+
+      !----------------------------
+      ! Parse number of grid points
+      idxX(:)=0
+      ! scan for #x# pattern and store indices of the 'x'
+      do i=1+1,len_trim(BoxFileRoot)-1
+         C0=BoxFileRoot(i-1:i-1)
+         C1=BoxFileRoot(i:i);       call Conv2UC(C1)
+         C2=BoxFileRoot(i+1:i+1)
+         if ((index(CharNums,C0)>0) .and. (C1=="X") .and. (index(CharNums,C2)>0)) then
+            if (idxX(1)==0) then  ! found first x
+               idxX(1)=i
+            else
+               idxX(2)=i
+               exit     ! found both "X" positions, so exit loop
+            endif
+         elseif (idxX(1)>0) then
+            if (.not. ((index(CharNums,C0)>0) .or. (index(CharNums,C1)>0))) then   ! not seeing a number in the window before next "X" is encountered
+               ErrStat3 = ErrID_Fatal
+               ErrMsg3  = ErrMsgFail
+               return
+            endif
+         endif
+      enddo
+      ! Did we get both "X" positions?
+      if (idxX(2)==0) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = ErrMsgFail
+         return
+      endif
+      ! Parse the first number (grab all contiguous digits before first "X")
+      nDig=0   ! start counter at zero
+      do i=idxX(1)-1,1,-1
+         ! is this a digit? (recount one we already know is one)
+         if (index(CharNums,BoxFileRoot(i:i))>0) then
+            nDig=nDig+1
+         else
+            exit
+         endif
+      enddo
+      ! internal read this
+      TmpStr=BoxFileRoot(idxX(1)-nDig+1:idxX(1)-1)
+      read (TmpStr,*,IOSTAT=ErrStat4)  Nxyz(1)
+      if (ErrStat4 > 0) then
+         ErrStat3 = ErrID_Fatal
+         ErrMsg3  = ErrMsgFail
+         return
+      endif
+   end subroutine MannLibDims
+end subroutine WAT_init
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of WakeDynamics
 SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )

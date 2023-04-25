@@ -1586,7 +1586,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    endif ! Curl or Polar
 
    ! --- WAT - Compute k_mt and add turbulence
-   if ( p%WAT /= Mod_WAT_None ) then
+   if ( p%WAT ) then
       R = u%D_Rotor /2
       do i = 1,maxPln  
          if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
@@ -1660,7 +1660,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                call vtk_point_data_scalar(m%dvx_dy(:,:,i),'dvx_dy', mvtk) 
                call vtk_point_data_scalar(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
             endif
-            if ( p%WAT /= Mod_WAT_None ) then
+            if ( p%WAT ) then
                call vtk_point_data_scalar(y%WAT_k_mt(:,:,i),'k_mt', mvtk)
             endif             
             call vtk_close_file(mvtk)
@@ -1668,7 +1668,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       enddo ! loop on planes
    endif
    
-endsubroutine WD_CalcOutput
+end subroutine WD_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations

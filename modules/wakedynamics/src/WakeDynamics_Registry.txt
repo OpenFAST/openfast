@@ -14,16 +14,13 @@
 include Registry_NWTC_Library.txt
 
 # ..... Constants .......................................................................................................
-param	WakeDynamics/WD      -               INTEGER         WakeDiamMod_RotDiam     - 1 -  "Wake diameter calculation model: rotor diameter" -
-param	^                    -               INTEGER         WakeDiamMod_Velocity    - 2 -  "Wake diameter calculation model: velocity-based" -
-param	^                    -               INTEGER         WakeDiamMod_MassFlux    - 3 -  "Wake diameter calculation model: mass-flux based" -
-param	^                    -               INTEGER         WakeDiamMod_MtmFlux     - 4 -  "Wake diameter calculation model: momentum-flux based" -
-param	^                    -               INTEGER         Mod_Wake_Polar          - 1 -  "Wake model" -
-param	^                    -               INTEGER         Mod_Wake_Curl           - 2 -  "Wake model" -
-param	^                    -               INTEGER         Mod_Wake_Cartesian      - 3 -  "Wake model" -
-param ^                    -               INTEGER         Mod_WAT_None            - 0 -  "WAT: off" -
-param ^                    -               INTEGER         Mod_WAT_PreDef          - 0 -  "WAT: predefined turubulence boxes" -
-param ^                    -               INTEGER         Mod_WAT_UserDef         - 0 -  "WAT: user defined turubulence boxes" -
+param WakeDynamics/WD      -               INTEGER         WakeDiamMod_RotDiam     - 1 -  "Wake diameter calculation model: rotor diameter" -
+param ^                    -               INTEGER         WakeDiamMod_Velocity    - 2 -  "Wake diameter calculation model: velocity-based" -
+param ^                    -               INTEGER         WakeDiamMod_MassFlux    - 3 -  "Wake diameter calculation model: mass-flux based" -
+param ^                    -               INTEGER         WakeDiamMod_MtmFlux     - 4 -  "Wake diameter calculation model: momentum-flux based" -
+param ^                    -               INTEGER         Mod_Wake_Polar          - 1 -  "Wake model" -
+param ^                    -               INTEGER         Mod_Wake_Curl           - 2 -  "Wake model" -
+param ^                    -               INTEGER         Mod_Wake_Cartesian      - 3 -  "Wake model" -
 
 # ..... InputFile Data .......................................................................................................
 typedef  ^                 WD_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
@@ -57,7 +54,7 @@ typedef  ^                 WD_InputFileType  IntKi           FilterInit     - - 
 typedef  ^                 WD_InputFileType  ReKi            k_vCurl        - - -  "Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0]" - 
 typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - -  "Output all planes" - 
 # wake added turbulence (WAT) inputs
-typedef  ^                 WD_InputFileType  IntKi           WAT            -  - - "Switch for turning on and off wake-added turbulence" -
+typedef  ^                 WD_InputFileType  Logical         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def      -  - - "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad     -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
 #typdef   ^                 WD_InputFileType  IntKi           nh             -  - - "Number of high-resolution time step within a low resolution time step" -
@@ -177,7 +174,7 @@ typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    - - -    "The root name
 typedef ^ ParameterType  CHARACTER(1024)  OutFileVTKDir  - - -    "The parent directory for all VTK files written by WD" -
 typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID number (start with 1; end with number of turbines)"      -
 # wake added turbulence (WAT) parameters
-typedef ^ ParameterType  IntKi            WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
+typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
 typedef ^ ParameterType  ReKi             WAT_k_Def      -  - -   "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
 typedef ^ ParameterType  ReKi             WAT_k_Grad     -  - -   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
 #typdef  ^ ParameterType  IntKi            nh             -  - - "Number of high-resolution time step within a low resolution time step" -
@@ -208,5 +205,5 @@ typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:}
 typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
-typedef      ^      OutputType         ReKi       WAT_k_mt             {:}{:}{:}  -    -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
+typedef      ^      OutputType         ReKi       WAT_k_mt             {:}{:}{:}  -   -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
 
