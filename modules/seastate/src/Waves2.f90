@@ -543,7 +543,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
-            j = (k-1) / InitInp%NGrid(2) + 1
+            j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
@@ -906,7 +906,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          DO k = 1,InitInp%NWaveElevGrid      ! Loop through all points where the incident wave elevations are to be computed (normally all the XY grid points)
                ! This subroutine call applies the FFT at the correct location.
             i = mod(k-1, InitInp%NGrid(1)) + 1
-            j = (k-1) / InitInp%NGrid(2) + 1
+            j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
