@@ -23,7 +23,7 @@ include (FindPackageHandleStandardArgs)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/ftnmods)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/ftnmods)
 
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
@@ -102,45 +102,32 @@ if (FPE_TRAP_ENABLED)
   add_definitions(-DFPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
-# Setup dependencies
-if (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
-  find_package(MKL)
-endif()
-if (MKL_FOUND)
-  include_directories(${MKL_INCLUDE_DIRS})
-  set(BLAS_LIBRARIES ${MKL_LIBRARIES})
-  set(LAPACK_LIBRARIES ${MKL_LIBRARIES})
-  set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "ifport;ifcore;imf;svml;m;ipgo;intlc;c;irc_s;dl;c")
-else(MKL_FOUND)
-  if (USE_LOCAL_STATIC_LAPACK)
-
-      message(STATUS "--> Reference LAPACK and BLAS will be downloaded and build as static libraries for linking with openfast")
-      include(ExternalProject)
-      ExternalProject_Add(
-		lapack
-		URL http://www.netlib.org/lapack/lapack.tgz
-		CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
-        PREFIX ${CMAKE_BINARY_DIR}/dependencies
-      )
-	  if (UNIX)
-         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/liblapack.a ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.a CACHE STRING "LAPACK library" FORCE)
-	  else (UNIX) # On Windows
-         set(LAPACK_LIBRARIES ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/libliblapack.lib ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/libblas.lib CACHE STRING "LAPACK library" FORCE)
-      endif (UNIX)
-
-      install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
-
-  else(USE_LOCAL_STATIC_LAPACK)
-
-    find_package(BLAS REQUIRED)
-    find_package(LAPACK REQUIRED)
-
-  endif(USE_LOCAL_STATIC_LAPACK)
-
-endif(MKL_FOUND)
-
 # Set the RPATH after configuring the install prefix
 include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
+
+# Find BLAS and LAPACK - set BLA_VENDOR to use a specific version of BLAS and LAPACK
+# For example -DBLA_VENDOR=Intel10_64lp for Intel MKL v10+ 64 bit, threaded code, lp64 model
+# (see https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors)
+find_package(LAPACK)
+if (LAPACK_FOUND)
+  add_link_options(${LAPACK_LINKER_FLAGS})
+elseif (USE_LOCAL_STATIC_LAPACK)
+  message(STATUS "Downloading and building LAPACK as static libraries for linking with OpenFAST")
+  set(BLAS_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}blas${CMAKE_STATIC_LIBRARY_SUFFIX} )
+  set(LAPACK_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX})
+  include(ExternalProject)
+  ExternalProject_Add(lapack
+    URL http://www.netlib.org/lapack/lapack.tgz
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/install
+    PREFIX ${CMAKE_BINARY_DIR}/dependencies
+    BUILD_BYPRODUCTS ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH}
+  )
+  set(LAPACK_LIBRARIES ${BLAS_LIB_PATH} ${LAPACK_LIB_PATH} CACHE STRING "LAPACK library" FORCE)
+  install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
+  message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
+else()
+  message(FATAL_ERROR "Unable to find BLAS and LAPACK")
+endif()
 
 ########################################################################
 # Build rules for OpenFAST Registry
@@ -226,11 +213,20 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
 if(BUILD_TESTING)
   include(CTest)
 
+  # Find python
+  cmake_policy(SET CMP0094 NEW) # Search for python by LOCATION
+  find_package (Python COMPONENTS Interpreter)
+  if(NOT ${Python_Interpreter_FOUND})
+    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
+  endif()
+
   # regression tests
   add_subdirectory(reg_tests)
 
   # unit tests
-  add_subdirectory(unit_tests)
+  if(NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang"))
+    add_subdirectory(unit_tests)
+  endif()
 endif()
 
 option(BUILD_DOCUMENTATION "Build documentation." OFF)

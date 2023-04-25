@@ -33,7 +33,8 @@ typedef  ^   ElemPropType  ReKi    Ixx      -  -  -  "Moment of inertia of an el
 typedef  ^   ElemPropType  ReKi    Iyy      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  ReKi    Jzz      -  -  -  "Moment of inertia of an element"
 typedef  ^   ElemPropType  LOGICAL Shear    -  -  -  "Use timoshenko (true) E-B (false)"
-typedef  ^   ElemPropType  ReKi    Kappa    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_x    -  -  -  "Shear coefficient"
+typedef  ^   ElemPropType  ReKi    Kappa_y    -  -  -  "Shear coefficient"
 typedef  ^   ElemPropType  ReKi    YoungE   -  -  -  "Young's modulus"
 typedef  ^   ElemPropType  ReKi    ShearG   -  -  -  "Shear modulus"  N/m^2
 # Properties common to all element types:
@@ -90,7 +91,7 @@ typedef  ^  SD_InitType   ReKi               PropSetsB {:}{:} - -     "Property 
 typedef  ^  SD_InitType   ReKi               PropSetsC {:}{:} - -     "Property ID and values for cables" 
 typedef  ^  SD_InitType   ReKi               PropSetsR {:}{:} - -     "Property ID and values for rigid link" 
 typedef  ^  SD_InitType   ReKi               PropSetsX {:}{:} - -     "Extended property sets" 
-typedef  ^  SD_InitType   ReKi               COSMs {:}{:} - -         "Independent direction cosine matrices" 
+typedef  ^  SD_InitType   R8Ki               COSMs {:}{:} - -         "Independent direction cosine matrices" 
 typedef  ^  SD_InitType   ReKi               CMass {:}{:} - -         "Concentrated mass information" 
 typedef  ^  SD_InitType   ReKi               JDampings {:} - -        "Damping coefficients for internal modes" 
 typedef  ^  SD_InitType   IntKi              GuyanDampMod  -  -  -    "Guyan damping [0=none, 1=Rayleigh Damping, 2= user specified 6x6 matrix]" 
@@ -140,27 +141,32 @@ typedef  ^    MiscVarType    ReKi           qmdotdot      {:}  -  -  "2nd Deriva
 typedef  ^    MiscVarType    ReKi           u_TP           6   -  -  
 typedef  ^    MiscVarType    ReKi           udot_TP        6   -  -  
 typedef  ^    MiscVarType    ReKi           udotdot_TP     6   -  -  
-typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -  
+typedef  ^    MiscVarType    ReKi           F_L           {:}  -  -  "Loads on internal DOF, size nL" 
+typedef  ^    MiscVarType    ReKi           F_L2          {:}  -  -  "Loads on internal DOF, size nL, used for SIM and ADM4" 
 typedef  ^    MiscVarType    ReKi           UR_bar        {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UR_bar_dotdot {:}  -  -  
-typedef  ^    MiscVarType    ReKi           UL            {:}  -  -  
+typedef  ^    MiscVarType    ReKi           UL            {:}  -  -  "Internal DOFs (L) displacements " 
+typedef  ^    MiscVarType    ReKi           UL_NS         {:}  -  -  "Internal DOFs (L) displacements, No SIM (NS)" 
 typedef  ^    MiscVarType    ReKi           UL_dot        {:}  -  -  
 typedef  ^    MiscVarType    ReKi           UL_dotdot     {:}  -  -  
-typedef  ^    MiscVarType    ReKi           DU_full       {:}  -  -  "Delta U used for extra moment" 
-typedef  ^    MiscVarType    ReKi           U_full        {:}  -  -  
+typedef  ^    MiscVarType    ReKi           DU_full       {:}  -  -  "Delta U used for extra moment, size nDOF" 
+typedef  ^    MiscVarType    ReKi           U_full        {:}  -  -  "Displacement of all DOFs (full system) with SIM"
+typedef  ^    MiscVarType    ReKi           U_full_NS     {:}  -  -  "Displacement of all DOFs (full system), No SIM (NS)"
 typedef  ^    MiscVarType    ReKi           U_full_dot    {:}  -  -  
 typedef  ^    MiscVarType    ReKi           U_full_dotdot {:}  -  -  
-typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating)"
+typedef  ^    MiscVarType    ReKi           U_full_elast  {:}  -  -  "Elastic displacements for computation of K ue (without rigid body mode for floating), includes SIM"
 typedef  ^    MiscVarType    ReKi           U_red          {:}  -  -  
-typedef  ^    MiscVarType    ReKi           U_red_dot      {:}  -  -  
-typedef  ^    MiscVarType    ReKi           U_red_dotdot   {:}  -  -  
 typedef  ^    MiscVarType    ReKi           FC_unit   {:}   -  -   "Cable Force vector (for varying cable load, of unit cable load)"  N
 typedef  ^    MiscVarType    ReKi           SDWrOutput {:} -  -    "Data from previous step to be written to a SubDyn output file"
+typedef  ^    MiscVarType    ReKi           AllOuts    {:} -  -    "Data for output file"
 typedef  ^    MiscVarType    DbKi           LastOutTime -  -  -    "The time of the most recent stored output data"  "s"
 typedef  ^    MiscVarType    IntKi          Decimat     -  -  -    "Current output decimation counter"  "-"
 typedef  ^    MiscVarType    ReKi           Fext      {:} -  -     "External loads on unconstrained DOFs"  "-"
 typedef  ^    MiscVarType    ReKi           Fext_red  {:} -  -     "External loads on constrained DOFs, Fext_red= T^t Fext"  "-"
+# SIM
+typedef  ^    MiscVarType    ReKi           UL_SIM        {:}  -  -  "UL for SIM = PhiL qL0- PhiM qm0, size nL" 
+typedef  ^    MiscVarType    ReKi           UL_0m         {:}  -  -  "Intermediate UL term for SIM = PhiM qm0, size nL" 
 ### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
 
 # ============================== Parameters ============================================================================================================================================

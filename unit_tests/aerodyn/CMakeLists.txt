@@ -23,11 +23,7 @@ set(module_library "fvwlib")
 file(MAKE_DIRECTORY ${build_testdirectory}/${module_directory})
 file(WRITE ${build_testdirectory}/${module_directory}/testSuites.inc "")
 
-include_directories(
-  ${PROJECT_SOURCE_DIR}
-  ${pfunit_directory}/mod
-  ${build_testdirectory}/${module_directory}
-)
+include_directories(${build_testdirectory}/${module_directory})
 
 set(testlist
     test_FVW_testsuite
@@ -36,7 +32,7 @@ foreach(test ${testlist})
     set(test_dependency pfunit ${source_modulesdirectory}/${module_directory}/tests/${test}.F90)
     add_custom_command(
         OUTPUT ${build_testdirectory}/${module_directory}/${test}.F90
-        COMMAND ${PYTHON_EXECUTABLE} ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module_directory}/tests/${test}.F90 ${build_testdirectory}/${module_directory}/${test}.F90
+        COMMAND ${Python_EXECUTABLE} ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module_directory}/tests/${test}.F90 ${build_testdirectory}/${module_directory}/${test}.F90
         DEPENDS ${test_dependency}
     )
     set(test_sources ${test_sources} ${build_testdirectory}/${module_directory}/${test}.F90)
@@ -51,7 +47,7 @@ add_executable(
 
 target_link_libraries(
     ${module_name}_utest
-    ${pfunit_directory}${pfunit_lib}
+    pfunit_lib
     ${module_library}
 )
 

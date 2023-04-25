@@ -184,7 +184,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          return
       end if
       
-      call move_alloc(m%Turbine%IfW%m%FDext%V, u%Vdist_High)
+      call move_alloc(m%Turbine%IfW%p%FlowField%Grid4D%Vel, u%Vdist_High)
          
       
       !.................
@@ -556,7 +556,7 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    ErrMsg  = ''
 
       ! put this back!
-   call move_alloc(m%Turbine%IfW%m%FDext%V, u%Vdist_High)
+   call move_alloc(m%Turbine%IfW%p%FlowField%Grid4D%Vel, u%Vdist_High)
    
    
    ! Turbine-dependent commands to the super controller:
@@ -712,8 +712,8 @@ SUBROUTINE FWrap_SetInputs(u, m, t)
    REAL(DbKi),                      INTENT(IN   )  :: t           !< current simulation time
 
    ! set the 4d-wind-inflow input array (a bit of a hack [simplification] so that we don't have large amounts of data copied in multiple data structures):
-      call move_alloc(u%Vdist_High, m%Turbine%IfW%m%FDext%V)
-      m%Turbine%IfW%m%FDext%TgridStart = t 
+      call move_alloc(u%Vdist_High, m%Turbine%IfW%p%FlowField%Grid4D%Vel)
+      m%Turbine%IfW%p%FlowField%Grid4D%TimeStart = t
       
       ! do something with the inputs from the super-controller:
    if ( m%Turbine%p_FAST%UseSC )  then
