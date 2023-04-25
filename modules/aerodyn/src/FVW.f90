@@ -584,7 +584,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       m%ComputeWakeInduced = .FALSE.
    endif
    if (bReevaluation) then
-      print*,'[INFO] FVW: Update States: reevaluation at the same starting time'
+      call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time')
       call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
       m%ComputeWakeInduced = .TRUE.
    endif
