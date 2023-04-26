@@ -5907,9 +5907,15 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
          
    IF (p_FAST%CompInflow == Module_IfW) THEN
       ! get Lidar position directly from hub mesh (may map meshes later)
-      IfW%Input%lidar%HubDisplacementX = ED%y%HubPtMotion%TranslationDisp(1,1)
-      IfW%Input%lidar%HubDisplacementY = ED%y%HubPtMotion%TranslationDisp(2,1)
-      IfW%Input%lidar%HubDisplacementZ = ED%y%HubPtMotion%TranslationDisp(3,1)
+      if ( p_FAST%CompElast == Module_SED ) then
+         IfW%Input%lidar%HubDisplacementX = SED%y%HubPtMotion%TranslationDisp(1,1)
+         IfW%Input%lidar%HubDisplacementY = SED%y%HubPtMotion%TranslationDisp(2,1)
+         IfW%Input%lidar%HubDisplacementZ = SED%y%HubPtMotion%TranslationDisp(3,1)
+      else
+         IfW%Input%lidar%HubDisplacementX = ED%y%HubPtMotion%TranslationDisp(1,1)
+         IfW%Input%lidar%HubDisplacementY = ED%y%HubPtMotion%TranslationDisp(2,1)
+         IfW%Input%lidar%HubDisplacementZ = ED%y%HubPtMotion%TranslationDisp(3,1)
+      endif
 
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )
