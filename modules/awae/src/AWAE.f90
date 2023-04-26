@@ -795,8 +795,6 @@ end subroutine HighResGridCalcOutput
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
 subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg )
-!..................................................................................................................................
-
    type(AWAE_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
    type(AWAE_ParameterType),       intent(  out) :: p             !< Parameters
@@ -812,8 +810,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    integer(IntKi),                 intent(  out) :: errStat       !< Error status of the operation
    character(*),                   intent(  out) :: errMsg        !< Error message if errStat /= ErrID_None
 
-
-      ! Local variables
    character(1024)                               :: rootDir, baseName, OutFileVTKDir ! Simulation root dir, basename for outputs
    integer(IntKi)                                :: i,j,nt        ! loop counter
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]
@@ -822,38 +818,23 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
    type(InflowWind_InitInputType)                :: IfW_InitInp
    type(InflowWind_InitOutputType)               :: IfW_InitOut
-      ! Initialize variables for this routine
 
+      ! Initialize variables for this routine
    errStat = ErrID_None
    errMsg  = ""
 
       ! Initialize the NWTC Subroutine Library
-
    call NWTC_Init( EchoLibVer=.FALSE. )
 
       ! Display the module information
-
    call DispNVD( AWAE_Ver )
-
    p%OutFileRoot  = TRIM(InitInp%OutFileRoot)
 
-
-
-
       ! Validate the initialization inputs
-   call ValidateInitInputData( InitInp%InputFileData, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-      if (errStat >= AbortErrLev) then
-         return
-      end if
+   call ValidateInitInputData( InitInp%InputFileData, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
-      !............................................................................................
-      ! Define parameters
-      !............................................................................................
-
-
-
-      ! set the rest of the parameters
+   !------------------
+   ! set the rest of the parameters
    p%Mod_AmbWind      = InitInp%InputFileData%Mod_AmbWind
    p%NumPlanes        = InitInp%InputFileData%NumPlanes
    p%NumRadii         = InitInp%InputFileData%NumRadii
@@ -883,24 +864,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%C_ScaleDiam   = 0.5_ReKi*p%C_Meander*2.23313_ReKi
    end select
 
-
-   call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         RETURN
-      end if
-
-   call allocAry( p%OutDisWindX, p%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            RETURN
-         end if
-
-   call allocAry( p%OutDisWindY, p%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            RETURN
-         end if
+   call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 ); if(Failed()) return;
+   call allocAry( p%OutDisWindX, p%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 ); if(Failed()) return;
+   call allocAry( p%OutDisWindY, p%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 ); if(Failed()) return;
 
    p%OutDisWindZ = InitInp%InputFileData%OutDisWindZ
    p%OutDisWindX = InitInp%InputFileData%OutDisWindX
@@ -915,10 +881,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call MKDIR(OutFileVTKDir) ! creating output directory
    end if
 
-
    ! Plane grids
-   allocate( p%y(-p%Numradii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%y.', errStat, errMsg, RoutineName )
-   allocate( p%z(-p%Numradii+1:p%NumRadii-1), stat=errStat2); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%z.', errStat, errMsg, RoutineName )
+   allocate( p%y(-p%Numradii+1:p%NumRadii-1), stat=errStat2);  if (Failed0('Could not allocate memory for p%y.')) return;
+   allocate( p%z(-p%Numradii+1:p%NumRadii-1), stat=errStat2);  if (Failed0('Could not allocate memory for p%z.')) return;
    if ( ErrStat >= AbortErrLev ) then
       return
    end if
@@ -927,11 +892,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%z(i)       = InitInp%InputFileData%dr*i
    end do
 
-   allocate( p%WT_Position(3,p%NumTurbines),stat=errStat2)
-      if (errStat2 /= 0) then
-         call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%WT_Position.', errStat, errMsg, RoutineName )
-         return
-      end if
+   allocate( p%WT_Position(3,p%NumTurbines),stat=errStat2);  if (Failed0('Could not allocate memory for p%WT_Position.')) return;
    p%WT_Position = InitInp%InputFileData%WT_Position
 
       ! Obtain the precursor grid information by parsing the necessary input files
@@ -940,13 +901,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Parameters: nX_low, nY_low, nZ_low, nX_high, nY_high, nZ_high, Grid_low,
       !             Grid_high, n_high_low, n_rp_max
       ! InitOutput: X0_high, Y0_high, Z0_high, dX_high, dY_high, dZ_high, nX_high, nY_high, nZ_high
-
-
-   call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2)
-      call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   if (errStat2 >= AbortErrLev) then
-         return
-   end if
+   call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2); if(Failed()) return;
 
    if ( p%Mod_AmbWind > 1 ) then
       ! Using InflowWind, so initialize that module now
@@ -961,36 +916,12 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
       if (      p%Mod_AmbWind == 2 ) then ! one InflowWind module
 
-         ALLOCATE(p%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind parameter data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(x%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind continuous states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(xd%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind discrete states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(z%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind constraint states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(OtherState%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind other states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(m%IfW(0:0),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind miscvar data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
+         ALLOCATE(p%IfW(         0:0),STAT=ErrStat2);  if (Failed0('InflowWind parameter data'        )) return;
+         ALLOCATE(x%IfW(         0:0),STAT=ErrStat2);  if (Failed0('InflowWind continuous states data')) return;
+         ALLOCATE(xd%IfW(        0:0),STAT=ErrStat2);  if (Failed0('InflowWind discrete states data'  )) return;
+         ALLOCATE(z%IfW(         0:0),STAT=ErrStat2);  if (Failed0('InflowWind constraint states data')) return;
+         ALLOCATE(OtherState%IfW(0:0),STAT=ErrStat2);  if (Failed0('InflowWind other states data'     )) return;
+         ALLOCATE(m%IfW(         0:0),STAT=ErrStat2);  if (Failed0('InflowWind miscvar data'          )) return;
 
          ! Initialize InflowWind
          IfW_InitInp%FixedWindFileRootName = .false.
@@ -998,44 +929,16 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%RadAvg                = 0.25 * p%nZ_low * p%dX_low     ! arbitrary garbage, just must be bigger than zero, but not bigger than grid (IfW will complain if this isn't set when it tries to calculate disk average vel)
          IfW_InitInp%MHK                   = 0                              ! not an MHK turbine setup
       
-         call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         if (errStat2 >= AbortErrLev) then
-            return
-         end if
+         call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
       else if ( p%Mod_AmbWind == 3 ) then ! multiple InflowWind modules
 
-         ALLOCATE(p%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind parameter data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(x%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind continuous states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(xd%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind discrete states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(z%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind constraint states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(OtherState%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind other states data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
-         ALLOCATE(m%IfW(0:p%NumTurbines),STAT=ErrStat2)
-         if (ErrStat2 /= 0) then
-            CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for InflowWind miscvar data', ErrStat, ErrMsg, RoutineName )
-            return
-         end if
+         ALLOCATE(p%IfW(         0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind parameter data'        )) return;
+         ALLOCATE(x%IfW(         0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind continuous states data')) return;
+         ALLOCATE(xd%IfW(        0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind discrete states data'  )) return;
+         ALLOCATE(z%IfW(         0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind constraint states data')) return;
+         ALLOCATE(OtherState%IfW(0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind other states data'     )) return;
+         ALLOCATE(m%IfW(         0:p%NumTurbines),STAT=ErrStat2);  if (Failed0('InflowWind miscvar data'          )) return;
 
          ! Initialize InflowWind for the low-resolution domain
          IfW_InitInp%FixedWindFileRootName = .true.
@@ -1043,25 +946,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%TurbineID             = 0
          IfW_InitInp%MHK                   = 0                              ! not an MHK turbine setup
       
-         call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         if (errStat2 >= AbortErrLev) then
-            return
-         end if
+         call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
          ! Initialize InflowWind for each high-resolution domain
          IfW_InitInp%NumWindPoints         = p%nX_high*p%nY_high*p%nZ_high
-         
          do nt = 1,p%NumTurbines
-
             IfW_InitInp%TurbineID          = nt
-      
-            call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
-               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-            if (errStat2 >= AbortErrLev) then
-               return
-            end if
-
+            call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
          end do
 
       end if
@@ -1074,33 +965,24 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
          ! Initialize the high-resolution grid inputs and outputs
        IF ( .NOT. ALLOCATED( m%u_IfW_High%PositionXYZ ) ) THEN
-         call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-         call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)
-            call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2); if(Failed()) return;
+         call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2); if(Failed()) return;
+         call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput),    'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return;
          if (allocated(m%y_IfW_Low%lidar%LidSpeed)) then
-            call AllocAry(m%y_IfW_High%lidar%LidSpeed,      size(m%y_IfW_Low%lidar%LidSpeed      ), 'm%y_IfW_High%lidar%LidSpeed',      ErrStat2, ErrMsg2)
-               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            call AllocAry(m%y_IfW_High%lidar%LidSpeed,      size(m%y_IfW_Low%lidar%LidSpeed      ), 'm%y_IfW_High%lidar%LidSpeed',      ErrStat2, ErrMsg2); if(Failed()) return;
          endif
          if (allocated(m%y_IfW_High%lidar%MsrPositionsX)) then
-            call AllocAry(m%y_IfW_High%lidar%MsrPositionsX, size(m%y_IfW_High%lidar%MsrPositionsX), 'm%y_IfW_High%lidar%MsrPositionsX', ErrStat2, ErrMsg2)
-               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsX, size(m%y_IfW_High%lidar%MsrPositionsX), 'm%y_IfW_High%lidar%MsrPositionsX', ErrStat2, ErrMsg2); if(Failed()) return;
          endif
          if (allocated(m%y_IfW_High%lidar%MsrPositionsY)) then
-            call AllocAry(m%y_IfW_High%lidar%MsrPositionsY, size(m%y_IfW_High%lidar%MsrPositionsY), 'm%y_IfW_High%lidar%MsrPositionsY', ErrStat2, ErrMsg2)
-               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsY, size(m%y_IfW_High%lidar%MsrPositionsY), 'm%y_IfW_High%lidar%MsrPositionsY', ErrStat2, ErrMsg2); if(Failed()) return;
          endif
          if (allocated(m%y_IfW_High%lidar%MsrPositionsZ)) then
-            call AllocAry(m%y_IfW_High%lidar%MsrPositionsZ, size(m%y_IfW_High%lidar%MsrPositionsZ), 'm%y_IfW_High%lidar%MsrPositionsZ', ErrStat2, ErrMsg2)
-               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsZ, size(m%y_IfW_High%lidar%MsrPositionsZ), 'm%y_IfW_High%lidar%MsrPositionsZ', ErrStat2, ErrMsg2); if(Failed()) return;
          endif
 
-
-
       END IF
-      if (errStat2 >= AbortErrLev) then
+      if (ErrStat >= AbortErrLev) then
             return
       end if
 
@@ -1108,167 +990,129 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    InitOut%Ver = AWAE_Ver
 
-      ! Test the request output wind locations against grid information
+   ! Test the request output wind locations against grid information
+      ! XY plane slices
+   do i = 1,p%NOutDisWindXY
+      gridLoc = (p%OutDisWindZ(i) - p%Z0_low) / p%dZ_low
+      if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nZ_low-1, ReKi) ) ) then
+         call SetErrStat(ErrID_Fatal, "The requested low-resolution XY output slice location, Z="//TRIM(Num2LStr(p%OutDisWindZ(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
+      end if
+   end do
 
-         ! XY plane slices
-      do i = 1,p%NOutDisWindXY
-         gridLoc = (p%OutDisWindZ(i) - p%Z0_low) / p%dZ_low
-         if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nZ_low-1, ReKi) ) ) then
-            call SetErrStat(ErrID_Fatal, "The requested low-resolution XY output slice location, Z="//TRIM(Num2LStr(p%OutDisWindZ(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
-         end if
-      end do
+      ! XZ plane slices
+   do i = 1,p%NOutDisWindXZ
+      gridLoc = (p%OutDisWindY(i) - p%Y0_low) / p%dY_low
+      if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nY_low-1, ReKi) ) ) then
+         call SetErrStat(ErrID_Fatal, "The requested low-resolution XZ output slice location, Y="//TRIM(Num2LStr(p%OutDisWindY(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
+      end if
+   end do
 
-         ! XZ plane slices
-      do i = 1,p%NOutDisWindXZ
-         gridLoc = (p%OutDisWindY(i) - p%Y0_low) / p%dY_low
-         if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nY_low-1, ReKi) ) ) then
-            call SetErrStat(ErrID_Fatal, "The requested low-resolution XZ output slice location, Y="//TRIM(Num2LStr(p%OutDisWindY(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
-         end if
-      end do
-
-         ! XZ plane slices
-      do i = 1,p%NOutDisWindYZ
-         gridLoc = (p%OutDisWindX(i) - p%X0_low) / p%dX_low
-         if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nX_low-1, ReKi) ) ) then
-            call SetErrStat(ErrID_Fatal, "The requested low-resolution YZ output slice location, X="//TRIM(Num2LStr(p%OutDisWindX(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
-         end if
-      end do
-      if (errStat >= AbortErrLev) return
+      ! XZ plane slices
+   do i = 1,p%NOutDisWindYZ
+      gridLoc = (p%OutDisWindX(i) - p%X0_low) / p%dX_low
+      if ( ( gridLoc < 0.0_ReKi ) .or. ( gridLoc > real(p%nX_low-1, ReKi) ) ) then
+         call SetErrStat(ErrID_Fatal, "The requested low-resolution YZ output slice location, X="//TRIM(Num2LStr(p%OutDisWindX(i)))//", is outside of the low-resolution grid.", errStat, errMsg, RoutineName )
+      end if
+   end do
+   if (errStat >= AbortErrLev) return
 
 
-   !interval = InitOut%dt_low
-
-      !............................................................................................
-      ! Define and initialize inputs here
-      !............................................................................................
-
-   allocate ( u%xhat_plane(3,0:p%NumPlanes-1,1:p%NumTurbines)             , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%xhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( u%p_plane   (3,0:p%NumPlanes-1,1:p%NumTurbines)             , STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_plane.', errStat, errMsg, RoutineName )
-   allocate ( u%Vx_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
-   allocate ( u%WAT_k     (0:p%NumRadii-1, 0:p%NumRadii-1, 0:p%NumPlanes-1, 1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%WAT_k.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   !----------------
+   ! initialize inputs
+   allocate ( u%xhat_plane(     3,                                                 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%xhat_plane.')) return;
+   allocate ( u%p_plane   (     3,                                                 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%p_plane.'   )) return;
+   allocate ( u%Vx_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vx_wake.'   )) return;
+   allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vy_wake.'   )) return;
+   allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vz_wake.'   )) return;
+   allocate ( u%D_wake    (                                                        0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%D_wake.'    )) return;
+   allocate ( u%WAT_k     (            0:p%NumRadii-1,             0:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%WAT_k.'     )) return;
 
    u%Vx_wake=0.0_ReKi
    u%Vy_wake=0.0_ReKi
    u%Vz_wake=0.0_ReKi
 
 
-
-
-      !............................................................................................
-      ! Define outputs here
-      !............................................................................................
-
-   allocate ( y%V_plane(3,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%V_plane.', errStat, errMsg, RoutineName )
-   allocate ( y%Vdist_High(1:p%NumTurbines), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High.', errStat, errMsg, RoutineName )
+   !----------------
+   ! initialize outputs
+   allocate ( y%V_plane(3,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('y%V_plane.'   )) return;
+   allocate ( y%Vdist_High(1:p%NumTurbines),                STAT=ErrStat2 );  if (Failed0('y%Vdist_High.')) return;
    do i = 1, p%NumTurbines
-      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )
-         if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High%data.', errStat, errMsg, RoutineName )
+      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 );  if (Failed0('y%Vdist_High%data.')) return;
       y%Vdist_High(i)%data    = 0.0_Siki
    end do
 
-   allocate ( y%Vx_wind_disk   (1:p%NumTurbines), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vx_rel_disk.', errStat, errMsg, RoutineName )
-   allocate ( y%TI_amb   (1:p%NumTurbines), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%TI_amb.', errStat, errMsg, RoutineName )
-   if (errStat >= AbortErrLev) return
+   allocate ( y%Vx_wind_disk   (1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('y%Vx_rel_disk.')) return;
+   allocate ( y%TI_amb   (1:p%NumTurbines),       STAT=ErrStat2 );  if (Failed0('y%TI_amb.')) return;
 
       ! This next step is not strictly necessary
    y%V_plane       = 0.0_Reki
    y%Vx_wind_disk  = 0.0_Reki
    y%TI_amb        = 0.0_Reki
 
-
    if ( p%NOutDisWindXY > 0 ) then
-      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXYPlane arrays.'
-         RETURN
-      ENDIF
+      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXYPlane arrays.')) return;
    end if
    if ( p%NOutDisWindYZ > 0 ) then
-      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low,1) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizYZPlane arrays.'
-         RETURN
-      ENDIF
+      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low,1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizYZPlane arrays.')) return;
    end if
    if ( p%NOutDisWindXZ > 0 ) then
-      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXZPlane arrays.'
-         RETURN
-      ENDIF
+      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXZPlane arrays.')) return;
    end if
-      !............................................................................................
-      ! Initialize misc vars : Note these are not the correct initializations because
-      ! that would require valid input data, which we do not have here.  Instead we will check for
-      ! an firstPass flag on the miscVars and if it is false we will properly initialize these state
-      ! in CalcOutput or UpdateStates, as necessary.
-      !............................................................................................
 
+   !----------------
+   ! Initialize misc vars : Note these are not the correct initializations because
+   ! that would require valid input data, which we do not have here.  Instead we will check for
+   ! an firstPass flag on the miscVars and if it is false we will properly initialize these state
+   ! in CalcOutput or UpdateStates, as necessary.
+   !
+   ! miscvars to avoid the allocation per timestep
+   allocate ( m%Vamb_low(       3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 ), STAT=errStat2 );  if (Failed0('m%Vamb_low.'     )) return;
+   allocate ( m%Vamb_lowpol(    3, 0:p%n_rp_max*8 ),                             STAT=errStat2 );  if (Failed0('m%Vamb_lowpol.'  )) return;
+   allocate ( m%Vdist_low(      3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 ), STAT=errStat2 );  if (Failed0('m%Vdist_low.'    )) return;
+   allocate ( m%Vdist_low_full( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 ), STAT=errStat2 );  if (Failed0('m%Vdist_low_full')) return;
 
-
-
-      ! miscvars to avoid the allocation per timestep
-
-   allocate ( m%Vamb_low   ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_low.', errStat, errMsg, RoutineName )
-   allocate ( m%Vamb_lowpol   ( 3, 0:p%n_rp_max*8 ) , STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_lowpol.', errStat, errMsg, RoutineName )
-   allocate ( m%Vdist_low  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName )
-   allocate ( m%Vdist_low_full  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low_full', errStat, errMsg, RoutineName )
-
-   allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high.', errStat, errMsg, RoutineName )
+   allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 );   if (Failed0('Could not allocate memory for m%Vamb_high.')) return;
    do i = 1, p%NumTurbines
-         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )
-            if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high%data.', errStat, errMsg, RoutineName )
+         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 );   if (Failed0('m%Vamb_high%data.')) return;
    end do
 
-   allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
-   allocate ( m%r_s( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_s.', errStat, errMsg, RoutineName )
-   allocate ( m%r_e( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_e.', errStat, errMsg, RoutineName )
-   allocate ( m%rhat_s( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_s.', errStat, errMsg, RoutineName )
-   allocate ( m%rhat_e( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_e.', errStat, errMsg, RoutineName )
-   allocate ( m%pvec_cs( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_cs.', errStat, errMsg, RoutineName )
-   allocate ( m%pvec_ce( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_ce.', errStat, errMsg, RoutineName )
-   if (errStat >= AbortErrLev) return
+   allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%parallelFlag.')) return;
+   allocate ( m%r_s(          0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%r_s.'         )) return;
+   allocate ( m%r_e(          0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%r_e.'         )) return;
+   allocate ( m%rhat_s(     3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%rhat_s.'      )) return;
+   allocate ( m%rhat_e(     3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%rhat_e.'      )) return;
+   allocate ( m%pvec_cs(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_cs.'     )) return;
+   allocate ( m%pvec_ce(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_ce.'     )) return;
 
+   !----------------
+   ! Discrete states
+   !  initialize tracer for WAT box location
+   xd%WAT_B_Box(1:3) = 0.0_ReKi
 
    ! Read-in the ambient wind data for the initial calculate output
+   call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 ); if(Failed()) return;
 
-   call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 )
-   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 
-
-
-
-
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+   end function Failed0
 end subroutine AWAE_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
-!..................................................................................................................................
-
       type(AWAE_InputType),           intent(inout)  :: u           !< System inputs
       type(AWAE_ParameterType),       intent(inout)  :: p           !< Parameters
       type(AWAE_ContinuousStateType), intent(inout)  :: x           !< Continuous states
@@ -1280,22 +1124,13 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
       character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-         ! Local variables
       integer(IntKi)                                 :: nt          !< loop counter
 
-
          ! Initialize errStat
-
       errStat = ErrID_None
       errMsg  = ""
 
-
-         ! Place any last minute operations or calculations here:
-
-
-         ! Close files here:
- 
-         ! End all instances of the InflowWind module
+      ! End all instances of the InflowWind module
       if (      p%Mod_AmbWind == 2 ) then
          call    InflowWind_End( m%u_IfW_Low, p%IfW(0 ), x%IfW(0 ), xd%IfW(0 ), z%IfW(0 ), OtherState%IfW(0 ), m%y_IfW_Low, m%IfW(0 ), errStat, errMsg )
       else if ( p%Mod_AmbWind == 3 ) then
@@ -1305,64 +1140,48 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          end do
       end if
 
-      
-
-         ! Destroy the input data:
-
+      ! Destroy the input data:
       call AWAE_DestroyInput( u, errStat, errMsg )
 
-
-         ! Destroy the parameter data:
-
+      ! Destroy the parameter data:
       call AWAE_DestroyParam( p, errStat, errMsg )
 
-
-         ! Destroy the state data:
-
+      ! Destroy the state data:
       call AWAE_DestroyContState(   x,           errStat, errMsg )
       call AWAE_DestroyDiscState(   xd,          errStat, errMsg )
       call AWAE_DestroyConstrState( z,           errStat, errMsg )
       call AWAE_DestroyOtherState(  OtherState,  errStat, errMsg )
       call AWAE_DestroyMisc(        m,           errStat, errMsg )
 
-         ! Destroy the output data:
-
+      ! Destroy the output data:
       call AWAE_DestroyOutput( y, errStat, errMsg )
-
-
-
 
 end subroutine AWAE_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
 subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg )
-!..................................................................................................................................
-
-   real(DbKi),                     intent(in   ) :: t          !< Current simulation time in seconds
-   integer(IntKi),                 intent(in   ) :: n          !< Current simulation time step n = 0,1,...
+   real(DbKi),                       intent(in   ) :: t          !< Current simulation time in seconds
+   integer(IntKi),                   intent(in   ) :: n          !< Current simulation time step n = 0,1,...
    type(AWAE_InputType),             intent(inout) :: u          !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-  ! real(DbKi),                     intent(in   ) :: utimes   !< Times associated with u(:), in seconds
    type(AWAE_ParameterType),         intent(in   ) :: p          !< Parameters
    type(AWAE_ContinuousStateType),   intent(inout) :: x          !< Input: Continuous states at t;
-                                                               !!   Output: Continuous states at t + Interval
+                                                                 !!   Output: Continuous states at t + Interval
    type(AWAE_DiscreteStateType),     intent(inout) :: xd         !< Input: Discrete states at t;
-                                                               !!   Output: Discrete states at t  + Interval
+                                                                 !!   Output: Discrete states at t  + Interval
    type(AWAE_ConstraintStateType),   intent(inout) :: z          !< Input: Constraint states at t;
-                                                               !!   Output: Constraint states at t+dt
+                                                                 !!   Output: Constraint states at t+dt
    type(AWAE_OtherStateType),        intent(inout) :: OtherState !< Input: Other states at t;
-                                                               !!   Output: Other states at t+dt
+                                                                 !!   Output: Other states at t+dt
    type(AWAE_MiscVarType),           intent(inout) :: m          !< Misc/optimization variables
-   integer(IntKi),                 intent(  out) :: errStat    !< Error status of the operation
-   character(*),                   intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
+   integer(IntKi),                   intent(  out) :: errStat    !< Error status of the operation
+   character(*),                     intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
 
-   ! local variables
-   type(AWAE_InputType)                           :: uInterp           ! Interpolated/Extrapolated input
-   integer(intKi)                               :: errStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
-!   real(DbKi)          :: t1, t2
-   integer(IntKi)                               :: n_high_low, nt, n_hl, i,j,k,c
+   type(AWAE_InputType)                            :: uInterp           ! Interpolated/Extrapolated input
+   integer(intKi)                                  :: errStat2          ! temporary Error status
+   character(ErrMsgLen)                            :: errMsg2           ! temporary Error message
+   character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
+   integer(IntKi)                                  :: n_high_low, nt, n_hl, i,j,k,c
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1380,9 +1199,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 
    if ( p%Mod_AmbWind == 1 ) then
          ! read from file the ambient flow for the n+1 time step
-      call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
+      call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat2, errMsg2);   if (Failed()) return;
    !#ifdef _OPENMP
    !   t2 = omp_get_wtime()      
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
@@ -1407,11 +1224,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 
          ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
       m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
-      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2)
+      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2);   if (Failed()) return;
       ! Set low-resolution inflow wind velocities
-      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2)
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
+      call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
       c = 1
       do k = 0,p%nZ_low-1
          do j = 0,p%nY_low-1
@@ -1429,9 +1244,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
             call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
             do n_hl=0, n_high_low
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2)
-                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-                  if (errStat >= AbortErrLev) return 
+               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
@@ -1459,9 +1272,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                   ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
                m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
                call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
-                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-                  if (errStat >= AbortErrLev) return 
+               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2);   if (Failed()) return;
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
@@ -1480,8 +1291,13 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 !#ifdef _OPENMP
 !   t1 = omp_get_wtime()      
 !   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
-!#endif 
-   
+!#endif
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 end subroutine AWAE_UpdateStates
 
 
@@ -1494,8 +1310,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 ! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
-!..................................................................................................................................
-
    use VTK
    real(DbKi),                     intent(in   )  :: t           !< Current simulation time in seconds
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
@@ -1505,45 +1319,31 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    type(AWAE_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t
    type(AWAE_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
    type(AWAE_OutputType),          intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
-                                                               !!   nectivity information does not have to be recalculated)
+                                                                 !!   nectivity information does not have to be recalculated)
    type(AWAE_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-
-   integer, parameter                           :: indx = 1
-   character(p%VTK_tWidth)                      :: Tstr          ! string for current VTK write-out step (padded with zeros)
-   integer(intKi)                               :: i, j, k
-   integer(intKi)                               :: errStat2
-   character(ErrMsgLen)                         :: errMsg2
-   character(*), parameter                      :: RoutineName = 'AWAE_CalcOutput'
-   integer(intKi)                               :: n, n_high
-   character(2)                                 :: PlaneNumStr          ! 2 digit number of the output plane
-   CHARACTER(1024)                              :: FileName
-   INTEGER(IntKi)                               :: Un                   ! unit number of opened file
-
+   integer, parameter                             :: indx = 1
+   character(p%VTK_tWidth)                        :: Tstr        ! string for current VTK write-out step (padded with zeros)
+   integer(intKi)                                 :: i, j, k
+   integer(intKi)                                 :: errStat2
+   character(ErrMsgLen)                           :: errMsg2
+   character(*), parameter                        :: RoutineName = 'AWAE_CalcOutput'
+   integer(intKi)                                 :: n, n_high
+   character(2)                                   :: PlaneNumStr ! 2 digit number of the output plane
+   CHARACTER(1024)                                :: FileName
+   INTEGER(IntKi)                                 :: Un          ! unit number of opened file
 
    errStat = ErrID_None
    errMsg  = ""
    n = nint(t / p%dt_low)
-   call ComputeLocals(n, u, p, y, m, errStat2, errMsg2)
-      call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if (errStat2 >= AbortErrLev) then
-            return
-      end if
-   call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
-      call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if (errStat2 >= AbortErrLev) then
-            return
-      end if
+   call ComputeLocals(n, u, p, y, m, errStat2, errMsg2);          if (Failed()) return;
+   call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2);   if (Failed()) return;
 
       ! starting index for the high-res files
    n_high =  n*p%n_high_low
-   call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2)
-      call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if (errStat2 >= AbortErrLev) then
-            return
-      end if
+   call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2);   if (Failed()) return;
 
    if (mod(n,p%WrDisSkp1) == 0) then
 
@@ -1560,12 +1360,8 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
       end do
 
          ! YZ plane slices
@@ -1574,12 +1370,8 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
       end do
 
          ! XZ plane slices
@@ -1588,15 +1380,16 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
          FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
-         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 );   if (Failed()) return;
+         call WrVTK_SP_vectors3D( Un, "Velocity", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat2, ErrMsg2 );   if (Failed()) return;
       end do
    end if
 
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 end subroutine AWAE_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1635,15 +1428,10 @@ end subroutine AWAE_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the Wind_AmbientAndArray input files.
 subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
-!..................................................................................................................................
-
-      ! Passed variables:
    type(AWAE_InputFileType), intent(in)     :: InputFileData                     !< All the data in the Wind_AmbientAndArray input file
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
    character(*),             intent(out)    :: errMsg                            !< Error message
 
-
-      ! local variables
    integer(IntKi)                           :: k                                 ! Blade number
    integer(IntKi)                           :: j                                 ! node number
    character(*), parameter                  :: RoutineName = 'ValidateInitInputData'
@@ -1678,12 +1466,10 @@ end subroutine ValidateInitInputData
 !=======================================================================
 ! Unit Tests
 !=======================================================================
-
 subroutine AWAE_TEST_Init_BadData(errStat, errMsg)
 
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
    character(*),             intent(out)    :: errMsg                            !< Error message
-
 
    type(AWAE_InitInputType)       :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType)           :: u             !< An initial guess for the input; input mesh must be defined
@@ -1700,12 +1486,7 @@ subroutine AWAE_TEST_Init_BadData(errStat, errMsg)
    type(AWAE_InitOutputType)      :: initOut                         !< Input data for initialization routine
 
 
-
-
-
-      ! Set up the initialization inputs
-
-
+   ! Set up the initialization inputs
    interval               = 0.0_DbKi
    InitInp%InputFileData%WindFilePath   = ''
    InitInp%InputFileData%NumTurbines    = 0
@@ -1715,11 +1496,9 @@ subroutine AWAE_TEST_Init_BadData(errStat, errMsg)
    InitInp%InputFileData%Mod_Meander    = 0
    InitInp%InputFileData%C_Meander      = 0.0_ReKi
 
-
    call AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg )
 
    return
-
 end subroutine AWAE_TEST_Init_BadData
 
 subroutine AWAE_TEST_SetGoodInitInpData(interval, InitInp)
@@ -1753,10 +1532,8 @@ end subroutine AWAE_TEST_SetGoodInitInpData
 
 
 subroutine AWAE_TEST_Init_GoodData(errStat, errMsg)
-
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
    character(*),             intent(out)    :: errMsg                            !< Error message
-
 
    type(AWAE_InitInputType)       :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType)           :: u             !< An initial guess for the input; input mesh must be defined
@@ -1772,25 +1549,17 @@ subroutine AWAE_TEST_Init_GoodData(errStat, errMsg)
 
    type(AWAE_InitOutputType)      :: initOut                         !< Input data for initialization routine
 
-
-
-
-
       ! Set up the initialization inputs
    call AWAE_TEST_SetGoodInitInpData(interval, InitInp)
-
    call AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, interval, InitOut, errStat, errMsg )
 
    return
-
 end subroutine AWAE_TEST_Init_GoodData
 
 
 subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
-
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
    character(*),             intent(out)    :: errMsg                            !< Error message
-
 
    type(AWAE_InitInputType)       :: InitInp       !< Input data for initialization routine
    type(AWAE_InputType)           :: u             !< An initial guess for the input; input mesh must be defined
@@ -1844,7 +1613,6 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
       return
    end if
 
-
       ! Set up the inputs
    do nt = 1,p%NumTurbines
       do np = 0,p%NumPlanes-1
@@ -1857,7 +1625,6 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
          end do
       end do
    end do
-
 
    u%xhat_plane(1,:,:) = 1.0_ReKi
    u%xhat_plane(2,:,:) = 0.0_ReKi
@@ -1890,8 +1657,6 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
    !end if
 
    return
-
-
 end subroutine AWAE_TEST_CalcOutput
 
 ! WAT TODO
@@ -1925,7 +1690,6 @@ subroutine TurbPlane(Uconv, t, nr, u_p, v_p, w_p)
          !u_b = u_b(iy_b, iz_b, ix_b) ! TODO
       enddo
    enddo
-   
 end subroutine 
 
 FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vbox)
