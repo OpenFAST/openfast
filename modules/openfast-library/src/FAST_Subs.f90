@@ -2043,8 +2043,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    
    IF (p%MHK /= 0 .and. p%MHK /= 1 .and. p%MHK /= 2) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
-   IF (p%MHK == 2) CALL SetErrStat( ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName )
-
    IF ((p%CompAero == Module_AD14 .or. p%CompAero == Module_ADsk) .and. (p%MHK == 1 .or. p%MHK == 2)) CALL SetErrStat( ErrID_Fatal, 'Neither AeroDyn14 or AeroDisk can be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK == 1 .and. p%Linearize .or. p%MHK == 2 .and. p%Linearize) CALL SetErrStat( ErrID_Fatal, 'Linearization has not yet been implemented for an MHK turbine. Change MHK or Linearize in the FAST input file.', ErrStat, ErrMsg, RoutineName )
