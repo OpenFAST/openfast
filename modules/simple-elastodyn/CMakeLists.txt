@@ -25,19 +25,28 @@ set(SED_SOURCES
   src/SED.f90
   )
 
-add_library(sedlib ${SED_SOURCES})
+add_library(sedlib_obj OBJECT ${SED_SOURCES})
+target_link_libraries(sedlib_obj nwtclibs_obj)
+
+add_library(sedlib $<TARGET_OBJECTS:sedlib_obj>)
 target_link_libraries(sedlib nwtclibs)
+
+install(TARGETS sedlib sedlib_obj
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
 
 set(SED_DRIVER_SOURCES
   src/driver/SED_Driver_Types.f90
   src/driver/SED_Driver_Subs.f90
   src/driver/SED_Driver.f90
 )
+
 add_executable(sed_driver ${SED_DRIVER_SOURCES})
 target_link_libraries(sed_driver sedlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS sedlib sed_driver
-  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+install(TARGETS sed_driver
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

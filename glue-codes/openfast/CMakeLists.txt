@@ -56,6 +56,8 @@ add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp
   $<TARGET_OBJECTS:icefloelib_obj>
   $<TARGET_OBJECTS:openfast_postlib_obj>
   $<TARGET_OBJECTS:versioninfolib_obj>
+  $<TARGET_OBJECTS:aerodisklib_obj>
+  $<TARGET_OBJECTS:sedlib_obj>
 )
 set_property(TARGET openfast_cpp PROPERTY LINKER_LANGUAGE CXX)
 

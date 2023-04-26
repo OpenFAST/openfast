@@ -25,19 +25,28 @@ set(ADSK_SOURCES
   src/AeroDisk.f90
   )
 
-add_library(aerodisklib ${ADSK_SOURCES})
+add_library(aerodisklib_obj OBJECT ${ADSK_SOURCES})
+target_link_libraries(aerodisklib_obj nwtclibs_obj)
+
+add_library(aerodisklib $<TARGET_OBJECTS:aerodisklib_obj>)
 target_link_libraries(aerodisklib nwtclibs)
+
+install(TARGETS aerodisklib aerodisklib_obj
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
 
 set(AERODISK_DRIVER_SOURCES
   src/driver/AeroDisk_Driver_Types.f90
   src/driver/AeroDisk_Driver_Subs.f90
   src/driver/AeroDisk_Driver.f90
 )
+
 add_executable(aerodisk_driver ${AERODISK_DRIVER_SOURCES})
 target_link_libraries(aerodisk_driver aerodisklib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS aerodisklib aerodisk_driver
-  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+install(TARGETS aerodisk_driver
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

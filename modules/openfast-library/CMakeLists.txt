@@ -46,6 +46,8 @@ target_link_libraries(openfast_prelib_obj
   icedynlib_obj
   icefloelib_obj
   maplib_obj
+  aerodisklib_obj
+  sedlib_obj
 )
 
 add_library(openfast_prelib $<TARGET_OBJECTS:openfast_prelib_obj>)
@@ -117,6 +119,8 @@ icedynlib_obj
 icefloelib_obj
 openfast_postlib_obj
 versioninfolib_obj
+aerodisklib_obj
+sedlib_obj
 )
 
 # Note that the python interface requires that openfastlib be a shared library
@@ -153,6 +157,8 @@ add_library(openfastlib SHARED
   $<TARGET_OBJECTS:icefloelib_obj>
   $<TARGET_OBJECTS:openfast_postlib_obj>
   $<TARGET_OBJECTS:versioninfolib_obj>
+  $<TARGET_OBJECTS:aerodisklib_obj>
+  $<TARGET_OBJECTS:sedlib_obj>
 )
 
 target_link_libraries(openfastlib
@@ -203,6 +209,8 @@ if(BUILD_OPENFAST_SIMULINK_API)
     $<TARGET_OBJECTS:icefloelib_obj>
     $<TARGET_OBJECTS:openfast_postlib_obj>
     $<TARGET_OBJECTS:versioninfolib_obj>
+    $<TARGET_OBJECTS:aerodisklib_obj>
+    $<TARGET_OBJECTS:sedlib_obj>
   )
 
   target_link_libraries(openfastlib_mex

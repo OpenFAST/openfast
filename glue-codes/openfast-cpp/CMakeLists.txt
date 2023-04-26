@@ -73,6 +73,8 @@ add_library(openfastcpplib
   $<TARGET_OBJECTS:icefloelib_obj>
   $<TARGET_OBJECTS:openfast_postlib_obj>
   $<TARGET_OBJECTS:versioninfolib_obj>
+  $<TARGET_OBJECTS:aerodisklib_obj>
+  $<TARGET_OBJECTS:sedlib_obj>
 )
 
 set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -114,6 +116,8 @@ target_link_libraries(openfastcpplib
   icefloelib_obj
   openfast_postlib_obj
   versioninfolib_obj
+  aerodisklib_obj
+  sedlib_obj
   ${HDF5_C_LIBRARIES}
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
