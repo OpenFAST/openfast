@@ -38,14 +38,9 @@ MODULE FAST_Farm_Subs
    USE OMP_LIB 
 #endif
 
-
    IMPLICIT NONE
-
-
-    
    
-   CONTAINS
- 
+CONTAINS
 
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
@@ -168,9 +163,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       
    IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
       CALL SetErrStat( ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName )
-
       CALL NWTC_DisplaySyntax( InputFile, 'FAST.Farm.exe' )
-         
       RETURN
    END IF            
                         
@@ -190,23 +183,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ! step 1: read input file
    !...............................................................................................................................  
       
-   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, OutList, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, OutList, ErrStat2, ErrMsg2 );  if(Failed()) return;
 
    !...............................................................................................................................  
    ! step 2: validate input & set parameters
    !...............................................................................................................................  
-   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
       
+   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, ErrStat2, ErrMsg2 );  if(Failed()) return;
    
    farm%p%NOutTurb = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9 
    
@@ -254,11 +237,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if(Failed()) return;
       
    farm%AWAE%IsInitialized = .true.
 
@@ -278,12 +257,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    if ( farm%p%useSC ) then
       SC_InitInp%nTurbines = farm%p%NumTurbines
       call SC_Init(SC_InitInp, farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
-                     farm%SC%y, farm%SC%m, farm%p%DT_low, SC_InitOut, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) then
-               call Cleanup()
-               return
-            end if 
+                     farm%SC%y, farm%SC%m, farm%p%DT_low, SC_InitOut, ErrStat2, ErrMsg2);  if(Failed()) return;
       farm%p%Module_Ver( ModuleFF_SC  ) = SC_InitOut%Ver
       farm%SC%IsInitialized = .true.
    else
@@ -306,36 +280,21 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       !-------------------
       ! d. initialize WD (one instance per turbine, each can be done in parallel, too)
       
-   call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
+   call Farm_InitWD( farm, WD_InitInput, ErrStat2, ErrMsg2 );  if(Failed()) return;
       
       
    !...............................................................................................................................  
    ! step 4: initialize FAST (each instance of FAST can also be done in parallel)
    !...............................................................................................................................  
 
-   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, SC_InitOut, farm%SC%y, ErrStat2, ErrMsg2)
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
+   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, SC_InitOut, farm%SC%y, ErrStat2, ErrMsg2);  if(Failed()) return;
       
    !...............................................................................................................................  
    ! step 4.5: initialize farm-level MoorDyn if applicable
    !...............................................................................................................................  
    
    if (farm%p%MooringMod == 3) then
-      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2)  ! FAST instances must be initialized first so that turbine initial positions are known
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF   
+      CALL Farm_InitMD( farm, ErrStat2, ErrMsg2);  if(Failed()) return;  ! FAST instances must be initialized first so that turbine initial positions are known
    end if
 
    !...............................................................................................................................  
@@ -343,24 +302,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    
       ! Set parameters for output channels:
-   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF  
+   CALL Farm_SetOutParam(OutList, farm, ErrStat2, ErrMsg2 );  if(Failed()) return; ! requires: p%NumOuts, sets: p%OutParam.
       
-   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF  
+   call Farm_InitOutput( farm, ErrStat2, ErrMsg2 );  if(Failed()) return;
 
       ! Print the summary file if requested:
    IF (farm%p%SumPrint) THEN
-      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 );  if(Failed()) return;
    END IF
    
    !...............................................................................................................................
@@ -370,13 +318,16 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
 CONTAINS
    SUBROUTINE Cleanup()
-   
       call WD_DestroyInitInput(WD_InitInput, ErrStat2, ErrMsg2)
       call AWAE_DestroyInitInput(AWAE_InitInput, ErrStat2, ErrMsg2)
       call AWAE_DestroyInitOutput(AWAE_InitOutput, ErrStat2, ErrMsg2)
-         
    END SUBROUTINE Cleanup
 
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
 END SUBROUTINE Farm_Initialize
 
 
@@ -651,11 +602,7 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   ALLOCATE(farm%WD(farm%p%NumTurbines),STAT=ErrStat2)
-   if (ErrStat2 /= 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for Wake Dynamics data', ErrStat, ErrMsg, RoutineName )
-      return
-   end if
+   ALLOCATE(farm%WD(farm%p%NumTurbines),STAT=ErrStat2);  if (Failed0('Wake Dynamics data')) return;
             
       !.................
       ! Initialize each instance of WD
@@ -690,6 +637,18 @@ contains
    subroutine cleanup()
       call WD_DestroyInitOutput( WD_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitWD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of FAST using the FASTWrapper module
@@ -719,11 +678,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   ALLOCATE(farm%FWrap(farm%p%NumTurbines),STAT=ErrStat2)
-   if (ErrStat2 /= 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data', ErrStat, ErrMsg, RoutineName )
-      return
-   end if
+   ALLOCATE(farm%FWrap(farm%p%NumTurbines),STAT=ErrStat2);  if (Failed0('FAST Wrapper data')) return;
             
       !.................
       ! Initialize each instance of FAST
@@ -741,20 +696,12 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
       FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
       FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
       FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
-      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSCglob`', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
+      allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob), stat=ErrStat2);  if (Failed0('FAST Wrapper data `fromSCglob`')) return;
       if (SC_InitOutput%NumSC2CtrlGlob>0) then
          FWrap_InitInp%fromSCglob = SC_y%fromSCglob
       endif
       
-      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2)
-      if (ErrStat2 /= 0) then
-         CALL SetErrStat( ErrID_Fatal, 'Could not allocate memory for FAST Wrapper data `fromSC`', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
+      allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl), stat=ErrStat2);  if (Failed0('FAST Wrapper data `fromSC`')) return;
       
       if (farm%p%MooringMod > 0) then
          FWrap_Interval = farm%p%dt_mooring    ! when there is a farm-level mooring model, FASTWrapper will be called at the mooring coupling time step
@@ -815,6 +762,17 @@ contains
       call FWrap_DestroyInitInput( FWrap_InitInp, ErrStat2, ErrMsg2 )
       call FWrap_DestroyInitOutput( FWrap_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitFAST
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes a farm-level instance of MoorDyn if applicable
@@ -877,11 +835,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    MD_InitInp%FarmSize  = farm%p%NumTurbines                    ! number of turbines in the array. >0 tells MoorDyn to operate in farm mode
    
    ALLOCATE( MD_InitInp%PtfmInit(6,farm%p%NumTurbines), MD_InitInp%TurbineRefPos(3,farm%p%NumTurbines), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MoorDyn PtfmInit and TurbineRefPos initialization inputs in FAST.Farm.")) return;
    
    ! gather spatial initialization inputs for Farm-level MoorDyn
    DO nt = 1,farm%p%NumTurbines              
@@ -897,33 +851,21 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
 
    ! allocate MoorDyn inputs (assuming size 2 for linear interpolation/extrapolation... >
    ALLOCATE( farm%MD%Input( 2 ), farm%MD%InputTimes( 2 ), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MD%Input and MD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MD%Input and MD%InputTimes.")) return;
 
    ! initialize MoorDyn
    CALL MD_Init( MD_InitInp, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, &
                  farm%MD%OtherSt, farm%MD%y, farm%MD%m, farm%p%DT_mooring, MD_InitOut, ErrStat2, ErrMsg2 )
+   if (Failed()) return;
    
    farm%MD%IsInitialized = .true.
 
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
-   
    
    ! Copy MD inputs over into the 2nd entry of the input array, to allow the first extrapolation in FARM_MD_Increment
-   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_NEWCOPY, Errstat2, ErrMsg2);  if (Failed()) return;
    farm%MD%InputTimes(2) = -0.1_DbKi
    
-   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
+   CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2);  if (Failed()) return; ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
    
    
    ! Set up mesh maps between MoorDyn and floating platforms.
@@ -931,11 +873,7 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    
    ! allocate mesh mappings for coupling farm-level MoorDyn with OpenFAST instances
    ALLOCATE( farm%m%MD_2_FWrap(farm%p%NumTurbines), farm%m%FWrap_2_MD(farm%p%NumTurbines), STAT = ErrStat2 )
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating MD_2_FWrap and FWrap_2_MD.",ErrStat,ErrMsg,RoutineName)
-      CALL Cleanup()
-      RETURN
-   END IF
+   if (Failed0("MD_2_FWrap and FWrap_2_MD.")) return;
    
    ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
    do nt = 1,farm%p%NumTurbines      
@@ -944,15 +882,13 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       ! loads
       CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
                           farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+      if (Failed()) return;
                           
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
-     
       ! kinematics
       CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
                           farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+      if (Failed()) return;
       
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )          
-
       ! Since SubDyn connections are not enabled yet, issue warning
       if (allocated(farm%FWrap(nt)%m%Turbine%SD%Input)) then
          call SetErrStat( ErrID_Warn, 'Turbine '//trim(Num2LStr(nt))//': Farm moorings connected to ElastoDyn platform reference instead of SubDyn', Errstat, ErrMsg, RoutineName//':MD_2_FWrap' )
@@ -960,14 +896,11 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
       
       ! SubDyn alternative:
       !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
-      !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 )
+      !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 );  if (Failed()) return;
       !                    
-      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MD_2_FWrap' )                  
-      !   
       !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
-      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 )
+      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 );  if (Failed()) return;
       !                    
-      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':FWrap_2_MD' )              
       !end if
    end do   
    
@@ -981,6 +914,24 @@ contains
       call MD_DestroyInitInput(  MD_InitInp, ErrStat2, ErrMsg2 )
       call MD_DestroyInitOutput( MD_InitOut, ErrStat2, ErrMsg2 )
    end subroutine cleanup
+
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+      if (Failed) call cleanup()
+   end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate memory for "//trim(txt)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+      Failed0 = errStat >= AbortErrLev
+      if(Failed0) call cleanUp()
+   end function Failed0
 END SUBROUTINE Farm_InitMD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine moves a farm-level MoorDyn simulation one step forward, to catch up with FWrap_Increment
@@ -1007,16 +958,16 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
 
    ! Do a linear extrapolation to estimate MoorDyn inputs at time n_ss+1
    CALL MD_Input_ExtrapInterp(farm%MD%Input, farm%MD%InputTimes, farm%MD%u, t_next, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    
    ! Shift "window" of MD%Input: move values of Input and InputTimes from index 1 to index 2
    CALL MD_CopyInput (farm%MD%Input(1),  farm%MD%Input(2),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    farm%MD%InputTimes(2) = farm%MD%InputTimes(1)
 
    ! update index 1 entries with the new extrapolated values
    CALL MD_CopyInput (farm%MD%u,  farm%MD%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   if (Failed()) return;
    farm%MD%InputTimes(1) = t_next  
 
 
@@ -1027,8 +978,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          
          CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%CoupledKinematics(nt), &
                                        farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
-       
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%CoupledKinematics' )
+         if (Failed()) return;
                              
          ! SubDyn alternative
          !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
@@ -1040,13 +990,11 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    
    CALL MD_UpdateStates( t, n_FMD, farm%MD%Input, farm%MD%InputTimes, farm%MD%p, farm%MD%x,  &
                          farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
-   
-   CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return;
       
    CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
                        farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
-   
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return;
    
    
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
@@ -1056,15 +1004,14 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
          
          ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
          !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':MeshCopy CoupledLoads' )   
+         !if (Failed()) return;
          
          
          ! mapping
          CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
                                        farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
-         
-         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)  
+         if (Failed()) return;
                   
          ! SubDyn alternative
          !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
@@ -1076,7 +1023,12 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
       end if
    end do
    
-         
+
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+   end function Failed
 end subroutine Farm_MD_Increment
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the initial call to calculate outputs (at t=0).

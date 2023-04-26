@@ -93,7 +93,7 @@ typedef  ^               ParameterType         ReKi            WAT_DxDyDz      {
 #typedef  ^               ParameterType         ReKi            WAT_k_Def       -    - - "Calibrated parameter for the influence of the wake deficit in the wake-added turbulence [>=0.0] or DEFAULT [DEFAULT=0.6]" -
 #typedef  ^               ParameterType         ReKi            WAT_k_Grad      -    - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
 
-# ..... FAST MiscVar data .......................................................................................................
+# ..... FARM MiscVar data .......................................................................................................
 typedef    ^    MiscVarType       ReKi          AllOuts        {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef    ^    ^                 DbKi          TimeData       {:} - - "Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
 typedef    ^    ^                 ReKi          AllOutData  {:}{:} - - "Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
