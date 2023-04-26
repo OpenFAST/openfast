@@ -104,8 +104,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Z0_low      !< Z-component of the origin of the low-resolution spatial domain [m]
     INTEGER(IntKi)  :: WAT      !< Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} [-]
     CHARACTER(1024)  :: WAT_BoxFile      !< Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined). [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: WAT_UserNxNyNz      !< Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] [(m)]
-    REAL(ReKi) , DIMENSION(1:3)  :: WAT_UserDxDyDz      !< Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] [(m)]
+    INTEGER(IntKi) , DIMENSION(1:3)  :: WAT_NxNyNz      !< Number of points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
+    REAL(ReKi) , DIMENSION(1:3)  :: WAT_DxDyDz      !< Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
   END TYPE Farm_ParameterType
 ! =======================
 ! =========  Farm_MiscVarType  =======
@@ -382,8 +382,8 @@ ENDIF
     DstParamData%Z0_low = SrcParamData%Z0_low
     DstParamData%WAT = SrcParamData%WAT
     DstParamData%WAT_BoxFile = SrcParamData%WAT_BoxFile
-    DstParamData%WAT_UserNxNyNz = SrcParamData%WAT_UserNxNyNz
-    DstParamData%WAT_UserDxDyDz = SrcParamData%WAT_UserDxDyDz
+    DstParamData%WAT_NxNyNz = SrcParamData%WAT_NxNyNz
+    DstParamData%WAT_DxDyDz = SrcParamData%WAT_DxDyDz
  END SUBROUTINE Farm_CopyParam
 
  SUBROUTINE Farm_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -600,8 +600,8 @@ ENDDO
       Re_BufSz   = Re_BufSz   + 1  ! Z0_low
       Int_BufSz  = Int_BufSz  + 1  ! WAT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%WAT_BoxFile)  ! WAT_BoxFile
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_UserNxNyNz)  ! WAT_UserNxNyNz
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_UserDxDyDz)  ! WAT_UserDxDyDz
+      Int_BufSz  = Int_BufSz  + SIZE(InData%WAT_NxNyNz)  ! WAT_NxNyNz
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_DxDyDz)  ! WAT_DxDyDz
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -926,12 +926,12 @@ ENDDO
       IntKiBuf(Int_Xferred) = ICHAR(InData%WAT_BoxFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    DO i1 = LBOUND(InData%WAT_UserNxNyNz,1), UBOUND(InData%WAT_UserNxNyNz,1)
-      ReKiBuf(Re_Xferred) = InData%WAT_UserNxNyNz(i1)
-      Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%WAT_NxNyNz,1), UBOUND(InData%WAT_NxNyNz,1)
+      IntKiBuf(Int_Xferred) = InData%WAT_NxNyNz(i1)
+      Int_Xferred = Int_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%WAT_UserDxDyDz,1), UBOUND(InData%WAT_UserDxDyDz,1)
-      ReKiBuf(Re_Xferred) = InData%WAT_UserDxDyDz(i1)
+    DO i1 = LBOUND(InData%WAT_DxDyDz,1), UBOUND(InData%WAT_DxDyDz,1)
+      ReKiBuf(Re_Xferred) = InData%WAT_DxDyDz(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE Farm_PackParam
@@ -1313,16 +1313,16 @@ ENDDO
       OutData%WAT_BoxFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    i1_l = LBOUND(OutData%WAT_UserNxNyNz,1)
-    i1_u = UBOUND(OutData%WAT_UserNxNyNz,1)
-    DO i1 = LBOUND(OutData%WAT_UserNxNyNz,1), UBOUND(OutData%WAT_UserNxNyNz,1)
-      OutData%WAT_UserNxNyNz(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%WAT_NxNyNz,1)
+    i1_u = UBOUND(OutData%WAT_NxNyNz,1)
+    DO i1 = LBOUND(OutData%WAT_NxNyNz,1), UBOUND(OutData%WAT_NxNyNz,1)
+      OutData%WAT_NxNyNz(i1) = IntKiBuf(Int_Xferred)
+      Int_Xferred = Int_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%WAT_UserDxDyDz,1)
-    i1_u = UBOUND(OutData%WAT_UserDxDyDz,1)
-    DO i1 = LBOUND(OutData%WAT_UserDxDyDz,1), UBOUND(OutData%WAT_UserDxDyDz,1)
-      OutData%WAT_UserDxDyDz(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%WAT_DxDyDz,1)
+    i1_u = UBOUND(OutData%WAT_DxDyDz,1)
+    DO i1 = LBOUND(OutData%WAT_DxDyDz,1), UBOUND(OutData%WAT_DxDyDz,1)
+      OutData%WAT_DxDyDz(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE Farm_UnPackParam

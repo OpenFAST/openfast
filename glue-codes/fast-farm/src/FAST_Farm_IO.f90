@@ -873,8 +873,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadCom( UnIn, InputFile, 'Section Header: Wake-added turbulence', ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    CALL ReadVar( UnIn, InputFile, p%WAT, "WAT", "Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box}", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, p%WAT_BoxFile, 'WAT_BoxFile', "Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
-   call ReadAry( UnIn, InputFile, p%WAT_UserNxNyNz, 3, "WAT_UserNxNyNz", "Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
-   call ReadAry( UnIn, InputFile, p%WAT_UserDxDyDz, 3, "WAT_UserDxDyDz", "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   call ReadAry( UnIn, InputFile, p%WAT_NxNyNz, 3, "WAT_NxNyNz", "Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   call ReadAry( UnIn, InputFile, p%WAT_DxDyDz, 3, "WAT_DxDyDz", "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def",    "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    IF ( PathIsRelative( p%WAT_BoxFile ) )p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
@@ -1029,6 +1029,16 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    ! --- SHARED MOORING SYSTEM ---
    ! TODO : Verify that p%MD_FileName file exists
    if ((p%DT_mooring <= 0.0_ReKi) .or. (p%DT_mooring > p%DT_high)) CALL SetErrStat(ErrID_Fatal,'DT_mooring must be greater than zero and no greater than dt_high.',ErrStat,ErrMsg,RoutineName)
+
+   ! --- AMBIENT WIND: INFLOWWIND MODULE --- [used only for Mod_AmbWind=2 or 3] ---
+   ! FIXME: this really should be checked with the turbine specific size diameter -- maybe relocate this check to AWAE or in FF after initializing all turbines?
+   if (AWAE_InitInp%Mod_AmbWind > 1) then
+      ! check that the grid is large enough to contain the turbine (only check Y and Z)
+      do i=1,p%NumTurbines
+         if (AWAE_InitInp%nY_High*AWAE_InitInp%dY_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Y (nY_High*dY_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+         if (AWAE_InitInp%nZ_High*AWAE_InitInp%dZ_high(i) < p%RotorDiamRef) call SetErrStat(ErrID_Warn,'High res domain for turbine '//trim(Num2LStr(i))//' may be too small in Z (nZ_High*dZ_High < RotorDiamRef)',ErrStat,ErrMsg,RoutineName)
+      enddo
+   endif
 
    ! --- WAKE DYNAMICS ---
    IF (WD_InitInp%Mod_Wake < 1 .or. WD_InitInp%Mod_Wake >3 ) CALL SetErrStat(ErrID_Fatal,'Mod_Wake needs to be 1,2 or 3',ErrStat,ErrMsg,RoutineName)

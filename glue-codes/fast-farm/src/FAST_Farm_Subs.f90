@@ -236,8 +236,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
 
       !-------------------
       ! a. read WAT input files using InflowWind
-   if (farm%p%WAT /= 0_IntKi) then
-      call WAT_init( farm%p, farm%WAT_IfW, ErrStat2, ErrMsg2 )
+   if (farm%p%WAT /= Mod_WAT_None) then
+      call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput%InputFileData, ErrStat2, ErrMsg2 )
    endif
 
       !-------------------
@@ -384,9 +384,10 @@ END SUBROUTINE Farm_Initialize
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of WakeDynamics.
 !! This also sets the WAT InflowWind data storage -- this will be changed later when IfW uses pointers
-SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
+SUBROUTINE WAT_init( p, IfW, AWAE_InputFileData, ErrStat, ErrMsg )
    type(farm_ParameterType), intent(inout) :: p                   !< farm parameters data
    type(WAT_IfW_data),       intent(inout) :: IfW                 !< InflowWind data
+   type(AWAE_InputFileType), intent(in   ) :: AWAE_InputFileData  !< for error checking
    integer(IntKi),           intent(  out) :: ErrStat             !< Error status of the operation
    character(*),             intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -394,8 +395,10 @@ SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
    type(InflowWind_InitOutputType)         :: IfW_InitOut
    character(1024)                         :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
    character(6)                            :: FileEnding(3)
-   integer(IntKi)                          :: Nxyz(3)
-   real(ReKi)                              :: Dxyz(3)
+   integer(IntKi)                          :: i
+   real(ReKi),     parameter               :: fstretch = 2.0_ReKi                       ! stretching factor for checking WAT resolution
+   real(ReKi)                              :: TmpRe3(3)                                 ! Temporary real for checking WAT resolution
+   CHARACTER(ErrMsgLen)                    :: TmpMsg                                    ! Temporary Error message text for WAT resolution checks
    integer(IntKi)                          :: ErrStat2
    character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'WAT_init'
@@ -423,25 +426,20 @@ SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
    IfW_InitInp%PassedFileData%HAWC_FileName_v   =  trim(BoxFileRoot)//trim(FileEnding(2))
    IfW_InitInp%PassedFileData%HAWC_FileName_w   =  trim(BoxFileRoot)//trim(FileEnding(3))
 
+   ! --- HAWC wind ---
+   ! Note: there are other variables form the input file that we simply don't set as they don't apply to this type of HAWC file
    ! HAWC grid
-   if (p%WAT == 1_IntKi) then       ! from libary of WAT files
-      call MannLibDims(BoxFileRoot, p%RotorDiamRef, Nxyz, Dxyz, ErrStat2, ErrMsg2);  if (Failed()) return
-      IfW_InitInp%PassedFileData%HAWC_nx           =  Nxyz(1)
-      IfW_InitInp%PassedFileData%HAWC_ny           =  Nxyz(2)
-      IfW_InitInp%PassedFileData%HAWC_nz           =  Nxyz(3)
-      IfW_InitInp%PassedFileData%HAWC_dx           =  Dxyz(1)
-      IfW_InitInp%PassedFileData%HAWC_dy           =  Dxyz(2)
-      IfW_InitInp%PassedFileData%HAWC_dz           =  Dxyz(3)
-   elseif (p%WAT == 2_IntKi) then   ! user specified
-      IfW_InitInp%PassedFileData%HAWC_nx           =  p%WAT_UserNxNyNz(1)
-      IfW_InitInp%PassedFileData%HAWC_ny           =  p%WAT_UserNxNyNz(2)
-      IfW_InitInp%PassedFileData%HAWC_nz           =  p%WAT_UserNxNyNz(3)
-      IfW_InitInp%PassedFileData%HAWC_dx           =  p%WAT_UserDxDyDz(1)
-      IfW_InitInp%PassedFileData%HAWC_dy           =  p%WAT_UserDxDyDz(2)
-      IfW_InitInp%PassedFileData%HAWC_dz           =  p%WAT_UserDxDyDz(3)
+   if (p%WAT == Mod_WAT_PreDef) then       ! from libary of WAT files, set the NxNyNz and DxDyDz terms
+      call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
    endif
+   IfW_InitInp%PassedFileData%HAWC_nx           =  p%WAT_NxNyNz(1)
+   IfW_InitInp%PassedFileData%HAWC_ny           =  p%WAT_NxNyNz(2)
+   IfW_InitInp%PassedFileData%HAWC_nz           =  p%WAT_NxNyNz(3)
+   IfW_InitInp%PassedFileData%HAWC_dx           =  p%WAT_DxDyDz(1)
+   IfW_InitInp%PassedFileData%HAWC_dy           =  p%WAT_DxDyDz(2)
+   IfW_InitInp%PassedFileData%HAWC_dz           =  p%WAT_DxDyDz(3)
 
-   IfW_InitInp%PassedFileData%FF%RefHt          =  0.5_ReKi * p%WAT_UserNxNyNz(3)*p%WAT_UserDxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
+   IfW_InitInp%PassedFileData%FF%RefHt          =  0.5_ReKi * p%WAT_NxNyNz(3)*p%WAT_DxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
 
    ! HAWC turbulence scaling
    IfW_InitInp%PassedFileData%FF%SF(1:3)        =  1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
@@ -454,7 +452,24 @@ SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
    IfW_InitInp%PassedFileData%SumPrint          =  .false.
    IfW_InitInp%PassedFileData%NumOuts           =  0
 
-   ! Note: there are other variables form the input file that we simply don't set as they don't apply to this type of HAWC file
+
+   ! check spatial resolution against turbine high res domains -- this would be checked in the ValidateData routine, except we don't have resolution for Mod_WAT_PreDef at that point
+   TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
+   do i=1,p%NumTurbines
+      TmpRe3(1) = real(AWAE_InputFileData%dX_high(i) / p%WAT_DxDyDz(1), ReKi)
+      TmpRe3(2) = real(AWAE_InputFileData%dY_high(i) / p%WAT_DxDyDz(2), ReKi)
+      TmpRe3(3) = real(AWAE_InputFileData%dZ_high(i) / p%WAT_DxDyDz(3), ReKi)
+      if (TmpRe3(1) < 1.0_ReKi/fstretch .or. TmpRe3(1) > fstretch)   &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dX_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(1)))// &
+                                       ' = '//trim(Num2LStr(TmpRe3(1)))//' for turbine '//trim(Num2LStr(i))//' in X.',ErrStat,ErrMsg,RoutineName)
+      if (TmpRe3(2) < 1.0_ReKi/fstretch .or. TmpRe3(2) > fstretch)   &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dY_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(2)))// &
+                                       ' = '//trim(Num2LStr(TmpRe3(2)))//' for turbine '//trim(Num2LStr(i))//' in Y.',ErrStat,ErrMsg,RoutineName)
+      if (TmpRe3(3) < 1.0_ReKi/fstretch .or. TmpRe3(3) > fstretch)   &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dZ_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(3)))// &
+                                       ' = '//trim(Num2LStr(TmpRe3(3)))//' for turbine '//trim(Num2LStr(i))//' in Z.',ErrStat,ErrMsg,RoutineName)
+   enddo
+
 
    call WrScr("Reading Wake added turbulence files: "//trim(p%WAT_BoxFile))
    call InflowWind_Init( IfW_InitInp, IfW%u, IfW%p, IfW%x, IfW%xd, IfW%z, IfW%OtherSt, IfW%y, IfW%m, p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
