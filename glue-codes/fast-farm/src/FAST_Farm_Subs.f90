@@ -407,6 +407,7 @@ SUBROUTINE WAT_init( p, IfW, ErrStat, ErrMsg )
    IfW_InitInp%FixedWindFileRootName = .false.
    IfW_InitInp%NumWindPoints         = 1        ! just some random number for the moment
    IfW_InitInp%RadAvg                = 0.25 * p%nZ_low * p%dX_low     ! arbitrary garbage, just must be bigger than zero, but not bigger than grid (IfW will complain if this isn't set when it tries to calculate disk average vel)
+   IfW_InitInp%MHK                   = 0        ! Not an MHK turbine
 
    ! Set InputFile data
    IfW_InitInp%FilePassingMethod                =  2_IntKi  ! passing the IfW%InputFile structure
