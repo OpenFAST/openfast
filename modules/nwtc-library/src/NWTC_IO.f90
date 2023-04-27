@@ -5561,7 +5561,7 @@ END SUBROUTINE CheckR8Var
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
-         WRITE (UnEc,Ec_IntFrmt)  Var, VarName, VarDescr
+         WRITE (UnEc,Ec_LgFrmt)  Var, VarName, VarDescr
    END IF
 
 
