@@ -163,7 +163,7 @@ typedef   ^ MiscVarType    InflowWind_InputType    u_WAT_IfW   - - -  "InflowWin
 typedef   ^ MiscVarType    InflowWind_OutputType   y_WAT_IfW   - - -  "InflowWind module output for WAT" -
 
 #wake added turbulence
-typdef    ^ MiscVarType    ReKi     V_amb_low_disk {:}{:}{:}    - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
+typedef   ^ MiscVarType    ReKi     V_amb_low_disk {:}{:}       - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

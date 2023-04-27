@@ -185,6 +185,7 @@ IMPLICIT NONE
     TYPE(InflowWind_MiscVarType)  :: WAT_IfW      !< InflowWind module misc vars for WAT [-]
     TYPE(InflowWind_InputType)  :: u_WAT_IfW      !< InflowWind module input for WAT [-]
     TYPE(InflowWind_OutputType)  :: y_WAT_IfW      !< InflowWind module output for WAT [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  AWAE_ParameterType  =======
@@ -4974,6 +4975,20 @@ ENDIF
       CALL InflowWind_CopyOutput( SrcMiscData%y_WAT_IfW, DstMiscData%y_WAT_IfW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcMiscData%V_amb_low_disk)) THEN
+  i1_l = LBOUND(SrcMiscData%V_amb_low_disk,1)
+  i1_u = UBOUND(SrcMiscData%V_amb_low_disk,1)
+  i2_l = LBOUND(SrcMiscData%V_amb_low_disk,2)
+  i2_u = UBOUND(SrcMiscData%V_amb_low_disk,2)
+  IF (.NOT. ALLOCATED(DstMiscData%V_amb_low_disk)) THEN 
+    ALLOCATE(DstMiscData%V_amb_low_disk(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%V_amb_low_disk.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%V_amb_low_disk = SrcMiscData%V_amb_low_disk
+ENDIF
  END SUBROUTINE AWAE_CopyMisc
 
  SUBROUTINE AWAE_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -5067,6 +5082,9 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL InflowWind_DestroyOutput( MiscData%y_WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ALLOCATED(MiscData%V_amb_low_disk)) THEN
+  DEALLOCATE(MiscData%V_amb_low_disk)
+ENDIF
  END SUBROUTINE AWAE_DestroyMisc
 
  SUBROUTINE AWAE_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5340,6 +5358,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! V_amb_low_disk allocated yes/no
+  IF ( ALLOCATED(InData%V_amb_low_disk) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! V_amb_low_disk upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%V_amb_low_disk)  ! V_amb_low_disk
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6005,6 +6028,26 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%V_amb_low_disk) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%V_amb_low_disk,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%V_amb_low_disk,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%V_amb_low_disk,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%V_amb_low_disk,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%V_amb_low_disk,2), UBOUND(InData%V_amb_low_disk,2)
+        DO i1 = LBOUND(InData%V_amb_low_disk,1), UBOUND(InData%V_amb_low_disk,1)
+          ReKiBuf(Re_Xferred) = InData%V_amb_low_disk(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AWAE_PackMisc
 
  SUBROUTINE AWAE_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6831,6 +6874,29 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! V_amb_low_disk not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%V_amb_low_disk)) DEALLOCATE(OutData%V_amb_low_disk)
+    ALLOCATE(OutData%V_amb_low_disk(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%V_amb_low_disk.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%V_amb_low_disk,2), UBOUND(OutData%V_amb_low_disk,2)
+        DO i1 = LBOUND(OutData%V_amb_low_disk,1), UBOUND(OutData%V_amb_low_disk,1)
+          OutData%V_amb_low_disk(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AWAE_UnPackMisc
 
  SUBROUTINE AWAE_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )

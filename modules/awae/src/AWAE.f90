@@ -196,7 +196,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vr_wake_tmp(3)
    real(ReKi)          :: Vr_term(3)
    real(ReKi)          :: Vx_term
-   real(ReKi)          :: Vsum_low(3)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: Vave_amb_low_norm, Vamb_lowpol_tmp(3), Vdist_lowpol_tmp(3), Vamb_low_tmp(3,8)
@@ -456,7 +455,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
              if ( np == 0 ) then
 
-                Vsum_low  = 0.0_ReKi
+                m%V_amb_low_disk(1:3,nt) = 0.0_ReKi
                 iwsum = 0
                 n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))
 
@@ -471,7 +470,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                       p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*yHat_plane + r_polar*SIN(psi_polar)*zHat_plane
                       Vamb_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vamb_low, within, p%nX_low, p%nY_low, p%nZ_low, Vbox=Vamb_low_tmp )
                       if ( within ) then
-                         Vsum_low = Vsum_low + Vamb_lowpol_tmp
+                         m%V_amb_low_disk(1:3,nt) = m%V_amb_low_disk(1:3,nt) + Vamb_lowpol_tmp
                          do i = 1,8
                             iwsum = iwsum + 1
                             m%Vamb_lowpol(:,iwsum) = Vamb_low_tmp(:,i)
@@ -489,16 +488,16 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                 else
 
-                   Vsum_low = Vsum_low/REAL(iwsum/8,ReKi)   ! iwsum is always a multiple of 8
-                   Vave_amb_low_norm  = TwoNorm(Vsum_low)
+                   m%V_amb_low_disk(1:3,nt) = m%V_amb_low_disk(1:3,nt)/REAL(iwsum/8,ReKi)   ! iwsum is always a multiple of 8
+                   Vave_amb_low_norm  = TwoNorm(m%V_amb_low_disk(1:3,nt))
                    if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
                       call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine #'//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
                       return
                    else
-                      y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),Vsum_low )
+                      y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),m%V_amb_low_disk(1:3,nt) )
                       y%TI_amb(nt) = 0.0_ReKi
                       do wamb = 1, iwsum
-                         y%TI_amb(nt) = y%TI_amb(nt)+TwoNorm(m%Vamb_lowpol(:,wamb)-Vsum_low)**2.0_ReKi
+                         y%TI_amb(nt) = y%TI_amb(nt)+TwoNorm(m%Vamb_lowpol(:,wamb)-m%V_amb_low_disk(1:3,nt))**2.0_ReKi
                       end do  !wamb
                       y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0_ReKi*REAL(iwsum,ReKi)))/Vave_amb_low_norm
                    end if !Vave_amb_low_norm
@@ -598,7 +597,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vr_wake_tmp(3)
    real(ReKi)          :: Vr_term(3)
    real(ReKi)          :: Vx_term
-   real(ReKi)          :: Vsum_low(3)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: delta, deltad
@@ -1085,9 +1083,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    !----------------------
    ! Wake added turbulence
-   !  initialize tracer for WAT box location
-   xd%WAT_B_Box(1:3) = 0.0_ReKi
    p%WAT_Enabled = InitInp%WAT_Enabled
+   ! initialize tracer for WAT box location
+   xd%WAT_B_Box(1:3) = 0.0_ReKi
+   ! store array of disk average velocities for all turbines
+   call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;
    ! copy data over -- note that this is super slow and time consuming!!!! This entire bit will get changed as soon as IfW supports pointers!
 !FIXME: remove after pointers are available
    if (p%WAT_Enabled) then
@@ -1194,6 +1194,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(ErrMsgLen)                            :: errMsg2           ! temporary Error message
    character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
    integer(IntKi)                                  :: n_high_low, nt, n_hl, i,j,k,c
+   real(ReKi)                                      :: Ufarm(3)    !< mean velocity of all disk average flow for all turbines in farm
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1297,8 +1298,19 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end do
          end do
       end if
-
    end if
+
+   ! WAT tracer propagation
+   if (p%WAT_Enabled) then
+      ! find mean velocity of all turbine disks
+      Ufarm = 0.0_ReKi
+      do nt=1,p%NumTurbines
+         Ufarm(1:3) = Ufarm(1:3) + m%V_amb_low_disk(1:3,nt)
+      enddo
+      Ufarm(1:3) = Ufarm(1:3) / real(p%NumTurbines,ReKi)
+      ! add mean velocity * dt to the tracer for the position of the WAT box
+      xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + Ufarm(1:3)*real(p%dt_low,ReKi)
+   endif
 
 !#ifdef _OPENMP
 !   t1 = omp_get_wtime()      
