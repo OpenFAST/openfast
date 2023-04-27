@@ -735,7 +735,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               tmp_Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np1,nt2)) &
                                                   + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np, nt2))
                               tmp_Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np1,nt2)) &
-                                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, nt2))
+                                                  + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, nt2))
 
                               ! Average xhat over overlapping wakes
                               xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
@@ -1022,7 +1022,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vy_wake.'   )) return;
    allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vz_wake.'   )) return;
    allocate ( u%D_wake    (                                                        0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%D_wake.'    )) return;
-   allocate ( u%WAT_k     (            0:p%NumRadii-1,             0:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%WAT_k.'     )) return;
+   allocate ( u%WAT_k     (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%WAT_k.'     )) return;
 
    u%Vx_wake=0.0_ReKi
    u%Vy_wake=0.0_ReKi
@@ -1088,9 +1088,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    xd%WAT_B_Box(1:3) = 0.0_ReKi
    ! store array of disk average velocities for all turbines
    call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;
-   ! copy data over -- note that this is super slow and time consuming!!!! This entire bit will get changed as soon as IfW supports pointers!
-!FIXME: remove after pointers are available
+!FIXME: modify after pointers are available
    if (p%WAT_Enabled) then
+      ! copy data over -- note that this is super slow and time consuming!!!! This entire bit will get changed as soon as IfW supports pointers!
       call InflowWind_CopyContState  ( InitInp%WAT_IfW_data%x,                x%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
       call InflowWind_CopyDiscState  ( InitInp%WAT_IfW_data%xd,              xd%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
       call InflowWind_CopyConstrState( InitInp%WAT_IfW_data%z,                z%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
@@ -1194,7 +1194,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(ErrMsgLen)                            :: errMsg2           ! temporary Error message
    character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
    integer(IntKi)                                  :: n_high_low, nt, n_hl, i,j,k,c
-   real(ReKi)                                      :: Ufarm(3)    !< mean velocity of all disk average flow for all turbines in farm
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1303,13 +1302,13 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    ! WAT tracer propagation
    if (p%WAT_Enabled) then
       ! find mean velocity of all turbine disks
-      Ufarm = 0.0_ReKi
+      xd%Ufarm = 0.0_ReKi
       do nt=1,p%NumTurbines
-         Ufarm(1:3) = Ufarm(1:3) + m%V_amb_low_disk(1:3,nt)
+         xd%Ufarm(1:3) = xd%Ufarm(1:3) + m%V_amb_low_disk(1:3,nt)
       enddo
-      Ufarm(1:3) = Ufarm(1:3) / real(p%NumTurbines,ReKi)
+      xd%Ufarm(1:3) = xd%Ufarm(1:3) / real(p%NumTurbines,ReKi)
       ! add mean velocity * dt to the tracer for the position of the WAT box
-      xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + Ufarm(1:3)*real(p%dt_low,ReKi)
+      xd%WAT_B_Box(1:3) = xd%WAT_B_Box(1:3) + xd%Ufarm(1:3)*real(p%dt_low,ReKi)
    endif
 
 !#ifdef _OPENMP

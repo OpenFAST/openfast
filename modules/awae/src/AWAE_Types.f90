@@ -146,6 +146,7 @@ IMPLICIT NONE
     TYPE(InflowWind_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< Dummy IfW discrete states [-]
     TYPE(InflowWind_DiscreteStateType)  :: WAT_IfW      !< Dummy IfW discrete states for WAT [-]
     REAL(ReKi) , DIMENSION(1:3)  :: WAT_B_Box      !< Position of passive tracer used to offset the WAT box at each low res time step [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: Ufarm      !< mean velocity of all disk average flow for all turbines in farm [m/s]
   END TYPE AWAE_DiscreteStateType
 ! =======================
 ! =========  AWAE_ConstraintStateType  =======
@@ -3598,6 +3599,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstDiscStateData%WAT_B_Box = SrcDiscStateData%WAT_B_Box
+    DstDiscStateData%Ufarm = SrcDiscStateData%Ufarm
  END SUBROUTINE AWAE_CopyDiscState
 
  SUBROUTINE AWAE_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -3709,6 +3711,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_B_Box)  ! WAT_B_Box
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Ufarm)  ! Ufarm
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3807,6 +3810,10 @@ ENDIF
       ENDIF
     DO i1 = LBOUND(InData%WAT_B_Box,1), UBOUND(InData%WAT_B_Box,1)
       ReKiBuf(Re_Xferred) = InData%WAT_B_Box(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%Ufarm,1), UBOUND(InData%Ufarm,1)
+      ReKiBuf(Re_Xferred) = InData%Ufarm(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE AWAE_PackDiscState
@@ -3938,6 +3945,12 @@ ENDIF
     i1_u = UBOUND(OutData%WAT_B_Box,1)
     DO i1 = LBOUND(OutData%WAT_B_Box,1), UBOUND(OutData%WAT_B_Box,1)
       OutData%WAT_B_Box(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%Ufarm,1)
+    i1_u = UBOUND(OutData%Ufarm,1)
+    DO i1 = LBOUND(OutData%Ufarm,1), UBOUND(OutData%Ufarm,1)
+      OutData%Ufarm(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
  END SUBROUTINE AWAE_UnPackDiscState

@@ -125,6 +125,7 @@ typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     IfW          {:
 typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     WAT_IfW       -  - -  "Dummy IfW discrete states for WAT" -
 #wake added turbulence
 typedef   ^ DiscreteStateType   ReKi                             WAT_B_Box    {3} - -  "Position of passive tracer used to offset the WAT box at each low res time step" m
+typedef   ^ DiscreteStateType   ReKi                             Ufarm        {3} - -  "mean velocity of all disk average flow for all turbines in farm" m/s
 
 # Define constraint states here:
 typedef   ^ ConstraintStateType InflowWind_ConstraintStateType   IfW     {:} - -  "Dummy IfW  constraint states" -
@@ -163,7 +164,8 @@ typedef   ^ MiscVarType    InflowWind_InputType    u_WAT_IfW   - - -  "InflowWin
 typedef   ^ MiscVarType    InflowWind_OutputType   y_WAT_IfW   - - -  "InflowWind module output for WAT" -
 
 #wake added turbulence
-typedef   ^ MiscVarType    ReKi     V_amb_low_disk {:}{:}       - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
+typedef   ^ MiscVarType    ReKi     V_amb_low_disk       {:}{:} - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
