@@ -220,12 +220,13 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       !-------------------
       ! a. read WAT input files using InflowWind
    if (farm%p%WAT /= Mod_WAT_None) then
-      call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput%InputFileData, ErrStat2, ErrMsg2 )
+      call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput, ErrStat2, ErrMsg2 )
    endif
 
       !-------------------
       ! b. CALL AWAE_Init
 
+   if (farm%p%WAT /= Mod_WAT_None) AWAE_InitInput%WAT_Enabled = .true.
    AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
    AWAE_InitInput%InputFileData%dt_low       = farm%p%dt_low
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
@@ -335,10 +336,10 @@ END SUBROUTINE Farm_Initialize
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of WakeDynamics.
 !! This also sets the WAT InflowWind data storage -- this will be changed later when IfW uses pointers
-SUBROUTINE WAT_init( p, IfW, AWAE_InputFileData, ErrStat, ErrMsg )
+SUBROUTINE WAT_init( p, IfW, AWAE_InitInput, ErrStat, ErrMsg )
    type(farm_ParameterType), intent(inout) :: p                   !< farm parameters data
    type(WAT_IfW_data),       intent(inout) :: IfW                 !< InflowWind data
-   type(AWAE_InputFileType), intent(in   ) :: AWAE_InputFileData  !< for error checking
+   type(AWAE_InitInputType), intent(inout) :: AWAE_InitInput      !< for error checking, and temporary to pass IfW
    integer(IntKi),           intent(  out) :: ErrStat             !< Error status of the operation
    character(*),             intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -407,28 +408,34 @@ SUBROUTINE WAT_init( p, IfW, AWAE_InputFileData, ErrStat, ErrMsg )
    ! check spatial resolution against turbine high res domains -- this would be checked in the ValidateData routine, except we don't have resolution for Mod_WAT_PreDef at that point
    TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
    do i=1,p%NumTurbines
-      TmpRe3(1) = real(AWAE_InputFileData%dX_high(i) / p%WAT_DxDyDz(1), ReKi)
-      TmpRe3(2) = real(AWAE_InputFileData%dY_high(i) / p%WAT_DxDyDz(2), ReKi)
-      TmpRe3(3) = real(AWAE_InputFileData%dZ_high(i) / p%WAT_DxDyDz(3), ReKi)
+      TmpRe3(1) = real(AWAE_InitInput%InputFileData%dX_high(i) / p%WAT_DxDyDz(1), ReKi)
+      TmpRe3(2) = real(AWAE_InitInput%InputFileData%dY_high(i) / p%WAT_DxDyDz(2), ReKi)
+      TmpRe3(3) = real(AWAE_InitInput%InputFileData%dZ_high(i) / p%WAT_DxDyDz(3), ReKi)
       if (TmpRe3(1) < 1.0_ReKi/fstretch .or. TmpRe3(1) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dX_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(1)))// &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dX_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(1)))// &
                                        ' = '//trim(Num2LStr(TmpRe3(1)))//' for turbine '//trim(Num2LStr(i))//' in X.',ErrStat,ErrMsg,RoutineName)
       if (TmpRe3(2) < 1.0_ReKi/fstretch .or. TmpRe3(2) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dY_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(2)))// &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dY_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(2)))// &
                                        ' = '//trim(Num2LStr(TmpRe3(2)))//' for turbine '//trim(Num2LStr(i))//' in Y.',ErrStat,ErrMsg,RoutineName)
       if (TmpRe3(3) < 1.0_ReKi/fstretch .or. TmpRe3(3) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InputFileData%dZ_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(3)))// &
+            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dZ_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(3)))// &
                                        ' = '//trim(Num2LStr(TmpRe3(3)))//' for turbine '//trim(Num2LStr(i))//' in Z.',ErrStat,ErrMsg,RoutineName)
    enddo
 
 
    call WrScr("Reading Wake added turbulence files: "//trim(p%WAT_BoxFile))
-   call InflowWind_Init( IfW_InitInp, IfW%u, IfW%p, IfW%x, IfW%xd, IfW%z, IfW%OtherSt, IfW%y, IfW%m, p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         call Cleanup()
-         RETURN
-      END IF
+!FIXME: revise this after IfW pointers are working
+   call InflowWind_Init( IfW_InitInp,              &
+            AWAE_InitInput%WAT_IfW_data%u,         &
+            AWAE_InitInput%WAT_IfW_data%p,         &
+            AWAE_InitInput%WAT_IfW_data%x,         &
+            AWAE_InitInput%WAT_IfW_data%xd,        &
+            AWAE_InitInput%WAT_IfW_data%z,         &
+            AWAE_InitInput%WAT_IfW_data%OtherSt,   &
+            AWAE_InitInput%WAT_IfW_data%y,         &
+            AWAE_InitInput%WAT_IfW_data%m,         &
+            p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
+      if (Failed()) return;
 
    call Cleanup()
    return

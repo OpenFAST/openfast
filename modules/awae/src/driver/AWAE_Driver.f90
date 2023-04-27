@@ -38,9 +38,9 @@ program AWAE_Driver
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( EchoLibVer=.FALSE. )
    !call AWAE_TEST_ExtractSlice(errStat, errMsg)
-   call AWAE_TEST_LowResGridCalcs(errStat, errMsg)
+!   call AWAE_TEST_LowResGridCalcs(errStat, errMsg)
 !   call AWAE_Dvr_Tests(1, errStat, errMsg)
-   call CheckError( errStat, errMsg  )
+!   call CheckError( errStat, errMsg  )
       ! Initialize the Driver and the WD module
    !call AWAE_TEST_Init_BadData(errStat, ErrMsg)
    !call CheckError( ErrStat, ErrMsg  )

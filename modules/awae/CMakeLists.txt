@@ -31,3 +31,15 @@ install(TARGETS awaelib
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
+#set(AWAE_DRIVER_SOURCES
+#   src/driver/AWAE_Driver_Subs.f90
+#   src/driver/AWAE_Driver.f90)
+#
+#add_executable(awae_driver ${AWAE_DRIVER_SOURCES})
+#target_link_libraries(awae_driver awaelib ifwlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+#
+#install(TARGETS awae_driver
+#  RUNTIME DESTINATION bin
+#  LIBRARY DESTINATION lib
+#  ARCHIVE DESTINATION lib)

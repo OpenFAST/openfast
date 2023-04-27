@@ -27,7 +27,6 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-   use InflowWind_Types
    use InflowWind
 
 #ifdef _OPENMP
@@ -1084,10 +1083,23 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%pvec_cs(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_cs.'     )) return;
    allocate ( m%pvec_ce(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_ce.'     )) return;
 
-   !----------------
-   ! Discrete states
+   !----------------------
+   ! Wake added turbulence
    !  initialize tracer for WAT box location
    xd%WAT_B_Box(1:3) = 0.0_ReKi
+   p%WAT_Enabled = InitInp%WAT_Enabled
+   ! copy data over -- note that this is super slow and time consuming!!!! This entire bit will get changed as soon as IfW supports pointers!
+!FIXME: remove after pointers are available
+   if (p%WAT_Enabled) then
+      call InflowWind_CopyContState  ( InitInp%WAT_IfW_data%x,                x%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyDiscState  ( InitInp%WAT_IfW_data%xd,              xd%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyConstrState( InitInp%WAT_IfW_data%z,                z%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyOtherState ( InitInp%WAT_IfW_data%OtherSt, OtherState%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyParam      ( InitInp%WAT_IfW_data%p,                p%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyMisc       ( InitInp%WAT_IfW_data%m,                m%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyInput      ( InitInp%WAT_IfW_data%u,              m%u_WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      call InflowWind_CopyOutput     ( InitInp%WAT_IfW_data%y,              m%y_WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+   endif
 
    ! Read-in the ambient wind data for the initial calculate output
    call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 ); if(Failed()) return;

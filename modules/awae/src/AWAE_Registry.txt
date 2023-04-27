@@ -22,6 +22,17 @@ param	^                    -               INTEGER         MeanderMod_Uniform   
 param	^                    -               INTEGER         MeanderMod_TruncJinc   - 2 -  "Spatial filter model for wake meandering: truncated jinc" -
 param	^                    -               INTEGER         MeanderMod_WndwdJinc   - 3 -  "Spatial filter model for wake meandering: windowed jinc" -
 
+# ..... WAT InflowWind data .. THIS IS TEMPORARY UNTIL IFW IS CHANGED TO POINTERS ..........................................
+typedef AWAE/AWAE    WAT_IfW_data      InflowWind_ContinuousStateType   x             -   -         -   "Continuous states"
+typedef ^                  ^           InflowWind_DiscreteStateType     xd            -   -         -   "Discrete states"
+typedef ^                  ^           InflowWind_ConstraintStateType   z             -   -         -   "Constraint states"
+typedef ^                  ^           InflowWind_OtherStateType        OtherSt       -   -         -   "Other states"
+typedef ^                  ^           InflowWind_ParameterType         p             -   -         -   "Parameters"
+typedef ^                  ^           InflowWind_InputType             u             -   -         -   "System inputs"
+typedef ^                  ^           InflowWind_OutputType            y             -   -         -   "System outputs"
+typedef ^                  ^           InflowWind_MiscVarType           m             -   -         -   "Misc/optimization variables"
+typedef ^                  ^           logical                   IsInitialized -   .FALSE.   -   "Has IfW_Init been called"
+
 # ..... Wind 3D Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_HighWindGrid       SiKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
 # ..... InputFile Data .......................................................................................................
@@ -77,6 +88,8 @@ typedef   ^ InitInputType  IntKi              NumDT            -  - -   "Number 
 typedef  ^  InitInputType  CHARACTER(1024)    OutFileRoot      -  - -   "The root name derived from the primary FAST.Farm input file" -
 #wake added turbulence (WAT)
 #typedef  ^  InitInputType  POINTER            WAT_V_Box        -  - -   "Pointer to unit turbulence box for WAT (3, nxb, nyb, nzb)" m/s
+typedef  ^            ^    Logical            WAT_Enabled      - .false. - "Is WAT enabled?" -
+typedef  ^            ^    WAT_IfW_data       WAT_IfW_data     -  - -   "IfW data for WAT.  Replace this with pointers later when IfW is changed over." -
 
 
 # Define outputs from the initialization routine here:
@@ -104,18 +117,22 @@ typedef   ^ InitOutputType ReKi               Z0_low           -  - -   "Z-compo
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef   ^ ContinuousStateType InflowWind_ContinuousStateType     IfW   {:} - -  "Dummy IfW continuous states" -
+typedef   ^ ContinuousStateType InflowWind_ContinuousStateType    IfW     {:} - -  "Dummy IfW continuous states" -
+typedef   ^ ContinuousStateType InflowWind_ContinuousStateType    WAT_IfW  -  - -  "Dummy IfW continuous states for WAT" -
 
 # Define discrete (nondifferentiable) states here:
 typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     IfW          {:} - -  "Dummy IfW discrete states" -
+typedef   ^ DiscreteStateType   InflowWind_DiscreteStateType     WAT_IfW       -  - -  "Dummy IfW discrete states for WAT" -
 #wake added turbulence
 typedef   ^ DiscreteStateType   ReKi                             WAT_B_Box    {3} - -  "Position of passive tracer used to offset the WAT box at each low res time step" m
 
 # Define constraint states here:
-typedef   ^ ConstraintStateType InflowWind_ConstraintStateType     IfW {:} - -  "Dummy IfW  constraint states" -
+typedef   ^ ConstraintStateType InflowWind_ConstraintStateType   IfW     {:} - -  "Dummy IfW  constraint states" -
+typedef   ^ ConstraintStateType InflowWind_ConstraintStateType   WAT_IfW  -  - -  "Dummy IfW  constraint states for WAT" -
 
 # Define any other states, including integer or logical states here:
-typedef   ^ OtherStateType      InflowWind_OtherStateType     IfW  {:} - -  "Dummy IfW   other states" -
+typedef   ^ OtherStateType      InflowWind_OtherStateType    IfW     {:} - -  "Dummy IfW other states" -
+typedef   ^ OtherStateType      InflowWind_OtherStateType    WAT_IFW  -  - -  "Dummy IfW other states for WAT" -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -141,6 +158,9 @@ typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_Low   - - -  "InflowWin
 typedef   ^ MiscVarType    InflowWind_InputType    u_IfW_High  - - -  "InflowWind module inputs for the high-resolution grid" -
 typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_Low   - - -  "InflowWind module outputs for the low-resolution grid" -
 typedef   ^ MiscVarType    InflowWind_OutputType   y_IfW_High  - - -  "InflowWind module outputs for the high-resolution grid" -
+typedef   ^ MiscVarType    InflowWind_MiscVarType  WAT_IfW     - - -  "InflowWind module misc vars for WAT" -
+typedef   ^ MiscVarType    InflowWind_InputType    u_WAT_IfW   - - -  "InflowWind module input for WAT" -
+typedef   ^ MiscVarType    InflowWind_OutputType   y_WAT_IfW   - - -  "InflowWind module output for WAT" -
 
 #wake added turbulence
 typdef    ^ MiscVarType    ReKi     V_amb_low_disk {:}{:}{:}    - -  "Rotor averaged ambiend wind speed for each wind turbine (3 x nWT)" m/s
@@ -189,6 +209,7 @@ typedef   ^ ParameterType  ReKi             C_Meander        -  - -   "Calibrate
 typedef   ^ ParameterType  ReKi             C_ScaleDiam      -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
 typedef   ^ ParameterType  IntKi            Mod_Projection   -  - -    "Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2]"
 typedef   ^ ParameterType  InflowWind_ParameterType IfW     {:} - -   "InflowWind module parameters" -
+typedef   ^ ParameterType  InflowWind_ParameterType WAT_IfW  -  - -   "InflowWind module parameters for WAT" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts           -  - -   "Number of parameters in the output list (number of outputs requested)"      -
 typedef  ^  ParameterType  IntKi            WrDisSkp1          -  - -   "Number of time steps to skip plus one" -
@@ -204,7 +225,7 @@ typedef  ^  ParameterType  CHARACTER(1024)  OutFileVTKRoot     -  - -   "The roo
 typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number of characters for VTK timestamp outputs" -
 #typedef  ^  ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
 #wake added turbulence
-#typedef  ^  ParameterType  IntKi            WAT                 -  - - "Switch for turning on and off wake-added turbulence" -
+typedef  ^  ParameterType  Logical          WAT_Enabled        -  - - "Switch for turning on and off wake-added turbulence" -
 #typedef  ^  ParameterType  POINTER          WAT_V_Box          -  - -   "Pointer to unit turbulence box for WAT (3, nxb, nyb, nzb)" m/s
 typedef  ^  ParameterType  ReKi              WAT_d_box        {3} - -   "Spacing (delta x, delta y, delta z) of unit turbulence box for WAT" m
 

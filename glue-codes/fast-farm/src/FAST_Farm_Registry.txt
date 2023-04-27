@@ -158,18 +158,6 @@ typedef    ^    ^                 DbKi                      InputTimes   {:}  - 
 typedef    ^    ^                 MD_OutputType             y             -   -         -   "System outputs"
 typedef    ^    ^                 MD_MiscVarType            m             -   -         -   "Misc/optimization variables"
 typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has MD_Init been called"
-# ..... WAT IfW Data (temporary until after pointers enabled) .........................................................
-typedef    ^    WAT_IfW_data      InflowWind_ContinuousStateType   x             -   -         -   "Continuous states"
-typedef    ^    ^                 InflowWind_DiscreteStateType     xd            -   -         -   "Discrete states"
-typedef    ^    ^                 InflowWind_ConstraintStateType   z             -   -         -   "Constraint states"
-typedef    ^    ^                 InflowWind_OtherStateType        OtherSt       -   -         -   "Other states"
-typedef    ^    ^                 InflowWind_ParameterType         p             -   -         -   "Parameters"
-typedef    ^    ^                 InflowWind_InputType             u             -   -         -   "Extrapolated system inputs"
-typedef    ^    ^                 InflowWind_InputType             Input        {:}  -         -   "System inputs"
-#typedef    ^    ^                 DbKi                      InputTimes   {:}  -         -   "Current time" s
-typedef    ^    ^                 InflowWind_OutputType            y             -   -         -   "System outputs"
-typedef    ^    ^                 InflowWind_MiscVarType           m             -   -         -   "Misc/optimization variables"
-typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has IfW_Init been called"
 # ..... All submodules' variables.................................................................................................
 typedef    ^   All_FastFarm_Data  Farm_ParameterType        p          -   -   -   "FAST.Farm parameter data" -
 typedef    ^   All_FastFarm_Data  Farm_MiscVarType          m          -   -   -   "FAST.Farm misc var data" -
