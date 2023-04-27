@@ -1361,13 +1361,18 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
    errStat = ErrID_None
    errMsg  = ""
-   n = nint(t / p%dt_low)
-   call ComputeLocals(n, u, p, y, m, errStat2, errMsg2);          if (Failed()) return;
-   call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2);   if (Failed()) return;
 
-      ! starting index for the high-res files
+   ! some variables and indexing
+   n = nint(t / p%dt_low)
    n_high =  n*p%n_high_low
+   call ComputeLocals(n, u, p, y, m, errStat2, errMsg2);                if (Failed()) return;
+
+   ! high-res
    call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2);   if (Failed()) return;
+
+   ! low-res
+   call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2);         if (Failed()) return;
+
 
    if (mod(n,p%WrDisSkp1) == 0) then
 
