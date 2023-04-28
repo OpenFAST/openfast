@@ -2633,7 +2633,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    real(ReKi)               :: omega_s2(3)
    real(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
    real(ReKi)               :: Imat(3,3)
-   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal
+   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
    real(ReKi)               :: C_1, C_2, a0b0, h, h_c_AM, deltal_AM
    real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6), F_B_End(6)
 
@@ -3707,66 +3707,44 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               ! Use initial z-position
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
            END IF
-           
-           ! When wave stretching is enabled, we do not allow an initially fully submerged member to breach the free surface during the simulation
-           ! IF ( p%WaveStMod>0 .AND. z1>m%WaveElev(mem%NodeIndx(i)) ) THEN
-           !    CALL SetErrStat(ErrID_Warn, 'An initially fully submerged member is at least partially out of water. The local hydrodynamic load is potentially discontinuous. This has happend for Member ID ' & 
-           !                           //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )   
-           ! END IF
-                      
+                                
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Default value for fully submerged interior node
            deltal = mem%dl
            h_c    = 0.0_ReKi
            
-           ! Special cases
-           ! Note that we only need to check if element crosses the SWL if WaveStMod == 0
-           ! With wave stretching, surface-piercing members are already handled by the IF branch above
+           ! Look to the "left" toward node 1
            IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
-              deltal =  mem%dl/2.0_ReKi
-              h_c    =  mem%dl/4.0_ReKi
-              ! Check for the special case where the first element also crosses the SWL
-              IF (p%WaveStMod==0) THEN ! No wave stretching
-                 ! Initial z position will always be used without wave stretching
-                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
-                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltal = h
-                    h_c    = 0.5*h
-                 END IF
-              END IF
+              deltalLeft = 0.0_ReKi
            ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
               ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
               !       This is the correct behavior.
-              deltal =  mem%dl/2.0_ReKi - mem%h_floor
-              h_c    =  0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
-              ! Check for the special case where the next element crosses the SWL
-              IF (p%WaveStMod==0) THEN ! No wave stretching
-                 ! Initial z position will always be used without wave stretching
-                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
-                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltal = h - mem%h_floor
-                    h_c    = 0.5*(h + mem%h_floor)
-                 END IF
-              END IF
-           ELSE IF ( i == N+1 ) THEN ! Last node
-              deltal =  mem%dl/2.0_ReKi
-              h_c    = -mem%dl/4.0_ReKi
-           ELSE ! Interior node
-              ! Need to check if element crosses the SWL, but only if WaveStMod == 0
+              deltalLeft = -mem%h_floor
+           ELSE ! Regular internal node
+              deltalLeft = 0.5_ReKi * mem%dl
+           END IF
+
+           ! Look to the "right" toward node N+1
+           IF ( i == N+1 ) THEN ! Last node
+              deltalRight = 0.0_ReKi
+           ELSE
+              deltalRight = 0.5_ReKi * mem%dl
+              ! Need to check if element i crosses the SWL, but only if WaveStMod == 0
               ! With wave stretching, surface-piercing members are already handled by the IF branch
               IF (p%WaveStMod==0) THEN ! No wave stretching
                  ! Initial z position will always be used
                  z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
                  IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
                     h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltal = mem%dl/2.0 + h
-                    h_c    = 0.5*(h-mem%dl/2.0)
+                    deltalRight = h
                  END IF
               END IF
            END IF
-           
+
+           ! Combine left and right contributions
+           deltal =              deltalRight + deltalLeft
+           h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
+
            ! Compute the slope of the member radius
            IF (i == 1) THEN
               dRdl_p  = abs(mem%dRdl_mg(i))
