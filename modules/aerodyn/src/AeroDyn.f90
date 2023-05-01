@@ -393,6 +393,16 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    end do
 
       !............................................................................................
+      ! Calculate inertia and added mass parameters
+      !............................................................................................
+   do iR = 1, nRotors
+      if ( p%rotors(iR)%MHK > 0 ) then 
+         call SetInertiaAddedMassParameters( InputFileData%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
+         if (Failed()) return;
+      end if
+   end do
+
+      !............................................................................................
       ! Initialize the BEMT module (also sets other variables for sub module)
       !............................................................................................
       
@@ -1472,6 +1482,72 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
    end if
 
 end subroutine SetBuoyancyParameters
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets parameters for use during the inertia and added mass calculations; these variables are not changed after AD_Init.
+subroutine SetInertiaAddedMassParameters( InputFileData, p, ErrStat, ErrMsg )
+   TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData    !< All the data in the AeroDyn input file
+   TYPE(RotParameterType),       INTENT(INOUT)  :: p                !< Parameters
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   INTEGER(IntKi)                               :: ErrStat2         !< Temporary error status of the operation
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2          !< Temporary error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                               :: k                !< Loop counter for blades
+   INTEGER(IntKi)                               :: j                !< Loop counter for nodes
+
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'SetInertiaAddedMassParameters'
+
+
+      ! Initialize variables for this routine
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   
+      ! Allocate inertia and added mass parameters
+   call AllocAry( p%BlIN, p%NumBlNds, p%NumBlades, 'BlIN', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlIT, p%NumBlNds, p%NumBlades, 'BlIT', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAN, p%NumBlNds, p%NumBlades, 'BlAN', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAT, p%NumBlNds, p%NumBlades, 'BlAT', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry( p%BlAM, p%NumBlNds, p%NumBlades, 'BlAM', ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   if ( p%NumTwrNds > 0 ) then
+      call AllocAry( p%TwrIT, p%NumTwrNds, 'TwrIT', ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call AllocAry( p%TwrAT, p%NumTwrNds, 'TwrAT', ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+
+      ! Calculate blade inertia and added mass parameters
+   do k = 1,p%NumBlades ! loop through all blades
+
+      do j = 1,p%NumBlNds ! loop through all nodes
+         p%BlIN(j,k) = (InputFileData%BladeProps(k)%BlCpn(j) + InputFileData%BladeProps(k)%BlCan(j)) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j normal-to-chord inertia factor
+         p%BlIT(j,k) = (InputFileData%BladeProps(k)%BlCpt(j) + InputFileData%BladeProps(k)%BlCat(j)) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord inertia factor
+         p%BlAN(j,k) = -InputFileData%BladeProps(k)%BlCan(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j normal-to-chord added mass factor
+         p%BlAT(j,k) = -InputFileData%BladeProps(k)%BlCat(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) ! node j tangential-to-chord added mass factor
+         p%BlAM(j,k) = -InputFileData%BladeProps(k)%BlCam(j) * p%airDens * InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j) * (InputFileData%BladeProps(k)%BlChord(j)**2 + InputFileData%BladeProps(k)%BlChord(j)**2 * InputFileData%BladeProps(k)%t_c(j)**2) ! node j pitch added mass factor
+      end do ! j = nodes
+
+   end do ! k = blades
+
+      ! Calculate tower inertia and added mass parameters
+   if ( p%NumTwrNds > 0 ) then
+         
+      do j = 1,p%NumTwrNds ! loop through all nodes
+         p%TwrIT(j) = (p%TwrCp(j) + p%TwrCa(j)) * p%airDens * pi * (p%TwrDiam(j)/2.0_ReKi)**2 ! node j tangential inertia factor
+         p%TwrAT(j) = -p%TwrCa(j) * p%airDens * pi * (p%TwrDiam(j)/2.0_ReKi)**2 ! node j tangential added mass factor
+      end do ! j = nodes
+
+   end if
+
+end subroutine SetInertiaAddedMassParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )

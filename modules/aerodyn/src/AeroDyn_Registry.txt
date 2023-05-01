@@ -355,10 +355,17 @@ typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent bla
 typedef ^   RotParameterType	ReKi	BlDL      {:}{:}	-	-	"Matrix of blade element length based on CB, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	BlTaper   {:}{:}	-	-	"Matrix of blade element taper, used in buoyancy calculation" -
 typedef ^   RotParameterType	ReKi	BlAxCent  {:}{:}	-	-	"Matrix of blade element axial centroid, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	BlIN      {:}{:}	-	-	"Matrix of blade node normal-to-chord inertia factor" kg/m
+typedef ^   RotParameterType	ReKi	BlIT      {:}{:}	-	-	"Matrix of blade node tangential-to-chord inertia factor" kg/m
+typedef ^   RotParameterType	ReKi	BlAN      {:}{:}	-	-	"Matrix of blade node normal-to-chord added mass factor" kg/m
+typedef ^   RotParameterType	ReKi	BlAT      {:}{:}	-	-	"Matrix of blade node tangential-to-chord added mass factor" kg/m
+typedef ^   RotParameterType	ReKi	BlAM      {:}{:}	-	-	"Matrix of blade node pitch added mass factor" kgm
 typedef ^   RotParameterType	ReKi	TwrRad    {:}    	-	-	"Array of equivalent tower radius at each node, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	TwrDL     {:}   	-	-	"Array of tower element length, used in buoyancy calculation" m
 typedef ^   RotParameterType	ReKi	TwrTaper  {:}   	-	-	"Array of tower element taper, used in buoyancy calculation" -
 typedef ^   RotParameterType	ReKi	TwrAxCent {:}	    -	-	"Array of tower element axial centroid, used in buoyancy calculation" -
+typedef ^   RotParameterType	ReKi	TwrIT     {:}   	-	-	"Array of tower node tangential inertia factor" kg/m
+typedef ^   RotParameterType	ReKi	TwrAT     {:}   	-	-	"Array of tower node tangential added mass factor" kg/m
 typedef	^	RotParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	RotParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 typedef	^	RotParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
