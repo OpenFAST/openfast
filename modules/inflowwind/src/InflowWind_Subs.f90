@@ -957,7 +957,7 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
       ! Passed variables
 
    TYPE(InflowWind_InitInputType),     INTENT(IN   )  :: InitInp              !< Input data for initialization
-   TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< The data for initialization
+   TYPE(InflowWind_InputFile),         INTENT(IN   )  :: InputFileData        !< The data for initialization
    TYPE(InflowWind_ParameterType),     INTENT(INOUT)  :: p                    !< The parameters for InflowWind
    TYPE(InflowWind_MiscVarType),       INTENT(INOUT)  :: m                    !< The misc/optimization variables for InflowWind
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine

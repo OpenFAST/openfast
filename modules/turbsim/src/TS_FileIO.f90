@@ -2627,7 +2627,7 @@ CHARACTER(ErrMsgLen)         :: ErrMsg
 
       WRITE (UFFF,"(I14,I6,F11.3,F11.3,F15.3,F11.2,F10.2)")  p_grid%NumGrid_Y, p_grid%NumGrid_Z, p_grid%GridRes_Y, p_grid%GridRes_Z, p_grid%TimeStep, p_grid%HubHt, UHub
       WRITE (UFFF,"(/,' Z Coordinates (m):')")
-      WRITE (UFFF,FormStr5)  ( p_grid%Z(p_grid%GridPtIndx(IZ))-p_grid%HubHt, IZ=1,p_grid%NPoints,p_grid%NumGrid_Y )
+      WRITE (UFFF,FormStr5)  ( p_grid%Z(p_grid%GridPtIndx(IZ))-p_grid%HubHt, IZ=1,p_grid%NumGrid_Y*p_grid%NumGrid_Z,p_grid%NumGrid_Y )
       WRITE (UFFF,"(/,' Y Coordinates (m):')")
       WRITE (UFFF,FormStr5)  ( p_grid%Y(p_grid%GridPtIndx(IY)), IY=1,p_grid%NumGrid_Y )
 
