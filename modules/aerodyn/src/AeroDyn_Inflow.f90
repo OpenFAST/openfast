@@ -5,7 +5,7 @@ module AeroDyn_Inflow
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
    use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End
-   use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_SetExternalWindPositions
+   use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_GetExternalAccel, AD_SetExternalWindPositions
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput, InflowWind_End
 
@@ -427,7 +427,7 @@ subroutine ADI_ADIW_Solve(t, p_AD, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errSta
    ! Compute IW%y%VelocityUVW
    call ADI_CalcOutput_IW(t, u_IfW, IW, errStat2, errMsg2); if(Failed()) return
    ! Set u_AD%..%InflowOnBlade, u_AD%..%InflowOnTower, etc
-   call ADI_AD_InputSolve_IfW(u_AD, IW%y, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
+   call ADI_AD_InputSolve_IfW(p_AD, u_AD, IW%y, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
 
 contains
    logical function Failed()
@@ -499,11 +499,12 @@ end subroutine ADI_CalcOutput_IW
 !> This routine sets the wind claculated by InflowWind to the AeroDyn arrays
 !! See similar routine in FAST_Solver
 !! TODO put this in AeroDyn
-subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
+subroutine ADI_AD_InputSolve_IfW(p_AD, u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
    ! Passed variables
+   TYPE(ADI_ParameterType),     INTENT(IN   )   :: p_AD        !< Parameters
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
-   TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
-   logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
+   TYPE(InflowWind_OutputType), INTENT(IN   )   :: y_IfW       !< The outputs from InflowWind
+   logical,                     INTENT(IN   )   :: hubHeightFirst !< Hub Height velocity is packed at beginning
    INTEGER(IntKi)                               :: errStat     !< Error status of the operation
    CHARACTER(*)                                 :: errMsg      !< Error message if errStat /= ErrID_None
    ! Local variables:
@@ -519,6 +520,15 @@ subroutine ADI_AD_InputSolve_IfW(u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
       enddo
    endif
    call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
+
+   if ( p_AD%MHK > 0 ) then
+      if (hubHeightFirst) then
+         do iWT=1,size(u_AD%rotors)
+            node = node + 1 ! Hub velocities for each rotor
+         enddo
+      endif
+      call AD_GetExternalAccel(u_AD, y_IfW%AccelUVW, node, errStat, errMsg)
+   endif
 
 end subroutine ADI_AD_InputSolve_IfW
 

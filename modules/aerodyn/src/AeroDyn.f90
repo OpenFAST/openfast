@@ -64,6 +64,7 @@ module AeroDyn
    PUBLIC :: AD_NumWindPoints                  !< Routine to return then number of windpoints required by AeroDyn
    PUBLIC :: AD_BoxExceedPointsIdx             !< Routine to set the start of the OLAF wind points
    PUBLIC :: AD_GetExternalWind                !< Set the external wind into AeroDyn inputs
+   PUBLIC :: AD_GetExternalAccel               !< Set the external accelerations into AeroDyn inputs
    PUBLIC :: AD_SetExternalWindPositions       !< Set the external wind points needed by AeroDyn inputs 
   
 contains    
@@ -1056,6 +1057,10 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( u%InflowOnTower, 3_IntKi, p%NumTwrNds, 'u%InflowOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( u%AccelOnBlade, 3_IntKi, p%NumBlNds, p%numBlades, 'u%AccelOnBlade', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( u%AccelOnTower, 3_IntKi, p%NumTwrNds, 'u%AccelOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
    call AllocAry( u%UserProp, p%NumBlNds, p%numBlades, 'u%UserProp', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -1063,6 +1068,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
    if (errStat >= AbortErrLev) return      
       
    u%InflowOnBlade = 0.0_ReKi
+   u%AccelOnBlade  = 0.0_ReKi
    u%UserProp      = 0.0_ReKi
    u%InflowOnHub   = 0.0_ReKi
    u%InflowOnNacelle = 0.0_ReKi
@@ -1074,7 +1080,8 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
          !................
    if (p%NumTwrNds > 0) then
       
-      u%InflowOnTower = 0.0_ReKi 
+      u%InflowOnTower = 0.0_ReKi
+      u%AccelOnTower  = 0.0_ReKi  
       
       call MeshCreate ( BlankMesh = u%TowerMotion   &
                        ,IOS       = COMPONENT_INPUT &
@@ -7335,6 +7342,42 @@ subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
       end do !j, wake points
    end if
 end subroutine AD_GetExternalWind
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Sets the flow accelerations calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW") for MHK turbines
+!! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions
+subroutine AD_GetExternalAccel(u_AD, AccUVW, node, errStat, errMsg)
+   ! Passed variables
+   type(AD_InputType),          intent(inout)   :: u_AD   !< AeroDyn inputs
+   real(ReKi), dimension(:,:),  intent(in   )   :: AccUVW !< Acceleration array 3 x n (as typically returned by InflowWind)
+   integer(IntKi),              intent(inout)   :: node   !< Counter for dimension 2 of AccUVW. Initialized by caller and returned!
+   integer(IntKi)                               :: errStat!< Error status of the operation
+   character(*)                                 :: errMsg !< Error message if errStat /= ErrID_None
+   ! Local variables:
+   integer(IntKi)                               :: j      ! Loops through nodes / elements.
+   integer(IntKi)                               :: k      ! Loops through blades.
+   integer(IntKi)                               :: nNodes
+   integer(IntKi)                               :: iWT
+   errStat = ErrID_None
+   errMsg  = ""
+
+   do iWT=1,size(u_AD%rotors)
+      nNodes = size(u_AD%rotors(iWT)%AccelOnBlade,2)
+      ! Blades
+      do k=1,size(u_AD%rotors(iWT)%AccelOnBlade,3)
+         do j=1,nNodes
+            u_AD%rotors(iWT)%AccelOnBlade(:,j,k) = AccUVW(:,node)
+            node = node + 1
+         end do
+      end do
+      ! Tower
+      if ( allocated(u_AD%rotors(iWT)%AccelOnTower) ) then
+         do j=1,size(u_AD%rotors(iWT)%AccelOnTower,2)
+            u_AD%rotors(iWT)%AccelOnTower(:,j) = AccUVW(:,node)
+            node = node + 1
+         end do      
+      end if
+   enddo ! rotors
+end subroutine AD_GetExternalAccel
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set inputs for inflow wind
 !! Order should match AD_NumWindPoints and AD_GetExternalWind

@@ -472,6 +472,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnHub      !< U,V,W at hub [m/s]
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnNacelle      !< U,V,W at nacelle [m/s]
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnTailFin      !< U,V,W at tailfin [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AccelOnBlade      !< U,V,W accelerations at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change) [m/s^2]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AccelOnTower      !< U,V,W accelerations at nodes on the tower [m/s^2]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: UserProp      !< Optional user property for interpolating airfoils (per element per blade) [-]
   END TYPE RotInputType
 ! =======================
@@ -16846,6 +16848,36 @@ ENDIF
     DstRotInputTypeData%InflowOnHub = SrcRotInputTypeData%InflowOnHub
     DstRotInputTypeData%InflowOnNacelle = SrcRotInputTypeData%InflowOnNacelle
     DstRotInputTypeData%InflowOnTailFin = SrcRotInputTypeData%InflowOnTailFin
+IF (ALLOCATED(SrcRotInputTypeData%AccelOnBlade)) THEN
+  i1_l = LBOUND(SrcRotInputTypeData%AccelOnBlade,1)
+  i1_u = UBOUND(SrcRotInputTypeData%AccelOnBlade,1)
+  i2_l = LBOUND(SrcRotInputTypeData%AccelOnBlade,2)
+  i2_u = UBOUND(SrcRotInputTypeData%AccelOnBlade,2)
+  i3_l = LBOUND(SrcRotInputTypeData%AccelOnBlade,3)
+  i3_u = UBOUND(SrcRotInputTypeData%AccelOnBlade,3)
+  IF (.NOT. ALLOCATED(DstRotInputTypeData%AccelOnBlade)) THEN 
+    ALLOCATE(DstRotInputTypeData%AccelOnBlade(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotInputTypeData%AccelOnBlade.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRotInputTypeData%AccelOnBlade = SrcRotInputTypeData%AccelOnBlade
+ENDIF
+IF (ALLOCATED(SrcRotInputTypeData%AccelOnTower)) THEN
+  i1_l = LBOUND(SrcRotInputTypeData%AccelOnTower,1)
+  i1_u = UBOUND(SrcRotInputTypeData%AccelOnTower,1)
+  i2_l = LBOUND(SrcRotInputTypeData%AccelOnTower,2)
+  i2_u = UBOUND(SrcRotInputTypeData%AccelOnTower,2)
+  IF (.NOT. ALLOCATED(DstRotInputTypeData%AccelOnTower)) THEN 
+    ALLOCATE(DstRotInputTypeData%AccelOnTower(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotInputTypeData%AccelOnTower.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRotInputTypeData%AccelOnTower = SrcRotInputTypeData%AccelOnTower
+ENDIF
 IF (ALLOCATED(SrcRotInputTypeData%UserProp)) THEN
   i1_l = LBOUND(SrcRotInputTypeData%UserProp,1)
   i1_u = UBOUND(SrcRotInputTypeData%UserProp,1)
@@ -16910,6 +16942,12 @@ IF (ALLOCATED(RotInputTypeData%InflowOnBlade)) THEN
 ENDIF
 IF (ALLOCATED(RotInputTypeData%InflowOnTower)) THEN
   DEALLOCATE(RotInputTypeData%InflowOnTower)
+ENDIF
+IF (ALLOCATED(RotInputTypeData%AccelOnBlade)) THEN
+  DEALLOCATE(RotInputTypeData%AccelOnBlade)
+ENDIF
+IF (ALLOCATED(RotInputTypeData%AccelOnTower)) THEN
+  DEALLOCATE(RotInputTypeData%AccelOnTower)
 ENDIF
 IF (ALLOCATED(RotInputTypeData%UserProp)) THEN
   DEALLOCATE(RotInputTypeData%UserProp)
@@ -17079,6 +17117,16 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnHub)  ! InflowOnHub
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnNacelle)  ! InflowOnNacelle
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnTailFin)  ! InflowOnTailFin
+  Int_BufSz   = Int_BufSz   + 1     ! AccelOnBlade allocated yes/no
+  IF ( ALLOCATED(InData%AccelOnBlade) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! AccelOnBlade upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AccelOnBlade)  ! AccelOnBlade
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! AccelOnTower allocated yes/no
+  IF ( ALLOCATED(InData%AccelOnTower) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! AccelOnTower upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AccelOnTower)  ! AccelOnTower
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! UserProp allocated yes/no
   IF ( ALLOCATED(InData%UserProp) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! UserProp upper/lower bounds for each dimension
@@ -17362,6 +17410,51 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%InflowOnTailFin(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( .NOT. ALLOCATED(InData%AccelOnBlade) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccelOnBlade,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccelOnBlade,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccelOnBlade,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccelOnBlade,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccelOnBlade,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccelOnBlade,3)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i3 = LBOUND(InData%AccelOnBlade,3), UBOUND(InData%AccelOnBlade,3)
+        DO i2 = LBOUND(InData%AccelOnBlade,2), UBOUND(InData%AccelOnBlade,2)
+          DO i1 = LBOUND(InData%AccelOnBlade,1), UBOUND(InData%AccelOnBlade,1)
+            ReKiBuf(Re_Xferred) = InData%AccelOnBlade(i1,i2,i3)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%AccelOnTower) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccelOnTower,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccelOnTower,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AccelOnTower,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AccelOnTower,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%AccelOnTower,2), UBOUND(InData%AccelOnTower,2)
+        DO i1 = LBOUND(InData%AccelOnTower,1), UBOUND(InData%AccelOnTower,1)
+          ReKiBuf(Re_Xferred) = InData%AccelOnTower(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%UserProp) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -17754,6 +17847,57 @@ ENDIF
       OutData%InflowOnTailFin(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AccelOnBlade not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AccelOnBlade)) DEALLOCATE(OutData%AccelOnBlade)
+    ALLOCATE(OutData%AccelOnBlade(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AccelOnBlade.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i3 = LBOUND(OutData%AccelOnBlade,3), UBOUND(OutData%AccelOnBlade,3)
+        DO i2 = LBOUND(OutData%AccelOnBlade,2), UBOUND(OutData%AccelOnBlade,2)
+          DO i1 = LBOUND(OutData%AccelOnBlade,1), UBOUND(OutData%AccelOnBlade,1)
+            OutData%AccelOnBlade(i1,i2,i3) = ReKiBuf(Re_Xferred)
+            Re_Xferred = Re_Xferred + 1
+          END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AccelOnTower not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%AccelOnTower)) DEALLOCATE(OutData%AccelOnTower)
+    ALLOCATE(OutData%AccelOnTower(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AccelOnTower.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%AccelOnTower,2), UBOUND(OutData%AccelOnTower,2)
+        DO i1 = LBOUND(OutData%AccelOnTower,1), UBOUND(OutData%AccelOnTower,1)
+          OutData%AccelOnTower(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UserProp not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -19263,6 +19407,28 @@ END IF ! check if allocated
   END DO
   ENDDO
   DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+IF (ALLOCATED(u_out%rotors(i01)%AccelOnBlade) .AND. ALLOCATED(u1%rotors(i01)%AccelOnBlade)) THEN
+  DO i3 = LBOUND(u_out%rotors(i01)%AccelOnBlade,3),UBOUND(u_out%rotors(i01)%AccelOnBlade,3)
+    DO i2 = LBOUND(u_out%rotors(i01)%AccelOnBlade,2),UBOUND(u_out%rotors(i01)%AccelOnBlade,2)
+      DO i1 = LBOUND(u_out%rotors(i01)%AccelOnBlade,1),UBOUND(u_out%rotors(i01)%AccelOnBlade,1)
+        b = -(u1%rotors(i01)%AccelOnBlade(i1,i2,i3) - u2%rotors(i01)%AccelOnBlade(i1,i2,i3))
+        u_out%rotors(i01)%AccelOnBlade(i1,i2,i3) = u1%rotors(i01)%AccelOnBlade(i1,i2,i3) + b * ScaleFactor
+      END DO
+    END DO
+  END DO
+END IF ! check if allocated
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+IF (ALLOCATED(u_out%rotors(i01)%AccelOnTower) .AND. ALLOCATED(u1%rotors(i01)%AccelOnTower)) THEN
+  DO i2 = LBOUND(u_out%rotors(i01)%AccelOnTower,2),UBOUND(u_out%rotors(i01)%AccelOnTower,2)
+    DO i1 = LBOUND(u_out%rotors(i01)%AccelOnTower,1),UBOUND(u_out%rotors(i01)%AccelOnTower,1)
+      b = -(u1%rotors(i01)%AccelOnTower(i1,i2) - u2%rotors(i01)%AccelOnTower(i1,i2))
+      u_out%rotors(i01)%AccelOnTower(i1,i2) = u1%rotors(i01)%AccelOnTower(i1,i2) + b * ScaleFactor
+    END DO
+  END DO
+END IF ! check if allocated
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
 IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
   DO i2 = LBOUND(u_out%rotors(i01)%UserProp,2),UBOUND(u_out%rotors(i01)%UserProp,2)
     DO i1 = LBOUND(u_out%rotors(i01)%UserProp,1),UBOUND(u_out%rotors(i01)%UserProp,1)
@@ -19419,6 +19585,30 @@ END IF ! check if allocated
     c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnTailFin(i1) + t(3)*u2%rotors(i01)%InflowOnTailFin(i1) - t(2)*u3%rotors(i01)%InflowOnTailFin(i1) ) * scaleFactor
     u_out%rotors(i01)%InflowOnTailFin(i1) = u1%rotors(i01)%InflowOnTailFin(i1) + b  + c * t_out
   END DO
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+IF (ALLOCATED(u_out%rotors(i01)%AccelOnBlade) .AND. ALLOCATED(u1%rotors(i01)%AccelOnBlade)) THEN
+  DO i3 = LBOUND(u_out%rotors(i01)%AccelOnBlade,3),UBOUND(u_out%rotors(i01)%AccelOnBlade,3)
+    DO i2 = LBOUND(u_out%rotors(i01)%AccelOnBlade,2),UBOUND(u_out%rotors(i01)%AccelOnBlade,2)
+      DO i1 = LBOUND(u_out%rotors(i01)%AccelOnBlade,1),UBOUND(u_out%rotors(i01)%AccelOnBlade,1)
+        b = (t(3)**2*(u1%rotors(i01)%AccelOnBlade(i1,i2,i3) - u2%rotors(i01)%AccelOnBlade(i1,i2,i3)) + t(2)**2*(-u1%rotors(i01)%AccelOnBlade(i1,i2,i3) + u3%rotors(i01)%AccelOnBlade(i1,i2,i3)))* scaleFactor
+        c = ( (t(2)-t(3))*u1%rotors(i01)%AccelOnBlade(i1,i2,i3) + t(3)*u2%rotors(i01)%AccelOnBlade(i1,i2,i3) - t(2)*u3%rotors(i01)%AccelOnBlade(i1,i2,i3) ) * scaleFactor
+        u_out%rotors(i01)%AccelOnBlade(i1,i2,i3) = u1%rotors(i01)%AccelOnBlade(i1,i2,i3) + b  + c * t_out
+      END DO
+    END DO
+  END DO
+END IF ! check if allocated
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+IF (ALLOCATED(u_out%rotors(i01)%AccelOnTower) .AND. ALLOCATED(u1%rotors(i01)%AccelOnTower)) THEN
+  DO i2 = LBOUND(u_out%rotors(i01)%AccelOnTower,2),UBOUND(u_out%rotors(i01)%AccelOnTower,2)
+    DO i1 = LBOUND(u_out%rotors(i01)%AccelOnTower,1),UBOUND(u_out%rotors(i01)%AccelOnTower,1)
+      b = (t(3)**2*(u1%rotors(i01)%AccelOnTower(i1,i2) - u2%rotors(i01)%AccelOnTower(i1,i2)) + t(2)**2*(-u1%rotors(i01)%AccelOnTower(i1,i2) + u3%rotors(i01)%AccelOnTower(i1,i2)))* scaleFactor
+      c = ( (t(2)-t(3))*u1%rotors(i01)%AccelOnTower(i1,i2) + t(3)*u2%rotors(i01)%AccelOnTower(i1,i2) - t(2)*u3%rotors(i01)%AccelOnTower(i1,i2) ) * scaleFactor
+      u_out%rotors(i01)%AccelOnTower(i1,i2) = u1%rotors(i01)%AccelOnTower(i1,i2) + b  + c * t_out
+    END DO
+  END DO
+END IF ! check if allocated
   ENDDO
   DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
 IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN

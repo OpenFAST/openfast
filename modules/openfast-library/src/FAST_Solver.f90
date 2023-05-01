@@ -515,8 +515,18 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          node = 1
       end if
 
-      ! Set the external wind from inflowwin into the AeroDyn inputs. Node counter is incremented
+      ! Set the external wind from inflowwind into the AeroDyn inputs. Node counter is incremented
       call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
+
+      ! Set the external accelerations from inflowwind into the AeroDyn inputs. Node counter is incremented
+      if (p_FAST%MHK > 0) then
+         if (p_FAST%CompServo == MODULE_SrvD) then
+            node = 2
+         else
+            node = 1
+         end if
+         call AD_GetExternalAccel(u_AD, y_IfW%AccelUVW, node, errStat, errMsg)
+      end if
 
    ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
       node = 2 !start of inputs to AD15

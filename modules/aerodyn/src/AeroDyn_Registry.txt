@@ -436,6 +436,8 @@ typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the towe
 typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInputType	ReKi	AccelOnBlade	{:}{:}{:}	-	-	"U,V,W accelerations at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s^2
+typedef	^	RotInputType	ReKi	AccelOnTower	{:}{:}	-	-	"U,V,W accelerations at nodes on the tower"	m/s^2
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 
