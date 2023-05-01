@@ -1306,8 +1306,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrCd  , p%TwrCd   )      
       call move_alloc( RotData%TwrTI  , p%TwrTI   )   
       call move_alloc( RotData%TwrCb  , p%TwrCb   ) 
-      call move_alloc( RotData%TwrCpt , p%TwrCpt  ) 
-      call move_alloc( RotData%TwrCat , p%TwrCat  ) 
+      call move_alloc( RotData%TwrCp  , p%TwrCp   ) 
+      call move_alloc( RotData%TwrCa  , p%TwrCa   ) 
    else
       p%NumTwrNds     = RotData%NumTwrNds
       
@@ -1315,8 +1315,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
       call move_alloc( RotData%TwrCd  , p%TwrCd   )      
       call move_alloc( RotData%TwrTI  , p%TwrTI   )   
       call move_alloc( RotData%TwrCb  , p%TwrCb   ) 
-      call move_alloc( RotData%TwrCpt , p%TwrCpt  ) 
-      call move_alloc( RotData%TwrCat , p%TwrCat  ) 
+      call move_alloc( RotData%TwrCp  , p%TwrCp   ) 
+      call move_alloc( RotData%TwrCa  , p%TwrCa   ) 
    end if
 
    if (p%MHK > 0) then
@@ -3626,15 +3626,15 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                   call SetErrStat( ErrID_Fatal, 'The thickness to chord ratio for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCac(j) < 0.0_ReKi )  then
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCan(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The chordwise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCae(j) < 0.0_ReKi )  then
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCat(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The edgewise added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
-               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCap(j) < 0.0_ReKi )  then
+               if ( InputFileData%rotors(iR)%BladeProps(k)%BlCam(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The pitch added mass coefficient for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
                                  //' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
@@ -3680,7 +3680,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
                   call SetErrStat( ErrID_Fatal, 'The buoyancy coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
 
-               if ( InputFileData%rotors(iR)%TwrCat(j) < 0.0_ReKi )  then
+               if ( InputFileData%rotors(iR)%TwrCa(j) < 0.0_ReKi )  then
                   call SetErrStat( ErrID_Fatal, 'The added mass coefficient for tower node '//trim(Num2LStr(j))//' must be greater than or equal to 0.', ErrStat, ErrMsg, RoutineName )
                endif
             end do ! j=nodes

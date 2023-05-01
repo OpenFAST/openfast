@@ -896,7 +896,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          ! NumTwrNds - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or MHK=1 or 2]
       call ParseVar( FileInfo_In, CurLine, "NumTwrNds", InputFileData%rotors(iR)%NumTwrNds, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb        TwrCpt        TwrCat
+         !TwrElev        TwrDiam        TwrCd        TwrTI        TwrCb        TwrCp         TwrCa
       if ( InputFileData%Echo )   WRITE(UnEc, '(A)') 'Tower Table Header: '//FileInfo_In%Lines(CurLine)    ! Write section break to echo
       CurLine = CurLine + 1
          !(m)            (m)            (-)          (-)          (-)
@@ -913,9 +913,9 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          if (Failed()) return
       CALL AllocAry( InputFileData%rotors(iR)%TwrCb, InputFileData%rotors(iR)%NumTwrNds, 'TwrCb', ErrStat2, ErrMsg2)
          if (Failed()) return 
-      CALL AllocAry( InputFileData%rotors(iR)%TwrCpt, InputFileData%rotors(iR)%NumTwrNds, 'TwrCpt', ErrStat2, ErrMsg2)
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCp, InputFileData%rotors(iR)%NumTwrNds, 'TwrCp', ErrStat2, ErrMsg2)
          if (Failed()) return 
-      CALL AllocAry( InputFileData%rotors(iR)%TwrCat, InputFileData%rotors(iR)%NumTwrNds, 'TwrCat', ErrStat2, ErrMsg2)
+      CALL AllocAry( InputFileData%rotors(iR)%TwrCa, InputFileData%rotors(iR)%NumTwrNds, 'TwrCa', ErrStat2, ErrMsg2)
          if (Failed()) return 
       do I=1,InputFileData%rotors(iR)%NumTwrNds
          call ParseAry ( FileInfo_In, CurLine, 'Properties for tower node '//trim( Int2LStr( I ) )//'.', TmpRe7, 7, ErrStat2, ErrMsg2, UnEc )
@@ -925,8 +925,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          InputFileData%rotors(iR)%TwrCd(I)   = TmpRe7( 3)
          InputFileData%rotors(iR)%TwrTI(I)   = TmpRe7( 4)
          InputFileData%rotors(iR)%TwrCb(I)   = TmpRe7( 5)
-         InputFileData%rotors(iR)%TwrCpt(I)  = TmpRe7( 6)
-         InputFileData%rotors(iR)%TwrCat(I)  = TmpRe7( 7)
+         InputFileData%rotors(iR)%TwrCp(I)   = TmpRe7( 6)
+         InputFileData%rotors(iR)%TwrCa(I)   = TmpRe7( 7)
       end do
    enddo
 
@@ -1135,15 +1135,15 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( BladeKInputFileData%BlCenBt, BladeKInputFileData%NumBlNds, 'BlCenBt', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCpc, BladeKInputFileData%NumBlNds, 'BlCpc', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCpn, BladeKInputFileData%NumBlNds, 'BlCpn', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCpe, BladeKInputFileData%NumBlNds, 'BlCpe', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCpt, BladeKInputFileData%NumBlNds, 'BlCpt', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCac, BladeKInputFileData%NumBlNds, 'BlCac', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCan, BladeKInputFileData%NumBlNds, 'BlCan', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCae, BladeKInputFileData%NumBlNds, 'BlCae', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCat, BladeKInputFileData%NumBlNds, 'BlCat', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCap, BladeKInputFileData%NumBlNds, 'BlCap', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCam, BladeKInputFileData%NumBlNds, 'BlCam', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    IF (.not. hasMHK) THEN
@@ -1151,11 +1151,11 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
       BladeKInputFileData%BlCb    = 0.0_ReKi
       BladeKInputFileData%BlCenBn = 0.0_ReKi
       BladeKInputFileData%BlCenBt = 0.0_ReKi
-      BladeKInputFileData%BlCpc   = 0.0_ReKi
-      BladeKInputFileData%BlCpe   = 0.0_ReKi
-      BladeKInputFileData%BlCac   = 0.0_ReKi
-      BladeKInputFileData%BlCae   = 0.0_ReKi
-      BladeKInputFileData%BlCap   = 0.0_ReKi
+      BladeKInputFileData%BlCpn   = 0.0_ReKi
+      BladeKInputFileData%BlCpt   = 0.0_ReKi
+      BladeKInputFileData%BlCan   = 0.0_ReKi
+      BladeKInputFileData%BlCat   = 0.0_ReKi
+      BladeKInputFileData%BlCam   = 0.0_ReKi
    ENDIF
       
       ! Return on error if we didn't allocate space for the next inputs
@@ -1169,9 +1169,9 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
          READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                      BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
                                      BladeKInputFileData%BlAFID(I), BladeKInputFileData%t_c(I), BladeKInputFileData%BlCb(I), &
-                                     BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I), BladeKInputFileData%BlCpc(I), & 
-                                     BladeKInputFileData%BlCpe(I), BladeKInputFileData%BlCac(I), BladeKInputFileData%BlCae(I), &
-                                     BladeKInputFileData%BlCap(I)
+                                     BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I), BladeKInputFileData%BlCpn(I), & 
+                                     BladeKInputFileData%BlCpt(I), BladeKInputFileData%BlCan(I), BladeKInputFileData%BlCat(I), &
+                                     BladeKInputFileData%BlCam(I)
       ELSE
          READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                      BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
@@ -1189,7 +1189,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, AeroProjMod, UnEc, E
             WRITE( UnEc, "(6(F9.4,1x),I9,10(F9.4,1x))", IOStat=IOS) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                   BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
                                   BladeKInputFileData%BlAFID(I), BladeKInputFileData%t_c(I), BladeKInputFileData%BlCb(I), BladeKInputFileData%BlCenBn(I), BladeKInputFileData%BlCenBt(I), &
-                                  BladeKInputFileData%BlCpc(I), BladeKInputFileData%BlCpe(I), BladeKInputFileData%BlCac(I), BladeKInputFileData%BlCae(I), BladeKInputFileData%BlCap(I)
+                                  BladeKInputFileData%BlCpn(I), BladeKInputFileData%BlCpt(I), BladeKInputFileData%BlCan(I), BladeKInputFileData%BlCat(I), BladeKInputFileData%BlCam(I)
          END IF         
    END DO
 
