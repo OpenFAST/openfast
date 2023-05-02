@@ -334,6 +334,10 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       call AllocAry(IW%y%VelocityUVW, 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
       IW%u%PositionXYZ = myNaN
       IW%y%VelocityUVW = myNaN
+      if (i_IW%MHK > 0) then
+         call AllocAry(IW%y%AccelUVW, 3, InitInData%NumWindPoints, 'AccelUVW', errStat2, errMsg2); if (Failed()) return
+         IW%y%AccelUVW = myNaN
+      endif
    else
       ! Module init
       InitInData%InputFileName    = i_IW%InputFile
@@ -344,6 +348,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
       endif
       InitInData%RootName         = trim(Root)//'.IfW'
       InitInData%MHK              = i_IW%MHK
+      InitInData%OutputAccel      = InitInData%MHK > 0
       CALL InflowWind_Init( InitInData, IW%u, IW%p, &
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
@@ -490,7 +495,10 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
          IW%y%VelocityUVW(1,j) = IW%HWindSpeed*(z/IW%RefHt)**IW%PLExp
          IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
          IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
-      end do 
+      end do
+      if (allocated(IW%y%AccelUVW)) then
+         IW%y%AccelUVW(:,j) = 0.0_ReKi
+      endif 
       !$OMP END DO 
       !$OMP END PARALLEL
    endif
@@ -522,6 +530,8 @@ subroutine ADI_AD_InputSolve_IfW(p_AD, u_AD, y_IfW, hubHeightFirst, errStat, err
    call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
 
    if ( p_AD%MHK > 0 ) then
+      node = 1
+      ! Order important!
       if (hubHeightFirst) then
          do iWT=1,size(u_AD%rotors)
             node = node + 1 ! Hub velocities for each rotor
