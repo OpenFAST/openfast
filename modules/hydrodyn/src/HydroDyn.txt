@@ -125,9 +125,8 @@ typedef     ^                 ^                 SiKi                 MCFD       
 #
 # Define outputs from the initialization routine here:
 #
-typedef   ^                            InitOutputType                WAMIT_InitOutputType     WAMIT                           {:}        -        -         "Initialization output from the WAMIT module"    -
-typedef   ^                            ^                             Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             ProgDesc                 Ver                             -          -        -         "Version of HydroDyn"
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_y                      {:}        -        -         "Names of the outputs used in linearization"	-

@@ -60,7 +60,7 @@ typedef     ^                 ^                 SeaSt_Interp_ParameterType      
 #
 #
 # Define outputs from the initialization routine here:
-typedef   ^                            InitOutputType                ReKi                      NULLVAL                        -          -        -         ""  -
+#typedef   ^                            InitOutputType                IntKi                      NULLVAL                        -          -        -         ""  -
 #
 #
 # ..... States ....................................................................................................................

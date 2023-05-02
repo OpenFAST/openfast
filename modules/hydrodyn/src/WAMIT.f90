@@ -96,7 +96,7 @@ CONTAINS
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(WAMIT_InitInputType),       INTENT(INOUT)  :: InitInp       !< Input data for initialization routine.  NOTE: we need INOUT because we may be moving the allocation of SS_Excitation data
@@ -109,13 +109,12 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(WAMIT_OutputType),          INTENT(  OUT)  :: y             !< Initial system outputs (outputs are not calculated; 
                                                                        !!   only the output mesh is initialized)
       TYPE(WAMIT_MiscVarType),         INTENT(  OUT)  :: m             !< Initial misc/optimization variables            
-      REAL(DbKi),                      INTENT(INOUT)  :: Interval      !< Coupling interval in seconds: the rate that 
+      REAL(DbKi),                      INTENT(IN   )  :: Interval      !< Coupling interval in seconds: the rate that 
                                                                        !!   (1) WAMIT_UpdateStates() is called in loose coupling &
                                                                        !!   (2) WAMIT_UpdateDiscState() is called in tight coupling.
                                                                        !!   Input is the suggested time from the glue code; 
                                                                        !!   Output is the actual coupling interval that will be used 
                                                                        !!   by the glue code.
-      TYPE(WAMIT_InitOutputType),      INTENT(  OUT)  :: InitOut       !< Output for initialization routine
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat       !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
@@ -215,7 +214,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       ErrStat  = ErrID_None         
       ErrMsg   = ""               
-      InitOut%NULLVAL = 0 ! set to avoid compiler warnings about INTENT(OUT) not getting set
       
          ! Copy Output Init data from Waves Module Init call
          
@@ -1368,7 +1366,7 @@ end if
     
          
             CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
-                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Interval, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
+                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
             
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
                IF ( ErrStat >= AbortErrLev ) THEN

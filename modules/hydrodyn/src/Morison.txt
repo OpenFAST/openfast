@@ -277,8 +277,6 @@ typedef   ^                            ^                             SiKi       
 #
 # Define outputs from the initialization routine here:
 #
-#typedef   ^                            InitOutputType                MeshType                 Mesh                              -          -        -         "Unused?"    -
-#typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #

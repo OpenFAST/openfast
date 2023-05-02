@@ -61,7 +61,7 @@ CONTAINS
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Conv_Rdtn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
@@ -74,12 +74,6 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
       TYPE(Conv_Rdtn_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
                                                                          !!   only the output mesh is initialized)
       TYPE(Conv_Rdtn_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables
-      REAL(DbKi),                          INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
-                                                                         !!   (1) Conv_Rdtn_UpdateStates() is called in loose coupling &
-                                                                         !!   (2) Conv_Rdtn_UpdateDiscState() is called in tight coupling.
-                                                                         !!   Input is the suggested time from the glue code;
-                                                                         !!   Output is the actual coupling interval that will be used
-                                                                         !!   by the glue code.
       TYPE(Conv_Rdtn_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
       INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -120,7 +114,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
          !   sufficient accuracy in the computation of the radiation impulse response
          !   functions:
       p%NBody      = InitInp%NBody
-      p%RdtnDT     = InitInp%RdtnDT
+      p%RdtnDT     = InitInp%RdtnDT ! this is also Interval
       RdtnOmegaMax = Pi / InitInp%RdtnDT
 
       IF ( InitInp%HighFreq > RdtnOmegaMax      )  THEN   ! .TRUE. if the highest frequency component (not counting infinity) in the WAMIT file is greater than RdtnOmegaMax
@@ -342,10 +336,6 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, 
 
    IF ( ALLOCATED( RdtnTime     ) ) DEALLOCATE( RdtnTime     )
 
-         ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-         !   this module must be called here:
-
-   Interval = p%RdtnDT
 
    m%LastIndRdtn = 0
    OtherState%IndRdtn = 0
