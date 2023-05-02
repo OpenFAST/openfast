@@ -123,7 +123,6 @@ PROGRAM MoorDyn_Driver
    ErrStat = ErrID_None
    UnEcho=-1
    UnIn  =-1
-   UnPtfmMotIn = -1
   
    ! TODO: Sort out error handling (two sets of flags currently used)
   
@@ -693,7 +692,6 @@ CONTAINS
    SUBROUTINE CleanUp()
       if(UnEcho     >0) CLOSE( UnEcho )
       if(UnIn       >0) CLOSE( UnIn )
-      if(UnPtfmMotIn>0) CLOSE( UnPtfmMotIn )
 
       IF (ALLOCATED(MD_u     )) DEALLOCATE(MD_u     )
       IF (ALLOCATED(MD_uTimes)) DEALLOCATE(MD_uTimes)
