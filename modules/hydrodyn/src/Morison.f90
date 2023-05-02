@@ -3204,7 +3204,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                END IF
                            
                CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
-               CALL GetElementHstLds( pos1, pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r1b, r2b, dl, F_B1, F_B2, ErrStat2, ErrMsg2)
+               CALL getElementHstLds_Mod2( pos1, pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r1b, r2b, dl, F_B1, F_B2, ErrStat2, ErrMsg2)
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                ! Add nodal loads to mesh
@@ -4200,7 +4200,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetSectionHstLds
 
-   SUBROUTINE GetElementHstLds( pos1In, pos2In, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
+   SUBROUTINE getElementHstLds_Mod2( pos1In, pos2In, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
       
       REAL(ReKi),      INTENT( IN    ) :: pos1In(3)
       REAL(ReKi),      INTENT( IN    ) :: pos2In(3)
@@ -4220,7 +4220,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi)                       :: dFdl1(6), dFdlMid(6), dFdl2(6), F_B(6)
       REAL(ReKi)                       :: i, rMid, posMid(3), pos1(3), pos2(3)
       INTEGER(IntKi)                   :: secStat1, secStatMid, secStat2
-      CHARACTER(*),    PARAMETER       :: routineName = "GetElementHstLds"
+      CHARACTER(*),    PARAMETER       :: routineName = "getElementHstLds_Mod2"
       INTEGER(IntKi)                   :: errStat2
       CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
@@ -4268,7 +4268,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       F_B1(4:6) = 0.5 * F_B(4:6)
       F_B2(4:6) = 0.5 * F_B(4:6)
 
-   END SUBROUTINE GetElementHstLds
+   END SUBROUTINE getElementHstLds_Mod2
 
    RECURSIVE SUBROUTINE RefineElementHstLds( origin, pos1, posMid, pos2, FSPt, r1, rMid, r2, dl, dRdl,secStat1,secStatMid,secStat2, k_hat, y_hat, z_hat, n_hat, dFdl1, dFdlMid, dFdl2, recurLvl, F_B_5pt, ErrStat, ErrMsg)
 
@@ -4432,6 +4432,156 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       F(4:6) = p%WtrDens * g * (My*y_hat + Mz*z_hat)
 
    END SUBROUTINE GetEndPlateHstLds
+
+   SUBROUTINE getElementHstLds_Mod1( pos1, pos2, Zeta1, Zeta2, k_hat, n_hat, r1, r2, dl, alphaIn, IsFirstElement, F_B0, F_B1, F_B2, ErrStat, ErrMsg )
+      
+      REAL(ReKi),      INTENT( IN    ) :: pos1(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos2(3)
+      REAL(ReKi),      INTENT( IN    ) :: Zeta1
+      REAL(ReKi),      INTENT( IN    ) :: Zeta2
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: n_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: r1
+      REAL(ReKi),      INTENT( IN    ) :: r2
+      REAL(ReKi),      INTENT( IN    ) :: dl
+      REAL(ReKi),      INTENT( IN    ) :: alphaIn
+      LOGICAL,         INTENT( IN    ) :: IsFirstElement
+      REAL(ReKi),      INTENT(   OUT ) :: F_B0(6) ! Lumped load at the first  node of the last    element
+      REAL(ReKi),      INTENT(   OUT ) :: F_B1(6) ! Lumped load at the first  node of the current element
+      REAL(ReKi),      INTENT(   OUT ) :: F_B2(6) ! Lumped load at the second node of the current element
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: alpha, dRdl, SubRatio
+      REAL(ReKi)                       :: Vs, Vrc, Vhc
+      REAL(ReKi)                       :: h0, rh, a0, b0, a0b0, s0, C_1, C_2, Z0
+      REAL(ReKi)                       :: sinGamma, cosGamma, tanGamma
+      REAL(ReKi)                       :: FbVec(3), MbVec(3), FSInt(3), t_hat(3), s_hat(3), r_hat(3)
+      INTEGER(IntKi),  PARAMETER       :: pwr = 3
+      CHARACTER(*),    PARAMETER       :: RoutineName = "getElementHstLds_Mod1"
+      
+      F_B0 = 0.0_ReKi
+      F_B1 = 0.0_ReKi
+      F_B2 = 0.0_ReKi
+
+      dRdl = (r2 - r1)/dl
+
+      IF ( (z1 <= Zeta1) .AND. (z2 <= Zeta2) ) THEN  ! If element is fully submerged
+         ! Compute the waterplane shape, the submerged volume, and it's geometric center
+         ! No need to consider tapered and non-tapered elements separately
+         Vs   =  Pi*dl   *(r1**2 +     r1*r2 +     r2**2 ) /  3.0_ReKi   ! volume of total submerged portion
+         Vhc  =  Pi*dl**2*(r1**2 + 2.0*r1*r2 + 3.0*r2**2 ) / 12.0_ReKi   ! Submerged Volume * h_c
+
+         ! Hydrostatic force on element
+         FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*( r2*r2*z2 - r1*r1*z1) *k_hat
+         FbVec = p%WtrDens * g * FbVec
+
+         ! Hydrostatic moment on element about the lower node
+         MbVec = (Vhc+0.25*Pi*(r2**4-r1**4)) * Cross_Product(k_hat,(/0.0_ReKi,0.0_ReKi,1.0_ReKi/))
+         MbVec = p%WtrDens * g * MbVec
+
+         ! Distribute element load to nodes
+         alpha = alphaIn*(z2-Zeta2)**pwr/(alphaIn*(z2-Zeta2)**pwr+(1.0_ReKi-alphaIn)*(z1-Zeta1)**pwr)
+
+         ! Hydrostatic force
+         F_B1(1:3) = (1-alpha) * FbVec
+         F_B2(1:3) =    alpha  * FbVec
+         
+         ! Hydrostatic moment correction followed by redistribution
+         MbVec = MbVec - Cross_Product( k_hat*dl, F_B1(1:3))
+         F_B1(4:6) = (1-alpha) * MbVec
+         F_B2(4:6) =    alpha  * MbVec
+         
+      ELSE IF ( (z1 <= Zeta1) .AND. (z2 > Zeta2) ) THEN ! Element is partially submerged
+         ! Submergence ratio
+         SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
+         ! The position of the intersection between the free surface and the element
+         FSInt    = SubRatio * (pos2-pos1) + pos1
+         ! Distances along element centerline from point 1 to the waterplane
+         h0       = SubRatio * dl
+         ! Scaled radius of element at point where its centerline crosses the waterplane
+         rh       = r1 + h0*dRdl
+
+         ! Get other relevant unit vectors, t_hat, r_hat, and s_hat
+         t_hat    = Cross_Product(k_hat,n_hat)
+         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
+         cosGamma = Dot_Product(k_hat,n_hat)
+         tanGamma = sinGamma/cosGamma
+         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
+            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
+            IF ( k_hat(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ELSE ! k_hat is close to vertical (0,0,1)
+               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
+            END IF
+         ELSE
+            t_hat = t_hat / sinGamma
+         END IF
+         s_hat = Cross_Product(t_hat,n_hat)
+         r_hat = Cross_Product(t_hat,k_hat)
+
+         ! Compute the waterplane shape, the submerged volume, and it's geometric center
+         IF (abs(dRdl) < 0.0001) THEN  ! non-tapered member
+
+            IF (cosGamma < 0.0001) THEN
+               CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+            END IF
+
+            a0   = r1/cosGamma                                       ! Semi major axis of waterplane
+            b0   = r1                                                ! Semi minor axis of waterplane
+            a0b0 = a0*b0
+            s0   = 0.0_ReKi                                          ! Distance from the center of the waterplane to the element centerline
+            Vs   =       Pi*r1**2*h0                                 ! volume of total submerged portion
+            Vrc  = -0.25*Pi*r1**4*tanGamma                           ! Submerged Volume * r_c
+            Vhc  = 0.125*Pi*r1**2* (4.0*h0**2 + r1**2 * tanGamma**2) ! Submerged Volume * h_c
+
+         ELSE  ! tapered member
+            C_1  = 1.0_ReKi - dRdl**2 * tanGamma**2
+            IF (C_1 < 0.0001) THEN ! The free surface is nearly tangent to the element wall
+               CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+            END IF
+
+            a0   = rh/(C_1*cosGamma)                                 ! Semi major axis of waterplane
+            b0   = rh/sqrt(C_1)                                      ! Semi minor axis of waterplane
+            a0b0 = a0*b0
+            C_2  = a0b0*rh*cosGamma - r1**3
+            s0   = -rh*dRdl*tanGamma/C_1/cosGamma                    ! Distance from the center of the waterplane to the element centerline
+            Vs   =  Pi*C_2/(3.0*dRdl)                                ! volume of total submerged portion
+            Vrc  = -0.25*Pi *  a0b0*rh**2*sinGamma/C_1                                                 ! Submerged Volume * r_c
+            Vhc  =  0.25*Pi * (a0b0*rh**2*cosGamma/C_1 - r1**4 - 4.0_ReKi/3.0_ReKi*r1*C_2 ) /dRdl**2   ! Submerged Volume * h_c
+
+         END IF
+
+         ! z-coordinate of the center of the waterplane in the global earth-fixed system
+         Z0 = z1+h0*k_hat(3)+s0*s_hat(3)  
+
+         ! Hydrostatic force on element
+         FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*a0b0*Z0*n_hat + Pi*r1**2*z1*k_hat
+         FbVec = p%WtrDens * g * FbVec
+
+         ! Hydrostatic moment on element about the lower node
+         MbVec = Cross_Product( Vrc*r_hat+Vhc*k_hat, (/0.0_ReKi,0.0_ReKi,1.0_ReKi/) ) &
+                 + 0.25*Pi*a0b0* ( ( s_hat(3)*a0*a0 + 4.0*(s0-h0*sinGamma)*Z0 )*t_hat - t_hat(3)*b0*b0*s_hat ) &
+                 - 0.25*Pi*r1**4*(   r_hat(3)                                  *t_hat - t_hat(3)   *   r_hat )
+         MbVec = p%WtrDens * g * MbVec
+
+         IF ( IsFirstElement ) THEN ! This is the 1st element of the member
+            ! Assign the element load to the lower (1st) node of the member
+            F_B1(1:3) = FbVec
+            F_B1(4:6) = MbVec
+         ELSE ! This is not the 1st element of the member
+            ! Distribute element load to nodes
+            alpha = (1.0-alphaIn)*(z1-Zeta1)**pwr / ( -alphaIn*(z2-Zeta2)**pwr + (1.0-alphaIn)*(z1-Zeta1)**pwr )
+            ! Hydrostatic force
+            F_B0(1:3) = (1-alpha) * FbVec
+            F_B1(1:3) =    alpha  * FbVec
+            ! Hydrostatic moment correction followed by redistribution
+            MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
+            F_B0(4:6) = (1-alpha) * MbVec
+            F_B1(4:6) =    alpha  * MbVec
+         END IF
+      END IF
+   END SUBROUTINE getElementHstLds_Mod1
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
