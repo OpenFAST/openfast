@@ -2405,7 +2405,7 @@ subroutine Grid3D_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower,
    if (HasTower) then
       FileDat%ZRange = [0.0_Reki, Grid3DField%RefHeight + Grid3DField%ZHWid]
    else
-      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0]
+      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0_ReKi]
    end if
 
    FileDat%ZRange_Limited = .true.

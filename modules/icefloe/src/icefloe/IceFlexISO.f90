@@ -282,7 +282,7 @@ contains
    !  Period is time from no load up to peak, down, then dwell at minimum (normal distribution)
             CALL RndNorm( period, meanPeriod, inParams%periodCOV*meanPeriod )
    !  Period has to be limited to +/- 50% of the mean period
-            period = min(1.5*meanPeriod, max(0.5*meanPeriod, period))
+            period = min(1.5_ReKi*meanPeriod, max(0.5_ReKi*meanPeriod, period))
 
    !  sub period is the fraction of a period: time for load to go up then down (uniform distribution)
             CALL RanLux ( tau )

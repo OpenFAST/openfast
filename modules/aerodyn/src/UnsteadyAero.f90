@@ -1753,7 +1753,7 @@ subroutine BV_getAlphas(i, j, u, p, xd, BL_p, tc, alpha_34, alphaE_L, alphaLag_D
    !print*,'dalpha         ', dalphaL,dalphaD
 
    ! --- Alpha dynamic
-   isgn       = sign(1.0,adotnorm)
+   isgn       = sign(1.0_ReKi,adotnorm)
    alphaE_L   = alpha_34 - dalphaL*isgn
    alphaLag_D = alpha_34 - dalphaD*isgn ! NOTE: not effective alpha yet for drag
 end subroutine BV_getAlphas

@@ -1665,7 +1665,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
             Lmid   = member%FillFSLoc - Za 
             Rmidin = member%Rin(i)+(Lmid/(Zb-Za))*(member%Rin(i+1)-member%Rin(i))  ! radius of member interior at middle of segment, where division occurs
             CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
-            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0_ReKi, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
  
          else if (i == member%i_floor) then     ! Hopefully we don't have a partially filled element crossing the seabed.
  

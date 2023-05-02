@@ -2120,11 +2120,12 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
     real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
     real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
     real(ReKi), intent(inout)   :: cantAngle(n)
+    real(ReKi), parameter       :: ThisTol = 1e-6
     
     do i = 1,size(xi)
         
         xiAbs = abs(xi-xi(i))
-        call hpsort_eps_epw (n, xiAbs, sortInd, 1e-6)
+        call hpsort_eps_epw (n, xiAbs, sortInd, ThisTol)
      
         if (i.eq.1) then
             fIn = f(1:stencilSize)
