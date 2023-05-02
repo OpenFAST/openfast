@@ -1,5 +1,5 @@
 #
-# Copyright 2016 National Renewable Energy Laboratory
+# Copyright 2023 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,20 @@
 # limitations under the License.
 #
 
-if (GENERATE_TYPES)
-  generate_f90_types(src/FEAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FEAMooring_Types.f90)
-endif()
-
-add_library(feamlib
-  src/FEAM.f90
-  src/FEAMooring_Types.f90
+matlab_add_mex(
+  NAME FAST_SFunc
+  SRC 
+    src/FAST_SFunc.c 
+    ${NWTC_SYS_FILE_MATLAB}
+    ${PROJECT_SOURCE_DIR}/modules/servodyn/src/ServoDyn.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Subs.f90
+  LINK_TO openfastlib_static
 )
-target_link_libraries(feamlib nwtclibs)
+target_compile_definitions(FAST_SFunc PRIVATE COMPILE_SIMULINK)
 
-add_executable(feam_driver 
-  src/FEAM_Driver.f90
-)
-target_link_libraries(feam_driver feamlib)
-
-install(TARGETS feamlib feam_driver
+install(TARGETS FAST_SFunc
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
-  ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )

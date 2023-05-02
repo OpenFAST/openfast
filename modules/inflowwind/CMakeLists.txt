@@ -21,7 +21,8 @@ if (GENERATE_TYPES)
   generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
 endif()
 
-add_library(ifwlib_obj OBJECT 
+# InflowWind object library
+add_library(ifwlib 
   src/IfW_FlowField_Types.f90
   src/IfW_FlowField.f90
   src/InflowWind_IO_Types.f90
@@ -30,30 +31,28 @@ add_library(ifwlib_obj OBJECT
   src/InflowWind_Types.f90
   src/InflowWind.f90 
   src/Lidar_Types.f90
-  src/Lidar.f90)
-target_link_libraries(ifwlib_obj nwtclibs_obj)
-
-add_library(ifwlib $<TARGET_OBJECTS:ifwlib_obj>)
+  src/Lidar.f90
+)
 target_link_libraries(ifwlib nwtclibs)
 
-# C-bound interface library
-add_library(ifw_c_binding SHARED src/IfW_C_Binding.f90 $<TARGET_OBJECTS:ifwlib_obj>)
-target_link_libraries(ifw_c_binding nwtclibs versioninfolib ${CMAKE_DL_LIBS})
-
+# InflowWind C-Interface Library
+add_library(ifw_c_binding SHARED 
+  src/IfW_C_Binding.f90
+)
+target_link_libraries(ifw_c_binding ifwlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(ifw_c_binding PUBLIC -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(ifw_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-set(IFW_DRIVER_SOURCES
-  src/InflowWind_Driver_Types.f90
+# InflowWind Driver executable
+add_executable(inflowwind_driver 
+  src/InflowWind_Driver_Types.f90 
   src/InflowWind_Driver_Subs.f90
   src/InflowWind_Driver.f90
 )
-
-add_executable(inflowwind_driver ${IFW_DRIVER_SOURCES})
 target_link_libraries(inflowwind_driver ifwlib versioninfolib)
 
-install(TARGETS inflowwind_driver ifwlib ifw_c_binding ifwlib_obj
+install(TARGETS ifwlib inflowwind_driver ifw_c_binding 
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

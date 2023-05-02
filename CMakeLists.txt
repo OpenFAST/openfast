@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(OpenFAST CXX C Fortran)
 
 include(${CMAKE_SOURCE_DIR}/cmake/OpenfastCmakeUtils.cmake)
@@ -64,9 +64,6 @@ if(BUILD_TESTING)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
 endif()
 option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
-if(BUILD_OPENFAST_SIMULINK_API)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DCOMPILE_SIMULINK")
-endif()
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -94,10 +91,6 @@ if(CODECOVERAGE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
 endif()
 
-if (USE_DLL_INTERFACE)
-  add_definitions(-DUSE_DLL_INTERFACE)
-endif (USE_DLL_INTERFACE)
-
 if (FPE_TRAP_ENABLED)
   add_definitions(-DFPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
@@ -105,13 +98,15 @@ endif (FPE_TRAP_ENABLED)
 # Set the RPATH after configuring the install prefix
 include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 
+#-------------------------------------------------------------------------------
+# BLAS and LAPACK
+#-------------------------------------------------------------------------------
+
 # Find BLAS and LAPACK - set BLA_VENDOR to use a specific version of BLAS and LAPACK
 # For example -DBLA_VENDOR=Intel10_64lp for Intel MKL v10+ 64 bit, threaded code, lp64 model
 # (see https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors)
-find_package(LAPACK)
-if (LAPACK_FOUND)
-  add_link_options(${LAPACK_LINKER_FLAGS})
-elseif (USE_LOCAL_STATIC_LAPACK)
+
+if (USE_LOCAL_STATIC_LAPACK)
   message(STATUS "Downloading and building LAPACK as static libraries for linking with OpenFAST")
   set(BLAS_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}blas${CMAKE_STATIC_LIBRARY_SUFFIX} )
   set(LAPACK_LIB_PATH ${CMAKE_BINARY_DIR}/dependencies/src/lapack-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lapack${CMAKE_STATIC_LIBRARY_SUFFIX})
@@ -126,21 +121,37 @@ elseif (USE_LOCAL_STATIC_LAPACK)
   install(FILES ${LAPACK_LIBRARIES} DESTINATION ${CMAKE_SOURCE_DIR}/install/lib)
   message(STATUS "Using LAPACK libraries: ${LAPACK_LIBRARIES}")
 else()
-  message(FATAL_ERROR "Unable to find BLAS and LAPACK")
+  find_package(LAPACK)
+  if (LAPACK_FOUND)
+    add_link_options(${LAPACK_LINKER_FLAGS})
+  else()
+    message(FATAL_ERROR "Unable to find BLAS and LAPACK")
+  endif()
 endif()
 
-########################################################################
+#-------------------------------------------------------------------------------
+# Simulink
+#-------------------------------------------------------------------------------
+
+if (BUILD_OPENFAST_SIMULINK_API)
+  find_package(Matlab REQUIRED SIMULINK)
+endif ()
+
+#-------------------------------------------------------------------------------
 # Build rules for OpenFAST Registry
-#
+#-------------------------------------------------------------------------------
+
 if(GENERATE_TYPES)
   add_subdirectory(modules/openfast-registry)
 endif()
 
-########################################################################
+#-------------------------------------------------------------------------------
 # OpenFAST modules
-#
+#-------------------------------------------------------------------------------
+
 set(OPENFAST_MODULES
   nwtc-library
+  version
   inflowwind
   aerodyn
   aerodyn14
@@ -151,18 +162,17 @@ set(OPENFAST_MODULES
   hydrodyn
   orcaflex-interface
   extptfm
-  openfoam
-  supercontroller
-  turbsim
-  openfast-library
-  version
   feamooring
   moordyn
   icedyn
   icefloe
-  map
   wakedynamics
   awae
+  map
+  turbsim
+  supercontroller
+  openfoam
+  openfast-library
 )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
@@ -214,7 +224,7 @@ if(BUILD_TESTING)
   include(CTest)
 
   # Find python
-  cmake_policy(SET CMP0094 NEW) # Search for python by LOCATION
+  # cmake_policy(SET CMP0094 NEW) # Search for python by LOCATION
   find_package (Python COMPONENTS Interpreter)
   if(NOT ${Python_Interpreter_FOUND})
     message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
