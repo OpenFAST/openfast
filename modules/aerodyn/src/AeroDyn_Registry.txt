@@ -301,6 +301,8 @@ typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node
 typedef	^	RotMiscVarType	ReKi	HubMB	{:}  	    -	-	  "buoyant moment at hub node"   Nm
 typedef	^	RotMiscVarType	ReKi	NacFB	{:}	        -	-	  "buoyant force at nacelle (tower top) node"   N
 typedef	^	RotMiscVarType	ReKi	NacMB	{:}  	    -	-	  "buoyant moment at nacelle (tower top) node"   Nm
+typedef	^	RotMiscVarType	ReKi	BlFI	{:}{:}{:}	-	-	  "inertia force per unit length at blade node"   N/m
+typedef	^	RotMiscVarType	ReKi	TwrFI	{:}{:}	    -	-	  "inertia force per unit length at tower node"   N/m
 typedef	^	RotMiscVarType	MeshType	BladeRootLoad	{:}	-	-	"meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only)"	-
 typedef	^	RotMiscVarType	MeshMapType	B_L_2_R_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh"
 typedef	^	RotMiscVarType	MeshType	BladeBuoyLoadPoint	{:}	-	-	"point mesh for lumped buoyant blade loads"	-

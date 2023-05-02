@@ -398,7 +398,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
    do iR = 1, nRotors
       if ( p%rotors(iR)%MHK > 0 ) then 
-         call SetInertiaAddedMassParameters( InputFileData%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
+         call SetAddedMassInertiaParameters( InputFileData%rotors(iR), p%rotors(iR), ErrStat2, ErrMsg2 )
          if (Failed()) return;
       end if
    end do
@@ -864,9 +864,13 @@ end if
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':T_P_2_T_L')
          
          if (ErrStat >= AbortErrLev) RETURN
-
+         
+         call AllocAry( m%TwrFI, 3_IntKi, p%NumTwrNds, 'm%TwrFI', ErrStat2, ErrMsg2 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       end if
-
+      
+      call AllocAry( m%BlFI, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlFI', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    end if
 
    ! 
@@ -1491,7 +1495,7 @@ subroutine SetBuoyancyParameters( InputFileData, u, p, ErrStat, ErrMsg )
 end subroutine SetBuoyancyParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets parameters for use during the inertia and added mass calculations; these variables are not changed after AD_Init.
-subroutine SetInertiaAddedMassParameters( InputFileData, p, ErrStat, ErrMsg )
+subroutine SetAddedMassInertiaParameters( InputFileData, p, ErrStat, ErrMsg )
    TYPE(RotInputFile),           INTENT(IN   )  :: InputFileData    !< All the data in the AeroDyn input file
    TYPE(RotParameterType),       INTENT(INOUT)  :: p                !< Parameters
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          !< Error status of the operation
@@ -1504,7 +1508,7 @@ subroutine SetInertiaAddedMassParameters( InputFileData, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: k                !< Loop counter for blades
    INTEGER(IntKi)                               :: j                !< Loop counter for nodes
 
-   CHARACTER(*), PARAMETER                      :: RoutineName = 'SetInertiaAddedMassParameters'
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'SetAddedMassInertiaParameters'
 
 
       ! Initialize variables for this routine
@@ -1554,7 +1558,7 @@ subroutine SetInertiaAddedMassParameters( InputFileData, p, ErrStat, ErrMsg )
 
    end if
 
-end subroutine SetInertiaAddedMassParameters
+end subroutine SetAddedMassInertiaParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -2425,27 +2429,83 @@ subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
       ! Local variables
    INTEGER(IntKi)                                   :: k                !< Loop counter for blades
    INTEGER(IntKi)                                   :: j                !< Loop counter for nodes
+   REAL(ReKi), DIMENSION(3)                         :: aBTemp           !< Inflow acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlFItmp          !< Inertia force at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aTTemp           !< Inflow acceleration at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: TwrFItmp         !< Inertia force at tower node in local coordinates
    CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcAddedMassInertiaLoads'
 
 
       ! Initialize variables for this routine
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   aBTemp    = 0.0_ReKi
+   BlFItmp  = 0.0_ReKi
+   aTTemp    = 0.0_ReKi
+   TwrFItmp  = 0.0_ReKi
 
       ! Blades
    do k = 1,p%NumBlades ! loop through all blades
       do j = 1,p%NumBlNds ! loop through all nodes
 
             ! Convert fluid acceleration at node to local blade coordinates
+         aBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), u%AccelOnBlade(:,j,k) )
 
             ! Calculate per-unit-length inertia forces at node
+         BlFItmp(1) = p%BlIN(j,k) * aBTemp(1)
+         BlFItmp(2) = p%BlIT(j,k) * aBTemp(2)
+         BlFItmp(3) = 0.0_ReKi
 
             ! Convert inertia forces to global coordinates
+         m%BlFI(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlFItmp )
 
-            ! ...
+            ! Convert body acceleration at node to local blade coordinates
+
+            ! Calculate per-unit-length added mass forces at node
+
+            ! Calculate per-unit-length added mass pitching moment at node
+
+            ! Convert added mass forces and moments to global coordinates
          
       end do
    end do
+
+      ! Add added mass and inertia loads to aerodynamic loads 
+   do k = 1,p%NumBlades ! loop through all blades
+      do j = 1,p%NumBlNds ! loop through all nodes
+         y%BladeLoad(k)%Force(:,j) = y%BladeLoad(k)%Force(:,j) + m%BlFI(:,j,k)
+      end do ! j = nodes
+   end do ! k = blades
+
+      ! Tower
+   if ( p%NumTwrNds > 0 ) then
+      do j = 1,p%NumTwrNds ! loop through all nodes
+
+            ! Convert fluid acceleration at node to local tower coordinates
+         aTTemp = matmul( u%TowerMotion%Orientation(:,:,j), u%AccelOnTower(:,j) )
+
+            ! Calculate per-unit-length inertia forces at node
+         TwrFItmp(1) = p%TwrIT(j) * aTTemp(1)
+         TwrFItmp(2) = p%TwrIT(j) * aTTemp(2)
+         TwrFItmp(3) = 0.0_ReKi
+
+            ! Convert inertia forces to global coordinates
+         m%TwrFI(:,j) = matmul( transpose(u%TowerMotion%Orientation(:,:,j)), TwrFItmp )
+
+            ! Convert body acceleration at node to local tower coordinates
+
+            ! Calculate per-unit-length added mass forces at node
+
+            ! Convert added mass forces to global coordinates
+
+      end do
+   end if
+
+      ! Add buoyant loads to aerodynamic loads
+   do j = 1,p%NumTwrNds ! loop through all nodes
+      y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + m%TwrFI(:,j)
+   end do ! j = nodes
+
 end subroutine CalcAddedMassInertiaLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
