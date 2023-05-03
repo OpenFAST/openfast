@@ -57,7 +57,7 @@ PROGRAM MoorDyn_Driver
    TYPE(MD_Drvr_InitInput)               :: drvrInitInp      ! Initialization data for the driver program
    INTEGER                               :: UnIn             ! Unit number for the input file
    INTEGER                               :: UnEcho           ! The local unit number for this module's echo file
-  
+   INTEGER                               :: UnPtfmMotIn
 
    TYPE (MD_InitInputType)               :: MD_InitInp    
    TYPE (MD_ParameterType)               :: MD_p
