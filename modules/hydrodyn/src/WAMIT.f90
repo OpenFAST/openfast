@@ -1351,6 +1351,13 @@ end if
          
          if ( InitInp%RdtnMod == 1 ) THEN
             
+            ! this check used to occur with equivalent variables after calling Conv_Rdtn_Init
+            if (.not. EqualRealNos( InitInp%Conv_Rdtn%RdtnDT, Interval) ) then
+               call SetErrStat(ErrID_Fatal,'RdtnDT must be the same as the HD time step', ErrStat, ErrMsg, RoutineName)
+               call Cleanup()
+               return
+            end if
+               
             ! Set Initialization data for the Conv_Rdtn submodule
             ! Would be nice if there were a copy InitInput function in the *_Types file
             ! BJJ 6/25/2014: There is a copy InitInput function.... ???
@@ -1358,12 +1365,12 @@ end if
             CALL MOVE_ALLOC( HdroFreq,  Conv_Rdtn_InitInp%HdroFreq  )
             CALL MOVE_ALLOC( HdroAddMs, Conv_Rdtn_InitInp%HdroAddMs )
             CALL MOVE_ALLOC( HdroDmpng, Conv_Rdtn_InitInp%HdroDmpng )
-            Conv_Rdtn_InitInp%NBody               = InitInp%NBody      
+            Conv_Rdtn_InitInp%NBody               = InitInp%NBody
             Conv_Rdtn_InitInp%RdtnTMax            = InitInp%RdtnTMax
-            Conv_Rdtn_InitInp%RdtnDT              = InitInp%Conv_Rdtn%RdtnDT                     
-            Conv_Rdtn_InitInp%HighFreq            = HighFreq                          
-            Conv_Rdtn_InitInp%WAMITFile           = InitInp%WAMITFile                      
-            Conv_Rdtn_InitInp%NInpFreq            = NInpFreq                         
+            Conv_Rdtn_InitInp%RdtnDT              = InitInp%Conv_Rdtn%RdtnDT
+            Conv_Rdtn_InitInp%HighFreq            = HighFreq
+            Conv_Rdtn_InitInp%WAMITFile           = InitInp%WAMITFile
+            Conv_Rdtn_InitInp%NInpFreq            = NInpFreq
     
          
             CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
