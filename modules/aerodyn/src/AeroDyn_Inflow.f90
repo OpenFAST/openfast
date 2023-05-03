@@ -497,7 +497,7 @@ subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
          IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
       end do
       if (allocated(IW%y%AccelUVW)) then
-         IW%y%AccelUVW(:,j) = 0.0_ReKi
+         IW%y%AccelUVW = 0.0_ReKi
       endif 
       !$OMP END DO 
       !$OMP END PARALLEL
