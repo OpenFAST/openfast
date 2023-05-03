@@ -2439,10 +2439,10 @@ subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
       ! Initialize variables for this routine
    ErrStat  = ErrID_None
    ErrMsg   = ""
-   aBTemp    = 0.0_ReKi
+   aBTemp   = 0.0_ReKi
    BlFItmp  = 0.0_ReKi
-   aTTemp    = 0.0_ReKi
-   TwrFItmp  = 0.0_ReKi
+   aTTemp   = 0.0_ReKi
+   TwrFItmp = 0.0_ReKi
 
       ! Blades
    do k = 1,p%NumBlades ! loop through all blades
