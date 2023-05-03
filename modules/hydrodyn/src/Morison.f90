@@ -3705,8 +3705,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
          r2      = mem%RMGB(N+1)
-         k_hat   = mem%k
-         CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
             IF (p%WaveStMod > 0) THEN
@@ -3719,9 +3717,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos1(1),pos1(2),0.0/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionFreeSurfaceIntersects( pos1, FSPt, k_hat, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat)
+            CALL GetSectionUnitVectors( k_hat1, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos1, FSPt, k_hat1, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds(pos1, k_hat, y_hat, z_hat, r1, theta1, theta2, F_B_End)
+            CALL GetEndPlateHstLds(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
@@ -3739,9 +3738,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos2(1),pos2(2),0.0/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+            CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+            CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
@@ -3760,9 +3760,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                FSPt = (/pos2(1),pos2(2),0.0/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
-            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+            CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            CALL GetEndPlateHstLds(pos2, k_hat, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+            CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
                IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
