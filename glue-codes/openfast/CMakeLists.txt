@@ -17,7 +17,7 @@
 set (CMAKE_CXX_STANDARD 11)
 
 add_executable(openfast src/FAST_Prog.f90)
-target_link_libraries(openfast openfastlib)
+target_link_libraries(openfast openfastlib_static)
 set_target_properties(openfast PROPERTIES LINKER_LANGUAGE Fortran)
 
 add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp)

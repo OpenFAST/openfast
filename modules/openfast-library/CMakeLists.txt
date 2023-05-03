@@ -37,11 +37,10 @@ elseif (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" A
   set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
-add_library(fasttypeslib 
-  src/FAST_Types.f90
-)
-target_link_libraries(fasttypeslib 
+add_library(openfast_prelib src/FAST_Types.f90)
+target_link_libraries(openfast_prelib 
   nwtclibs
+  versioninfolib
   aerodyn14lib
   aerodynlib
   beamdynlib
@@ -61,44 +60,32 @@ target_link_libraries(fasttypeslib
   subdynlib
 )
 
-add_library(fastlib_obj OBJECT
-  src/FAST_Library.f90
+add_library(openfast_postlib
   src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
   src/FAST_Solver.f90
 )
-target_link_libraries(fastlib_obj fasttypeslib foamfastlib scfastlib versioninfolib)
+target_link_libraries(openfast_postlib openfast_prelib foamfastlib scfastlib)
+target_include_directories(openfast_postlib PUBLIC 
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
+)
+set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER src/FAST_Library.h)
+
+# OpenFAST Library static (openfast, FAST.Farm, Simulink)
+add_library(openfastlib_static INTERFACE)
+target_link_libraries(openfastlib_static INTERFACE openfast_postlib wdlib awaelib)
+set_target_properties(openfastlib_static PROPERTIES LINKER_LANGUAGE Fortran)
+
+# OpenFAST Library shared (Python, openfast_cpp, openfastcpplib)
+add_library(openfastlib SHARED src/FAST_Library.f90)
+target_link_libraries(openfastlib openfast_postlib)
 if(APPLE OR UNIX)
-  target_compile_definitions(fastlib_obj PRIVATE IMPLICIT_DLLEXPORT)
+  target_compile_definitions(openfastlib PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-# OpenFAST Library static (Simulink)
-add_library(openfastlib_static STATIC
-  $<TARGET_OBJECTS:fastlib_obj>
-)
-target_link_libraries(openfastlib_static fastlib_obj)
-target_include_directories(openfastlib_static PUBLIC 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
-)
-set_target_properties(openfastlib_static PROPERTIES 
-  PUBLIC_HEADER src/FAST_Library.h
-  LINKER_LANGUAGE Fortran)
-
-# OpenFAST Library shared (Python, FAST.Farm)
-add_library(openfastlib SHARED
-  $<TARGET_OBJECTS:fastlib_obj>
-)
-target_link_libraries(openfastlib fasttypeslib fastlib_obj)
-target_include_directories(openfastlib PUBLIC 
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
-)
-set_target_properties(openfastlib PROPERTIES 
-  PUBLIC_HEADER src/FAST_Library.h
-  LINKER_LANGUAGE Fortran)
-
 # Install
-install(TARGETS fastlib_obj fasttypeslib openfastlib openfastlib_static 
+install(TARGETS openfast_postlib openfast_prelib openfastlib openfastlib_static
   EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib

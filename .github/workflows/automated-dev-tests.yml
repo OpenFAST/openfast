@@ -189,7 +189,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build openfast-postlib
         working-directory: ${{runner.workspace}}/openfast/build
-        run: cmake --build . --target openfastlib
+        run: cmake --build . --target openfast_postlib
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:

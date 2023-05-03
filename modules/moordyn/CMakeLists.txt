@@ -42,7 +42,7 @@ add_library(moordyn_c_binding SHARED
 )
 target_link_libraries(moordyn_c_binding moordynlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(moordyn_c_binding PUBLIC IMPLICIT_DLLEXPORT)
+   target_compile_definitions(moordyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
 install(TARGETS moordynlib moordyn_driver moordyn_c_binding

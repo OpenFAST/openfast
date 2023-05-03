@@ -22,7 +22,7 @@ add_library(foamtypeslib src/OpenFOAM_Types.f90)
 target_link_libraries(foamtypeslib nwtclibs)
 
 add_library(foamfastlib src/OpenFOAM.f90)
-target_link_libraries(foamfastlib fasttypeslib)
+target_link_libraries(foamfastlib openfast_prelib)
 target_include_directories(foamfastlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )

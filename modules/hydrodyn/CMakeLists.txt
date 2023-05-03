@@ -69,7 +69,7 @@ add_library(hydrodyn_c_binding SHARED
 )
 target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(hydrodyn_c_binding PUBLIC IMPLICIT_DLLEXPORT)
+   target_compile_definitions(hydrodyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
 #add_executable(ss_radiation

@@ -14,16 +14,24 @@
 # limitations under the License.
 #
 
+# Build the matlab shared library (mex) using the current toolchain.
+# Most of the openfast-library is recompiled with COMPILE_SIMULINK defined. 
 matlab_add_mex(
   NAME FAST_SFunc
-  SRC 
-    src/FAST_SFunc.c 
+  SRC src/FAST_SFunc.c
     ${NWTC_SYS_FILE_MATLAB}
     ${PROJECT_SOURCE_DIR}/modules/servodyn/src/ServoDyn.f90
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Subs.f90
-  LINK_TO openfastlib_static
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Lin.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Mods.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Solver.f90
+    ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
+  LINK_TO openfast_prelib foamfastlib scfastlib
 )
-target_compile_definitions(FAST_SFunc PRIVATE COMPILE_SIMULINK)
+target_compile_definitions(FAST_SFunc PUBLIC COMPILE_SIMULINK)
+target_include_directories(FAST_SFunc PUBLIC 
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/openfast-library/src>  
+)
 
 install(TARGETS FAST_SFunc
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

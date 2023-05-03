@@ -96,7 +96,7 @@ add_library(aerodyn_inflow_c_binding SHARED
 )
 target_link_libraries(aerodyn_inflow_c_binding aerodyn_driver_subs versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(aerodyn_inflow_c_binding PUBLIC IMPLICIT_DLLEXPORT)
+   target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
 install(TARGETS aerodynlib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding 
