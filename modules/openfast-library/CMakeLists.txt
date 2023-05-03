@@ -81,7 +81,9 @@ target_link_libraries(openfastlib_static fastlib_obj)
 target_include_directories(openfastlib_static PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-set_target_properties(openfastlib_static PROPERTIES PUBLIC_HEADER src/FAST_Library.h)
+set_target_properties(openfastlib_static PROPERTIES 
+  PUBLIC_HEADER src/FAST_Library.h
+  LINKER_LANGUAGE Fortran)
 
 # OpenFAST Library shared (Python, FAST.Farm)
 add_library(openfastlib SHARED
@@ -91,7 +93,9 @@ target_link_libraries(openfastlib fasttypeslib fastlib_obj)
 target_include_directories(openfastlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-set_target_properties(openfastlib PROPERTIES PUBLIC_HEADER src/FAST_Library.h)
+set_target_properties(openfastlib PROPERTIES 
+  PUBLIC_HEADER src/FAST_Library.h
+  LINKER_LANGUAGE Fortran)
 
 # Install
 install(TARGETS fastlib_obj fasttypeslib openfastlib openfastlib_static 

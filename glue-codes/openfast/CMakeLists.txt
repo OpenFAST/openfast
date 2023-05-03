@@ -18,16 +18,10 @@ set (CMAKE_CXX_STANDARD 11)
 
 add_executable(openfast src/FAST_Prog.f90)
 target_link_libraries(openfast openfastlib)
+set_target_properties(openfast PROPERTIES LINKER_LANGUAGE Fortran)
 
 add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp)
 target_link_libraries(openfast_cpp openfastlib)
-
-if (OPENMP)
-  find_package(OpenMP)
-  if(OpenMP_CXX_FOUND)
-    target_link_libraries(openfast_cpp OpenMP::OpenMP_CXX)
-  endif()
-endif(OPENMP)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
 if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})

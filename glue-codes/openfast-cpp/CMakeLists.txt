@@ -54,14 +54,7 @@ target_link_libraries(openfastcpp
   openfastcpplib 
 )
 target_include_directories(openfastcpp PRIVATE ${YAML_CPP_INCLUDE_DIR})
-
-if (OPENMP)
-  find_package(OpenMP)
-  if(OpenMP_CXX_FOUND)
-    target_link_libraries(openfastcpplib OpenMP::OpenMP_CXX)
-    target_link_libraries(openfastcpp OpenMP::OpenMP_CXX)
-  endif()
-endif(OPENMP)
+set_target_properties(openfastcpp PROPERTIES LINKER_LANGUAGE CXX)
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
@@ -72,8 +65,6 @@ if(MPI_LINK_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
     LINK_FLAGS "${MPI_LINK_FLAGS}")
 endif(MPI_LINK_FLAGS)
-
-set_property(TARGET openfastcpp PROPERTY LINKER_LANGUAGE CXX)
 
 install(TARGETS openfastcpp openfastcpplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

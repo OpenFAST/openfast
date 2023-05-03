@@ -31,6 +31,10 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+#-------------------------------------------------------------------------------
+# Options
+#-------------------------------------------------------------------------------
+
 option(VARIABLE_TRACKING "Enables variable tracking for better runtime debugging output. May increase compile time. Valid only for GNU." on)
 option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
@@ -38,8 +42,9 @@ option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
-option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 option(BUILD_FASTFARM "Enable building FAST.Farm" off)
+option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
+option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
 option(OPENMP "Enable OpenMP support" off)
 option(USE_LOCAL_STATIC_LAPACK "Enable downloading and building static LAPACK and BLAS libs" off)
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -63,7 +68,6 @@ if(BUILD_TESTING)
   option(CODECOVERAGE "Enable infrastructure for measuring code coverage." OFF)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
 endif()
-option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -99,12 +103,25 @@ endif (FPE_TRAP_ENABLED)
 include(${CMAKE_SOURCE_DIR}/cmake/set_rpath.cmake)
 
 #-------------------------------------------------------------------------------
+# OpenMP
+#-------------------------------------------------------------------------------
+
+if (OPENMP OR BUILD_FASTFARM OR BUILD_OPENFAST_CPP_API)
+  FIND_PACKAGE(OpenMP REQUIRED)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_FORTRAN_FLAGS "${CMAKE_FORTRAN_FLAGS} ${OpenMP_FORTRAN_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+
+#-------------------------------------------------------------------------------
 # BLAS and LAPACK
 #-------------------------------------------------------------------------------
 
 # Find BLAS and LAPACK - set BLA_VENDOR to use a specific version of BLAS and LAPACK
 # For example -DBLA_VENDOR=Intel10_64lp for Intel MKL v10+ 64 bit, threaded code, lp64 model
 # (see https://cmake.org/cmake/help/latest/module/FindBLAS.html#blas-lapack-vendors)
+# If USE_LOCAL_STATIC_LAPACK then LAPACK will be downloaded, built, and statically linked.
 
 if (USE_LOCAL_STATIC_LAPACK)
   message(STATUS "Downloading and building LAPACK as static libraries for linking with OpenFAST")
@@ -138,7 +155,7 @@ if (BUILD_OPENFAST_SIMULINK_API)
 endif ()
 
 #-------------------------------------------------------------------------------
-# Build rules for OpenFAST Registry
+# OpenFAST Registry
 #-------------------------------------------------------------------------------
 
 if(GENERATE_TYPES)
@@ -146,7 +163,7 @@ if(GENERATE_TYPES)
 endif()
 
 #-------------------------------------------------------------------------------
-# OpenFAST modules
+# Modules
 #-------------------------------------------------------------------------------
 
 set(OPENFAST_MODULES
@@ -186,11 +203,17 @@ foreach(IDIR IN ITEMS ${OPENFAST_MODULES})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules/${IDIR}")
 endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
 
+#-------------------------------------------------------------------------------
+# Glue Code
+#-------------------------------------------------------------------------------
+
 add_subdirectory(glue-codes)
 
 # Install fortran .mod files also to installation directory
-install(CODE
-  "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}\" \"${CMAKE_INSTALL_PREFIX}/include/openfast/\")")
+install(DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/openfast/
+  FILES_MATCHING PATTERN "*.mod"
+)
 
 # Install the library dependency information
 install(EXPORT OpenFASTLibraries
@@ -217,17 +240,22 @@ configure_package_config_file(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
 
-########################################################################
+#-------------------------------------------------------------------------------
+# Testing
+#-------------------------------------------------------------------------------
 
 # Option configuration
 if(BUILD_TESTING)
   include(CTest)
 
-  # Find python
-  # cmake_policy(SET CMP0094 NEW) # Search for python by LOCATION
+  # Find Python interpreter - used for running tests.
+  # If the wrong version is found, set Python_ROOT_DIR when running CMake.
+  if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0")
+    cmake_policy(SET CMP0094 NEW) # Search for Python by LOCATION
+  endif()
   find_package (Python COMPONENTS Interpreter)
   if(NOT ${Python_Interpreter_FOUND})
-    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
+    message(FATAL_ERROR "CMake cannot find a Python interpreter. Python is required for regression and unit tests." )
   endif()
 
   # regression tests
@@ -238,6 +266,10 @@ if(BUILD_TESTING)
     add_subdirectory(unit_tests)
   endif()
 endif()
+
+#-------------------------------------------------------------------------------
+# Documentation
+#-------------------------------------------------------------------------------
 
 option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
