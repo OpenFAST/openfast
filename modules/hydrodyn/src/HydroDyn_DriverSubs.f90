@@ -361,7 +361,7 @@ SUBROUTINE ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
 
       ! Determine how many lines of data (how many time steps) are in the PRP input file
    CALL GetFileLength(UnIn, trim(drvrData%PRPInputsFile), sizeAry, NumDataLines, NumHeaderLines, ErrStat2, ErrMsg2)
-
+      if (Failed()) return
    CALL AllocAry(TmpAry, sizeAry, 'TmpAry', ErrStat2, ErrMsg2)
       if (Failed()) return
    CALL AllocAry(drvrData%PRPin, NumDataLines, sizeAry-1, 'PRPin', ErrStat2, ErrMsg2)
