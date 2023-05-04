@@ -327,7 +327,7 @@ SUBROUTINE ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
    character(ErrMsgLen)                             :: errMsg2       ! temporary error message 
    character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
    real(ReKi), allocatable                          :: TmpAry(:)
-   
+   integer(IntKi)                                   :: NumDataLines, numHeaderLines
    
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
@@ -353,30 +353,30 @@ SUBROUTINE ReadPRPInputsFile( drvrData, ErrStat, ErrMsg )
       RETURN
       
    END IF
-   
-   CALL AllocAry(TmpAry, sizeAry, 'TmpAry', ErrStat2, ErrMsg2)
-      if (Failed()) return
-   CALL AllocAry(drvrData%PRPin, drvrData%NSteps, sizeAry-1, 'PRPin', ErrStat2, ErrMsg2)
-      if (Failed()) return
-   CALL AllocAry(drvrData%PRPinTime, drvrData%NSteps, 'PRPinTime', ErrStat2, ErrMsg2)
-      if (Failed()) return
       
-   
       ! Open the (PRP or WAMIT) inputs data file
    CALL GetNewUnit( UnIn ) 
    CALL OpenFInpFile ( UnIn, trim(drvrData%PRPInputsFile), ErrStat2, ErrMsg2 )
       if (Failed()) return
-   
+
+      ! Determine how many lines of data (how many time steps) are in the PRP input file
+   CALL GetFileLength(UnIn, trim(drvrData%PRPInputsFile), sizeAry, NumDataLines, NumHeaderLines, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   CALL AllocAry(TmpAry, sizeAry, 'TmpAry', ErrStat2, ErrMsg2)
+      if (Failed()) return
+   CALL AllocAry(drvrData%PRPin, NumDataLines, sizeAry-1, 'PRPin', ErrStat2, ErrMsg2)
+      if (Failed()) return
+   CALL AllocAry(drvrData%PRPinTime, NumDataLines, 'PRPinTime', ErrStat2, ErrMsg2)
+      if (Failed()) return
+
       !seems like it would be more efficient to switch the indices on drvrData%PRPin
-   DO n = 1,drvrData%NSteps
+   DO n = 1,NumDataLines
       CALL ReadAry ( UnIn, drvrData%PRPInputsFile, TmpAry, sizeAry, 'Line', 'drvrData%PRPin', ErrStat2, ErrMsg2, UnEchoLocal )
       drvrData%PRPin(n,:) = TmpAry(2:sizeAry)
       drvrData%PRPinTime(n) = TmpAry(1)
       if (Failed()) return
    END DO
-   
-   
-   
+      
    call Cleanup()
    
 CONTAINS
@@ -394,7 +394,161 @@ CONTAINS
       IF ( UnEchoLocal > 0 ) CLOSE( UnEchoLocal )
    end subroutine Cleanup
    
+   SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
+
+      IMPLICIT NONE
    
+      ! Passed variables
+      INTEGER(IntKi),                     INTENT(IN   )  :: UnitDataFile          !< Unit number of the file we are looking at.
+      CHARACTER(*),                       INTENT(IN   )  :: Filename          !< The name of the file we are looking at.
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataColumns    !< The number of columns in the data file.
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataLines      !< Number of lines containing data
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumHeaderLines    !< Number of header lines at the start of the file
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Error Message to return (empty if all good)
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< Status flag if there were any problems (ErrID_None if all good)
+
+      ! Local Variables
+      CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary message variable.  Used in calls.
+      INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary error status.  Used in calls.
+      INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
+      INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
+      LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
+   
+      CHARACTER(MaxFileInfoLineLen*4)                    :: TextLine          !< One line of text read from the file
+      INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
+      CHARACTER(MaxFileInfoLineLen)                      :: StrRead           !< String containing the first word read in
+      REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+      CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
+      INTEGER(IntKi)                                     :: i                 !< simple integer counter
+      INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
+      LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
+      LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.
+      INTEGER(IntKi)                                     :: NumWords          !< Number of words on a line
+      INTEGER(IntKi)                                     :: FirstDataLineNum  !< Line number of the first row of data in the file
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'GetFileLength'
+   
+      ! Initialize the error handling
+      ErrStat     = ErrID_None
+      ErrStatTmp  = ErrID_None
+      LclErrStat  = ErrID_None
+      ErrMsg      = ''
+      ErrMsgTmp   = ''
+   
+      ! Set some of the flags and counters
+      HaveReadData   = .FALSE.
+      NumDataColumns = 0
+      NumHeaderLines = 0
+      NumDataLines   = 0
+      LineNumber     = 0
+   
+      ! Just in case we were handed a file that we are part way through reading (should never be true), rewind to the start
+      REWIND( UnitDataFile )
+      
+      !------------------------------------
+      !> The variable LclErrStat is used to indicate when we have reached the end of the file or had an error from
+      !! ReadLine.  Until that occurs, we read each line, and decide if it contained any non-numeric data.  The
+      !! first group of lines containing non-numeric data is considered the header.  The first line of all numeric
+      !! data is considered the start of the data section.  Any non-numeric containing found within the data section
+      !! will be considered as an invalid file format at which point we will return a fatal error from this routine.
+   
+      DO WHILE ( LclErrStat == ErrID_None )
+   
+         !> Reset the indicator flag for the non-numeric content
+         LineHasText = .FALSE.
+   
+         !> Read in a single line from the file
+         CALL ReadLine( UnitDataFile, '', TextLine, LineLen, LclErrStat )
+   
+         !> If there was an error in reading the file, then exit.
+         !!    Possible causes: reading beyond end of file in which case we are done so don't process it.
+         IF ( LclErrStat /= ErrID_None ) EXIT
+   
+         !> Increment the line counter.
+         LineNumber  = LineNumber + 1
+   
+         !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
+         !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
+         CALL GetWords( TextLine, Words, SIZE(Words), NumWords )
+   
+         !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
+         !! everything that is on the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
+         !! when the value in Words(i) can be read as a real(SiKi).  'StrRead' will contain the string equivalent.
+         DO i=1,NumWords
+            CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
+            IF ( .NOT. IsRealNum) THEN
+               LineHasText = .TRUE.
+            END IF
+         END DO
+   
+         !> If all the words on that line had no text in them, then it must have been a line of data.
+         !! If not, then we have either a header line, which is ok, or a line containing text in the middle of the
+         !! the data section, which is not good (the flag HaveReadData tells us which case this is).
+         IF ( LineHasText ) THEN
+            IF ( HaveReadData ) THEN      ! Uh oh, we have already read a line of data before now, so there is a problem
+               CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(FileName)// &
+                           ' when real numbers were expected.  There may be a problem with the file.', ErrStat, ErrMsg, RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  RETURN
+               END IF
+            ELSE
+               NumHeaderLines = NumHeaderLines + 1
+            END IF
+         ELSE     ! No text, must be data line
+            NumDataLines = NumDataLines + 1
+            ! If this is the first row of data, then store the number of words that were on the line
+            IF ( .NOT. HaveReadData )  THEN
+               ! If this is the first line of data, keep some relevant info about it and the number of columns in it
+               HaveReadData      = .TRUE.
+               FirstDataLineNum  = LineNumber         ! Keep the line number of the first row of data (for error reporting)
+               NumDataColumns    = NumWords
+            ELSE
+               ! Make sure that the number columns on the row matches the number of columnns on the first row of data.
+               IF ( NumWords /= NumDataColumns ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' Error in data file: '//TRIM(Filename)//'.'// &
+                          ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
+                          '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
+                          ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
+                          ErrStat, ErrMsg, RoutineName)
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     RETURN
+                  END IF
+               END IF
+            END IF
+         END IF
+      END DO 
+      REWIND( UnitDataFile )
+   END SUBROUTINE GetFileLength
+
+   SUBROUTINE ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
+   
+      CHARACTER(*),        INTENT(IN   )           :: StringToParse  !< The string we were handed.
+      REAL(SiKi),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
+      LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
+      INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
+      CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
+      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+     
+      ! Initialize some things
+      ErrStat     = ErrID_None
+      ErrMsg      = ''
+      
+      ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
+      READ(StringToParse,*,IOSTAT=IOErrStat)   StrRead
+      READ(StringToParse,*,IOSTAT=IOErrStat)   ValueRead
+     
+      ! If IOErrStat==0, then we have a real number, anything else is a problem.
+      IF (IOErrStat==0) THEN
+         IsRealNum   = .TRUE.
+      ELSE
+         IsRealNum   = .FALSE.
+         ValueRead   = NaN                ! This is NaN as defined in the NWTC_Num.
+         ErrMsg      = 'Not a real number. '//TRIM(ErrMsg)//NewLine
+         ErrSTat     = ErrID_Severe
+      END IF
+   
+      RETURN
+   END SUBROUTINE ReadRealNumberFromString
 
 END SUBROUTINE ReadPRPInputsFile
 !----------------------------------------------------------------------------------------------------------------------------------
