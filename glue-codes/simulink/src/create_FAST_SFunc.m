@@ -1,4 +1,8 @@
 %% INSTRUCTIONS
+% This script is used to manually build a Simulink mex file which uses the openfastlib shared library (.dll, .so, .dylib).
+% If you are building OpenFAST with CMake on linux or macOS or windows, you can automatically generate the mex file
+% by specifying -DBUILD_OPENFAST_SIMULINK_API=ON when running cmake, you do not need to use this script.
+%
 % Before running this script, you must have compiled OpenFAST for Simulink to create a DLL (i.e., a shared library like .so, .dylib, .lib, etc.).
 % - If cmake was used, make sure the install directory is specified properly in the `installDir` variable below,
 %   and if using Windows, set `built_with_visualStudio` to false.
