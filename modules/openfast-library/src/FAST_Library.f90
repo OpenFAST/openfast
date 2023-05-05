@@ -318,10 +318,6 @@ subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, En
    OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global 
    OutputAry(2:NumOutputs_c) = Outputs 
 
-   CALL FillOutputAry_T(Turbine(iTurb), Outputs)
-   OutputAry(1)              = Turbine(iTurb)%m_FAST%t_global
-   OutputAry(2:NumOutputs_c) = Outputs
-
 #ifdef CONSOLE_FILE   
    if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
 #endif   

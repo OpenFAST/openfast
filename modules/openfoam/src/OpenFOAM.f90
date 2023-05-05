@@ -1031,7 +1031,6 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Line2 to Line2 mapping expects the destination mesh to be smaller than the source mesh for deformation mapping and larger than the source mesh for load mapping. This forces me to create nodes at the very ends of the blade.
 
 
    ! Tower
@@ -1094,9 +1093,9 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
 
        ! Iterate on a chord-based non-uniform spacing.
        counter = 0
-       e(:) = 1.0e+6
+       e = 1.0e+6
        eTol = 1.0e-6
-       eSum = sqrt(sum(e(:) * e(:)))
+       eSum = sqrt(sum(e*e))
        do while ((eSum .gt. eTol) .and. (counter < 50))
 
           !set the non-uniform spacing to ds = (sum(ds^) / sum(c^)) * c^, where
@@ -1128,11 +1127,8 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
 
        end do
 
-       print*, "Using chord-scaled blade force node clustering."
-       print*, "   -converged to ", eSum, " in ", counter," iterations."
-      !do i = 1, p_OpFM%nNodesForceBlade
-      !   print*, "r, c(",i,") = ", pNonUniform(i), cNonUniform(i)
-      !end do
+       CALL WrScr("Using chord-scaled blade force node clustering")
+       CALL WrScr(" -converged to "//trim(Num2LStr(eSum))//" in "//trim(Num2LStr(counter))//" iterations.")
    end if
 
 
