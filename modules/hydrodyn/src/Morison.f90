@@ -3122,12 +3122,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + mem%dRdl_in(i)*dl**2/3.0 )*cosphi )
 
             ! forces and moment in tilted coordinates about node i
-            !Fl = mem%Cfl_fb(i)*cosPhi     
             Fr = mem%Cfr_fb(i)*sinPhi     
             Moment  = mem%CM0_fb(i)*sinPhi - Fr*mem%alpha_fb_star(i)*dl
            
             ! calculate full vector and distribute to nodes
-            !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), m%F_BF(:, mem%NodeIndx(i)), m%F_BF(:, mem%NodeIndx(i+1)))
             call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), F_B1, F_B2)
             m%memberLoads(im)%F_BF(:, i)   = m%memberLoads(im)%F_BF(:, i) + F_B2  ! 1-alpha
             m%memberLoads(im)%F_BF(:, i+1) = m%memberLoads(im)%F_BF(:, i+1) + F_B1 ! alpha
@@ -3145,7 +3143,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Moment  = mem%CM0_fb(i)*sinPhi + Fr*(1 - mem%alpha_fb_star(i))*dl
         
             ! calculate full vector and distribute to nodes
-            !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), m%F_BF(:, mem%NodeIndx(i)), m%F_BF(:, mem%NodeIndx(i-1)))
             call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), F_B1, F_B2)
             m%memberLoads(im)%F_BF(:, i) = m%memberLoads(im)%F_BF(:, i) + F_B1     ! alpha
             m%memberLoads(im)%F_BF(:, i-1) = m%memberLoads(im)%F_BF(:, i-1) + F_B2 ! 1- alpha
@@ -3275,7 +3272,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
               
-           
               !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
               IF (mem%PropMCF) THEN
                  f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
@@ -3770,7 +3766,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                    CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
                END IF
             END IF
-         else
+         ! else
             ! entire member is buried below the seabed
          end if
          
@@ -4411,8 +4407,6 @@ subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
    real(ReKi), intent(in   ) :: dl
    real(ReKi), intent(in   ) :: h_c
    real(ReKi), intent(inout) :: lumpedLoad(6)
-   !lumpedLoad(1:3) = lumpedLoad(1:3) + f_hydro*dl
-   !lumpedLoad(4:6) = lumpedLoad(4:6) + cross_product(k_hat*h_c, f_hydro)*dl
    lumpedLoad(1:3) = f_hydro*dl
    lumpedLoad(4:6) = cross_product(k_hat*h_c, f_hydro)*dl
 end subroutine LumpDistrHydroLoads
@@ -4431,50 +4425,21 @@ SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, a
    
    REAL(ReKi),                     INTENT    ( OUT   )  :: F1(6)   ! (N, Nm) force/moment vector for node i
    REAL(ReKi),                     INTENT    ( OUT   )  :: F2(6)   ! (N, Nm) force/moment vector for the other node (whether i+1, or i-1)
-         
-
-   !F1(1) = F1(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(2) = F1(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(3) = F1(3) +          (Fl*cosPhi - Fr*sinPhi)*alpha
-   !F1(4) = F1(4) +  sinBeta * M                    *alpha
-   !F1(5) = F1(5) +  cosBeta * M                    *alpha
-   !!F1(6) = F1(6) + 0.0
-   !   
-   !F2(1) = F2(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(2) = F2(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(3) = F2(3) +          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   !F2(4) = F2(4) +  sinBeta * M                    *(1-alpha)
-   !F2(5) = F2(5) +  cosBeta * M                    *(1-alpha)
-   !!F2(6) = F2(6) + 0.0
    
    F1(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
    F1(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(3) =         (Fl*cosPhi - Fr*sinPhi)*alpha
-   F1(4) =  -sinBeta * M                    *alpha
+   F1(3) =          (Fl*cosPhi - Fr*sinPhi)*alpha
+   F1(4) = -sinBeta * M                    *alpha
    F1(5) =  cosBeta * M                    *alpha
    F1(6) =  0.0
       
    F2(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
    F2(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
    F2(3) =          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   F2(4) =  -sinBeta * M                    *(1-alpha)
+   F2(4) = -sinBeta * M                    *(1-alpha)
    F2(5) =  cosBeta * M                    *(1-alpha)
-   F2(6) = 0.0
+   F2(6) =  0.0
    
-   !F1(1) =  cosBeta*(-Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(2) =  sinBeta*(-Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(3) =         (Fl*cosPhi + Fr*sinPhi)*alpha
-   !F1(4) =  -sinBeta * M                    *alpha
-   !F1(5) =  cosBeta * M                    *alpha
-   !F1(6) =  0.0
-   !   
-   !F2(1) =  cosBeta*(-Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(2) =  sinBeta*(-Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(3) =          (Fl*cosPhi + Fr*sinPhi)*(1-alpha)
-   !F2(4) =  -sinBeta * M                    *(1-alpha)
-   !F2(5) =  cosBeta * M                    *(1-alpha)
-   !F2(6) = 0.0
-
 END SUBROUTINE DistributeElementLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on end node i and converts to 6DOF loads, adding to the nodes existing loads
