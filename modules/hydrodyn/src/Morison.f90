@@ -3189,15 +3189,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      ! Get the z-positions of the two end nodes of the member to determine whether the member is surface piercing 
-      z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
-      z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
-      ! Include displacement if wave stretching enabled and WaveDisp /= 0
-      IF ( p%WaveStMod > 0 .AND. p%WaveDisp /= 0 ) THEN
-        z1 = z1 + u%Mesh%TranslationDisp(3, mem%NodeIndx(1))
-        z2 = z2 + u%Mesh%TranslationDisp(3, mem%NodeIndx(N+1))
-      END IF
-
       IF ( p%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
       !----------------------------Apply load smoothing----------------------------!
       ! only when:
