@@ -2909,7 +2909,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! Determine member submergence status
       IF ( p%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
          IF ( m%nodeInWater(mem%NodeIndx(1)) .NE. m%nodeInWater(mem%NodeIndx(N+1)) ) THEN
-            MemSubStat = 2_IntKi  ! Member centerline crosses the SWL once
+            MemSubStat = 1_IntKi  ! Member centerline crosses the SWL once
          ELSE IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
             MemSubStat = 3_IntKi  ! Member centerline completely above water
          ELSE
@@ -2923,9 +2923,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             END IF
          END DO
          IF (NumFSX .EQ. 1_IntKi) THEN
-            MemSubStat = 2_IntKi  ! Member centerline crosses the free surface once
+            MemSubStat = 1_IntKi  ! Member centerline crosses the free surface once
          ELSE IF (NumFSX .GT. 1_IntKi) THEN
-            MemSubStat = 3_IntKi  ! Member centerline crosses the free surface multiple time
+            MemSubStat = 2_IntKi  ! Member centerline crosses the free surface multiple time
          ELSE ! Member centerline does not cross the free surface
             IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
                MemSubStat = 3_IntKi  ! Member centerline completely above water
