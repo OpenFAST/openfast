@@ -2643,7 +2643,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: pos1Prime(3)
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
-
+   INTEGER(IntKi)           :: MemSubStat, NumFSX
    REAL(ReKi)               :: theta1, theta2, dFdl(6), y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
    INTEGER(IntKi)           :: secStat
 
@@ -2905,6 +2905,35 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_WMG = 0.0_ReKi
       m%memberLoads(im)%F_IMG = 0.0_ReKi
       m%memberLoads(im)%F_If  = 0.0_ReKi
+
+      ! Determine member submergence status
+      IF ( p%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
+         IF ( m%nodeInWater(mem%NodeIndx(1)) .NE. m%nodeInWater(mem%NodeIndx(N+1)) ) THEN
+            MemSubStat = 2_IntKi  ! Member centerline crosses the SWL once
+         ELSE IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
+            MemSubStat = 3_IntKi  ! Member centerline completely above water
+         ELSE
+            MemSubStat = 0_IntKi  ! Member centerline fully submerged
+         END IF 
+      ELSE IF ( p%WaveStMod > 0_IntKi ) THEN ! Has wave stretching - Need to check every node
+         NumFSX = 0_IntKi ! Number of free-surface crossing
+         DO i = 1, N ! loop through member elements
+            IF ( m%nodeInWater(mem%NodeIndx(i)) .NE. m%nodeInWater(mem%NodeIndx(i+1)) ) THEN
+               NumFSX = NumFSX + 1
+            END IF
+         END DO
+         IF (NumFSX .EQ. 1_IntKi) THEN
+            MemSubStat = 2_IntKi  ! Member centerline crosses the free surface once
+         ELSE IF (NumFSX .GT. 1_IntKi) THEN
+            MemSubStat = 3_IntKi  ! Member centerline crosses the free surface multiple time
+         ELSE ! Member centerline does not cross the free surface
+            IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
+               MemSubStat = 3_IntKi  ! Member centerline completely above water
+            ELSE
+               MemSubStat = 0_IntKi  ! Member centerline completely submerged
+            END IF
+         END IF
+      END IF
 
       !---------------- Marine growth and Buoyancy: Sides: Only if member not modeled with potential flow theory ----------------  
       IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
@@ -3169,9 +3198,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         z2 = z2 + u%Mesh%TranslationDisp(3, mem%NodeIndx(N+1))
       END IF
 
-      IF ( p%WaveStMod > 0 .AND. z1 <= m%WaveElev(mem%NodeIndx(1)) .AND. z2 > m%WaveElev(mem%NodeIndx(N+1)) ) THEN 
-      
-      !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
+      IF ( p%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
+      !----------------------------Apply load smoothing----------------------------!
+      ! only when:
+      ! 1. wave stretching is enabled
+      ! 2. member centerline crosses the free surface exactly once
+      ! 3. the last node is out of water, which implies the first node is in water
                 
         FSElem = -1 ! Initialize the No. of the partially wetted element as -1
       
@@ -3248,6 +3280,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL undisplaced; zero added-mass force
                     f_hydro = 0.0_ReKi
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
                  ELSE
                     ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
                     z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL ! Undisplaced z-position of the next node
@@ -3513,8 +3546,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
         END IF
 
-      ELSE !----------------------------Non-surface Piercing Member or No Wave Stretching----------------------------!
-      
+      ELSE IF ( MemSubStat .NE. 3_IntKi) THEN ! Skip members with centerline completely out of water
+        !----------------------------No load smoothing----------------------------!
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
            ! Using the initial z-position to be consistent with the evaluation of wave kinematics
@@ -3524,44 +3557,67 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ELSE
               ! Use initial z-position
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
-           END IF
-                                
+           END IF         
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
-           ! Default value for fully submerged interior node
-           deltal = mem%dl
-           h_c    = 0.0_ReKi
-           
-           ! Look to the "left" toward node 1
-           IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
-              deltalLeft = 0.0_ReKi
-           ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
-              ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
-              !       This is the correct behavior.
-              deltalLeft = -mem%h_floor
-           ELSE ! Regular internal node
-              deltalLeft = 0.5_ReKi * mem%dl
-           END IF
-
-           ! Look to the "right" toward node N+1
-           IF ( i == N+1 ) THEN ! Last node
-              deltalRight = 0.0_ReKi
-           ELSE
-              deltalRight = 0.5_ReKi * mem%dl
-              ! Need to check if element i crosses the SWL, but only if WaveStMod == 0
-              ! With wave stretching, surface-piercing members are already handled by the IF branch
-              IF (p%WaveStMod==0) THEN ! No wave stretching
-                 ! Initial z position will always be used
-                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
-                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltalRight = h
+           ! Cannot make any assumption about WaveStMod and member orientation 
+           IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 0_IntKi ) THEN ! Node is out of water
+              deltal = 0.0_ReKi
+              h_c    = 0.0_ReKi
+           ELSE ! Node in water
+              ! Look to the "left" toward node 1
+              IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
+                 deltalLeft = 0.0_ReKi
+              ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
+                 ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
+                 !       This is the correct behavior.
+                 deltalLeft = -mem%h_floor
+              ELSE ! Regular internal node
+                 IF ( m%NodeInWater(mem%NodeIndx(i-1)) .EQ. 1_IntKi ) THEN ! Node to the left is submerged
+                    deltalLeft = 0.5_ReKi * mem%dl
+                 ELSE ! Element i-1 crosses the free surface
+                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i-1)) - p%MSL2SWL
+                    ELSE ! Use initial z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) - p%MSL2SWL 
+                    END IF
+                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                       zeta1 = m%WaveElev(mem%NodeIndx(i  ))
+                       zeta2 = m%WaveElev(mem%NodeIndx(i-1))
+                    ELSE
+                       zeta1 = 0.0_ReKi
+                       zeta2 = 0.0_ReKi
+                    END IF
+                    SubRatio = (zeta1-z1)/((zeta1-z1)-(zeta2-z2))
+                    deltalLeft = SubRatio * mem%dl ! Portion of element i-1 in water
                  END IF
               END IF
+              ! Look to the "right" toward node N+1
+              IF ( i == N+1 ) THEN ! Last node
+                 deltalRight = 0.0_ReKi
+              ELSE ! Regular internal node
+                 IF ( m%NodeInWater(mem%NodeIndx(i+1)) .EQ. 1_IntKi ) THEN ! Node to the right is submerged
+                    deltalRight = 0.5_ReKi * mem%dl
+                 ELSE ! Element i crosses the free surface
+                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                    ELSE ! Use initial z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL 
+                    END IF
+                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                       zeta1 = m%WaveElev(mem%NodeIndx(i  ))
+                       zeta2 = m%WaveElev(mem%NodeIndx(i+1))
+                    ELSE
+                       zeta1 = 0.0_ReKi
+                       zeta2 = 0.0_ReKi
+                    END IF
+                    SubRatio = (zeta1-z1)/((zeta1-z1)-(zeta2-z2))
+                    deltalRight = SubRatio * mem%dl ! Portion of element i in water
+                 END IF
+              END IF
+              ! Combine left and right contributions
+              deltal =              deltalRight + deltalLeft
+              h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
            END IF
-
-           ! Combine left and right contributions
-           deltal =              deltalRight + deltalLeft
-           h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
 
            ! Compute the slope of the member radius
            IF (i == 1) THEN
@@ -3586,13 +3642,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( .NOT. mem%PropPot ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )  * m%nodeInWater(mem%NodeIndx(i))
-              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Always compute added-mass force on nodes below SWL when undisplaced
+                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
+                 IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL when undisplaced; zero added-mass force
+                    f_hydro = 0.0_ReKi
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+                 ELSE ! Node at or below SWL when undisplaced
+                    IF ( i == 1 ) THEN
+                       deltalLeft = 0.0_ReKi
+                    ELSE IF ( i == mem%i_floor+1 ) THEN
+                       deltalLeft = -mem%h_floor
+                    ELSE
+                       deltalLeft = 0.5_ReKi * mem%dl
+                    END IF
+                    IF ( i == N+1 ) THEN
+                       deltalRight = 0.0_ReKi
+                    ELSE
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                       IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
+                          deltalRight = -z1 / mem%cosPhi_ref
+                       ELSE
+                          deltalRight = 0.5_ReKi * mem%dl
+                       END IF
+                    END IF
+                    deltal_AM =              deltalRight + deltalLeft
+                    h_c_AM    = 0.5_ReKi * ( deltalRight - deltalLeft )
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal_AM, h_c_AM, m%memberLoads(im)%F_A(:, i) )
+                 END IF
+              ELSE ! Compute added-mass force on the instantaneous wetted section of the member
+                 f_hydro = f_hydro * m%nodeInWater(mem%NodeIndx(i)) ! Zero the force if node above free surface
+                 CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              END IF ! AMMod 0 or 1
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
-           
-              !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
               
+              !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
               IF ( mem%PropMCF ) THEN
                  f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
                               2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
@@ -3602,8 +3687,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                               2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
                               2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
               END IF
-                           
-                           
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
