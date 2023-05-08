@@ -763,6 +763,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of FAST output files (overrides normal operation) [-]
     INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
     INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
+    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======
@@ -48056,6 +48057,7 @@ ENDIF
     DstExternInitTypeData%RootName = SrcExternInitTypeData%RootName
     DstExternInitTypeData%NumActForcePtsBlade = SrcExternInitTypeData%NumActForcePtsBlade
     DstExternInitTypeData%NumActForcePtsTower = SrcExternInitTypeData%NumActForcePtsTower
+    DstExternInitTypeData%NodeClusterType = SrcExternInitTypeData%NodeClusterType
  END SUBROUTINE FAST_CopyExternInitType
 
  SUBROUTINE FAST_DestroyExternInitType( ExternInitTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -48148,6 +48150,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Int_BufSz  = Int_BufSz  + 1  ! NumActForcePtsBlade
       Int_BufSz  = Int_BufSz  + 1  ! NumActForcePtsTower
+      Int_BufSz  = Int_BufSz  + 1  ! NodeClusterType
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -48246,6 +48249,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsBlade
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsTower
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_PackExternInitType
 
@@ -48361,6 +48366,8 @@ ENDIF
     OutData%NumActForcePtsBlade = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumActForcePtsTower = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_UnPackExternInitType
 
