@@ -1061,7 +1061,7 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
        pUniform(i) = (i-1)*dRforceNodes
    end do
    pUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
-   p_OpFM%forceBldRnodes(:) = pUniform(:)
+   p_OpFM%forceBldRnodes = pUniform
 
    if (p_OpFM%NodeClusterType .eq. 0) then
        print*, "Using uniform blade force node clustering."
@@ -1085,7 +1085,7 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
 
        ! For chord-based clustering (increase resolution in regions of decreased chord), an iterative solution to the grid spacing is used.
        ! The initial guess to the spacing is uniform spacing, so start with that.
-       pNonUniform(:) = pUniform(:)
+       pNonUniform = pUniform
 
        ! Get the chord at the initial force points.
        call OpFM_InterpolateForceNodesChord(initOut_AD, p_OpFM, u_OpFM, ErrStat2, ErrMsg2)
@@ -1101,26 +1101,26 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrSta
           !set the non-uniform spacing to ds = (sum(ds^) / sum(c^)) * c^, where
           !the ^ denotes from the last iteration.  To begin the iteration, we
           !use ds = uniform.
-          sNonUniform(:) = (p_OpFM%BladeLength)*cNonUniform(:)/(sum(cNonUniform(2:p_OpFM%nNodesForceBlade-1)) + 0.5*(cNonUniform(1)+cNonUniform(p_OpFM%nNodesForceBlade)))
+          sNonUniform = (p_OpFM%BladeLength)*cNonUniform/(sum(cNonUniform(2:p_OpFM%nNodesForceBlade-1)) + 0.5*(cNonUniform(1)+cNonUniform(p_OpFM%nNodesForceBlade)))
 
           ! set the new blade points based on the new ds.
           do i = 2, p_OpFM%nNodesForceBlade
              pNonUniform(i) = pNonUniform(i-1) + 0.5*(sNonUniform(i-1) + sNonUniform(i))
           end do
           pNonUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
-          p_OpFM%forceBldRnodes(:) = pNonUniform(:)
+          p_OpFM%forceBldRnodes = pNonUniform
 
           ! interpolate chord to the new points to get the updated chord values
           call OpFM_InterpolateForceNodesChord(initOut_AD, p_OpFM, u_OpFM,ErrStat2, ErrMsg2)
           cNonUniform(1:p_OpFM%nNodesForceBlade) = u_OpFM%forceNodesChord(2:p_OpFM%nNodesForceBlade+1)
 
           ! compute a = c/ds
-          cByS(:) = cNonUniform(:)/sNonUniform(:)
+          cByS = cNonUniform/sNonUniform
 
           ! check how a = c/s varies along the span and take its rms to check
           ! convergence.
-          e(:) = cByS(2:p_OpFM%nNodesForceBlade) - cByS(1:p_OpFM%nNodesForceBlade-1)
-          eSum = sqrt(sum(e(:) * e(:)))
+          e = cByS(2:p_OpFM%nNodesForceBlade) - cByS(1:p_OpFM%nNodesForceBlade-1)
+          eSum = sqrt(sum(e*e))
 
           ! increment the iteration counter
           counter = counter + 1
