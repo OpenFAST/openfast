@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/MoorDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MoorDyn_Types.f90)
 endif()
 
-set(MOORDYN_LIBS_SOURCES
+add_library(moordynlib
   src/MoorDyn.f90
   src/MoorDyn_Body.f90
   src/MoorDyn_IO.f90
@@ -28,33 +28,27 @@ set(MOORDYN_LIBS_SOURCES
   src/MoorDyn_Rod.f90
   src/MoorDyn_Types.f90
 )
-
-add_library(moordynlib_obj OBJECT ${MOORDYN_LIBS_SOURCES})
-target_link_libraries(moordynlib_obj nwtclibs_obj)
-
-add_library(moordynlib $<TARGET_OBJECTS:moordynlib_obj>)
 target_link_libraries(moordynlib nwtclibs)
 
-# c-bindings interface library
-add_library(moordyn_c_binding SHARED src/MoorDyn_C_Binding.f90)
-target_link_libraries(moordyn_c_binding moordynlib versioninfolib ${CMAKE_DL_LIBS})
+# Driver
+add_executable(moordyn_driver 
+  src/MoorDyn_Driver.f90
+)
+target_link_libraries(moordyn_driver moordynlib versioninfolib)
+
+# C-bindings interface library
+add_library(moordyn_c_binding SHARED 
+  src/MoorDyn_C_Binding.f90
+)
+target_link_libraries(moordyn_c_binding moordynlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(moordyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(moordyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-
-install(TARGETS moordynlib moordynlib_obj
+install(TARGETS moordynlib moordyn_driver moordyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-  RUNTIME DESTINATION lib
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
-
-set(MD_DRIVER_SOURCES src/MoorDyn_Driver.f90)
-add_executable(moordyn_driver ${MD_DRIVER_SOURCES})
-target_link_libraries(moordyn_driver moordynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
-
-install(TARGETS moordyn_driver
   RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+)
 

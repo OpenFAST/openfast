@@ -1,5 +1,5 @@
 #
-# Copyright 2021 National Renewable Energy Laboratory
+# Copyright 2023 National Renewable Energy Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SeaState.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Types.f90 -noextrap)
 endif()
 
-set(SEAST_SOURCES
+add_library(seastlib
   src/Current.f90
   src/Waves.f90
   src/Waves2.f90
@@ -37,22 +37,17 @@ set(SEAST_SOURCES
   src/SeaState_Interp_Types.f90
   src/SeaState_Types.f90
 )
-
-add_library(seastlib_obj OBJECT ${SEAST_SOURCES})
-target_link_libraries(seastlib_obj nwtclibs_obj versioninfolib_obj)
-
-add_library(seastlib $<TARGET_OBJECTS:seastlib_obj>)
 target_link_libraries(seastlib nwtclibs versioninfolib)
 
-set(SEAST_DRIVER_SOURCES
+# Driver
+add_executable(seastate_driver 
   src/SeaState_DriverCode.f90
 )
+target_link_libraries(seastate_driver seastlib)
 
-add_executable(seastate_driver ${SEAST_DRIVER_SOURCES})
-target_link_libraries(seastate_driver seastlib ${CMAKE_DL_LIBS})
-
-install(TARGETS seastate_driver seastlib seastlib_obj
+install(TARGETS seastate_driver seastlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)
