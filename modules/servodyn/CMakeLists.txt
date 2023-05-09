@@ -19,7 +19,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/ServoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ServoDyn_Types.f90)
 endif()
 
-set(SrvD_SOURCES
+add_library(servodynlib 
   src/BladedInterface.f90
   src/BladedInterface_EX.f90
   src/UserSubs.f90
@@ -31,12 +31,13 @@ set(SrvD_SOURCES
   src/StrucCtrl_Types.f90
   src/ServoDyn_Types.f90
 )
-
-add_library(servodynlib ${SrvD_SOURCES})
 target_link_libraries(servodynlib nwtclibs)
 
-add_executable(servodyn_driver src/ServoDyn_Driver.f90)
-target_link_libraries(servodyn_driver servodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+# Driver
+add_executable(servodyn_driver 
+  src/ServoDyn_Driver.f90
+)
+target_link_libraries(servodyn_driver servodynlib versioninfolib)
 
 # The Structural Control driver is currently not functional, so commenting this temporarily
 # add_executable(strucctrl_driver src/StrucCtrl_Driver.f90)

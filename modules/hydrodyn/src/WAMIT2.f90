@@ -769,14 +769,14 @@ END SUBROUTINE WAMIT2_Init
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
-      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
+!      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+!      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
       INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
       INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
-      INTEGER(IntKi)                                     :: K                    !< Generic counter
+!      INTEGER(IntKi)                                     :: K                    !< Generic counter
       CHARACTER(*), PARAMETER                            :: RoutineName = 'MnDrift_InitCalc'
 
 
@@ -1308,13 +1308,13 @@ END SUBROUTINE WAMIT2_Init
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
       REAL(SiKi)                                         :: TmpReal1             !< Temporary real
-      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
+!     REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
       INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
       INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
-      INTEGER(IntKi)                                     :: K                    !< Generic counter
+!      INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
       CHARACTER(*), PARAMETER                            :: RoutineName = 'NewmanApp_InitCalc'
 
@@ -2168,10 +2168,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! If something went wrong during allocation of the temporary arrays...
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2184,10 +2181,7 @@ END SUBROUTINE WAMIT2_Init
       CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
@@ -2199,10 +2193,7 @@ END SUBROUTINE WAMIT2_Init
       CALL MnDrift_InitCalc( InitInp, p, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2216,10 +2207,7 @@ END SUBROUTINE WAMIT2_Init
                      ErrStat,ErrMsg,RoutineName)
       ENDDO
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2293,10 +2281,7 @@ END SUBROUTINE WAMIT2_Init
                                              DiffQTFData%Data4D%WvDir1, DiffQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
                         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                         IF (ErrStat >= AbortErrLev ) THEN
-                           IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                           IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+                           call cleanup()
                            RETURN
                         ENDIF
 
@@ -2377,10 +2362,7 @@ END SUBROUTINE WAMIT2_Init
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+               call cleanup()
                RETURN
             END IF
 
@@ -2404,20 +2386,22 @@ END SUBROUTINE WAMIT2_Init
       CALL  ExitFFT(FFT_Data, ErrStatTmp)
       CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
+      call cleanup()
+      
+   contains
+!--------------------------------------------------- 
+      subroutine cleanup()
 
-         ! Cleanup
-      IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
-
-
+            ! Cleanup
+         IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+      end subroutine cleanup
+!--------------------------------------------------- 
    END SUBROUTINE DiffQTF_InitCalc
 
 
@@ -3061,7 +3045,7 @@ END SUBROUTINE WAMIT2_Init
 
          ! Temporary Error Variables
       INTEGER(IntKi)                                     :: ErrStatTmp     !< Temporary variable for the local error status
-      CHARACTER(2048)                                    :: ErrMsgTmp      !< Temporary error message variable
+!      CHARACTER(2048)                                    :: ErrMsgTmp      !< Temporary error message variable
       CHARACTER(*), PARAMETER                            :: RoutineName = 'CheckInitInput'
 
       !> ## Subroutine contents
@@ -4733,6 +4717,21 @@ END SUBROUTINE WAMIT2_Init
             RETURN
          endif
 
+            ! Check that it is a valid force component
+         if (TmpCoord(5) < 1 .or. TmpCoord(5) > 6*Data4D%NumBodies) then
+            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
+                           ' contains force component '//TRIM(Num2LStr(TmpCoord(5)))//' which is outside the expected force '// &
+                           ' range of 1 to '//TRIM(Num2Lstr(6*Data4D%NumBodies))//' for a '//TRIM(Num2LStr(Data4D%NumBodies))// &
+                           ' body system.', ErrStat, ErrMsg, RoutineName)
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         endif
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
             !! is a partial dimensionalization since the wave amplitudes are not included (this is done later
@@ -5010,7 +5009,7 @@ END SUBROUTINE WAMIT2_Init
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Message about the error
 
          ! Local variables
-      REAL(SiKi)                                         :: TmpReal           !< Temporary real value
+!      REAL(SiKi)                                         :: TmpReal           !< Temporary real value
       INTEGER(IntKi)                                     :: I                 !< Generic counter
       INTEGER(IntKi)                                     :: J                 !< Generic counter
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArray(:)   !< Temporary real array
@@ -5153,9 +5152,9 @@ END SUBROUTINE WAMIT2_Init
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
       REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
+!      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(NWTC_SizeOfNumWord)                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-      INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+      INTEGER(IntKi)                                     :: i !,j,k             !< simple integer counters
       INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
       LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
       LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.

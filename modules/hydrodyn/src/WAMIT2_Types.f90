@@ -38,7 +38,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WAMIT2_InitInputType
     LOGICAL  :: HasWAMIT      !< .TRUE. if using WAMIT model, .FALSE. otherwise [-]
     CHARACTER(1024)  :: WAMITFile      !< Root of the filename for WAMIT2 outputs [-]
-    INTEGER(IntKi)  :: UnSum      !< The unit number for the HydroDyn summary file [-]
     INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefxt      !< The xt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ] [(m)]
@@ -122,7 +121,6 @@ CONTAINS
    ErrMsg  = ""
     DstInitInputData%HasWAMIT = SrcInitInputData%HasWAMIT
     DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
-    DstInitInputData%UnSum = SrcInitInputData%UnSum
     DstInitInputData%NBody = SrcInitInputData%NBody
     DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
 IF (ALLOCATED(SrcInitInputData%PtfmRefxt)) THEN
@@ -310,7 +308,6 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! HasWAMIT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%WAMITFile)  ! WAMITFile
-      Int_BufSz  = Int_BufSz  + 1  ! UnSum
       Int_BufSz  = Int_BufSz  + 1  ! NBody
       Int_BufSz  = Int_BufSz  + 1  ! NBodyMod
   Int_BufSz   = Int_BufSz   + 1     ! PtfmRefxt allocated yes/no
@@ -403,8 +400,6 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%WAMITFile(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    IntKiBuf(Int_Xferred) = InData%UnSum
-    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NBody
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NBodyMod
@@ -594,8 +589,6 @@ ENDIF
       OutData%WAMITFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%UnSum = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
     OutData%NBody = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NBodyMod = IntKiBuf(Int_Xferred)

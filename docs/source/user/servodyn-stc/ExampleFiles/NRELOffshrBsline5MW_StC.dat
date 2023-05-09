@@ -3,7 +3,7 @@ Input file for tuned mass damper, module by Matt Lackner, Meghan Glade, and Semy
 ---------------------- SIMULATION CONTROL --------------------------------------
 True          Echo         - Echo input data to <RootName>.ech (flag)
 ---------------------- StC DEGREES OF FREEDOM ----------------------------------
-          2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series}
+          2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series; 5: Force determined by external DLL}
 true          StC_X_DOF    - DOF on or off for StC X (flag) [Used only when StC_DOF_MODE=1]
 true          StC_Y_DOF    - DOF on or off for StC Y (flag) [Used only when StC_DOF_MODE=1]
 FALSE         StC_Z_DOF    - DOF on or off for StC Z (flag) [Used only when StC_DOF_MODE=1]

@@ -205,8 +205,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PCurrVyiPz0   = Current_InitOut%PCurrVyiPz0
          
 
+      
+         ! distribute wave field and turbine location variables as needed to submodule initInputs
+      InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
+      InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
+      InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
+      
+      
 
-         ! Initialize Waves module
+         ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
       
@@ -229,6 +236,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL CleanUp()
          RETURN
       END IF
+      
       
       
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
@@ -518,7 +526,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        CALL MOVE_ALLOC( Waves_InitOut%WaveElevC, InitOut%WaveElevC ) ! For WAMIT
        InitOut%WaveDirMin   =  Waves_InitOut%WaveDirMin          ! For WAMIT and WAMIT2
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
-       InitOut%WaveDir      =  Waves_InitOut%WaveDir             ! For WAMIT for use in SS_Excitation
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        
        
@@ -536,6 +543,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
+       InitOut%WaveDir      =  InputFileData%Waves%WaveDir       ! For WAMIT for use in SS_Excitation
+       InitOut%WtrDens      =  InputFileData%Waves%WtrDens
+       InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
+       InitOut%MSL2SWL      =  InputFileData%MSL2SWL
+       
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:

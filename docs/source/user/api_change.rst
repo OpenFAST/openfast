@@ -9,19 +9,156 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-
-OpenFAST v3.2.0 to OpenFAST `dev`
+OpenFAST v3.4.0 to OpenFAST dev 
 ----------------------------------
 
+Updated the CMake build system.  Now requires CMake v3.12 or higher.
+
+============================================= ==== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name           Example Value
+============================================= ==== ==================== ========================================================================================================================================================================================================
+ServoDyn-StructCtrl                            6   StC_DOF_MODE         2   StC_DOF_MODE - DOF mode (switch) {0: No StC or TLCD DOF; 1: StC_X_DOF, StC_Y_DOF, and/or StC_Z_DOF (three independent StC DOFs); 2: StC_XY_DOF (Omni-Directional StC); 3: TLCD; 4: Prescribed force/moment time series; 5: Force determined by external DLL}
+InflowWind                                     8   VelInterpCubic              true   VelInterpCubic      - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]
+InflowWind                                     51                       ================== LIDAR Parameters ===========================================================================
+InflowWind                                     52  SensorType                     0   SensorType          - Switch for lidar configuration (0 = None, 1 = Single Point Beam(s), 2 = Continuous, 3 = Pulsed)
+InflowWind                                     53  NumPulseGate                   0   NumPulseGate        - Number of lidar measurement gates (used when SensorType = 3)
+InflowWind                                     54  PulseSpacing                  30   PulseSpacing        - Distance between range gates (m) (used when SensorType = 3)
+InflowWind                                     55  NumBeam                        0   NumBeam             - Number of lidar measurement beams (0-5)(used when SensorType = 1)
+InflowWind                                     56  FocalDistanceX              -200   FocalDistanceX      - Focal distance co-ordinates of the lidar beam in the x direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     57  FocalDistanceY                 0   FocalDistanceY      - Focal distance co-ordinates of the lidar beam in the y direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     58  FocalDistanceZ                 0   FocalDistanceZ      - Focal distance co-ordinates of the lidar beam in the z direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)
+InflowWind                                     59  RotorApexOffsetPos   0.0 0.0 0.0   RotorApexOffsetPos  - Offset of the lidar from hub height (m)
+InflowWind                                     60  URefLid                       17   URefLid             - Reference average wind speed for the lidar[m/s]
+InflowWind                                     61  MeasurementInterval         0.25   MeasurementInterval - Time between each measurement [s]
+InflowWind                                     62  LidRadialVel               False   LidRadialVel        - TRUE => return radial component, FALSE => return 'x' direction estimate
+InflowWind                                     63  ConsiderHubMotion              1   ConsiderHubMotion   - Flag whether to consider the hub motion's impact on Lidar measurements
+============================================= ==== ==================== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v3.4.0 to OpenFAST v3.4.1 
+----------------------------------
+
+Restored the AeroDyn channel names with `Aero` in the name.  These had be
+changed to `Fld` in v3.4.0 which caused headaches for users.  The `Fld` names
+are now aliases to the `Aero` names.
+
+
+OpenFAST v3.3.0 to OpenFAST v3.4.0 
+----------------------------------
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `3.4.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
+FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
+FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]
+FAST.Farm                                     70   NumVortices       DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100] [only used if Mod_Wake=2]
+FAST.Farm                                     71   sigma_D           DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimensionalized by rotor diameter (-) [DEFAULT=0.2] [only used if Mod_Wake=2]
+FAST.Farm                                     72   FilterInit        DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] (switch)
+FAST.Farm                                     73   k_vCurl           DEFAULT    k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FAST.Farm                                     74   Mod_Projection    DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is projected in AWAE {1: keep all components, 2: project against plane normal} or DEFAULT [DEFAULT=1: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wake is 2] (switch)
+FAST.Farm                                     91   OutAllPlanes      DEFAULT    OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
+AeroDyn 15                                    13   Buoyancy          True       Buoyancy          - Include buoyancy effects? (flag)
+AeroDyn 15                                    65   HubPropsSection   ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    66   VolHub            7.0        VolHub            - Hub volume (m^3)
+AeroDyn 15                                    67   HubCenBx          0.5        HubCenBx          - Hub center of buoyancy x direction offset (m)
+AeroDyn 15                                    68   NacPropsSection   ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+AeroDyn 15                                    69   VolNac            32.0       VolNac            - Nacelle volume (m^3)
+AeroDyn 15                                    70   NacCenB           0.4,0,0    NacCenB           - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+AeroDyn 15                                    71   TFinPropsSection  ======  Tail fin Aerodynamics ======================================================================== 
+AeroDyn 15                                    72   TFinAero          True      TFinAero            - Calculate tail fin aerodynamics model (flag)
+AeroDyn 15                                    73   TFinFile\$        "AD_Fin.dat"  TFinFile        - Input file for tail fin aerodynamics [used only when TFinAero=True]
+AeroDyn 15                                         TwrCb             1.0        [additional column in *Tower Influence and Aerodynamics* table]
+AeroDyn blade                                      BlCb              0.187      [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBn           0.3        [additional column in *Blade Properties* table]
+AeroDyn blade                                      BlCenBt           0.1        [additional column in *Blade Properties* table]
+OLAF                                          18   nNWPanelFree      180       nNWPanelFree       - Number of free near-wake panels (-) {default: nNWPanels}
+OLAF                                          19   nFWPanels         900       nFWPanels          - Number of far-wake panels (-) {default: 0}
+OLAF                                          20   nFWPanelsFree     0         nFWPanelsFree      - Number of free far-wake panels (-) {default: nFWPanels}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+\*Exact line number depends on number of entries in various preceeding tables.
+
+\$ The content of the tail fin input file is described in :numref:`TF_tf_input-file`.
+
+**New Default Values**:
+The following default value were changed 
+
+- OLAF *VelocityMethod* is now 2 (particle tree), previous value 1 (n^2 BiotSavart law on segments). 
+- OLAF *WakeRegMethod* is now 3 (increasing with wake age), previous value was 1 (constant).
+- OLAF *nVTKBlades* is now 0 (no wake panels output), previous value was 1 (wake panels output for blade 1)
+
+
 ============================================= ==== =============== ========================================================================================================================================================================================================
-Added in OpenFAST dev 
+Removed in OpenFAST v3.4.0
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
-AeroDyn driver                                54\* WrVTK_Type      1           WrVTK_Type    - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+OLAF                                          18   WakeLength      900     WakeLength         Total wake distance [integer] (number of time steps)
+OLAF                                          19   FreeWakeLength  0       FreeWakeLength     Wake length that is free [integer] (number of time steps) {default: WakeLength}
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v3.2.0 to OpenFAST v3.3.0
+----------------------------------
+
+
+============================================= ==== ================= ========================================================================================================================================================================================================
+Added in OpenFAST `3.3.0`
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== ================= ========================================================================================================================================================================================================
+FAST.Farm                                     9    ModWaveField      2           Mod_WaveField     - Wave field handling (-) (switch) {1: use individual HydroDyn inputs without adjustment, 2: adjust wave phases based on turbine offsets from farm origin}
+FAST.Farm                                     10   Mod_SharedMooring 0           Mod_SharedMooring - Shared mooring system model (switch) {0: None, 3=MoorDyn}}
+FAST.Farm                                     13   na                ------ SHARED MOORING SYSTEM ------ [used only for Mod_SharedMoor>0]
+FAST.Farm                                     14   SharedMoorFile    ""          SharedMoorFile   -  Name of file containing shared mooring system input parameters (quoted string) [used only when Mod_SharedMooring > 0]
+FAST.Farm                                     15   DT_Mooring        0.04        DT_Mooring       -  Time step for farm-level mooring coupling with each turbine (s) [used only when Mod_SharedMooring > 0]
+AeroDyn driver                                54\* WrVTK_Type        1           WrVTK_Type       - VTK visualization data type: (switch) {1=surfaces; 2=lines; 3=both}
+============================================= ==== ================= ========================================================================================================================================================================================================
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Modified in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    na                Name     Diam      MassDen       EA    BA/-zeta    EI    Cd      Ca     CdAx   CaAx
+MoorDyn\&                                     6    na                (-)       (m)      (kg/m)        (N)    (N-s/-)    (-)   (-)     (-)    (-)    (-)
+MoorDyn\&                                     7    na                main     0.0766    113.35     7.536E8     -1.0      0    2.0     0.8    0.4   0.25
+MoorDyn\&                                     8\*  na                ---------------------- POINTS --------------------------------
+MoorDyn\&                                     9\*  na                ID     Attachment   X          Y         Z      M      V       CdA   CA
+MoorDyn\&                                     10\* na                (-)    (-)         (m)        (m)       (m)    (kg)   (m^3)   (m^2)  (-)
+MoorDyn\&                                     11\* na                1      Fixed     418.8      725.383   -200.0     0      0       0     0
+MoorDyn\&                                     17\* na                ---------------------- LINES --------------------------------------
+MoorDyn\&                                     18\* na                ID      LineType   AttachA   AttachB  UnstrLen  NumSegs   Outputs
+MoorDyn\&                                     19\* na                (-)       (-)       (-)       (-)         (m)      (-)         (-)
+MoorDyn\&                                     20\* na                1         main       1         4        835.35      20          -
+============================================= ==== =============== ========================================================================================================================================================================================================
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
+
+============================================= ==== =============== ========================================================================================================================================================================================================
+Removed in OpenFAST v3.3.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name        Example Value
+============================================= ==== =============== ========================================================================================================================================================================================================
+MoorDyn\&                                     5    NTypes            1        NTypes    - number of LineTypes
+MoorDyn\&                                     10\* NConnects         6        NConnects - number of connections including anchors and fairleads
+MoorDyn\&                                     20\* NLines            3        NLines    - number of line objects
 ============================================= ==== =============== ========================================================================================================================================================================================================
 
 \*Exact line number depends on number of entries in various preceeding tables.
+
+\&MoorDyn has undergone an extensive revision that leaves few lines unchanged. We recommend looking at a sample input file for the 5MW_OC4Semi_WSt_WavesWN regression test for reference rather than line by line changes in the above tables.
+
 
 
 OpenFAST v3.1.0 to OpenFAST v3.2.0
@@ -59,12 +196,12 @@ ServoDyn                                      62   AfC_Mean        0            
 ServoDyn                                      63   AfC_Amp         0             AfC_Amp      - Amplitude for cosine cycling of flap signal (-) [used only with AfCmode==1]
 ServoDyn                                      64   AfC_Phase       0             AfC_Phase    - Phase relative to the blade azimuth (0 is vertical) for cosine cycling of flap signal (deg) [used only with AfCmode==1]
 ServoDyn                                      74   CablesSection   ---------------------- CABLE CONTROL -------------------------------------------
-ServoDyn                                      75   CCmode          0             CCmode       - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
+ServoDyn                                      75   CCmode          0          CCmode            - Cable control mode {0: none, 4: user-defined from Simulink/Labview, 5: user-defined from Bladed-style DLL} (switch)
 HydroDyn driver                               6    WtrDens         1025       WtrDens           - Water density (kg/m^3)
 HydroDyn driver                               7    WtrDpth         200        WtrDpth           - Water depth (m)
 HydroDyn driver                               8    MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
 OpenFAST                                      21   MHK             0          MHK               - MHK turbine type (switch) {0=Not an MHK turbine; 1=Fixed MHK turbine; 2=Floating MHK turbine}
-OpenFAST                                      22   N/A             ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
+OpenFAST                                      22   EnvCondSection  ---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
 OpenFAST                                      23   Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 OpenFAST                                      24   AirDens         1.225      AirDens           - Air density (kg/m^3)
 OpenFAST                                      25   WtrDens         1025       WtrDens           - Water density (kg/m^3)
@@ -74,13 +211,24 @@ OpenFAST                                      28   Patm            103500     Pa
 OpenFAST                                      29   Pvap            1700       Pvap              - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
 OpenFAST                                      30   WtrDpth         50         WtrDpth           - Water depth (m)
 OpenFAST                                      31   MSL2SWL         0          MSL2SWL           - Offset between still-water level and mean sea level (m) [positive upward]
-AeroDyn 15                                    40   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
-AeroDyn 15                                    41   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
+AeroDyn 15                                    39   UAStartRad      0.25       UAStartRad        - Starting radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAStartRad=0]
+AeroDyn 15                                    40   UAEndRad        0.95       UAEndRad          - Ending radius for dynamic stall (fraction of rotor radius) [used only when AFAeroMod=2; if line is missing UAEndRad=1]
 AeroDyn driver                                34   Twr2Shft        3.09343    Twr2Shft          - Vertical distance from the tower-top to the rotor shaft (m)
 AirFoilTables                                 12\* alphaUpper      5.0        alphaUpper        ! Angle of attack at upper boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data
 AirFoilTables                                 13\* alphaLower      \-3.0      alphaLower        ! Angle of attack at lower boundary of fully-attached region. (deg) [used only when UAMod=5] ! THIS IS AN OPTIONAL LINE; if omitted, it will be calculated from the polar data 		   
 AirFoilTables                                 42\* UACutout_delta  "DEFAULT"  UACutout_delta    ! Delta angle of attack below UACutout where unsteady aerodynamics begin to turn off (blend with steady solution) (deg) [Specifying the string "Default" sets UACutout_delta to 5 degrees] ! THIS IS AN OPTIONAL LINE; if omitted, it will be set to its default value
+FASTFarm                                      28   Mod_Wake        1          Mod_Wake          -  Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FASTFarm                                      62   Swirl           False      Swirl             - Switch to include swirl velocities in wake [only used if Mod_Wake=2 or Mod_Wake=3] (-) (switch)
+FASTFarm                                      63   k_VortexDecay   0.         k_VortexDecay     - Vortex decay constant for curl (-)
+FASTFarm                                      64   NumVortices     DEFAULT    NumVortices       - The number of vortices in the curled wake model (-) [DEFAULT=100]
+FASTFarm                                      65   sigma_D         DEFAULT    sigma_D           - The width of the vortices in the curled wake model non-dimesionalized by rotor diameter (-) [DEFAULT=0.2]
+FASTFarm                                      66   FilterInit      DEFAULT    FilterInit        - Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=1] [unused for Mod_Wake=1] (switch)
+FASTFarm                                      67   k_vCurl         20         k_vCurl           - Calibrated parameter for scaling the eddy viscosity in the curled-wake model (-) [only used if Mod_Wake=2 or Mod_Wake=3] [>=0] or DEFAULT [DEFAULT=2.0 ]  
+FASTFarm                                      68   Mod_Projection  DEFAULT    Mod_Projection    - Switch to select how the wake plane velocity is project
+FASTFarm                                      85   OutAllPlanes    True       OutAllPlanes      - Output all wake planes at all time steps. [DEFAULT=False]
 ============================================= ==== =============== ========================================================================================================================================================================================================
+
+
 
 \*non-comment line count, excluding lines contained if NumCoords is not 0, and including all OPTIONAL lines in the UA coefficients table.
 
@@ -105,7 +253,7 @@ Removed in OpenFAST v3.1.0
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== =============== ========================================================================================================================================================================================================
 AeroDyn                                       21   FluidDepth      0.5        FluidDepth        - Water depth above mid-hub height (m) [used only when CavitCheck=True]
-ElastoDyn                                     7    N/A             ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
+ElastoDyn                                     7    EnvCondSection  ---------------------- ENVIRONMENTAL CONDITION ---------------------------------
 ElastoDyn                                     8    Gravity         9.80665    Gravity           - Gravitational acceleration (m/s^2)
 ============================================= ==== =============== ========================================================================================================================================================================================================
 

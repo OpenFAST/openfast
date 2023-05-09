@@ -1665,7 +1665,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
             Lmid   = member%FillFSLoc - Za 
             Rmidin = member%Rin(i)+(Lmid/(Zb-Za))*(member%Rin(i+1)-member%Rin(i))  ! radius of member interior at middle of segment, where division occurs
             CALL FloodedBallastPartSegment(member%Rin(i  ), Rmidin,  Lmid, member%FillDens, Vballast_l, member%m_fb_l(i), member%h_cfb_l(i), member%I_lfb_l(i), member%I_rfb_l(i))   ! get precomputed quantities for lower half-segment
-            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
+            CALL FloodedBallastPartSegment(member%Rin(i+1), Rmidin, -Lmid, 0.0_ReKi, Vballast_u, member%m_fb_u(i), member%h_cfb_u(i), member%I_lfb_u(i), member%I_rfb_u(i))   ! get precomputed quantities for upper half-segment
  
          else if (i == member%i_floor) then     ! Hopefully we don't have a partially filled element crossing the seabed.
  
@@ -1974,7 +1974,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call AllocateNodeLoadVariables(InitInp, p, m, p%NNodes, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
-   call MOVE_ALLOC( InitInp%nodeInWater, p%nodeInWater )   
    
    ! Create the input and output meshes associated with loads at the nodes     
    CALL MeshCreate( BlankMesh      = u%Mesh          &
@@ -2159,7 +2158,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
             END IF
          
          END DO   !J = 1, InitInp%InpJoints(I)%NConnections
-         
+
          Vn = Vn*TwoPi/3.0_ReKi ! Semisphere volume is Vn = 2/3 pi \sum (r_MG^3 k)
          
          p%An_End(:,i) = An_drag 
@@ -2178,7 +2177,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Constant part of the external hydrodynamic added mass term
          if ( Vmag > 0.0 ) then
             v2D(:,1) = Vn        
-            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(v2D,transpose(v2D)) 
+            p%AM_End(:,:,i) = (InitInp%Nodes(I)%JAxCa*InitInp%WtrDens/ Vmag)*matmul(v2D, transpose(v2D))
          end if
          
          ! Constant part of the external hydrodynamic dynamic pressure force
@@ -2340,9 +2339,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-      
-   GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-
+   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
+      GetAlpha = 0.0_ReKi
+   else
+      GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
+   end if
    
 END FUNCTION GetAlpha
 
@@ -2553,7 +2554,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 !   REAL(ReKi)                                        :: F_DP(6)
    REAL(ReKi)                                        :: vmag, vmagf
    INTEGER                                           :: I, J, K
-   REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
 
 
@@ -4022,13 +4022,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!
    !                                      External Hydrodynamic Joint Loads - End                                  !
    !---------------------------------------------------------------------------------------------------------------!    
-   ! Map calculated results into the AllOuts Array
-   CALL MrsnOut_MapOutputs(y, p, u, m, AllOuts)
+   ! Map calculated results into the y%WriteOutput Array
+   CALL MrsnOut_MapOutputs(y, p, u, m)
         
-   ! Put the output data in the WriteOutput array
-   DO I = 1,p%NumOuts
-      y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-   END DO
 
 
    CONTAINS

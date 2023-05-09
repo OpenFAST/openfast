@@ -57,7 +57,7 @@ FUNCTION GetVersion(ThisProgVer, Cmpl4SFun, Cmpl4LV)
 
    CHARACTER(200)                  :: git_commit
 
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled on '//__DATE__//' at '//__TIME__
 
    if (present(Cmpl4SFun)) then
       IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink

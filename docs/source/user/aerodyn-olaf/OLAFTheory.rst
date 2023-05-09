@@ -241,7 +241,7 @@ approach using the following steps:
 
    .. math::
       \begin{aligned}
-         \Gamma_{ll,j} =\frac{1}{2} C_{l,j}(\alpha_j) \frac{\left[ (\vec{v}_j  \cdot \vec{N})^2 +  (\vec{v}_j  \cdot \vec{T})^2\right]^2\,dA}{
+         \Gamma_{ll,j} =\frac{1}{2} C_{l,j}(\alpha_j) \frac{\left[ (\vec{v}_j  \cdot \vec{N})^2 +  (\vec{v}_j  \cdot \vec{T})^2\right]\,dA}{
          \sqrt{\left[(\vec{v}_j\times \vec{dl})\cdot\vec{N}\right]^2 + \left[(\vec{v}_j\times \vec{dl})\cdot\vec{T}\right]^2}
          }   %\label{eq:}
       ,\quad\text{with}
@@ -278,11 +278,13 @@ approach using the following steps:
 No-flow-through Method
 ^^^^^^^^^^^^^^^^^^^^^^
 
-A Weissinger-L-based representation (:cite:`olaf-Weissinger47_1`)
-of the lifting surface is also
-available (:cite:`olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`). In this
-method, the circulation is solved by satisfying a no-flow through
-condition at the 1/4-chord points.  It is selected with **CircSolvMethod=[2]**.
+A no-flow-through circulation solving method
+(sometimes called Weissinger-L-based method)
+might be implemented in the future
+(:cite:`olaf-Weissinger47_1,olaf-Bagai94_1,olaf-Gupta06_1,olaf-Ribera07_1`).
+In this method, the circulation is solved by satisfying a no-flow through
+condition at the 1/4-chord points.  
+It would be selected with **CircSolvMethod=[2]** but is currently no implemented.
 
 Prescribed Circulation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -341,6 +343,39 @@ where :math:`d\psi/dt=\Omega` and
 :math:`d\psi=d\zeta` (:cite:`olaf-Leishman02_1`). Here,
 :math:`\vec{r}(\psi,\zeta)` is the position vector of a Lagrangian
 marker, and :math:`\vec{V}[\vec{r}(\psi,\zeta)]` is the velocity.
+
+
+.. _sec:vortconvfrozen:
+
+Frozen Vorticity Convection
+---------------------------
+
+For computational efficiency, the user can define "frozen" near wake and far wake zones.
+In these zones, the Lagrangian markers are convected using an common induced velocity
+which is independent of the radial location of the marker, and potentially a function of the wake age. 
+The convection equation of the Lagrangian markers in the frozen zone is:
+
+.. math::
+   \frac{d\vec{r}_\zeta}{dt}=\vec{V}_0(\vec{r}_\zeta,t) + \vec{V}_\text{avg}(t)*k(\zeta)
+
+where :math:`\vec{V}_\text{avg}(t)` is an average induced velocity computed based on the convection velocity of a subset of the "free" markers.
+:math:`k(\zeta)` is a decay factor between 1 and 0 based on the wake age :math:`\zeta`.
+A constant decay factor of 1 would result in a uniform convection velocity across the frozen wake. 
+This is what is used for the far-wake. 
+For the near-wake, typical values are such that the decay factor is 1 at the beginning of the frozen wake, and
+0.5 at the end of the frozen wake.
+In fact, current verification indicated that starting at :math:`k(0)=0.75` was better, as otherwise the 
+average convection velocity (computed over a subset of the free markers) ended up too low, and the 
+frozen wake would be more condensed, leading to higher inductions at the rotor.
+Clearly, the choice of the average velocity and its decay are tuning parameters that might change in future releases. 
+These parameters are currently not directly exposed in the input file.
+
+In general, convecting the whole "frozen" wake with a unique induced velocity introduces some error, but greatly reduces the computational time.
+The advantage of having a "frozen" far-wake region, is that it mitigates the impact of wake truncation which is an erroneous boundary condition (vortex lines cannot end in the fluid). If the wake is truncated while still being "free", then the vorticity will rollup on itself in this region. 
+Another advantage is that in the absence of diffusion, the wake tends to become excessively distorted downstream, reaching limit on the validity of the vortex filament representation. 
+
+
+
 
 
 Induced Velocity and Velocity Field
@@ -446,10 +481,10 @@ The regularization parameter is both a function of the physics being modeled
 (blade boundary layer and wake) and the choice of discretization. Contributing
 factors are the chord length, the boundary layer height, and the volume that
 each vortex filament is approximating.  Currently the choice is left to the user
-(**RegDetMethod=[0]**).  Empirical results for a rotating blade are found in the
+(**RegDeterMethod=[0]**).  Empirical results for a rotating blade are found in the
 work of Gupta (:cite:`olaf-Gupta06_1`). As a guideline, the regularization parameter
 may be chosen as twice the average spanwise discretization of the blade. This
-guideline is implemented when the user chooses **RegDetMethod=[1]**. Further
+guideline is implemented when the user chooses **RegDeterMethod=[1]**. Further
 refinement of this option will be considered in the future.
 
 .. _sec:RegularizationFunction:

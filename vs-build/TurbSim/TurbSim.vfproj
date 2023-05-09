@@ -62,7 +62,8 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
 		<Filter Name="RanLux">
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter></Filter>
 		<Filter Name="TurbSim">

@@ -34,7 +34,6 @@ MODULE Morison_Types
 USE SeaState_Interp_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxMrsnOutputs = 4626      ! Total number of possible Morison module output channels [-]
 ! =========  Morison_JointType  =======
   TYPE, PUBLIC :: Morison_JointType
     INTEGER(IntKi)  :: JointID      !< User-specified integer ID for the given joint [-]
@@ -319,11 +318,8 @@ IMPLICIT NONE
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs      !<  [-]
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
-    CHARACTER(ChanLen) , DIMENSION(1:4626)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
-    LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    CHARACTER(1024)  :: OutRootName      !<  [-]
-    INTEGER(IntKi)  :: UnOutFile      !<  [-]
     INTEGER(IntKi)  :: UnSum      !<  [-]
     INTEGER(IntKi)  :: NStepWave      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
@@ -337,7 +333,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAccMCF0 => NULL()      !< (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: PWaveDynP0 => NULL()      !< (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveVel0 => NULL()      !< (points to SeaState module data) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: nodeInWater      !< Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     INTEGER(IntKi)  :: WaveStMod      !<  [-]
     REAL(SiKi)  :: MCFD      !< Diameter of the MacCamy-Fuchs member. [-]
@@ -431,7 +426,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAccMCF0 => NULL()      !< (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: PWaveDynP0 => NULL()      !< (points to SeaState module data) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: nodeInWater      !< Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated [-]
     INTEGER(IntKi)  :: NStepWave      !<  [-]
     INTEGER(IntKi)  :: NMOutputs      !<  [-]
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
@@ -439,10 +433,6 @@ IMPLICIT NONE
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
-    INTEGER(IntKi)  :: UnOutFile      !<  [-]
-    CHARACTER(20)  :: OutFmt      !<  [-]
-    CHARACTER(20)  :: OutSFmt      !<  [-]
-    CHARACTER(ChanLen)  :: Delim      !<  [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     INTEGER(IntKi)  :: WaveStMod      !<  [-]
   END TYPE Morison_ParameterType
@@ -6359,22 +6349,19 @@ IF (ALLOCATED(SrcInitInputData%JOutLst)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-    DstInitInputData%OutList = SrcInitInputData%OutList
-IF (ALLOCATED(SrcInitInputData%ValidOutList)) THEN
-  i1_l = LBOUND(SrcInitInputData%ValidOutList,1)
-  i1_u = UBOUND(SrcInitInputData%ValidOutList,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%ValidOutList)) THEN 
-    ALLOCATE(DstInitInputData%ValidOutList(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInitInputData%OutList)) THEN
+  i1_l = LBOUND(SrcInitInputData%OutList,1)
+  i1_u = UBOUND(SrcInitInputData%OutList,1)
+  IF (.NOT. ALLOCATED(DstInitInputData%OutList)) THEN 
+    ALLOCATE(DstInitInputData%OutList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%ValidOutList.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%OutList.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInitInputData%ValidOutList = SrcInitInputData%ValidOutList
+    DstInitInputData%OutList = SrcInitInputData%OutList
 ENDIF
     DstInitInputData%NumOuts = SrcInitInputData%NumOuts
-    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
-    DstInitInputData%UnOutFile = SrcInitInputData%UnOutFile
     DstInitInputData%UnSum = SrcInitInputData%UnSum
     DstInitInputData%NStepWave = SrcInitInputData%NStepWave
 IF (ASSOCIATED(SrcInitInputData%WaveElev1)) THEN
@@ -6569,20 +6556,6 @@ IF (ASSOCIATED(SrcInitInputData%PWaveVel0)) THEN
   END IF
     DstInitInputData%PWaveVel0 = SrcInitInputData%PWaveVel0
 ENDIF
-IF (ALLOCATED(SrcInitInputData%nodeInWater)) THEN
-  i1_l = LBOUND(SrcInitInputData%nodeInWater,1)
-  i1_u = UBOUND(SrcInitInputData%nodeInWater,1)
-  i2_l = LBOUND(SrcInitInputData%nodeInWater,2)
-  i2_u = UBOUND(SrcInitInputData%nodeInWater,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%nodeInWater)) THEN 
-    ALLOCATE(DstInitInputData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%nodeInWater = SrcInitInputData%nodeInWater
-ENDIF
       CALL SeaSt_Interp_CopyParam( SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -6688,8 +6661,8 @@ DO i1 = LBOUND(InitInputData%JOutLst,1), UBOUND(InitInputData%JOutLst,1)
 ENDDO
   DEALLOCATE(InitInputData%JOutLst)
 ENDIF
-IF (ALLOCATED(InitInputData%ValidOutList)) THEN
-  DEALLOCATE(InitInputData%ValidOutList)
+IF (ALLOCATED(InitInputData%OutList)) THEN
+  DEALLOCATE(InitInputData%OutList)
 ENDIF
 IF (ASSOCIATED(InitInputData%WaveElev1)) THEN
  IF (DEALLOCATEpointers_local) &
@@ -6745,9 +6718,6 @@ IF (ASSOCIATED(InitInputData%PWaveVel0)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitInputData%PWaveVel0)
   InitInputData%PWaveVel0 => NULL()
-ENDIF
-IF (ALLOCATED(InitInputData%nodeInWater)) THEN
-  DEALLOCATE(InitInputData%nodeInWater)
 ENDIF
   CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7074,15 +7044,12 @@ ENDIF
       END IF
     END DO
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! OutList allocated yes/no
+  IF ( ALLOCATED(InData%OutList) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! OutList upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutList)*LEN(InData%OutList)  ! OutList
-  Int_BufSz   = Int_BufSz   + 1     ! ValidOutList allocated yes/no
-  IF ( ALLOCATED(InData%ValidOutList) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ValidOutList upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%ValidOutList)  ! ValidOutList
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutRootName)  ! OutRootName
-      Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
       Int_BufSz  = Int_BufSz  + 1  ! UnSum
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
   Int_BufSz   = Int_BufSz   + 1     ! WaveElev1 allocated yes/no
@@ -7139,11 +7106,6 @@ ENDIF
   IF ( ASSOCIATED(InData%PWaveVel0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! PWaveVel0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PWaveVel0)  ! PWaveVel0
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nodeInWater allocated yes/no
-  IF ( ALLOCATED(InData%nodeInWater) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! nodeInWater upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nodeInWater)  ! nodeInWater
   END IF
       Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
@@ -7706,34 +7668,24 @@ ENDIF
       ENDIF
     END DO
   END IF
-    DO i1 = LBOUND(InData%OutList,1), UBOUND(InData%OutList,1)
-      DO I = 1, LEN(InData%OutList)
-        IntKiBuf(Int_Xferred) = ICHAR(InData%OutList(i1)(I:I), IntKi)
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-  IF ( .NOT. ALLOCATED(InData%ValidOutList) ) THEN
+  IF ( .NOT. ALLOCATED(InData%OutList) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ValidOutList,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ValidOutList,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%OutList,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%OutList,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%ValidOutList,1), UBOUND(InData%ValidOutList,1)
-        IntKiBuf(Int_Xferred) = TRANSFER(InData%ValidOutList(i1), IntKiBuf(1))
-        Int_Xferred = Int_Xferred + 1
+      DO i1 = LBOUND(InData%OutList,1), UBOUND(InData%OutList,1)
+        DO I = 1, LEN(InData%OutList)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%OutList(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutRootName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutRootName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    IntKiBuf(Int_Xferred) = InData%UnOutFile
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%UnSum
     Int_Xferred = Int_Xferred + 1
@@ -8051,26 +8003,6 @@ ENDIF
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%nodeInWater) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%nodeInWater,2), UBOUND(InData%nodeInWater,2)
-        DO i1 = LBOUND(InData%nodeInWater,1), UBOUND(InData%nodeInWater,1)
-          IntKiBuf(Int_Xferred) = InData%nodeInWater(i1,i2)
-          Int_Xferred = Int_Xferred + 1
         END DO
       END DO
   END IF
@@ -8819,39 +8751,27 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-    i1_l = LBOUND(OutData%OutList,1)
-    i1_u = UBOUND(OutData%OutList,1)
-    DO i1 = LBOUND(OutData%OutList,1), UBOUND(OutData%OutList,1)
-      DO I = 1, LEN(OutData%OutList)
-        OutData%OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ValidOutList not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutList not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ValidOutList)) DEALLOCATE(OutData%ValidOutList)
-    ALLOCATE(OutData%ValidOutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%OutList)) DEALLOCATE(OutData%OutList)
+    ALLOCATE(OutData%OutList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ValidOutList.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutList.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%ValidOutList,1), UBOUND(OutData%ValidOutList,1)
-        OutData%ValidOutList(i1) = TRANSFER(IntKiBuf(Int_Xferred), OutData%ValidOutList(i1))
-        Int_Xferred = Int_Xferred + 1
+      DO i1 = LBOUND(OutData%OutList,1), UBOUND(OutData%OutList,1)
+        DO I = 1, LEN(OutData%OutList)
+          OutData%OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
       END DO
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutRootName)
-      OutData%OutRootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%UnOutFile = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%UnSum = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -9202,29 +9122,6 @@ ENDIF
               Re_Xferred = Re_Xferred + 1
             END DO
           END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nodeInWater not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%nodeInWater)) DEALLOCATE(OutData%nodeInWater)
-    ALLOCATE(OutData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%nodeInWater,2), UBOUND(OutData%nodeInWater,2)
-        DO i1 = LBOUND(OutData%nodeInWater,1), UBOUND(OutData%nodeInWater,1)
-          OutData%nodeInWater(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
         END DO
       END DO
   END IF
@@ -11955,20 +11852,6 @@ IF (ASSOCIATED(SrcParamData%PWaveDynP0)) THEN
   END IF
     DstParamData%PWaveDynP0 = SrcParamData%PWaveDynP0
 ENDIF
-IF (ALLOCATED(SrcParamData%nodeInWater)) THEN
-  i1_l = LBOUND(SrcParamData%nodeInWater,1)
-  i1_u = UBOUND(SrcParamData%nodeInWater,1)
-  i2_l = LBOUND(SrcParamData%nodeInWater,2)
-  i2_u = UBOUND(SrcParamData%nodeInWater,2)
-  IF (.NOT. ALLOCATED(DstParamData%nodeInWater)) THEN 
-    ALLOCATE(DstParamData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%nodeInWater = SrcParamData%nodeInWater
-ENDIF
     DstParamData%NStepWave = SrcParamData%NStepWave
     DstParamData%NMOutputs = SrcParamData%NMOutputs
 IF (ALLOCATED(SrcParamData%MOutLst)) THEN
@@ -12021,10 +11904,6 @@ IF (ALLOCATED(SrcParamData%OutParam)) THEN
     ENDDO
 ENDIF
     DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%UnOutFile = SrcParamData%UnOutFile
-    DstParamData%OutFmt = SrcParamData%OutFmt
-    DstParamData%OutSFmt = SrcParamData%OutSFmt
-    DstParamData%Delim = SrcParamData%Delim
       CALL SeaSt_Interp_CopyParam( SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -12155,9 +12034,6 @@ IF (ASSOCIATED(ParamData%PWaveDynP0)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(ParamData%PWaveDynP0)
   ParamData%PWaveDynP0 => NULL()
-ENDIF
-IF (ALLOCATED(ParamData%nodeInWater)) THEN
-  DEALLOCATE(ParamData%nodeInWater)
 ENDIF
 IF (ALLOCATED(ParamData%MOutLst)) THEN
 DO i1 = LBOUND(ParamData%MOutLst,1), UBOUND(ParamData%MOutLst,1)
@@ -12378,11 +12254,6 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! PWaveDynP0 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PWaveDynP0)  ! PWaveDynP0
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nodeInWater allocated yes/no
-  IF ( ALLOCATED(InData%nodeInWater) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! nodeInWater upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nodeInWater)  ! nodeInWater
-  END IF
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NMOutputs
   Int_BufSz   = Int_BufSz   + 1     ! MOutLst allocated yes/no
@@ -12456,10 +12327,6 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-      Int_BufSz  = Int_BufSz  + 1  ! UnOutFile
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFmt)  ! OutFmt
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutSFmt)  ! OutSFmt
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%Delim)  ! Delim
       Int_BufSz   = Int_BufSz + 3  ! SeaSt_Interp_p: size of buffers for each call to pack subtype
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, .TRUE. ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -13181,26 +13048,6 @@ ENDIF
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%nodeInWater) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%nodeInWater,2), UBOUND(InData%nodeInWater,2)
-        DO i1 = LBOUND(InData%nodeInWater,1), UBOUND(InData%nodeInWater,1)
-          IntKiBuf(Int_Xferred) = InData%nodeInWater(i1,i2)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     IntKiBuf(Int_Xferred) = InData%NStepWave
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NMOutputs
@@ -13332,20 +13179,6 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%UnOutFile
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(InData%OutFmt)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutFmt(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%OutSFmt)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%OutSFmt(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%Delim)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%Delim(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       CALL SeaSt_Interp_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%SeaSt_Interp_p, ErrStat2, ErrMsg2, OnlySize ) ! SeaSt_Interp_p 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -14175,29 +14008,6 @@ ENDIF
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nodeInWater not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%nodeInWater)) DEALLOCATE(OutData%nodeInWater)
-    ALLOCATE(OutData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%nodeInWater,2), UBOUND(OutData%nodeInWater,2)
-        DO i1 = LBOUND(OutData%nodeInWater,1), UBOUND(OutData%nodeInWater,1)
-          OutData%nodeInWater(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     OutData%NStepWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NMOutputs = IntKiBuf(Int_Xferred)
@@ -14374,20 +14184,6 @@ ENDIF
   END IF
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%UnOutFile = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    DO I = 1, LEN(OutData%OutFmt)
-      OutData%OutFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%OutSFmt)
-      OutData%OutSFmt(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%Delim)
-      OutData%Delim(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN

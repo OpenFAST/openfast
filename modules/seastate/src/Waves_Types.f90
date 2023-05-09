@@ -78,6 +78,9 @@ IMPLICIT NONE
     REAL(SiKi)  :: CrestXi      !< xi-coordinate for the wave crest [m]
     REAL(SiKi)  :: CrestYi      !< yi-coordinate for the wave crest [m]
     REAL(SiKi)  :: MCFD      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
+    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
+    REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
+    REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
   END TYPE Waves_InitInputType
 ! =======================
 ! =========  Waves_InitOutputType  =======
@@ -87,11 +90,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction. [(degrees)]
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDir      !< Incident wave propagation heading direction [(degrees)]
     INTEGER(IntKi)  :: WaveNDir      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
-    LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics will be computed; these are relative to the mean see level [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAccMCF => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
@@ -104,7 +104,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined [(sec)]
     REAL(DbKi)  :: WaveTMax      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: nodeInWater      !< Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated [-]
     REAL(SiKi)  :: RhoXg      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
@@ -230,6 +229,9 @@ ENDIF
     DstInitInputData%CrestXi = SrcInitInputData%CrestXi
     DstInitInputData%CrestYi = SrcInitInputData%CrestYi
     DstInitInputData%MCFD = SrcInitInputData%MCFD
+    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
+    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
+    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
  END SUBROUTINE Waves_CopyInitInput
 
  SUBROUTINE Waves_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -387,6 +389,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! CrestXi
       Re_BufSz   = Re_BufSz   + 1  ! CrestYi
       Re_BufSz   = Re_BufSz   + 1  ! MCFD
+      Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
+      Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -604,6 +609,12 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%CrestYi
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MCFD
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%WaveFieldMod
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationX
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_PackInitInput
 
@@ -860,6 +871,12 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%MCFD = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
+    OutData%WaveFieldMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%PtfmLocationX = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE Waves_UnPackInitInput
 
  SUBROUTINE Waves_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -925,22 +942,8 @@ IF (ASSOCIATED(SrcInitOutputData%WaveDirArr)) THEN
 ENDIF
     DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
     DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
-    DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
     DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
-    DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
     DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
-IF (ALLOCATED(SrcInitOutputData%WaveKinzi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WaveKinzi,1)
-  i1_u = UBOUND(SrcInitOutputData%WaveKinzi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WaveKinzi)) THEN 
-    ALLOCATE(DstInitOutputData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WaveKinzi = SrcInitOutputData%WaveKinzi
-ENDIF
 IF (ASSOCIATED(SrcInitOutputData%WaveDynP)) THEN
   i1_l = LBOUND(SrcInitOutputData%WaveDynP,1)
   i1_u = UBOUND(SrcInitOutputData%WaveDynP,1)
@@ -1130,20 +1133,6 @@ IF (ASSOCIATED(SrcInitOutputData%WaveTime)) THEN
     DstInitOutputData%WaveTime = SrcInitOutputData%WaveTime
 ENDIF
     DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
-IF (ALLOCATED(SrcInitOutputData%nodeInWater)) THEN
-  i1_l = LBOUND(SrcInitOutputData%nodeInWater,1)
-  i1_u = UBOUND(SrcInitOutputData%nodeInWater,1)
-  i2_l = LBOUND(SrcInitOutputData%nodeInWater,2)
-  i2_u = UBOUND(SrcInitOutputData%nodeInWater,2)
-  IF (.NOT. ALLOCATED(DstInitOutputData%nodeInWater)) THEN 
-    ALLOCATE(DstInitOutputData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%nodeInWater = SrcInitOutputData%nodeInWater
-ENDIF
     DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
     DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
     DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -1182,9 +1171,6 @@ IF (ASSOCIATED(InitOutputData%WaveDirArr)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveDirArr)
   InitOutputData%WaveDirArr => NULL()
-ENDIF
-IF (ALLOCATED(InitOutputData%WaveKinzi)) THEN
-  DEALLOCATE(InitOutputData%WaveKinzi)
 ENDIF
 IF (ASSOCIATED(InitOutputData%WaveDynP)) THEN
  IF (DEALLOCATEpointers_local) &
@@ -1238,9 +1224,6 @@ IF (ASSOCIATED(InitOutputData%WaveTime)) THEN
  IF (DEALLOCATEpointers_local) &
   DEALLOCATE(InitOutputData%WaveTime)
   InitOutputData%WaveTime => NULL()
-ENDIF
-IF (ALLOCATED(InitOutputData%nodeInWater)) THEN
-  DEALLOCATE(InitOutputData%nodeInWater)
 ENDIF
  END SUBROUTINE Waves_DestroyInitOutput
 
@@ -1296,15 +1279,8 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMin
       Re_BufSz   = Re_BufSz   + 1  ! WaveDirMax
-      Re_BufSz   = Re_BufSz   + 1  ! WaveDir
       Int_BufSz  = Int_BufSz  + 1  ! WaveNDir
-      Int_BufSz  = Int_BufSz  + 1  ! WaveMultiDir
       Re_BufSz   = Re_BufSz   + 1  ! WaveDOmega
-  Int_BufSz   = Int_BufSz   + 1     ! WaveKinzi allocated yes/no
-  IF ( ALLOCATED(InData%WaveKinzi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WaveKinzi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveKinzi)  ! WaveKinzi
-  END IF
   Int_BufSz   = Int_BufSz   + 1     ! WaveDynP allocated yes/no
   IF ( ASSOCIATED(InData%WaveDynP) ) THEN
     Int_BufSz   = Int_BufSz   + 2*4  ! WaveDynP upper/lower bounds for each dimension
@@ -1361,11 +1337,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveTime)  ! WaveTime
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! WaveTMax
-  Int_BufSz   = Int_BufSz   + 1     ! nodeInWater allocated yes/no
-  IF ( ALLOCATED(InData%nodeInWater) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! nodeInWater upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nodeInWater)  ! nodeInWater
-  END IF
       Re_BufSz   = Re_BufSz   + 1  ! RhoXg
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
@@ -1460,29 +1431,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDirMax
     Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WaveDir
-    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%WaveNDir
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%WaveMultiDir, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WaveDOmega
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%WaveKinzi) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveKinzi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveKinzi,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WaveKinzi,1), UBOUND(InData%WaveKinzi,1)
-        ReKiBuf(Re_Xferred) = InData%WaveKinzi(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( .NOT. ASSOCIATED(InData%WaveDynP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1790,26 +1742,6 @@ ENDIF
   END IF
     DbKiBuf(Db_Xferred) = InData%WaveTMax
     Db_Xferred = Db_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%nodeInWater) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nodeInWater,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nodeInWater,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%nodeInWater,2), UBOUND(InData%nodeInWater,2)
-        DO i1 = LBOUND(InData%nodeInWater,1), UBOUND(InData%nodeInWater,1)
-          IntKiBuf(Int_Xferred) = InData%nodeInWater(i1,i2)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     ReKiBuf(Re_Xferred) = InData%RhoXg
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NStepWave
@@ -1922,32 +1854,10 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%WaveDirMax = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-    OutData%WaveDir = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
     OutData%WaveNDir = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WaveMultiDir = TRANSFER(IntKiBuf(Int_Xferred), OutData%WaveMultiDir)
     Int_Xferred = Int_Xferred + 1
     OutData%WaveDOmega = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveKinzi not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WaveKinzi)) DEALLOCATE(OutData%WaveKinzi)
-    ALLOCATE(OutData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WaveKinzi,1), UBOUND(OutData%WaveKinzi,1)
-        OutData%WaveKinzi(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveDynP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -2288,29 +2198,6 @@ ENDIF
   END IF
     OutData%WaveTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nodeInWater not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%nodeInWater)) DEALLOCATE(OutData%nodeInWater)
-    ALLOCATE(OutData%nodeInWater(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nodeInWater.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%nodeInWater,2), UBOUND(OutData%nodeInWater,2)
-        DO i1 = LBOUND(OutData%nodeInWater,1), UBOUND(OutData%nodeInWater,1)
-          OutData%nodeInWater(i1,i2) = IntKiBuf(Int_Xferred)
-          Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
     OutData%RhoXg = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
     OutData%NStepWave = IntKiBuf(Int_Xferred)

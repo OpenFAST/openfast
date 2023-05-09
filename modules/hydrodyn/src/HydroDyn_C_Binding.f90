@@ -19,10 +19,11 @@
 !**********************************************************************************************************************************
 MODULE HydroDyn_C_BINDING
 
-    USE ISO_C_BINDING
-    USE HydroDyn
-    USE HydroDyn_Types
-    USE NWTC_Library
+   USE ISO_C_BINDING
+   USE HydroDyn
+   USE HydroDyn_Types
+   USE NWTC_Library
+   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -38,6 +39,10 @@ MODULE HydroDyn_C_BINDING
    !     to correctly handle different lengths of the strings
    integer(IntKi),   parameter            :: ErrMsgLen_C = 1025
    integer(IntKi),   parameter            :: IntfStrLen  = 1025       ! length of other strings through the C interface
+
+   !------------------------------------------------------------------------------------
+   !  Version info for display
+   type(ProgDesc), parameter              :: version   = ProgDesc( 'HydroDyn library', '', '' )
 
    !------------------------------------------------------------------------------------
    !  Potential issues
@@ -223,6 +228,10 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLen
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
+
    ! Sanity checks on values passed
    InterpOrder = int(InterpOrder_C, IntKi)
    if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
@@ -260,9 +269,9 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C, InputFileString_C, InputFileStringLen
 
    ! Values passed in
    InitInp%Gravity               = REAL(Gravity_C,    ReKi)
-   InitInp%defWtrDens            = REAL(defWtrDens_C, ReKi)
-   InitInp%defWtrDpth            = REAL(defWtrDpth_C, ReKi)
-   InitInp%defMSL2SWL            = REAL(defMSL2SWL_C, ReKi)
+   InitInp%WtrDens               = REAL(defWtrDens_C, ReKi) ! use values from SeaState
+   InitInp%WtrDpth               = REAL(defWtrDpth_C, ReKi) ! use values from SeaState
+   InitInp% MSL2SWL              = REAL(defMSL2SWL_C, ReKi) ! use values from SeaState
    TimeInterval                  = REAL(DT_C,         DbKi)
    dT_Global                     = TimeInterval                ! Assume this DT is constant for all simulation
    N_Global                      = 0_IntKi                     ! Assume we are on timestep 0 at start

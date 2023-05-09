@@ -19,30 +19,33 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SC_DataEx_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SCDataEx_Types.f90 -ccode -noextrap)
 endif()
 
-# copy the header files to their build location
-configure_file(src/SuperController_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-configure_file(src/SCDataEx_Types.h ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-
-add_library(scdataextypeslib src/SCDataEx_Types.f90)
-target_link_libraries(scdataextypeslib nwtclibs)
-
-add_library(scdataexlib src/SC_DataEx.f90)
-target_link_libraries(scdataexlib scdataextypeslib openfast_prelib nwtclibs)
-
-add_library(sctypeslib  src/SuperController_Types.f90)
+add_library(sctypeslib
+  src/SCDataEx_Types.f90
+)
 target_link_libraries(sctypeslib nwtclibs)
 
 add_library(scfastlib
-  src/SuperController.f90)
-target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
+  src/SC_DataEx.f90
+  src/SuperController_Types.f90
+  src/SuperController.f90
+)
+target_include_directories(scfastlib PUBLIC 
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
+)
+target_link_libraries(scfastlib openfast_prelib)
+set_target_properties(scfastlib PROPERTIES PUBLIC_HEADER "src/SuperController_Types.h;src/SCDataEx_Types.h")
 
-install(TARGETS sctypeslib scfastlib scdataextypeslib scdataexlib
+add_library(sclib SHARED
+  src/SC_DLL.F90
+)
+if(APPLE OR UNIX)
+  target_compile_definitions(sclib PRIVATE IMPLICIT_DLLEXPORT)
+endif()
+  
+install(TARGETS sctypeslib scfastlib sclib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/SuperController_Types.h
-  ${CMAKE_CURRENT_BINARY_DIR}/SCDataEx_Types.h
-  DESTINATION include)
+  PUBLIC_HEADER DESTINATION include
+)

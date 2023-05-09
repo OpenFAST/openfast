@@ -37,6 +37,7 @@ import pass_fail
 from errorPlotting import exportCaseSummary
 
 ##### Main program
+excludeExt=['.out','.outb','.ech','.yaml','.sum','.log','.rst']
 
 ### Store the python executable for future python calls
 pythonCommand = sys.executable
@@ -91,19 +92,13 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
-    os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,"hd_*inp")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-    for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
+    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
 
 dirToCopy = os.path.join("glue-codes","openfast","5MW_Baseline","HydroData")
 buildDirectoryGlue = os.path.join(buildDirectory,os.pardir,os.pardir,dirToCopy)
 if not os.path.isdir(buildDirectoryGlue):
     src = os.path.join(rtest,dirToCopy)
-    shutil.copytree(src, buildDirectoryGlue)
+    rtl.copyTree(src, buildDirectoryGlue, excludeExt=excludeExt)
     
 ### Run HydroDyn on the test case
 if not noExec:

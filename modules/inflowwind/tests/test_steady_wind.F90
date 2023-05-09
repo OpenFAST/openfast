@@ -43,7 +43,7 @@ contains
         PriPath = ""
 
         InFileInfo = getInputFileData()
-        InFileInfo%Lines(8:11) = (/ &
+        InFileInfo%Lines(9:12) = (/ &
             '          2   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
             '        0,0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
             '        0,0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &

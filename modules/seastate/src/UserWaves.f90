@@ -10,6 +10,7 @@ MODULE UserWaves
    PUBLIC :: UserWaves_Init
    PUBLIC :: UserWaveElevations_Init
    PUBLIC :: UserWaveComponents_Init
+   PUBLIC :: Initial_InitOut_Arrays
 
 
    ! Data type for reading in wave elevation data from a file.
@@ -34,6 +35,78 @@ MODULE UserWaves
 
 
    CONTAINS
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Initial_InitOut_Arrays(InitOut, InitInp, WaveDT, ErrStat, ErrMsg)
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization output data
+   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Initialization input data
+   REAL(DbKi),                      INTENT(IN   )  :: WaveDT      ! Value of wave dt, used for filling WaveTime
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local Variables
+   INTEGER(IntKi)                                  :: i           ! loop counter
+   INTEGER(IntKi)                                  :: ErrStat2    ! Temporary error status
+!   CHARACTER(ErrMsgLen)                            :: ErrMsg2
+   character(*), parameter                         :: RoutineName = 'Initial_InitOut_Arrays'
+   
+   
+      ErrStat = ErrID_None
+      ErrMsg = ""
+
+      ! Allocatable arrays:
+      ALLOCATE ( InitOut%WaveElev0  (   0:InitOut%NStepWave                                       ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',  ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveElevC  (2, 0:InitOut%NStepWave2, InitInp%NGrid(1)*InitInp%NGrid(2)   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC.',  ErrStat,ErrMsg,RoutineName)
+!     ALLOCATE ( InitOut%nodeInWater(   0:InitOut%NStepWave,  InitInp%NWaveKinGrid                ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',ErrStat,ErrMsg,RoutineName)
+   
+      ! Pointers:
+      ALLOCATE ( InitOut%WaveTime   (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( InitOut%WaveDirArr (   0:InitOut%NStepWave2                ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat, ErrMsg, RoutineName)
+   
+      ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)                   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.', ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)  ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
+
+      
+      if (ErrStat >= AbortErrLev) return
+      
+      !----------------------------------------
+      ! Initialize the arrays we just allocated
+      !----------------------------------------
+      
+      ! Calculate the array of simulation times at which the instantaneous
+      !   elevation of, velocity of, acceleration of, and loads associated with
+      !   the incident waves are to be determined:
+      DO I = 0,InitOut%NStepWave ! Loop through all time steps
+         InitOut%WaveTime(I) = I * WaveDT
+      END DO                ! I - All time steps
+      
+      InitOut%WaveElev0  = 0.0
+      InitOut%WaveElevC  = 0.0
+      
+      InitOut%WaveElevC0 = 0.0
+      InitOut%WaveElev   = 0.0
+      InitOut%WaveDynP   = 0.0
+      InitOut%WaveVel    = 0.0
+      InitOut%WaveAcc    = 0.0
+      InitOut%WaveDirArr = 0.0
+      
+      !DO I = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
+      !      ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
+      !   IF (    InitInp%WaveKinGridzi(i) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(i) <= 0 )  THEN
+      !      InitOut%nodeInWater(:, i) = 1
+      !   ELSE
+      !      InitOut%nodeInWater(:, i) = 0
+      !   END IF
+      !END DO
+      
+         ! scalars (adjusted later, if necessary)
+      InitOut%WaveDirMin   = 0.0
+      InitOut%WaveDirMax   = 0.0
+      InitOut%WaveNDir     = 1
+      
+END SUBROUTINE Initial_InitOut_Arrays
 
 !----------------------------------------------------------------------------------------------------------------------!
 !                                                                                                                      !
@@ -63,7 +136,6 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
 
 
    ! Variables for reading in the wave elevation
-   CHARACTER(1024)                                 :: FileName             !< Name of the file we are reading
    REAL(SiKi)                                      :: TmpWaveElevRow(2)    !< row read in from the wave elevation input file
  
    ! Local Variables
@@ -244,13 +316,13 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ! Check that the file timestep is the same as the HD file, and check that the WaveTMax value of the file is larger than that of HD.
    IF ( InitInp%WaveTMax > WaveElevData%WaveTMax ) THEN
-      CALL SetErrStat(ErrID_Fatal,' HydroDyn requires a minimum of '//TRIM(Num2LStr(InitInp%WaveTMax))//', but '//TRIM(WaveElevData%FileName)// &
+      CALL SetErrStat(ErrID_Fatal,' SeaState requires a minimum of '//TRIM(Num2LStr(InitInp%WaveTMax))//', but '//TRIM(WaveElevData%FileName)// &
             ' only contains a maximum time of '//TRIM(Num2LStr(WaveElevData%WaveTMax))//' (last line).',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
    ! Check that the values of WaveDT are the same or similar enough
    IF ( ABS(InitInp%WaveDT - WaveElevData%WaveDT) > WaveDT_Tol ) THEN
-      CALL SetErrStat(ErrID_Fatal,' WaveDT from Hydrodyn ('//TRIM(Num2LStr(InitInp%WaveDT))//') and timestep size in wave elevation file '// &
+      CALL SetErrStat(ErrID_Fatal,' WaveDT from SeaState ('//TRIM(Num2LStr(InitInp%WaveDT))//') and timestep size in wave elevation file '// &
             TRIM(WaveElevData%FileName)//' (WaveDT = '//TRIM(Num2LStr(WaveElevData%WaveDT))//')  do not match.  These need to be within '// &
             TRIM(Num2LStr(WaveDT_Tol))//' seconds of each other.',ErrStat,ErrMsg,RoutineName)
    ENDIF
@@ -260,7 +332,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
-
+   !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 5
    ! Set new value for NStepWave so that the FFT algorithms are efficient. We will use the values passed in rather than what is read from the file
    ! NOTE: This method is what is used in the VariousWaves_Init routine in Waves.f90
    InitOut%NStepWave  = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )  ! Set NStepWave to an even integer
@@ -268,9 +340,14 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%NStepWave2 = MAX( InitOut%NStepWave/2, 1 )                                        ! Make sure that NStepWave is an even product of small factors (PSF) that is
    InitOut%NStepWave  = 2*PSF ( InitOut%NStepWave2, 9 )                                      !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
    InitOut%NStepWave2 = InitOut%NStepWave/2                                                  ! Update the value of NStepWave2 based on the value needed for NStepWave.
-   InitOut%WaveTMax   = InitOut%NStepWave*InitInp%WaveDT                                ! Update the value of WaveTMax   based on the value needed for NStepWave.
-   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax                                          ! Compute the frequency step for incident wave calculations.
- 
+   InitOut%WaveTMax   = InitOut%NStepWave*InitInp%WaveDT                                     ! Update the value of WaveTMax   based on the value needed for NStepWave.
+   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax                                               ! Compute the frequency step for incident wave calculations.
+   
+   ! >>> Allocate and initialize (set to 0) InitOut arrays
+   call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   
+   
    ! Give warning if the number of timesteps changed
    IF ( WaveElevData%NStepWave /= InitOut%NStepWave ) THEN
       CALL SetErrStat(ErrID_Warn, ' Changed number of timesteps from '//TRIM(Num2LStr(WaveElevData%NStepWave))//' to '//   &
@@ -282,10 +359,6 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ALLOCATE ( TmpFFTWaveElev( 0:InitOut%NStepWave-1 ), STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array TmpFFTWaveElev.',ErrStat,ErrMsg,RoutineName)
 
-   ! Allocate frequency array for the wave elevation information in frequency space
-   ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                ), STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,RoutineName)
-
    ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
@@ -294,7 +367,6 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ! Set the values
    TmpFFTWaveElev          =  0.0_SiKi
-   InitOut%WaveElevC0(:,:) =  0.0_SiKi
 
    ! Copy values over
    DO I=0,MIN(WaveElevData%NStepWave,InitOut%NStepWave-1)
@@ -389,6 +461,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
 
+   !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 6
    ! Perform some initialization computations including calculating the
    !   total number of time steps in the incident wave and ALLOCATing the
    !   arrays; initialize the unneeded values to zero:
@@ -400,29 +473,17 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    END IF
 
    InitOut%NStepWave2 = InitOut%NStepWave/2
+   InitOut%WaveTMax   = InitInp%WaveTMax  ! bjj added this
+   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax ! bjj added this
+   
+   ! >>> Allocate and initialize (set to 0) InitOut arrays
+   call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
          
    ALLOCATE ( WaveDataStr  ( InitInp%NGrid(1) ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDataStr.',  ErrStat,ErrMsg,RoutineName)
    
-   ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKinGrid  ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
-   InitOut%nodeInWater = 1
    
-   ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveElev (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2) ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
-   InitOut%WaveElev = 0.0_SiKi
-   
-   ALLOCATE ( InitOut%WaveDynP (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3)   ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,'VariousWaves_Init')
-
-   ALLOCATE ( InitOut%WaveVel  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,'VariousWaves_Init')
-
-   ALLOCATE ( InitOut%WaveAcc  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,'VariousWaves_Init')
       
       ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -430,6 +491,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
+   
    ! Even though for OpenFAST data, NStepWave time increment data equals the 0 time increment data, 
    ! we cannot assume that is true for arbitrary user data.  Therefore, we read the entire [0, NStepWave] data from file.
    ! As a result for WaveMod=5,6 we shouldn't assume periodic waves over the period WaveTMax
@@ -441,10 +503,10 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       FileName = TRIM(InitInp%WvKinFile) // TRIM(extension(iFile))
    
-      CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
+      CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp )
+      IF ( ErrStatTmp /= 0 ) THEN
+         ErrMsgTmp  = 'Failed to open wave kinematics file, ' //  TRIM(FileName) 
+         CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
@@ -470,10 +532,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             
                   isNumeric = is_numeric(WaveDataStr(i), WaveData)
                   IF (.NOT. isNumeric ) THEN
-                     InitOut%nodeInWater(m,icount) = 0
                      WaveData            = 0.0
-                  ELSE              
-                     InitOut%nodeInWater(m,icount) = 1
                   END IF
                   
                   SELECT CASE (iFile)
@@ -498,21 +557,16 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          end do
       END DO
    end do
-  
-   ! WaveTime
-   DO i = 0,InitOut%NStepWave
-      InitOut%WaveTime(i) = i*InitInp%WaveDT
-   END DO
    
    ! WaveElev
    CALL GetNewUnit( UnWv )
 
    FileName = TRIM(InitInp%WvKinFile) // '.Elev'
    
-   CALL OpenFInpFile ( UnWv, FileName, ErrStat, ErrMsg ) 
-   IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
+   CALL OpenFInpFile ( UnWv, FileName, ErrStatTmp, ErrMsgTmp ) 
+   IF ( ErrStatTmp /= 0 ) THEN
+      ErrMsgTmp  = 'Failed to open wave elevation file, ' //  TRIM(FileName) 
+      CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       RETURN
    END IF
 
@@ -614,7 +668,6 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
 
 
    ! Variables for reading in the wave components
-   CHARACTER(1024)                                 :: FileName             !< Name of the file we are reading
    REAL(SiKi)                                      :: TmpWaveCompRow(4)    !< row read in from the wave component input file
    REAL(SiKi)                                      :: WaveAngFreq
  
@@ -655,8 +708,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL OpenFInpFile(  WaveCompUnit, WaveCompData%FileName, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -664,8 +716,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL GetFileLength(WaveCompUnit, TRIM(WaveCompData%Filename), NumDataColumns, WaveCompData%NCompWave, NumHeaderLines, ErrStatTmp, ErrMsgTmp)
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat,ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -673,8 +724,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    CALL ReadLine( WaveCompUnit, '', TextLine, LineLen, ErrStatTmp )
    IF (ErrStatTmp /= ErrID_None) THEN
       CALL SetErrStat( ErrID_Fatal, 'Error reading the first line of ' // TRIM(WaveCompData%FileName), ErrStat, ErrMsg, RoutineName)
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    If (TextLine(1:28) == 'source: SEAFileGenerator.exe') THEN
@@ -690,8 +740,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
          ! Make sure the wave direction convention is not nautial, which is not supported
          IF (TRIM(Words(1)) == 'dconv:' .AND. TRIM(Words(2)) == 'naut') THEN
             CALL SetErrStat( ErrID_Fatal, 'Nautical (naut) convention for wave direction is not supported. Must use cartesian (cart) convention.', ErrStat, ErrMsg, RoutineName)
-            CLOSE ( WaveCompUnit )
-            CALL CleanUp()
+            CALL CleanUpError()
             RETURN
          END IF
          
@@ -715,8 +764,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    IF ( NumDataColumns /= 4_IntKi ) THEN
       CALL SetErrStat( ErrID_Fatal, ' Wave component files should contain four columns of data: (angular) frequency, wave height/amplitude, wave direction, wave phase. '// &
                'Found '//TRIM(Num2LStr(NumDataColumns))//' of data in "'//TRIM(WaveCompData%FileName)//'".', ErrStat, ErrMsg, RoutineName)
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
 
@@ -731,32 +779,28 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    ALLOCATE ( WaveCompData%WaveAngFreq(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveAngFreq array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WaveAmp(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveAmp array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WaveDir(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WaveDir array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
    
    ALLOCATE ( WaveCompData%WavePhase(WaveCompData%NCompWave), STAT = ErrStatTmp )
    IF ( ErrStatTmp /= 0 ) THEN      
       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for user WavePhase array.', ErrStat, ErrMsg, RoutineName )
-      CLOSE ( WaveCompUnit )
-      CALL CleanUp() 
+      CALL CleanUpError() 
       RETURN
    END IF
  
@@ -773,8 +817,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       IF ( ErrStatTmp /= 0 ) THEN      
          CALL SetErrStat( ErrID_Fatal, 'Error in reading in value from the file: line number '//TRIM(Num2LStr(I))//'. Expecting a total of '// &
                TRIM(Num2LStr(WaveCompData%NCompWave))//' rows of data.', ErrStat, ErrMsg, RoutineName )
-         CLOSE ( WaveCompUnit )
-         CALL CleanUp() 
+         CALL CleanUpError() 
          RETURN
       END IF
 
@@ -787,13 +830,11 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       OmegaRatio = WaveAngFreq/InitOut%WaveDOmega
       IF (ABS(OmegaRatio - REAL(NINT(OmegaRatio),SiKi))>WaveDOmega_RelTol) THEN
           CALL SetErrStat( ErrID_Fatal, 'The wave frequency on line number '//TRIM(Num2LStr(I))//' is not an integer multiple of the frequency resolution given by 1/WaveTMax.', ErrStat, ErrMsg, RoutineName )
-          CLOSE ( WaveCompUnit )
-          CALL CleanUp() 
+          CALL CleanUpError() 
           RETURN
       ELSE IF (WaveAngFreq <= 0.0_ReKi) THEN
           CALL SetErrStat( ErrID_Fatal, 'The wave frequency on line number '//TRIM(Num2LStr(I))//' is less than or equal to zero. All frequency must be positive.', ErrStat, ErrMsg, RoutineName )
-          CLOSE ( WaveCompUnit )
-          CALL CleanUp() 
+          CALL CleanUpError() 
           RETURN  
       END IF
       
@@ -819,14 +860,16 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
 
    CONTAINS
 
-      SUBROUTINE CleanUp
+      SUBROUTINE CleanUpError
 
+         CLOSE ( WaveCompUnit )
+      
          IF (ALLOCATED( WaveCompData%WaveAngFreq ))    DEALLOCATE( WaveCompData%WaveAngFreq, STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WaveAmp  ))       DEALLOCATE( WaveCompData%WaveAmp,     STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WaveDir     ))    DEALLOCATE( WaveCompData%WaveDir,     STAT=ErrStatTmp)
          IF (ALLOCATED( WaveCompData%WavePhase   ))    DEALLOCATE( WaveCompData%WavePhase,   STAT=ErrStatTmp)
 
-      END SUBROUTINE CleanUp
+      END SUBROUTINE CleanUpError
 END SUBROUTINE WaveComp_ReadFile
    
    
@@ -870,6 +913,7 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 7
       MaxWaveAngFreq     = MAXVAL(WaveCompData%WaveAngFreq)
       ! NStepWave2 should be large enough to accommodate the highest user frequency component and 
       ! produce a time step no larger than the user WaveDT.
@@ -878,16 +922,20 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%NStepWave2 = PSF ( InitOut%NStepWave2, 9 )                         ! Make sure NStepWave2 is a product of small factors (PSF) greater or equal to what's required by the user input 
       InitOut%NStepWave  = InitOut%NStepWave2 * 2_IntKi                          ! NStepWave is guaranteed to be even
       InitOut%WaveTMax   = InitInp%WaveTMax                                      ! Copy over WaveTMax.
-      InitInp%WaveDT     = InitOut%WaveTMax / InitOut%NStepWave                  ! Update the value of WaveDT     based on the value needed for NStepWave.
+      
+      ! Note that InitOut%WaveDOmega is computed in WaveComp_ReadFile:
+      !InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax 
+      
+      
+      !BJJ: Note that this is changing an InitInp value. This seems dangerous... check that this isn't an issue elsewhere
+      InitInp%WaveDT    = InitOut%WaveTMax / InitOut%NStepWave                  ! Update the value of WaveDT     based on the value needed for NStepWave.
       CALL WrScr1 (' Setting WaveDT to ' // TRIM(Num2Lstr(InitInp%WaveDt)) // ' sec.')
+
+      
+      ! >>> Allocate and initialize (set to 0) InitOut arrays
+      call Initial_InitOut_Arrays(InitOut, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
+      !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  
-      ! Allocate frequency array for the wave elevation information in frequency space
-      ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2  ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,RoutineName)
-      
-      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2    ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
-      
       ALLOCATE ( IsSpecified( 0:InitOut%NStepWave2           ), STAT = ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array IsSpecified.',ErrStat,ErrMsg,RoutineName)
       
@@ -898,8 +946,6 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
 
       ! Set the values
-      InitOut%WaveElevC0(:,:) =  0.0_SiKi
-      InitOut%WaveDirArr(:)   =  0.0_SiKi
       IsSpecified(:) = .FALSE.
 
       ! Copy the wave frequency component information to the InitOut%WaveElevC0 array

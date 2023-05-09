@@ -11,15 +11,14 @@ SUBROUTINE PitchCntrl ( BlPitch, ElecPwr, LSS_Spd, TwrAccel, NB, ZTime, DT, DirR
 
 
    ! This routine reads a data file containing user specified transfer
-   !   function information to allow the use of control systems in FAST
-   !   and ADAMS.  The parameters read in, and array dimensions may be
-   !   adjusted to suit the users need.
+   !   function information to allow the use of control systems in FAST.
+   !   The parameters read in, and array dimensions may be adjusted to 
+   !   suit the users need.
    ! The transfer function coefficients are read in, then converted to
    !   state space form for integration using a fourth order Runge-Kutta
    !   integration scheme.
    ! This routine was originally written by C. Hansen in Fortran 77 for
-   !   use with FAST and ADAMS.  It was converted to Modern Fortran by
-   !   J. Jonkman.
+   !   use with FAST.  It was converted to Modern Fortran by J. Jonkman.
 
 
 USE                            NWTC_Library
@@ -429,8 +428,7 @@ AWIND = PHI1 - PHI2                 ! Anti windup term when pitch demand saturat
 
 
    ! Now apply fourth transfer function to represent the actuator
-   !   (Do not use this actuator in ADAMS.  If order of 4th
-   !    transfer function is zero, this transfer function is not applied)
+   !   (If order of 4th transfer function is zero, this transfer function is not applied)
 
 IF ( NORDER(4) == 0 )  THEN
    DO K=1,NB

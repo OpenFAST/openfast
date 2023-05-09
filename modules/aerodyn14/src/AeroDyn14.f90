@@ -121,6 +121,15 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    p%DtAero            = Interval            ! set the default DT here; may be overwritten later, when we read the input file in AD14_GetInput()
    p%UseDWM            = InitInp%UseDWM
 
+   ! 2022.09.06 -- ADP
+   !  Recent changes to how the disk average velocity is calculated in InflowWind will likely cause seg-faults in DWM. Therefore
+   !  changes will need to be made to DWM for this to work properly.  Since AD14 and DWM will be removed in the very near future,
+   !  it is not a good use of time to fix this.  Instead I'll leave this comment here for anyone who really wants to use DWM.
+   if (p%UseDWM) then
+      call SetErrStat(ErrID_Fatal, ' DWM is no longer supported and will be deprecated in the near future.  We recommend using FAST.Farm instead.', ErrStat,ErrMess,RoutineName )
+      return
+   endif
+
          ! Define parameters here:
 
    p%WrOptFile   = InitInp%WrSumFile
@@ -864,7 +873,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
       ! calculate yaw angle
       ! note: YawAng should use the Hub instead of the RotorFurl, but it is calculated this way to
       ! get the same answers as previous version.
-   m%Rotor%YawAng = ATAN2( -1.*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
+   m%Rotor%YawAng = ATAN2( -1.0_ReKi*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
    m%Rotor%SYaw   = SIN( m%Rotor%YawAng )
    m%Rotor%CYaw   = COS( m%Rotor%YawAng )
 
@@ -950,7 +959,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
          ! note: the equation below should use TurbineComponents%Blade markers, but this is used to get the
          ! same answers as the previous version (before v13.00.00)
 
-      AzimuthAngle = ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
+      AzimuthAngle = ATAN2( -1.0_ReKi*DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
                                              u%TurbineComponents%RotorFurl%Orientation(2,:) ), &
                                 DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
                                              u%TurbineComponents%RotorFurl%Orientation(3,:) )  ) + pi + (IBlade - 1)*p%TwoPiNB

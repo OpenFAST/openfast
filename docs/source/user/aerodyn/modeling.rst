@@ -19,8 +19,8 @@ Environmental Conditions
 For air, typical values for ``AirDens``, ``KinVisc``,
 ``SpdSound``, and ``Patm`` are around 1.225 kg/m\ :sup:`3`, 1.460E-5
 m\ :sup:`2`/s, 340.3 m/s, and 101,325 Pa, respectively. For seawater,
-typical values for ``AirDens``, ``KinVisc``, and ``Pvap`` are
-around 1025 kg/m\ :sup:`3`, 1.004E-6 m\ :sup:`2`/s, and 2000 Pa,
+typical values for ``FldDens``, ``KinVisc``, ``SpdSound``, and ``Pvap`` are
+around 1025 kg/m\ :sup:`3`, 1.004E-6 m\ :sup:`2`/s, 1500 m/s, and 2000 Pa,
 respectively.
 
 Temporal and Spatial Discretization
@@ -51,15 +51,15 @@ When the tower potential-flow (``TwrPotent > 0``), tower shadow
 (``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
-above ground (or above MSL for offshore wind turbines or above the
-seabed for MHK turbines) (``TwrElev``), must be entered in
-monotonically increasing order from the lowest (tower-base) to the
-highest (tower-top) elevation. However, when AeroDyn is coupled to FAST,
-the tower-base node in AeroDyn cannot be set lower than the lowest point
+above ground (or relative to MSL for offshore wind and floating 
+MHK turbines or relative to the seabed for fixed MHK turbines) (``TwrElev``),
+must be entered in monotonically increasing order from the lowest (tower-base) to the
+highest (tower-top) elevation (or monotonically decreasing order for floating MHK turbines).
+However, when AeroDyn is coupled to FAST, the tower-base node in AeroDyn cannot be set lower than the lowest point
 where wind is specified in the InflowWind module. To avoid truncating
 the lower section of the tower in AeroDyn, we recommend that the wind be
 specified in InflowWind as low to the ground (or MSL for offshore wind
-turbines or above the seabed for MHK turbines) as possible (this is a
+turbines or seabed for fixed and floating MHK turbines) as possible (this is a
 particular issue for full-field wind file formats).
 
 Model Options Under Operational and Parked/Idling Conditions
@@ -114,4 +114,6 @@ linearization of the full coupled solution. When induction is enabled
 (``WakeMod = 1``), we recommend to base the linearized solution on the
 frozen-wake assumption, by setting ``FrozenWake = TRUE``. The UA
 models are not set up to support linearization, so, UA must be disabled
-during linearization by setting ``AFAeroMod = 1``.
+during linearization by setting ``AFAeroMod = 1``. Linearization is not 
+currently possible when modeling an MHK turbine, but we will attempt to
+enable it in an upcoming release.

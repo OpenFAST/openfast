@@ -24,7 +24,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/WAMIT2.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT2_Types.f90)
 endif()
 
-set(HYDRODYN_SOURCES
+add_library(hydrodynlib 
   src/Conv_Radiation.f90
   src/HydroDyn.f90
   src/HydroDyn_Input.f90
@@ -44,31 +44,37 @@ set(HYDRODYN_SOURCES
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
 )
-
-add_library(hydrodynlib ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib seastlib nwtclibs)
 
-# c-bindings interface library
-add_library(hydrodyn_c_binding SHARED src/HydroDyn_C_Binding.f90)
-target_link_libraries(hydrodyn_c_binding hydrodynlib)
+# HydroDyn Driver Subs Library
+add_library(hydrodyn_driver_subs
+  src/HydroDyn_DriverSubs.f90
+)
+target_link_libraries(hydrodyn_driver_subs hydrodynlib)
+
+# Driver
+add_executable(hydrodyn_driver 
+  src/HydroDyn_DriverCode.f90
+)
+target_link_libraries(hydrodyn_driver hydrodyn_driver_subs versioninfolib)
+
+# C-bindings interface library
+add_library(hydrodyn_c_binding SHARED 
+  src/HydroDyn_C_Binding.f90
+)
+target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(hydrodyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-
-set(HD_DRIVER_SOURCES
-  src/HydroDyn_DriverCode.f90
-  src/HydroDyn_DriverSubs.f90)
-  
-add_executable(hydrodyn_driver ${HD_DRIVER_SOURCES})
-target_link_libraries(hydrodyn_driver hydrodynlib seastlib nwtclibs versioninfolib)
 
 #add_executable(ss_radiation
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
-install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding
+install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_driver_subs hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)

@@ -1842,7 +1842,7 @@ Similar considerations apply for Eq. :eq:`bigY2`.
 
 
 The coupling load :math:`F_{{TP},cpl}` given in Eq. :eq:`bigY1` corresponds to the rection force at the TP reference position. 
-In the "free boundary condition" case, there is no need to correct this output load since the reference position is at the deflected position.
+In the "free boundary condition" (floating) case, there is no need to correct this output load since the reference position is at the deflected position.
 For the "fixed boundary condition" case, the reference position does not correspond to the deflected position, so the reaction moment needs to be transfered to the deflected position as follows:
 
 .. math::
@@ -1935,9 +1935,9 @@ dynamic solution.
 The SIM formulation provides a correction for the displacements of the
 internal nodes. The uncorrected displacements are now noted :math:`{\hat{U}}_{L}`, while
 the corrected displacements are noted :math:`U_L`. The SIM correction
-consists in an additional term :math:`U_L` obtained by adding the total
-static deflection of all the internal
-DOFs (:math:`U_{L0}`), and subtracting the static deflection associated
+consists in an additional term :math:`U_{L,\text{SIM}}` obtained 
+as the static deflection of all the internal DOFs (:math:`U_{L0}`)
+minus the static deflection associated
 with C-B modes (:math:`U_{L0m}`), as cast in :eq:`SIM` :
 
 .. math::   :label: SIM
@@ -2572,7 +2572,7 @@ Output: nodal motions
 
 **Fixed-bottom case**
 
-.. math:: :label:
+.. math:: :label: nodalMotionFixed
 
         \bar{U}_R  &= T_I U_{TP} 
         ,\qquad
@@ -2597,7 +2597,7 @@ The meshes :math:`y_2` and :math:`y_3` are identical (Guyan displacements comput
 
 **Floating case**
 
-.. math:: :label:
+.. math:: :label: nodalMotionFloating
 
         \bar{U}_R  &= U_{R,\text{rigid}}
         ,\qquad
@@ -2646,7 +2646,13 @@ where :math:`P` is a point belonging to the R- or L-set of nodes.
 Outputs to file:
 ~~~~~~~~~~~~~~~~
 
-**Motions**: nodal motions written to file are in global coordinates, and for the floating case they contain the elastic motion :math:`\bar{U}_L  = U_{L,\text{rigid}} + \Phi_m q_m +  U_{L,\text{SIM}}` (whereas these elastic motions are not returned to the glue code)
+**Motions**: nodal motions written to file are in global coordinates.
+For the fixed-bottom case, they are :math:`\bar{U}_L  = \bar{\Phi}_R \bar{U}_R +     \Phi_m q_m + U_{L,\text{SIM}}`
+(see Eq. :eq:`nodalMotionFixed`).
+For the floating case, they are     :math:`\bar{U}_L  = U_{L,\text{rigid}} + R_{b2g}(\Phi_m q_m +  U_{L,\text{SIM}})`.
+Note that the outputs for the floating case contains the elastic motions (similar to what is returned to MoorDyn), whereas these motions are not returned to the glue code for HydroDyn (see the "0" present in Eq. :eq:`nodalMotionFloating`). 
+
+
 
 
 **Loads**: Nodal loads are written to file in the element coordinate system. The procedure are the same for fixed-bottom and floating cases. 

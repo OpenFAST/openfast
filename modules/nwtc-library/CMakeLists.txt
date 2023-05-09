@@ -15,19 +15,28 @@
 #
 
 set(NWTCLIBS_SOURCES
+  src/SingPrec.f90
+
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
   src/ModMesh_Types.f90
-  src/NWTC_Base.f90
+
+  src/NWTC_Base.f90 
   src/NWTC_IO.f90
   src/NWTC_Library.f90
   src/NWTC_Num.f90
   src/NWTC_RandomNumber.f90
-  src/SingPrec.f90
+  
   src/NWTC_Library_Types.f90
+  src/VTK.f90
+  src/YAML.f90
+  src/JSON.f90
 
   # RanLux sources
   src/ranlux/RANLUX.f90
+
+  # Public Domain Aeronautical Software (PDAS) Polynomial Root Finder
+  src/Polynomial/quartic.f90
   
   # NetLib sources
   src/NetLib/fftpack/fftpack4.1.f
@@ -85,52 +94,66 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
          endif()
       endif()
    endif()
-endif() 
+endif()
 
-
-if(BUILD_OPENFAST_SIMULINK_API)
-
-  if (APPLE OR UNIX)
-    if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-      set(NWTC_SYS_FILE src/SysMatlabLinuxGnu.f90)
-    elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
-      set(NWTC_SYS_FILE src/SysMatlabLinuxIntel.f90)
-    endif()
-  elseif (WIN32)
-    set(NWTC_SYS_FILE src/SysMatlabWindows.f90)
-  endif()
-
-elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   if (WIN32)
     set(NWTC_SYS_FILE src/SysGnuWin.f90)
+    set(NWTC_SYS_FILE_MATLAB ${CMAKE_CURRENT_SOURCE_DIR}/src/SysMatlabWindows.f90)
   elseif (APPLE OR UNIX OR CYGWIN)
     set(NWTC_SYS_FILE src/SysGnuLinux.f90)
+    set(NWTC_SYS_FILE_MATLAB ${CMAKE_CURRENT_SOURCE_DIR}/src/SysMatlabLinuxGnu.f90)
   endif ()
 elseif (${CMAKE_Fortran_COMPILER_ID} MATCHES "^Intel")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
+    set(NWTC_SYS_FILE_MATLAB ${CMAKE_CURRENT_SOURCE_DIR}/src/SysMatlabLinuxIntel.f90)
   elseif (WIN32)
     set(NWTC_SYS_FILE src/SysIVF.f90)
+    set(NWTC_SYS_FILE_MATLAB ${CMAKE_CURRENT_SOURCE_DIR}/src/SysMatlabWindows.f90)
   endif (APPLE OR UNIX)
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
+  if(APPLE OR UNIX)
+    set(NWTC_SYS_FILE src/SysFlangLinux.f90)
+  endif()
 endif ()
 
+# System file
 if (NWTC_SYS_FILE)
   message("-- Setting system file as: ${NWTC_SYS_FILE}")
   list(APPEND NWTCLIBS_SOURCES ${NWTC_SYS_FILE})
-else (NWTC_SYS_FILE)
+else ()
   message(FATAL_ERROR "Cannot determine system file used with NWTC_Library")
-endif (NWTC_SYS_FILE)
+endif ()
 
-add_library(nwtclibs ${NWTCLIBS_SOURCES})
-
+# MATLAB Library
 if(BUILD_OPENFAST_SIMULINK_API)
-  find_package(Matlab REQUIRED)
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS} ${Matlab_MEX_LIBRARY})
-else()
-  target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
+  if (NWTC_SYS_FILE_MATLAB)
+    message("-- Setting Matlab system file as: ${NWTC_SYS_FILE_MATLAB}")
+    message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
+  else ()
+    message(FATAL_ERROR "Cannot determine Matlab system file used with NWTC_Library")
+  endif ()
+endif(BUILD_OPENFAST_SIMULINK_API)
+
+# Create static library for nwtclibs
+add_library(nwtclibs ${NWTCLIBS_SOURCES})
+target_link_libraries(nwtclibs PUBLIC
+  ${LAPACK_LIBRARIES} 
+  ${CMAKE_DL_LIBS} 
+  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
+)
+if (USE_DLL_INTERFACE)
+  target_compile_definitions(nwtclibs PRIVATE USE_DLL_INTERFACE)
+endif (USE_DLL_INTERFACE)
+if (USE_LOCAL_STATIC_LAPACK)
+  add_dependencies(nwtclibs lapack)
 endif()
 
 install(TARGETS nwtclibs
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)
+

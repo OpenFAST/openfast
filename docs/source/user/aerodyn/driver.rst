@@ -63,7 +63,7 @@ More details are provided below, where the different sections of the input file 
 The input file starts with a header, the user can place a relevant description of the model on the second line.
 The input configuration section follows. 
 The user can toggle the flag `Echo` to write back the input file, as parsed by the driver, to disk.
-The `MHK` switch allows the user to specify whether or not the turbine is an MHK turbine. `MHK=0` denotes not an MHK turbine, `MHK=1` denotes a fixed MHK turbine, and `MHK=2` denotes a floating MHK turbine. Currently, only `MHK=0` can be specified, although users can still select a cavitation check.
+The `MHK` switch allows the user to specify whether or not the turbine is an MHK turbine. `MHK=0` denotes not an MHK turbine, `MHK=1` denotes a fixed MHK turbine, and `MHK=2` denotes a floating MHK turbine.
 The driver supports three kinds of analyses, but not all turbine formats and inflow types are available for each analysis type: 
 
 - `AnalysisType=1`: Simulation of one or multiple rotors with basic (HAWT) or arbitrary geometries (HAWT/VAWT, quad-rotor, etc.), with basic or advanced wind inputs, and optional time-varying motion of the tower base, nacelle and individual pitch angles. Arbitrary motion or sinusoidal motion of the tower base are possible.
@@ -91,13 +91,13 @@ An example of header and input configuration is given below:
 
 **Environmental conditions**
 
-Environmental conditions are specified here and passed to AeroDyn. `FldDens` (equivalent to `AirDens` in the AeroDyn primary input file) specifies the fluid density and must be a value greater than zero; a typical value is around 1.225 kg/m\ :sup:`3` for air (wind turbines) and 1025 kg/m\ :sup:`3` for seawater (MHK turbines). `KinVisc` specifies the kinematic viscosity of the fluid (used in the Reynolds number calculation); a typical value is around 1.460E-5 m\ :sup:`2`/s for air (wind turbines) and 1.004E-6 m\ :sup:`2`/s for seawater (MHK turbines). `SpdSound` is the speed of sound in the fluid (used to calculate the Mach number within the unsteady airfoil aerodynamics calculations); a typical value is around 340.3 m/s for air. The next two parameters in this section are only used when `CavitCheck = TRUE` for MHK turbines. `Patm` is the atmospheric pressure above the free surface; typically around 101,325 Pa. `Pvap` is the vapor pressure of the fluid; for seawater this is typically around 2,000 Pa. `WtrDpth` is the water depth from the seabed to the mean sea level (MSL).
+Environmental conditions are specified here and passed to AeroDyn. `FldDens` (equivalent to `AirDens` in the AeroDyn primary input file) specifies the fluid density and must be a value greater than zero; a typical value is around 1.225 kg/m\ :sup:`3` for air (wind turbines) and 1025 kg/m\ :sup:`3` for seawater (MHK turbines). `KinVisc` specifies the kinematic viscosity of the fluid (used in the Reynolds number calculation); a typical value is around 1.460E-5 m\ :sup:`2`/s for air (wind turbines) and 1.004E-6 m\ :sup:`2`/s for seawater (MHK turbines). `SpdSound` is the speed of sound in the fluid (used to calculate the Mach number within the unsteady airfoil aerodynamics calculations); a typical value is around 340.3 m/s for air (wind turbines) and 1500 m/s for seawater (MHK turbines). The next two parameters in this section are only used when `CavitCheck = TRUE` for MHK turbines. `Patm` is the atmospheric pressure above the free surface; typically around 101,325 Pa. `Pvap` is the vapor pressure of the fluid; for seawater this is typically around 2,000 Pa. `WtrDpth` is the water depth from the seabed to the mean sea level (MSL).
 
 **Inflow data**
 
 The inflow can be provided in two ways:
 
-- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a power law exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). With `AnalysisType=2`, the reference wind speed and power law are defined separately as time series (see "time-dependent analysis"). With `AnalysisType=3`, these parameters are provided in a separate table (see "Combined-Case analyses"). The reference height is used for all analyses types, since this height may be different than the hub height. The wind at a given node is determined using the following equation, where :math:`Z` is the instantaneous elevation of the node above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for MHK turbines.
+- basic (`CompInflow=0`): uniform wind with a power law shear. The wind is defined using a reference height (`RefHt`), a power law exponent (`PLExp`), and the wind speed at reference height (`HWindSpeed`). With `AnalysisType=2`, the reference wind speed and power law are defined separately as time series (see "time-dependent analysis"). With `AnalysisType=3`, these parameters are provided in a separate table (see "Combined-Case analyses"). The reference height is used for all analyses types, since this height may be different than the hub height. The wind at a given node is determined using the following equation, where :math:`Z` is the instantaneous elevation of the node above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for fixed and floating MHK turbines.
 
 .. math::
 
@@ -150,7 +150,7 @@ Two turbine input formats are supported:
 
 - basic (`BasicHAWTFormat=True`): Basic horizontal axis wind turbine (HAWT) format.
   In this format, the turbine geometry is entirely determined by the number of blades (`NumBlades`), the hub radius (`HubRad`), the hub height  (`HubHt`), the overhang (`Overhang`), the shaft tilt (`ShftTilt`), the precone (`Precone`), and the vertical distance from the tower-top to the rotor shaft (`Twr2Shft`), as shown in :numref:`fig:BasicGeometry`.
-  The definition of each parameter follows the ElastoDyn convention. For example, `HubRad` specifies the radius from the center-of-rotation to the blade root along the (possibly preconed) blade-pitch axis and must be greater than zero. `HubHt` specifies the elevation of the hub center above the ground for land-based wind turbines, above the mean sea level (MSL) for offshore wind turbines, or above the seabed for MHK turbines. `Overhang` specifies the distance along the (possibly tilted) rotor shaft between the tower centerline and hub center and is positive downwind (use a negative number for upwind rotors). `ShftTilt` is the angle (in degrees) between the rotor shaft and the horizontal plane, and positive `ShftTilt` means that the downwind end of the shaft is the highest (upwind turbines have negative `ShftTilt` for improved tower clearance). `Precone` is the angle (in degrees) between a flat rotor disk and the cone swept by the blades, positive downwind (upwind turbines have negative `Precone` for improved tower clearance).
+  The definition of each parameter follows the ElastoDyn convention. For example, `HubRad` specifies the radius from the center-of-rotation to the blade root along the (possibly preconed) blade-pitch axis and must be greater than zero. `HubHt` specifies the elevation of the hub center above the ground for land-based wind turbines, relative to the mean sea level (MSL) for offshore wind and floating MHK turbines, or relative to the seabed for fixed MHK turbines. For floating MHK turbines with the hub positioned below the MSL, `HubHt` should be negative. `Overhang` specifies the distance along the (possibly tilted) rotor shaft between the tower centerline and hub center and is positive downwind (use a negative number for upwind rotors). `ShftTilt` is the angle (in degrees) between the rotor shaft and the horizontal plane, and positive `ShftTilt` means that the downwind end of the shaft is the highest (upwind turbines have negative `ShftTilt` for improved tower clearance). For floating MHK turbines, the sign of `ShftTilt` should be flipped to achieve an equivalent shaft tilt. For example, floating, upwind MHK turbines have positive `ShftTilt` for improved tower clearance. `Precone` is the angle (in degrees) between a flat rotor disk and the cone swept by the blades, positive downwind (upwind turbines have negative `Precone` for improved tower clearance). `Twr2Shft` is the vertical distance from the tower-top to the rotor shaft. For floating MHK turbines with the rotor below the tower-top, this value should be negative.
 
   .. figure:: figs/aerodyn_driver_geom.png
    :width: 60%
@@ -158,7 +158,7 @@ Two turbine input formats are supported:
 
    Definition of basic turbine geometry.
 
-  Additionally, the user needs to provide the origin of the turbine base at `t=0` (`BaseOriginInit`). An example of basic input is given below:
+  Additionally, the user needs to provide the origin of the turbine base at `t=0` (`BaseOriginInit`). For fixed MHK turbines, `BaseOriginInit` is input relative to the seabed. For floating MHK turbines, `BaseOriginInit` is input relative to the MSL, and the vertical component is negative if the turbine base is below the MSL. An example of basic input is given below:
 
 .. code::
 
@@ -176,7 +176,7 @@ Two turbine input formats are supported:
 
 - advanced (`BasicHAWTFormat=False`): The position and orientation of the tower base, nacelle, hub, and individual blades can be arbitrarily defined. This can be used for HAWT and any other turbine concepts. 
   The definition of the different frames are given in :numref:`fig:MultiRotor`.
-  The position (`BaseOriginInit`) and orientation (`BaseOrientationInit`) of the turbine base frame are defined with respect to the global frame. Orientations are given using the values of three successive rotations (x-y-z Euler angle sequence). If the base undergoes a motion, the orientation of the base frame will consist of the time-varying rotations followed by these initial rotations.
+  The position (`BaseOriginInit`) and orientation (`BaseOrientationInit`) of the turbine base frame are defined with respect to the global frame. The vertical component of `BaseOriginInit` is defined relative to the seabed for fixed MHK turbines and relative to the MSL for floating MHK turbines. Orientations are given using the values of three successive rotations (x-y-z Euler angle sequence). If the base undergoes a motion, the orientation of the base frame will consist of the time-varying rotations followed by these initial rotations.
 
   A flag indicating whether the turbine has a tower is given on the next line (`HasTower`). This flag currently affects the VTK outputs and does not have an impact on AeroDyn yet. The user still has to provide tower input data in AeroDyn for each turbine (see :numref:`ad_inputs_multirot`).
   The next line indicates which projection AeroDyn is to use in its calculation. It is recommended to use `HAWTprojection=True` for HAWT, which is the default projection used in AeroDyn (projects on the coned-pitched axis). For other rotor concepts, set `HAWTprojection=False`.
@@ -185,7 +185,8 @@ Two turbine input formats are supported:
   The tower and the nacelle are defined with respect to the turbine base (t) origin and frame.
   The tower top is assumed to coincide with the nacelle origin. 
   The tower stations defined in the AeroDyn input file are assumed to be given with respect to the tower origin, unlike OpenFAST which uses ground/MSL as a reference (see :numref:`ad_inputs_multirot`).
-  The hub is defined with respect to the nacelle origin and frame (n).
+  For floating MHK turbines, the vertical components of `TwrOrigin_t` and `NacOrigin_t` are negative if the tower origin and nacelle origin are below the turbine base.
+  The hub is defined with respect to the nacelle origin and frame (n). The vertical component of `HubOrigin_n` is negative for floating MHK turbines if the hub origin is below the nacelle origin (i.e., tower top).
 
   The definitions of the blades follow, starting with the number of blades `NumBlades`. A rotor with zero blades is supported and can be used to model an isolated tower.
   If tower shadow/potential is used in AeroDyn, then the isolated tower will disturb the flow of the vortex wake when OLAF is used.
@@ -250,7 +251,7 @@ An example of inputs for a sinusoidal surge motion is given below:
 
 The different inputs for the basic and advanced geometries are given below:
 
-- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), rotor speed (`RotSpeed`, positive clockwise looking downwind), and blade pitch (`BldPitch`, negative around :math:`z_b`). 
+- basic: The motion of a basic turbine consists of a constant nacelle yaw (`NacYaw`, positive rotation of the nacelle about the vertical tower axis, counterclockwise when looking downward), rotor speed (`RotSpeed`, positive clockwise looking downwind), and blade pitch (`BldPitch`, negative around :math:`z_b`). For floating MHK turbines, `NacYaw` should be flipped to achieve the same global yaw direction (i.e., positive rotation of the nacelle about the vertical tower axis, clockwise when looking downward).
   Examples are given below:
 
 .. code::
@@ -349,7 +350,7 @@ No changes are required to the AeroDyn input files when one turbine is used.
 To minimize the impact of the multiple-turbines implementation, the driver currently uses only one AeroDyn input file for all turbines. 
 This means that the AeroDyn options are currently the same for all rotors.
 
-The definition of the blade files and tower inputs needs to be adapted when more than three blades are used and more than one turbine is used.
+The definition of the blade files and the tower, hub, and nacelle inputs needs to be adapted when more than three blades are used and more than one turbine is used.
 
 **Blade files**
 
@@ -371,6 +372,29 @@ An example is given below for two turbines, the first one having 3 blades, the s
     "AD_Turbine2_blade2.dat" ADBlFile(5) - Name of file containing distributed aerodynamic properties for Blade #5 (-) 
 
 
+
+**Hub and nacelle inputs**
+
+The sections defining the hub and nacelle buoyancy parameters must also be reproduced for each turbine.
+
+An example is given below for two turbines:
+
+.. code::
+
+    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    7.0   VolHub             - Hub volume (m^3)
+    0.0   HubCenBx           - Hub center of buoyancy x direction offset (m)
+    ======  Hub Properties ============================================================================== [used only when Buoyancy=True]
+    5.0   VolHub             - Hub volume (m^3)
+    0.2   HubCenBx           - Hub center of buoyancy x direction offset (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    32.0  VolNac             - Nacelle volume (m^3)
+    0.3, 0.0, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+    ======  Nacelle Properties ========================================================================== [used only when Buoyancy=True]
+    30.0  VolNac             - Nacelle volume (m^3)
+    0.5, 0.1, 0.05 NacCenB   - Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates (m)
+
+
 **Aerodynamic tower inputs**
 
 The entire tower input section of AeroDyn has to be reproduced for each turbine, including turbines that are set not to have a tower (`hasTower=False`).
@@ -382,21 +406,19 @@ An example is given below for two turbines:
 
 .. code::
 
-    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
-    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
-    TwrElev TwrDiam  TwrCd    TwrTI
-    (m)       (m)     (-)     (-)
-     0.0      2.0     1.0    0.1
-    10.0      1.0     1.0    0.1
-    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
-    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
-    TwrElev TwrDiam  TwrCd   TwrTI
-    (m)       (m)     (-)    (-)
-     0.0      4.0     1.0    0.1
-    15.0      3.0     1.0    0.1
-    30.0      2.0     1.0    0.1
-
-
+    ======  Turbine(1) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    2   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    TwrElev TwrDiam  TwrCd    TwrTI   TwrCb
+    (m)       (m)     (-)     (-)     (-)
+     0.0      2.0     1.0    0.1      0.0
+    10.0      1.0     1.0    0.1      0.0
+    ======  Turbine(2) Tower Influence and Aerodynamics ================================================ [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    3   NumTwrNds   - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow/=0, TwrAero=True, or Buoyancy=True]
+    TwrElev TwrDiam  TwrCd   TwrTI   TwrCb
+    (m)       (m)     (-)    (-)     (-)
+     0.0      4.0     1.0    0.1     0.0
+    15.0      3.0     1.0    0.1     0.0
+    30.0      2.0     1.0    0.1     0.0
 
 
 .. _ad_inputfiles_examples:
@@ -425,10 +447,18 @@ An example of an AeroDyn driver for a basic inflow, basic HAWT, and combined cas
     Three bladed wind turbine, using basic geometry input
     ----- Input Configuration ---------------------------------------------------------------
     False           Echo         - Echo input parameters to "<rootname>.ech"?
+            0       MHK          - MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine}
             3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
            11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
             0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)
     "./AD.dat"      AeroFile - Name of the primary AeroDyn input file
+    ----- Environmental Conditions ----------------------------------------------------------
+    1.225000000000000e+00     FldDens      - Density of working fluid (kg/m^3)
+    1.477551020408163e-05     KinVisc      - Kinematic viscosity of working fluid (m^2/s)
+    3.350000000000000e+02     SpdSound     - Speed of sound in working fluid (m/s)
+    1.035000000000000e+05     Patm         - Atmospheric pressure (Pa) [used only for an MHK turbine cavitation check]
+    1.700000000000000e+03     Pvap         - Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
+                        0     WtrDpth      - Water depth (m)
     ----- Inflow Data -----------------------------------------------------------------------
               0      CompInflow  - Compute inflow wind velocities (switch) {0=Steady Wind; 1=InflowWind}
     "unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
