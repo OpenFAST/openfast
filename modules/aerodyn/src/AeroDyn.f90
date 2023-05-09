@@ -867,9 +867,18 @@ end if
          
          call AllocAry( m%TwrFI, 3_IntKi, p%NumTwrNds, 'm%TwrFI', ErrStat2, ErrMsg2 )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+         call AllocAry( m%TwrFA, 3_IntKi, p%NumTwrNds, 'm%TwrFA', ErrStat2, ErrMsg2 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       end if
       
       call AllocAry( m%BlFI, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlFI', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call AllocAry( m%BlFA, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlFA', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      call AllocAry( m%BlMA, 3_IntKi, p%NumBlNds, p%numBlades, 'm%BlMA', ErrStat2, ErrMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    end if
 
@@ -1191,6 +1200,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
                         ,TranslationVel  = .true.                         &
                         ,RotationVel     = .true.                         &
                         ,TranslationAcc  = .true.                         &
+                        ,RotationAcc     = .true.                         &
                         )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -1240,6 +1250,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
       u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
       u%BladeMotion(k)%RotationVel     = 0.0_ReKi
       u%BladeMotion(k)%TranslationAcc  = 0.0_ReKi
+      u%BladeMotion(k)%RotationAcc     = 0.0_ReKi
          
                
    
@@ -2429,43 +2440,61 @@ subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
       ! Local variables
    INTEGER(IntKi)                                   :: k                !< Loop counter for blades
    INTEGER(IntKi)                                   :: j                !< Loop counter for nodes
-   REAL(ReKi), DIMENSION(3)                         :: aBTemp           !< Inflow acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aFBTemp          !< Inflow acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aBBTemp          !< Body translational acceleration at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: alphaBBTemp      !< Body rotational acceleration at blade node in local coordinates
    REAL(ReKi), DIMENSION(3)                         :: BlFItmp          !< Inertia force at blade node in local coordinates
-   REAL(ReKi), DIMENSION(3)                         :: aTTemp           !< Inflow acceleration at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlFAtmp          !< Added mass force at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: BlMAtmp          !< Added mass moment at blade node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aFTTemp          !< Inflow acceleration at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: aBTTemp          !< Body translational acceleration at tower node in local coordinates
    REAL(ReKi), DIMENSION(3)                         :: TwrFItmp         !< Inertia force at tower node in local coordinates
+   REAL(ReKi), DIMENSION(3)                         :: TwrFAtmp         !< Added mass force at tower node in local coordinates
    CHARACTER(*), PARAMETER                          :: RoutineName = 'CalcAddedMassInertiaLoads'
 
 
       ! Initialize variables for this routine
-   ErrStat  = ErrID_None
-   ErrMsg   = ""
-   aBTemp   = 0.0_ReKi
-   BlFItmp  = 0.0_ReKi
-   aTTemp   = 0.0_ReKi
-   TwrFItmp = 0.0_ReKi
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
+   aFBTemp     = 0.0_ReKi
+   aBBTemp     = 0.0_ReKi
+   alphaBBTemp = 0.0_ReKi
+   BlFItmp     = 0.0_ReKi
+   BlFAtmp     = 0.0_ReKi
+   BlMAtmp     = 0.0_ReKi
+   aFTTemp     = 0.0_ReKi
+   aBTTemp     = 0.0_ReKi
+   TwrFItmp    = 0.0_ReKi
+   TwrFAtmp    = 0.0_ReKi
 
       ! Blades
    do k = 1,p%NumBlades ! loop through all blades
       do j = 1,p%NumBlNds ! loop through all nodes
 
             ! Convert fluid acceleration at node to local blade coordinates
-         aBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), u%AccelOnBlade(:,j,k) )
+         aFBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), u%AccelOnBlade(:,j,k) )
 
             ! Calculate per-unit-length inertia forces at node
-         BlFItmp(1) = p%BlIN(j,k) * aBTemp(1)
-         BlFItmp(2) = p%BlIT(j,k) * aBTemp(2)
-         BlFItmp(3) = 0.0_ReKi
+         BlFItmp(1) = p%BlIN(j,k) * aFBTemp(1)
+         BlFItmp(2) = p%BlIT(j,k) * aFBTemp(2)
 
             ! Convert inertia forces to global coordinates
          m%BlFI(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlFItmp )
 
             ! Convert body acceleration at node to local blade coordinates
+         aBBTemp = matmul( u%BladeMotion(k)%Orientation(:,:,j), u%BladeMotion(k)%TranslationAcc(:,j) )
+         alphaBBTemp(3) = u%BladeMotion(k)%Orientation(3,1,j)*u%BladeMotion(k)%RotationAcc(1,j) + u%BladeMotion(k)%Orientation(3,2,j)*u%BladeMotion(k)%RotationAcc(2,j) + u%BladeMotion(k)%Orientation(3,3,j)*u%BladeMotion(k)%RotationAcc(3,j)
 
             ! Calculate per-unit-length added mass forces at node
+         BlFAtmp(1) = p%BlAN(j,k) * aBBTemp(1)
+         BlFAtmp(2) = p%BlAT(j,k) * aBBTemp(2)
 
             ! Calculate per-unit-length added mass pitching moment at node
+         BlMAtmp(3) = p%BlAM(j,k) * alphaBBTemp(3)
 
             ! Convert added mass forces and moments to global coordinates
+         m%BlFA(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlFAtmp )
+         m%BlMA(:,j,k) = matmul( transpose(u%BladeMotion(k)%Orientation(:,:,j)), BlMAtmp )
          
       end do
    end do
@@ -2473,7 +2502,8 @@ subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
       ! Add added mass and inertia loads to aerodynamic loads 
    do k = 1,p%NumBlades ! loop through all blades
       do j = 1,p%NumBlNds ! loop through all nodes
-         y%BladeLoad(k)%Force(:,j) = y%BladeLoad(k)%Force(:,j) + m%BlFI(:,j,k)
+         y%BladeLoad(k)%Force(:,j) = y%BladeLoad(k)%Force(:,j) + m%BlFI(:,j,k) + m%BlFA(:,j,k)
+         y%BladeLoad(k)%Moment(:,j) = y%BladeLoad(k)%Moment(:,j) + m%BlMA(:,j,k)
       end do ! j = nodes
    end do ! k = blades
 
@@ -2482,28 +2512,31 @@ subroutine CalcAddedMassInertiaLoads( u, p, m, y, ErrStat, ErrMsg )
       do j = 1,p%NumTwrNds ! loop through all nodes
 
             ! Convert fluid acceleration at node to local tower coordinates
-         aTTemp = matmul( u%TowerMotion%Orientation(:,:,j), u%AccelOnTower(:,j) )
+         aFTTemp = matmul( u%TowerMotion%Orientation(:,:,j), u%AccelOnTower(:,j) )
 
             ! Calculate per-unit-length inertia forces at node
-         TwrFItmp(1) = p%TwrIT(j) * aTTemp(1)
-         TwrFItmp(2) = p%TwrIT(j) * aTTemp(2)
-         TwrFItmp(3) = 0.0_ReKi
+         TwrFItmp(1) = p%TwrIT(j) * aFTTemp(1)
+         TwrFItmp(2) = p%TwrIT(j) * aFTTemp(2)
 
             ! Convert inertia forces to global coordinates
          m%TwrFI(:,j) = matmul( transpose(u%TowerMotion%Orientation(:,:,j)), TwrFItmp )
 
             ! Convert body acceleration at node to local tower coordinates
+         aBTTemp = matmul( u%TowerMotion%Orientation(:,:,j), u%TowerMotion%TranslationAcc(:,j) )
 
             ! Calculate per-unit-length added mass forces at node
+         TwrFAtmp(1) = p%TwrAT(j) * aBTTemp(1)
+         TwrFAtmp(2) = p%TwrAT(j) * aBTTemp(2)
 
             ! Convert added mass forces to global coordinates
+         m%TwrFA(:,j) = matmul( transpose(u%TowerMotion%Orientation(:,:,j)), TwrFAtmp )
 
       end do
    end if
 
       ! Add buoyant loads to aerodynamic loads
    do j = 1,p%NumTwrNds ! loop through all nodes
-      y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + m%TwrFI(:,j)
+      y%TowerLoad%Force(:,j) = y%TowerLoad%Force(:,j) + m%TwrFI(:,j) + m%TwrFA(:,j)
    end do ! j = nodes
 
 end subroutine CalcAddedMassInertiaLoads
