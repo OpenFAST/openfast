@@ -76,6 +76,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: DpthAxCaMG      !< Depth-based Axial Ca for marine growth [-]
     REAL(ReKi)  :: DpthAxCp      !< Depth-based Axial Cp [-]
     REAL(ReKi)  :: DpthAxCpMG      !< Depth-based Axial Cp for marine growth [-]
+    REAL(ReKi)  :: DpthCb      !< Simple model hydrostatic/buoyancy load coefficient [-]
+    REAL(ReKi)  :: DpthCbMg      !< Simple model hydrostatic/buoyancy load coefficient for marine growth [-]
     LOGICAL  :: DpthMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefDpths
 ! =======================
@@ -104,6 +106,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MPropSetID2Indx      !< Index into the Property table for the end of this member [-]
     REAL(ReKi)  :: MDivSize      !< User-specified desired member discretization size for the final element [m]
     INTEGER(IntKi)  :: MCoefMod      !< Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based] [-]
+    INTEGER(IntKi)  :: MHstLMod      !< Which hydrostatic model is being used for this member [1=column-type, 2=ship-type] [-]
     INTEGER(IntKi)  :: MmbrCoefIDIndx      !< Index into the appropriate coefs table for this member's properties [-]
     INTEGER(IntKi)  :: MmbrFilledIDIndx      !< Index into the filled group table if this is a filled member [-]
     LOGICAL  :: PropPot      !< Flag T/F for whether the member is modeled with potential flow theory [-]
@@ -145,10 +148,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: Ak      !< matrix of I - kkt [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: R      !< outer member radius at each node [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMG      !< radius at each node including marine growth [m]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RMGB      !< radius at each node including marine growth scaled by sqrt(Cb) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Rin      !< inner member radius at node, equivalent to radius of water ballast at this node if filled [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: tMG      !< Nodal thickness with marine growth (of member at node location) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: MGdensity      !< Nodal density of marine growth [kg/m^3]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg      !< taper dr/dl of outer surface including marine growth of each element [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_mg_b      !< taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: dRdl_in      !< taper dr/dl of interior surface of each element [-]
     REAL(ReKi)  :: Vinner      !< Member volume without marine growth [m^3]
     REAL(ReKi)  :: Vouter      !< Member volume including marine growth [m^3]
@@ -171,6 +176,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCd      !< Member axial Cd at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCa      !< Member axial Ca at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AxCp      !< Member axial Cp at each node [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Cb      !< Member Cb at each node [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_fb_l      !< mass of flooded ballast in lower portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: m_fb_u      !< mass of flooded ballast in upper portion of each element [kg]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: h_cfb_l      !< distance to flooded ballast centroid from node point in lower portion of each element [m]
@@ -195,6 +201,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MCoefMod      !< Coefs model for member: 1 = simple, 2 =depth, 3 = member-based  [-]
     INTEGER(IntKi)  :: MmbrCoefIDIndx      !< If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table [-]
     INTEGER(IntKi)  :: MmbrFilledIDIndx      !< If this member is part of a fill group, this is the index into the master fill group table, if not = -1 [-]
+    INTEGER(IntKi)  :: MHstLMod      !< Hydrostatic model for member [1=column-type, 2=ship-type] [-]
     REAL(ReKi)  :: FillFSLoc      !< Z-location of the filled free-surface [m]
     REAL(ReKi)  :: FillDens      !< Filled fluid density [kg/m^3]
     LOGICAL  :: PropPot      !< Is this element/member modeled with potential flow theory T/F [-]
@@ -244,6 +251,10 @@ IMPLICIT NONE
     REAL(ReKi)  :: MemberAxCp2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberAxCpMG1      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     REAL(ReKi)  :: MemberAxCpMG2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb1      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCb2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG1      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
+    REAL(ReKi)  :: MemberCbMG2      !< Member-based coefs, see above descriptions for meanings (1 = start, 2=end) [-]
     LOGICAL  :: MemberMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
   END TYPE Morison_CoefMembers
 ! =======================
@@ -301,6 +312,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: SimplAxCaMG      !< Simple model Axial Ca for marine growth [-]
     REAL(ReKi)  :: SimplAxCp      !< Simple model Axial Cp [-]
     REAL(ReKi)  :: SimplAxCpMG      !< Simple model Axial Cp for marine growth [-]
+    REAL(ReKi)  :: SimplCb      !< Simple model hydrostatic/buoyancy load coefficient [-]
+    REAL(ReKi)  :: SimplCbMg      !< Simple model hydrostatic/buoyancy load coefficient for marine growth [-]
     LOGICAL  :: SimplMCF      !< Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model [-]
     INTEGER(IntKi)  :: NCoefDpth      !<  [-]
     TYPE(Morison_CoefDpths) , DIMENSION(:), ALLOCATABLE  :: CoefDpths      !<  [-]
@@ -1034,6 +1047,8 @@ ENDIF
     DstCoefDpthsData%DpthAxCaMG = SrcCoefDpthsData%DpthAxCaMG
     DstCoefDpthsData%DpthAxCp = SrcCoefDpthsData%DpthAxCp
     DstCoefDpthsData%DpthAxCpMG = SrcCoefDpthsData%DpthAxCpMG
+    DstCoefDpthsData%DpthCb = SrcCoefDpthsData%DpthCb
+    DstCoefDpthsData%DpthCbMg = SrcCoefDpthsData%DpthCbMg
     DstCoefDpthsData%DpthMCF = SrcCoefDpthsData%DpthMCF
  END SUBROUTINE Morison_CopyCoefDpths
 
@@ -1108,6 +1123,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCaMG
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCp
       Re_BufSz   = Re_BufSz   + 1  ! DpthAxCpMG
+      Re_BufSz   = Re_BufSz   + 1  ! DpthCb
+      Re_BufSz   = Re_BufSz   + 1  ! DpthCbMg
       Int_BufSz  = Int_BufSz  + 1  ! DpthMCF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1161,6 +1178,10 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%DpthAxCp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%DpthAxCpMG
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%DpthCb
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%DpthCbMg
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%DpthMCF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -1217,6 +1238,10 @@ ENDIF
     OutData%DpthAxCp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%DpthAxCpMG = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%DpthCb = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%DpthCbMg = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%DpthMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%DpthMCF)
     Int_Xferred = Int_Xferred + 1
@@ -1433,6 +1458,7 @@ ENDIF
     DstMemberInputTypeData%MPropSetID2Indx = SrcMemberInputTypeData%MPropSetID2Indx
     DstMemberInputTypeData%MDivSize = SrcMemberInputTypeData%MDivSize
     DstMemberInputTypeData%MCoefMod = SrcMemberInputTypeData%MCoefMod
+    DstMemberInputTypeData%MHstLMod = SrcMemberInputTypeData%MHstLMod
     DstMemberInputTypeData%MmbrCoefIDIndx = SrcMemberInputTypeData%MmbrCoefIDIndx
     DstMemberInputTypeData%MmbrFilledIDIndx = SrcMemberInputTypeData%MmbrFilledIDIndx
     DstMemberInputTypeData%PropPot = SrcMemberInputTypeData%PropPot
@@ -1519,6 +1545,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! MPropSetID2Indx
       Re_BufSz   = Re_BufSz   + 1  ! MDivSize
       Int_BufSz  = Int_BufSz  + 1  ! MCoefMod
+      Int_BufSz  = Int_BufSz  + 1  ! MHstLMod
       Int_BufSz  = Int_BufSz  + 1  ! MmbrCoefIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! MmbrFilledIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
@@ -1589,6 +1616,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MDivSize
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MCoefMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHstLMod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MmbrCoefIDIndx
     Int_Xferred = Int_Xferred + 1
@@ -1672,6 +1701,8 @@ ENDIF
     OutData%MDivSize = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%MCoefMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHstLMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%MmbrCoefIDIndx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -1984,6 +2015,18 @@ IF (ALLOCATED(SrcMemberTypeData%RMG)) THEN
   END IF
     DstMemberTypeData%RMG = SrcMemberTypeData%RMG
 ENDIF
+IF (ALLOCATED(SrcMemberTypeData%RMGB)) THEN
+  i1_l = LBOUND(SrcMemberTypeData%RMGB,1)
+  i1_u = UBOUND(SrcMemberTypeData%RMGB,1)
+  IF (.NOT. ALLOCATED(DstMemberTypeData%RMGB)) THEN 
+    ALLOCATE(DstMemberTypeData%RMGB(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%RMGB.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMemberTypeData%RMGB = SrcMemberTypeData%RMGB
+ENDIF
 IF (ALLOCATED(SrcMemberTypeData%Rin)) THEN
   i1_l = LBOUND(SrcMemberTypeData%Rin,1)
   i1_u = UBOUND(SrcMemberTypeData%Rin,1)
@@ -2031,6 +2074,18 @@ IF (ALLOCATED(SrcMemberTypeData%dRdl_mg)) THEN
     END IF
   END IF
     DstMemberTypeData%dRdl_mg = SrcMemberTypeData%dRdl_mg
+ENDIF
+IF (ALLOCATED(SrcMemberTypeData%dRdl_mg_b)) THEN
+  i1_l = LBOUND(SrcMemberTypeData%dRdl_mg_b,1)
+  i1_u = UBOUND(SrcMemberTypeData%dRdl_mg_b,1)
+  IF (.NOT. ALLOCATED(DstMemberTypeData%dRdl_mg_b)) THEN 
+    ALLOCATE(DstMemberTypeData%dRdl_mg_b(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%dRdl_mg_b.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMemberTypeData%dRdl_mg_b = SrcMemberTypeData%dRdl_mg_b
 ENDIF
 IF (ALLOCATED(SrcMemberTypeData%dRdl_in)) THEN
   i1_l = LBOUND(SrcMemberTypeData%dRdl_in,1)
@@ -2174,6 +2229,18 @@ IF (ALLOCATED(SrcMemberTypeData%AxCp)) THEN
     END IF
   END IF
     DstMemberTypeData%AxCp = SrcMemberTypeData%AxCp
+ENDIF
+IF (ALLOCATED(SrcMemberTypeData%Cb)) THEN
+  i1_l = LBOUND(SrcMemberTypeData%Cb,1)
+  i1_u = UBOUND(SrcMemberTypeData%Cb,1)
+  IF (.NOT. ALLOCATED(DstMemberTypeData%Cb)) THEN 
+    ALLOCATE(DstMemberTypeData%Cb(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMemberTypeData%Cb.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMemberTypeData%Cb = SrcMemberTypeData%Cb
 ENDIF
 IF (ALLOCATED(SrcMemberTypeData%m_fb_l)) THEN
   i1_l = LBOUND(SrcMemberTypeData%m_fb_l,1)
@@ -2408,6 +2475,7 @@ ENDIF
     DstMemberTypeData%MCoefMod = SrcMemberTypeData%MCoefMod
     DstMemberTypeData%MmbrCoefIDIndx = SrcMemberTypeData%MmbrCoefIDIndx
     DstMemberTypeData%MmbrFilledIDIndx = SrcMemberTypeData%MmbrFilledIDIndx
+    DstMemberTypeData%MHstLMod = SrcMemberTypeData%MHstLMod
     DstMemberTypeData%FillFSLoc = SrcMemberTypeData%FillFSLoc
     DstMemberTypeData%FillDens = SrcMemberTypeData%FillDens
     DstMemberTypeData%PropPot = SrcMemberTypeData%PropPot
@@ -2445,6 +2513,9 @@ ENDIF
 IF (ALLOCATED(MemberTypeData%RMG)) THEN
   DEALLOCATE(MemberTypeData%RMG)
 ENDIF
+IF (ALLOCATED(MemberTypeData%RMGB)) THEN
+  DEALLOCATE(MemberTypeData%RMGB)
+ENDIF
 IF (ALLOCATED(MemberTypeData%Rin)) THEN
   DEALLOCATE(MemberTypeData%Rin)
 ENDIF
@@ -2456,6 +2527,9 @@ IF (ALLOCATED(MemberTypeData%MGdensity)) THEN
 ENDIF
 IF (ALLOCATED(MemberTypeData%dRdl_mg)) THEN
   DEALLOCATE(MemberTypeData%dRdl_mg)
+ENDIF
+IF (ALLOCATED(MemberTypeData%dRdl_mg_b)) THEN
+  DEALLOCATE(MemberTypeData%dRdl_mg_b)
 ENDIF
 IF (ALLOCATED(MemberTypeData%dRdl_in)) THEN
   DEALLOCATE(MemberTypeData%dRdl_in)
@@ -2489,6 +2563,9 @@ IF (ALLOCATED(MemberTypeData%AxCa)) THEN
 ENDIF
 IF (ALLOCATED(MemberTypeData%AxCp)) THEN
   DEALLOCATE(MemberTypeData%AxCp)
+ENDIF
+IF (ALLOCATED(MemberTypeData%Cb)) THEN
+  DEALLOCATE(MemberTypeData%Cb)
 ENDIF
 IF (ALLOCATED(MemberTypeData%m_fb_l)) THEN
   DEALLOCATE(MemberTypeData%m_fb_l)
@@ -2607,6 +2684,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! RMG upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%RMG)  ! RMG
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! RMGB allocated yes/no
+  IF ( ALLOCATED(InData%RMGB) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! RMGB upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RMGB)  ! RMGB
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! Rin allocated yes/no
   IF ( ALLOCATED(InData%Rin) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! Rin upper/lower bounds for each dimension
@@ -2626,6 +2708,11 @@ ENDIF
   IF ( ALLOCATED(InData%dRdl_mg) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! dRdl_mg upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%dRdl_mg)  ! dRdl_mg
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! dRdl_mg_b allocated yes/no
+  IF ( ALLOCATED(InData%dRdl_mg_b) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! dRdl_mg_b upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%dRdl_mg_b)  ! dRdl_mg_b
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! dRdl_in allocated yes/no
   IF ( ALLOCATED(InData%dRdl_in) ) THEN
@@ -2692,6 +2779,11 @@ ENDIF
   IF ( ALLOCATED(InData%AxCp) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! AxCp upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%AxCp)  ! AxCp
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Cb allocated yes/no
+  IF ( ALLOCATED(InData%Cb) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Cb upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Cb)  ! Cb
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! m_fb_l allocated yes/no
   IF ( ALLOCATED(InData%m_fb_l) ) THEN
@@ -2793,6 +2885,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! MCoefMod
       Int_BufSz  = Int_BufSz  + 1  ! MmbrCoefIDIndx
       Int_BufSz  = Int_BufSz  + 1  ! MmbrFilledIDIndx
+      Int_BufSz  = Int_BufSz  + 1  ! MHstLMod
       Re_BufSz   = Re_BufSz   + 1  ! FillFSLoc
       Re_BufSz   = Re_BufSz   + 1  ! FillDens
       Int_BufSz  = Int_BufSz  + 1  ! PropPot
@@ -2896,6 +2989,21 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%RMGB) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%RMGB,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%RMGB,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%RMGB,1), UBOUND(InData%RMGB,1)
+        ReKiBuf(Re_Xferred) = InData%RMGB(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%Rin) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2953,6 +3061,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%dRdl_mg,1), UBOUND(InData%dRdl_mg,1)
         ReKiBuf(Re_Xferred) = InData%dRdl_mg(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%dRdl_mg_b) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dRdl_mg_b,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dRdl_mg_b,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%dRdl_mg_b,1), UBOUND(InData%dRdl_mg_b,1)
+        ReKiBuf(Re_Xferred) = InData%dRdl_mg_b(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3140,6 +3263,21 @@ ENDIF
 
       DO i1 = LBOUND(InData%AxCp,1), UBOUND(InData%AxCp,1)
         ReKiBuf(Re_Xferred) = InData%AxCp(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Cb) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Cb,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Cb,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Cb,1), UBOUND(InData%Cb,1)
+        ReKiBuf(Re_Xferred) = InData%Cb(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3438,6 +3576,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MmbrFilledIDIndx
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHstLMod
+    Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FillFSLoc
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%FillDens
@@ -3568,6 +3708,24 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RMGB not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%RMGB)) DEALLOCATE(OutData%RMGB)
+    ALLOCATE(OutData%RMGB(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%RMGB.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%RMGB,1), UBOUND(OutData%RMGB,1)
+        OutData%RMGB(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Rin not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -3637,6 +3795,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%dRdl_mg,1), UBOUND(OutData%dRdl_mg,1)
         OutData%dRdl_mg(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dRdl_mg_b not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dRdl_mg_b)) DEALLOCATE(OutData%dRdl_mg_b)
+    ALLOCATE(OutData%dRdl_mg_b(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dRdl_mg_b.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%dRdl_mg_b,1), UBOUND(OutData%dRdl_mg_b,1)
+        OutData%dRdl_mg_b(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -3857,6 +4033,24 @@ ENDIF
     END IF
       DO i1 = LBOUND(OutData%AxCp,1), UBOUND(OutData%AxCp,1)
         OutData%AxCp(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Cb not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Cb)) DEALLOCATE(OutData%Cb)
+    ALLOCATE(OutData%Cb(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Cb.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Cb,1), UBOUND(OutData%Cb,1)
+        OutData%Cb(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -4211,6 +4405,8 @@ ENDIF
     OutData%MmbrCoefIDIndx = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%MmbrFilledIDIndx = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHstLMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%FillFSLoc = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -5113,6 +5309,10 @@ ENDIF
     DstCoefMembersData%MemberAxCp2 = SrcCoefMembersData%MemberAxCp2
     DstCoefMembersData%MemberAxCpMG1 = SrcCoefMembersData%MemberAxCpMG1
     DstCoefMembersData%MemberAxCpMG2 = SrcCoefMembersData%MemberAxCpMG2
+    DstCoefMembersData%MemberCb1 = SrcCoefMembersData%MemberCb1
+    DstCoefMembersData%MemberCb2 = SrcCoefMembersData%MemberCb2
+    DstCoefMembersData%MemberCbMG1 = SrcCoefMembersData%MemberCbMG1
+    DstCoefMembersData%MemberCbMG2 = SrcCoefMembersData%MemberCbMG2
     DstCoefMembersData%MemberMCF = SrcCoefMembersData%MemberMCF
  END SUBROUTINE Morison_CopyCoefMembers
 
@@ -5199,6 +5399,10 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCp2
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCpMG1
       Re_BufSz   = Re_BufSz   + 1  ! MemberAxCpMG2
+      Re_BufSz   = Re_BufSz   + 1  ! MemberCb1
+      Re_BufSz   = Re_BufSz   + 1  ! MemberCb2
+      Re_BufSz   = Re_BufSz   + 1  ! MemberCbMG1
+      Re_BufSz   = Re_BufSz   + 1  ! MemberCbMG2
       Int_BufSz  = Int_BufSz  + 1  ! MemberMCF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5276,6 +5480,14 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MemberAxCpMG1
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MemberAxCpMG2
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MemberCb1
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MemberCb2
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MemberCbMG1
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MemberCbMG2
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%MemberMCF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -5356,6 +5568,14 @@ ENDIF
     OutData%MemberAxCpMG1 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%MemberAxCpMG2 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MemberCb1 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MemberCb2 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MemberCbMG1 = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MemberCbMG2 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%MemberMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%MemberMCF)
     Int_Xferred = Int_Xferred + 1
@@ -6227,6 +6447,8 @@ ENDIF
     DstInitInputData%SimplAxCaMG = SrcInitInputData%SimplAxCaMG
     DstInitInputData%SimplAxCp = SrcInitInputData%SimplAxCp
     DstInitInputData%SimplAxCpMG = SrcInitInputData%SimplAxCpMG
+    DstInitInputData%SimplCb = SrcInitInputData%SimplCb
+    DstInitInputData%SimplCbMg = SrcInitInputData%SimplCbMg
     DstInitInputData%SimplMCF = SrcInitInputData%SimplMCF
     DstInitInputData%NCoefDpth = SrcInitInputData%NCoefDpth
 IF (ALLOCATED(SrcInitInputData%CoefDpths)) THEN
@@ -6873,6 +7095,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCaMG
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCp
       Re_BufSz   = Re_BufSz   + 1  ! SimplAxCpMG
+      Re_BufSz   = Re_BufSz   + 1  ! SimplCb
+      Re_BufSz   = Re_BufSz   + 1  ! SimplCbMg
       Int_BufSz  = Int_BufSz  + 1  ! SimplMCF
       Int_BufSz  = Int_BufSz  + 1  ! NCoefDpth
   Int_BufSz   = Int_BufSz   + 1     ! CoefDpths allocated yes/no
@@ -7360,6 +7584,10 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%SimplAxCp
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%SimplAxCpMG
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SimplCb
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%SimplCbMg
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%SimplMCF, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -8338,6 +8566,10 @@ ENDIF
     OutData%SimplAxCp = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%SimplAxCpMG = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SimplCb = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%SimplCbMg = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%SimplMCF = TRANSFER(IntKiBuf(Int_Xferred), OutData%SimplMCF)
     Int_Xferred = Int_Xferred + 1

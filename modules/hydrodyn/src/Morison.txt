@@ -44,6 +44,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         "Depth-based Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         "Depth-based Axial Cp"    -
 typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         "Depth-based Axial Cp for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthCb                   -          -        -         "Simple model hydrostatic/buoyancy load coefficient" - 
+typedef   ^                            ^                             ReKi             DpthCbMg                 -          -        -         "Simple model hydrostatic/buoyancy load coefficient for marine growth" - 
 typedef   ^                            ^                             LOGICAL          DpthMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         "User-supplied integer ID for this set of Axial coefs"    -
 typedef   ^                            ^                             ReKi             AxCd                     -          -        -         "Axial Cd"    -
@@ -65,6 +67,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER          MPropSetID2Indx          -          -        -         "Index into the Property table for the end of this member"    -
 typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         "User-specified desired member discretization size for the final element"    m
 typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based]"    -
+typedef   ^                            ^                             INTEGER          MHstLMod                 -          -        -         "Which hydrostatic model is being used for this member [1=column-type, 2=ship-type]"    -
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "Index into the appropriate coefs table for this member's properties"    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "Index into the filled group table if this is a filled member"    -
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Flag T/F for whether the member is modeled with potential flow theory"    -
@@ -100,10 +103,12 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
 typedef   ^                            ^                             ReKi           RMG                      {:}        -        -         "radius at each node including marine growth"   m
+typedef   ^                            ^                             ReKi           RMGB                     {:}        -        -         "radius at each node including marine growth scaled by sqrt(Cb)"   m
 typedef   ^                            ^                             ReKi           Rin                      {:}        -        -         "inner member radius at node, equivalent to radius of water ballast at this node if filled"    m
 typedef   ^                            ^                             ReKi           tMG                      {:}        -        -         "Nodal thickness with marine growth (of member at node location)"    m
 typedef   ^                            ^                             ReKi           MGdensity                {:}        -        -         "Nodal density of marine growth"    kg/m^3
 typedef   ^                            ^                             ReKi           dRdl_mg                  {:}        -        -         "taper dr/dl of outer surface including marine growth of each element"    -
+typedef   ^                            ^                             ReKi           dRdl_mg_b                {:}        -        -         "taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb)"    -
 typedef   ^                            ^                             ReKi           dRdl_in                  {:}        -        -         "taper dr/dl of interior surface of each element"    -
 typedef   ^                            ^                             ReKi           Vinner                   -          -        -         "Member volume without marine growth"   m^3
 typedef   ^                            ^                             ReKi           Vouter                   -          -        -         "Member volume including marine growth"   m^3
@@ -126,6 +131,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           AxCd                     {:}        -        -         "Member axial Cd at each node"    -
 typedef   ^                            ^                             ReKi           AxCa                     {:}        -        -         "Member axial Ca at each node"    -
 typedef   ^                            ^                             ReKi           AxCp                     {:}        -        -         "Member axial Cp at each node"    -
+typedef   ^                            ^                             ReKi           Cb                       {:}        -        -         "Member Cb at each node"    -
 typedef   ^                            ^                             ReKi           m_fb_l                   {:}        -        -         "mass of flooded ballast in lower portion of each element"    kg
 typedef   ^                            ^                             ReKi           m_fb_u                   {:}        -        -         "mass of flooded ballast in upper portion of each element"    kg
 typedef   ^                            ^                             ReKi           h_cfb_l                  {:}        -        -         "distance to flooded ballast centroid from node point in lower portion of each element"    m
@@ -150,6 +156,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Coefs model for member: 1 = simple, 2 =depth, 3 = member-based "    -
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table"    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "If this member is part of a fill group, this is the index into the master fill group table, if not = -1"    -
+typedef   ^                            ^                             INTEGER          MHstLMod                 -          -        -         "Hydrostatic model for member [1=column-type, 2=ship-type]"    -
 typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "Z-location of the filled free-surface"    m
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Filled fluid density"    kg/m^3
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Is this element/member modeled with potential flow theory T/F"    -
@@ -193,6 +200,10 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCb1                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCb2                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCbMG1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCbMG2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             LOGICAL          MemberMCF                -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         "Marine growth depth location for these properties" m
 typedef   ^                            ^                             ReKi             MGThck                   -          -        -         "Marine growth thickness"    m
@@ -238,6 +249,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         "Simple model Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         "Simple model Axial Cp"    -
 typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         "Simple model Axial Cp for marine growth"    -
+typedef   ^                            ^                             ReKi                     SimplCb                          -          -        -         "Simple model hydrostatic/buoyancy load coefficient" - 
+typedef   ^                            ^                             ReKi                     SimplCbMg                        -          -        -         "Simple model hydrostatic/buoyancy load coefficient for marine growth" - 
 typedef   ^                            ^                             LOGICAL                  SimplMCF                         -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
