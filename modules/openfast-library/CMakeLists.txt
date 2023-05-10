@@ -76,7 +76,6 @@ set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER src/FAST_Library
 # OpenFAST Library static (openfast, FAST.Farm, Simulink)
 add_library(openfastlib_static INTERFACE)
 target_link_libraries(openfastlib_static INTERFACE openfast_postlib wdlib awaelib)
-set_target_properties(openfastlib_static PROPERTIES LINKER_LANGUAGE Fortran)
 
 # OpenFAST Library shared (Python, openfast_cpp, openfastcpplib)
 add_library(openfastlib SHARED src/FAST_Library.f90)
