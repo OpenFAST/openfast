@@ -855,7 +855,7 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<Filter Name="UnsteadyAero">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Registry.txt">
