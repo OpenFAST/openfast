@@ -2559,13 +2559,23 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
 
    ! Calculate Yaw and Tilt for use in xVelCorr
    ! Define a vector wrt which the yaw is defined 
-   x_hat_wind = m%V_diskAvg/twonorm(m%V_diskAvg)
-   ! Yaw
+   denom = twonorm(m%V_diskAvg)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      x_hat_wind = 0.0_ReKi
+   else
+      x_hat_wind = m%V_diskAvg/denom
+   end if
+      ! Yaw
    tmpD = x_hat_disk 
    tmpD(3) = 0.0
    tmpW = x_hat_wind
    tmpW(3) = 0.0
-   yaw  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/(twonorm(tmpD)*TwoNorm(tmpW)))))
+   denom = TwoNorm(tmpD)*TwoNorm(tmpW)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      yaw = 0.0_ReKi
+   else
+      yaw  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/denom)))
+   end if   
    tmp_skewVec = cross_product(tmpW,tmpD);
    yaw = sign(yaw,tmp_skewVec(3))
    m%Yaw = yaw
