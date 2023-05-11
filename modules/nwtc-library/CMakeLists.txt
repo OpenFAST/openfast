@@ -118,6 +118,18 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Flang")
   endif()
 endif ()
 
+# MATLAB Library
+if(BUILD_OPENFAST_SIMULINK_API)
+  if (NWTC_SYS_FILE_MATLAB)
+    message("-- Setting Matlab system file as: ${NWTC_SYS_FILE_MATLAB}")
+    message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
+    # reset NWTC_SYS_FILE so it gets used picked up and added to the NWTCLIBS_SOURCES
+    set(NWTC_SYS_FILE ${NWTC_SYS_FILE_MATLAB})
+  else ()
+    message(FATAL_ERROR "Cannot determine Matlab system file used with NWTC_Library")
+  endif ()
+endif(BUILD_OPENFAST_SIMULINK_API)
+
 # System file
 if (NWTC_SYS_FILE)
   message("-- Setting system file as: ${NWTC_SYS_FILE}")
@@ -125,16 +137,6 @@ if (NWTC_SYS_FILE)
 else ()
   message(FATAL_ERROR "Cannot determine system file used with NWTC_Library")
 endif ()
-
-# MATLAB Library
-if(BUILD_OPENFAST_SIMULINK_API)
-  if (NWTC_SYS_FILE_MATLAB)
-    message("-- Setting Matlab system file as: ${NWTC_SYS_FILE_MATLAB}")
-    message(STATUS "In NWTC Matlab_MEX_LIBRARY: ${Matlab_MEX_LIBRARY}")
-  else ()
-    message(FATAL_ERROR "Cannot determine Matlab system file used with NWTC_Library")
-  endif ()
-endif(BUILD_OPENFAST_SIMULINK_API)
 
 # Create static library for nwtclibs
 add_library(nwtclibs ${NWTCLIBS_SOURCES})
