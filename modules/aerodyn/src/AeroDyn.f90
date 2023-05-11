@@ -2585,7 +2585,13 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    tmpD(2) = 0.0 
    tmpW = x_hat_wind
    tmpW(2) = 0.0
-   tilt  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/(twonorm(tmpD)*TwoNorm(tmpW))))) 
+   denom = TwoNorm(tmpD)*TwoNorm(tmpW)
+   if (EqualRealNos(denom, 0.0_Reki)) then
+      tilt = 0.0_ReKi
+   else
+      tilt  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/denom)))
+   end if
+   
    tmp_skewVec = cross_product(tmpW,tmpD)
    tilt = sign(tilt,tmp_skewVec(2))
    m%tilt = tilt
@@ -2709,7 +2715,12 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
             dr(:) = elemPosRotorProj(:,j) - elemPosRotorProj(:,j-1)
             dz(:) =  elemPosRelToHub(:,j) -  elemPosRelToHub(:,j-1)
             
-            m%BEMT_u(indx)%drdz(j,k) = TwoNorm(dr(:)) / TwoNorm(dz(:))
+            denom = TwoNorm(dz(:))
+            if (EqualRealNos(denom,0.0_ReKi)) then ! this should not happen, but we'll check anyway
+               m%BEMT_u(indx)%drdz(j,k) = 0.0_ReKi
+            else
+               m%BEMT_u(indx)%drdz(j,k) = TwoNorm(dr(:)) / denom
+            end if
          end do ! j
          m%BEMT_u(indx)%drdz(1,k) = m%BEMT_u(indx)%drdz(2,k)
       end do !k=blades
