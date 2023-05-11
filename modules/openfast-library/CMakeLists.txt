@@ -47,7 +47,7 @@ target_link_libraries(openfast_prelib
   elastodynlib
   extptfm_mckflib
   feamlib
-  foamtypeslib 
+  foamtypeslib
   hydrodynlib
   icedynlib
   icefloelib

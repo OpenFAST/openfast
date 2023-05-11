@@ -151,6 +151,9 @@ endif()
 #-------------------------------------------------------------------------------
 
 if (BUILD_OPENFAST_SIMULINK_API)
+  if (BUILD_SHARED_LIBS)
+    message(FATAL_ERROR "OpenFAST's Simulink API is not compatible with BUILD_SHARED_LIBS=ON")
+  endif ()
   find_package(Matlab REQUIRED SIMULINK)
 endif ()
 
