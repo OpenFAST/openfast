@@ -58,7 +58,7 @@ matlab_add_mex(
     ${CMAKE_DL_LIBS} 
     ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
 )
-add_dependencies(FAST_SFunc openfast_postlib) # guarantees that library files exist
+add_dependencies(FAST_SFunc openfast_postlib nwtclibs-matlab servodynlib-matlab)
 target_compile_definitions(FAST_SFunc PUBLIC COMPILE_SIMULINK)
 set_target_properties(FAST_SFunc PROPERTIES 
   Fortran_MODULE_DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/matlab)
