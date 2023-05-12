@@ -52,8 +52,6 @@ matlab_add_mex(
     $<TARGET_FILE:openfast_prelib>
     $<TARGET_FILE:foamfastlib>
     $<TARGET_FILE:scfastlib>
-    $<TARGET_FILE:wdlib>
-    $<TARGET_FILE:awaelib>
     ${LAPACK_LIBRARIES} 
     ${CMAKE_DL_LIBS} 
     ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
