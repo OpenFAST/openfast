@@ -47,7 +47,7 @@ target_link_libraries(openfast_prelib
   elastodynlib
   extptfm_mckflib
   feamlib
-  foamtypeslib 
+  foamtypeslib
   hydrodynlib
   icedynlib
   icefloelib
@@ -75,7 +75,7 @@ set_target_properties(openfast_postlib PROPERTIES PUBLIC_HEADER src/FAST_Library
 
 # OpenFAST Library static (openfast, FAST.Farm, Simulink)
 add_library(openfastlib_static INTERFACE)
-target_link_libraries(openfastlib_static INTERFACE openfast_postlib wdlib awaelib)
+target_link_libraries(openfastlib_static INTERFACE openfast_postlib)
 
 # OpenFAST Library shared (Python, openfast_cpp, openfastcpplib)
 add_library(openfastlib SHARED src/FAST_Library.f90)
