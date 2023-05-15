@@ -143,19 +143,20 @@ When converting from a full-field wind format to a uniform wind file, the follow
 accel flag
 -------------------
 
-The ability to calculate the acceleration of the flow field was added to InflowWind
-to support the analysis of MHK, underwater, turbines. The acceleration is needed
-to calculate the mass effects of the fluid interacting with the rotor. Calculation of the
-acceleration is supported for Uniform/Steady Wind and grid based wind profiles (Turbsim,
-HAWC, and Bladed files). Enabling this flag causes the driver to output the flow field
-acceleration for points defined in the Points file in addition to the velocities at those
-same points.
+The ability to calculate the acceleration of the flow field was added to
+InflowWind to support the analysis of MHK, underwater, turbines. The
+acceleration is needed to calculate the fluid-inertia effects of the fluid
+interacting with the rotor. Calculation of the acceleration is supported for
+Uniform/Steady Wind and grid based wind profiles (Turbsim, HAWC, and Bladed
+files). Enabling this flag causes the driver to output the flow field
+acceleration for points defined in the Points file in addition to the velocities
+at those same points.
 
 
 BoxExceedAllow flag
 -------------------
 
-A feature was added to InflowWind to all for some requested points to lie
+A feature was added to InflowWind to allow some requested points to lie
 outside the full field wind grid. This allows for a continuous exptrapolation of
 values beyond the grid that approaches an average level.
 
