@@ -127,16 +127,22 @@ SUBROUTINE EXavrSWAP_Init( InitInp, u, p, y, dll_data, StC_CtrlChanInitInfo, UnS
    call InitNonLidarSensors()    ! 1018:2000
       if (Failed())  return
 
+      ! Initialize lidar measurements (2001:2501)
+   if (InitInp%NumBeam > 0 .or. InitInp%NumPulseGate > 0) then
+      call InitLidarMeas()
+         if (Failed())  return
+   endif
+
       ! Initialize cable controls (2601:2800)
    if (InitInp%NumCableControl > 0) then
       call InitCableCtrl()
-        if (Failed())  return
+         if (Failed())  return
    endif
 
       ! Initialize cable controls (2801:3000)
    if (p%NumStC_Control > 0) then
       call InitStCCtrl()
-        if (Failed())  return
+         if (Failed())  return
    endif
       ! Add additional routines here as needed.
 
@@ -366,6 +372,62 @@ contains
       endif
    end subroutine InitStCCtrl
 
+   subroutine InitLidarMeas()
+      integer  :: I,J
+      if (p%NumBeam == 0) return ! Nothing to set
+      ! Allocate arrays for inputs
+      if (allocated(InitInp%LidSpeed)) then    ! make sure we have the array allocated before setting it
+         CALL AllocAry(u%LidSpeed, size(InitInp%LidSpeed), 'u%LidSpeed', errStat2, ErrMsg2)
+         if (Failed())  return
+         u%LidSpeed = InitInp%LidSpeed
+      endif
+      if (allocated(InitInp%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
+         CALL AllocAry(u%MsrPositionsX, size(InitInp%MsrPositionsX), 'u%MsrPositionsX', errStat2, ErrMsg2)
+         if (Failed())  return
+         u%MsrPositionsX = InitInp%MsrPositionsX
+      endif
+      if (allocated(InitInp%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
+         CALL AllocAry(u%MsrPositionsY, size(InitInp%MsrPositionsY), 'u%MsrPositionsY', errStat2, ErrMsg2)
+         if (Failed())  return
+         u%MsrPositionsY = InitInp%MsrPositionsY
+      endif
+      if (allocated(InitInp%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
+         CALL AllocAry(u%MsrPositionsZ, size(InitInp%MsrPositionsZ), 'u%MsrPositionsZ', errStat2, ErrMsg2)
+         if (Failed())  return
+         u%MsrPositionsZ = InitInp%MsrPositionsZ
+      endif
+      ! Write summary info to summary file
+      if (p%SensorType > 0) then    ! Set these here rather than overwrite every loop step in SensorType 1 or 3
+         J=LidarMsr_StartIdx
+         call WrSumInfoRcvd( J+0, '','Lidar input: Sensor Type')
+         call WrSumInfoRcvd( J+1, '','Lidar input: Number of Beams')
+         call WrSumInfoRcvd( J+2, '','Lidar input: Number of Pulse Gates')
+         call WrSumInfoRcvd( J+3, '','Lidar input: Reference average wind speed for the lidar')
+      endif
+      if (p%SensorType == 1) THEN
+         do I=1,min(p%NumBeam,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+            J=LidarMsr_StartIdx + 4 + (I-1)
+            call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumBeam*1,      '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumBeam*2,      '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumBeam*3,      '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
+         enddo
+      elseif (p%SensorType == 2) THEN
+         J=LidarMsr_StartIdx
+         call WrSumInfoRcvd( J+4,                   '','Lidar input: Measured Wind Speeds')
+         call WrSumInfoRcvd( J+5,                   '','Lidar input: Measurement Points X')
+         call WrSumInfoRcvd( J+6,                   '','Lidar input: Measurement Points Y')
+         call WrSumInfoRcvd( J+7,                   '','Lidar input: Measurement Points Z')
+      elseif (p%SensorType == 3) THEN
+         do I=1,min(p%NumPulseGate,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+            J=LidarMsr_StartIdx + 4 + (I-1)
+            call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumPulseGate*1, '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumPulseGate*2, '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
+            call WrSumInfoRcvd( J+p%NumPulseGate*3, '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
+         enddo
+      endif
+   end subroutine InitLidarMeas
 
 
    subroutine WrBladedSumInfoToFile()
@@ -482,6 +544,36 @@ CONTAINS
    subroutine SetEXavrSWAP_LidarSensors()
          ! in case something got set wrong, don't try to write beyond array
       if (size(dll_data%avrswap) < (LidarMsr_StartIdx + LidarMsr_MaxChan - 1) ) return
+      if (p%NumBeam == 0) return ! Nothing to set
+
+      if (p%SensorType > 0) then    ! Set these here rather than overwrite every loop step in SensorType 1 or 3
+         dll_data%avrswap(LidarMsr_StartIdx)        = real(p%SensorType,SiKi)    ! Sensor Type
+         dll_data%avrswap(LidarMsr_StartIdx+1)      = real(p%NumBeam,SiKi)       ! Number of Beams
+         dll_data%avrswap(LidarMsr_StartIdx+2)      = real(p%NumPulseGate,SiKi)  ! Number of Pulse Gates
+         dll_data%avrswap(LidarMsr_StartIdx+3)      = p%URefLid                  ! Reference average wind speed for the lidar
+      endif
+      if (p%SensorType == 1) THEN
+         do I=1,min(p%NumBeam,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+            J=LidarMsr_StartIdx + 4 + (I-1)
+            dll_data%avrswap(J)                     = u%LidSpeed(I)              ! Lidar Measured Wind Speeds
+            dll_data%avrswap(J+p%NumBeam)           = u%MsrPositionsX(I)         ! Lidar Measurement Points X
+            dll_data%avrswap(J+(p%NumBeam*2))       = u%MsrPositionsY(I)         ! Lidar Measurement Points Y
+            dll_data%avrswap(J+(p%NumBeam*3))       = u%MsrPositionsZ(I)         ! Lidar Measurement Points Z
+         enddo
+      elseif (p%SensorType == 2) THEN
+         dll_data%avrswap(LidarMsr_StartIdx+4)      = u%LidSpeed(1)              ! Lidar Measured Wind Speeds
+         dll_data%avrswap(LidarMsr_StartIdx+5)      = u%MsrPositionsX(1)         ! Lidar Measurement Points X
+         dll_data%avrswap(LidarMsr_StartIdx+6)      = u%MsrPositionsY(1)         ! Lidar Measurement Points Y
+         dll_data%avrswap(LidarMsr_StartIdx+7)      = u%MsrPositionsZ(1)         ! Lidar Measurement Points Z
+      elseif (p%SensorType == 3) THEN
+         do I=1,min(p%NumPulseGate,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+            J=LidarMsr_StartIdx + 4 + (I-1)
+            dll_data%avrswap(J)                     = u%LidSpeed(I)              ! Lidar Measured Wind Speeds
+            dll_data%avrswap(J+p%NumPulseGate)      = u%MsrPositionsX(I)         ! Lidar Measurement Points X
+            dll_data%avrswap(J+(p%NumPulseGate*2))  = u%MsrPositionsY(I)         ! Lidar Measurement Points Y
+            dll_data%avrswap(J+(p%NumPulseGate*3))  = u%MsrPositionsZ(I)         ! Lidar Measurement Points Z
+         enddo
+      endif
    end subroutine SetEXavrSWAP_LidarSensors
 
    !> Set the Lidar related sensor inputs

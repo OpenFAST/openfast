@@ -100,6 +100,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition      !< X-Y-Z reference position of nacelle [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
+    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
   END TYPE RotInitInputType
 ! =======================
 ! =========  AD_InitInputType  =======
@@ -342,7 +343,8 @@ IMPLICIT NONE
     TYPE(MeshType)  :: TwrBuoyLoad      !< line mesh for per unit length buoyant tower loads [-]
     TYPE(MeshMapType)  :: T_P_2_T_L      !< mapping data structure to map buoyant tower point loads (m%TwrBuoyLoadPoint) to buoyant tower line loads (m%TwrBuoyLoad) [-]
     LOGICAL  :: FirstWarn_TowerStrike      !< flag to avoid printing tower strike multiple times [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVel      !< disk-averaged U,V,W [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVel      !< disk-averaged U,V,W (undisturbed) [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVelDist      !< disk-averaged U,V,W (disturbed) [m/s]
     REAL(ReKi)  :: TFinAlpha      !< Angle of attack for tailfin [-]
     REAL(ReKi)  :: TFinRe      !< Reynolds number for tailfin [-]
     REAL(ReKi)  :: TFinVrel      !< Orthogonal relative velocity nrom at the reference point [-]
@@ -378,6 +380,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
+    REAL(ReKi)  :: VolBl      !< Buoyancy volume of all blades [m^3]
+    REAL(ReKi)  :: VolTwr      !< Buoyancy volume of the tower [m^3]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlDL      !< Matrix of blade element length based on CB, used in buoyancy calculation [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlTaper      !< Matrix of blade element taper, used in buoyancy calculation [-]
@@ -399,6 +403,7 @@ IMPLICIT NONE
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy      !< Include buoyancy effects? [flag]
+    INTEGER(IntKi)  :: MHK      !< MHK [flag]
     LOGICAL  :: CompAA      !< Compute AeroAcoustic noise [flag]
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
     REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [m^2/s]
@@ -409,6 +414,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
+    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
     INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -1429,6 +1435,7 @@ ENDIF
     DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
     DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
     DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
+    DstRotInitInputTypeData%AeroBEM_Mod = SrcRotInitInputTypeData%AeroBEM_Mod
  END SUBROUTINE AD_CopyRotInitInputType
 
  SUBROUTINE AD_DestroyRotInitInputType( RotInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1511,6 +1518,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacellePosition)  ! NacellePosition
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacelleOrientation)  ! NacelleOrientation
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
+      Int_BufSz  = Int_BufSz  + 1  ! AeroBEM_Mod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1606,6 +1614,8 @@ ENDIF
       END DO
     END DO
     IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AeroBEM_Mod
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackRotInitInputType
 
@@ -1724,6 +1734,8 @@ ENDIF
       END DO
     END DO
     OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AeroBEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackRotInitInputType
 
@@ -9330,6 +9342,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstRotMiscVarTypeData%FirstWarn_TowerStrike = SrcRotMiscVarTypeData%FirstWarn_TowerStrike
     DstRotMiscVarTypeData%AvgDiskVel = SrcRotMiscVarTypeData%AvgDiskVel
+    DstRotMiscVarTypeData%AvgDiskVelDist = SrcRotMiscVarTypeData%AvgDiskVelDist
     DstRotMiscVarTypeData%TFinAlpha = SrcRotMiscVarTypeData%TFinAlpha
     DstRotMiscVarTypeData%TFinRe = SrcRotMiscVarTypeData%TFinRe
     DstRotMiscVarTypeData%TFinVrel = SrcRotMiscVarTypeData%TFinVrel
@@ -9996,6 +10009,7 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_TowerStrike
       Re_BufSz   = Re_BufSz   + SIZE(InData%AvgDiskVel)  ! AvgDiskVel
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AvgDiskVelDist)  ! AvgDiskVelDist
       Re_BufSz   = Re_BufSz   + 1  ! TFinAlpha
       Re_BufSz   = Re_BufSz   + 1  ! TFinRe
       Re_BufSz   = Re_BufSz   + 1  ! TFinVrel
@@ -11094,6 +11108,10 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DO i1 = LBOUND(InData%AvgDiskVel,1), UBOUND(InData%AvgDiskVel,1)
       ReKiBuf(Re_Xferred) = InData%AvgDiskVel(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%AvgDiskVelDist,1), UBOUND(InData%AvgDiskVelDist,1)
+      ReKiBuf(Re_Xferred) = InData%AvgDiskVelDist(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
     ReKiBuf(Re_Xferred) = InData%TFinAlpha
@@ -12519,6 +12537,12 @@ ENDIF
       OutData%AvgDiskVel(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    i1_l = LBOUND(OutData%AvgDiskVelDist,1)
+    i1_u = UBOUND(OutData%AvgDiskVelDist,1)
+    DO i1 = LBOUND(OutData%AvgDiskVelDist,1), UBOUND(OutData%AvgDiskVelDist,1)
+      OutData%AvgDiskVelDist(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%TFinAlpha = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%TFinRe = ReKiBuf(Re_Xferred)
@@ -13276,6 +13300,8 @@ ENDIF
     DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
     DstRotParameterTypeData%VolNac = SrcRotParameterTypeData%VolNac
     DstRotParameterTypeData%NacCenB = SrcRotParameterTypeData%NacCenB
+    DstRotParameterTypeData%VolBl = SrcRotParameterTypeData%VolBl
+    DstRotParameterTypeData%VolTwr = SrcRotParameterTypeData%VolTwr
 IF (ALLOCATED(SrcRotParameterTypeData%BlRad)) THEN
   i1_l = LBOUND(SrcRotParameterTypeData%BlRad,1)
   i1_u = UBOUND(SrcRotParameterTypeData%BlRad,1)
@@ -13432,6 +13458,7 @@ ENDIF
     DstRotParameterTypeData%FrozenWake = SrcRotParameterTypeData%FrozenWake
     DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
     DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
+    DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
     DstRotParameterTypeData%CompAA = SrcRotParameterTypeData%CompAA
     DstRotParameterTypeData%AirDens = SrcRotParameterTypeData%AirDens
     DstRotParameterTypeData%KinVisc = SrcRotParameterTypeData%KinVisc
@@ -13442,6 +13469,7 @@ ENDIF
     DstRotParameterTypeData%WtrDpth = SrcRotParameterTypeData%WtrDpth
     DstRotParameterTypeData%MSL2SWL = SrcRotParameterTypeData%MSL2SWL
     DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
+    DstRotParameterTypeData%AeroBEM_Mod = SrcRotParameterTypeData%AeroBEM_Mod
     DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
     DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
 IF (ALLOCATED(SrcRotParameterTypeData%OutParam)) THEN
@@ -13678,6 +13706,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
+      Re_BufSz   = Re_BufSz   + 1  ! VolBl
+      Re_BufSz   = Re_BufSz   + 1  ! VolTwr
   Int_BufSz   = Int_BufSz   + 1     ! BlRad allocated yes/no
   IF ( ALLOCATED(InData%BlRad) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! BlRad upper/lower bounds for each dimension
@@ -13776,6 +13806,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FrozenWake
       Int_BufSz  = Int_BufSz  + 1  ! CavitCheck
       Int_BufSz  = Int_BufSz  + 1  ! Buoyancy
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! CompAA
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
       Re_BufSz   = Re_BufSz   + 1  ! KinVisc
@@ -13786,6 +13817,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
       Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
+      Int_BufSz  = Int_BufSz  + 1  ! AeroBEM_Mod
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
   Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
@@ -14027,6 +14059,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    ReKiBuf(Re_Xferred) = InData%VolBl
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%VolTwr
+    Re_Xferred = Re_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%BlRad) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -14289,6 +14325,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Buoyancy, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAA, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%AirDens
@@ -14308,6 +14346,8 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AeroProjMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%AeroBEM_Mod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumOuts
     Int_Xferred = Int_Xferred + 1
@@ -14649,6 +14689,10 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%VolBl = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%VolTwr = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlRad not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -14968,6 +15012,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%Buoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Buoyancy)
     Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
     OutData%CompAA = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAA)
     Int_Xferred = Int_Xferred + 1
     OutData%AirDens = ReKiBuf(Re_Xferred)
@@ -14987,6 +15033,8 @@ ENDIF
     OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%AeroProjMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%AeroBEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NumOuts = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1

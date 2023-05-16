@@ -1270,7 +1270,7 @@ END SUBROUTINE ReadTailFinInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
-
+   use YAML, only: yaml_write_var
       ! passed variables
    TYPE(AD_InputFile),        INTENT(IN)  :: InputFileData                        ! Input-file data
    TYPE(RotParameterType),    INTENT(IN)  :: p                                    ! Parameters
@@ -1286,7 +1286,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
-   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
+   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T41,1(:,F13.3))'                ! Format for outputting mass and modal data.
    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
 
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
@@ -1370,6 +1370,22 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       Msg = 'No'
    end if   
    WRITE (UnSu,Ec_LgFrmt) p%TwrAero, 'TwrAero', 'Calculate tower aerodynamic loads? '//TRIM(Msg)
+
+      ! CavitCheck
+   if (p%CavitCheck) then
+      Msg = 'Yes'
+   else
+      Msg = 'No'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) p%CavitCheck, 'CavitCheck', 'Perform cavitation check? '//TRIM(Msg)
+
+      ! Buoyancy
+   if (p%Buoyancy) then
+      Msg = 'Yes'
+   else
+      Msg = 'No'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
 
 
    if (p_AD%WakeMod/=WakeMod_none) then
@@ -1541,6 +1557,12 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
    END DO
 
+   ! Buoyancy parameters
+   WRITE (UnSu,'(//,A,/)')  'Buoyancy parameters:'
+   call yaml_write_var ( UnSu , 'Hub volume (m^3)' , p%VolHub , 'F15.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the hub
+   call yaml_write_var ( UnSu , 'Nacelle volume (m^3)' , p%VolNac , 'F11.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the nacelle
+   call yaml_write_var ( UnSu , 'Total blade volume (m^3)' , p%VolBl  , 'F7.3' , ErrStat , ErrMsg ) ! Buoyancy volume of all blades
+   call yaml_write_var ( UnSu , 'Tower volume (m^3)' , p%VolTwr , 'F13.3' , ErrStat , ErrMsg ) ! Buoyancy volume of the tower
 
    CLOSE(UnSu)
 
@@ -2098,11 +2120,6 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
     real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
     real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
     real(ReKi), intent(inout)   :: cantAngle(n)
-     
-    !dimension       :: f(n),xi(n), sortInd(n), cx(stencilSize),cf(stencilSize), xiIn(stencilSize)
-    !dimension       :: cantAngle(n), fIn(stencilSize), cPrime(n), fPrime(n), indexIn(stencilSize), xiAbs(n)
-    
-
     
     do i = 1,size(xi)
         

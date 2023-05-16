@@ -249,6 +249,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
    Init%InData_ED%Gravity       = p_FAST%Gravity
 
+   Init%InData_ED%MHK           = p_FAST%MHK
+   Init%InData_ED%WtrDpth       = p_FAST%WtrDpth
+
    CALL ED_Init( Init%InData_ED, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
                   ED%y, ED%m, p_FAST%dt_module( MODULE_ED ), Init%OutData_ED, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -484,7 +487,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_AD%MHK                = p_FAST%MHK
       if ( p_FAST%MHK == 0 ) then
          Init%InData_AD%defFldDens      = p_FAST%AirDens
-      elseif ( p_FAST%MHK == 1 ) then
+      elseif ( p_FAST%MHK == 1 .or. p_FAST%MHK == 2 ) then
          Init%InData_AD%defFldDens      = p_FAST%WtrDens
       end if
       Init%InData_AD%defKinVisc         = p_FAST%KinVisc
@@ -560,6 +563,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%RootName         = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))
       Init%InData_IfW%UseInputFile     = .TRUE.
       Init%InData_IfW%FixedWindFileRootName = .FALSE.
+      Init%InData_IfW%OutputAccel      = p_FAST%MHK > 0
+
+      Init%InData_IfW%MHK              = p_FAST%MHK
+      Init%InData_IfW%WtrDpth          = p_FAST%WtrDpth
 
       Init%InData_IfW%NumWindPoints = 0
       IF ( p_FAST%CompServo == Module_SrvD ) Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + 1
@@ -568,6 +575,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
          ! Number of Wind points from AeroDyn, see AeroDyn.f90
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD_NumWindPoints(AD%Input(1), AD%OtherSt(STATE_CURR))
+         ! Wake -- we allow the wake positions to exceed the wind box
+         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
+            Init%InData_IfW%BoxExceedAllowF = .true.
+            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+         endif
       END IF
 
       ! lidar
@@ -589,14 +601,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             Init%InData_IfW%FDext%delta  = ExternInitData%windGrid_delta
             Init%InData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
          end if
-
-         ! bjj: these lidar inputs should come from an InflowWind input file; I'm hard coding them here for now
-         Init%InData_IfW%lidar%SensorType          = ExternInitData%SensorType
-         Init%InData_IfW%lidar%LidRadialVel        = ExternInitData%LidRadialVel
-         Init%InData_IfW%lidar%RotorApexOffsetPos  = 0.0
-         Init%InData_IfW%lidar%NumPulseGate        = 0
       ELSE
-         Init%InData_IfW%lidar%SensorType          = SensorType_None
          Init%InData_IfW%Use4Dext                  = .false.
       END IF
 
@@ -626,6 +631,34 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
+      
+      IF ( p_FAST%CompServo == Module_SrvD ) THEN !assign the number of gates to ServD
+         if (allocated(IfW%y%lidar%LidSpeed)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%LidSpeed, size(IfW%y%lidar%LidSpeed), 'Init%InData_SrvD%LidSpeed',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%LidSpeed = IfW%y%lidar%LidSpeed
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsX, size(IfW%y%lidar%MsrPositionsX), 'Init%InData_SrvD%MsrPositionsX',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsX = IfW%y%lidar%MsrPositionsX
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsY, size(IfW%y%lidar%MsrPositionsY), 'Init%InData_SrvD%MsrPositionsY',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsY = IfW%y%lidar%MsrPositionsY
+         endif
+         if (allocated(IfW%y%lidar%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
+            CALL AllocAry(Init%InData_SrvD%MsrPositionsZ, size(IfW%y%lidar%MsrPositionsZ), 'Init%InData_SrvD%MsrPositionsZ',     errStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Init%InData_SrvD%MsrPositionsZ = IfW%y%lidar%MsrPositionsZ
+         endif
+         Init%InData_SrvD%SensorType    = IfW%p%lidar%SensorType
+         Init%InData_SrvD%NumBeam       = IfW%p%lidar%NumBeam
+         Init%InData_SrvD%NumPulseGate  = IfW%p%lidar%NumPulseGate
+         Init%InData_SrvD%PulseSpacing  = IfW%p%lidar%PulseSpacing
+      END IF
+      
 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM ) THEN
 
@@ -655,6 +688,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
+
+      !Set node clustering type
+      Init%InData_OpFM%NodeClusterType = ExternInitData%NodeClusterType
          ! set up the data structures for integration with OpenFOAM
       CALL Init_OpFM( Init%InData_OpFM, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, OpFM, Init%OutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1435,7 +1471,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       endif
    end if
 
-   m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)
+
 
 
    !...............................................................................................................................
@@ -1873,8 +1909,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    if (p%CompInflow == MODULE_OpFM .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when OpenFOAM is used. Change CompAero or CompInflow in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
    IF (p%MHK /= 0 .and. p%MHK /= 1 .and. p%MHK /= 2) CALL SetErrStat( ErrID_Fatal, 'MHK switch is invalid. Set MHK to 0, 1, or 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
-
-   IF (p%MHK == 2) CALL SetErrStat( ErrID_Fatal, 'Functionality to model a floating MHK turbine has not yet been implemented.', ErrStat, ErrMsg, RoutineName )
 
    IF (p%MHK == 1 .and. p%CompAero == Module_AD14 .or. p%MHK == 2 .and. p%CompAero == Module_AD14) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used with an MHK turbine. Change CompAero or MHK in the FAST input file.', ErrStat, ErrMsg, RoutineName )
 
@@ -4183,8 +4217,8 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
 
       ! the initial ServoDyn and IfW/Lidar inputs from Simulink:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )
-   IF ( p_FAST%CompInflow == Module_IfW ) CALL IfW_SetExternalInputs( IfW%p, m_FAST, ED%y, IfW%Input(1) )
-
+  
+  
    CALL CalcOutputs_And_SolveForInputs(  n_t_global, t_initial,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                         p_FAST, m_FAST, y_FAST%WriteThisStep, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
@@ -5622,6 +5656,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
    IF ( p_FAST%CompSub == Module_SD .and. allocated(SD%Input)) THEN
       !call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
       call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_LMesh_y2Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%y%y2Mesh )
+      call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_LMesh_y3Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%y%y3Mesh )
 
       call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y1Mesh_TPMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, SD%Input(1)%TPMesh )
       !call MeshWrVTK(p_FAST%TurbinePos, SD%y%y3Mesh, trim(p_FAST%VTK_OutFileRoot)//'.SD_y3Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )

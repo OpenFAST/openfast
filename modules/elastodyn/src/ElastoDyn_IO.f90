@@ -1276,7 +1276,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads the input file and stores all the data in the ED_InputFile structure.
 !! It does not perform data validation.
-SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
+SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, BD4Blades, Default_DT, OutFileRoot, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables
@@ -1289,7 +1289,6 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
    TYPE(ED_InputFile),   INTENT(OUT)      :: InputFileData  !< Data stored in the module's input file
 
    INTEGER(IntKi),       INTENT(OUT)      :: ErrStat        !< The error status code
-   LOGICAL,              INTENT(IN)       :: ReadAdmVals    !< Determines if we should read the Adams-only values
    LOGICAL,              INTENT(IN)       :: BD4Blades      !< Determines if we should read the blade values (true=don't read this file; use BeamDyn for blades instead)
    CHARACTER(*),         INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
@@ -1377,7 +1376,7 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
 
       ! get the blade input-file data (from blade and mesh files)
    IF (.NOT. BD4Blades) THEN
-      CALL ReadBladeInputs ( BldFile, MeshFile, ReadAdmVals, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
+      CALL ReadBladeInputs ( BldFile, MeshFile, InputFileData, UnEcho, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call Cleanup()
@@ -1387,7 +1386,7 @@ SUBROUTINE ED_ReadInput( InputFileName, MeshFile, InputFileData, ReadAdmVals, BD
 
       ! get the tower input-file data
 
-   CALL ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEcho,  ErrStat2, ErrMsg2 )
+   CALL ReadTowerFile( TwrFile, InputFileData, UnEcho,  ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call Cleanup()
@@ -1410,12 +1409,13 @@ CONTAINS
 END SUBROUTINE ED_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine validates the input file data
-SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
+SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, MHK, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData       !< Data stored in the module's input file
    LOGICAL,                  INTENT(IN)       :: BD4Blades           !< Determines if we should validate the blade values (true=don't validate; use BeamDyn for blades instead)
    LOGICAL,                  INTENT(IN)       :: Linearize           !< Flag indicating glue code wants to linearize this module
+   INTEGER(IntKi),           INTENT(IN)       :: MHK                 !< MHK turbine type switch
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat             !< The error status code
    CHARACTER(*),             INTENT(OUT)      :: ErrMsg              !< The error message, if an error occurred
 
@@ -1431,7 +1431,7 @@ SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, ErrStat, ErrMs
    ErrMsg  = ''
 
       ! validate the primary input data
-   CALL ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat2, ErrMsg2 )
+   CALL ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -1463,7 +1463,7 @@ END SUBROUTINE ED_ValidateInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the data from the blade and mesh inputs files.
 !! This routines assumes that InputFileData%NumBl has already been set.
-SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, ReadAdmVals, InputFileData, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, InputFileData, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
@@ -1475,7 +1475,6 @@ SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, ReadAdmVals, InputFileData, UnEc
 
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat                             !< The error ID
    CHARACTER(*),           INTENT(OUT)    :: ErrMsg                              !< Message describing error
-   LOGICAL,                INTENT(IN)     :: ReadAdmVals                         !< Logical to determine if Adams inputs should be read from file
 
 
       ! Local variables:
@@ -1527,7 +1526,7 @@ SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, ReadAdmVals, InputFileData, UnEc
             WRITE (UnEc,'(//,A,/)')  'Blade '//TRIM( Num2LStr( K ) )//' input data from file "'//TRIM( BldFile(K) )//'":'
          END IF
 
-         CALL ReadBladeFile( BldFile(K), InputFileData%InpBl(K), ReadAdmVals, UnEc, ErrStat2, ErrMsg2 )
+         CALL ReadBladeFile( BldFile(K), InputFileData%InpBl(K), UnEc, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1551,14 +1550,13 @@ SUBROUTINE ReadBladeInputs ( BldFile, MeshFile, ReadAdmVals, InputFileData, UnEc
 END SUBROUTINE ReadBladeInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads a blade input file.
-SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, ReadAdmVals, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
 
    TYPE(BladeInputData),     INTENT(INOUT)  :: BladeKInputFileData                 !< Data for Blade K stored in the module's input file
    CHARACTER(*),             INTENT(IN)     :: BldFile                             !< Name of the blade input file data
-   LOGICAL,                  INTENT(IN)     :: ReadAdmVals                         !< Logical to determine if Adams inputs should be read from file
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
@@ -1638,7 +1636,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, ReadAdmVals, UnEc, ErrS
 
 
       ! .......... Allocate the arrays based on this NBlInpSt input ..........
-   CALL Alloc_BladeInputProperties( BladeKInputFileData, ReadAdmVals, ErrStat2, ErrMsg2 )
+   CALL Alloc_BladeInputProperties( BladeKInputFileData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -1772,11 +1770,7 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, ReadAdmVals, UnEc, ErrS
 
       ! Read the table.
 
-   IF ( ReadAdmVals ) THEN
-      NInputCols = 17
-   ELSE
-      NInputCols = 6
-   END IF
+   NInputCols = 6
 
 
    DO I=1,BladeKInputFileData%NBlInpSt
@@ -1796,19 +1790,6 @@ SUBROUTINE ReadBladeFile ( BldFile, BladeKInputFileData, ReadAdmVals, UnEc, ErrS
       BladeKInputFileData%FlpStff( I) = TmpRAry(5)*AdjFlSt  ! Apply the correction factors to the elemental data.
       BladeKInputFileData%EdgStff( I) = TmpRAry(6)*AdjEdSt  ! Apply the correction factors to the elemental data.
 
-      IF ( NInputCols > 6 ) THEN
-         BladeKInputFileData%GJStff(   I) = TmpRAry( 7)
-         BladeKInputFileData%EAStff(   I) = TmpRAry( 8)
-         BladeKInputFileData%Alpha(    I) = TmpRAry( 9)
-         BladeKInputFileData%FlpIner(  I) = TmpRAry(10)
-         BladeKInputFileData%EdgIner(  I) = TmpRAry(11)
-         BladeKInputFileData%PrecrvRef(I) = TmpRAry(12)
-         BladeKInputFileData%PreswpRef(I) = TmpRAry(13)
-         BladeKInputFileData%FlpcgOf(  I) = TmpRAry(14)
-         BladeKInputFileData%EdgcgOf(  I) = TmpRAry(15)
-         BladeKInputFileData%FlpEAOf(  I) = TmpRAry(16)
-         BladeKInputFileData%EdgEAOf(  I) = TmpRAry(17)
-      END IF
    ENDDO ! I
 
 
@@ -2164,7 +2145,7 @@ contains
 END SUBROUTINE ReadFurlFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads the tower file  input.
-SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadTowerFile( TwrFile, InputFileData, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    IMPLICIT                        NONE
@@ -2173,7 +2154,6 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, Er
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                !< I/O unit for echo file. If present and > 0, write to UnEc
-   LOGICAL,                  INTENT(IN)     :: ReadAdmVals                         !< Logical to determine if Adams inputs should be read from file
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
    CHARACTER(*),             INTENT(IN)     :: TwrFile                             !< Name of the tower input file data
    TYPE(ED_InputFile),       INTENT(INOUT)  :: InputFileData                       !< All the data in the ElastoDyn input file
@@ -2254,7 +2234,7 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, Er
 
 
       ! Allocate the input arrays based on this NTwInpSt input
-   CALL Alloc_TowerInputProperties( InputFileData, ReadAdmVals, ErrStat, ErrMsg )
+   CALL Alloc_TowerInputProperties( InputFileData, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -2402,12 +2382,8 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, Er
 
 
       ! Read the table.
-
-   IF ( ReadAdmVals ) THEN
-      NInputCols = 10
-   ELSE
-      NInputCols = 4
-   END IF
+      
+   NInputCols = 4
 
 
    DO I=1,InputFileData%NTwInpSt
@@ -2424,15 +2400,6 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, Er
       InputFileData%TMassDen(I) = TmpRAry(2)*AdjTwMa   ! Apply the correction factors to the elemental data.
       InputFileData%TwFAStif(I) = TmpRAry(3)*AdjFASt   ! Apply the correction factors to the elemental data.
       InputFileData%TwSSStif(I) = TmpRAry(4)*AdjSSSt   ! Apply the correction factors to the elemental data.
-
-      IF ( NInputCols > 4 ) THEN
-         InputFileData%TwGJStif(I) = TmpRAry( 5)
-         InputFileData%TwEAStif(I) = TmpRAry( 6)
-         InputFileData%TwFAIner(I) = TmpRAry( 7)
-         InputFileData%TwSSIner(I) = TmpRAry( 8)
-         InputFileData%TwFAcgOf(I) = TmpRAry( 9)
-         InputFileData%TwSScgOf(I) = TmpRAry(10)
-      END IF
 
    END DO ! I
 
@@ -3136,48 +3103,48 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
-      ! TowerHt - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerHt - Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerHt, "TowerHt", "Height of tower above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! TowerBsHt - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! TowerBsHt - Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%TowerBsHt, "TowerBsHt", "Height of tower base above ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMxt - Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMxt - Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMxt, "PtfmCMxt", "Downwind distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMyt - Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMzt", "Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMyt - Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMyt, "PtfmCMyt", "Lateral distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
       
-      ! PtfmCMzt - Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmCMzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmCMzt, "PtfmCMzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       END IF
 
-      ! PtfmRefzt - Vertical distance from the ground ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
+      ! PtfmRefzt - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters):
+   CALL ReadVar( UnIn, InputFile, InputFileData%PtfmRefzt, "PtfmRefzt", "Vertical distance from the ground [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -3702,11 +3669,10 @@ SUBROUTINE Alloc_BladeMeshInputProperties( BladeKInputFileMesh, ErrStat, ErrMsg 
 END SUBROUTINE Alloc_BladeMeshInputProperties
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the blade properties from the input file.
-SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(BladeInputData),     INTENT(INOUT)  :: BladeKInputFileData      !< Data for Blade K stored in the module's input file
-   LOGICAL,                  INTENT(IN)     :: AllocAdams               !< Logical to determine if we should allocate the arrays only used for Adams
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                  !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                   !< Err message
 
@@ -3734,32 +3700,6 @@ SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, AllocAdams, ErrStat,
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( BladeKInputFileData%GJStff,   BladeKInputFileData%NBlInpSt, 'GJStff'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%EAStff,   BladeKInputFileData%NBlInpSt, 'EAStff'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%Alpha,    BladeKInputFileData%NBlInpSt, 'Alpha'    , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%FlpIner,  BladeKInputFileData%NBlInpSt, 'FlpIner'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%EdgIner,  BladeKInputFileData%NBlInpSt, 'EdgIner'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%PrecrvRef,BladeKInputFileData%NBlInpSt, 'PrecrvRef', ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%PreswpRef,BladeKInputFileData%NBlInpSt, 'PreswpRef', ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%FlpcgOf,  BladeKInputFileData%NBlInpSt, 'FlpcgOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%EdgcgOf,  BladeKInputFileData%NBlInpSt, 'EdgcgOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%FlpEAOf,  BladeKInputFileData%NBlInpSt, 'FlpEAOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( BladeKInputFileData%EdgEAOf,  BladeKInputFileData%NBlInpSt, 'EdgEAOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
-
-
       ! BJJ: note that these used to be allocated 2:PolyOrd  :
 
    CALL AllocAry  ( BladeKInputFileData%BldFl1Sh,  PolyOrd-1, 'BldFl1Sh'  , ErrStat, ErrMsg )
@@ -3773,11 +3713,10 @@ SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, AllocAdams, ErrStat,
 END SUBROUTINE Alloc_BladeInputProperties
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the tower properties from the input file.
-SUBROUTINE Alloc_TowerInputProperties( InputFileData, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_TowerInputProperties( InputFileData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_InputFile),       INTENT(INOUT)  :: InputFileData      !< All the data in the ElastoDyn input file
-   LOGICAL,                  INTENT(IN)     :: AllocAdams         !< Determines if the columns for Adams data will be read
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat            !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg             !< Error message
 
@@ -3799,21 +3738,6 @@ SUBROUTINE Alloc_TowerInputProperties( InputFileData, AllocAdams, ErrStat, ErrMs
    IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry  ( InputFileData%TwSSStif,  InputFileData%NTwInpSt, 'TwSSStif'  , ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
-
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( InputFileData%TwGJStif,  InputFileData%NTwInpSt, 'TwGJStif'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( InputFileData%TwEAStif,  InputFileData%NTwInpSt, 'TwEAStif'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( InputFileData%TwFAIner,  InputFileData%NTwInpSt, 'TwFAIner'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( InputFileData%TwSSIner,  InputFileData%NTwInpSt, 'TwSSIner'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( InputFileData%TwFAcgOf,  InputFileData%NTwInpSt, 'TwFAcgOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( InputFileData%TwSScgOf,  InputFileData%NTwInpSt, 'TwSScgOf'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
 
 
       ! BJJ: note that these used to be allocated 2:PolyOrd  :
@@ -3895,61 +3819,6 @@ SUBROUTINE ValidateBladeData ( BladeKInputFileData, ErrStat, ErrMsg )
       END IF
 
    END DO
-
-
-      ! Check values for Adams input
-
-   IF ( ALLOCATED(BladeKInputFileData%GJStff) ) THEN  ! We assume that if GJStff is allocated, we are using ADAMS inputs
-
-         ! The reference axis must be coincident with the pitch axis at the blade root (I == 1):
-      IF ( .NOT. EqualRealNos( BladeKInputFileData%PrecrvRef(1), 0.0_ReKi ) .OR. &
-            .NOT. EqualRealNos( BladeKInputFileData%PreswpRef(1), 0.0_ReKi )      )  THEN
-         CALL SetErrStat( ErrID_Fatal,'Both PrecrvRef(1) and PreswpRef(1) must be zero '//&
-                        '(the reference axis must be coincident with the pitch axis at the blade root).',ErrStat,ErrMsg,RoutineName)
-      END IF
-
-
-      DO I = 1,BladeKInputFileData%NBlInpSt
-
-            ! Check that GJStff is contained in (0.0, inf):
-         IF ( BladeKInputFileData%GJStff(I) <= 0.0_ReKi )  THEN
-            CALL SetErrStat( ErrID_Fatal,'GJStff('//TRIM( Num2LStr( I ) )//') must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that EAStff is contained in (0.0, inf):
-         IF ( BladeKInputFileData%EAStff(I) <= 0.0_ReKi )  THEN
-            CALL SetErrStat( ErrID_Fatal,'EAStff('//TRIM( Num2LStr( I ) )//') must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that Alpha is contained in (-1.0, 1):
-         IF ( ( BladeKInputFileData%Alpha(I) <= -1.0_ReKi ) .OR. ( BladeKInputFileData%Alpha(I) >= 1.0_ReKi ) )  THEN
-            CALL SetErrStat( ErrID_Fatal,'Alpha('//TRIM( Num2LStr( I ) )//') (the blade flap/twist'// &
-                         ' coupling coefficient) must be between -1 and 1 (exclusive).',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that FlpIner is contained in [0.0, inf):
-         IF ( BladeKInputFileData%FlpIner(I) <  0.0_ReKi )  THEN
-            CALL SetErrStat( ErrID_Fatal,'FlpIner('//TRIM( Num2LStr( I ) )//') must not be less than zero.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that EdgIner is contained in [0.0, inf):
-         IF ( BladeKInputFileData%EdgIner(I) <  0.0_ReKi )  THEN
-            CALL SetErrStat( ErrID_Fatal,'EdgIner('//TRIM( Num2LStr( I ) )//') must not be less than zero.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that PrecrvRef is 0.0 for Adams models:
-         IF ( .NOT. EqualRealNos( BladeKInputFileData%PrecrvRef(I), 0.0_ReKi) )  THEN
-            CALL SetErrStat( ErrID_Fatal,'PrecrvRef('//TRIM( Num2LStr( I ) )//') must be zero for Adams models.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-            ! Check that GJStff is contained in (0.0, inf):
-         IF ( .NOT. EqualRealNos( BladeKInputFileData%PreswpRef(I), 0.0_ReKi) )  THEN
-            CALL SetErrStat( ErrID_Fatal,'PreswpRef('//TRIM( Num2LStr( I ) )//') must be zero for Adams models.',ErrStat,ErrMsg,RoutineName)
-         END IF
-
-      END DO
-
-   END IF  ! check for Adams models
 
 
       ! Check that the blade damping is not negative:
@@ -4055,31 +3924,6 @@ SUBROUTINE ValidateTowerData ( InputFileData, ErrStat, ErrMsg )
          CALL SetErrStat( ErrID_Fatal, 'TwSSStif('//TRIM(Num2LStr( I ))//') must be greater than zero.', ErrStat, ErrMsg, RoutineName)
       END IF
    END DO
-
-      ! Check Adams inputs
-
-   IF ( ALLOCATED( InputFileData%TwGJStif ) ) THEN ! Assume that all of the Adams tower data is allocated
-
-      DO I = 1,InputFileData%NTwInpSt
-         IF ( InputFileData%TwGJStif(I) <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'TwGJStif('//TRIM(Num2LStr( I ))//') must be greater than zero.', ErrStat, ErrMsg, RoutineName)
-         END IF
-
-         IF ( InputFileData%TwEAStif(I) <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'TwEAStif('//TRIM(Num2LStr( I ))//') must be greater than zero.', ErrStat, ErrMsg, RoutineName)
-         END IF
-
-         IF ( InputFileData%TwFAIner(I) <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'TwFAIner('//TRIM(Num2LStr( I ))//') must be greater than zero.', ErrStat, ErrMsg, RoutineName)
-         END IF
-
-         IF ( InputFileData%TwSSIner(I) <= 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'TwSSIner('//TRIM(Num2LStr( I ))//') must be greater than zero.', ErrStat, ErrMsg, RoutineName)
-         END IF
-      END DO
-
-   END IF ! Check items for Adams
-
 
 
       ! Check that the tower damping (TwrFADmp) is contained in the range [0, 100]:
@@ -4271,7 +4115,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the primary input file.
 !! note that all angles are assumed to be in radians in this routine:
-SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
+SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
@@ -4279,6 +4123,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                       !< All the data in the ElastoDyn input file
    LOGICAL,                  INTENT(IN)     :: BD4Blades                           !< Use BeamDyn for blades, thus ignore ElastoDyn blade info 
    LOGICAL,                  INTENT(IN)     :: Linearize                           !< Flag indicating glue code wants to linearize this module
+   INTEGER(IntKi),           INTENT(IN)     :: MHK                                 !< MHK turbine type switch
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
 
@@ -4338,8 +4183,12 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    IF ( InputFileData%YawBrMass < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'YawBrMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%NacMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'NacMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%HubMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubMass must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF ( InputFileData%Twr2Shft  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
-   
+   IF ( MHK /= 2 ) THEN
+      IF ( InputFileData%Twr2Shft  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
+   ELSEIF ( MHK == 2 ) THEN
+      IF ( InputFileData%Twr2Shft  > 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be positive for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
+   ENDIF
+      
    DO K=1,InputFileData%NumBl
       IF ( InputFileData%TipMass(K) < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'TipMass('//TRIM( Num2LStr( K ) )//') must not be negative.',ErrStat,ErrMsg,RoutineName)
    ENDDO ! K
@@ -4349,7 +4198,11 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
    IF ( InputFileData%HubIner  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubIner must not be negative.',ErrStat,ErrMsg,RoutineName)
 
       ! Check that TowerHt is in the range [0,inf):
-   IF ( InputFileData%TowerHt <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
+   IF ( MHK /= 2 ) THEN
+      IF ( InputFileData%TowerHt <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
+   ELSEIF ( MHK == 2 ) THEN
+      IF ( InputFileData%TowerHt >= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be less than zero for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName )
+   ENDIF
 
       ! Check that these integers are in appropriate ranges:
    IF ( InputFileData%TwrNodes < 1_IntKi ) CALL SetErrStat( ErrID_Fatal, 'TwrNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
@@ -4388,22 +4241,37 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
       END IF
    ENDIF
 
-   IF ( InputFileData%TowerBsHt >= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be less than TowerHt.',ErrStat,ErrMsg,RoutineName)
+   IF ( MHK /= 2 ) THEN
 
-   IF ( InputFileData%PtfmCMzt  > InputFileData%TowerBsHt ) &
-      CALL SetErrStat( ErrID_Fatal, 'PtfmCMzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+      IF ( InputFileData%TowerBsHt >= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be less than TowerHt.',ErrStat,ErrMsg,RoutineName)
+
+      IF ( InputFileData%PtfmCMzt  > InputFileData%TowerBsHt ) &
+         CALL SetErrStat( ErrID_Fatal, 'PtfmCMzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
    
-   IF ( InputFileData%PtfmRefzt  > InputFileData%TowerBsHt ) &
-      CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+      IF ( InputFileData%PtfmRefzt  > InputFileData%TowerBsHt ) &
+         CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
+
+   ELSEIF ( MHK == 2 ) THEN
+
+      IF ( InputFileData%TowerBsHt <= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be greater than TowerHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
+         
+   ENDIF
      
    IF (.NOT. BD4Blades ) THEN
       IF (InputFileData%HubRad >= InputFileData%TipRad ) &
       CALL SetErrStat( ErrID_Fatal, 'HubRad must be less than TipRad.',ErrStat,ErrMsg,RoutineName)
 
-      IF ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
-                                 <= InputFileData%TipRad )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
-      END IF
+      IF ( MHK /= 2 ) THEN
+         IF ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
+                                    <= InputFileData%TipRad )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ELSEIF ( MHK == 2 ) THEN
+         IF ( -InputFileData%TowerHt - InputFileData%Twr2Shft - InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
+                                    <= InputFileData%TipRad )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+         END IF
+      ENDIF
    END IF
 
 

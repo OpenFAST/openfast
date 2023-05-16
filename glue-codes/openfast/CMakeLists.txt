@@ -17,12 +17,9 @@
 set (CMAKE_CXX_STANDARD 11)
 
 add_executable(openfast src/FAST_Prog.f90)
-target_link_libraries(openfast openfast_postlib foamfastlib)
-set_property(TARGET openfast PROPERTY LINKER_LANGUAGE Fortran)
+target_link_libraries(openfast openfastlib_static)
+set_target_properties(openfast PROPERTIES LINKER_LANGUAGE Fortran)
 
-include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)
-include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
-include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 add_executable(openfast_cpp src/FAST_Prog.cpp src/FastLibAPI.cpp)
 target_link_libraries(openfast_cpp openfastlib)
 

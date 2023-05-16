@@ -103,7 +103,7 @@ PROGRAM HydroDynDriver
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
    INTEGER(IntKi)                                     :: ErrStat,ErrStat2     ! Status of error message
    CHARACTER(1024)                                    :: ErrMsg,ErrMsg2       ! Error message if ErrStat /= ErrID_None
-   REAL(R8Ki)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
+   REAL(ReKi)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(HD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
    

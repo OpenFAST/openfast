@@ -18,8 +18,7 @@ typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of tower nodes from AD15 (rel
 typedef	^       ^	ReKi	BladeLength	-	-	-	"Blade length"	meters
 typedef	^	^	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
 typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
-
-
+typedef ^       ^       IntKi   NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 
 
@@ -44,12 +43,12 @@ typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesVel	-	-	-	"number of velocity no
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForce	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceBlade	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceTower	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
-typedef  OpenFOAM/OpFM	ParameterType	ReKi	forceBldRnodes	{:}	-	-	"Radial location of force nodes"  -
-typedef  OpenFOAM/OpFM	ParameterType	ReKi	forceTwrHnodes	{:}	-	-	"Vertical location of force nodes"  -
+typedef OpenFOAM/OpFM	ParameterType	ReKi	forceBldRnodes	{:}	-	-	"Radial location of force nodes"  -
+typedef OpenFOAM/OpFM	ParameterType	ReKi	forceTwrHnodes	{:}	-	-	"Vertical location of force nodes"  -
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	BladeLength	-	-	-	"Blade length (same for all blades)"	"m"
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	TowerHeight	-	-	-	"Tower height"	"m"
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	TowerBaseHeight	-	-	-	"Tower base height"	"m"
-
+typedef OpenFOAM/OpFM   ParameterType   IntKi   NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 # ..... OpenFOAM_InputType data .......................................................................................................
 typedef	^	InputType	ReKi	pxVel	{:}	-	-	"x position of velocity interface (Aerodyn) nodes"	"m"

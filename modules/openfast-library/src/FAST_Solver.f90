@@ -471,31 +471,14 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
    u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
    
                
-   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
 
+
+   IF ( p_FAST%MHK==1 .or. p_FAST%MHK==2 ) THEN
+      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
+   ENDIF
 
 END SUBROUTINE IfW_InputSolve
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the inputs required for InflowWind from an external source (Simulink)
-SUBROUTINE IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
-!..................................................................................................................................
 
-   TYPE(InflowWind_ParameterType),   INTENT(IN)     :: p_IfW        !< InflowWind parameters
-   TYPE(FAST_MiscVarType),           INTENT(IN)     :: m_FAST       !< Glue-code misc variables (including inputs from external sources like Simulink)
-   TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         !< The outputs of the structural dynamics module
-   TYPE(InflowWind_InputType),       INTENT(INOUT)  :: u_IfW        !< InflowWind Inputs at t
-
-   
-   ! bjj: this is a total hack to get the lidar inputs into InflowWind. We should use a mesh to take care of this messiness (and, really this Lidar Focus should come
-   ! from Fortran (a scanning pattern or file-lookup inside InflowWind), not MATLAB.
-            
-   u_IfW%lidar%LidPosition = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1) & ! rotor apex position (absolute)
-                                                            + p_IfW%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
-      
-   u_IfW%lidar%MsrPosition = m_FAST%ExternInput%LidarFocus + u_IfW%lidar%LidPosition
-
-
-END SUBROUTINE IfW_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the AeroDyn wind inflow inputs.
 SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
@@ -921,17 +904,28 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, y
 
       u_SrvD%WindDir  = ATAN2( y_IfW%VelocityUVW(2,1), y_IfW%VelocityUVW(1,1) )
       u_SrvD%HorWindV = SQRT( y_IfW%VelocityUVW(1,1)**2 + y_IfW%VelocityUVW(2,1)**2 )
+      if (allocated(y_IfW%lidar%LidSpeed     ))  u_SrvD%LidSpeed      = y_IfW%lidar%LidSpeed
+      if (allocated(y_IfW%lidar%MsrPositionsX))  u_SrvD%MsrPositionsX = y_IfW%lidar%MsrPositionsX
+      if (allocated(y_IfW%lidar%MsrPositionsY))  u_SrvD%MsrPositionsY = y_IfW%lidar%MsrPositionsY
+      if (allocated(y_IfW%lidar%MsrPositionsZ))  u_SrvD%MsrPositionsZ = y_IfW%lidar%MsrPositionsZ
 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM )  THEN 
       
       u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
+      if (allocated(u_SrvD%LidSpeed     ))  u_SrvD%LidSpeed      = 0.0
+      if (allocated(u_SrvD%MsrPositionsX))  u_SrvD%MsrPositionsX = 0.0
+      if (allocated(u_SrvD%MsrPositionsY))  u_SrvD%MsrPositionsY = 0.0
+      if (allocated(u_SrvD%MsrPositionsz))  u_SrvD%MsrPositionsz = 0.0
 
    ELSE  ! No wind inflow
 
       u_SrvD%WindDir  = 0.0
       u_SrvD%HorWindV = 0.0
-
+      if (allocated(u_SrvD%LidSpeed     ))  u_SrvD%LidSpeed      = 0.0
+      if (allocated(u_SrvD%MsrPositionsX))  u_SrvD%MsrPositionsX = 0.0
+      if (allocated(u_SrvD%MsrPositionsY))  u_SrvD%MsrPositionsY = 0.0
+      if (allocated(u_SrvD%MsrPositionsz))  u_SrvD%MsrPositionsz = 0.0
    ENDIF
 
    
@@ -3321,6 +3315,7 @@ CONTAINS
    !...............................................................................................................................
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      INTEGER(IntKi)             :: nb 
       CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
       INTEGER(IntKi)             :: nb_local
          
@@ -5577,6 +5572,10 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
 
          
    IF (p_FAST%CompInflow == Module_IfW) THEN
+      ! get Lidar position directly from hub mesh (may map meshes later)
+      IfW%Input%lidar%HubDisplacementX = ED%y%HubPtMotion%TranslationDisp(1,1)
+      IfW%Input%lidar%HubDisplacementY = ED%y%HubPtMotion%TranslationDisp(2,1)
+      IfW%Input%lidar%HubDisplacementZ = ED%y%HubPtMotion%TranslationDisp(3,1)
 
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )

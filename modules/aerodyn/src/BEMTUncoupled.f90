@@ -51,6 +51,7 @@ module BEMTUnCoupled
    public :: ApplySkewedWakeCorrection
    public :: Transform_ClCd_to_CxCy
    public :: getAirfoilOrientation
+   public :: getAirfoilOrientationMatrix
    public :: computeAirfoilOperatingAOA
    public :: Transform_ClCdCm_to_CxCyCzCmxCmyCmz
    public :: getHubTipLossCorrection
@@ -126,8 +127,8 @@ contains
 
 !bjj: check that the cantAngle modification works for UA!!!!
    
-      v_ac(1) = (Vx*cos(cantAngle)+xVelCorr)*(1.0_ReKi-axInduction)
-      v_ac(2) = Vy*(1.0_ReKi+tanInduction)
+      v_ac(1) = (Vx*cos(cantAngle)+xVelCorr)*(1.0_ReKi - axInduction)
+      v_ac(2) =                           Vy*(1.0_ReKi + tanInduction)
 
       Vrel    = TwoNorm(v_ac)
 
@@ -152,7 +153,7 @@ contains
       orientation(1) = toeAngle
       orientation(2) = cantAngle
       orientation(3) = -theta
-      rotMat = EulerConstruct( orientation )
+      rotMat = EulerConstruct( orientation ) ! = R_ap: from polar to airfoil
       
       ! unit vector normal to the chord line in the airfoil plane
       afNormalVec = rotMat(1,:)
@@ -165,6 +166,24 @@ contains
       afRadialVec = rotMat(3,:)
       
    end subroutine getAirfoilOrientation
+!..................................................................................................................................
+!> getAirfoilOrientation = R_ap = transformation from from polar coordinate system of the section to the airfoil coordinate system
+   subroutine getAirfoilOrientationMatrix( theta, cantAngle, toeAngle, rotMat)
+      ! Routine for creating the airfoil orientation vectors
+      
+      implicit none
+      
+      real(ReKi), intent(in   ) :: theta
+      real(ReKi), intent(in   ) :: cantAngle
+      real(ReKi), intent(in   ) :: toeAngle
+      real(ReKi), intent(out  ) :: rotMat(3,3)
+      real(ReKi)                :: orientation(3)
+      
+      orientation(1) = toeAngle
+      orientation(2) = cantAngle
+      orientation(3) = -theta
+      rotMat = EulerConstruct( orientation ) ! = R_ap: from polar to airfoil
+   end subroutine getAirfoilOrientationMatrix
 !..................................................................................................................................
    subroutine computeAirfoilOperatingAOA( BEM_Mod, phi, theta, cantAngle, toeAngle, AoA )
       ! Routine for computing local angle-of-attack in the airfoil reference frame
@@ -371,17 +390,20 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
       endif
       
       
-         ! Determine axInduction, tanInduction for the current Cl, Cd, phi
-      if(p%BEM_Mod==BEMMod_2D) then
-          call inductionFactors0( u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, p%numBlades, &
-                              u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useHubLoss, p%useTipLoss,  p%hubLossConst(i,j), p%tipLossConst(i,j), &
-                              ResidualVal, axInduction, tanInduction, IsValidSolution)
-      else
-      ! Prandtl's tip and hub loss factor
-      ! TODO TODO TODO EB Unify with 2D, compute F for both before induction
+   
+      !.....................................................
+      ! Prandtl's tip and hub loss factor:
+      !.....................................................
+      ! Note: cantAngle is 0 for BEMMod_2D
       F = getHubTipLossCorrection(p%BEM_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi, u%cantAngle(i,j) )
       F = max(F,0.0001_ReKi)
-          call inductionFactors2( p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), u%drdz(i,j), u%cantAngle(i,j), F, u%CHI0, p%useTanInd, &
+      
+         ! Determine axInduction, tanInduction for the current Cl, Cd, phi
+      if(p%BEM_Mod==BEMMod_2D) then
+          call inductionFactors0(p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), F, p%useTanInd, &
+                              ResidualVal, axInduction, tanInduction, IsValidSolution)
+      else
+          call inductionFactors2(p%BEM_Mod, p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), u%drdz(i,j), u%cantAngle(i,j), F, u%CHI0, p%useTanInd, &
                               ResidualVal, axInduction, tanInduction, p%MomentumCorr, u%xVelCorr(i,j), IsValidSolution, k_out, kp_out )
 
       endif
@@ -397,10 +419,14 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    
 end function BEMTU_InductionWithResidual
 !-----------------------------------------------------------------------------------------
-subroutine ApplySkewedWakeCorrection( yawCorrFactor, azimuth, chi0, tipRatio, a, chi, FirstWarn )
+subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth, azimuthOffset, chi0, tipRatio, a, chi, FirstWarn )
    
+   integer(IntKi),            intent(in   ) :: BEM_Mod
+   integer(IntKi),            intent(in   ) :: SkewMod
    real(ReKi),                intent(in   ) :: yawCorrFactor ! set to 15*pi/32 previously; now allowed to be input (to better match data) 
+   real(ReKi),                intent(in   ) :: F             ! tip/hub loss factor
    real(ReKi),                intent(in   ) :: azimuth
+   real(ReKi),                intent(in   ) :: azimuthOffset ! offset angle of most downwind blade position
    real(ReKi),                intent(in   ) :: chi0 
    real(ReKi),                intent(in   ) :: tipRatio            ! r/Rtip 
    real(ReKi),                intent(inout) :: a 
@@ -413,8 +439,13 @@ subroutine ApplySkewedWakeCorrection( yawCorrFactor, azimuth, chi0, tipRatio, a,
    
    
    ! Skewed wake correction
-      
-   chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+   IF (.true.) then
+      if(BEM_Mod==BEMMod_2D) then
+         chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+      else
+         chi = (0.6_ReKi*a + 1.0_ReKi)*abs(chi0)
+      endif
+   END IF
       
    call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
       
@@ -441,41 +472,39 @@ subroutine ApplySkewedWakeCorrection( yawCorrFactor, azimuth, chi0, tipRatio, a,
 end subroutine ApplySkewedWakeCorrection
 !-----------------------------------------------------------------------------------------
 !> This subroutine computes the induction factors (a) and (ap) along with the residual (fzero)
-subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
-                              fzero, a, ap, IsValidSolution)
+subroutine inductionFactors0(B, r, chord, phi, cn, ct, Vx, Vy, F, wakerotation, &
+                              fzero, a_out, ap_out, IsValidSolution)
 
    implicit none
 
    ! in
+   integer,    intent(in) :: B              !< number of blades [p%numBlades]
    real(ReKi), intent(in) :: r              !< local radial position [u%rlocal]
    real(ReKi), intent(in) :: chord          !< chord [p%chord]
    real(ReKi), intent(in) :: phi            !< angle between the plane of rotation and the direction of the local wind [y%phi]; must be in range [-pi,pi]
    real(ReKi), intent(in) :: cn             !< normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade; [y%cx]
    real(ReKi), intent(in) :: ct             !< tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade; [y%cy]
-   integer,    intent(in) :: B              !< number of blades [p%numBlades]
    real(ReKi), intent(in) :: Vx             !< velocity component [u%Vx]
    real(ReKi), intent(in) :: Vy             !< velocity component [u%Vy]
-   real(ReKi), intent(in) :: hubLossConst   !< hub loss constant [p%hubLossConst]
-   real(ReKi), intent(in) :: tipLossConst   !< tip loss constant [p%tipLossConst]
-   logical,    intent(in) :: useHubLoss     !< hub-loss flag [p%useHubLoss]
-   logical,    intent(in) :: useTipLoss     !< tip-loss flag [p%useTipLoss]
+   real(ReKi), intent(in) :: F              !< hub/tip loss correction factor
    logical,    intent(in) :: wakerotation   !< Include tangential induction in BEMT calculations [flag] [p%useTanInd]
                    
    ! out
    real(ReKi), intent(out) :: fzero         !< residual of BEM equations
-   real(ReKi), intent(out) :: a             !< axial induction [y%axInduction]
-   real(ReKi), intent(out) :: ap            !< tangential induction, i.e., a-prime [y%tanInduction]
+   real(ReKi), intent(out) :: a_out         !< axial induction [y%axInduction]
+   real(ReKi), intent(out) :: ap_out        !< tangential induction, i.e., a-prime [y%tanInduction]
    logical,    intent(out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
    
    ! local
         
-   real(ReKi) :: sigma_p   ! local solidity (B*chord/(TwoPi*r))
-   real(ReKi) :: sphi, cphi, lambda_r
-   real(ReKi) :: k, kp ! non-dimensional parameters 
-   real(ReKi) :: F ! hub/tip loss correction factor
+   real(R8Ki) :: VxCorrected
+   real(R8Ki) :: sigma_p   ! local solidity (B*chord/(TwoPi*r))
+   real(R8Ki) :: sphi, cphi, lambda_r
+   real(R8Ki) :: k, kp ! non-dimensional parameters 
    real(ReKi) :: g1, g2, g3
    real(ReKi) :: temp  ! temporary variable so we don't have to calculate 2.0_ReKi*F*k multiple times
-   real(ReKi), parameter :: InductionLimit = 1000000.0_ReKi
+   real(R8Ki)            :: a, ap   ! double precision versions of output variables of similar name
+   real(R8Ki), parameter :: InductionLimit = 1000000.0_R8Ki
   
    logical    :: momentumRegion
 
@@ -493,12 +522,6 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    cphi = cos(phi)
    
    
-   !.....................................................
-   ! Prandtl's tip and hub loss factor:
-   !.....................................................
-   ! TODO TODO TODO EB Put this up like BEM_Mod3d
-   F = getHubTipLossCorrection(BEMMod_2D, useHubLoss, useTipLoss, hubLossConst, tipLossConst, phi, cantAngle=0.0_ReKi)
-   
 
    !.....................................................
    ! compute axial induction factor:
@@ -514,13 +537,13 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
         ! update axial induction factor
       if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state for a < 0.4
          
-         if ( EqualRealNos(k,-1.0_ReKi) ) then
-            a = -sign(InductionLimit, 1.0_ReKi+k)
+         if ( EqualRealNos(k,-1.0_R8Ki) ) then
+            a = -sign(InductionLimit, 1.0_R8Ki+k)
          else   
-            a = k/(1.0_ReKi+k)
+            a = k/(1.0_R8Ki+k)
          end if
          
-         if (k<-1.0_ReKi) then ! k < -1 cannot be a solution in momentum region (this is equivalent to a>1.0)
+         if (k<-1.0_R8Ki) then ! k < -1 cannot be a solution in momentum region (this is equivalent to a>1.0)
             IsValidSolution = .false.
          end if
          
@@ -545,15 +568,15 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    else  ! propeller brake
       
             
-      if ( EqualRealNos(k,1.0_ReKi) ) then
+      if ( EqualRealNos(k,1.0_R8Ki) ) then
          IsValidSolution = .false.
          a = InductionLimit
       else
-         a = k/(k-1.0_ReKi)
+         a = k/(k-1.0_R8Ki)
       end if
 
       
-      if (k<=1.0_ReKi) then ! k <= 1 cannot be a solution in propeller brake region (this is equivalent to a<1.0)
+      if (k<=1.0_R8Ki) then ! k <= 1 cannot be a solution in propeller brake region (this is equivalent to a<1.0)
          IsValidSolution = .false.
       end if
       
@@ -564,35 +587,15 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    !.....................................................
     
    if (wakerotation) then 
-   
-         ! compute tangential induction factor
-      if ( EqualRealNos(cphi,0.0_ReKi) ) then
-         
-         ap = -1.0_ReKi
-         kp =  sign(InductionLimit, ct*sphi)*sign(1.0_ReKi,Vx)
-         
-      else
-         
-         kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
-         if (Vx < 0.0_ReKi) then 
-            kp = -kp
-         end if
-         
-      
-         if ( EqualRealNos(kp,1.0_ReKi) ) then
-            ap = sign(InductionLimit, 1.0_ReKi-kp)
-         else
-            ap = kp/(1.0_ReKi-kp)
-         end if
-
-      endif
+      VxCorrected = Vx
+      call getTangentialInduction(a, cphi, sphi, Vx, F, 1.0_R8Ki, sigma_p, ct, VxCorrected, 0.0_R8Ki, 1.0_R8Ki, .False., ap, kp)
             
    else 
       
       ! we're not computing tangential induction:       
-      ap = 0.0_ReKi
-      kp = 0.0_ReKi
-      
+      ap = 0.0_R8Ki
+      kp = 0.0_R8Ki
+!       
    end if
 
     
@@ -602,7 +605,7 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
    lambda_r = Vy/Vx
 
    if (momentumRegion) then  ! momentum/empirical
-      if ( EqualRealNos(a, 1.0_ReKi) ) then
+      if ( EqualRealNos(a, 1.0_R8Ki) ) then
          fzero = - cphi/lambda_r*(1-kp)
       else       
          fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
@@ -612,15 +615,67 @@ subroutine inductionFactors0(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, use
       fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
    end if
 
+
+   ! Convert from double to ReKi
+   a_out     = real(     a, ReKi )
+   ap_out    = real(    ap, ReKi )
+
 end subroutine inductionFactors0
+subroutine getTangentialInduction(a, cphi, sphi, Vx, F, kCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
+   real(ReKi), intent(in) :: Vx             !< velocity component [u%Vx]
+   real(ReKi), intent(in) :: F              !< hub/tip loss correction factor
+   logical,    intent(in) :: MomentumCorr   !< Include tangential induction in BEMT calculations [flag] [p%useTanInd]
+   real(ReKi), intent(in) :: ct             !< tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade; [y%cy]
+   real(R8Ki), intent(in) :: sigma_p           ! local solidity (B*chord/(TwoPi*r))
+   real(R8Ki), intent(in) :: sphi, cphi        ! sin(phi), cos(phi)
+   real(R8Ki), intent(in) :: VxCorrected, kCorrectionFactor
+   real(R8Ki), intent(in) :: effectiveYaw !
+   real(R8Ki), intent(in) :: H              ! scaling factor to gradually phase out tangential induction when axial induction is near 1.0
+   real(R8Ki), intent(in) :: a   ! double precision versions of output variables of similar name
+   real(R8Ki), intent(out) :: kp                ! non-dimensional parameters 
+   real(R8Ki), intent(out) :: ap   ! double precision versions of output variables of similar name
+   real(R8Ki), parameter :: InductionLimit = 1000000.0_R8Ki
+
+   ! compute tangential induction factor
+   if ( EqualRealNos(cphi,0.0_R8Ki) ) then
+      
+      ap = -1.0_R8Ki
+      kp =  sign(InductionLimit, ct*sphi)*sign(1.0_R8Ki,real(Vx,R8Ki))
+      
+   else
+      !H = smoothStep( real(a,ReKi), 0.8, 1.0, 1.0, 0.0 ) + smoothStep( real(a,ReKi), 1.0, 0.0, 1.2, 1.0 )
+      !kp = sigma_p*( cl*sphi - H*cd*cphi )/( 4.0*F*sphi*cphi )*kCorrectionFactor
+      if (MomentumCorr) then             
+          if (equalrealnos(a,1.0_R8Ki)) then
+              kp = 0.0_R8Ki !H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)
+          else
+              kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)/sqrt(1+(tan(effectiveYaw)/(1.0_ReKi-a))**2)            
+          endif             
+      else
+          kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*kCorrectionFactor
+      endif
+      
+      if ( VxCorrected < 0.0_ReKi ) then
+         kp = -kp
+      endif
+   
+      if ( EqualRealNos(kp,1.0_R8Ki) ) then
+         ap = sign(InductionLimit, 1.0_R8Ki-kp)
+      else
+         ap = kp/(1.0_R8Ki-kp)
+      end if
+
+   endif
+end subroutine getTangentialInduction
 !-----------------------------------------------------------------------------------------
 !> This subroutine computes the induction factors (a) and (ap) along with the residual (fzero)
-subroutine inductionFactors2( B, r, chord, phi, cn, ct, Vx, Vy, drdz,cantAngle, F, CHI0, wakerotation, &
+subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,cantAngle, F, CHI0, wakerotation, &
    fzero_out, a_out, ap_out, MomentumCorr, xVelCorr, IsValidSolution, k_out, kp_out )
 
    implicit none
 
    ! in
+   integer,    intent(in) :: BEM_Mod
    integer,    intent(in) :: B              !< number of blades [p%numBlades]
    real(ReKi), intent(in) :: r              !< local radial position [u%rlocal]
    real(ReKi), intent(in) :: chord          !< chord [p%chord]
@@ -711,38 +766,7 @@ subroutine inductionFactors2( B, r, chord, phi, cn, ct, Vx, Vy, drdz,cantAngle, 
    ! compute tangential induction factor:
    !.....................................................
    if (wakerotation) then 
-   
-      ! compute tangential induction factor
-      if ( EqualRealNos(cphi,0.0_R8Ki) ) then
-         
-         ap = -1.0_R8Ki
-         kp =  sign(InductionLimit, ct*sphi)*sign(1.0_R8Ki,real(Vx,R8Ki))
-         
-      else
-         !H = smoothStep( real(a,ReKi), 0.8, 1.0, 1.0, 0.0 ) + smoothStep( real(a,ReKi), 1.0, 0.0, 1.2, 1.0 )
-         !kp = sigma_p*( cl*sphi - H*cd*cphi )/( 4.0*F*sphi*cphi )*kCorrectionFactor
-         if (MomentumCorr) then             
-             if (equalrealnos(a,1.0_R8Ki)) then
-                 kp = 0.0_R8Ki !H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)
-             else
-                 kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)/sqrt(1+(tan(effectiveYaw)/(1.0_ReKi-a))**2)            
-             endif             
-         else
-             kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*kCorrectionFactor
-         endif
-         
-         if ( VxCorrected < 0.0_ReKi ) then
-            kp = -kp
-         endif
-      
-         if ( EqualRealNos(kp,1.0_R8Ki) ) then
-            ap = sign(InductionLimit, 1.0_R8Ki-kp)
-         else
-            ap = kp/(1.0_R8Ki-kp)
-         end if
-
-      endif
-            
+      call getTangentialInduction(a, cphi, sphi, Vx, F, kCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
    else 
       
       ! we're not computing tangential induction:       

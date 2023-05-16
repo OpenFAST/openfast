@@ -27,7 +27,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Waves2.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves2_Types.f90)
 endif()
 
-set(HYDRODYN_SOURCES
+add_library(hydrodynlib 
   src/Conv_Radiation.f90
   src/Current.f90
   src/HydroDyn.f90
@@ -55,19 +55,22 @@ set(HYDRODYN_SOURCES
   src/Waves_Types.f90
   src/Waves2_Types.f90
 )
-
-add_library(hydrodynlib ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib nwtclibs)
 
-# c-bindings interface library
-add_library(hydrodyn_c_binding SHARED src/HydroDyn_C_Binding.f90)
+# Driver
+add_executable(hydrodyn_driver 
+  src/HydroDyn_DriverCode.f90
+)
+target_link_libraries(hydrodyn_driver hydrodynlib versioninfolib)
+
+# C-bindings interface library
+add_library(hydrodyn_c_binding SHARED 
+  src/HydroDyn_C_Binding.f90
+)
 target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(hydrodyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
-
-add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
-target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 
 #add_executable(ss_radiation
 #  src/SS_Radiation_DriverCode.f90)
@@ -77,4 +80,5 @@ install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)

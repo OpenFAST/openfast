@@ -649,15 +649,14 @@ excluding its file extension, where *<n*\ :sub:`t`\ *>* and
 *<n*\ :sub:`low`\ *>* are as specified in
 :numref:`FF:Input:VTK`, but include leading zeros.
 
-For visualization, FAST.Farm can also output low-resolution disturbed
-(including wakes) wind data output files that are two-dimensional (2D)
-slices of the full low-resolution domain, specified by the following 7
-inputs. Up to nine 2D slices parallel to the *X-Y*, *Y-Z*, and/or *X-Z*
-planes can be output.
+For visualization, FAST.Farm can also output low-resolution disturbed (including
+wakes) wind data output files that are two-dimensional (2D) slices of the full
+low-resolution domain, specified by the following 7 inputs. Up to ninety-nine 2D
+slices parallel to the *X-Y*, *Y-Z*, and/or *X-Z* planes can be output.
 
 -  **NOutDisWindXY** [integer] specifies the number of 2D slices
    parallel to the *X-Y* plane where low-resolution disturbed wind data
-   output files are output (:math:`0` to :math:`9`).
+   output files are output (:math:`0` to :math:`99`).
 
 -  **OutDisWindZ** [m] is a list **NOutDisWindXY** values long of the
    *Z* coordinates of each plane that will be output. These values are
@@ -666,7 +665,7 @@ planes can be output.
 
 -  **NOutDisWindYZ** [integer] specifies the number of 2D slices
    parallel to the *Y-Z* plane where low-resolution disturbed wind data
-   output files are output (:math:`0` to :math:`9`).
+   output files are output (:math:`0` to :math:`99`).
 
 -  **OutDisWindX** [m] is a list **NOutDisWindYZ** values long of the
    *X* coordinates of each plane that will be output. These values are
@@ -675,7 +674,7 @@ planes can be output.
 
 -  **NOutDisWindXZ** [integer] specifies the number of 2D slices
    parallel to the *X-Z* plane where low-resolution disturbed wind data
-   output files are output (:math:`0` to :math:`9`).
+   output files are output (:math:`0` to :math:`99`).
 
 -  **OutDisWindY** [m] is a list **NOutDisWindXZ** values long of the
    *Y* coordinates of each plane that will be output. These values are

@@ -26,17 +26,8 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FVW_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
 
-
-# AeroAcoustics - Main
-set(AEROACOUSTIC_SOURCES
-  src/AeroAcoustics_TNO.f90
-  src/AeroAcoustics.f90
-  src/AeroAcoustics_IO.f90
-  src/AeroAcoustics_Types.f90
-)
-
-# AeroDyn lib
-set(AD_LIBS_SOURCES
+# AeroDyn Library
+add_library(aerodynlib 
   src/AeroDyn.f90
   src/AeroDyn_IO_Params.f90
   src/AeroDyn_IO.f90
@@ -48,22 +39,22 @@ set(AD_LIBS_SOURCES
   src/AeroDyn_Types.f90
   src/BEMT_Types.f90
   src/DBEMT_Types.f90
-)
 
-# UnsteadyAero lib
-set(UA_LIBS_SOURCES
+  # AeroAcoustics - Main
+  src/AeroAcoustics_TNO.f90
+  src/AeroAcoustics.f90
+  src/AeroAcoustics_IO.f90
+  src/AeroAcoustics_Types.f90
+
+  # UnsteadyAero lib
   src/UnsteadyAero.f90
   src/UnsteadyAero_Types.f90
-)
 
-# AirFoil Info lib
-set(AFINFO_LIBS_SOURCES
+  # AirFoil Info lib
   src/AirfoilInfo.f90
   src/AirfoilInfo_Types.f90
-)
 
-# FVW lib
-set(FVW_LIBS_SOURCES
+  # FVW lib
   src/FVW.f90
   src/FVW_IO.f90
   src/FVW_VortexTools.f90
@@ -72,70 +63,45 @@ set(FVW_LIBS_SOURCES
   src/FVW_BiotSavart.f90
   src/FVW_Tests.f90
   src/FVW_Types.f90
-)
 
-# ADI lib
-set(ADI_LIB_SOURCES
+  # ADI lib
   src/AeroDyn_Inflow.f90
   src/AeroDyn_Inflow_Types.f90
 )
+target_link_libraries(aerodynlib ifwlib nwtclibs)
 
-# UnsteadyAero lib
-add_library(uaaerolib ${UA_LIBS_SOURCES})
-target_link_libraries(uaaerolib afinfolib nwtclibs)
-
-# AirfoilInfo lib
-add_library(afinfolib ${AFINFO_LIBS_SOURCES})
-target_link_libraries(afinfolib nwtclibs)
-
-# this lib is only for the ctest
-add_library(fvwlib ${FVW_LIBS_SOURCES})
-target_link_libraries(fvwlib uaaerolib afinfolib nwtclibs)
-
-# Aero acoustics
-add_library(aeroacoustics ${AEROACOUSTIC_SOURCES})
-target_link_libraries(aeroacoustics afinfolib nwtclibs)
-
-add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib fvwlib uaaerolib afinfolib nwtclibs aeroacoustics)
-
-# ADI lib
-add_library(adilib ${ADI_LIB_SOURCES})
-target_link_libraries(adilib aerodynlib ifwlib nwtclibs versioninfolib)
-
-# AeroDyn driver
-set(AD_DRIVER_SOURCES
-  src/AeroDyn_Driver.f90
+# AeroDyn Driver Subs Library
+add_library(aerodyn_driver_subs
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90
 )
+target_link_libraries(aerodyn_driver_subs aerodynlib versioninfolib)
 
-add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver adilib ifwlib aerodynlib fvwlib uaaerolib afinfolib nwtclibs versioninfolib aeroacoustics ${CMAKE_DL_LIBS})
+# AeroDyn Driver
+add_executable(aerodyn_driver 
+  src/AeroDyn_Driver.f90
+)
+target_link_libraries(aerodyn_driver aerodyn_driver_subs)
 
-
-# UnsteadyAero driver
-set(UA_DRIVER_SOURCES
+# UnsteadyAero Driver
+add_executable(unsteadyaero_driver 
   src/UnsteadyAero_Driver.f90
   src/UA_Dvr_Subs.f90
 )
-add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
-target_link_libraries(unsteadyaero_driver uaaerolib afinfolib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(unsteadyaero_driver aerodyn_driver_subs)
 
-
-# c-bindings interface library
-set(ADI_C_SOURCES
+# AeroDyn-InflowWind c-bindings interface library
+add_library(aerodyn_inflow_c_binding SHARED 
   src/AeroDyn_Inflow_C_Binding.f90
 )
-add_library(aerodyn_inflow_c_binding SHARED ${ADI_C_SOURCES})
-target_link_libraries(aerodyn_inflow_c_binding adilib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_inflow_c_binding aerodyn_driver_subs versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(aerodyn_inflow_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-
-install(TARGETS unsteadyaero_driver aerodyn_driver adilib aerodynlib fvwlib uaaerolib afinfolib aeroacoustics aerodyn_inflow_c_binding
+install(TARGETS aerodynlib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding 
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)
