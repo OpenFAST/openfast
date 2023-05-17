@@ -84,11 +84,11 @@ False         WrDisWind             - Write low- and high-resolution disturbed w
 --- OUTPUT ---
 True          SumPrint              - Print summary data to <RootName>.sum? (flag)
 99999.9       ChkptTime             - Amount of time between creating checkpoint files for potential restart (s) [>0.0]
-200.0         TStart                - Time to begin tabular output (s) [>=0.0]
-1             OutFileFmt            - Format for tabular (time-marching) output file (-) (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
+0.0                TStart             - Time to begin tabular output (s) [>=0.0]
+1                  OutFileFmt         - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
 True          TabDelim              - Use tab delimiters in text tabular output file? (flag) {uses spaces if False}
 "ES10.3E2"    OutFmt                - Format used for text tabular output, excluding the time channel. Resulting field should be 10 characters. (quoted string)
-DEFAULT       OutAllPlanes          - - Output all wake planes at all time steps. [DEFAULT=False]
+DEFAULT       OutAllPlanes          - Output all wake planes at all time steps. [DEFAULT=False]
 3             NOutRadii             - Number of radial nodes for wake output for an individual rotor (-) [0 to 20]
 0, 15, 39     OutRadii              - List of radial nodes for wake output for an individual rotor (-)
 2             NOutDist              - Number of downstream distances for wake output for an individual rotor (-) [1 to NOutRadii] [unused for NOutRadii=0] rotor (-) [0 to 9]
