@@ -28,7 +28,7 @@ add_executable(FAST.Farm
   src/FAST_Farm_Types.f90
   src/FASTWrapper_Types.f90
 ) 
-target_link_libraries(FAST.Farm openfastlib_static)
+target_link_libraries(FAST.Farm openfastlib_static wdlib awaelib)
 set_property(TARGET FAST.Farm PROPERTY LINKER_LANGUAGE Fortran)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
