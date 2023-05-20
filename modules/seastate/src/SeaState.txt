@@ -18,6 +18,7 @@ usefrom   Current.txt
 usefrom   Waves.txt
 usefrom   Waves2.txt
 usefrom   SeaState_Interp.txt
+usefrom   SeaSt_WaveField.txt
 #
 #
 typedef   SeaState/SeaSt     SeaSt_InputFile        LOGICAL                  EchoFlag          -       -      -  "Echo the input file"   
@@ -187,6 +188,7 @@ typedef   ^                  ^                      CHARACTER(1)             Del
 typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
 typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
 typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      SeaSt_WaveFieldType      WaveField         -       -      -  "Wave field"
 #
 #
 # ..... Inputs ....................................................................................................................

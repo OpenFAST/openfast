@@ -19,6 +19,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Waves.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves_Types.f90 -noextrap)
   generate_f90_types(src/Waves2.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves2_Types.f90 -noextrap)
   generate_f90_types(src/SeaState_Interp.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Interp_Types.f90 -noextrap)
+  generate_f90_types(src/SeaSt_WaveField.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaSt_WaveField_Types.f90 -noextrap)
   generate_f90_types(src/SeaState.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Types.f90 -noextrap)
 endif()
 
@@ -28,6 +29,7 @@ add_library(seastlib
   src/Waves2.f90
   src/UserWaves.f90
   src/SeaState_Interp.f90
+  src/SeaSt_WaveField.f90
   src/SeaState_Input.f90
   src/SeaState.f90
   src/SeaState_Output.f90
@@ -35,6 +37,7 @@ add_library(seastlib
   src/Waves_Types.f90
   src/Waves2_Types.f90
   src/SeaState_Interp_Types.f90
+  src/SeaSt_WaveField_Types.f90
   src/SeaState_Types.f90
 )
 target_link_libraries(seastlib nwtclibs versioninfolib)
