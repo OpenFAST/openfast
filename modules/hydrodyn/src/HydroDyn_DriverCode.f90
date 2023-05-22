@@ -184,7 +184,6 @@ PROGRAM HydroDynDriver
       ErrStat = ErrID_Fatal
       call HD_DvrEnd()
    end if
-
   
       ! Set HD Init Inputs based on SeaStates Init Outputs
    call SetHD_InitInputs()
@@ -367,8 +366,9 @@ subroutine SetHD_InitInputs()
    InitInData_HD%WaveElev1      => InitOutData_SeaSt%WaveElev1
    InitInData_HD%WaveElev2      => InitOutData_SeaSt%WaveElev2
    
-   call SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
+   CALL SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
 
+   CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitOutData_SeaSt%WaveField, InitInData_HD%WaveField, MESH_NEWCOPY, ErrStat, ErrMsg )
 
 end subroutine SetHD_InitInputs
 !----------------------------------------------------------------------------------------------------------------------------------

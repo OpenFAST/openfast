@@ -49,7 +49,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [(m)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< Parameter information from the SeaState Interpolation module [(-)]
     INTEGER(IntKi)  :: WaveStMod      !< Wave stretching model [-]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [(-)]
+    REAL(ReKi)  :: EffWtrDpth      !< Water depth [(-)]
+    REAL(ReKi)  :: MSL2SWL      !< Vertical distance from mean sea level to still water level [(m)]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -268,7 +269,8 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstSeaSt_WaveFieldTypeData%WaveStMod = SrcSeaSt_WaveFieldTypeData%WaveStMod
-    DstSeaSt_WaveFieldTypeData%WtrDpth = SrcSeaSt_WaveFieldTypeData%WtrDpth
+    DstSeaSt_WaveFieldTypeData%EffWtrDpth = SrcSeaSt_WaveFieldTypeData%EffWtrDpth
+    DstSeaSt_WaveFieldTypeData%MSL2SWL = SrcSeaSt_WaveFieldTypeData%MSL2SWL
  END SUBROUTINE SeaSt_WaveField_CopySeaSt_WaveFieldType
 
  SUBROUTINE SeaSt_WaveField_DestroySeaSt_WaveFieldType( SeaSt_WaveFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -460,7 +462,8 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
-      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! EffWtrDpth
+      Re_BufSz   = Re_BufSz   + 1  ! MSL2SWL
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -833,7 +836,9 @@ ENDIF
       ENDIF
     IntKiBuf(Int_Xferred) = InData%WaveStMod
     Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WtrDpth
+    ReKiBuf(Re_Xferred) = InData%EffWtrDpth
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%MSL2SWL
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SeaSt_WaveField_PackSeaSt_WaveFieldType
 
@@ -1258,7 +1263,9 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%WaveStMod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    OutData%EffWtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MSL2SWL = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE SeaSt_WaveField_UnPackSeaSt_WaveFieldType
 

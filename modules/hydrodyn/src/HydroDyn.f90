@@ -30,7 +30,7 @@ MODULE HydroDyn
    use Morison
    USE WAMIT
    USE WAMIT2
-   use SeaState
+   USE SeaState
    USE HydroDyn_Input
    USE HydroDyn_Output
 
@@ -608,11 +608,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
          InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
+         CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitInp%WaveField, InputFileData%Morison%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or
                ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
                ! will be passing into the Morrison module.
 
-        
          InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
         
             ! Initialize the Morison Element Calculations 

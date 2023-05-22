@@ -135,10 +135,10 @@ SUBROUTINE WaveField_GetWaveNormal( WaveField, Time, pos, r, n, ErrStat, ErrMsg 
 END SUBROUTINE WaveField_GetWaveNormal
 
 !-------------------- Subroutine for full wave field kinematics --------------------!
-SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
-   REAL(ReKi),                INTENT( IN    ) :: pos(3)
+   REAL(ReKi),                INTENT( IN    ) :: posIn(3)
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev1
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev2
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev
@@ -151,7 +151,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
-   REAL(ReKi)                                 :: posXY(2), posPrime(3), posXY0(3)
+   REAL(ReKi)                                 :: pos(3), posXY(2), posPrime(3), posXY0(3)
    TYPE(SeaSt_Interp_MiscVarType)             :: SeaSt_Interp_m
    LOGICAL                                    :: FirstWarn_Clamp
    CHARACTER(*),              PARAMETER       :: RoutineName = 'GetWaveKin'
@@ -161,8 +161,9 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
    ErrStat   = ErrID_None
    ErrMsg    = ""
 
-   posXY    = pos(1:2)
-   posXY0   = (/pos(1),pos(2),0.0_ReKi/)
+   pos      = (/posIn(1),posIn(2),posIn(3)-WaveField%MSL2SWL/)  ! Vertical position measured from the SWL
+   posXY    = posIn(1:2)
+   posXY0   = (/posIn(1),posIn(2),0.0_ReKi/)
    FAMCF(:) = 0.0
 
    ! Wave elevation
@@ -255,9 +256,9 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
  
          ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
                   
-                  ! Map the node z-position linearly from [-WtrDpth,m%WaveElev(j)] to [-WtrDpth,0] 
+                  ! Map the node z-position linearly from [-EffWtrDpth,m%WaveElev(j)] to [-EffWtrDpth,0] 
                   posPrime    = pos
-                  posPrime(3) = WaveField%WtrDpth*(WaveField%WtrDpth+pos(3))/(WaveField%WtrDpth+WaveElev)-WaveField%WtrDpth
+                  posPrime(3) = WaveField%EffWtrDpth*(WaveField%EffWtrDpth+pos(3))/(WaveField%EffWtrDpth+WaveElev)-WaveField%EffWtrDpth
                   
                   ! Obtain the wave-field variables by interpolation with the mapped position.
                   call SeaSt_Interp_Setup( Time, posPrime, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 

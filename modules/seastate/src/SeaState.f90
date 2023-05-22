@@ -21,7 +21,7 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!    rning generating S
+!
 !**********************************************************************************************************************************
 MODULE SeaState
 
@@ -233,29 +233,14 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveElevC0   => Waves_InitOut%WaveElevC0
       p%WaveDirArr   => Waves_InitOut%WaveDirArr
       p%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
-
-      p%WaveField%WtrDpth      =  p%WtrDpth
-      p%WaveField%WaveStMod    =  p%WaveStMod
-      p%WaveField%WaveTime     => Waves_InitOut%WaveTime
-      p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
-      p%WaveField%WaveVel      => Waves_InitOut%WaveVel
-      p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
-      p%WaveField%WaveDynP     => Waves_InitOut%WaveDynP
-      p%WaveField%PWaveVel0    => Waves_InitOut%PWaveVel0
-      p%WaveField%PWaveAcc0    => Waves_InitOut%PWaveAcc0
-      p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
-      p%WaveField%WaveAccMCF   => Waves_InitOut%WaveAccMCF
-      p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
-      
-         ! check error (must be done AFTER moving pointers to parameters)
+    
+      ! check error (must be done AFTER moving pointers to parameters)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
          RETURN
       END IF
-      
-      
-      
-         ! Copy Waves initialization output into the initialization input type for the WAMIT module
+    
+      ! Copy Waves initialization output into the initialization input type for the WAMIT module
       p%NStepWave    = Waves_InitOut%NStepWave
       p%WaveDT       = InputFileData%Waves%WaveDT
       
@@ -516,7 +501,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       SeaSt_Interp_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
       SeaSt_Interp_InitInp%Z_Depth  = InputFileData%Z_Depth
       call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%seast_interp_p,  ErrStat2, ErrMsg2)
-      CALL SeaSt_Interp_CopyParam( p%seast_interp_p, p%WaveField%seast_interp_p, 0, ErrStat2, ErrMsg2 )
+      CALL SeaSt_Interp_CopyParam( p%seast_interp_p, p%WaveField%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
@@ -565,6 +550,23 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%MSL2SWL      =  InputFileData%MSL2SWL
        
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
+
+      ! Build WaveField
+      p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
+      p%WaveField%EffWtrDpth   =  p%WtrDpth + InitOut%MSL2SWL ! Effective water depth measured from the SWL
+      p%WaveField%WaveStMod    =  p%WaveStMod
+      p%WaveField%WaveTime     => Waves_InitOut%WaveTime
+      p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
+      p%WaveField%WaveVel      => Waves_InitOut%WaveVel
+      p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
+      p%WaveField%WaveDynP     => Waves_InitOut%WaveDynP
+      p%WaveField%PWaveVel0    => Waves_InitOut%PWaveVel0
+      p%WaveField%PWaveAcc0    => Waves_InitOut%PWaveAcc0
+      p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
+      p%WaveField%WaveAccMCF   => Waves_InitOut%WaveAccMCF
+      p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
+
+       CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( p%WaveField, InitOut%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2) 
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
        InitOut%InvalidWithSSExctn = InputFileData%Waves%WaveMod == 6     .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )

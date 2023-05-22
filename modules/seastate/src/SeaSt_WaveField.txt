@@ -18,4 +18,5 @@ typedef     ^                ^                     SiKi                         
 typedef     ^                ^                     SiKi                          WaveElev2       {*}{*}{*}        -        -        "Second order wave elevation" (m)
 typedef     ^                ^                     SeaSt_Interp_ParameterType    SeaSt_Interp_p  -                -        -        "Parameter information from the SeaState Interpolation module" (-)
 typedef     ^                ^                     IntKi                         WaveStMod       -                -        -        "Wave stretching model"
-typedef     ^                ^                     ReKi                          WtrDpth         -                -        -        "Water depth" (-)
+typedef     ^                ^                     ReKi                          EffWtrDpth      -                -        -        "Water depth" (-)
+typedef     ^                ^                     ReKi                          MSL2SWL         -                -        -        "Vertical distance from mean sea level to still water level" (m)
