@@ -291,9 +291,9 @@ endif()
 
 # OpenFAST C++ Driver test for OpenFAST Library
 # This tests the FAST Library and FAST_Library.h
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn15;servodyn")
-endif()
+endif(BUILD_OPENFAST_CPP_DRIVER)
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn15;servodyn")
