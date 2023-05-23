@@ -1152,7 +1152,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
      
    
-      ! WaveMod - Wave kinematics model switch.
+
+      ! WaveMod - Wave kinematics model switch. -- Check that actual data was passed in from SeaState.  If none exists, then set WaveMod=0 and warn
+   if (.not. associated(InitInp%WaveTime) .or. InitInp%NStepWave == 0) then
+      call SetErrStat( ErrID_Fatal,' No SeaState wave information available.  Setting WaveMod=0.',ErrStat,ErrMsg,RoutineName)
+      return
+   endif
 
    IF ( InputFileData%PotMod > 0 .and. InitInp%WaveMod == 6 ) THEN
          CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5 when PotMod is not 0',ErrStat,ErrMsg,RoutineName)
