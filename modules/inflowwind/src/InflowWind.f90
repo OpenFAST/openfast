@@ -809,7 +809,7 @@ SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGues
 
    ! Destroy all inflow wind derived types
    CALL InflowWind_DestroyInput( InputData, ErrStat, ErrMsg )         
-   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg, DeallocatePointers=.true. )         
+   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyContState( ContStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyDiscState( DiscStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyConstrState( ConstrStateGuess, ErrStat, ErrMsg )         

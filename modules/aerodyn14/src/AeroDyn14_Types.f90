@@ -480,7 +480,6 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AD14_CopyMarker'
@@ -493,14 +492,12 @@ CONTAINS
     DstMarkerData%RotationVel = SrcMarkerData%RotationVel
  END SUBROUTINE AD14_CopyMarker
 
- SUBROUTINE AD14_DestroyMarker( MarkerData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyMarker( MarkerData, ErrStat, ErrMsg )
   TYPE(Marker), INTENT(INOUT) :: MarkerData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMarker'
@@ -508,12 +505,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyMarker
 
  SUBROUTINE AD14_PackMarker( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -617,7 +608,6 @@ CONTAINS
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AD14_UnPackMarker'
@@ -716,14 +706,12 @@ ENDIF
     DstAeroConfigData%BladeLength = SrcAeroConfigData%BladeLength
  END SUBROUTINE AD14_CopyAeroConfig
 
- SUBROUTINE AD14_DestroyAeroConfig( AeroConfigData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyAeroConfig( AeroConfigData, ErrStat, ErrMsg )
   TYPE(AeroConfig), INTENT(INOUT) :: AeroConfigData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAeroConfig'
@@ -731,32 +719,26 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(AeroConfigData%Blade)) THEN
 DO i1 = LBOUND(AeroConfigData%Blade,1), UBOUND(AeroConfigData%Blade,1)
-  CALL AD14_Destroymarker( AeroConfigData%Blade(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%Blade(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(AeroConfigData%Blade)
 ENDIF
-  CALL AD14_Destroymarker( AeroConfigData%Hub, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%Hub, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%RotorFurl, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%RotorFurl, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Nacelle, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%Nacelle, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%TailFin, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%TailFin, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Tower, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%Tower, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%SubStructure, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%SubStructure, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroymarker( AeroConfigData%Foundation, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyMarker( AeroConfigData%Foundation, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyAeroConfig
 
@@ -801,7 +783,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%Blade,1), UBOUND(InData%Blade,1)
       Int_BufSz   = Int_BufSz + 3  ! Blade: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Blade(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Blade 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Blade(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -820,7 +802,7 @@ ENDIF
     END DO
   END IF
       Int_BufSz   = Int_BufSz + 3  ! Hub: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Hub, ErrStat2, ErrMsg2, .TRUE. ) ! Hub 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Hub, ErrStat2, ErrMsg2, .TRUE. ) ! Hub 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -837,7 +819,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! RotorFurl: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%RotorFurl, ErrStat2, ErrMsg2, .TRUE. ) ! RotorFurl 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%RotorFurl, ErrStat2, ErrMsg2, .TRUE. ) ! RotorFurl 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -854,7 +836,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Nacelle: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Nacelle, ErrStat2, ErrMsg2, .TRUE. ) ! Nacelle 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Nacelle, ErrStat2, ErrMsg2, .TRUE. ) ! Nacelle 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -871,7 +853,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! TailFin: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%TailFin, ErrStat2, ErrMsg2, .TRUE. ) ! TailFin 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%TailFin, ErrStat2, ErrMsg2, .TRUE. ) ! TailFin 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -888,7 +870,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Tower: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Tower, ErrStat2, ErrMsg2, .TRUE. ) ! Tower 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Tower, ErrStat2, ErrMsg2, .TRUE. ) ! Tower 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -905,7 +887,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! SubStructure: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%SubStructure, ErrStat2, ErrMsg2, .TRUE. ) ! SubStructure 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%SubStructure, ErrStat2, ErrMsg2, .TRUE. ) ! SubStructure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -922,7 +904,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Foundation: size of buffers for each call to pack subtype
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Foundation, ErrStat2, ErrMsg2, .TRUE. ) ! Foundation 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Foundation, ErrStat2, ErrMsg2, .TRUE. ) ! Foundation 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -977,7 +959,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Blade,1), UBOUND(InData%Blade,1)
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Blade(i1), ErrStat2, ErrMsg2, OnlySize ) ! Blade 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Blade(i1), ErrStat2, ErrMsg2, OnlySize ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1007,7 +989,7 @@ ENDIF
       ENDIF
     END DO
   END IF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Hub, ErrStat2, ErrMsg2, OnlySize ) ! Hub 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Hub, ErrStat2, ErrMsg2, OnlySize ) ! Hub 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1035,7 +1017,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%RotorFurl, ErrStat2, ErrMsg2, OnlySize ) ! RotorFurl 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%RotorFurl, ErrStat2, ErrMsg2, OnlySize ) ! RotorFurl 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1063,7 +1045,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Nacelle, ErrStat2, ErrMsg2, OnlySize ) ! Nacelle 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Nacelle, ErrStat2, ErrMsg2, OnlySize ) ! Nacelle 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1091,7 +1073,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%TailFin, ErrStat2, ErrMsg2, OnlySize ) ! TailFin 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%TailFin, ErrStat2, ErrMsg2, OnlySize ) ! TailFin 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1119,7 +1101,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Tower, ErrStat2, ErrMsg2, OnlySize ) ! Tower 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Tower, ErrStat2, ErrMsg2, OnlySize ) ! Tower 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1147,7 +1129,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%SubStructure, ErrStat2, ErrMsg2, OnlySize ) ! SubStructure 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%SubStructure, ErrStat2, ErrMsg2, OnlySize ) ! SubStructure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1175,7 +1157,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packmarker( Re_Buf, Db_Buf, Int_Buf, InData%Foundation, ErrStat2, ErrMsg2, OnlySize ) ! Foundation 
+      CALL AD14_PackMarker( Re_Buf, Db_Buf, Int_Buf, InData%Foundation, ErrStat2, ErrMsg2, OnlySize ) ! Foundation 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1281,7 +1263,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%Blade(i1), ErrStat2, ErrMsg2 ) ! Blade 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%Blade(i1), ErrStat2, ErrMsg2 ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1323,7 +1305,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%Hub, ErrStat2, ErrMsg2 ) ! Hub 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%Hub, ErrStat2, ErrMsg2 ) ! Hub 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1363,7 +1345,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%RotorFurl, ErrStat2, ErrMsg2 ) ! RotorFurl 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%RotorFurl, ErrStat2, ErrMsg2 ) ! RotorFurl 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1403,7 +1385,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%Nacelle, ErrStat2, ErrMsg2 ) ! Nacelle 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%Nacelle, ErrStat2, ErrMsg2 ) ! Nacelle 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1443,7 +1425,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%TailFin, ErrStat2, ErrMsg2 ) ! TailFin 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%TailFin, ErrStat2, ErrMsg2 ) ! TailFin 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1483,7 +1465,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%Tower, ErrStat2, ErrMsg2 ) ! Tower 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%Tower, ErrStat2, ErrMsg2 ) ! Tower 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1523,7 +1505,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%SubStructure, ErrStat2, ErrMsg2 ) ! SubStructure 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%SubStructure, ErrStat2, ErrMsg2 ) ! SubStructure 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1563,7 +1545,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackmarker( Re_Buf, Db_Buf, Int_Buf, OutData%Foundation, ErrStat2, ErrMsg2 ) ! Foundation 
+      CALL AD14_UnpackMarker( Re_Buf, Db_Buf, Int_Buf, OutData%Foundation, ErrStat2, ErrMsg2 ) ! Foundation 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1657,14 +1639,12 @@ ENDIF
     DstAirFoilData%MulTabLoc = SrcAirFoilData%MulTabLoc
  END SUBROUTINE AD14_CopyAirFoil
 
- SUBROUTINE AD14_DestroyAirFoil( AirFoilData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyAirFoil( AirFoilData, ErrStat, ErrMsg )
   TYPE(AirFoil), INTENT(INOUT) :: AirFoilData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoil'
@@ -1672,12 +1652,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(AirFoilData%AL)) THEN
   DEALLOCATE(AirFoilData%AL)
 ENDIF
@@ -2102,14 +2076,12 @@ IF (ALLOCATED(SrcAirFoilParmsData%FoilNm)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyAirFoilParms
 
- SUBROUTINE AD14_DestroyAirFoilParms( AirFoilParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyAirFoilParms( AirFoilParmsData, ErrStat, ErrMsg )
   TYPE(AirFoilParms), INTENT(INOUT) :: AirFoilParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyAirFoilParms'
@@ -2117,12 +2089,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(AirFoilParmsData%NTables)) THEN
   DEALLOCATE(AirFoilParmsData%NTables)
 ENDIF
@@ -3217,14 +3183,12 @@ ENDIF
     DstBeddoesData%VOR = SrcBeddoesData%VOR
  END SUBROUTINE AD14_CopyBeddoes
 
- SUBROUTINE AD14_DestroyBeddoes( BeddoesData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyBeddoes( BeddoesData, ErrStat, ErrMsg )
   TYPE(Beddoes), INTENT(INOUT) :: BeddoesData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoes'
@@ -3232,12 +3196,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(BeddoesData%ADOT)) THEN
   DEALLOCATE(BeddoesData%ADOT)
 ENDIF
@@ -6093,14 +6051,12 @@ ENDIF
     DstBeddoesParmsData%TVL = SrcBeddoesParmsData%TVL
  END SUBROUTINE AD14_CopyBeddoesParms
 
- SUBROUTINE AD14_DestroyBeddoesParms( BeddoesParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyBeddoesParms( BeddoesParmsData, ErrStat, ErrMsg )
   TYPE(BeddoesParms), INTENT(INOUT) :: BeddoesParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBeddoesParms'
@@ -6108,12 +6064,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyBeddoesParms
 
  SUBROUTINE AD14_PackBeddoesParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6276,14 +6226,12 @@ ENDIF
     DstBladeParmsData%BladeLength = SrcBladeParmsData%BladeLength
  END SUBROUTINE AD14_CopyBladeParms
 
- SUBROUTINE AD14_DestroyBladeParms( BladeParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyBladeParms( BladeParmsData, ErrStat, ErrMsg )
   TYPE(BladeParms), INTENT(INOUT) :: BladeParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyBladeParms'
@@ -6291,12 +6239,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(BladeParmsData%C)) THEN
   DEALLOCATE(BladeParmsData%C)
 ENDIF
@@ -6559,14 +6501,12 @@ ENDIF
     DstDynInflowData%GAMMA = SrcDynInflowData%GAMMA
  END SUBROUTINE AD14_CopyDynInflow
 
- SUBROUTINE AD14_DestroyDynInflow( DynInflowData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyDynInflow( DynInflowData, ErrStat, ErrMsg )
   TYPE(DynInflow), INTENT(INOUT) :: DynInflowData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflow'
@@ -6574,12 +6514,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(DynInflowData%RMC_SAVE)) THEN
   DEALLOCATE(DynInflowData%RMC_SAVE)
 ENDIF
@@ -7070,14 +7004,12 @@ ENDIF
     DstDynInflowParmsData%xMinv = SrcDynInflowParmsData%xMinv
  END SUBROUTINE AD14_CopyDynInflowParms
 
- SUBROUTINE AD14_DestroyDynInflowParms( DynInflowParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyDynInflowParms( DynInflowParmsData, ErrStat, ErrMsg )
   TYPE(DynInflowParms), INTENT(INOUT) :: DynInflowParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDynInflowParms'
@@ -7085,12 +7017,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyDynInflowParms
 
  SUBROUTINE AD14_PackDynInflowParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -7318,14 +7244,12 @@ IF (ALLOCATED(SrcElementData%PITNOW)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyElement
 
- SUBROUTINE AD14_DestroyElement( ElementData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyElement( ElementData, ErrStat, ErrMsg )
   TYPE(Element), INTENT(INOUT) :: ElementData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElement'
@@ -7333,12 +7257,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ElementData%A)) THEN
   DEALLOCATE(ElementData%A)
 ENDIF
@@ -7858,14 +7776,12 @@ IF (ALLOCATED(SrcElementParmsData%TLCNST)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyElementParms
 
- SUBROUTINE AD14_DestroyElementParms( ElementParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyElementParms( ElementParmsData, ErrStat, ErrMsg )
   TYPE(ElementParms), INTENT(INOUT) :: ElementParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElementParms'
@@ -7873,12 +7789,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ElementParmsData%TWIST)) THEN
   DEALLOCATE(ElementParmsData%TWIST)
 ENDIF
@@ -8436,14 +8346,12 @@ ENDIF
     DstElOutParmsData%NumElOut = SrcElOutParmsData%NumElOut
  END SUBROUTINE AD14_CopyElOutParms
 
- SUBROUTINE AD14_DestroyElOutParms( ElOutParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyElOutParms( ElOutParmsData, ErrStat, ErrMsg )
   TYPE(ElOutParms), INTENT(INOUT) :: ElOutParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyElOutParms'
@@ -8451,12 +8359,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ElOutParmsData%AAA)) THEN
   DEALLOCATE(ElOutParmsData%AAA)
 ENDIF
@@ -9527,14 +9429,12 @@ ENDIF
     DstInducedVelData%SumInFl = SrcInducedVelData%SumInFl
  END SUBROUTINE AD14_CopyInducedVel
 
- SUBROUTINE AD14_DestroyInducedVel( InducedVelData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyInducedVel( InducedVelData, ErrStat, ErrMsg )
   TYPE(InducedVel), INTENT(INOUT) :: InducedVelData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVel'
@@ -9542,12 +9442,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyInducedVel
 
  SUBROUTINE AD14_PackInducedVel( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9670,14 +9564,12 @@ ENDIF
     DstInducedVelParmsData%HLoss = SrcInducedVelParmsData%HLoss
  END SUBROUTINE AD14_CopyInducedVelParms
 
- SUBROUTINE AD14_DestroyInducedVelParms( InducedVelParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyInducedVelParms( InducedVelParmsData, ErrStat, ErrMsg )
   TYPE(InducedVelParms), INTENT(INOUT) :: InducedVelParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInducedVelParms'
@@ -9685,12 +9577,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyInducedVelParms
 
  SUBROUTINE AD14_PackInducedVelParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9845,14 +9731,12 @@ ENDIF
     DstRotorData%YawVEL = SrcRotorData%YawVEL
  END SUBROUTINE AD14_CopyRotor
 
- SUBROUTINE AD14_DestroyRotor( RotorData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyRotor( RotorData, ErrStat, ErrMsg )
   TYPE(Rotor), INTENT(INOUT) :: RotorData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotor'
@@ -9860,12 +9744,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyRotor
 
  SUBROUTINE AD14_PackRotor( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10022,14 +9900,12 @@ ENDIF
     DstRotorParmsData%HH = SrcRotorParmsData%HH
  END SUBROUTINE AD14_CopyRotorParms
 
- SUBROUTINE AD14_DestroyRotorParms( RotorParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyRotorParms( RotorParmsData, ErrStat, ErrMsg )
   TYPE(RotorParms), INTENT(INOUT) :: RotorParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyRotorParms'
@@ -10037,12 +9913,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyRotorParms
 
  SUBROUTINE AD14_PackRotorParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10250,14 +10120,12 @@ IF (ALLOCATED(SrcTwrPropsParmsData%TwrNodeWidth)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyTwrPropsParms
 
- SUBROUTINE AD14_DestroyTwrPropsParms( TwrPropsParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyTwrPropsParms( TwrPropsParmsData, ErrStat, ErrMsg )
   TYPE(TwrPropsParms), INTENT(INOUT) :: TwrPropsParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyTwrPropsParms'
@@ -10265,12 +10133,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(TwrPropsParmsData%TwrHtFr)) THEN
   DEALLOCATE(TwrPropsParmsData%TwrHtFr)
 ENDIF
@@ -10735,14 +10597,12 @@ ENDIF
     DstWindData%SDEL = SrcWindData%SDEL
  END SUBROUTINE AD14_CopyWind
 
- SUBROUTINE AD14_DestroyWind( WindData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyWind( WindData, ErrStat, ErrMsg )
   TYPE(Wind), INTENT(INOUT) :: WindData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWind'
@@ -10750,12 +10610,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyWind
 
  SUBROUTINE AD14_PackWind( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -10898,14 +10752,12 @@ ENDIF
     DstWindParmsData%KinVisc = SrcWindParmsData%KinVisc
  END SUBROUTINE AD14_CopyWindParms
 
- SUBROUTINE AD14_DestroyWindParms( WindParmsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyWindParms( WindParmsData, ErrStat, ErrMsg )
   TYPE(WindParms), INTENT(INOUT) :: WindParmsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyWindParms'
@@ -10913,12 +10765,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyWindParms
 
  SUBROUTINE AD14_PackWindParms( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11041,14 +10887,12 @@ ENDIF
     DstPositionTypeData%Pos = SrcPositionTypeData%Pos
  END SUBROUTINE AD14_CopyPositionType
 
- SUBROUTINE AD14_DestroyPositionType( PositionTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyPositionType( PositionTypeData, ErrStat, ErrMsg )
   TYPE(PositionType), INTENT(INOUT) :: PositionTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyPositionType'
@@ -11056,12 +10900,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyPositionType
 
  SUBROUTINE AD14_PackPositionType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11187,14 +11025,12 @@ ENDIF
     DstOrientationTypeData%Orient = SrcOrientationTypeData%Orient
  END SUBROUTINE AD14_CopyOrientationType
 
- SUBROUTINE AD14_DestroyOrientationType( OrientationTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyOrientationType( OrientationTypeData, ErrStat, ErrMsg )
   TYPE(OrientationType), INTENT(INOUT) :: OrientationTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOrientationType'
@@ -11202,12 +11038,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AD14_DestroyOrientationType
 
  SUBROUTINE AD14_PackOrientationType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -11369,14 +11199,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyInitInput
 
- SUBROUTINE AD14_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(AD14_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitInput'
@@ -11384,18 +11212,12 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL AD14_Destroyaeroconfig( InitInputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyAeroConfig( InitInputData%TurbineComponents, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitInputData%TwrNodeLocs)) THEN
   DEALLOCATE(InitInputData%TwrNodeLocs)
 ENDIF
-  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyInitInput( InitInputData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitInput
 
@@ -11444,7 +11266,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! UseDWM
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! TurbineComponents: size of buffers for each call to pack subtype
-      CALL AD14_Packaeroconfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, .TRUE. ) ! TurbineComponents 
+      CALL AD14_PackAeroConfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, .TRUE. ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11533,7 +11355,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseDWM, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL AD14_Packaeroconfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, OnlySize ) ! TurbineComponents 
+      CALL AD14_PackAeroConfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, OnlySize ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11698,7 +11520,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackaeroconfig( Re_Buf, Db_Buf, Int_Buf, OutData%TurbineComponents, ErrStat2, ErrMsg2 ) ! TurbineComponents 
+      CALL AD14_UnpackAeroConfig( Re_Buf, Db_Buf, Int_Buf, OutData%TurbineComponents, ErrStat2, ErrMsg2 ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11797,14 +11619,12 @@ ENDIF
     DstInitOutputData%AirDens = SrcInitOutputData%AirDens
  END SUBROUTINE AD14_CopyInitOutput
 
- SUBROUTINE AD14_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(AD14_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInitOutput'
@@ -11812,15 +11632,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyInitOutput( InitOutputData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyInitOutput
 
@@ -11861,7 +11675,7 @@ ENDIF
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11922,7 +11736,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -12041,7 +11855,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackprogdesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
+      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -12111,14 +11925,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyContState
 
- SUBROUTINE AD14_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyContState( ContStateData, ErrStat, ErrMsg )
   TYPE(AD14_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyContState'
@@ -12126,13 +11938,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyContState( ContStateData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyContState
 
@@ -12333,14 +12139,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyDiscState
 
- SUBROUTINE AD14_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
   TYPE(AD14_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyDiscState'
@@ -12348,13 +12152,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyDiscState( DiscStateData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyDiscState
 
@@ -12555,14 +12353,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyConstrState
 
- SUBROUTINE AD14_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
   TYPE(AD14_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyConstrState'
@@ -12570,13 +12366,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyConstrState( ConstrStateData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyConstrState
 
@@ -12777,14 +12567,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyOtherState
 
- SUBROUTINE AD14_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
   TYPE(AD14_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOtherState'
@@ -12792,13 +12580,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyOtherState( OtherStateData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyOtherState
 
@@ -13092,14 +12874,12 @@ IF (ALLOCATED(SrcMiscData%StoredMoments)) THEN
 ENDIF
  END SUBROUTINE AD14_CopyMisc
 
- SUBROUTINE AD14_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(AD14_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyMisc'
@@ -13107,36 +12887,30 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyMisc( MiscData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyInput( MiscData%DWM_Inputs, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyOutput( MiscData%DWM_Outputs, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%ElPrNum)) THEN
   DEALLOCATE(MiscData%ElPrNum)
 ENDIF
-  CALL AD14_Destroyairfoil( MiscData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyAirFoil( MiscData%AirFoil, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybeddoes( MiscData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyBeddoes( MiscData%Beddoes, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroydyninflow( MiscData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyDynInflow( MiscData%DynInflow, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyelement( MiscData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyElement( MiscData%Element, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyrotor( MiscData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyRotor( MiscData%Rotor, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroywind( MiscData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyWind( MiscData%Wind, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyinducedvel( MiscData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyInducedVel( MiscData%InducedVel, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyeloutparms( MiscData%ElOut, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyElOutParms( MiscData%ElOut, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%StoredForces)) THEN
   DEALLOCATE(MiscData%StoredForces)
@@ -13252,7 +13026,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NoLoadsCalculated
       Int_BufSz  = Int_BufSz  + 1  ! NERRORS
       Int_BufSz   = Int_BufSz + 3  ! AirFoil: size of buffers for each call to pack subtype
-      CALL AD14_Packairfoil( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, .TRUE. ) ! AirFoil 
+      CALL AD14_PackAirFoil( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, .TRUE. ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13269,7 +13043,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Beddoes: size of buffers for each call to pack subtype
-      CALL AD14_Packbeddoes( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, .TRUE. ) ! Beddoes 
+      CALL AD14_PackBeddoes( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, .TRUE. ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13286,7 +13060,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! DynInflow: size of buffers for each call to pack subtype
-      CALL AD14_Packdyninflow( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, .TRUE. ) ! DynInflow 
+      CALL AD14_PackDynInflow( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, .TRUE. ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13303,7 +13077,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Element: size of buffers for each call to pack subtype
-      CALL AD14_Packelement( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, .TRUE. ) ! Element 
+      CALL AD14_PackElement( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, .TRUE. ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13320,7 +13094,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Rotor: size of buffers for each call to pack subtype
-      CALL AD14_Packrotor( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, .TRUE. ) ! Rotor 
+      CALL AD14_PackRotor( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, .TRUE. ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13337,7 +13111,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Wind: size of buffers for each call to pack subtype
-      CALL AD14_Packwind( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, .TRUE. ) ! Wind 
+      CALL AD14_PackWind( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, .TRUE. ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13354,7 +13128,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! InducedVel: size of buffers for each call to pack subtype
-      CALL AD14_Packinducedvel( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, .TRUE. ) ! InducedVel 
+      CALL AD14_PackInducedVel( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, .TRUE. ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13371,7 +13145,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! ElOut: size of buffers for each call to pack subtype
-      CALL AD14_Packeloutparms( Re_Buf, Db_Buf, Int_Buf, InData%ElOut, ErrStat2, ErrMsg2, .TRUE. ) ! ElOut 
+      CALL AD14_PackElOutParms( Re_Buf, Db_Buf, Int_Buf, InData%ElOut, ErrStat2, ErrMsg2, .TRUE. ) ! ElOut 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13552,7 +13326,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NERRORS
     Int_Xferred = Int_Xferred + 1
-      CALL AD14_Packairfoil( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, OnlySize ) ! AirFoil 
+      CALL AD14_PackAirFoil( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, OnlySize ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13580,7 +13354,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packbeddoes( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, OnlySize ) ! Beddoes 
+      CALL AD14_PackBeddoes( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, OnlySize ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13608,7 +13382,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packdyninflow( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, OnlySize ) ! DynInflow 
+      CALL AD14_PackDynInflow( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, OnlySize ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13636,7 +13410,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packelement( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, OnlySize ) ! Element 
+      CALL AD14_PackElement( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, OnlySize ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13664,7 +13438,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packrotor( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, OnlySize ) ! Rotor 
+      CALL AD14_PackRotor( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, OnlySize ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13692,7 +13466,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packwind( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, OnlySize ) ! Wind 
+      CALL AD14_PackWind( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, OnlySize ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13720,7 +13494,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packinducedvel( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, OnlySize ) ! InducedVel 
+      CALL AD14_PackInducedVel( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, OnlySize ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -13748,7 +13522,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packeloutparms( Re_Buf, Db_Buf, Int_Buf, InData%ElOut, ErrStat2, ErrMsg2, OnlySize ) ! ElOut 
+      CALL AD14_PackElOutParms( Re_Buf, Db_Buf, Int_Buf, InData%ElOut, ErrStat2, ErrMsg2, OnlySize ) ! ElOut 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14060,7 +13834,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackairfoil( Re_Buf, Db_Buf, Int_Buf, OutData%AirFoil, ErrStat2, ErrMsg2 ) ! AirFoil 
+      CALL AD14_UnpackAirFoil( Re_Buf, Db_Buf, Int_Buf, OutData%AirFoil, ErrStat2, ErrMsg2 ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14100,7 +13874,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackbeddoes( Re_Buf, Db_Buf, Int_Buf, OutData%Beddoes, ErrStat2, ErrMsg2 ) ! Beddoes 
+      CALL AD14_UnpackBeddoes( Re_Buf, Db_Buf, Int_Buf, OutData%Beddoes, ErrStat2, ErrMsg2 ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14140,7 +13914,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackdyninflow( Re_Buf, Db_Buf, Int_Buf, OutData%DynInflow, ErrStat2, ErrMsg2 ) ! DynInflow 
+      CALL AD14_UnpackDynInflow( Re_Buf, Db_Buf, Int_Buf, OutData%DynInflow, ErrStat2, ErrMsg2 ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14180,7 +13954,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackelement( Re_Buf, Db_Buf, Int_Buf, OutData%Element, ErrStat2, ErrMsg2 ) ! Element 
+      CALL AD14_UnpackElement( Re_Buf, Db_Buf, Int_Buf, OutData%Element, ErrStat2, ErrMsg2 ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14220,7 +13994,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackrotor( Re_Buf, Db_Buf, Int_Buf, OutData%Rotor, ErrStat2, ErrMsg2 ) ! Rotor 
+      CALL AD14_UnpackRotor( Re_Buf, Db_Buf, Int_Buf, OutData%Rotor, ErrStat2, ErrMsg2 ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14260,7 +14034,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackwind( Re_Buf, Db_Buf, Int_Buf, OutData%Wind, ErrStat2, ErrMsg2 ) ! Wind 
+      CALL AD14_UnpackWind( Re_Buf, Db_Buf, Int_Buf, OutData%Wind, ErrStat2, ErrMsg2 ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14300,7 +14074,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackinducedvel( Re_Buf, Db_Buf, Int_Buf, OutData%InducedVel, ErrStat2, ErrMsg2 ) ! InducedVel 
+      CALL AD14_UnpackInducedVel( Re_Buf, Db_Buf, Int_Buf, OutData%InducedVel, ErrStat2, ErrMsg2 ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14340,7 +14114,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackeloutparms( Re_Buf, Db_Buf, Int_Buf, OutData%ElOut, ErrStat2, ErrMsg2 ) ! ElOut 
+      CALL AD14_UnpackElOutParms( Re_Buf, Db_Buf, Int_Buf, OutData%ElOut, ErrStat2, ErrMsg2 ) ! ElOut 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14482,14 +14256,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyParam
 
- SUBROUTINE AD14_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(AD14_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyParam'
@@ -14497,31 +14269,25 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL AD14_Destroyairfoilparms( ParamData%AirFoil, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyAirFoilParms( ParamData%AirFoil, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybladeparms( ParamData%Blade, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyBladeParms( ParamData%Blade, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroybeddoesparms( ParamData%Beddoes, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyBeddoesParms( ParamData%Beddoes, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroydyninflowparms( ParamData%DynInflow, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyDynInflowParms( ParamData%DynInflow, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyelementparms( ParamData%Element, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyElementParms( ParamData%Element, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroytwrpropsparms( ParamData%TwrProps, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyTwrPropsParms( ParamData%TwrProps, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyinducedvelparms( ParamData%InducedVel, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyInducedVelParms( ParamData%InducedVel, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroywindparms( ParamData%Wind, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyWindParms( ParamData%Wind, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyrotorparms( ParamData%Rotor, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyRotorParms( ParamData%Rotor, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL DWM_DestroyParam( ParamData%DWM, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL DWM_DestroyParam( ParamData%DWM, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AD14_DestroyParam
 
@@ -14587,7 +14353,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! DEFAULT_Wind
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! AirFoil: size of buffers for each call to pack subtype
-      CALL AD14_Packairfoilparms( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, .TRUE. ) ! AirFoil 
+      CALL AD14_PackAirFoilParms( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, .TRUE. ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14604,7 +14370,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Blade: size of buffers for each call to pack subtype
-      CALL AD14_Packbladeparms( Re_Buf, Db_Buf, Int_Buf, InData%Blade, ErrStat2, ErrMsg2, .TRUE. ) ! Blade 
+      CALL AD14_PackBladeParms( Re_Buf, Db_Buf, Int_Buf, InData%Blade, ErrStat2, ErrMsg2, .TRUE. ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14621,7 +14387,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Beddoes: size of buffers for each call to pack subtype
-      CALL AD14_Packbeddoesparms( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, .TRUE. ) ! Beddoes 
+      CALL AD14_PackBeddoesParms( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, .TRUE. ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14638,7 +14404,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! DynInflow: size of buffers for each call to pack subtype
-      CALL AD14_Packdyninflowparms( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, .TRUE. ) ! DynInflow 
+      CALL AD14_PackDynInflowParms( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, .TRUE. ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14655,7 +14421,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Element: size of buffers for each call to pack subtype
-      CALL AD14_Packelementparms( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, .TRUE. ) ! Element 
+      CALL AD14_PackElementParms( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, .TRUE. ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14672,7 +14438,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! TwrProps: size of buffers for each call to pack subtype
-      CALL AD14_Packtwrpropsparms( Re_Buf, Db_Buf, Int_Buf, InData%TwrProps, ErrStat2, ErrMsg2, .TRUE. ) ! TwrProps 
+      CALL AD14_PackTwrPropsParms( Re_Buf, Db_Buf, Int_Buf, InData%TwrProps, ErrStat2, ErrMsg2, .TRUE. ) ! TwrProps 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14689,7 +14455,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! InducedVel: size of buffers for each call to pack subtype
-      CALL AD14_Packinducedvelparms( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, .TRUE. ) ! InducedVel 
+      CALL AD14_PackInducedVelParms( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, .TRUE. ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14706,7 +14472,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Wind: size of buffers for each call to pack subtype
-      CALL AD14_Packwindparms( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, .TRUE. ) ! Wind 
+      CALL AD14_PackWindParms( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, .TRUE. ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14723,7 +14489,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Rotor: size of buffers for each call to pack subtype
-      CALL AD14_Packrotorparms( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, .TRUE. ) ! Rotor 
+      CALL AD14_PackRotorParms( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, .TRUE. ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14835,7 +14601,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%DEFAULT_Wind
     Int_Xferred = Int_Xferred + 1
-      CALL AD14_Packairfoilparms( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, OnlySize ) ! AirFoil 
+      CALL AD14_PackAirFoilParms( Re_Buf, Db_Buf, Int_Buf, InData%AirFoil, ErrStat2, ErrMsg2, OnlySize ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14863,7 +14629,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packbladeparms( Re_Buf, Db_Buf, Int_Buf, InData%Blade, ErrStat2, ErrMsg2, OnlySize ) ! Blade 
+      CALL AD14_PackBladeParms( Re_Buf, Db_Buf, Int_Buf, InData%Blade, ErrStat2, ErrMsg2, OnlySize ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14891,7 +14657,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packbeddoesparms( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, OnlySize ) ! Beddoes 
+      CALL AD14_PackBeddoesParms( Re_Buf, Db_Buf, Int_Buf, InData%Beddoes, ErrStat2, ErrMsg2, OnlySize ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14919,7 +14685,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packdyninflowparms( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, OnlySize ) ! DynInflow 
+      CALL AD14_PackDynInflowParms( Re_Buf, Db_Buf, Int_Buf, InData%DynInflow, ErrStat2, ErrMsg2, OnlySize ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14947,7 +14713,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packelementparms( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, OnlySize ) ! Element 
+      CALL AD14_PackElementParms( Re_Buf, Db_Buf, Int_Buf, InData%Element, ErrStat2, ErrMsg2, OnlySize ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -14975,7 +14741,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packtwrpropsparms( Re_Buf, Db_Buf, Int_Buf, InData%TwrProps, ErrStat2, ErrMsg2, OnlySize ) ! TwrProps 
+      CALL AD14_PackTwrPropsParms( Re_Buf, Db_Buf, Int_Buf, InData%TwrProps, ErrStat2, ErrMsg2, OnlySize ) ! TwrProps 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15003,7 +14769,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packinducedvelparms( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, OnlySize ) ! InducedVel 
+      CALL AD14_PackInducedVelParms( Re_Buf, Db_Buf, Int_Buf, InData%InducedVel, ErrStat2, ErrMsg2, OnlySize ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15031,7 +14797,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packwindparms( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, OnlySize ) ! Wind 
+      CALL AD14_PackWindParms( Re_Buf, Db_Buf, Int_Buf, InData%Wind, ErrStat2, ErrMsg2, OnlySize ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15059,7 +14825,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packrotorparms( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, OnlySize ) ! Rotor 
+      CALL AD14_PackRotorParms( Re_Buf, Db_Buf, Int_Buf, InData%Rotor, ErrStat2, ErrMsg2, OnlySize ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15228,7 +14994,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackairfoilparms( Re_Buf, Db_Buf, Int_Buf, OutData%AirFoil, ErrStat2, ErrMsg2 ) ! AirFoil 
+      CALL AD14_UnpackAirFoilParms( Re_Buf, Db_Buf, Int_Buf, OutData%AirFoil, ErrStat2, ErrMsg2 ) ! AirFoil 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15268,7 +15034,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackbladeparms( Re_Buf, Db_Buf, Int_Buf, OutData%Blade, ErrStat2, ErrMsg2 ) ! Blade 
+      CALL AD14_UnpackBladeParms( Re_Buf, Db_Buf, Int_Buf, OutData%Blade, ErrStat2, ErrMsg2 ) ! Blade 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15308,7 +15074,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackbeddoesparms( Re_Buf, Db_Buf, Int_Buf, OutData%Beddoes, ErrStat2, ErrMsg2 ) ! Beddoes 
+      CALL AD14_UnpackBeddoesParms( Re_Buf, Db_Buf, Int_Buf, OutData%Beddoes, ErrStat2, ErrMsg2 ) ! Beddoes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15348,7 +15114,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackdyninflowparms( Re_Buf, Db_Buf, Int_Buf, OutData%DynInflow, ErrStat2, ErrMsg2 ) ! DynInflow 
+      CALL AD14_UnpackDynInflowParms( Re_Buf, Db_Buf, Int_Buf, OutData%DynInflow, ErrStat2, ErrMsg2 ) ! DynInflow 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15388,7 +15154,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackelementparms( Re_Buf, Db_Buf, Int_Buf, OutData%Element, ErrStat2, ErrMsg2 ) ! Element 
+      CALL AD14_UnpackElementParms( Re_Buf, Db_Buf, Int_Buf, OutData%Element, ErrStat2, ErrMsg2 ) ! Element 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15428,7 +15194,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpacktwrpropsparms( Re_Buf, Db_Buf, Int_Buf, OutData%TwrProps, ErrStat2, ErrMsg2 ) ! TwrProps 
+      CALL AD14_UnpackTwrPropsParms( Re_Buf, Db_Buf, Int_Buf, OutData%TwrProps, ErrStat2, ErrMsg2 ) ! TwrProps 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15468,7 +15234,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackinducedvelparms( Re_Buf, Db_Buf, Int_Buf, OutData%InducedVel, ErrStat2, ErrMsg2 ) ! InducedVel 
+      CALL AD14_UnpackInducedVelParms( Re_Buf, Db_Buf, Int_Buf, OutData%InducedVel, ErrStat2, ErrMsg2 ) ! InducedVel 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15508,7 +15274,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackwindparms( Re_Buf, Db_Buf, Int_Buf, OutData%Wind, ErrStat2, ErrMsg2 ) ! Wind 
+      CALL AD14_UnpackWindParms( Re_Buf, Db_Buf, Int_Buf, OutData%Wind, ErrStat2, ErrMsg2 ) ! Wind 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15548,7 +15314,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackrotorparms( Re_Buf, Db_Buf, Int_Buf, OutData%Rotor, ErrStat2, ErrMsg2 ) ! Rotor 
+      CALL AD14_UnpackRotorParms( Re_Buf, Db_Buf, Int_Buf, OutData%Rotor, ErrStat2, ErrMsg2 ) ! Rotor 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15666,14 +15432,12 @@ ENDIF
     DstInputData%AvgInfVel = SrcInputData%AvgInfVel
  END SUBROUTINE AD14_CopyInput
 
- SUBROUTINE AD14_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(AD14_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyInput'
@@ -15681,12 +15445,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InputData%InputMarkers)) THEN
 DO i1 = LBOUND(InputData%InputMarkers,1), UBOUND(InputData%InputMarkers,1)
   CALL MeshDestroy( InputData%InputMarkers(i1), ErrStat2, ErrMsg2 )
@@ -15696,7 +15454,7 @@ ENDDO
 ENDIF
   CALL MeshDestroy( InputData%Twr_InputMarkers, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD14_Destroyaeroconfig( InputData%TurbineComponents, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AD14_DestroyAeroConfig( InputData%TurbineComponents, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputData%MulTabLoc)) THEN
   DEALLOCATE(InputData%MulTabLoc)
@@ -15783,7 +15541,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! TurbineComponents: size of buffers for each call to pack subtype
-      CALL AD14_Packaeroconfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, .TRUE. ) ! TurbineComponents 
+      CALL AD14_PackAeroConfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, .TRUE. ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -15906,7 +15664,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL AD14_Packaeroconfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, OnlySize ) ! TurbineComponents 
+      CALL AD14_PackAeroConfig( Re_Buf, Db_Buf, Int_Buf, InData%TurbineComponents, ErrStat2, ErrMsg2, OnlySize ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -16137,7 +15895,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AD14_Unpackaeroconfig( Re_Buf, Db_Buf, Int_Buf, OutData%TurbineComponents, ErrStat2, ErrMsg2 ) ! TurbineComponents 
+      CALL AD14_UnpackAeroConfig( Re_Buf, Db_Buf, Int_Buf, OutData%TurbineComponents, ErrStat2, ErrMsg2 ) ! TurbineComponents 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -16234,14 +15992,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AD14_CopyOutput
 
- SUBROUTINE AD14_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AD14_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(AD14_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AD14_DestroyOutput'
@@ -16249,12 +16005,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(OutputData%OutputLoads)) THEN
 DO i1 = LBOUND(OutputData%OutputLoads,1), UBOUND(OutputData%OutputLoads,1)
   CALL MeshDestroy( OutputData%OutputLoads(i1), ErrStat2, ErrMsg2 )

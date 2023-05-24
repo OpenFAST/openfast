@@ -237,9 +237,6 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'WD_CopyInputFileType'
@@ -280,14 +277,12 @@ CONTAINS
     DstInputFileTypeData%WAT_k_Grad = SrcInputFileTypeData%WAT_k_Grad
  END SUBROUTINE WD_CopyInputFileType
 
- SUBROUTINE WD_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
   TYPE(WD_InputFileType), INTENT(INOUT) :: InputFileTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyInputFileType'
@@ -295,12 +290,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE WD_DestroyInputFileType
 
  SUBROUTINE WD_PackInputFileType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -476,9 +465,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'WD_UnPackInputFileType'
@@ -579,14 +565,12 @@ CONTAINS
     DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
  END SUBROUTINE WD_CopyInitInput
 
- SUBROUTINE WD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(WD_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyInitInput'
@@ -594,13 +578,7 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL WD_Destroyinputfiletype( InitInputData%InputFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyInputFileType( InitInputData%InputFileData, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WD_DestroyInitInput
 
@@ -641,7 +619,7 @@ CONTAINS
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! InputFileData: size of buffers for each call to pack subtype
-      CALL WD_Packinputfiletype( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, .TRUE. ) ! InputFileData 
+      CALL WD_PackInputFileType( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, .TRUE. ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -686,7 +664,7 @@ CONTAINS
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL WD_Packinputfiletype( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, OnlySize ) ! InputFileData 
+      CALL WD_PackInputFileType( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, OnlySize ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -781,7 +759,7 @@ CONTAINS
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL WD_Unpackinputfiletype( Re_Buf, Db_Buf, Int_Buf, OutData%InputFileData, ErrStat2, ErrMsg2 ) ! InputFileData 
+      CALL WD_UnpackInputFileType( Re_Buf, Db_Buf, Int_Buf, OutData%InputFileData, ErrStat2, ErrMsg2 ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -840,14 +818,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE WD_CopyInitOutput
 
- SUBROUTINE WD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(WD_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyInitOutput'
@@ -855,19 +831,13 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE WD_DestroyInitOutput
 
@@ -918,7 +888,7 @@ ENDIF
   END IF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -995,7 +965,7 @@ ENDIF
         END DO ! I
       END DO
   END IF
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1125,7 +1095,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackprogdesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
+      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1151,14 +1121,12 @@ ENDIF
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE WD_CopyContState
 
- SUBROUTINE WD_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyContState( ContStateData, ErrStat, ErrMsg )
   TYPE(WD_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyContState'
@@ -1166,12 +1134,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE WD_DestroyContState
 
  SUBROUTINE WD_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1495,14 +1457,12 @@ IF (ALLOCATED(SrcDiscStateData%Cq_azavg_filt)) THEN
 ENDIF
  END SUBROUTINE WD_CopyDiscState
 
- SUBROUTINE WD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
   TYPE(WD_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyDiscState'
@@ -1510,12 +1470,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(DiscStateData%xhat_plane)) THEN
   DEALLOCATE(DiscStateData%xhat_plane)
 ENDIF
@@ -2370,14 +2324,12 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE WD_CopyConstrState
 
- SUBROUTINE WD_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
   TYPE(WD_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyConstrState'
@@ -2385,12 +2337,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE WD_DestroyConstrState
 
  SUBROUTINE WD_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2507,14 +2453,12 @@ ENDIF
     DstOtherStateData%firstPass = SrcOtherStateData%firstPass
  END SUBROUTINE WD_CopyOtherState
 
- SUBROUTINE WD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
   TYPE(WD_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyOtherState'
@@ -2522,12 +2466,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE WD_DestroyOtherState
 
  SUBROUTINE WD_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2934,14 +2872,12 @@ ENDIF
     DstMiscData%Ct_avg = SrcMiscData%Ct_avg
  END SUBROUTINE WD_CopyMisc
 
- SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(WD_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyMisc'
@@ -2949,12 +2885,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MiscData%dvtdr)) THEN
   DEALLOCATE(MiscData%dvtdr)
 ENDIF
@@ -4183,14 +4113,12 @@ ENDIF
     DstParamData%WAT_k_Grad = SrcParamData%WAT_k_Grad
  END SUBROUTINE WD_CopyParam
 
- SUBROUTINE WD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(WD_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyParam'
@@ -4198,12 +4126,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%r)) THEN
   DEALLOCATE(ParamData%r)
 ENDIF
@@ -4680,14 +4602,12 @@ IF (ALLOCATED(SrcInputData%Cq_azavg)) THEN
 ENDIF
  END SUBROUTINE WD_CopyInput
 
- SUBROUTINE WD_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(WD_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyInput'
@@ -4695,12 +4615,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InputData%V_plane)) THEN
   DEALLOCATE(InputData%V_plane)
 ENDIF
@@ -5150,14 +5064,12 @@ IF (ALLOCATED(SrcOutputData%WAT_k_mt)) THEN
 ENDIF
  END SUBROUTINE WD_CopyOutput
 
- SUBROUTINE WD_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE WD_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(WD_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'WD_DestroyOutput'
@@ -5165,12 +5077,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(OutputData%xhat_plane)) THEN
   DEALLOCATE(OutputData%xhat_plane)
 ENDIF

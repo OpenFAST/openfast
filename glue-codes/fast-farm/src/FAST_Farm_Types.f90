@@ -87,7 +87,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< Number of user-requested outputs [-]
     INTEGER(IntKi)  :: NOutSteps      !< Maximum number of output steps [-]
     CHARACTER(1024) , DIMENSION(1:3)  :: FileDescLines      !< File Description lines [-]
-    TYPE(ProgDesc) , DIMENSION(NumModules)  :: Module_Ver      !< Version information from all modules [-]
+    TYPE(ProgDesc) , DIMENSION(1:NumModules)  :: Module_Ver      !< Version information from all modules [-]
     INTEGER(IntKi)  :: UnOu      !< File unit for Fast.Farm output data [-]
     REAL(ReKi)  :: dX_low      !< The spacing of the low-resolution nodes in X direction [m]
     REAL(ReKi)  :: dY_low      !< The spacing of the low-resolution nodes in Y direction [m]
@@ -358,14 +358,12 @@ ENDIF
     DstParamData%Z0_low = SrcParamData%Z0_low
  END SUBROUTINE Farm_CopyParam
 
- SUBROUTINE Farm_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(Farm_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyParam'
@@ -373,12 +371,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%WT_Position)) THEN
   DEALLOCATE(ParamData%WT_Position)
 ENDIF
@@ -402,13 +394,13 @@ IF (ALLOCATED(ParamData%WindVelZ)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
 DO i1 = LBOUND(ParamData%Module_Ver,1), UBOUND(ParamData%Module_Ver,1)
-  CALL NWTC_Library_Destroyprogdesc( ParamData%Module_Ver(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyProgDesc( ParamData%Module_Ver(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
  END SUBROUTINE Farm_DestroyParam
@@ -519,7 +511,7 @@ ENDDO
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
       Int_BufSz   = Int_BufSz + 3  ! OutParam: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
+      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -542,7 +534,7 @@ ENDDO
       Int_BufSz  = Int_BufSz  + SIZE(InData%FileDescLines)*LEN(InData%FileDescLines)  ! FileDescLines
     DO i1 = LBOUND(InData%Module_Ver,1), UBOUND(InData%Module_Ver,1)
       Int_BufSz   = Int_BufSz + 3  ! Module_Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Module_Ver(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Module_Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Module_Ver(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Module_Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -795,7 +787,7 @@ ENDDO
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
-      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! OutParam 
+      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -836,7 +828,7 @@ ENDDO
       END DO ! I
     END DO
     DO i1 = LBOUND(InData%Module_Ver,1), UBOUND(InData%Module_Ver,1)
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Module_Ver(i1), ErrStat2, ErrMsg2, OnlySize ) ! Module_Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Module_Ver(i1), ErrStat2, ErrMsg2, OnlySize ) ! Module_Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1171,7 +1163,7 @@ ENDDO
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackoutparmtype( Re_Buf, Db_Buf, Int_Buf, OutData%OutParam(i1), ErrStat2, ErrMsg2 ) ! OutParam 
+      CALL NWTC_Library_UnpackOutParmType( Re_Buf, Db_Buf, Int_Buf, OutData%OutParam(i1), ErrStat2, ErrMsg2 ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1228,7 +1220,7 @@ ENDDO
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackprogdesc( Re_Buf, Db_Buf, Int_Buf, OutData%Module_Ver(i1), ErrStat2, ErrMsg2 ) ! Module_Ver 
+      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Module_Ver(i1), ErrStat2, ErrMsg2 ) ! Module_Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1347,14 +1339,12 @@ IF (ALLOCATED(SrcMiscData%MD_2_FWrap)) THEN
 ENDIF
  END SUBROUTINE Farm_CopyMisc
 
- SUBROUTINE Farm_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(Farm_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyMisc'
@@ -1362,12 +1352,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MiscData%AllOuts)) THEN
   DEALLOCATE(MiscData%AllOuts)
 ENDIF
@@ -1379,14 +1363,14 @@ IF (ALLOCATED(MiscData%AllOutData)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%FWrap_2_MD)) THEN
 DO i1 = LBOUND(MiscData%FWrap_2_MD,1), UBOUND(MiscData%FWrap_2_MD,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%FWrap_2_MD(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyMeshMapType( MiscData%FWrap_2_MD(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%FWrap_2_MD)
 ENDIF
 IF (ALLOCATED(MiscData%MD_2_FWrap)) THEN
 DO i1 = LBOUND(MiscData%MD_2_FWrap,1), UBOUND(MiscData%MD_2_FWrap,1)
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%MD_2_FWrap(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyMeshMapType( MiscData%MD_2_FWrap(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%MD_2_FWrap)
@@ -1450,7 +1434,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%FWrap_2_MD,1), UBOUND(InData%FWrap_2_MD,1)
       Int_BufSz   = Int_BufSz + 3  ! FWrap_2_MD: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%FWrap_2_MD(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FWrap_2_MD 
+      CALL NWTC_Library_PackMeshMapType( Re_Buf, Db_Buf, Int_Buf, InData%FWrap_2_MD(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FWrap_2_MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1473,7 +1457,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MD_2_FWrap upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%MD_2_FWrap,1), UBOUND(InData%MD_2_FWrap,1)
       Int_BufSz   = Int_BufSz + 3  ! MD_2_FWrap: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%MD_2_FWrap(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MD_2_FWrap 
+      CALL NWTC_Library_PackMeshMapType( Re_Buf, Db_Buf, Int_Buf, InData%MD_2_FWrap(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MD_2_FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1581,7 +1565,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%FWrap_2_MD,1), UBOUND(InData%FWrap_2_MD,1)
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%FWrap_2_MD(i1), ErrStat2, ErrMsg2, OnlySize ) ! FWrap_2_MD 
+      CALL NWTC_Library_PackMeshMapType( Re_Buf, Db_Buf, Int_Buf, InData%FWrap_2_MD(i1), ErrStat2, ErrMsg2, OnlySize ) ! FWrap_2_MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1622,7 +1606,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%MD_2_FWrap,1), UBOUND(InData%MD_2_FWrap,1)
-      CALL NWTC_Library_Packmeshmaptype( Re_Buf, Db_Buf, Int_Buf, InData%MD_2_FWrap(i1), ErrStat2, ErrMsg2, OnlySize ) ! MD_2_FWrap 
+      CALL NWTC_Library_PackMeshMapType( Re_Buf, Db_Buf, Int_Buf, InData%MD_2_FWrap(i1), ErrStat2, ErrMsg2, OnlySize ) ! MD_2_FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1790,7 +1774,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%FWrap_2_MD(i1), ErrStat2, ErrMsg2 ) ! FWrap_2_MD 
+      CALL NWTC_Library_UnpackMeshMapType( Re_Buf, Db_Buf, Int_Buf, OutData%FWrap_2_MD(i1), ErrStat2, ErrMsg2 ) ! FWrap_2_MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1846,7 +1830,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackmeshmaptype( Re_Buf, Db_Buf, Int_Buf, OutData%MD_2_FWrap(i1), ErrStat2, ErrMsg2 ) ! MD_2_FWrap 
+      CALL NWTC_Library_UnpackMeshMapType( Re_Buf, Db_Buf, Int_Buf, OutData%MD_2_FWrap(i1), ErrStat2, ErrMsg2 ) ! MD_2_FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1898,14 +1882,12 @@ ENDIF
     DstFASTWrapper_DataData%IsInitialized = SrcFASTWrapper_DataData%IsInitialized
  END SUBROUTINE Farm_CopyFASTWrapper_Data
 
- SUBROUTINE Farm_DestroyFASTWrapper_Data( FASTWrapper_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyFASTWrapper_Data( FASTWrapper_DataData, ErrStat, ErrMsg )
   TYPE(FASTWrapper_Data), INTENT(INOUT) :: FASTWrapper_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyFASTWrapper_Data'
@@ -1913,27 +1895,21 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL FWrap_DestroyContState( FASTWrapper_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyContState( FASTWrapper_DataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyDiscState( FASTWrapper_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyDiscState( FASTWrapper_DataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyConstrState( FASTWrapper_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyConstrState( FASTWrapper_DataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyOtherState( FASTWrapper_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyOtherState( FASTWrapper_DataData%OtherSt, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyParam( FASTWrapper_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyParam( FASTWrapper_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyInput( FASTWrapper_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyInput( FASTWrapper_DataData%u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyOutput( FASTWrapper_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyOutput( FASTWrapper_DataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL FWrap_DestroyMisc( FASTWrapper_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL FWrap_DestroyMisc( FASTWrapper_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyFASTWrapper_Data
 
@@ -2756,14 +2732,12 @@ ENDIF
     DstWakeDynamics_DataData%IsInitialized = SrcWakeDynamics_DataData%IsInitialized
  END SUBROUTINE Farm_CopyWakeDynamics_Data
 
- SUBROUTINE Farm_DestroyWakeDynamics_Data( WakeDynamics_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyWakeDynamics_Data( WakeDynamics_DataData, ErrStat, ErrMsg )
   TYPE(WakeDynamics_Data), INTENT(INOUT) :: WakeDynamics_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyWakeDynamics_Data'
@@ -2771,27 +2745,21 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL WD_DestroyContState( WakeDynamics_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyContState( WakeDynamics_DataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyDiscState( WakeDynamics_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyDiscState( WakeDynamics_DataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyConstrState( WakeDynamics_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyConstrState( WakeDynamics_DataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyOtherState( WakeDynamics_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyOtherState( WakeDynamics_DataData%OtherSt, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyParam( WakeDynamics_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyParam( WakeDynamics_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyInput( WakeDynamics_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyInput( WakeDynamics_DataData%u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyOutput( WakeDynamics_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyOutput( WakeDynamics_DataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WD_DestroyMisc( WakeDynamics_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL WD_DestroyMisc( WakeDynamics_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyWakeDynamics_Data
 
@@ -3614,14 +3582,12 @@ ENDIF
     DstAWAE_DataData%IsInitialized = SrcAWAE_DataData%IsInitialized
  END SUBROUTINE Farm_CopyAWAE_Data
 
- SUBROUTINE Farm_DestroyAWAE_Data( AWAE_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyAWAE_Data( AWAE_DataData, ErrStat, ErrMsg )
   TYPE(AWAE_Data), INTENT(INOUT) :: AWAE_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAWAE_Data'
@@ -3629,27 +3595,21 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL AWAE_DestroyContState( AWAE_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyContState( AWAE_DataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyDiscState( AWAE_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyDiscState( AWAE_DataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyConstrState( AWAE_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyConstrState( AWAE_DataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyOtherState( AWAE_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyOtherState( AWAE_DataData%OtherSt, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyParam( AWAE_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyParam( AWAE_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyInput( AWAE_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyInput( AWAE_DataData%u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyOutput( AWAE_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyOutput( AWAE_DataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_DestroyMisc( AWAE_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyMisc( AWAE_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyAWAE_Data
 
@@ -4474,14 +4434,12 @@ ENDIF
     DstSC_DataData%IsInitialized = SrcSC_DataData%IsInitialized
  END SUBROUTINE Farm_CopySC_Data
 
- SUBROUTINE Farm_DestroySC_Data( SC_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroySC_Data( SC_DataData, ErrStat, ErrMsg )
   TYPE(SC_Data), INTENT(INOUT) :: SC_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroySC_Data'
@@ -4489,27 +4447,21 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL SC_DestroyContState( SC_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyContState( SC_DataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyDiscState( SC_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyDiscState( SC_DataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyConstrState( SC_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyConstrState( SC_DataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyOtherState( SC_DataData%OtherState, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyOtherState( SC_DataData%OtherState, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyParam( SC_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyParam( SC_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyInput( SC_DataData%uInputs, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyInput( SC_DataData%uInputs, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyOutput( SC_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyOutput( SC_DataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SC_DestroyMisc( SC_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL SC_DestroyMisc( SC_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroySC_Data
 
@@ -5373,14 +5325,12 @@ ENDIF
     DstMD_DataData%IsInitialized = SrcMD_DataData%IsInitialized
  END SUBROUTINE Farm_CopyMD_Data
 
- SUBROUTINE Farm_DestroyMD_Data( MD_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyMD_Data( MD_DataData, ErrStat, ErrMsg )
   TYPE(MD_Data), INTENT(INOUT) :: MD_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyMD_Data'
@@ -5388,27 +5338,21 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL MD_DestroyContState( MD_DataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyContState( MD_DataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyDiscState( MD_DataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyDiscState( MD_DataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyConstrState( MD_DataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyConstrState( MD_DataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyOtherState( MD_DataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyOtherState( MD_DataData%OtherSt, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyParam( MD_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyParam( MD_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyInput( MD_DataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyInput( MD_DataData%u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MD_DataData%Input)) THEN
 DO i1 = LBOUND(MD_DataData%Input,1), UBOUND(MD_DataData%Input,1)
-  CALL MD_DestroyInput( MD_DataData%Input(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyInput( MD_DataData%Input(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MD_DataData%Input)
@@ -5416,9 +5360,9 @@ ENDIF
 IF (ALLOCATED(MD_DataData%InputTimes)) THEN
   DEALLOCATE(MD_DataData%InputTimes)
 ENDIF
-  CALL MD_DestroyOutput( MD_DataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyOutput( MD_DataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyMisc( MD_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL MD_DestroyMisc( MD_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyMD_Data
 
@@ -6423,14 +6367,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE Farm_CopyAll_FastFarm_Data
 
- SUBROUTINE Farm_DestroyAll_FastFarm_Data( All_FastFarm_DataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Farm_DestroyAll_FastFarm_Data( All_FastFarm_DataData, ErrStat, ErrMsg )
   TYPE(All_FastFarm_Data), INTENT(INOUT) :: All_FastFarm_DataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Farm_DestroyAll_FastFarm_Data'
@@ -6438,35 +6380,29 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL Farm_DestroyParam( All_FastFarm_DataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyParam( All_FastFarm_DataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Farm_DestroyMisc( All_FastFarm_DataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyMisc( All_FastFarm_DataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(All_FastFarm_DataData%FWrap)) THEN
 DO i1 = LBOUND(All_FastFarm_DataData%FWrap,1), UBOUND(All_FastFarm_DataData%FWrap,1)
-  CALL Farm_Destroyfastwrapper_data( All_FastFarm_DataData%FWrap(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyFASTWrapper_Data( All_FastFarm_DataData%FWrap(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(All_FastFarm_DataData%FWrap)
 ENDIF
 IF (ALLOCATED(All_FastFarm_DataData%WD)) THEN
 DO i1 = LBOUND(All_FastFarm_DataData%WD,1), UBOUND(All_FastFarm_DataData%WD,1)
-  CALL Farm_Destroywakedynamics_data( All_FastFarm_DataData%WD(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyWakeDynamics_Data( All_FastFarm_DataData%WD(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(All_FastFarm_DataData%WD)
 ENDIF
-  CALL Farm_Destroyawae_data( All_FastFarm_DataData%AWAE, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyAWAE_Data( All_FastFarm_DataData%AWAE, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Farm_Destroysc_data( All_FastFarm_DataData%SC, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroySC_Data( All_FastFarm_DataData%SC, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Farm_Destroymd_data( All_FastFarm_DataData%MD, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Farm_DestroyMD_Data( All_FastFarm_DataData%MD, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Farm_DestroyAll_FastFarm_Data
 
@@ -6545,7 +6481,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! FWrap upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%FWrap,1), UBOUND(InData%FWrap,1)
       Int_BufSz   = Int_BufSz + 3  ! FWrap: size of buffers for each call to pack subtype
-      CALL Farm_Packfastwrapper_data( Re_Buf, Db_Buf, Int_Buf, InData%FWrap(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FWrap 
+      CALL Farm_PackFASTWrapper_Data( Re_Buf, Db_Buf, Int_Buf, InData%FWrap(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6568,7 +6504,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! WD upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%WD,1), UBOUND(InData%WD,1)
       Int_BufSz   = Int_BufSz + 3  ! WD: size of buffers for each call to pack subtype
-      CALL Farm_Packwakedynamics_data( Re_Buf, Db_Buf, Int_Buf, InData%WD(i1), ErrStat2, ErrMsg2, .TRUE. ) ! WD 
+      CALL Farm_PackWakeDynamics_Data( Re_Buf, Db_Buf, Int_Buf, InData%WD(i1), ErrStat2, ErrMsg2, .TRUE. ) ! WD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6587,7 +6523,7 @@ ENDIF
     END DO
   END IF
       Int_BufSz   = Int_BufSz + 3  ! AWAE: size of buffers for each call to pack subtype
-      CALL Farm_Packawae_data( Re_Buf, Db_Buf, Int_Buf, InData%AWAE, ErrStat2, ErrMsg2, .TRUE. ) ! AWAE 
+      CALL Farm_PackAWAE_Data( Re_Buf, Db_Buf, Int_Buf, InData%AWAE, ErrStat2, ErrMsg2, .TRUE. ) ! AWAE 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6604,7 +6540,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! SC: size of buffers for each call to pack subtype
-      CALL Farm_Packsc_data( Re_Buf, Db_Buf, Int_Buf, InData%SC, ErrStat2, ErrMsg2, .TRUE. ) ! SC 
+      CALL Farm_PackSC_Data( Re_Buf, Db_Buf, Int_Buf, InData%SC, ErrStat2, ErrMsg2, .TRUE. ) ! SC 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6621,7 +6557,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! MD: size of buffers for each call to pack subtype
-      CALL Farm_Packmd_data( Re_Buf, Db_Buf, Int_Buf, InData%MD, ErrStat2, ErrMsg2, .TRUE. ) ! MD 
+      CALL Farm_PackMD_Data( Re_Buf, Db_Buf, Int_Buf, InData%MD, ErrStat2, ErrMsg2, .TRUE. ) ! MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6731,7 +6667,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%FWrap,1), UBOUND(InData%FWrap,1)
-      CALL Farm_Packfastwrapper_data( Re_Buf, Db_Buf, Int_Buf, InData%FWrap(i1), ErrStat2, ErrMsg2, OnlySize ) ! FWrap 
+      CALL Farm_PackFASTWrapper_Data( Re_Buf, Db_Buf, Int_Buf, InData%FWrap(i1), ErrStat2, ErrMsg2, OnlySize ) ! FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6772,7 +6708,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%WD,1), UBOUND(InData%WD,1)
-      CALL Farm_Packwakedynamics_data( Re_Buf, Db_Buf, Int_Buf, InData%WD(i1), ErrStat2, ErrMsg2, OnlySize ) ! WD 
+      CALL Farm_PackWakeDynamics_Data( Re_Buf, Db_Buf, Int_Buf, InData%WD(i1), ErrStat2, ErrMsg2, OnlySize ) ! WD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6802,7 +6738,7 @@ ENDIF
       ENDIF
     END DO
   END IF
-      CALL Farm_Packawae_data( Re_Buf, Db_Buf, Int_Buf, InData%AWAE, ErrStat2, ErrMsg2, OnlySize ) ! AWAE 
+      CALL Farm_PackAWAE_Data( Re_Buf, Db_Buf, Int_Buf, InData%AWAE, ErrStat2, ErrMsg2, OnlySize ) ! AWAE 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6830,7 +6766,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL Farm_Packsc_data( Re_Buf, Db_Buf, Int_Buf, InData%SC, ErrStat2, ErrMsg2, OnlySize ) ! SC 
+      CALL Farm_PackSC_Data( Re_Buf, Db_Buf, Int_Buf, InData%SC, ErrStat2, ErrMsg2, OnlySize ) ! SC 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6858,7 +6794,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL Farm_Packmd_data( Re_Buf, Db_Buf, Int_Buf, InData%MD, ErrStat2, ErrMsg2, OnlySize ) ! MD 
+      CALL Farm_PackMD_Data( Re_Buf, Db_Buf, Int_Buf, InData%MD, ErrStat2, ErrMsg2, OnlySize ) ! MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7042,7 +6978,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Farm_Unpackfastwrapper_data( Re_Buf, Db_Buf, Int_Buf, OutData%FWrap(i1), ErrStat2, ErrMsg2 ) ! FWrap 
+      CALL Farm_UnpackFASTWrapper_Data( Re_Buf, Db_Buf, Int_Buf, OutData%FWrap(i1), ErrStat2, ErrMsg2 ) ! FWrap 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7098,7 +7034,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Farm_Unpackwakedynamics_data( Re_Buf, Db_Buf, Int_Buf, OutData%WD(i1), ErrStat2, ErrMsg2 ) ! WD 
+      CALL Farm_UnpackWakeDynamics_Data( Re_Buf, Db_Buf, Int_Buf, OutData%WD(i1), ErrStat2, ErrMsg2 ) ! WD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7140,7 +7076,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Farm_Unpackawae_data( Re_Buf, Db_Buf, Int_Buf, OutData%AWAE, ErrStat2, ErrMsg2 ) ! AWAE 
+      CALL Farm_UnpackAWAE_Data( Re_Buf, Db_Buf, Int_Buf, OutData%AWAE, ErrStat2, ErrMsg2 ) ! AWAE 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7180,7 +7116,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Farm_Unpacksc_data( Re_Buf, Db_Buf, Int_Buf, OutData%SC, ErrStat2, ErrMsg2 ) ! SC 
+      CALL Farm_UnpackSC_Data( Re_Buf, Db_Buf, Int_Buf, OutData%SC, ErrStat2, ErrMsg2 ) ! SC 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7220,7 +7156,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Farm_Unpackmd_data( Re_Buf, Db_Buf, Int_Buf, OutData%MD, ErrStat2, ErrMsg2 ) ! MD 
+      CALL Farm_UnpackMD_Data( Re_Buf, Db_Buf, Int_Buf, OutData%MD, ErrStat2, ErrMsg2 ) ! MD 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

@@ -305,7 +305,7 @@ IMPLICIT NONE
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs      !<  [-]
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
-    CHARACTER(ChanLen) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum   of possible outputs because of the use of ReadAry() [-]
+    CHARACTER(ChanLen) , DIMENSION(1:4032)  :: OutList      !< This list size needs to be the maximum # of possible outputs because of the use of ReadAry() [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: ValidOutList      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     INTEGER(IntKi)  :: OutSwtch      !<  [-]
@@ -423,8 +423,6 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'Morison_CopyJointType'
@@ -440,14 +438,12 @@ CONTAINS
     DstJointTypeData%ConnectionList = SrcJointTypeData%ConnectionList
  END SUBROUTINE Morison_CopyJointType
 
- SUBROUTINE Morison_DestroyJointType( JointTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyJointType( JointTypeData, ErrStat, ErrMsg )
   TYPE(Morison_JointType), INTENT(INOUT) :: JointTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyJointType'
@@ -455,12 +451,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyJointType
 
  SUBROUTINE Morison_PackJointType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -566,8 +556,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'Morison_UnPackJointType'
@@ -624,14 +612,12 @@ CONTAINS
     DstMemberPropTypeData%PropThck = SrcMemberPropTypeData%PropThck
  END SUBROUTINE Morison_CopyMemberPropType
 
- SUBROUTINE Morison_DestroyMemberPropType( MemberPropTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMemberPropType( MemberPropTypeData, ErrStat, ErrMsg )
   TYPE(Morison_MemberPropType), INTENT(INOUT) :: MemberPropTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMemberPropType'
@@ -639,12 +625,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyMemberPropType
 
  SUBROUTINE Morison_PackMemberPropType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -787,14 +767,12 @@ ENDIF
     DstFilledGroupTypeData%FillDens = SrcFilledGroupTypeData%FillDens
  END SUBROUTINE Morison_CopyFilledGroupType
 
- SUBROUTINE Morison_DestroyFilledGroupType( FilledGroupTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyFilledGroupType( FilledGroupTypeData, ErrStat, ErrMsg )
   TYPE(Morison_FilledGroupType), INTENT(INOUT) :: FilledGroupTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyFilledGroupType'
@@ -802,12 +780,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(FilledGroupTypeData%FillMList)) THEN
   DEALLOCATE(FilledGroupTypeData%FillMList)
 ENDIF
@@ -997,14 +969,12 @@ ENDIF
     DstCoefDpthsData%DpthAxCpMG = SrcCoefDpthsData%DpthAxCpMG
  END SUBROUTINE Morison_CopyCoefDpths
 
- SUBROUTINE Morison_DestroyCoefDpths( CoefDpthsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyCoefDpths( CoefDpthsData, ErrStat, ErrMsg )
   TYPE(Morison_CoefDpths), INTENT(INOUT) :: CoefDpthsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyCoefDpths'
@@ -1012,12 +982,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyCoefDpths
 
  SUBROUTINE Morison_PackCoefDpths( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1197,14 +1161,12 @@ ENDIF
     DstAxialCoefTypeData%AxCp = SrcAxialCoefTypeData%AxCp
  END SUBROUTINE Morison_CopyAxialCoefType
 
- SUBROUTINE Morison_DestroyAxialCoefType( AxialCoefTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyAxialCoefType( AxialCoefTypeData, ErrStat, ErrMsg )
   TYPE(Morison_AxialCoefType), INTENT(INOUT) :: AxialCoefTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyAxialCoefType'
@@ -1212,12 +1174,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyAxialCoefType
 
  SUBROUTINE Morison_PackAxialCoefType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1378,14 +1334,12 @@ ENDIF
     DstMemberInputTypeData%dl = SrcMemberInputTypeData%dl
  END SUBROUTINE Morison_CopyMemberInputType
 
- SUBROUTINE Morison_DestroyMemberInputType( MemberInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMemberInputType( MemberInputTypeData, ErrStat, ErrMsg )
   TYPE(Morison_MemberInputType), INTENT(INOUT) :: MemberInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMemberInputType'
@@ -1393,12 +1347,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MemberInputTypeData%NodeIndx)) THEN
   DEALLOCATE(MemberInputTypeData%NodeIndx)
 ENDIF
@@ -1649,14 +1597,12 @@ ENDIF
     DstNodeTypeData%MGdensity = SrcNodeTypeData%MGdensity
  END SUBROUTINE Morison_CopyNodeType
 
- SUBROUTINE Morison_DestroyNodeType( NodeTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyNodeType( NodeTypeData, ErrStat, ErrMsg )
   TYPE(Morison_NodeType), INTENT(INOUT) :: NodeTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyNodeType'
@@ -1664,12 +1610,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyNodeType
 
  SUBROUTINE Morison_PackNodeType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2327,14 +2267,12 @@ ENDIF
     DstMemberTypeData%Flipped = SrcMemberTypeData%Flipped
  END SUBROUTINE Morison_CopyMemberType
 
- SUBROUTINE Morison_DestroyMemberType( MemberTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMemberType( MemberTypeData, ErrStat, ErrMsg )
   TYPE(Morison_MemberType), INTENT(INOUT) :: MemberTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMemberType'
@@ -2342,12 +2280,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MemberTypeData%NodeIndx)) THEN
   DEALLOCATE(MemberTypeData%NodeIndx)
 ENDIF
@@ -4303,14 +4235,12 @@ IF (ALLOCATED(SrcMemberLoadsData%F_DP)) THEN
 ENDIF
  END SUBROUTINE Morison_CopyMemberLoads
 
- SUBROUTINE Morison_DestroyMemberLoads( MemberLoadsData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMemberLoads( MemberLoadsData, ErrStat, ErrMsg )
   TYPE(Morison_MemberLoads), INTENT(INOUT) :: MemberLoadsData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMemberLoads'
@@ -4318,12 +4248,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MemberLoadsData%F_D)) THEN
   DEALLOCATE(MemberLoadsData%F_D)
 ENDIF
@@ -5022,14 +4946,12 @@ ENDIF
     DstCoefMembersData%MemberAxCpMG2 = SrcCoefMembersData%MemberAxCpMG2
  END SUBROUTINE Morison_CopyCoefMembers
 
- SUBROUTINE Morison_DestroyCoefMembers( CoefMembersData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyCoefMembers( CoefMembersData, ErrStat, ErrMsg )
   TYPE(Morison_CoefMembers), INTENT(INOUT) :: CoefMembersData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyCoefMembers'
@@ -5037,12 +4959,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyCoefMembers
 
  SUBROUTINE Morison_PackCoefMembers( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5281,14 +5197,12 @@ ENDIF
     DstMGDepthsTypeData%MGDens = SrcMGDepthsTypeData%MGDens
  END SUBROUTINE Morison_CopyMGDepthsType
 
- SUBROUTINE Morison_DestroyMGDepthsType( MGDepthsTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMGDepthsType( MGDepthsTypeData, ErrStat, ErrMsg )
   TYPE(Morison_MGDepthsType), INTENT(INOUT) :: MGDepthsTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMGDepthsType'
@@ -5296,12 +5210,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyMGDepthsType
 
  SUBROUTINE Morison_PackMGDepthsType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -5503,14 +5411,12 @@ IF (ALLOCATED(SrcMOutputData%s)) THEN
 ENDIF
  END SUBROUTINE Morison_CopyMOutput
 
- SUBROUTINE Morison_DestroyMOutput( MOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMOutput( MOutputData, ErrStat, ErrMsg )
   TYPE(Morison_MOutput), INTENT(INOUT) :: MOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMOutput'
@@ -5518,12 +5424,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MOutputData%NodeLocs)) THEN
   DEALLOCATE(MOutputData%NodeLocs)
 ENDIF
@@ -5898,14 +5798,12 @@ ENDIF
     DstJOutputData%JointIDIndx = SrcJOutputData%JointIDIndx
  END SUBROUTINE Morison_CopyJOutput
 
- SUBROUTINE Morison_DestroyJOutput( JOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyJOutput( JOutputData, ErrStat, ErrMsg )
   TYPE(Morison_JOutput), INTENT(INOUT) :: JOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyJOutput'
@@ -5913,12 +5811,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyJOutput
 
  SUBROUTINE Morison_PackJOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6339,14 +6231,12 @@ IF (ALLOCATED(SrcInitInputData%nodeInWater)) THEN
 ENDIF
  END SUBROUTINE Morison_CopyInitInput
 
- SUBROUTINE Morison_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(Morison_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyInitInput'
@@ -6354,85 +6244,79 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InitInputData%InpJoints)) THEN
 DO i1 = LBOUND(InitInputData%InpJoints,1), UBOUND(InitInputData%InpJoints,1)
-  CALL Morison_Destroyjointtype( InitInputData%InpJoints(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyJointType( InitInputData%InpJoints(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%InpJoints)
 ENDIF
 IF (ALLOCATED(InitInputData%Nodes)) THEN
 DO i1 = LBOUND(InitInputData%Nodes,1), UBOUND(InitInputData%Nodes,1)
-  CALL Morison_Destroynodetype( InitInputData%Nodes(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyNodeType( InitInputData%Nodes(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%Nodes)
 ENDIF
 IF (ALLOCATED(InitInputData%AxialCoefs)) THEN
 DO i1 = LBOUND(InitInputData%AxialCoefs,1), UBOUND(InitInputData%AxialCoefs,1)
-  CALL Morison_Destroyaxialcoeftype( InitInputData%AxialCoefs(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyAxialCoefType( InitInputData%AxialCoefs(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%AxialCoefs)
 ENDIF
 IF (ALLOCATED(InitInputData%MPropSets)) THEN
 DO i1 = LBOUND(InitInputData%MPropSets,1), UBOUND(InitInputData%MPropSets,1)
-  CALL Morison_Destroymemberproptype( InitInputData%MPropSets(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMemberPropType( InitInputData%MPropSets(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MPropSets)
 ENDIF
 IF (ALLOCATED(InitInputData%CoefDpths)) THEN
 DO i1 = LBOUND(InitInputData%CoefDpths,1), UBOUND(InitInputData%CoefDpths,1)
-  CALL Morison_Destroycoefdpths( InitInputData%CoefDpths(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyCoefDpths( InitInputData%CoefDpths(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%CoefDpths)
 ENDIF
 IF (ALLOCATED(InitInputData%CoefMembers)) THEN
 DO i1 = LBOUND(InitInputData%CoefMembers,1), UBOUND(InitInputData%CoefMembers,1)
-  CALL Morison_Destroycoefmembers( InitInputData%CoefMembers(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyCoefMembers( InitInputData%CoefMembers(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%CoefMembers)
 ENDIF
 IF (ALLOCATED(InitInputData%InpMembers)) THEN
 DO i1 = LBOUND(InitInputData%InpMembers,1), UBOUND(InitInputData%InpMembers,1)
-  CALL Morison_Destroymemberinputtype( InitInputData%InpMembers(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMemberInputType( InitInputData%InpMembers(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%InpMembers)
 ENDIF
 IF (ALLOCATED(InitInputData%FilledGroups)) THEN
 DO i1 = LBOUND(InitInputData%FilledGroups,1), UBOUND(InitInputData%FilledGroups,1)
-  CALL Morison_Destroyfilledgrouptype( InitInputData%FilledGroups(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyFilledGroupType( InitInputData%FilledGroups(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%FilledGroups)
 ENDIF
 IF (ALLOCATED(InitInputData%MGDepths)) THEN
 DO i1 = LBOUND(InitInputData%MGDepths,1), UBOUND(InitInputData%MGDepths,1)
-  CALL Morison_Destroymgdepthstype( InitInputData%MGDepths(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMGDepthsType( InitInputData%MGDepths(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MGDepths)
 ENDIF
 IF (ALLOCATED(InitInputData%MOutLst)) THEN
 DO i1 = LBOUND(InitInputData%MOutLst,1), UBOUND(InitInputData%MOutLst,1)
-  CALL Morison_Destroymoutput( InitInputData%MOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMOutput( InitInputData%MOutLst(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%MOutLst)
 ENDIF
 IF (ALLOCATED(InitInputData%JOutLst)) THEN
 DO i1 = LBOUND(InitInputData%JOutLst,1), UBOUND(InitInputData%JOutLst,1)
-  CALL Morison_Destroyjoutput( InitInputData%JOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyJOutput( InitInputData%JOutLst(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%JOutLst)
@@ -6504,7 +6388,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%InpJoints,1), UBOUND(InData%InpJoints,1)
       Int_BufSz   = Int_BufSz + 3  ! InpJoints: size of buffers for each call to pack subtype
-      CALL Morison_Packjointtype( Re_Buf, Db_Buf, Int_Buf, InData%InpJoints(i1), ErrStat2, ErrMsg2, .TRUE. ) ! InpJoints 
+      CALL Morison_PackJointType( Re_Buf, Db_Buf, Int_Buf, InData%InpJoints(i1), ErrStat2, ErrMsg2, .TRUE. ) ! InpJoints 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6527,7 +6411,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! Nodes upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%Nodes,1), UBOUND(InData%Nodes,1)
       Int_BufSz   = Int_BufSz + 3  ! Nodes: size of buffers for each call to pack subtype
-      CALL Morison_Packnodetype( Re_Buf, Db_Buf, Int_Buf, InData%Nodes(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Nodes 
+      CALL Morison_PackNodeType( Re_Buf, Db_Buf, Int_Buf, InData%Nodes(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Nodes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6551,7 +6435,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! AxialCoefs upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%AxialCoefs,1), UBOUND(InData%AxialCoefs,1)
       Int_BufSz   = Int_BufSz + 3  ! AxialCoefs: size of buffers for each call to pack subtype
-      CALL Morison_Packaxialcoeftype( Re_Buf, Db_Buf, Int_Buf, InData%AxialCoefs(i1), ErrStat2, ErrMsg2, .TRUE. ) ! AxialCoefs 
+      CALL Morison_PackAxialCoefType( Re_Buf, Db_Buf, Int_Buf, InData%AxialCoefs(i1), ErrStat2, ErrMsg2, .TRUE. ) ! AxialCoefs 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6575,7 +6459,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MPropSets upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%MPropSets,1), UBOUND(InData%MPropSets,1)
       Int_BufSz   = Int_BufSz + 3  ! MPropSets: size of buffers for each call to pack subtype
-      CALL Morison_Packmemberproptype( Re_Buf, Db_Buf, Int_Buf, InData%MPropSets(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MPropSets 
+      CALL Morison_PackMemberPropType( Re_Buf, Db_Buf, Int_Buf, InData%MPropSets(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MPropSets 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6611,7 +6495,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! CoefDpths upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%CoefDpths,1), UBOUND(InData%CoefDpths,1)
       Int_BufSz   = Int_BufSz + 3  ! CoefDpths: size of buffers for each call to pack subtype
-      CALL Morison_Packcoefdpths( Re_Buf, Db_Buf, Int_Buf, InData%CoefDpths(i1), ErrStat2, ErrMsg2, .TRUE. ) ! CoefDpths 
+      CALL Morison_PackCoefDpths( Re_Buf, Db_Buf, Int_Buf, InData%CoefDpths(i1), ErrStat2, ErrMsg2, .TRUE. ) ! CoefDpths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6635,7 +6519,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! CoefMembers upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%CoefMembers,1), UBOUND(InData%CoefMembers,1)
       Int_BufSz   = Int_BufSz + 3  ! CoefMembers: size of buffers for each call to pack subtype
-      CALL Morison_Packcoefmembers( Re_Buf, Db_Buf, Int_Buf, InData%CoefMembers(i1), ErrStat2, ErrMsg2, .TRUE. ) ! CoefMembers 
+      CALL Morison_PackCoefMembers( Re_Buf, Db_Buf, Int_Buf, InData%CoefMembers(i1), ErrStat2, ErrMsg2, .TRUE. ) ! CoefMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6659,7 +6543,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! InpMembers upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%InpMembers,1), UBOUND(InData%InpMembers,1)
       Int_BufSz   = Int_BufSz + 3  ! InpMembers: size of buffers for each call to pack subtype
-      CALL Morison_Packmemberinputtype( Re_Buf, Db_Buf, Int_Buf, InData%InpMembers(i1), ErrStat2, ErrMsg2, .TRUE. ) ! InpMembers 
+      CALL Morison_PackMemberInputType( Re_Buf, Db_Buf, Int_Buf, InData%InpMembers(i1), ErrStat2, ErrMsg2, .TRUE. ) ! InpMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6683,7 +6567,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! FilledGroups upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%FilledGroups,1), UBOUND(InData%FilledGroups,1)
       Int_BufSz   = Int_BufSz + 3  ! FilledGroups: size of buffers for each call to pack subtype
-      CALL Morison_Packfilledgrouptype( Re_Buf, Db_Buf, Int_Buf, InData%FilledGroups(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FilledGroups 
+      CALL Morison_PackFilledGroupType( Re_Buf, Db_Buf, Int_Buf, InData%FilledGroups(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FilledGroups 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6707,7 +6591,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MGDepths upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%MGDepths,1), UBOUND(InData%MGDepths,1)
       Int_BufSz   = Int_BufSz + 3  ! MGDepths: size of buffers for each call to pack subtype
-      CALL Morison_Packmgdepthstype( Re_Buf, Db_Buf, Int_Buf, InData%MGDepths(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MGDepths 
+      CALL Morison_PackMGDepthsType( Re_Buf, Db_Buf, Int_Buf, InData%MGDepths(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MGDepths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6733,7 +6617,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MOutLst upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%MOutLst,1), UBOUND(InData%MOutLst,1)
       Int_BufSz   = Int_BufSz + 3  ! MOutLst: size of buffers for each call to pack subtype
-      CALL Morison_Packmoutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MOutLst 
+      CALL Morison_PackMOutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6757,7 +6641,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! JOutLst upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%JOutLst,1), UBOUND(InData%JOutLst,1)
       Int_BufSz   = Int_BufSz + 3  ! JOutLst: size of buffers for each call to pack subtype
-      CALL Morison_Packjoutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! JOutLst 
+      CALL Morison_PackJOutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6863,7 +6747,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%InpJoints,1), UBOUND(InData%InpJoints,1)
-      CALL Morison_Packjointtype( Re_Buf, Db_Buf, Int_Buf, InData%InpJoints(i1), ErrStat2, ErrMsg2, OnlySize ) ! InpJoints 
+      CALL Morison_PackJointType( Re_Buf, Db_Buf, Int_Buf, InData%InpJoints(i1), ErrStat2, ErrMsg2, OnlySize ) ! InpJoints 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6904,7 +6788,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Nodes,1), UBOUND(InData%Nodes,1)
-      CALL Morison_Packnodetype( Re_Buf, Db_Buf, Int_Buf, InData%Nodes(i1), ErrStat2, ErrMsg2, OnlySize ) ! Nodes 
+      CALL Morison_PackNodeType( Re_Buf, Db_Buf, Int_Buf, InData%Nodes(i1), ErrStat2, ErrMsg2, OnlySize ) ! Nodes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6947,7 +6831,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%AxialCoefs,1), UBOUND(InData%AxialCoefs,1)
-      CALL Morison_Packaxialcoeftype( Re_Buf, Db_Buf, Int_Buf, InData%AxialCoefs(i1), ErrStat2, ErrMsg2, OnlySize ) ! AxialCoefs 
+      CALL Morison_PackAxialCoefType( Re_Buf, Db_Buf, Int_Buf, InData%AxialCoefs(i1), ErrStat2, ErrMsg2, OnlySize ) ! AxialCoefs 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6990,7 +6874,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%MPropSets,1), UBOUND(InData%MPropSets,1)
-      CALL Morison_Packmemberproptype( Re_Buf, Db_Buf, Int_Buf, InData%MPropSets(i1), ErrStat2, ErrMsg2, OnlySize ) ! MPropSets 
+      CALL Morison_PackMemberPropType( Re_Buf, Db_Buf, Int_Buf, InData%MPropSets(i1), ErrStat2, ErrMsg2, OnlySize ) ! MPropSets 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7057,7 +6941,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%CoefDpths,1), UBOUND(InData%CoefDpths,1)
-      CALL Morison_Packcoefdpths( Re_Buf, Db_Buf, Int_Buf, InData%CoefDpths(i1), ErrStat2, ErrMsg2, OnlySize ) ! CoefDpths 
+      CALL Morison_PackCoefDpths( Re_Buf, Db_Buf, Int_Buf, InData%CoefDpths(i1), ErrStat2, ErrMsg2, OnlySize ) ! CoefDpths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7100,7 +6984,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%CoefMembers,1), UBOUND(InData%CoefMembers,1)
-      CALL Morison_Packcoefmembers( Re_Buf, Db_Buf, Int_Buf, InData%CoefMembers(i1), ErrStat2, ErrMsg2, OnlySize ) ! CoefMembers 
+      CALL Morison_PackCoefMembers( Re_Buf, Db_Buf, Int_Buf, InData%CoefMembers(i1), ErrStat2, ErrMsg2, OnlySize ) ! CoefMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7143,7 +7027,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%InpMembers,1), UBOUND(InData%InpMembers,1)
-      CALL Morison_Packmemberinputtype( Re_Buf, Db_Buf, Int_Buf, InData%InpMembers(i1), ErrStat2, ErrMsg2, OnlySize ) ! InpMembers 
+      CALL Morison_PackMemberInputType( Re_Buf, Db_Buf, Int_Buf, InData%InpMembers(i1), ErrStat2, ErrMsg2, OnlySize ) ! InpMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7186,7 +7070,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%FilledGroups,1), UBOUND(InData%FilledGroups,1)
-      CALL Morison_Packfilledgrouptype( Re_Buf, Db_Buf, Int_Buf, InData%FilledGroups(i1), ErrStat2, ErrMsg2, OnlySize ) ! FilledGroups 
+      CALL Morison_PackFilledGroupType( Re_Buf, Db_Buf, Int_Buf, InData%FilledGroups(i1), ErrStat2, ErrMsg2, OnlySize ) ! FilledGroups 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7229,7 +7113,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%MGDepths,1), UBOUND(InData%MGDepths,1)
-      CALL Morison_Packmgdepthstype( Re_Buf, Db_Buf, Int_Buf, InData%MGDepths(i1), ErrStat2, ErrMsg2, OnlySize ) ! MGDepths 
+      CALL Morison_PackMGDepthsType( Re_Buf, Db_Buf, Int_Buf, InData%MGDepths(i1), ErrStat2, ErrMsg2, OnlySize ) ! MGDepths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7276,7 +7160,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%MOutLst,1), UBOUND(InData%MOutLst,1)
-      CALL Morison_Packmoutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! MOutLst 
+      CALL Morison_PackMOutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7319,7 +7203,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%JOutLst,1), UBOUND(InData%JOutLst,1)
-      CALL Morison_Packjoutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! JOutLst 
+      CALL Morison_PackJOutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7581,7 +7465,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackjointtype( Re_Buf, Db_Buf, Int_Buf, OutData%InpJoints(i1), ErrStat2, ErrMsg2 ) ! InpJoints 
+      CALL Morison_UnpackJointType( Re_Buf, Db_Buf, Int_Buf, OutData%InpJoints(i1), ErrStat2, ErrMsg2 ) ! InpJoints 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7637,7 +7521,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpacknodetype( Re_Buf, Db_Buf, Int_Buf, OutData%Nodes(i1), ErrStat2, ErrMsg2 ) ! Nodes 
+      CALL Morison_UnpackNodeType( Re_Buf, Db_Buf, Int_Buf, OutData%Nodes(i1), ErrStat2, ErrMsg2 ) ! Nodes 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7695,7 +7579,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackaxialcoeftype( Re_Buf, Db_Buf, Int_Buf, OutData%AxialCoefs(i1), ErrStat2, ErrMsg2 ) ! AxialCoefs 
+      CALL Morison_UnpackAxialCoefType( Re_Buf, Db_Buf, Int_Buf, OutData%AxialCoefs(i1), ErrStat2, ErrMsg2 ) ! AxialCoefs 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7753,7 +7637,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmemberproptype( Re_Buf, Db_Buf, Int_Buf, OutData%MPropSets(i1), ErrStat2, ErrMsg2 ) ! MPropSets 
+      CALL Morison_UnpackMemberPropType( Re_Buf, Db_Buf, Int_Buf, OutData%MPropSets(i1), ErrStat2, ErrMsg2 ) ! MPropSets 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7835,7 +7719,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackcoefdpths( Re_Buf, Db_Buf, Int_Buf, OutData%CoefDpths(i1), ErrStat2, ErrMsg2 ) ! CoefDpths 
+      CALL Morison_UnpackCoefDpths( Re_Buf, Db_Buf, Int_Buf, OutData%CoefDpths(i1), ErrStat2, ErrMsg2 ) ! CoefDpths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7893,7 +7777,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackcoefmembers( Re_Buf, Db_Buf, Int_Buf, OutData%CoefMembers(i1), ErrStat2, ErrMsg2 ) ! CoefMembers 
+      CALL Morison_UnpackCoefMembers( Re_Buf, Db_Buf, Int_Buf, OutData%CoefMembers(i1), ErrStat2, ErrMsg2 ) ! CoefMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7951,7 +7835,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmemberinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%InpMembers(i1), ErrStat2, ErrMsg2 ) ! InpMembers 
+      CALL Morison_UnpackMemberInputType( Re_Buf, Db_Buf, Int_Buf, OutData%InpMembers(i1), ErrStat2, ErrMsg2 ) ! InpMembers 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8009,7 +7893,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackfilledgrouptype( Re_Buf, Db_Buf, Int_Buf, OutData%FilledGroups(i1), ErrStat2, ErrMsg2 ) ! FilledGroups 
+      CALL Morison_UnpackFilledGroupType( Re_Buf, Db_Buf, Int_Buf, OutData%FilledGroups(i1), ErrStat2, ErrMsg2 ) ! FilledGroups 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8067,7 +7951,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmgdepthstype( Re_Buf, Db_Buf, Int_Buf, OutData%MGDepths(i1), ErrStat2, ErrMsg2 ) ! MGDepths 
+      CALL Morison_UnpackMGDepthsType( Re_Buf, Db_Buf, Int_Buf, OutData%MGDepths(i1), ErrStat2, ErrMsg2 ) ! MGDepths 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8129,7 +8013,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmoutput( Re_Buf, Db_Buf, Int_Buf, OutData%MOutLst(i1), ErrStat2, ErrMsg2 ) ! MOutLst 
+      CALL Morison_UnpackMOutput( Re_Buf, Db_Buf, Int_Buf, OutData%MOutLst(i1), ErrStat2, ErrMsg2 ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8187,7 +8071,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackjoutput( Re_Buf, Db_Buf, Int_Buf, OutData%JOutLst(i1), ErrStat2, ErrMsg2 ) ! JOutLst 
+      CALL Morison_UnpackJOutput( Re_Buf, Db_Buf, Int_Buf, OutData%JOutLst(i1), ErrStat2, ErrMsg2 ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8401,14 +8285,12 @@ IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
 ENDIF
  END SUBROUTINE Morison_CopyInitOutput
 
- SUBROUTINE Morison_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(Morison_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyInitOutput'
@@ -8416,12 +8298,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
@@ -8624,14 +8500,12 @@ ENDIF
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE Morison_CopyContState
 
- SUBROUTINE Morison_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyContState( ContStateData, ErrStat, ErrMsg )
   TYPE(Morison_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyContState'
@@ -8639,12 +8513,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyContState
 
  SUBROUTINE Morison_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -8761,14 +8629,12 @@ ENDIF
     DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
  END SUBROUTINE Morison_CopyDiscState
 
- SUBROUTINE Morison_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
   TYPE(Morison_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyDiscState'
@@ -8776,12 +8642,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyDiscState
 
  SUBROUTINE Morison_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -8898,14 +8758,12 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE Morison_CopyConstrState
 
- SUBROUTINE Morison_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
   TYPE(Morison_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyConstrState'
@@ -8913,12 +8771,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyConstrState
 
  SUBROUTINE Morison_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9035,14 +8887,12 @@ ENDIF
     DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE Morison_CopyOtherState
 
- SUBROUTINE Morison_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
   TYPE(Morison_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyOtherState'
@@ -9050,12 +8900,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Morison_DestroyOtherState
 
  SUBROUTINE Morison_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -9340,14 +9184,12 @@ ENDIF
     DstMiscData%LastIndWave = SrcMiscData%LastIndWave
  END SUBROUTINE Morison_CopyMisc
 
- SUBROUTINE Morison_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(Morison_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyMisc'
@@ -9355,12 +9197,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MiscData%FV)) THEN
   DEALLOCATE(MiscData%FV)
 ENDIF
@@ -9378,7 +9214,7 @@ IF (ALLOCATED(MiscData%nodeInWater)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%memberLoads)) THEN
 DO i1 = LBOUND(MiscData%memberLoads,1), UBOUND(MiscData%memberLoads,1)
-  CALL Morison_Destroymemberloads( MiscData%memberLoads(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMemberLoads( MiscData%memberLoads(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%memberLoads)
@@ -9469,7 +9305,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%memberLoads,1), UBOUND(InData%memberLoads,1)
       Int_BufSz   = Int_BufSz + 3  ! memberLoads: size of buffers for each call to pack subtype
-      CALL Morison_Packmemberloads( Re_Buf, Db_Buf, Int_Buf, InData%memberLoads(i1), ErrStat2, ErrMsg2, .TRUE. ) ! memberLoads 
+      CALL Morison_PackMemberLoads( Re_Buf, Db_Buf, Int_Buf, InData%memberLoads(i1), ErrStat2, ErrMsg2, .TRUE. ) ! memberLoads 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -9646,7 +9482,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%memberLoads,1), UBOUND(InData%memberLoads,1)
-      CALL Morison_Packmemberloads( Re_Buf, Db_Buf, Int_Buf, InData%memberLoads(i1), ErrStat2, ErrMsg2, OnlySize ) ! memberLoads 
+      CALL Morison_PackMemberLoads( Re_Buf, Db_Buf, Int_Buf, InData%memberLoads(i1), ErrStat2, ErrMsg2, OnlySize ) ! memberLoads 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -9980,7 +9816,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmemberloads( Re_Buf, Db_Buf, Int_Buf, OutData%memberLoads(i1), ErrStat2, ErrMsg2 ) ! memberLoads 
+      CALL Morison_UnpackMemberLoads( Re_Buf, Db_Buf, Int_Buf, OutData%memberLoads(i1), ErrStat2, ErrMsg2 ) ! memberLoads 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10402,14 +10238,12 @@ ENDIF
     DstParamData%Delim = SrcParamData%Delim
  END SUBROUTINE Morison_CopyParam
 
- SUBROUTINE Morison_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(Morison_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyParam'
@@ -10417,15 +10251,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%Members)) THEN
 DO i1 = LBOUND(ParamData%Members,1), UBOUND(ParamData%Members,1)
-  CALL Morison_Destroymembertype( ParamData%Members(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMemberType( ParamData%Members(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%Members)
@@ -10468,21 +10296,21 @@ IF (ALLOCATED(ParamData%nodeInWater)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%MOutLst)) THEN
 DO i1 = LBOUND(ParamData%MOutLst,1), UBOUND(ParamData%MOutLst,1)
-  CALL Morison_Destroymoutput( ParamData%MOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyMOutput( ParamData%MOutLst(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%MOutLst)
 ENDIF
 IF (ALLOCATED(ParamData%JOutLst)) THEN
 DO i1 = LBOUND(ParamData%JOutLst,1), UBOUND(ParamData%JOutLst,1)
-  CALL Morison_Destroyjoutput( ParamData%JOutLst(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL Morison_DestroyJOutput( ParamData%JOutLst(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%JOutLst)
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
@@ -10536,7 +10364,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%Members,1), UBOUND(InData%Members,1)
       Int_BufSz   = Int_BufSz + 3  ! Members: size of buffers for each call to pack subtype
-      CALL Morison_Packmembertype( Re_Buf, Db_Buf, Int_Buf, InData%Members(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Members 
+      CALL Morison_PackMemberType( Re_Buf, Db_Buf, Int_Buf, InData%Members(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Members 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10623,7 +10451,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! MOutLst upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%MOutLst,1), UBOUND(InData%MOutLst,1)
       Int_BufSz   = Int_BufSz + 3  ! MOutLst: size of buffers for each call to pack subtype
-      CALL Morison_Packmoutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MOutLst 
+      CALL Morison_PackMOutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10647,7 +10475,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! JOutLst upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%JOutLst,1), UBOUND(InData%JOutLst,1)
       Int_BufSz   = Int_BufSz + 3  ! JOutLst: size of buffers for each call to pack subtype
-      CALL Morison_Packjoutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! JOutLst 
+      CALL Morison_PackJOutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, .TRUE. ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10670,7 +10498,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! OutParam upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
       Int_BufSz   = Int_BufSz + 3  ! OutParam: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
+      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10745,7 +10573,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Members,1), UBOUND(InData%Members,1)
-      CALL Morison_Packmembertype( Re_Buf, Db_Buf, Int_Buf, InData%Members(i1), ErrStat2, ErrMsg2, OnlySize ) ! Members 
+      CALL Morison_PackMemberType( Re_Buf, Db_Buf, Int_Buf, InData%Members(i1), ErrStat2, ErrMsg2, OnlySize ) ! Members 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11039,7 +10867,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%MOutLst,1), UBOUND(InData%MOutLst,1)
-      CALL Morison_Packmoutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! MOutLst 
+      CALL Morison_PackMOutput( Re_Buf, Db_Buf, Int_Buf, InData%MOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11082,7 +10910,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%JOutLst,1), UBOUND(InData%JOutLst,1)
-      CALL Morison_Packjoutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! JOutLst 
+      CALL Morison_PackJOutput( Re_Buf, Db_Buf, Int_Buf, InData%JOutLst(i1), ErrStat2, ErrMsg2, OnlySize ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11123,7 +10951,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
-      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! OutParam 
+      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11263,7 +11091,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmembertype( Re_Buf, Db_Buf, Int_Buf, OutData%Members(i1), ErrStat2, ErrMsg2 ) ! Members 
+      CALL Morison_UnpackMemberType( Re_Buf, Db_Buf, Int_Buf, OutData%Members(i1), ErrStat2, ErrMsg2 ) ! Members 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11608,7 +11436,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackmoutput( Re_Buf, Db_Buf, Int_Buf, OutData%MOutLst(i1), ErrStat2, ErrMsg2 ) ! MOutLst 
+      CALL Morison_UnpackMOutput( Re_Buf, Db_Buf, Int_Buf, OutData%MOutLst(i1), ErrStat2, ErrMsg2 ) ! MOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11666,7 +11494,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL Morison_Unpackjoutput( Re_Buf, Db_Buf, Int_Buf, OutData%JOutLst(i1), ErrStat2, ErrMsg2 ) ! JOutLst 
+      CALL Morison_UnpackJOutput( Re_Buf, Db_Buf, Int_Buf, OutData%JOutLst(i1), ErrStat2, ErrMsg2 ) ! JOutLst 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11722,7 +11550,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackoutparmtype( Re_Buf, Db_Buf, Int_Buf, OutData%OutParam(i1), ErrStat2, ErrMsg2 ) ! OutParam 
+      CALL NWTC_Library_UnpackOutParmType( Re_Buf, Db_Buf, Int_Buf, OutData%OutParam(i1), ErrStat2, ErrMsg2 ) ! OutParam 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11772,14 +11600,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE Morison_CopyInput
 
- SUBROUTINE Morison_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(Morison_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyInput'
@@ -11787,12 +11613,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
   CALL MeshDestroy( InputData%Mesh, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Morison_DestroyInput
@@ -12007,14 +11827,12 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE Morison_CopyOutput
 
- SUBROUTINE Morison_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Morison_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(Morison_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Morison_DestroyOutput'
@@ -12022,12 +11840,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
   CALL MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
