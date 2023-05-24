@@ -237,6 +237,24 @@ function(py_md_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_md_regression)
 
+# aerodisk
+function(adsk_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodiskRegressionCase.py")
+  set(AERODISK_EXECUTABLE "${CTEST_AERODISK_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodisk")
+  regression(${TEST_SCRIPT} ${AERODISK_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(adsk_regression)
+
+# simple-elastodyn
+function(sed_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSimpleElastodynRegressionCase.py")
+  set(SED_EXECUTABLE "${CTEST_SED_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/simple-elastodyn")
+  regression(${TEST_SCRIPT} ${SED_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(sed_regression)
+
 # # Python-based OpenFAST Library tests
 # function(py_openfast_library_regression TESTNAME LABEL)
 #   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
@@ -267,6 +285,9 @@ of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;se
 of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;servodyn")
 # of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
+of_regression("5MW_Land_DLL_WTurb_ADsk"         "openfast;elastodyn;aerodisk;servodyn")
+of_regression("5MW_Land_DLL_WTurb_SED"          "openfast;simple-elastodyn;aerodyn15;servodyn")
+of_regression("5MW_Land_DLL_WTurb_ADsk_SED"     "openfast;simple-elastodyn;aerodisk;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 of_regression("5MW_OC3Trpd_DLL_WSt_WavesReg"    "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 # of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
@@ -320,6 +341,7 @@ if(BUILD_FASTFARM)
   ff_regression("LESinflow"  "fastfarm")
 #   ff_regression("Uninflow_curl"  "fastfarm")
   ff_regression("TSinflow_curl"  "fastfarm")
+  ff_regression("TSinflowADskSED"  "fastfarm;aerodisk;simple-elastodyn")
 endif()
 
 # AeroDyn regression tests
@@ -397,3 +419,10 @@ py_md_regression("py_md_5MW_OC4Semi"                             "moordyn;python
 #md_regression("md_Node_Check_N20"                             "moordyn")
 #md_regression("md_Node_Check_N40"                             "moordyn")
 #md_regression("md_Single_Line_Quasi_Static_Test"              "moordyn")
+
+# AeroDisk regression tests
+adsk_regression("adsk_timeseries_shutdown"                    "aerodisk")
+
+# SimplifiedElastoDyn regression tests
+sed_regression("sed_test_HSSbrk"                              "simple-elastodyn")
+sed_regression("sed_test_freewheel"                           "simple-elastodyn")

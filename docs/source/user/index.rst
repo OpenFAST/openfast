@@ -48,6 +48,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    AeroDyn <aerodyn/index.rst>
    OLAF <aerodyn-olaf/index.rst>
    Aeroacoustics <aerodyn-aeroacoustics/index.rst>
+   AeroDisk <aerodisk/index.rst>
    BeamDyn <beamdyn/index.rst>
    SubDyn <subdyn/index.rst>
    ExtPtfm <extptfm//index.rst>
@@ -56,6 +57,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    InflowWind <inflowwind/index.rst>
    MoorDyn <moordyn/index.rst>
    ServoDyn <servodyn/index.rst>
+   Simplified ElastoDyn <simplified_elastodyn/index.rst>
    Structural Control <servodyn-stc/StC_index.rst>
    TurbSim <turbsim/index.rst>
    C++ API <cppapi/index.rst>

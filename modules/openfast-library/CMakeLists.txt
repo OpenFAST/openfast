@@ -42,6 +42,7 @@ target_link_libraries(openfast_prelib
   nwtclibs
   versioninfolib
   aerodyn14lib
+  aerodisklib
   aerodynlib
   beamdynlib
   elastodynlib
@@ -56,6 +57,7 @@ target_link_libraries(openfast_prelib
   moordynlib
   orcaflexlib
   sctypeslib
+  sedlib
   servodynlib
   subdynlib
 )
