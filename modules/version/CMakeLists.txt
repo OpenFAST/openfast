@@ -27,13 +27,10 @@ else()
 endif()
 add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
-add_library(versioninfolib_obj OBJECT src/VersionInfo.f90)
-target_link_libraries(versioninfolib_obj nwtclibs_obj)
-
-add_library(versioninfolib $<TARGET_OBJECTS:versioninfolib_obj>)
+add_library(versioninfolib src/VersionInfo.f90)
 target_link_libraries(versioninfolib nwtclibs)
 
-install(TARGETS versioninfolib versioninfolib_obj
+install(TARGETS versioninfolib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

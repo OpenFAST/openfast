@@ -771,6 +771,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SED, BD, S
          CALL Cleanup()
          RETURN
       END IF
+
+      !Set node clustering type
+      Init%InData_OpFM%NodeClusterType = ExternInitData%NodeClusterType
          ! set up the data structures for integration with OpenFOAM
       CALL Init_OpFM( Init%InData_OpFM, p_FAST, AirDens, AD%Input(1), Init%OutData_AD, AD%y, OpFM, Init%OutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

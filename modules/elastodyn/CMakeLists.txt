@@ -18,21 +18,16 @@ if (GENERATE_TYPES)
   generate_f90_types(src/ElastoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ElastoDyn_Types.f90)
 endif()
 
-set(ED_SOURCES
+add_library(elastodynlib 
   src/ElastoDyn.f90
   src/ElastoDyn_IO.f90
   src/ElastoDyn_AllBldNdOuts_IO.f90
   src/ED_UserSubs.f90
   src/ElastoDyn_Types.f90
-  )
+)
+target_link_libraries(elastodynlib nwtclibs)
 
-add_library(elastodynlib_obj OBJECT ${ED_SOURCES})
-target_link_libraries(elastodynlib_obj servodynlib_obj nwtclibs_obj)
-
-add_library(elastodynlib $<TARGET_OBJECTS:elastodynlib_obj>)
-target_link_libraries(elastodynlib servodynlib nwtclibs)
-
-install(TARGETS elastodynlib elastodynlib_obj
+install(TARGETS elastodynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

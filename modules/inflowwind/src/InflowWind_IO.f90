@@ -493,6 +493,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    character(ErrMsgLen)          :: TmpErrMsg         ! temporary error message
 
    type :: TurbSimHeaderType
+      sequence
       integer(B2Ki)  :: FileID
       integer(B4Ki)  :: NZGrids, NYGrids, NTGrids, NSteps
       real(SiKi)     :: dz, dy, dt
@@ -1800,6 +1801,7 @@ subroutine Bladed_ReadHeader0(WindFileUnit, G3D, NativeBladedFmt, ErrStat, ErrMs
    character(*), intent(out)              :: ErrMsg            !< error message
 
    type :: HeaderType
+      sequence
       integer(B2Ki)  :: NComp
       integer(B2Ki)  :: DeltaZ, DeltaY, DeltaX
       integer(B2Ki)  :: NStepsHalf, MWS10
@@ -1874,19 +1876,23 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    character(*), intent(out)              :: ErrMsg            !< error message
 
    type :: Turb4Type
+      sequence
       integer(B4Ki)  :: NComp
       real(SiKi)     :: Latitude, RoughLen, RefHeight, TurbInt(3)
    end type
 
    type :: Turb78Type
+      sequence
       integer(B4Ki)  :: HeaderSize, NComp
    end type
 
    type :: Turb7Type
+      sequence
       real(SiKi)     :: CoherenceDecay, CoherenceScale
    end type
 
    type :: Turb8Type
+      sequence
       real(SiKi)     :: dummy1(6)
       integer(B4Ki)  :: dummy2(3)
       real(SiKi)     :: dummy3(2)
@@ -1895,6 +1901,7 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    end type
 
    type :: Sub1Type
+      sequence
       real(SiKi)     :: DeltaZ, DeltaY, DeltaX
       integer(B4Ki)  :: NStepsHalf
       real(SiKi)     :: MeanWS, zLu, yLu, xLu
@@ -1902,6 +1909,7 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    end type
 
    type :: Sub2Type
+      sequence
       real(SiKi)     :: zLv, yLv, xLv, zLw, yLw, xLw
    end type
 
@@ -2205,6 +2213,7 @@ subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg         !< a message for errors that occur
 
    type :: HeaderType
+      sequence
       real(SiKi)     :: DZ, DX, Zmax
       integer(B4Ki)  :: NumOutSteps, NumZ
       real(SiKi)     :: UHub, TI(3)
