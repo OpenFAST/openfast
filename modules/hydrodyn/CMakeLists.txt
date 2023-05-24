@@ -62,7 +62,7 @@ target_link_libraries(hydrodyn_driver hydrodyn_driver_subs versioninfolib)
 add_library(hydrodyn_c_binding SHARED 
   src/HydroDyn_C_Binding.f90
 )
-target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
+target_link_libraries(hydrodyn_c_binding hydrodynlib seastlib versioninfolib)
 if(APPLE OR UNIX)
    target_compile_definitions(hydrodyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
