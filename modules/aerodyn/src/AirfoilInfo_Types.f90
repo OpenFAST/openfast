@@ -68,7 +68,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k2      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: k3      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: k1_hat      !< Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1] [-]
-    REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
+    REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
     REAL(ReKi)  :: UACutout      !< Angle of attack above which unsteady aerodynamics are disabled [input in degrees; stored as radians]
     REAL(ReKi)  :: UACutout_delta      !< Number of angles-of-attack below UACutout where unsteady aerodynamics begin to be disabled [input in degrees; stored as radians]
     REAL(ReKi)  :: UACutout_blend      !< Angle of attack above which unsteady aerodynamics begins to be disabled [stored as radians]
@@ -207,9 +207,6 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyUA_BL_Type'
@@ -265,14 +262,12 @@ CONTAINS
     DstUA_BL_TypeData%c_alphaUpperWrap = SrcUA_BL_TypeData%c_alphaUpperWrap
  END SUBROUTINE AFI_CopyUA_BL_Type
 
- SUBROUTINE AFI_DestroyUA_BL_Type( UA_BL_TypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyUA_BL_Type( UA_BL_TypeData, ErrStat, ErrMsg )
   TYPE(AFI_UA_BL_Type), INTENT(INOUT) :: UA_BL_TypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyUA_BL_Type'
@@ -280,12 +275,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AFI_DestroyUA_BL_Type
 
  SUBROUTINE AFI_PackUA_BL_Type( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -506,9 +495,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_UnPackUA_BL_Type'
@@ -670,14 +656,12 @@ CONTAINS
     DstUA_BL_Default_TypeData%alphaLower = SrcUA_BL_Default_TypeData%alphaLower
  END SUBROUTINE AFI_CopyUA_BL_Default_Type
 
- SUBROUTINE AFI_DestroyUA_BL_Default_Type( UA_BL_Default_TypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyUA_BL_Default_Type( UA_BL_Default_TypeData, ErrStat, ErrMsg )
   TYPE(AFI_UA_BL_Default_Type), INTENT(INOUT) :: UA_BL_Default_TypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyUA_BL_Default_Type'
@@ -685,12 +669,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AFI_DestroyUA_BL_Default_Type
 
  SUBROUTINE AFI_PackUA_BL_Default_Type( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1034,14 +1012,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AFI_CopyTable_Type
 
- SUBROUTINE AFI_DestroyTable_Type( Table_TypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyTable_Type( Table_TypeData, ErrStat, ErrMsg )
   TYPE(AFI_Table_Type), INTENT(INOUT) :: Table_TypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyTable_Type'
@@ -1049,12 +1025,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(Table_TypeData%Alpha)) THEN
   DEALLOCATE(Table_TypeData%Alpha)
 ENDIF
@@ -1064,7 +1034,7 @@ ENDIF
 IF (ALLOCATED(Table_TypeData%SplineCoefs)) THEN
   DEALLOCATE(Table_TypeData%SplineCoefs)
 ENDIF
-  CALL AFI_Destroyua_bl_type( Table_TypeData%UA_BL, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AFI_DestroyUA_BL_Type( Table_TypeData%UA_BL, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AFI_DestroyTable_Type
 
@@ -1125,7 +1095,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! InclUAdata
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! UA_BL: size of buffers for each call to pack subtype
-      CALL AFI_Packua_bl_type( Re_Buf, Db_Buf, Int_Buf, InData%UA_BL, ErrStat2, ErrMsg2, .TRUE. ) ! UA_BL 
+      CALL AFI_PackUA_BL_Type( Re_Buf, Db_Buf, Int_Buf, InData%UA_BL, ErrStat2, ErrMsg2, .TRUE. ) ! UA_BL 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1238,7 +1208,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%InclUAdata, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL AFI_Packua_bl_type( Re_Buf, Db_Buf, Int_Buf, InData%UA_BL, ErrStat2, ErrMsg2, OnlySize ) ! UA_BL 
+      CALL AFI_PackUA_BL_Type( Re_Buf, Db_Buf, Int_Buf, InData%UA_BL, ErrStat2, ErrMsg2, OnlySize ) ! UA_BL 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1409,7 +1379,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AFI_Unpackua_bl_type( Re_Buf, Db_Buf, Int_Buf, OutData%UA_BL, ErrStat2, ErrMsg2 ) ! UA_BL 
+      CALL AFI_UnpackUA_BL_Type( Re_Buf, Db_Buf, Int_Buf, OutData%UA_BL, ErrStat2, ErrMsg2 ) ! UA_BL 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1442,14 +1412,12 @@ ENDIF
     DstInitInputData%UA_f_cn = SrcInitInputData%UA_f_cn
  END SUBROUTINE AFI_CopyInitInput
 
- SUBROUTINE AFI_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(AFI_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInitInput'
@@ -1457,12 +1425,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AFI_DestroyInitInput
 
  SUBROUTINE AFI_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1620,14 +1582,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AFI_CopyInitOutput
 
- SUBROUTINE AFI_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(AFI_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInitOutput'
@@ -1635,13 +1595,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AFI_DestroyInitOutput
 
@@ -1682,7 +1636,7 @@ ENDIF
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1725,7 +1679,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1814,7 +1768,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackprogdesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
+      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1905,14 +1859,12 @@ ENDIF
     DstParamData%FileName = SrcParamData%FileName
  END SUBROUTINE AFI_CopyParam
 
- SUBROUTINE AFI_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(AFI_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyParam'
@@ -1920,12 +1872,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%secondVals)) THEN
   DEALLOCATE(ParamData%secondVals)
 ENDIF
@@ -1937,7 +1883,7 @@ IF (ALLOCATED(ParamData%Y_Coord)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%Table)) THEN
 DO i1 = LBOUND(ParamData%Table,1), UBOUND(ParamData%Table,1)
-  CALL AFI_Destroytable_type( ParamData%Table(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AFI_DestroyTable_Type( ParamData%Table(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%Table)
@@ -2011,7 +1957,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%Table,1), UBOUND(InData%Table,1)
       Int_BufSz   = Int_BufSz + 3  ! Table: size of buffers for each call to pack subtype
-      CALL AFI_Packtable_type( Re_Buf, Db_Buf, Int_Buf, InData%Table(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Table 
+      CALL AFI_PackTable_Type( Re_Buf, Db_Buf, Int_Buf, InData%Table(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Table 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2136,7 +2082,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Table,1), UBOUND(InData%Table,1)
-      CALL AFI_Packtable_type( Re_Buf, Db_Buf, Int_Buf, InData%Table(i1), ErrStat2, ErrMsg2, OnlySize ) ! Table 
+      CALL AFI_PackTable_Type( Re_Buf, Db_Buf, Int_Buf, InData%Table(i1), ErrStat2, ErrMsg2, OnlySize ) ! Table 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2326,7 +2272,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AFI_Unpacktable_type( Re_Buf, Db_Buf, Int_Buf, OutData%Table(i1), ErrStat2, ErrMsg2 ) ! Table 
+      CALL AFI_UnpackTable_Type( Re_Buf, Db_Buf, Int_Buf, OutData%Table(i1), ErrStat2, ErrMsg2 ) ! Table 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2364,14 +2310,12 @@ ENDIF
     DstInputData%Re = SrcInputData%Re
  END SUBROUTINE AFI_CopyInput
 
- SUBROUTINE AFI_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(AFI_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInput'
@@ -2379,12 +2323,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AFI_DestroyInput
 
  SUBROUTINE AFI_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2519,14 +2457,12 @@ ENDIF
     DstOutputData%FullyAttached = SrcOutputData%FullyAttached
  END SUBROUTINE AFI_CopyOutput
 
- SUBROUTINE AFI_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AFI_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(AFI_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyOutput'
@@ -2534,12 +2470,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE AFI_DestroyOutput
 
  SUBROUTINE AFI_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

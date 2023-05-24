@@ -226,8 +226,8 @@ program SeaStateDriver
    
       ! Destroy initialization data
 
-   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
-   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg, DEALLOCATEpointers = .false. )
+   call SeaSt_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
+   call SeaSt_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
 
    if (errStat >= AbortErrLev) then
@@ -291,7 +291,7 @@ subroutine SeaSt_DvrCleanup()
       errStat2 = ErrID_None
       errMsg2  = ""
      
-      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2, DEALLOCATEpointers = .false. )
+      call SeaSt_DestroyInitInput( InitInData, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'SeaSt_DvrCleanup' )
 
       call SeaSt_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )

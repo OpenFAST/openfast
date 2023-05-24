@@ -1533,13 +1533,13 @@ CONTAINS
    
       ! destroy local variables that are types in the framework:
       
-      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2 )
+      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2 )
 
-      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2 )
+      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2 )
+      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,   ErrStat2, ErrMsg2 )
+      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,   ErrStat2, ErrMsg2 )
       
       
       ! destroy local variables that are allocatable arrays:
@@ -1599,7 +1599,7 @@ SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data:
-      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg )
 
 
          ! Destroy the state data:

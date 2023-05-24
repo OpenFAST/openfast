@@ -914,8 +914,8 @@ CONTAINS
       ! NOTE: All of the pointer data originated in SeaState, and SeaState is responsible for deallocating the data
       !        all other modules are responsible for nullifying their versions of the pointers when they are done with the data
 
-      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
+      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
 
    END SUBROUTINE CleanUp
 !................................
@@ -963,27 +963,27 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
           
 
          ! Destroy the input data: (ignore errors)
-      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2 )
 
 
          ! Destroy the parameter data: (ignore errors)
       ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
       ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
-      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2 )
 
 
          ! Destroy the state data: (ignore errors)
          
-      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2 )
 
          ! Destroy misc variables: (ignore errors)
-      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2 )
 
          ! Destroy the output data: (ignore errors)
-      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2 )
       
 
 END SUBROUTINE HydroDyn_End

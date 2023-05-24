@@ -1576,7 +1576,7 @@ CONTAINS
    !...............................................................................................................................
       ! We assume that all initializion data points to parameter data, so we just nullify the pointers instead of deallocate
       ! data that they point to:
-      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ) 
+      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    END SUBROUTINE Cleanup
