@@ -35,6 +35,7 @@ USE AirfoilInfo_Types
 USE BEMT_Types
 USE FVW_Types
 USE AeroAcoustics_Types
+USE InflowWind_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown = -1      !  [-]
@@ -362,6 +363,9 @@ IMPLICIT NONE
     TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
     TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
     TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
   END TYPE AD_MiscVarType
 ! =======================
 ! =========  RotParameterType  =======
@@ -442,6 +446,7 @@ IMPLICIT NONE
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag      !< logical flag indicating whether to use UnsteadyAero [-]
+    TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -12420,6 +12425,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AD_CopyMisc'
@@ -12464,6 +12470,48 @@ ENDIF
       CALL FVW_CopyMisc( SrcMiscData%FVW, DstMiscData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcMiscData%WindPos)) THEN
+  i1_l = LBOUND(SrcMiscData%WindPos,1)
+  i1_u = UBOUND(SrcMiscData%WindPos,1)
+  i2_l = LBOUND(SrcMiscData%WindPos,2)
+  i2_u = UBOUND(SrcMiscData%WindPos,2)
+  IF (.NOT. ALLOCATED(DstMiscData%WindPos)) THEN 
+    ALLOCATE(DstMiscData%WindPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindPos.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%WindPos = SrcMiscData%WindPos
+ENDIF
+IF (ALLOCATED(SrcMiscData%WindVel)) THEN
+  i1_l = LBOUND(SrcMiscData%WindVel,1)
+  i1_u = UBOUND(SrcMiscData%WindVel,1)
+  i2_l = LBOUND(SrcMiscData%WindVel,2)
+  i2_u = UBOUND(SrcMiscData%WindVel,2)
+  IF (.NOT. ALLOCATED(DstMiscData%WindVel)) THEN 
+    ALLOCATE(DstMiscData%WindVel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindVel.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%WindVel = SrcMiscData%WindVel
+ENDIF
+IF (ALLOCATED(SrcMiscData%WindAcc)) THEN
+  i1_l = LBOUND(SrcMiscData%WindAcc,1)
+  i1_u = UBOUND(SrcMiscData%WindAcc,1)
+  i2_l = LBOUND(SrcMiscData%WindAcc,2)
+  i2_u = UBOUND(SrcMiscData%WindAcc,2)
+  IF (.NOT. ALLOCATED(DstMiscData%WindAcc)) THEN 
+    ALLOCATE(DstMiscData%WindAcc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WindAcc.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%WindAcc = SrcMiscData%WindAcc
+ENDIF
  END SUBROUTINE AD_CopyMisc
 
  SUBROUTINE AD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -12497,6 +12545,15 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   CALL FVW_DestroyMisc( MiscData%FVW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ALLOCATED(MiscData%WindPos)) THEN
+  DEALLOCATE(MiscData%WindPos)
+ENDIF
+IF (ALLOCATED(MiscData%WindVel)) THEN
+  DEALLOCATE(MiscData%WindVel)
+ENDIF
+IF (ALLOCATED(MiscData%WindAcc)) THEN
+  DEALLOCATE(MiscData%WindAcc)
+ENDIF
  END SUBROUTINE AD_DestroyMisc
 
  SUBROUTINE AD_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -12615,6 +12672,21 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WindPos allocated yes/no
+  IF ( ALLOCATED(InData%WindPos) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WindPos upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WindPos)  ! WindPos
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WindVel allocated yes/no
+  IF ( ALLOCATED(InData%WindVel) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WindVel upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WindVel)  ! WindVel
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WindAcc allocated yes/no
+  IF ( ALLOCATED(InData%WindAcc) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WindAcc upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WindAcc)  ! WindAcc
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -12780,6 +12852,66 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%WindPos) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindPos,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindPos,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindPos,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindPos,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%WindPos,2), UBOUND(InData%WindPos,2)
+        DO i1 = LBOUND(InData%WindPos,1), UBOUND(InData%WindPos,1)
+          ReKiBuf(Re_Xferred) = InData%WindPos(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WindVel) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindVel,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindVel,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindVel,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindVel,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%WindVel,2), UBOUND(InData%WindVel,2)
+        DO i1 = LBOUND(InData%WindVel,1), UBOUND(InData%WindVel,1)
+          ReKiBuf(Re_Xferred) = InData%WindVel(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WindAcc) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindAcc,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindAcc,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WindAcc,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WindAcc,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%WindAcc,2), UBOUND(InData%WindAcc,2)
+        DO i1 = LBOUND(InData%WindAcc,1), UBOUND(InData%WindAcc,1)
+          ReKiBuf(Re_Xferred) = InData%WindAcc(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AD_PackMisc
 
  SUBROUTINE AD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -12796,6 +12928,7 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_UnPackMisc'
@@ -13001,6 +13134,75 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindPos not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WindPos)) DEALLOCATE(OutData%WindPos)
+    ALLOCATE(OutData%WindPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WindPos.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%WindPos,2), UBOUND(OutData%WindPos,2)
+        DO i1 = LBOUND(OutData%WindPos,1), UBOUND(OutData%WindPos,1)
+          OutData%WindPos(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindVel not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WindVel)) DEALLOCATE(OutData%WindVel)
+    ALLOCATE(OutData%WindVel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WindVel.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%WindVel,2), UBOUND(OutData%WindVel,2)
+        DO i1 = LBOUND(OutData%WindVel,1), UBOUND(OutData%WindVel,1)
+          OutData%WindVel(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindAcc not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WindAcc)) DEALLOCATE(OutData%WindAcc)
+    ALLOCATE(OutData%WindAcc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WindAcc.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%WindAcc,2), UBOUND(OutData%WindAcc,2)
+        DO i1 = LBOUND(OutData%WindAcc,1), UBOUND(OutData%WindAcc,1)
+          OutData%WindAcc(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
  END SUBROUTINE AD_UnPackMisc
 
  SUBROUTINE AD_CopyRotParameterType( SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -15102,6 +15304,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
     DstParamData%UA_Flag = SrcParamData%UA_Flag
+    DstParamData%FlowField => SrcParamData%FlowField
  END SUBROUTINE AD_CopyParam
 
  SUBROUTINE AD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -15133,6 +15336,7 @@ ENDDO
 ENDIF
   CALL FVW_DestroyParam( ParamData%FVW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+NULLIFY(ParamData%FlowField)
  END SUBROUTINE AD_DestroyParam
 
  SUBROUTINE AD_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -15586,6 +15790,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%UA_Flag = TRANSFER(IntKiBuf(Int_Xferred), OutData%UA_Flag)
     Int_Xferred = Int_Xferred + 1
+  NULLIFY(OutData%FlowField)
  END SUBROUTINE AD_UnPackParam
 
  SUBROUTINE AD_CopyRotInputType( SrcRotInputTypeData, DstRotInputTypeData, CtrlCode, ErrStat, ErrMsg )

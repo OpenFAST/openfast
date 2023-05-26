@@ -32,7 +32,6 @@
 MODULE AeroDyn_Inflow_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE AeroDyn_Types
-USE InflowWind_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ADI_Version = 1      !  [-]

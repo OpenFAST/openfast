@@ -16,6 +16,7 @@ usefrom	BEMT_Registry.txt
 usefrom  FVW_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
 usefrom AeroAcoustics_Registry.txt
+usefrom InflowWind.txt
 
 param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
 param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model - none"                                      -
@@ -320,6 +321,9 @@ typedef	^	MiscVarType	RotMiscVarType	rotors	{:} -	-	-	"MiscVars for each rotor"	
 typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
 typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
 typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
+typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
+typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
+typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -405,6 +409,7 @@ typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=non
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
+typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
 
 
 # ..... Inputs ....................................................................................................................
