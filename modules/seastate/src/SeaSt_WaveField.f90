@@ -35,7 +35,7 @@ FUNCTION WaveField_GetWaveElev1( WaveField, Time, pos, ErrStat, ErrMsg )
    ErrStat   = ErrID_None
    ErrMsg    = ""
    
-   IF (associated(WaveField%WaveElev1)) THEN
+   IF (ALLOCATED(WaveField%WaveElev1)) THEN
       Zeta = SeaSt_Interp_3D( Time, pos(1:2), WaveField%WaveElev1, WaveField%seast_interp_p, FirstWarn_Clamp, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSE
@@ -63,7 +63,7 @@ FUNCTION WaveField_GetWaveElev2( WaveField, Time, pos, ErrStat, ErrMsg )
    ErrStat   = ErrID_None
    ErrMsg    = ""
    
-   IF (associated(WaveField%WaveElev2)) THEN
+   IF (ALLOCATED(WaveField%WaveElev2)) THEN
       Zeta = SeaSt_Interp_3D( Time, pos(1:2), WaveField%WaveElev2, WaveField%seast_interp_p, FirstWarn_Clamp, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSE
@@ -186,7 +186,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1,
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( ASSOCIATED(WaveField%WaveAccMCF) ) THEN
+         IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
             FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
@@ -217,7 +217,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1,
                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               IF ( ASSOCIATED(WaveField%WaveAccMCF) ) THEN
+               IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
                   FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
@@ -233,7 +233,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1,
                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               IF ( ASSOCIATED(WaveField%WaveAccMCF) ) THEN
+               IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
                   FAMCF(:) = SeaSt_Interp_4D_vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                END IF
@@ -246,7 +246,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1,
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   FDynP = FDynP + SeaSt_Interp_3D    ( Time, posXY, WaveField%PWaveDynP0, WaveField%seast_interp_p, FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3)
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  IF ( ASSOCIATED(WaveField%WaveAccMCF) ) THEN
+                  IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
                      FAMCF(:) = FAMCF(:) + SeaSt_Interp_3D_vec( Time, posXY, WaveField%PWaveAccMCF0, WaveField%seast_interp_p, FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3)
                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   END IF
@@ -269,7 +269,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, posIn, nodeInWater, WaveElev1,
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   FDynP = SeaSt_Interp_4D    ( WaveField%WaveDynP, seast_interp_m, ErrStat2, ErrMsg2 )
                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  IF ( ASSOCIATED(WaveField%WaveAccMCF) ) THEN
+                  IF ( ALLOCATED(WaveField%WaveAccMCF) ) THEN
                      FAMCF(:) = SeaSt_Interp_4D_Vec( WaveField%WaveAccMCF, seast_interp_m, ErrStat2, ErrMsg2 )
                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   END IF
@@ -295,17 +295,17 @@ SUBROUTINE WaveField_End( WaveField )
 
    ! Dissociate all pointers within WaveField and let SeaState deallocate the data
    ! Temporary solution before the code is modified to exclusively use WaveField
-   NULLIFY( WaveField%WaveTime     )
-   NULLIFY( WaveField%WaveDynP     )
-   NULLIFY( WaveField%WaveAcc      )
-   NULLIFY( WaveField%WaveAccMCF   )
-   NULLIFY( WaveField%WaveVel      )
-   NULLIFY( WaveField%PWaveDynP0   )
-   NULLIFY( WaveField%PWaveAcc0    )
-   NULLIFY( WaveField%PWaveAccMCF0 )
-   NULLIFY( WaveField%PWaveVel0    )
-   NULLIFY( WaveField%WaveElev1    )
-   NULLIFY( WaveField%WaveElev2    )
+   ! NULLIFY( WaveField%WaveTime     )
+   ! NULLIFY( WaveField%WaveDynP     )
+   ! NULLIFY( WaveField%WaveAcc      )
+   ! NULLIFY( WaveField%WaveAccMCF   )
+   ! NULLIFY( WaveField%WaveVel      )
+   ! NULLIFY( WaveField%PWaveDynP0   )
+   ! NULLIFY( WaveField%PWaveAcc0    )
+   ! NULLIFY( WaveField%PWaveAccMCF0 )
+   ! NULLIFY( WaveField%PWaveVel0    )
+   ! NULLIFY( WaveField%WaveElev1    )
+   ! NULLIFY( WaveField%WaveElev2    )
 
 END SUBROUTINE WaveField_End
 

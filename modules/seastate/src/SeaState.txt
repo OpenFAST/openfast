@@ -111,7 +111,7 @@ typedef     ^                 ^                 LOGICAL              InvalidWith
 typedef   ^                  ^      SeaSt_Interp_ParameterType       SeaSt_Interp_p     -       -        -        "parameter information from the SeaState Interpolation module"   -
 typedef   ^                  ^                  SiKi                 MCFD               -       -        -        "Diameter of MacCamy-Fuchs member" (meters)
 typedef   ^                  ^                  SiKi                 WaveElevSeries     {:}{:}  -        -        "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
-typedef   ^                  ^             SeaSt_WaveFieldType       WaveField          -       -        -        "Wave field"
+typedef   ^                  ^             SeaSt_WaveFieldType      *WaveField          -       -        -        "Pointer to wave field"
 #                            
 #                            
 # ..... States ....................................................................................................................
@@ -189,7 +189,7 @@ typedef   ^                  ^                      CHARACTER(1)             Del
 typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
 typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
 typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
-typedef   ^                  ^                      SeaSt_WaveFieldType      WaveField         -       -      -  "Wave field"
+typedef   ^                  ^                      SeaSt_WaveFieldType     &WaveField         -       -      -  "Wave field"
 #
 #
 # ..... Inputs ....................................................................................................................

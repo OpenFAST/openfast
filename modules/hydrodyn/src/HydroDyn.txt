@@ -122,7 +122,7 @@ typedef     ^                 ^                 LOGICAL              WaveMultiDi
 typedef     ^                 ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 typedef     ^                 ^                 SiKi                 MCFD              -        -        -        "Diameter of MacCamy-Fuchs members" (meters)
-typedef     ^                 ^         SeaSt_WaveFieldType          WaveField         -        -        -        "SeaState wave field" -
+typedef     ^                 ^         SeaSt_WaveFieldType         *WaveField         -        -        -        "Pointer to SeaState wave field" -
 #
 #
 # Define outputs from the initialization routine here:

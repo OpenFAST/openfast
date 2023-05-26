@@ -608,7 +608,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
          InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
-         CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitInp%WaveField, InputFileData%Morison%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         ! CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitInp%WaveField, InputFileData%Morison%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         InputFileData%Morison%WaveField => InitInp%WaveField
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or
                ! dynamic pressure using the Waves2 module, then we need to add these to the values that we

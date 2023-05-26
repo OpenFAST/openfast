@@ -368,7 +368,8 @@ subroutine SetHD_InitInputs()
    
    CALL SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
 
-   CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitOutData_SeaSt%WaveField, InitInData_HD%WaveField, MESH_NEWCOPY, ErrStat, ErrMsg )
+   ! CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitOutData_SeaSt%WaveField, InitInData_HD%WaveField, MESH_NEWCOPY, ErrStat, ErrMsg )
+   InitInData_HD%WaveField => InitOutData_SeaSt%WaveField
 
 end subroutine SetHD_InitInputs
 !----------------------------------------------------------------------------------------------------------------------------------

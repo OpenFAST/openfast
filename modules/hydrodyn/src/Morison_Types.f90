@@ -350,7 +350,7 @@ IMPLICIT NONE
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     INTEGER(IntKi)  :: WaveStMod      !<  [-]
     REAL(SiKi)  :: MCFD      !< Diameter of the MacCamy-Fuchs member. [-]
-    TYPE(SeaSt_WaveFieldType)  :: WaveField      !< SeaState wave field [-]
+    TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE Morison_InitInputType
 ! =======================
 ! =========  Morison_InitOutputType  =======
@@ -6493,9 +6493,7 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
     DstInitInputData%MCFD = SrcInitInputData%MCFD
-      CALL SeaSt_WaveField_Copyseast_wavefieldtype( SrcInitInputData%WaveField, DstInitInputData%WaveField, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
+    DstInitInputData%WaveField => SrcInitInputData%WaveField
  END SUBROUTINE Morison_CopyInitInput
 
  SUBROUTINE Morison_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -6604,8 +6602,7 @@ NULLIFY(InitInputData%PWaveDynP0)
 NULLIFY(InitInputData%PWaveVel0)
   CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SeaSt_WaveField_DestroySeaSt_WaveFieldType( InitInputData%WaveField, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+NULLIFY(InitInputData%WaveField)
  END SUBROUTINE Morison_DestroyInitInput
 
  SUBROUTINE Morison_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6958,23 +6955,6 @@ NULLIFY(InitInputData%PWaveVel0)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! WaveStMod
       Re_BufSz   = Re_BufSz   + 1  ! MCFD
-      Int_BufSz   = Int_BufSz + 3  ! WaveField: size of buffers for each call to pack subtype
-      CALL SeaSt_WaveField_PackSeaSt_WaveFieldType( Re_Buf, Db_Buf, Int_Buf, InData%WaveField, ErrStat2, ErrMsg2, .TRUE. ) ! WaveField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! WaveField
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! WaveField
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! WaveField
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -7576,34 +7556,6 @@ NULLIFY(InitInputData%PWaveVel0)
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%MCFD
     Re_Xferred = Re_Xferred + 1
-      CALL SeaSt_WaveField_PackSeaSt_WaveFieldType( Re_Buf, Db_Buf, Int_Buf, InData%WaveField, ErrStat2, ErrMsg2, OnlySize ) ! WaveField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
  END SUBROUTINE Morison_PackInitInput
 
  SUBROUTINE Morison_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -8402,46 +8354,7 @@ NULLIFY(InitInputData%PWaveVel0)
     Int_Xferred = Int_Xferred + 1
     OutData%MCFD = REAL(ReKiBuf(Re_Xferred), SiKi)
     Re_Xferred = Re_Xferred + 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL SeaSt_WaveField_UnpackSeaSt_WaveFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%WaveField, ErrStat2, ErrMsg2 ) ! WaveField 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  NULLIFY(OutData%WaveField)
  END SUBROUTINE Morison_UnPackInitInput
 
  SUBROUTINE Morison_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
