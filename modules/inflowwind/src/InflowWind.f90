@@ -172,12 +172,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    EchoFileName  = TRIM(p%RootFileName)//".ech"
    SumFileName   = TRIM(p%RootFileName)//".sum"
 
-
-
-
-
-
-
    ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
    CALL GetPath( InitInp%InputFileName, PriPath )
 
@@ -290,8 +284,17 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    ! Set flow field input data based on wind type
    !----------------------------------------------------------------------------
 
+   ! If flowfield is allocated, deallocate and allocate again to clear old data
+   if (associated(p%FlowField)) deallocate(p%FlowField)
+   allocate(p%FlowField)
+
+   ! Associate initialization output to flow field
+   InitOutData%FlowField => p%FlowField
+
+   ! Initialize mean wind speed to a very large number
    InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
 
+   ! Switch based on the wind type specified in the input file
    select case(InputFileData%WindType)
 
    case (Steady_WindNumber)
@@ -804,9 +807,6 @@ SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGues
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Reset the wind type so that the initialization routine must be called
-   p%WindType      = Undef_WindNumber
-
    ! Destroy all inflow wind derived types
    CALL InflowWind_DestroyInput( InputData, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg )         
@@ -1020,8 +1020,8 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
       end if
          
          
-      SELECT CASE ( p%WindType )
-      CASE (Steady_WindNumber, Uniform_WindNumber)
+      SELECT CASE ( p%FlowField%FieldType )
+      CASE (Uniform_FieldType)
 
             ! note that we are including the propagation direction in the analytical derivative calculated
             ! inside IfW_UniformWind_JacobianPInput, so no need to transform input position vectors first

@@ -983,9 +983,6 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    !-----------------------------------------------------------------
    ! Copy over the general information that applies to everything
    !-----------------------------------------------------------------
-   
-      ! Copy the WindType over.
-   p%WindType   =  InputFileData%WindType
 
       ! Convert the PropagationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
    p%FlowField%PropagationDir = D2R * InputFileData%PropagationDir
@@ -1638,12 +1635,9 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    CHARACTER(*),              PARAMETER                     :: RoutineName="CalculateOutput"
-
-   ! Temporary variables for error handling
    INTEGER(IntKi)                                           :: TmpErrStat
    CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
-   ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
@@ -1651,7 +1645,6 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
    CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, InputData%PositionXYZ, &
                                  y%VelocityUVW, y%AccelUVW, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-   IF ( ErrStat >= AbortErrLev) RETURN
 
    ! Get velocities and accelerations for OutList variables, no error check
    IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
@@ -1665,14 +1658,6 @@ END SUBROUTINE CalculateOutput
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
 
-
-   IMPLICIT                                                    NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetSpatialAverage"
-
-
-      ! Inputs / Outputs
-
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
    TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
@@ -1681,63 +1666,50 @@ SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStat
    TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z                 !< Constraint states at Time
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other states at Time
    TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< misc/optimization variables
-   REAL(ReKi),                               INTENT(  OUT)  :: MeanVelocity(3)   !< at InputPosition
-      
+   REAL(ReKi),                               INTENT(  OUT)  :: MeanVelocity(3)   !< at InputPosition      
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
+   CHARACTER(*),PARAMETER     :: RoutineName = "InflowWind_GetSpatialAverage"
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2   
+   INTEGER(IntKi)             :: I
+   REAL(ReKi), ALLOCATABLE    :: acc(:,:)  ! acceleration, unallocated so it won't be calculated
 
-
-      ! Local variables
-   INTEGER(IntKi)                                           :: I                   !< Generic counters
-
-
-      ! Temporary variables for error handling
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2            ! temporary error message
-   LOGICAL,                PARAMETER                        :: FillWrOut = .false.
-
-
-
-      ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
    MeanVelocity = 0.0_ReKi
    
-   !-----------------------------------------------------------------------
-   !  Points coordinate transforms from to global to aligned with hub orientation
-   !-----------------------------------------------------------------------
+   !----------------------------------------------------------------------------
+   ! Points coordinate transforms from to global to aligned with hub orientation
+   !----------------------------------------------------------------------------
+
    m%u_Avg%HubPosition    = InputData%HubPosition
    m%u_Avg%HubOrientation = InputData%HubOrientation
    
-   do i=1,IfW_NumPtsAvg
-      m%u_Avg%PositionXYZ(:,i) = matmul(InputData%HubOrientation,p%PositionAvg(:,i)) + InputData%HubPosition
+   do i = 1, IfW_NumPtsAvg
+      m%u_Avg%PositionXYZ(:,i) = InputData%HubPosition + &
+                                 matmul(InputData%HubOrientation,p%PositionAvg(:,i))
    end do
 
-   CALL CalculateOutput( Time, m%u_Avg, p, x, xd, z, OtherStates, m%y_Avg, m, FillWrOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !----------------------------------------------------------------------------
+   ! Calculate wind velocities at average positions
+   !----------------------------------------------------------------------------
 
-   do i=1,IfW_NumPtsAvg
-      MeanVelocity = MeanVelocity + m%y_Avg%VelocityUVW(:,i)
-   end do
-   MeanVelocity = MeanVelocity / REAL(IfW_NumPtsAvg,ReKi)
-        
-   
-   RETURN
+   CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, m%u_Avg%PositionXYZ, &
+                                m%y_Avg%VelocityUVW, acc, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-!............................
+   !----------------------------------------------------------------------------
+   ! Calculate average velocity over all positions
+   !----------------------------------------------------------------------------
+
+   MeanVelocity = sum(m%y_Avg%VelocityUVW, dim=2) / REAL(IfW_NumPtsAvg,ReKi)
+
 END SUBROUTINE InflowWind_GetSpatialAverage
 !====================================================================================================
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m, Velocity, ErrStat, ErrMsg )
-
-
-   IMPLICIT                                                    NONE
-
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetSpatialAverage"
-
-
-      ! Inputs / Outputs
-
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
    TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
@@ -1747,42 +1719,27 @@ SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other states at Time
    TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< misc/optimization variables
    REAL(ReKi),                               INTENT(  OUT)  :: Velocity(3)       !< at InputPosition
-      
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
+   CHARACTER(*),PARAMETER     :: RoutineName="InflowWind_GetSpatialAverage"
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2            ! temporary error message
+   REAL(ReKi), ALLOCATABLE    :: acc(:,:)  ! acceleration, unallocated so it won't be calculated
 
-
-      ! Local variables
-   INTEGER(IntKi)                                           :: I                   !< Generic counters
-
-
-      ! Temporary variables for error handling
-   INTEGER(IntKi)                                           :: ErrStat2
-   CHARACTER(ErrMsgLen)                                     :: ErrMsg2            ! temporary error message
-   LOGICAL,                PARAMETER                        :: FillWrOut = .false.
-
-
-
-      ! Initialize ErrStat
    ErrStat  = ErrID_None
    ErrMsg   = ""
    
-   !-----------------------------------------------------------------------
-   !  Calculate values at the hub:
-   !-----------------------------------------------------------------------
    m%u_Hub%HubPosition      = InputData%HubPosition
    m%u_Hub%HubOrientation   = InputData%HubOrientation
-   
    m%u_Hub%PositionXYZ(:,1) = InputData%HubPosition
-      
-   CALL CalculateOutput( Time, m%u_Hub, p, x, xd, z, OtherStates, m%y_Hub, m, FillWrOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   Velocity = m%y_Hub%VelocityUVW(:,1)
-      
-   RETURN
 
-!............................
+   CALL IfW_FlowField_GetVelAcc(p%FlowField, 0, Time, m%u_Hub%PositionXYZ, &
+                                m%y_Hub%VelocityUVW, acc, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+     
+   Velocity = m%y_Hub%VelocityUVW(:,1)
+
 END SUBROUTINE InflowWind_GetHubValues
 !====================================================================================================
 !> this routine calculates the mean wind speed 

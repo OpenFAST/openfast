@@ -133,16 +133,16 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_y      !< Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
   END TYPE InflowWind_InitOutputType
 ! =======================
 ! =========  InflowWind_ParameterType  =======
   TYPE, PUBLIC :: InflowWind_ParameterType
     CHARACTER(1024)  :: RootFileName      !< Root of the InflowWind input   filename [-]
-    INTEGER(IntKi)  :: WindType = 0      !< Type of wind -- set to Undef_Wind initially [-]
     REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
-    TYPE(FlowFieldType)  :: FlowField      !< Parameters from Full-Field [-]
+    TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PositionAvg      !< (non-rotated) positions of points used for averaging wind speed [meters]
     INTEGER(IntKi)  :: NWindVel      !< Number of points in the wind velocity list [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of parameters in the output list (number of outputs requested) [-]
@@ -1752,6 +1752,7 @@ IF (ALLOCATED(SrcInitOutputData%IsLoad_u)) THEN
   END IF
     DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
 ENDIF
+    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
  END SUBROUTINE InflowWind_CopyInitOutput
 
  SUBROUTINE InflowWind_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -1792,6 +1793,7 @@ ENDIF
 IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
   DEALLOCATE(InitOutputData%IsLoad_u)
 ENDIF
+NULLIFY(InitOutputData%FlowField)
  END SUBROUTINE InflowWind_DestroyInitOutput
 
  SUBROUTINE InflowWind_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2338,6 +2340,7 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
+  NULLIFY(OutData%FlowField)
  END SUBROUTINE InflowWind_UnPackInitOutput
 
  SUBROUTINE InflowWind_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -2357,7 +2360,6 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstParamData%RootFileName = SrcParamData%RootFileName
-    DstParamData%WindType = SrcParamData%WindType
     DstParamData%DT = SrcParamData%DT
 IF (ALLOCATED(SrcParamData%WindViXYZprime)) THEN
   i1_l = LBOUND(SrcParamData%WindViXYZprime,1)
@@ -2387,9 +2389,18 @@ IF (ALLOCATED(SrcParamData%WindViXYZ)) THEN
   END IF
     DstParamData%WindViXYZ = SrcParamData%WindViXYZ
 ENDIF
+IF (ASSOCIATED(SrcParamData%FlowField)) THEN
+  IF (.NOT. ASSOCIATED(DstParamData%FlowField)) THEN 
+    ALLOCATE(DstParamData%FlowField,STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FlowField.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
       CALL IfW_FlowField_Copyflowfieldtype( SrcParamData%FlowField, DstParamData%FlowField, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+ENDIF
 IF (ALLOCATED(SrcParamData%PositionAvg)) THEN
   i1_l = LBOUND(SrcParamData%PositionAvg,1)
   i1_u = UBOUND(SrcParamData%PositionAvg,1)
@@ -2461,8 +2472,13 @@ ENDIF
 IF (ALLOCATED(ParamData%WindViXYZ)) THEN
   DEALLOCATE(ParamData%WindViXYZ)
 ENDIF
-  CALL IfW_FlowField_DestroyFlowFieldType( ParamData%FlowField, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+IF (ASSOCIATED(ParamData%FlowField)) THEN
+  IF (ASSOCIATED(ParamData%FlowField)) THEN
+    CALL IfW_FlowField_DestroyFlowFieldType( ParamData%FlowField, ErrStat2, ErrMsg2 )
+       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  ENDIF
+  DEALLOCATE(ParamData%FlowField)
+ENDIF
 IF (ALLOCATED(ParamData%PositionAvg)) THEN
   DEALLOCATE(ParamData%PositionAvg)
 ENDIF
@@ -2516,7 +2532,6 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootFileName)  ! RootFileName
-      Int_BufSz  = Int_BufSz  + 1  ! WindType
       Db_BufSz   = Db_BufSz   + 1  ! DT
   Int_BufSz   = Int_BufSz   + 1     ! WindViXYZprime allocated yes/no
   IF ( ALLOCATED(InData%WindViXYZprime) ) THEN
@@ -2528,6 +2543,9 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! WindViXYZ upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WindViXYZ)  ! WindViXYZ
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FlowField allocated yes/no
+  IF ( ASSOCIATED(InData%FlowField) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*0  ! FlowField upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! FlowField: size of buffers for each call to pack subtype
       CALL IfW_FlowField_PackFlowFieldType( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, .TRUE. ) ! FlowField 
@@ -2546,6 +2564,7 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! PositionAvg allocated yes/no
   IF ( ALLOCATED(InData%PositionAvg) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PositionAvg upper/lower bounds for each dimension
@@ -2630,8 +2649,6 @@ ENDIF
       IntKiBuf(Int_Xferred) = ICHAR(InData%RootFileName(I:I), IntKi)
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    IntKiBuf(Int_Xferred) = InData%WindType
-    Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%DT
     Db_Xferred = Db_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%WindViXYZprime) ) THEN
@@ -2674,6 +2691,13 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ASSOCIATED(InData%FlowField) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+
       CALL IfW_FlowField_PackFlowFieldType( Re_Buf, Db_Buf, Int_Buf, InData%FlowField, ErrStat2, ErrMsg2, OnlySize ) ! FlowField 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -2702,6 +2726,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  END IF
   IF ( .NOT. ALLOCATED(InData%PositionAvg) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2851,8 +2876,6 @@ ENDIF
       OutData%RootFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1
     END DO ! I
-    OutData%WindType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
     OutData%DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WindViXYZprime not allocated
@@ -2901,6 +2924,16 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FlowField not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    IF (ASSOCIATED(OutData%FlowField)) DEALLOCATE(OutData%FlowField)
+    ALLOCATE(OutData%FlowField,STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FlowField.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -2941,6 +2974,7 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PositionAvg not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
