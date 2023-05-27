@@ -581,44 +581,16 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
          END IF
    
-
-
-         ! Are there Morison elements?
-       
+      ! Are there Morison elements?
       IF ( InputFileData%Morison%NMembers > 0 ) THEN
-
-         
-                ! Copy SeaState initialization output into the initialization input type for the Morison module
-         
+     
+         ! Copy SeaState initialization output into the initialization input type for the Morison module
          InputFileData%Morison%NStepWave =  InitInp%NStepWave
-         InputFileData%Morison%WaveTime  => InitInp%WaveTime
-         
-         InputFileData%Morison%WaveAcc    => InitInp%WaveAcc         
-         InputFileData%Morison%WaveDynP   => InitInp%WaveDynP        
-         InputFileData%Morison%WaveVel    => InitInp%WaveVel  
-         InputFileData%Morison%PWaveAcc0  => InitInp%PWaveAcc0       
-         InputFileData%Morison%PWaveDynP0 => InitInp%PWaveDynP0        
-         InputFileData%Morison%PWaveVel0  => InitInp%PWaveVel0  
-         InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
-         InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
-         
-         InputFileData%Morison%MCFD          =  InitInp%MCFD
-         InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
-         InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
-         
-         InputFileData%Morison%WaveStMod = InitInp%WaveStMod
-
-         ! CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( InitInp%WaveField, InputFileData%Morison%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         InputFileData%Morison%MCFD      =  InitInp%MCFD
+         InputFileData%Morison%WaveStMod =  InitInp%WaveStMod
          InputFileData%Morison%WaveField => InitInp%WaveField
-
-               ! If we did some second order wave kinematics corrections to the acceleration, velocity or
-               ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
-               ! will be passing into the Morrison module.
-
-         InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
-        
-            ! Initialize the Morison Element Calculations 
-      
+     
+         ! Initialize the Morison Element Calculations      
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -627,7 +599,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          
-      END IF  ! ( InputFileData%Morison%NMembers > 0 )
+      END IF  ! Has Morison elements
     
 !===============================================
       p%PotMod = InputFileData%Potmod      

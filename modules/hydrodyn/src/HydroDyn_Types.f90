@@ -112,14 +112,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined (points to SeaState module data) [(sec)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: WaveDynP => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(N/m^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAccMCF => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) (points to SeaState module data) [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: PWaveDynP0 => NULL()      !< Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(N/m^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAccMCF0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data) [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveVel0 => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) (points to SeaState module data) [(m/s)]
     REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data) [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 (points to SeaState module data) [(degrees)]
@@ -1744,8 +1736,6 @@ ENDIF
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyInitInput'
@@ -1794,14 +1784,6 @@ IF (ALLOCATED(SrcInitInputData%WaveElev0)) THEN
     DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
 ENDIF
     DstInitInputData%WaveTime => SrcInitInputData%WaveTime
-    DstInitInputData%WaveDynP => SrcInitInputData%WaveDynP
-    DstInitInputData%WaveAcc => SrcInitInputData%WaveAcc
-    DstInitInputData%WaveAccMCF => SrcInitInputData%WaveAccMCF
-    DstInitInputData%WaveVel => SrcInitInputData%WaveVel
-    DstInitInputData%PWaveDynP0 => SrcInitInputData%PWaveDynP0
-    DstInitInputData%PWaveAcc0 => SrcInitInputData%PWaveAcc0
-    DstInitInputData%PWaveAccMCF0 => SrcInitInputData%PWaveAccMCF0
-    DstInitInputData%PWaveVel0 => SrcInitInputData%PWaveVel0
     DstInitInputData%WaveElevC0 => SrcInitInputData%WaveElevC0
 IF (ALLOCATED(SrcInitInputData%WaveElevC)) THEN
   i1_l = LBOUND(SrcInitInputData%WaveElevC,1)
@@ -1853,14 +1835,6 @@ IF (ALLOCATED(InitInputData%WaveElev0)) THEN
   DEALLOCATE(InitInputData%WaveElev0)
 ENDIF
 NULLIFY(InitInputData%WaveTime)
-NULLIFY(InitInputData%WaveDynP)
-NULLIFY(InitInputData%WaveAcc)
-NULLIFY(InitInputData%WaveAccMCF)
-NULLIFY(InitInputData%WaveVel)
-NULLIFY(InitInputData%PWaveDynP0)
-NULLIFY(InitInputData%PWaveAcc0)
-NULLIFY(InitInputData%PWaveAccMCF0)
-NULLIFY(InitInputData%PWaveVel0)
 NULLIFY(InitInputData%WaveElevC0)
 IF (ALLOCATED(InitInputData%WaveElevC)) THEN
   DEALLOCATE(InitInputData%WaveElevC)
@@ -2186,8 +2160,6 @@ NULLIFY(InitInputData%WaveField)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_UnPackInitInput'
@@ -2314,14 +2286,6 @@ NULLIFY(InitInputData%WaveField)
       END DO
   END IF
   NULLIFY(OutData%WaveTime)
-  NULLIFY(OutData%WaveDynP)
-  NULLIFY(OutData%WaveAcc)
-  NULLIFY(OutData%WaveAccMCF)
-  NULLIFY(OutData%WaveVel)
-  NULLIFY(OutData%PWaveDynP0)
-  NULLIFY(OutData%PWaveAcc0)
-  NULLIFY(OutData%PWaveAccMCF0)
-  NULLIFY(OutData%PWaveVel0)
   NULLIFY(OutData%WaveElevC0)
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElevC not allocated
     Int_Xferred = Int_Xferred + 1
