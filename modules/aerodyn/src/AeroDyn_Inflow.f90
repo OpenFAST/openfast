@@ -268,13 +268,6 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    errMsg  = ""
 
    !----------------------------------------------------------------------------
-   ! Wind inputs to AeroDyn
-   !----------------------------------------------------------------------------
-
-   call AD_CalcWind(t, u%AD, p%AD, OtherState%AD, m%AD, errStat2, errMsg2); 
-   if(Failed()) return ! TODO TODO TODO remove me
-
-   !----------------------------------------------------------------------------
    ! Calculate InflowWind outputs if module was initialized
    !----------------------------------------------------------------------------
 
@@ -311,7 +304,7 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    endif
 
    !----------------------------------------------------------------------------
-   ! Copy wind velocities to appropriate structures
+   ! Calculate aerodyn output
    !----------------------------------------------------------------------------
 
    ! Calculate outputs at t

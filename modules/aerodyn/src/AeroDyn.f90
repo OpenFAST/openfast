@@ -1720,7 +1720,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 !..................................................................................................................................
 
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(AD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
+   TYPE(AD_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time t
    TYPE(AD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(AD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
    TYPE(AD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
@@ -1747,6 +1747,10 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    else
       CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
    end if
+
+   ! Calculate wind based on current positions
+   call AD_CalcWind(t, u, p, OtherState, m, ErrStat2, ErrMsg2)
+   if(Failed()) return
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
    do iR=1,size(p%rotors)
