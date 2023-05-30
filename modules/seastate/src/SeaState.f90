@@ -524,15 +524,14 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WaveElevC0   => p%WaveField%WaveElevC0                      ! For WAMIT and WAMIT2,  FIT
       InitOut%WaveDirArr   => p%WaveField%WaveDirArr                      ! For WAMIT and WAMIT2
       InitOut%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0                    ! For Morison (MacCamy-Fuchs)
-      
+      InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
+      InitOut%WaveElev0    => p%WaveField%WaveElev0 
+
           ! non-pointer data:
-       CALL MOVE_ALLOC( Waves_InitOut%WaveElevC, InitOut%WaveElevC ) ! For WAMIT
        InitOut%WaveDirMin   =  Waves_InitOut%WaveDirMin          ! For WAMIT and WAMIT2
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        
-       
-       call MOVE_ALLOC(Waves_InitOut%WaveElev0, InitOut%WaveElev0 )
        InitOut%RhoXg        =  Waves_InitOut%RhoXg               ! For WAMIT and WAMIT2
        InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT

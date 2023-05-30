@@ -346,14 +346,12 @@ subroutine SetHD_InitInputs()
    InitInData_HD%WaveMultiDir   =  InitOutData_SeaSt%WaveMultiDir
    InitInData_HD%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
    InitInData_HD%MCFD           =  InitOutData_SeaSt%MCFD
-   CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElev0, InitInData_HD%WaveElev0 )  
-   CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData_HD%WaveElevC )
-   InitInData_HD%WaveTime       => InitOutData_SeaSt%WaveTime  
-   InitInData_HD%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
-   InitInData_HD%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
-   InitInData_HD%WaveElev1      => InitOutData_SeaSt%WaveElev1
-   InitInData_HD%WaveElev2      => InitOutData_SeaSt%WaveElev2
-
+   
+   ! InitInData_HD%WaveTime       => InitOutData_SeaSt%WaveTime  
+   ! InitInData_HD%WaveElevC0     => InitOutData_SeaSt%WaveElevC0
+   ! InitInData_HD%WaveDirArr     => InitOutData_SeaSt%WaveDirArr
+   ! InitInData_HD%WaveElev1      => InitOutData_SeaSt%WaveElev1
+   ! InitInData_HD%WaveElev2      => InitOutData_SeaSt%WaveElev2
    ! InitInData_HD%WaveElev0      => InitOutData_SeaSt%WaveElev0 
    ! InitInData_HD%WaveDynP       => InitOutData_SeaSt%WaveDynP  
    ! InitInData_HD%WaveAcc        => InitOutData_SeaSt%WaveAcc   
@@ -363,8 +361,10 @@ subroutine SetHD_InitInputs()
    ! InitInData_HD%PWaveVel0      => InitOutData_SeaSt%PWaveVel0
    ! InitInData_HD%WaveAccMCF     => InitOutData_SeaSt%WaveAccMCF
    ! InitInData_HD%PWaveAccMCF0   => InitOutData_SeaSt%PWaveAccMCF0
+   ! CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElev0, InitInData_HD%WaveElev0 )  
+   ! CALL MOVE_ALLOC( InitOutData_SeaSt%WaveElevC, InitInData_HD%WaveElevC )
+   ! CALL SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
    
-   CALL SeaSt_Interp_CopyParam(InitOutData_SeaSt%SeaSt_Interp_p, InitInData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat, ErrMsg ); CALL CheckError()
    InitInData_HD%WaveField => InitOutData_SeaSt%WaveField
 
 end subroutine SetHD_InitInputs

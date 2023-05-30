@@ -293,7 +293,8 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       p%WaveTime  => InitInp%WaveTime  
       p%ExctnDisp = InitInp%ExctnDisp
       if (p%ExctnDisp == 0) then
-         call MOVE_ALLOC(InitInp%WaveElev0, p%WaveElev0)
+         ! call MOVE_ALLOC(InitInp%WaveElev0, p%WaveElev0)
+         p%WaveElev0 => InitInp%WaveElev0
       else
          p%WaveElev1 => InitInp%WaveElev1
       end if

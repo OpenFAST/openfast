@@ -56,8 +56,8 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, WaveField, InitInp, WaveDT, ErrStat, 
       ErrMsg = ""
 
       ! Allocatable arrays:
-      ALLOCATE ( InitOut%WaveElev0  (   0:InitOut%NStepWave                                       ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',  ErrStat, ErrMsg, RoutineName)
-      ALLOCATE ( InitOut%WaveElevC  (2, 0:InitOut%NStepWave2, InitInp%NGrid(1)*InitInp%NGrid(2)   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC.',  ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( WaveField%WaveElev0  (   0:InitOut%NStepWave                                       ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveElev0.',  ErrStat, ErrMsg, RoutineName)
+      ALLOCATE ( WaveField%WaveElevC  (2, 0:InitOut%NStepWave2, InitInp%NGrid(1)*InitInp%NGrid(2)   ), STAT=ErrStat2 ); IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveElevC.',  ErrStat,ErrMsg,RoutineName)
    
       ! Allocatable arrays in WaveField:
       ALLOCATE ( WaveField%WaveTime   (   0:InitOut%NStepWave                 ) , STAT=ErrStat2 );  IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveTime.',  ErrStat, ErrMsg, RoutineName)
@@ -83,9 +83,8 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, WaveField, InitInp, WaveDT, ErrStat, 
          WaveField%WaveTime(I) = I * WaveDT
       END DO                ! I - All time steps
       
-      InitOut%WaveElev0  = 0.0
-      InitOut%WaveElevC  = 0.0
-      
+      WaveField%WaveElev0  = 0.0
+      WaveField%WaveElevC  = 0.0
       WaveField%WaveElevC0 = 0.0
       WaveField%WaveElev1  = 0.0
       WaveField%WaveDynP   = 0.0

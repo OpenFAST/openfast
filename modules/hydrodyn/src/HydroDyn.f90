@@ -271,7 +271,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       !p%NWaveElev    = InputFileData%Waves%NWaveElev  
       p%NStepWave    = InitInp%NStepWave
       
-      p%WaveTime =>  InitInp%WaveTime
+      p%WaveTime =>  InitInp%WaveField%WaveTime
 
       m%LastIndWave = 1
 
@@ -286,7 +286,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%WtrDpth  = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
             p%NBody                  = InputFileData%NBody
             p%NBodyMod               = InputFileData%NBodyMod
-            InputFileData%WAMIT%WaveElev1 => InitInp%WaveElev1
+            InputFileData%WAMIT%WaveElev1 => InitInp%WaveField%WaveElev1
             call AllocAry( m%F_PtfmAdd, 6*InputFileData%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             call AllocAry( m%F_Waves  , 6*InputFileData%NBody, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
@@ -363,14 +363,19 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
             InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir
-            CALL MOVE_ALLOC(  InitInp%WaveElev0, InputFileData%WAMIT%WaveElev0 )  
+            ! CALL MOVE_ALLOC(  InitInp%WaveElev0, InputFileData%WAMIT%WaveElev0 )
+            ! CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC )
                 ! Temporarily move arrays to init input for WAMIT (save some space)
             
-            InputFileData%WAMIT%WaveTime   => InitInp%WaveTime
-            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveElevC0
-            CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC ) 
-            InputFileData%WAMIT%seast_interp_p = InitInp%seast_interp_p
-            InputFileData%WAMIT%WaveDirArr => InitInp%WaveDirArr
+            InputFileData%WAMIT%WaveTime   => InitInp%WaveField%WaveTime
+            InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
+            InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
+            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveField%WaveElevC0            
+            InputFileData%WAMIT%WaveDirArr => InitInp%WaveField%WaveDirArr
+            
+            ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
+            CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+              CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                
             CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
                                     y%WAMIT(1), m%WAMIT(1), Interval, ErrStat2, ErrMsg2 )
@@ -435,8 +440,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
                   ! init input for WAMIT2 pointers to save space
                !InputFileData%WAMIT2%WaveTime   => InitInp%WaveTime     ! This isn't actually used within WAMIT2  GJH 9/30/2021
-               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveElevC0
-               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveDirArr
+               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveField%WaveElevC0
+               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveField%WaveDirArr
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InputFileData%WAMIT2%RhoXg       = InitInp%RhoXg
@@ -557,12 +562,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   RETURN
                END IF
                
-               ! Populate wave arrays
+               ! Populate wave arrays (Need to double chech this part. It doesn't look right!)
             Np = 2*(InitInp%WaveDOmega + 1)
             DO I = 1 , InitInp%NStepWave2
                
-               dftreal        = InitInp%WaveElevC0( 1,ABS(I ) )
-               dftimag        = InitInp%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
+               dftreal        = InitInp%WaveField%WaveElevC0( 1, ABS(I ) )
+               dftimag        = InitInp%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
                FITInitData%Wave_amp   (I) = sqrt( dftreal**2 + dftimag**2 )  * 2.0 / Np
                FITInitData%Wave_omega (I) = I*InitInp%WaveDOmega
                FITInitData%Wave_number(I) = I*InitInp%WaveDOmega**2. / InputFileData%Gravity

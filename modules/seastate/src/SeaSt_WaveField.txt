@@ -14,12 +14,14 @@ typedef     ^                ^                     SiKi                         
 typedef     ^                ^                     SiKi                          PWaveAcc0       {:}{:}{:}{:}     -        -        "Partial derivative of incident wave acceleration in the vertical direction at the still water level" (m/s^2/m)
 typedef     ^                ^                     SiKi                          PWaveAccMCF0    {:}{:}{:}{:}     -        -        "Partial derivative of scaled wave acceleration in the vertical direction at the still water level for MacCamy-Fuchs members" (m/s^2/m)
 typedef     ^                ^                     SiKi                          PWaveVel0       {:}{:}{:}{:}     -        -        "Partial derivative of incident wave velocity in the vertical direction at the still water level" (m/s/m)
+typedef     ^                ^                     SiKi                          WaveElev0       {:}              -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (m)
 typedef     ^                ^                     SiKi                          WaveElev1       {:}{:}{:}        -        -        "First order wave elevation"  (m)
 typedef     ^                ^                     SiKi                          WaveElev2       {:}{:}{:}        -        -        "Second order wave elevation" (m)
 typedef     ^                ^                     SeaSt_Interp_ParameterType    SeaSt_Interp_p  -                -        -        "Parameter information from the SeaState Interpolation module" (-)
 typedef     ^                ^                     IntKi                         WaveStMod       -                -        -        "Wave stretching model"
 typedef     ^                ^                     ReKi                          EffWtrDpth      -                -        -        "Water depth" (-)
 typedef     ^                ^                     ReKi                          MSL2SWL         -                -        -        "Vertical distance from mean sea level to still water level" (m)
+typedef     ^                ^                     SiKi                          WaveElevC       {:}{:}{:}        -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part" (m)
 typedef     ^                ^                     SiKi                          WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
 typedef     ^                ^                     SiKi                          WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
 

@@ -1158,7 +1158,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! Compute the inverse discrete Fourier transforms to find the time-domain
       !   representations of the wave kinematics without stretcing:
 
-      CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      CALL    ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -1170,7 +1170,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          i = mod(k-1, InitInp%NGrid(1)) + 1
          j = (k-1) / InitInp%NGrid(1) + 1
             ! note that this subroutine resets tmpComplexArr
-         CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), WaveField%WaveElev1(:,i,j), InitOut%WaveElevC(:,:,k), tmpComplexArr, ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
+         CALL WaveElevTimeSeriesAtXY( InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), WaveField%WaveElev1(:,i,j), WaveField%WaveElevC(:,:,k), tmpComplexArr, ErrStatTmp, ErrMsgTmp ) ! Note this sets tmpComplexArr
          CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveField%WaveElev1.',ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -1483,7 +1483,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
   !    ENDSELECT
 
       ! Set the ending timestep to the same as the first timestep
-      InitOut%WaveElev0 (InitOut%NStepWave)          = InitOut%WaveElev0 (0    )
+      WaveField%WaveElev0 (InitOut%NStepWave)          = WaveField%WaveElev0 (0    )
       WaveField%WaveDynP  (InitOut%NStepWave,:,:,:  )  = WaveField%WaveDynP  (0,:,:,:  )
       WaveField%WaveVel   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveVel   (0,:,:,:,:)
       WaveField%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveAcc   (0,:,:,:,:)
@@ -2437,13 +2437,13 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
             ! Compute the crest height based on the current guess of crest elevation
             tmpComplexArr = CMPLX(  WaveField%WaveElevC0(1,:) + Crest * tmpArr, &
                                     WaveField%WaveElevC0(2,:))
-            CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+            CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
             ! Find the preceding or following trough, whichever is lower
-            Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                         MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+            Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
+                         MINVAL(WaveField%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
             CrestHeight = Crest-Trough
             CrestHeightError = ABS(CrestHeight - InitInp%CrestHmax)
             ! print *, CrestHeight
@@ -2452,14 +2452,14 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
                ! Compute the crest height based on a slightly nudged crest elevation
                tmpComplexArr = CMPLX(  WaveField%WaveElevC0(1,:) + (Crest+CrestHeightTol) * tmpArr, &
                                        WaveField%WaveElevC0(2,:))
-               CALL ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+               CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
                CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
 
                
                ! Find the preceding or following trough, whichever is lower
-               Trough = MIN(MINVAL(InitOut%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                           MINVAL(InitOut%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+               Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
+                           MINVAL(WaveField%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
                CrestHeight1 = Crest+CrestHeightTol-Trough
                ! Update crest elevation with Newton-Raphson Method
                Crest = Crest - (CrestHeight-InitInp%CrestHmax)*CrestHeightTol/(CrestHeight1-CrestHeight)
