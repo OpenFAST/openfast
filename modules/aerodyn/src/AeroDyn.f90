@@ -1757,17 +1757,10 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'RotCalcOutput'
-   LOGICAL                                      :: CalcWriteOutput
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   if (present(NeedWriteOutput)) then
-      CalcWriteOutput = NeedWriteOutput
-   else
-      CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
-   end if
-
    call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1799,15 +1792,7 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
    ! --- Tail Fin
    if (p%TFinAero) then
       call TFin_CalcOutput(p, p_AD, u, m, y, ErrStat2, ErrMsg2)
-   endif
-   
-   
-   !-------------------------------------------------------   
-   !     get values to output to file:  
-   !-------------------------------------------------------   
-   if (CalcWriteOutput) then
-      call RotWriteOutputs(t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg)
-   end if   
+   endif  
    
 end subroutine RotCalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
