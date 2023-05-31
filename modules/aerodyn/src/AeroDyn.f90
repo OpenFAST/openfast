@@ -2511,9 +2511,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
       
    ! local variables
-   real(R8Ki)                              :: x_hat(3)
-   real(R8Ki)                              :: y_hat(3)
-   real(R8Ki)                              :: z_hat(3)
+   !real(R8Ki)                              :: x_hat(3)
+   !real(R8Ki)                              :: y_hat(3)
+   !real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -3269,10 +3269,10 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
             y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%orientationAnnulus(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
          
          else
-           ! Transfer loads from the airfoil frame to the blade frame
-           y%BladeLoad(k)%Force(:,j)  = matmul( forceAirfoil,  u%BladeMotion(k)%Orientation(:,:,j) )  ! force per unit length of the jth node in the kth blade 
-           y%BladeLoad(k)%Moment(:,j) = matmul( momentAirfoil, u%BladeMotion(k)%Orientation(:,:,j) )  ! moment per unit length of the jth node in the kth blade 
-        endif
+            ! Transfer loads from the airfoil frame to the blade frame
+            y%BladeLoad(k)%Force(:,j)  = matmul( forceAirfoil,  u%BladeMotion(k)%Orientation(:,:,j) )  ! force per unit length of the jth node in the kth blade 
+            y%BladeLoad(k)%Moment(:,j) = matmul( momentAirfoil, u%BladeMotion(k)%Orientation(:,:,j) )  ! moment per unit length of the jth node in the kth blade 
+         endif
       end do !j=nodes
    end do !k=blades
    

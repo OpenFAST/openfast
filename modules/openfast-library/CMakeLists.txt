@@ -56,6 +56,7 @@ target_link_libraries(openfast_prelib
   moordynlib
   orcaflexlib
   sctypeslib
+  seastlib
   servodynlib
   subdynlib
 )

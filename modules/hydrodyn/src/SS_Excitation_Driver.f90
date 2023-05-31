@@ -238,6 +238,10 @@ PROGRAM SS_Excitation_Driver
       CALL WrScr( ErrMsg )
    END IF
    
+   CALL SS_Exc_DestroyInitInput( InitInData, ErrStat, ErrMsg, DEALLOCATEpointers = .true. ) ! pointers were allocated in this data type, so we need to deallocate them here, too
+   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
+      CALL WrScr( ErrMsg )
+   END IF
 
    !...............................................................................................................................
    ! Routine to terminate program execution

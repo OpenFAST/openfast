@@ -162,8 +162,10 @@ class HydroDynLib(CDLL):
     def _initialize_routines(self):
         self.HydroDyn_C_Init.argtypes = [
             POINTER(c_char),                    # OutRootName 
-            POINTER(c_char_p),                  # input file string
-            POINTER(c_int),                     # input file string length
+            POINTER(c_char_p),                  # SeaState input file string
+            POINTER(c_int),                     # SeaState input file string length
+            POINTER(c_char_p),                  # HydroDyn input file string
+            POINTER(c_int),                     # HydroDyn input file string length
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defWtrDens
             POINTER(c_float),                   # defWtrDpth
@@ -216,14 +218,17 @@ class HydroDynLib(CDLL):
         self.HydroDyn_C_End.restype = c_int
 
     # hydrodyn_init ------------------------------------------------------------------------------------------------------------
-    def hydrodyn_init(self, input_string_array):
+    def hydrodyn_init(self, seast_input_string_array, hd_input_string_array):
         # nodePositions -- N x 6 array  -- position info as [x1,y1,z1,Rx1,Ry1,Rz1]
 
         # Primary input file will be passed as a single string joined by
         # C_NULL_CHAR.
-        input_string = '\x00'.join(input_string_array)
-        input_string = input_string.encode('utf-8')
-        input_string_length = len(input_string)
+        seast_input_string = '\x00'.join(seast_input_string_array)
+        seast_input_string = seast_input_string.encode('utf-8')
+        seast_input_string_length = len(seast_input_string)
+        hd_input_string = '\x00'.join(hd_input_string_array)
+        hd_input_string = hd_input_string.encode('utf-8')
+        hd_input_string_length = len(hd_input_string)
         
         self._numChannels_c = c_int(0)
 
@@ -264,8 +269,10 @@ class HydroDynLib(CDLL):
         # call HydroDyn_C_Init
         self.HydroDyn_C_Init(
             _outRootName_c,                         # IN: rootname for HD file writing
-            c_char_p(input_string),                 # IN: input file string
-            byref(c_int(input_string_length)),      # IN: input file string length
+            c_char_p(seast_input_string),           # IN: SeaState input file string
+            byref(c_int(seast_input_string_length)),# IN: SeaState input file string length
+            c_char_p(hd_input_string),              # IN: HydroDyn input file string
+            byref(c_int(hd_input_string_length)),   # IN: HydroDyn input file string length
             byref(c_float(self.gravity)),           # IN: gravity
             byref(c_float(self.defWtrDens)),        # IN: default water density
             byref(c_float(self.defWtrDpth)),        # IN: default water depth

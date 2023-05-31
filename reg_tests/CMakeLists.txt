@@ -71,6 +71,10 @@ set(CTEST_INFLOWWIND_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/inflowwind/inflowwi
 # Set the MoorDyn executable configuration option and default
 set(CTEST_MOORDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/moordyn/moordyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the MoorDyn driver executable to use in testing.")
 
+# Set the SeaState executable configuration option and default
+set(CTEST_SEASTATE_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/seastate/seastate_driver" CACHE FILEPATH "Specify the SeaState driver executable to use in testing.")
+
+
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
 set(CTEST_RTEST_ATOL "1.9" CACHE STRING "Set the absolute orders of magnitude to consider as testable values; any deviations smaller than this always pass.")
@@ -187,5 +191,6 @@ add_custom_target(
     hydrodyn_driver
     inflowwind_driver
     moordyn_driver
+    seastate_driver
     subdyn_driver
 )

@@ -1047,8 +1047,8 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       if (p%RegDeterMethod==idRegDeterConstant) then
          ! Constant reg param throughout the wake
          if (p%WakeRegMethod==idRegAge) then ! NOTE: age method implies a division by rc
-            p%WingRegParam=max(0.01, p%WingRegParam)
-            p%WakeRegParam=max(0.01, p%WakeRegParam)
+            p%WingRegParam=max(0.01_ReKi, p%WingRegParam)
+            p%WakeRegParam=max(0.01_ReKi, p%WakeRegParam)
          endif
 
          ! Set reg param on wing and first NW

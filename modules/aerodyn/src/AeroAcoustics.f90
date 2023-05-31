@@ -1508,7 +1508,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,StallVa
     IF (ALPSTAR .GT. StallVal)                           ST2 = 4.72 * ST1
     ST1PRIM = (ST1+ST2)/2.                                                             ! Eq 33 from BPM Airfoil Self-noise and Prediction paper
     CALL A0COMP(RC,A0)      ! compute -20 dB dropout   (returns A0)
-    CALL A0COMP(3.*RC,A02)   ! compute -20 dB dropout for AoA > AoA_0   (returns A02)
+    CALL A0COMP(3.0_ReKi*RC,A02)   ! compute -20 dB dropout for AoA > AoA_0   (returns A02)
     ! Evaluate minimum and maximum 'a' curves at a0
     CALL AMIN(A0,AMINA0)
     CALL AMAX(A0,AMAXA0)
@@ -2332,7 +2332,7 @@ SUBROUTINE TBLTE_TNO(U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS,SPLALPH
     Mach = U  / p%SpdSound
 
     ! Directivity function
-    CALL DIRECTH_TE(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
+    CALL DIRECTH_TE(REAL(Mach,ReKi),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName )
  
     do i_omega = 1,n_freq
