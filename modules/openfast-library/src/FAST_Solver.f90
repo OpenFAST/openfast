@@ -461,8 +461,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
          
    ELSEIF (p_FAST%CompAero == MODULE_AD) THEN               
       
-      ! Set u_IfW%PositionXYZ needed by AeroDyn (node counter will be incremented)
-      ! call AD_SetExternalWindPositions(u_AD, OtherSt_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
       
    END IF
    
@@ -470,9 +468,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
    u_IfW%HubPosition    = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1)
    u_IfW%HubOrientation = y_ED%HubPtMotion%Orientation(:,:,1)
    
-               
-
-
    IF ( p_FAST%MHK==1 .or. p_FAST%MHK==2 ) THEN
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
    ENDIF
