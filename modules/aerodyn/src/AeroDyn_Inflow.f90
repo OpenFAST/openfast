@@ -316,7 +316,10 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
 
    ! --- Set outputs
    !TODO: this assumes one rotor!!!
-   y%WriteOutput = [y%AD%rotors(1)%WriteOutput, y%IW_WriteOutput]
+   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts)
+      y%WriteOutput(1:AD_NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
+      y%WriteOutput(AD_NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   end associate
 
 contains
 
