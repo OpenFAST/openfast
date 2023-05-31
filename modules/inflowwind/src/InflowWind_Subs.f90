@@ -1656,7 +1656,7 @@ END SUBROUTINE CalculateOutput
                       
 !====================================================================================================
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
-SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_GetRotorSpatialAverage( Time, InputData, p, x, xd, z, OtherStates, m, MeanVelocity, ErrStat, ErrMsg )
 
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
@@ -1670,7 +1670,7 @@ SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStat
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
-   CHARACTER(*),PARAMETER     :: RoutineName = "InflowWind_GetSpatialAverage"
+   CHARACTER(*),PARAMETER     :: RoutineName = "InflowWind_GetRotorSpatialAverage"
    INTEGER(IntKi)             :: ErrStat2
    CHARACTER(ErrMsgLen)       :: ErrMsg2   
    INTEGER(IntKi)             :: I
@@ -1706,7 +1706,7 @@ SUBROUTINE InflowWind_GetSpatialAverage( Time, InputData, p, x, xd, z, OtherStat
 
    MeanVelocity = sum(m%y_Avg%VelocityUVW, dim=2) / REAL(IfW_NumPtsAvg,ReKi)
 
-END SUBROUTINE InflowWind_GetSpatialAverage
+END SUBROUTINE InflowWind_GetRotorSpatialAverage
 !====================================================================================================
 !> this routine calculates a rotor-averaged mean velocity, DiskVel 
 SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m, Velocity, ErrStat, ErrMsg )
@@ -1722,7 +1722,7 @@ SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
-   CHARACTER(*),PARAMETER     :: RoutineName="InflowWind_GetSpatialAverage"
+   CHARACTER(*),PARAMETER     :: RoutineName="InflowWind_GetHubValues"
    INTEGER(IntKi)             :: ErrStat2
    CHARACTER(ErrMsgLen)       :: ErrMsg2            ! temporary error message
    REAL(ReKi), ALLOCATABLE    :: acc(:,:)  ! acceleration, unallocated so it won't be calculated

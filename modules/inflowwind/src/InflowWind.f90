@@ -742,7 +742,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    !-----------------------------
    ! Output: OutputData%DiskVel
    !-----------------------------
-   CALL InflowWind_GetSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+   CALL InflowWind_GetRotorSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
                      OtherStates, m, OutputData%DiskVel, TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       
@@ -1046,7 +1046,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          end do
          
          
-         ! see InflowWind_GetSpatialAverage():
+         ! see InflowWind_GetRotorSpatialAverage():
          
          ! location of y%DiskAvg
          i_start = 3*n + 1
