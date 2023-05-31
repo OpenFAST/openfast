@@ -64,8 +64,8 @@ module AeroDyn
    
    PUBLIC :: AD_NumWindPoints                  !< Routine to return then number of windpoints required by AeroDyn
    PUBLIC :: AD_BoxExceedPointsIdx             !< Routine to set the start of the OLAF wind points
-   PUBLIC :: AD_GetExternalWind                !< Set the external wind into AeroDyn inputs
-   PUBLIC :: AD_SetExternalWindPositions       !< Set the external wind points needed by AeroDyn inputs 
+   PUBLIC :: AD_GetWindVel                !< Set the external wind into AeroDyn inputs
+   PUBLIC :: AD_GetWindPositions       !< Set the external wind points needed by AeroDyn inputs 
    PUBLIC :: AD_CalcWind                       !< Calculate the wind
   
 contains    
@@ -1687,19 +1687,24 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
    ErrMsg = ""
    
    ! Set wind positions
-   node = 0
-   call AD_SetExternalWindPositions(p, u, o, m%WindPos, node, errStat2, errMsg2)
+   node = 1 ! Index of first node in WindPos array
+   call AD_GetWindPositions(p, u, o, m%WindPos, node, errStat2, errMsg2)
    if(Failed()) return
 
    ! Calculate wind velocity/acceleration
-   call IfW_FlowField_GetVelAcc(p%FlowField, 1, t, m%WindPos, &
-                                m%WindVel, m%WindAcc, errStat2, errMsg2)
+   call IfW_FlowField_GetVelAcc(p%FlowField, 1, t, m%WindPos, m%WindVel, m%WindAcc, errStat2, errMsg2)
    if(Failed()) return
 
    ! Transfer wind velocity to nodes
-   node = 1
-   call AD_GetExternalWind(u, m%WindVel, node, errStat2, errMsg2)
+   node = 1  ! Index of first node in WindVel array
+   call AD_GetWindVel(u, m%WindVel, node, errStat2, errMsg2)
    if(Failed()) return
+
+   ! Transfer wind acceleration to nodes
+   if (allocated(m%WindAcc)) then
+      node = 1
+      ! TODO: call AD_GetWindAcc
+   end if
 
 contains
    logical function Failed()
@@ -7175,7 +7180,7 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
 END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Count number of wind points required by AeroDyn.
-!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
+!! Should respect the order of AD_GetWindVel and AD_GetWindPositions
 integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
@@ -7207,7 +7212,7 @@ integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
 end function AD_NumWindPoints
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Start index of the OLAF wind points for this turbine
-!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
+!! Should respect the order of AD_GetWindVel and AD_GetWindPositions
 integer(IntKi) function AD_BoxExceedPointsIdx(u_AD, o_AD) result(n)
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
@@ -7223,15 +7228,15 @@ integer(IntKi) function AD_BoxExceedPointsIdx(u_AD, o_AD) result(n)
 end function AD_BoxExceedPointsIdx
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Sets the wind calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW")
-!! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions
-subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
+!! Should respect the order of AD_NumWindPoints and AD_GetWindPositions
+subroutine AD_GetWindVel(u_AD, VelUVW, node, errStat, errMsg)
    type(AD_InputType),          intent(inout)   :: u_AD     !< AeroDyn inputs
    real(ReKi), dimension(:,:),  intent(in   )   :: VelUVW  !< Wind velocities at points
    integer(IntKi),              intent(inout)   :: node     !< Counter for dimension 2 of VelUVW. Initialized by caller and returned!
    integer(IntKi)                               :: errStat  !< Error status of the operation
    character(*)                                 :: errMsg   !< Error message if errStat /= ErrID_None
       
-   character(*), parameter                      :: RoutineName = 'AD_GetExternalWind'
+   character(*), parameter                      :: RoutineName = 'AD_GetWindVel'
    integer(IntKi)                               :: j        ! Loops through nodes / elements.
    integer(IntKi)                               :: k        ! Loops through blades.
    integer(IntKi)                               :: nNodes
@@ -7285,11 +7290,11 @@ subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
          node = node + 1
       end do !j, wake points
    end if
-end subroutine AD_GetExternalWind
+end subroutine AD_GetWindVel
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Set inputs for inflow wind
-!! Order should match AD_NumWindPoints and AD_GetExternalWind
-subroutine AD_SetExternalWindPositions(p_AD, u_AD, o_AD, PosXYZ, node, errStat, errMsg)
+!! Order should match AD_NumWindPoints and AD_GetWindVel
+subroutine AD_GetWindPositions(p_AD, u_AD, o_AD, PosXYZ, node, errStat, errMsg)
    type(AD_ParameterType),       intent(in   ) :: p_AD    !< AeroDyn parameters
    type(AD_InputType),           intent(in   ) :: u_AD    !< AeroDyn inputs
    type(AD_OtherStateType),      intent(in   ) :: o_AD    !< AeroDyn other states
@@ -7302,51 +7307,51 @@ subroutine AD_SetExternalWindPositions(p_AD, u_AD, o_AD, PosXYZ, node, errStat, 
    errMsg  = ''
 
    do iWT=1,size(u_AD%rotors)
-      niWTstart = node + 1
+      niWTstart = node
       ! Blade
       do k = 1,size(u_AD%rotors(iWT)%BladeMotion)
          do j = 1,u_AD%rotors(iWT)%BladeMotion(k)%nNodes
-            node = node + 1
             PosXYZ(:,node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
+            node = node + 1
          end do !J = 1,p%Bldnodes ! Loop through the blade nodes / elements
       end do !K = 1,p%NumBl         
       ! Tower
       do j = 1,u_AD%rotors(iWT)%TowerMotion%nNodes
-         node = node + 1
          PosXYZ(:,node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
+         node = node + 1
       end do      
       ! Nacelle
       if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         node = node + 1
          PosXYZ(:,node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
+         node = node + 1
       end if
       ! Hub
       if (u_AD%rotors(iWT)%HubMotion%Committed) then
-         node = node + 1
          PosXYZ(:,node) = u_AD%rotors(iWT)%HubMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%HubMotion%Position(:,1)
+         node = node + 1
       end if
       ! TailFin
       if (u_AD%rotors(iWT)%TFinMotion%Committed) then
-         node = node + 1
          PosXYZ(:,node) = u_AD%rotors(iWT)%TFinMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%TFinMotion%Position(:,1)
+         node = node + 1
       end if
       ! If rotor is MHK, add water depth to z coordinate
       if (p_AD%rotors(iWT)%MHK == 1 .or. p_AD%rotors(iWT)%MHK == 2) then
-         PosXYZ(3,niWTstart:node) = PosXYZ(3,niWTstart:node) + p_AD%rotors(iWT)%WtrDpth
+         PosXYZ(3,niWTstart:node-1) = PosXYZ(3,niWTstart:node-1) + p_AD%rotors(iWT)%WtrDpth
       end if
    enddo ! iWT
    ! vortex points from FVW in AD15
    if (allocated(o_AD%WakeLocationPoints)) then
-      niWTstart = node + 1
+      niWTstart = node
       do j = 1,size(o_AD%WakeLocationPoints,dim=2)
-         node = node + 1
          PosXYZ(:,node) = o_AD%WakeLocationPoints(:,j)
+         node = node + 1
       enddo !j, wake points
       ! TODO: this adds water depth if first first rotor is MHK
       if (p_AD%rotors(1)%MHK == 1 .or. p_AD%rotors(1)%MHK == 2) then
-         PosXYZ(3,niWTstart:node) = PosXYZ(3,niWTstart:node) + p_AD%rotors(1)%WtrDpth
+         PosXYZ(3,niWTstart:node-1) = PosXYZ(3,niWTstart:node-1) + p_AD%rotors(1)%WtrDpth
       end if
    end if
-end subroutine AD_SetExternalWindPositions
+end subroutine AD_GetWindPositions
 
 END MODULE AeroDyn
