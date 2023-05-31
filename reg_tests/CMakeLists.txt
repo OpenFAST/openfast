@@ -191,5 +191,6 @@ add_custom_target(
     hydrodyn_driver
     inflowwind_driver
     moordyn_driver
+    seastate_driver
     subdyn_driver
 )

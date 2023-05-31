@@ -400,7 +400,7 @@ ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
 
 # SeaState regression tests
-seast_regression("seastate1"                                 "seastate")
+seast_regression("seastate_1"                                "seastate")
 seast_regression("seastate_wavemod5"                         "seastate")
 seast_regression("seastate_wr_kin1"                          "seastate")
 
