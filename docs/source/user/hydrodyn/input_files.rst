@@ -230,17 +230,17 @@ real surface waves, permitting more accurate modeling of sea states and
 the associated wave loads at the expense of greater computational effort
 (mostly at HydroDyn initialization).
 
-While the cut-off frequencies in the :ref:`hd-2nd_order_waves_input` section
-above apply to both the second-order wave kinematics used by strip
+While the cut-off frequencies in the :ref:`sea-2nd_order_waves_input` section
+of the SeaState module to apply to both the second-order wave kinematics used by strip
 theory and the second-order diffraction loads in potential-flow theory,
 the second-order terms themselves are enabled separately. The
 second-order wave kinematics used by strip theory are enabled in the
-:ref:`hd-2nd_order_waves_input` section above while the second-order
+:ref:`sea-2nd_order_waves_input` section while the second-order
 diffraction loads in potential-flow theory are enabled in this section.
 While the second-order effects are included when enabled, the wave
 elevations output from HydroDyn will only include the second-order terms
 when the second-order wave kinematics are enabled in the
-:ref:`hd-2nd_order_waves_input` section above.
+:ref:`sea-2nd_order_waves_input` section in the SeaState module documetation.
 
 The second-order difference-frequency potential-flow terms can be
 enabled in one of three ways. To compute only the mean-drift term, set
