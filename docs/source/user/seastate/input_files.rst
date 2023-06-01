@@ -57,7 +57,7 @@ first-order waves or the use of externally generated waves, used by both
 the strip-theory and potential-flow solutions. The wave spectrum
 settings in this section only pertain to the first-order wave frequency
 components. When second-order terms are optionally enabled—see the
-:ref:`sea-2nd_order_waves_input` and :ref:`sea-2nd_order_floating_platform_forces_input`
+:ref:`sea-2nd_order_waves_input` and :ref:`hd-2nd_order_floating_platform_forces_input`
 sections below—the second-order terms are calculated using the
 first-order wave-component amplitudes and extra energy is added to the
 wave spectrum (at the difference and sum frequencies).
@@ -276,7 +276,7 @@ diffraction loads in potential-flow theory, the second-order terms
 themselves are enabled separately. The second-order wave kinematics used
 by strip theory are enabled in this section while the second-order
 diffraction loads in potential-flow theory are enabled in the
-:ref:`sea-2nd_order_floating_platform_forces_input` section below. While the
+:ref:`hd-2nd_order_floating_platform_forces_input` section below. While the
 second-order effects are included when enabled, the wave elevations
 output from HydroDyn will only include the second-order terms when the
 second-order wave kinematics are enabled in this section.
@@ -408,7 +408,7 @@ with the string "END" at the beginning of the line or at the beginning
 of a quoted string found at the beginning of the line will cause
 HydroDyn to quit scanning for more lines of channel names. Member- and
 joint-related quantities are generated for the requested 
-:ref:`sea-member-output-list` and :ref:`sea-joint-output-list`.
+:ref:`hd-member-output-list` and :ref:`hd-joint-output-list`.
 If HydroDyn encounters an unknown/invalid
 channel name, it warns the users but will remove the suspect channel
 from the output file. Please refer to Appendix C for a complete list of
