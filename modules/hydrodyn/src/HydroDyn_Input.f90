@@ -488,7 +488,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    CurLine = CurLine + 1
 
 
-   CALL AllocAry( tmpReArray, 12, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
+   CALL AllocAry( tmpReArray, 14, 'temporary array for Simple hydrodynamic coefficients', ErrStat2, ErrMsg2 )
       if (Failed())  return
    ! call ParseAry( FileInfo_In, CurLine, 'Simple hydrodynamic coefficients table row '//trim( Int2LStr(I)), tmpReArray, size(tmpReArray), ErrStat2, ErrMsg2, UnEc )
    !    if (Failed())  return;
@@ -508,6 +508,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
    InputFileData%Morison%SimplAxCaMG   = tmpReArray(10)
    InputFileData%Morison%SimplAxCp     = tmpReArray(11)
    InputFileData%Morison%SimplAxCpMG   = tmpReArray(12)
+   InputFileData%Morison%SimplCb       = tmpReArray(13)
+   InputFileData%Morison%SimplCbMG     = tmpReArray(14)
 
    if (allocated(tmpReArray))      deallocate(tmpReArray)
 
@@ -529,7 +531,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
 
    IF ( InputFileData%Morison%NCoefDpth > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 13, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 15, 'temporary array for CoefDpths', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for depth-based coefficient arrays
@@ -561,6 +563,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
          InputFileData%Morison%CoefDpths(I)%DpthAxCaMG   = tmpReArray(11)
          InputFileData%Morison%CoefDpths(I)%DpthAxCp     = tmpReArray(12)
          InputFileData%Morison%CoefDpths(I)%DpthAxCpMG   = tmpReArray(13)
+         InputFileData%Morison%CoefDpths(I)%DpthCb       = tmpReArray(14)
+         InputFileData%Morison%CoefDpths(I)%DpthCbMG     = tmpReArray(15)
       END DO
       
       DO I = 2,InputFileData%Morison%NCoefDpth
@@ -593,7 +597,7 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
 
    IF ( InputFileData%Morison%NCoefMembers > 0 ) THEN
 
-      CALL AllocAry( tmpReArray, 25, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
+      CALL AllocAry( tmpReArray, 29, 'temporary array for CoefMembers', ErrStat2, ErrMsg2 )
          if (Failed())  return;
 
          ! Allocate memory for Member-based coefficient arrays
@@ -637,6 +641,10 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
          InputFileData%Morison%CoefMembers(I)%MemberAxCp2      =      tmpReArray(23)
          InputFileData%Morison%CoefMembers(I)%MemberAxCpMG1    =      tmpReArray(24)
          InputFileData%Morison%CoefMembers(I)%MemberAxCpMG2    =      tmpReArray(25)
+         InputFileData%Morison%CoefMembers(I)%MemberCb1        =      tmpReArray(26)
+         InputFileData%Morison%CoefMembers(I)%MemberCb2        =      tmpReArray(27)
+         InputFileData%Morison%CoefMembers(I)%MemberCbMG1      =      tmpReArray(28)
+         InputFileData%Morison%CoefMembers(I)%MemberCbMG2      =      tmpReArray(29)
       END DO
 
       if (allocated(tmpReArray))      deallocate(tmpReArray)
@@ -675,7 +683,8 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
          READ(Line,*,IOSTAT=ErrStat2) InputFileData%Morison%InpMembers(I)%MemberID,   InputFileData%Morison%InpMembers(I)%MJointID1,    &
                                      InputFileData%Morison%InpMembers(I)%MJointID2,   InputFileData%Morison%InpMembers(I)%MPropSetID1,  &
                                      InputFileData%Morison%InpMembers(I)%MPropSetID2, InputFileData%Morison%InpMembers(I)%MDivSize,     &
-                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%PropPot
+                                     InputFileData%Morison%InpMembers(I)%MCoefMod,    InputFileData%Morison%InpMembers(I)%MHstLMod,     &
+                                     InputFileData%Morison%InpMembers(I)%PropPot
          IF ( ErrStat2 /= 0 ) THEN
             ErrStat2 = ErrID_Fatal
             ErrMsg2  = 'Error reading members table row '//trim( Int2LStr(I))//', line '  &
@@ -1816,6 +1825,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       CALL SetErrStat( ErrID_Fatal,'SimplAxCaMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
+   IF ( InputFileData%Morison%SimplCb < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+   IF ( InputFileData%Morison%SimplCbMG < 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal,'SimplCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
    !TODO: Do we need a test for AxCp
 
    !-------------------------------------------------------------------------------------------------
@@ -1891,6 +1908,14 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
          IF ( InputFileData%Morison%CoefDpths(I)%DpthAxCpMG < 0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthAxCpMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefDpths(I)%DpthCb < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCb must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefDpths(I)%DpthCbMG < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the Depth-based hydrodynamic coefficients table, DpthCbMG must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
       END DO
@@ -1969,6 +1994,22 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
          END IF
          IF ( InputFileData%Morison%CoefMembers(I)%MemberAxCaMG2 < 0 ) THEN 
             CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCaMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCb2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCb2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG1 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG1 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+         IF ( InputFileData%Morison%CoefMembers(I)%MemberCbMG2 < 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'In the member-based hydrodynamic coefficients table, MemberCbMG2 must be greater or equal to zero.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
       END DO
@@ -2115,11 +2156,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
             END IF
          END IF
 
+         IF ( InputFileData%Morison%InpMembers(I)%MHstLMod /= 0 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 1 .AND. InputFileData%Morison%InpMembers(I)%MHstLMod /= 2 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'MHstLMod must be 1 for column-type hydrostatic load calculation or 2 for ship-like calculation.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+
          IF ( InputFileData%Morison%InpMembers(I)%PropPot .AND. InputFileData%PotMod == 0  ) THEN
             CALL SetErrStat( ErrID_Fatal,'A member cannot have PropPot set to TRUE if PotMod = 0 in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
-
 
          
       END DO

@@ -343,7 +343,7 @@ subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, co
    real(ReKi),   intent(  out) :: phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat(3)
    integer,      intent(  out) :: errStat              ! returns a non-zero value when an error occurs  
    character(*), intent(  out) :: errMsg               ! Error message if errStat /= ErrID_None
-   
+   character(*), parameter     :: RoutineName = 'GetOrientationAngles'
    
    real(ReKi) :: vec(3), vecLen, vecLen2D, beta
    
@@ -358,7 +358,7 @@ subroutine GetOrientationAngles(p1, p2, phi, sinPhi, cosPhi, tanPhi, sinBeta, co
          vecLen   = SQRT(Dot_Product(vec,vec))
          vecLen2D = SQRT(vec(1)**2+vec(2)**2)
          if ( vecLen < 0.000001 ) then
-            call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, 'Morison_CalcOutput' )
+            call SeterrStat(ErrID_Fatal, 'An element of the Morison structure has co-located endpoints!  This should never occur.  Please review your model.', errStat, errMsg, RoutineName )
             return
          else
             k_hat = vec / vecLen 
@@ -550,7 +550,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
    real(ReKi)                                  :: ptLoad(6)
    logical                                     :: fillFlag
    type(Morison_MemberType)                    :: mem
-   REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
+   REAL(ReKi)                                  :: Cd1, Cd2, Ca1, Ca2, Cp1, Cp2, AxCd1, AxCd2, AxCa1, AxCa2, AxCp1, AxCp2, Cb1, Cb2, JAxCd1, JAxCd2, JAxCa1, JAxCa2, JAxCp1, JAxCp2 ! tmp coefs
    real(ReKi)                                  :: F_B(6, numNodes), F_BF(6, numNodes), F_WMG(6, numNodes)
    
    INTEGER                                     :: ErrStat2
@@ -784,15 +784,15 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
       WRITE( UnSum,  '(//)' ) 
       WRITE( UnSum,  '(A14,I4,A44)' ) 'Nodes (first [',numJoints,'] are joints, remainder are internal nodes)'
       WRITE( UnSum,  '(/)' ) 
-      WRITE( UnSum, '(1X,A5,20(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '     R    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    Ca    ', '    Cp    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  '
-      WRITE( UnSum, '(1X,A5,20(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
+      WRITE( UnSum, '(1X,A5,21(2X,A10))' ) '  i  ', '  MbrIndx ', '   Nxi    ', '   Nyi    ', '   Nzi    ', '     R    ', '    t     ', '   tMG    ', '  MGDens  ', ' PropPot  ', 'FilledFlag', 'FilledMass', '    Cd    ', '    Ca    ', '    Cp    ', '    Cb    ', '   AxCd   ',  '   AxCa   ', '   AxCp   ', '   JAxCd  ', '   JAxCa  ', '   JAxCp  '
+      WRITE( UnSum, '(1X,A5,21(2X,A10))' ) ' (-) ', '    (-)   ', '   (m)    ', '   (m)    ', '   (m)    ', '    (m)   ', '   (m)    ', '   (m)    ', ' (kg/m^3) ', '   (-)    ', '   (-)    ', '  (kg)    ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ',  '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   ', '    (-)   '
       
          ! Write the node data
       do I = 1,numJoints   
          ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
          pos = nodes(i)%Position
          pos(3) = pos(3) + MSL2SWL
-         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),9(2X,A10),3(2X,ES10.3))' ) i,'    -     ', pos, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
+         write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),10(2X,A10),3(2X,ES10.3))' ) i,'    -     ', pos, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
       end do
       c = numJoints
       do j= 1, numMembers
@@ -811,7 +811,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
             else
                II=I
             endif
-            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),7(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
+            write( UnSum, '(1X,I5,(2X,I10),3(2X,F10.4),4(2X,ES10.3),2(6X,L6),8(2X,ES10.3),3(7x,A5))' ) c, members(j)%MemberID, pos, members(j)%R(ii),  members(j)%R(ii)-members(j)%Rin(ii),  members(j)%tMG(ii),  members(j)%MGdensity(ii),  members(j)%PropPot,  fillFlag,  members(j)%m_fb_u(ii)+members(j)%m_fb_l(ii),  members(j)%Cd(ii),  members(j)%Ca(ii),  members(j)%Cp(ii),  members(j)%Cb(ii),  members(j)%AxCd(ii),  members(j)%AxCa(ii),  members(j)%AxCp(ii), '  -  ',  '  -  ',  '  -  '
          end do
       end do
       
@@ -819,8 +819,8 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
       write( UnSum,  '(//)' ) 
       write( UnSum,  '(A8)' ) 'Members'
       write( UnSum,  '(/)' ) 
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,31(2X,A12))' ) 'MemberID', 'joint1','joint2','  Length  ', '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     t1     ', '      R2    ', '     t2     ', ' PropPot  ', 'FilledFlag', 'FillDensity', '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    Ca1   ', '     Cp1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '   JAxCa1   ', '  JAxCp1    ', '     Cd2    ', '     Ca2    ', '     Cp2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
-      write( UnSum, '(1X,A8,2X,A6,2X,A6,31(2X,A12))' ) '  (-)   ', ' (-)  ',' (-)  ','   (m)    ', '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '      (m)   ', '     (m)    ', '   (-)    ', '   (-)    ', ' (kg/m^3)  ', '     (-)    ', '    (kg)    ', '     (-)    ', '    (-)   ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '    (-)     ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    '
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,33(2X,A12))' ) 'MemberID', 'joint1','joint2','  Length  ', '   NElem    ', '   Volume   ', '  MGVolume  ', '      R1    ', '     t1     ', '      R2    ', '     t2     ', ' PropPot  ', 'FilledFlag', 'FillDensity', '  FillFSLoc ', '  FillMass  ', '     Cd1    ', '    Ca1   ', '     Cp1    ', '     Cb1    ', '    AxCd1   ', '    AxCa1   ', '    AxCp1   ', '   JAxCd1   ', '   JAxCa1   ', '  JAxCp1    ', '     Cd2    ', '     Ca2    ', '     Cp2    ', '     Cb2    ', '    AxCd2   ', '    AxCa2   ', '    AxCp2   ', '   JAxCd2   ', '   JAxCa2   ', '   JAxCp2   '
+      write( UnSum, '(1X,A8,2X,A6,2X,A6,33(2X,A12))' ) '  (-)   ', ' (-)  ',' (-)  ','   (m)    ', '    (-)     ', '   (m^3)    ', '   (m^3)    ', '      (m)   ', '     (m)    ', '      (m)   ', '     (m)    ', '   (-)    ', '   (-)    ', ' (kg/m^3)  ', '     (-)    ', '    (kg)    ', '     (-)    ', '    (-)   ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '    (-)     ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    ', '     (-)    '
       
       
       
@@ -856,6 +856,8 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
          AxCa2 = members(i)%AxCa(N+1)
          AxCp1 = members(i)%AxCp(1)
          AxCp2 = members(i)%AxCp(N+1)
+         Cb1   = members(i)%Cb(1)
+         Cb2   = members(i)%Cb(N+1)
      
          JAxCd1 = nodes(members(i)%NodeIndx(1  ))%JAxCd
          JAxCd2 = nodes(members(i)%NodeIndx(1+N))%JAxCd
@@ -865,13 +867,13 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
          JAxCp2 = nodes(members(i)%NodeIndx(1+N))%JAxCp
        
          
-         write( UnSum, '(1X,I8,2X,I6,2X,I6,2X,ES12.5,2X,I12, 6(2X,ES12.5),2(2X,L12),21(2X,ES12.5))' )  members(i)%MemberID, &
+         write( UnSum, '(1X,I8,2X,I6,2X,I6,2X,ES12.5,2X,I12, 6(2X,ES12.5),2(2X,L12),23(2X,ES12.5))' )  members(i)%MemberID, &
                        members(i)%NodeIndx(1), members(i)%NodeIndx(N+1), members(i)%RefLength, N, &
                        memberVol, MGvolume, members(i)%Rmg(1), members(i)%Rmg(1)-members(i)%Rin(1), &
                        members(i)%Rmg(N+1), members(i)%Rmg(N+1)-members(i)%Rin(N+1),  &
                        members(i)%PropPot, filledFlag, members(i)%FillDens, members(i)%FillFSLoc, &
-                       mass_fill, Cd1, Ca1, Cp1, AxCd1, AxCa1, AxCp1, JAxCd1, JAxCa1, JAxCp1, &
-                       Cd2, Ca2, Cp2, AxCd2, AxCa2, AxCp2, JAxCd2, JAxCa2, JAxCp2
+                       mass_fill, Cd1, Ca1, Cp1, Cb1, AxCd1, AxCa1, AxCp1, JAxCd1, JAxCa1, JAxCp1, &
+                       Cd2, Ca2, Cp2, Cb2, AxCd2, AxCa2, AxCp2, JAxCd2, JAxCa2, JAxCp2
       
       end do   ! i = 1,numMembers
                
@@ -1051,7 +1053,7 @@ end subroutine Morison_GenerateSimulationNodes
 
 
 !====================================================================================================
-SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp )
+SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, AxCa, AxCp, Cb )
    
    REAL(ReKi), INTENT (IN   )             :: z ! Z location relative to MSL inertial system
    REAL(ReKi), INTENT (IN   )             :: tMG
@@ -1063,6 +1065,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
    REAL(ReKi), INTENT (  OUT)             :: AxCd
    REAL(ReKi), INTENT (  OUT)             :: AxCa
    REAL(ReKi), INTENT (  OUT)             :: AxCp
+   REAL(ReKi), INTENT (  OUT)             :: Cb
    
    INTEGER                 :: I, indx1, indx2
    REAL(ReKi)              :: dd, s
@@ -1106,6 +1109,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       AxCd   = CoefDpths(indx1)%DpthAxCdMG*(1-s) + CoefDpths(indx2)%DpthAxCdMG*s
       AxCa   = CoefDpths(indx1)%DpthAxCaMG*(1-s) + CoefDpths(indx2)%DpthAxCaMG*s
       AxCp   = CoefDpths(indx1)%DpthAxCpMG*(1-s) + CoefDpths(indx2)%DpthAxCpMG*s
+      Cb     = CoefDpths(indx1)%DpthCbMG*(1-s)   + CoefDpths(indx2)%DpthCbMG*s
    else
       Cd     = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthCd*s
       Ca     = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthCa*s
@@ -1113,6 +1117,7 @@ SUBROUTINE SetDepthBasedCoefs( z, tMG, NCoefDpth, CoefDpths, Cd, Ca, Cp, AxCd, A
       AxCd   = CoefDpths(indx1)%DpthCd*(1-s)     + CoefDpths(indx2)%DpthAxCd*s
       AxCa   = CoefDpths(indx1)%DpthCa*(1-s)     + CoefDpths(indx2)%DpthAxCa*s
       AxCp   = CoefDpths(indx1)%DpthCp*(1-s)     + CoefDpths(indx2)%DpthAxCp*s
+      Cb     = CoefDpths(indx1)%DpthCb*(1-s)     + CoefDpths(indx2)%DpthCb*s
    end if
    
 
@@ -1122,9 +1127,9 @@ END SUBROUTINE SetDepthBasedCoefs
 
 !====================================================================================================
 SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, SimplCdMG, SimplCa, SimplCaMG, SimplCp, &
-                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplMCF, CoefMembers,    &
+                                   SimplCpMG, SimplAxCd, SimplAxCdMG, SimplAxCa, SimplAxCaMG, SimplAxCp, SimplAxCpMG, SimplCb, SimplCbMG, SimplMCF, CoefMembers,    &
                                    NCoefDpth, CoefDpths, nodes, member )   
-!     This private subroutine generates the Cd, Ca, Cp, CdMG, CaMG and CpMG coefs for the member based on
+!     This private subroutine generates the Cd, Ca, Cp, Cb, CdMG, CaMG, CpMG, and CbMG coefs for the member based on
 !     the input data.  
 !---------------------------------------------------------------------------------------------------- 
    real(ReKi),                             intent(in   )  :: MSL2SWL
@@ -1142,6 +1147,8 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
    real(ReKi),                             intent(in   )  :: SimplAxCaMG 
    real(ReKi),                             intent(in   )  :: SimplAxCp
    real(ReKi),                             intent(in   )  :: SimplAxCpMG 
+   real(ReKi),                             intent(in   )  :: SimplCb
+   real(ReKi),                             intent(in   )  :: SimplCbMG
    logical,                                intent(in   )  :: SimplMCF
    type(Morison_CoefMembers), allocatable, intent(in   )  :: CoefMembers(:)
    integer(IntKi),                         intent(in   )  :: NCoefDpth
@@ -1162,7 +1169,8 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%Cp    (i) = SimplCpMG
             member%AxCd  (i) = SimplAxCdMG
             member%AxCa  (i) = SimplAxCaMG
-            member%AxCp  (i) = SimplAxCpMG          
+            member%AxCp  (i) = SimplAxCpMG
+            member%Cb    (i) = SimplCbMG
          else
             member%Cd    (i) = SimplCd
             member%Ca    (i) = SimplCa
@@ -1170,13 +1178,14 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
             member%AxCd  (i) = SimplAxCd
             member%AxCa  (i) = SimplAxCa
             member%AxCp  (i) = SimplAxCp
+            member%Cb    (i) = SimplCb
          end if
       end do
       member%PropMCF = SimplMCF
    CASE (2) ! Depth-based model: coefficients are set using depth-based table data
       do i = 1, member%NElements + 1
          CALL SetDepthBasedCoefs( nodes(member%NodeIndx(i))%Position(3)+MSL2SWL,  member%tMG(i), NCoefDpth, CoefDpths, member%Cd(i), member%Ca(i), &
-                                    member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i) )
+                                    member%Cp(i), member%AxCd(i), member%AxCa(i), member%AxCp(i), member%Cb(i) )
       end do
       member%PropMCF = CoefDpths(1)%DpthMCF
    CASE (3) ! Member-based model: coefficients set using member-specific coefficient tables
@@ -1184,16 +1193,18 @@ SUBROUTINE SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, SimplCd, S
          ! Pull member  end-node data from the tables and then linearly interpolate it onto the interior member nodes    
          s = (real(i,ReKi)-1.0) / real(member%NElements,ReKi)
          if ( member%tMG(i) > 0.0_ReKi ) then
-            member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdMG2*s
-            member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaMG2*s
-            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCpMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCpMG2*s 
+            member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCdMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCdMG2  *s
+            member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCaMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCaMG2  *s
+            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCpMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCpMG2  *s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCbMG1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCbMG2  *s
             member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCdMG2*s
             member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCaMG2*s
             member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG1*(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCpMG2*s
          else
-            member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCd1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCd2 *s
-            member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCa1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCa2 *s
-            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCp1 *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCp2 *s
+            member%Cd    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCd1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCd2    *s
+            member%Ca    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCa1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCa2    *s
+            member%Cp    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCp1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCp2    *s
+            member%Cb    (i) = CoefMembers(MmbrCoefIDIndx)%MemberCb1    *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberCb2    *s
             member%AxCd  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCd1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCd2  *s
             member%AxCa  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCa1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCa2  *s
             member%AxCp  (i) = CoefMembers(MmbrCoefIDIndx)%MemberAxCp1  *(1-s) + CoefMembers(MmbrCoefIDIndx)%MemberAxCp2  *s
@@ -1276,6 +1287,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    errMSg  = ''
    call AllocAry(member%NodeIndx     , member%NElements+1, 'member%NodeIndx'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_mg      , member%NElements,   'member%dRdl_mg'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%dRdl_mg_b    , member%NElements,   'member%dRdl_mg_b'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%dRdl_in      , member%NElements,   'member%dRdl_in'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%floodstatus  , member%NElements,   'member%floodstatus'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%alpha        , member%NElements,   'member%alpha'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1302,6 +1314,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%CM0_fb       , member%NElements,   'member%CM0_fb       ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
    call AllocAry(member%R            , member%NElements+1, 'member%R            ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%RMG          , member%NElements+1, 'member%RMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%RMGB         , member%NElements+1, 'member%RMGB         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%Rin          , member%NElements+1, 'member%Rin          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%tMG          , member%NElements+1, 'member%tMG          ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%MGdensity    , member%NElements+1, 'member%MGdensity    ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1311,6 +1324,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    call AllocAry(member%AxCd         , member%NElements+1, 'member%AxCd         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCa         , member%NElements+1, 'member%AxCa         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry(member%AxCp         , member%NElements+1, 'member%AxCp         ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry(member%Cb           , member%NElements+1, 'member%Cb           ', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_D    , 6, member%NElements+1, 'memberLoads%F_D'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_A    , 6, member%NElements+1, 'memberLoads%F_A'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( memberLoads%F_B    , 6, member%NElements+1, 'memberLoads%F_B'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -1325,6 +1339,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    ! Initialize everything to zero
    member%NodeIndx      = 0.0_ReKi
    member%dRdl_mg       = 0.0_ReKi
+   member%dRdl_mg_b     = 0.0_ReKi
    member%dRdl_in       = 0.0_ReKi
    member%floodstatus   = 0.0_ReKi
    member%alpha         = 0.0_ReKi
@@ -1351,6 +1366,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%CM0_fb        = 0.0_ReKi
    member%R             = 0.0_ReKi
    member%RMG           = 0.0_ReKi
+   member%RMGB          = 0.0_ReKi
    member%Rin           = 0.0_ReKi
    member%tMG           = 0.0_ReKi
    member%MGdensity     = 0.0_ReKi
@@ -1360,6 +1376,7 @@ subroutine AllocateMemberDataArrays( member, memberLoads, errStat, errMsg )
    member%AxCd          = 0.0_ReKi
    member%AxCa          = 0.0_ReKi
    member%AxCp          = 0.0_ReKi
+   member%Cb            = 0.0_ReKi
    memberLoads%F_D      = 0.0_ReKi
    memberLoads%F_A      = 0.0_ReKi
    memberLoads%F_B      = 0.0_ReKi
@@ -1486,9 +1503,15 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    end do
 
    call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
-                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, InitInp%SimplMCF, & 
+                                   InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
+                                   InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
                                    InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
    
+   ! calculate member radius with marine growth scaled by sqrt(Cb) for buoyancy/hydrostatic load calculation
+   do i = 1, member%NElements+1
+      member%RMGB(i) = member%RMG(i) * SQRT(member%Cb(i))
+   end do
+
    ! calculate reference incline angle and heading, and related trig values.  Note: members are straight to start
    Za = InitInp%Nodes(member%NodeIndx(1  ))%Position(3) 
    Zb = InitInp%Nodes(member%NodeIndx(N+1))%Position(3)
@@ -1556,13 +1579,14 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
     ! Check the member does not exhibit any of the following conditions
    if (.not. member%PropPot) then 
-      if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
-         call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+      if (member%MHstLMod == 1) then
+         if ( abs(Zb) < abs(member%Rmg(N+1)*sinPhi) ) then
+            call SetErrStat(ErrID_Fatal, 'The upper end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         end if
+         if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
+            call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
+         end if
       end if
-      if ( abs(Za) < abs(member%Rmg(1)*sinPhi) ) then
-         call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
-      end if
-      
       if ( ( Za < -WtrDepth .and. Zb >= -WtrDepth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
          call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
       end if
@@ -1600,11 +1624,12 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    ! calculate element-level values
    
    do i = 1, member%NElements
-      member%dRdl_mg(i) = (member%RMG(i+1) - member%RMG(i))/dl
-      member%dRdl_in(i) = (member%Rin(i+1) - member%Rin(i))/dl
+      member%dRdl_mg(  i) = (member%RMG( i+1) - member%RMG( i))/dl
+      member%dRdl_in(  i) = (member%Rin( i+1) - member%Rin( i))/dl
+      member%dRdl_mg_b(i) = (member%RMGB(i+1) - member%RMGB(i))/dl
       
-      member%alpha(   i) = GetAlpha(member%RMG(i), member%RMG(i+1))
-      member%alpha_fb(i) = GetAlpha(member%Rin(i), member%Rin(i+1))
+      member%alpha(   i) = GetAlpha(member%RMGB(i), member%RMGB(i+1))   ! Only used to distribute external buoyancy load to nodes
+      member%alpha_fb(i) = GetAlpha(member%Rin( i), member%Rin( i+1))
       
    end do
 
@@ -1827,6 +1852,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
       p%Members(i)%dl        = InitInp%InpMembers(i)%dl
       p%Members(i)%NElements = InitInp%InpMembers(i)%NElements
       p%Members(i)%PropPot   = InitInp%InpMembers(i)%PropPot
+      p%Members(i)%MHstLMod  = InitInp%InpMembers(i)%MHstLMod
       ! p%Members(i)%MCF       = InitInp%InpMembers(i)%MCF
       
       call AllocateMemberDataArrays(p%Members(i), m%MemberLoads(i), errStat2, errMsg2)
@@ -1955,12 +1981,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    do i = 1, InitInp%NJoints
       InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
       InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
-      InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
-      
-      !InitInp%Nodes(i)%JAxCd = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCd
-      !InitInp%Nodes(i)%JAxCa = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCa
-      !InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp
-      
+      InitInp%Nodes(i)%JAxCp = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxCp     
       InitInp%Nodes(i)%JAxFDMod   = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDMod
       InitInp%Nodes(i)%JAxVnCOff  = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxVnCOff
       InitInp%Nodes(i)%JAxFDLoFSc = InitInp%AxialCoefs(InitInp%InpJoints(i)%JointAxIDIndx)%AxFDLoFSc
@@ -2339,11 +2360,11 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-   if ( EqualRealNos(R1, 0.0_ReKi) .AND. EqualRealNos(R2, 0.0_ReKi) ) then  ! if undefined, return 0
-      GetAlpha = 0.0_ReKi
-   else
+   IF ( EqualRealNos(R1, R2) ) THEN ! To cover the case where R1=R2=0
+      GetAlpha = 0.5
+   ELSE
       GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
-   end if
+   END IF
    
 END FUNCTION GetAlpha
 
@@ -2545,18 +2566,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-      ! Local variables
-                  
+   ! Local variables
    INTEGER(IntKi)                                    :: errStat2    ! Error status of the operation (occurs after initial error)
    CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
-!   REAL(ReKi)                                        :: F_DP(6)
    REAL(ReKi)                                        :: vmag, vmagf
    INTEGER                                           :: I, J, K
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
-
-
       
    TYPE(Morison_MemberType) :: mem     ! the current member
    INTEGER                  :: N       ! Number of elements within a given member
@@ -2568,47 +2585,36 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: tanPhi
    REAL(ReKi)               :: sinBeta, sinBeta1, sinBeta2
    REAL(ReKi)               :: cosBeta, cosBeta1, cosBeta2
-   real(ReKi)               :: CMatrix(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
+   REAL(ReKi)               :: CMatrix(3,3), CTrans(3,3) ! Direction cosine matrix for element, and its transpose
    REAL(ReKi)               :: z1
    REAL(ReKi)               :: z2
    REAL(ReKi)               :: r1
    REAL(ReKi)               :: r2
+   REAL(ReKi)               :: r1b
+   REAL(ReKi)               :: r2b
+   REAL(ReKi)               :: rMidb
    REAL(ReKi)               :: dRdl_mg     ! shorthand for taper including marine growth of element i
+   REAL(ReKi)               :: dRdl_mg_b   ! shorthand for taper including marine growth of element i with radius scaling by sqrt(Cb)
    REAL(ReKi)               :: RMGFSInt    ! Member radius with marine growth at the intersection with the instantaneous free surface
-   real(ReKi)               :: g     ! gravity constant
-   REAL(ReKi)               :: h0    ! distances along cylinder centerline from point 1 to the waterplane
-   real(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
-   REAL(ReKi)               :: rh    ! radius of cylinder at point where its centerline crosses the waterplane
-   REAL(ReKi)               :: Vs    ! segment submerged volume
-   REAL(ReKi)               :: a0    ! waterplane ellipse shape
-   REAL(ReKi)               :: b0    
-  !REAL(ReKi)               :: cr    ! centroid of segment submerged volume relative to its lower node
-  !REAL(ReKi)               :: cl 
-  !REAL(ReKi)               :: cx 
-  !REAL(ReKi)               :: cz
-   REAL(ReKi)               :: ZetaP, ZetaM, dZetadx, dZetady
-   REAL(ReKi)               :: n_hat(3), t_hat(3), s_hat(3), r_hat(3)
-   REAL(ReKi)               :: sinGamma, cosGamma, tanGamma
-   REAL(ReKi)               :: s0, Vrc, Vhc, Z0
-   REAL(ReKi)               :: FbVec(3), MbVec(3)
-   REAL(ReKi)               :: pwr   ! exponent for buoyancy node distribution smoothing
+   REAL(ReKi)               :: g     ! gravity constant
+   REAL(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
+   REAL(ReKi)               :: n_hat(3)
    REAL(ReKi)               :: alpha ! final load distribution factor for element
-!   REAL(ReKi)               :: Fb    !buoyant force
    REAL(ReKi)               :: Fr    !radial component of buoyant force
    REAL(ReKi)               :: Fl    !axial component of buoyant force
    REAL(ReKi)               :: Moment     !moment induced about the center of the cylinder's bottom face
-   integer(IntKi)           :: im    ! counter   
-   real(ReKi)               :: a_s1(3)       
-   real(ReKi)               :: alpha_s1(3)
-   real(ReKi)               :: omega_s1(3)
-   real(ReKi)               :: a_s2(3)       
-   real(ReKi)               :: alpha_s2(3)
-   real(ReKi)               :: omega_s2(3)
-   real(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
-   real(ReKi)               :: Imat(3,3)
-   real(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
-   real(ReKi)               :: C_1, C_2, a0b0, h, h_c_AM, deltal_AM
-   real(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B1(6), F_B2(6)
+   INTEGER(IntKi)           :: im    ! counter   
+   REAL(ReKi)               :: a_s1(3)       
+   REAL(ReKi)               :: alpha_s1(3)
+   REAL(ReKi)               :: omega_s1(3)
+   REAL(ReKi)               :: a_s2(3)       
+   REAL(ReKi)               :: alpha_s2(3)
+   REAL(ReKi)               :: omega_s2(3)
+   REAL(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
+   REAL(ReKi)               :: Imat(3,3)
+   REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
+   REAL(ReKi)               :: h, h_c_AM, deltal_AM
+   REAL(ReKi)               :: F_WMG(6), F_IMG(6), F_If(6), F_B0(6), F_B1(6), F_B2(6), F_B_End(6)
 
    ! Local variables needed for wave stretching and load smoothing/redistribution
    INTEGER(IntKi)           :: FSElem
@@ -2635,6 +2641,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: pos1Prime(3)
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
+   INTEGER(IntKi)           :: MemSubStat, NumFSX
+   REAL(ReKi)               :: theta1, theta2, dFdl(6), y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
+   INTEGER(IntKi)           :: secStat
+
+   LOGICAL                  :: Is1stElement
 
    ! Initialize errStat
    errStat = ErrID_None         
@@ -2649,8 +2660,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
 
    DO j = 1, p%NNodes
-      !m%nodeInWater(j) = REAL( p%nodeInWater(IntWrapIndx,j), ReKi )
-      !TODO: Update for Wave Kinematics grid  
       IF (p%WaveDisp == 0 ) THEN
          ! use the initial X,Y location
          pos1(1) = u%Mesh%Position(1,j)
@@ -2678,7 +2687,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ELSE
         m%WaveElev(j) =  m%WaveElev1(j) 
       END IF      
-      
       
       IF (p%WaveStMod == 0) THEN ! No wave stretching
     
@@ -2876,16 +2884,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    ! Zero out previous time-steps loads (these are loads which are computed at the member-level and summed onto a node, 
    !    so they need to be zeroed out before the summations happen)
-   !m%F_WMG   = 0.0_ReKi
-   !m%F_IMG   = 0.0_ReKi
-   m%F_BF_End= 0.0_ReKi
-   !m%F_If    = 0.0_ReKi
-   !m%F_D     = 0.0_ReKi
-   !m%F_A     = 0.0_ReKi
-   !m%F_I     = 0.0_ReKi
-   !m%F_B     = 0.0_ReKi
-   !m%F_BF    = 0.0_ReKi
-   m%F_B_End = 0.0_ReKi
+   m%F_BF_End    = 0.0_ReKi
+   m%F_B_End     = 0.0_ReKi
    y%Mesh%Force  = 0.0_ReKi
    y%Mesh%Moment = 0.0_ReKi
    
@@ -2895,54 +2895,81 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       mem = p%Members(im)   !@mhall: does this have much overhead?
 
       !zero member loads
-      m%memberLoads(im)%F_B = 0.0_ReKi
-      m%memberLoads(im)%F_BF = 0.0_ReKi
-      m%memberLoads(im)%F_D = 0.0_ReKi
-      m%memberLoads(im)%F_A = 0.0_ReKi
-      m%memberLoads(im)%F_I = 0.0_ReKi
+      m%memberLoads(im)%F_B   = 0.0_ReKi
+      m%memberLoads(im)%F_BF  = 0.0_ReKi
+      m%memberLoads(im)%F_D   = 0.0_ReKi
+      m%memberLoads(im)%F_A   = 0.0_ReKi
+      m%memberLoads(im)%F_I   = 0.0_ReKi
       m%memberLoads(im)%F_WMG = 0.0_ReKi
       m%memberLoads(im)%F_IMG = 0.0_ReKi
-      m%memberLoads(im)%F_If = 0.0_ReKi
+      m%memberLoads(im)%F_If  = 0.0_ReKi
 
-      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
+      ! Determine member submergence status
+      IF ( p%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
+         IF ( m%nodeInWater(mem%NodeIndx(1)) .NE. m%nodeInWater(mem%NodeIndx(N+1)) ) THEN
+            MemSubStat = 1_IntKi  ! Member centerline crosses the SWL once
+         ELSE IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
+            MemSubStat = 3_IntKi  ! Member centerline completely above water
+         ELSE
+            MemSubStat = 0_IntKi  ! Member centerline fully submerged
+         END IF 
+      ELSE IF ( p%WaveStMod > 0_IntKi ) THEN ! Has wave stretching - Need to check every node
+         NumFSX = 0_IntKi ! Number of free-surface crossing
+         DO i = 1, N ! loop through member elements
+            IF ( m%nodeInWater(mem%NodeIndx(i)) .NE. m%nodeInWater(mem%NodeIndx(i+1)) ) THEN
+               NumFSX = NumFSX + 1
+            END IF
+         END DO
+         IF (NumFSX .EQ. 1_IntKi) THEN
+            MemSubStat = 1_IntKi  ! Member centerline crosses the free surface once
+         ELSE IF (NumFSX .GT. 1_IntKi) THEN
+            MemSubStat = 2_IntKi  ! Member centerline crosses the free surface multiple time
+         ELSE ! Member centerline does not cross the free surface
+            IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
+               MemSubStat = 3_IntKi  ! Member centerline completely above water
+            ELSE
+               MemSubStat = 0_IntKi  ! Member centerline completely submerged
+            END IF
+         END IF
+      END IF
+
+      !---------------- Marine growth and Buoyancy: Sides: Only if member not modeled with potential flow theory ----------------  
+      IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
+         DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
-         ! calculate instantaneous incline angle and heading, and related trig values
-         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
+            ! calculate instantaneous incline angle and heading, and related trig values
+            ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-         pos2(3) = pos2(3) - p%MSL2SWL
+            pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+            pos1(3) = pos1(3) - p%MSL2SWL
+            pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
+            pos2(3) = pos2(3) - p%MSL2SWL
 
-         call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
-         call Morison_DirCosMtrx( pos1, pos2, CMatrix )
-         CTrans  = transpose(CMatrix)
-         ! save some commonly used variables   
-         dl      = mem%dl
-         z1      = pos1(3)   ! get node z locations from input mesh
-         z2      = pos2(3)
-         r1      = mem%RMG(i  )                         ! outer radius element nodes including marine growth
-         r2      = mem%RMG(i+1)
-         dRdl_mg = mem%dRdl_mg(i)                                    ! Taper of element including marine growth
-         a_s1    = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
-         alpha_s1= u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
-         omega_s1= u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
-         a_s2    = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
-         alpha_s2= u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
-         omega_s2= u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
-         
-         IF ( .NOT. mem%PropPot ) THEN ! Member is NOT modeled with Potential Flow Theory
-            ! should i_floor theshold be applied to below calculations to avoid wasting time on computing zero-valued things? <<<<<
-            ! should lumped half-element coefficients get combined at initialization? <<<
+            call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
+              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            call Morison_DirCosMtrx( pos1, pos2, CMatrix )
+            CTrans  = transpose(CMatrix)
+            ! save some commonly used variables   
+            dl        = mem%dl
+            z1        = pos1(3)          ! get node z locations from input mesh
+            z2        = pos2(3)
+            r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
+            r2        = mem%RMG(i+1)
+            r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+            r2b       = mem%RMGB(i+1)
+            dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
+            dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+            a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
+            alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
+            omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
+            a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
+            alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
+            omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
               
             ! ------------------ marine growth: Sides: Section 4.1.2 --------------------  
             F_WMG = 0.0_ReKi
 
             ! lower node
-            !m%F_WMG(3, mem%NodeIndx(i  )) = m%F_WMG(3, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
-            !m%F_WMG(4, mem%NodeIndx(i  )) = m%F_WMG(4, mem%NodeIndx(i  )) - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * sinBeta! weight force
-            !m%F_WMG(5, mem%NodeIndx(i  )) = m%F_WMG(5, mem%NodeIndx(i  )) + mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * cosBeta! weight force
-            
             F_WMG(3) = - mem%m_mg_l(i)*g ! weight force  : Note: this is a constant
             F_WMG(4) = - mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * sinBeta! weight force
             F_WMG(5) =   mem%m_mg_l(i)*g * mem%h_cmg_l(i)* sinPhi * cosBeta! weight force
@@ -2951,9 +2978,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_WMG(4:6)
             
             ! upper node
-            !m%F_WMG(3, mem%NodeIndx(i+1)) = m%F_WMG(3, mem%NodeIndx(i+1)) - mem%m_mg_u(i)*g ! weight force  : Note: this is a constant 
-            !m%F_WMG(4, mem%NodeIndx(i+1)) = m%F_WMG(4, mem%NodeIndx(i+1)) - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * sinBeta! weight force
-            !m%F_WMG(5, mem%NodeIndx(i+1)) = m%F_WMG(5, mem%NodeIndx(i+1)) + mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * cosBeta! weight force
             F_WMG(3) = - mem%m_mg_u(i)*g ! weight force  : Note: this is a constant 
             F_WMG(4) = - mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * sinBeta! weight force
             F_WMG(5) =   mem%m_mg_u(i)*g * mem%h_cmg_u(i)* sinPhi * cosBeta! weight force
@@ -2969,11 +2993,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_l(i) * k_hat
             iTerm     = ( -a_s1 - cross_product(omega_s1, cross_product(omega_s1,iArm )) - cross_product(alpha_s1,iArm) ) * mem%m_mg_l(i)
-            !m%F_IMG(1:3, mem%NodeIndx(i  )) = m%F_IMG(1:3, mem%NodeIndx(i  )) + iTerm
-            !m%F_IMG(4:6, mem%NodeIndx(i  )) = m%F_IMG(4:6, mem%NodeIndx(i  )) &
-            !                                  - cross_product(a_s1 * mem%m_mg_l(i), mem%h_cmg_l(i) * k_hat) &
-            !                                  + matmul(Imat, alpha_s1)  &
-            !                                  - cross_product(omega_s1,matmul(Imat,omega_s1))
             F_IMG(1:3) = iTerm
             F_IMG(4:6) = - cross_product(a_s1 * mem%m_mg_l(i), mem%h_cmg_l(i) * k_hat) + matmul(Imat, alpha_s1)  &
                          - cross_product(omega_s1,matmul(Imat,omega_s1))
@@ -2989,11 +3008,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Imat      =  matmul(matmul(CMatrix, Imat), CTrans)
             iArm = mem%h_cmg_u(i) * k_hat
             iTerm     = ( -a_s2 - cross_product(omega_s2, cross_product(omega_s2,iArm )) - cross_product(alpha_s2,iArm) ) * mem%m_mg_u(i)
-            !m%F_IMG(1:3, mem%NodeIndx(i+1)) = m%F_IMG(1:3, mem%NodeIndx(i+1)) + iTerm
-            !m%F_IMG(4:6, mem%NodeIndx(i+1)) = m%F_IMG(4:6, mem%NodeIndx(i+1)) &
-            !                                  - cross_product(a_s2 * mem%m_mg_u(i), mem%h_cmg_u(i) * k_hat) &
-            !                                  + matmul(Imat, alpha_s2) &
-            !                                  - cross_product(omega_s2,matmul(Imat,omega_s2))
             F_IMG(1:3) = iTerm
             F_IMG(4:6) = - cross_product(a_s2 * mem%m_mg_u(i), mem%h_cmg_u(i) * k_hat) + matmul(Imat, alpha_s2) &
                          - cross_product(omega_s2,matmul(Imat,omega_s2))
@@ -3002,190 +3016,91 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_IMG(4:6)
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
-            IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
-               CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-               CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
-                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            ELSE ! Without wave stretching, compute buoyancy based on SWL
-               Zeta1 = 0.0_ReKi
-               Zeta2 = 0.0_ReKi
-            END IF
+            IF (mem%MHstLMod == 1) THEN
+               IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
+                  CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
+                  CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
+                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               ELSE ! Without wave stretching, compute buoyancy based on SWL
+                  Zeta1 = 0.0_ReKi
+                  Zeta2 = 0.0_ReKi
+               END IF
+               Is1stElement = ( i .EQ. 1)
+               CALL getElementHstLds_Mod1( Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1b, r2b, dl, mem%alpha(i), Is1stElement, F_B0, F_B1, F_B2, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               ! Add nodal loads to mesh
+               IF ( .NOT. Is1stElement ) THEN
+                  m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B0
+                  y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B0(1:3)
+                  y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B0(4:6)
+               END IF
+               m%memberLoads(im)%F_B(:, i  ) = m%memberLoads(im)%F_B(:, i  ) + F_B1
+               m%memberLoads(im)%F_B(:, i+1) = m%memberLoads(im)%F_B(:, i+1) + F_B2
+               y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
+               y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
+               y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B2(1:3)
+               y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B2(4:6)
+            ELSE IF (mem%MHstLMod == 2) THEN ! Alternative hydrostatic load calculation
+               ! Get free surface elevation and normal at the element midpoint (both assumed constant over the element)
+               posMid = 0.5 * (pos1+pos2)
+               rMidb  = 0.5 * (r1b +r2b )
+               IF (p%WaveStMod > 0) THEN
+                  CALL GetTotalWaveElev( Time, posMid, ZetaMid, ErrStat2, ErrMsg2 )
+                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  CALL GetFreeSurfaceNormal( Time, posMid, rMidb, n_hat, ErrStat2, ErrMsg2 )
+                    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  FSPt = (/posMid(1),posMid(2),ZetaMid/) ! Reference point on the free surface
+               ELSE
+                  FSPt = (/posMid(1),posMid(2),0.0/)
+                  n_hat = (/0.0,0.0,1.0/)
+               END IF    
+               CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
+               CALL getElementHstLds_Mod2( pos1, pos2, FSPt, k_hat, y_hat, z_hat, n_hat, r1b, r2b, dl, F_B1, F_B2, ErrStat2, ErrMsg2)
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               ! Add nodal loads to mesh
+               m%memberLoads(im)%F_B(:,i  ) = m%memberLoads(im)%F_B(:,i  ) + F_B1
+               m%memberLoads(im)%F_B(:,i+1) = m%memberLoads(im)%F_B(:,i+1) + F_B2
+               y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
+               y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
+               y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B2(1:3)
+               y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B2(4:6)
+            END IF ! MHstLMod
+         END DO ! i = max(mem%i_floor,1), N    ! loop through member elements that are not fully buried in the seabed
+      END IF ! NOT Modeled with Potential flow theory
 
-            IF ( z1 < Zeta1 ) THEN  ! If element is at least partially submerged
+      ! --------------------------- flooded ballast: sides: Always compute regardless of PropPot setting ------------------------------
+      DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
+         
+         ! calculate instantaneous incline angle and heading, and related trig values
+         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
 
-               IF (z2 >= Zeta2) THEN  ! Partially submerged element
+         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
+         pos1(3) = pos1(3) - p%MSL2SWL
+         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
+         pos2(3) = pos2(3) - p%MSL2SWL
 
-                  ! Check that this is not the 1st element of the member
-                  ! IF (( i == 1 ) .AND. (z2 > Zeta2)) THEN
-                  !   CALL SeterrStat(ErrID_Fatal, 'The lowest element of a Morison member has become partially submerged!  This is not allowed.  Please review your model and create a discretization such that even with displacements, the lowest element of a member does not become partially submerged.', errStat, errMsg, 'Morison_CalcOutput' )
-                  !   RETURN
-                  ! END IF
+         call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         call Morison_DirCosMtrx( pos1, pos2, CMatrix )
+         CTrans  = transpose(CMatrix)
+         ! save some commonly used variables   
+         dl        = mem%dl
+         z1        = pos1(3)          ! get node z locations from input mesh
+         z2        = pos2(3)
+         r1        = mem%RMG(i  )     ! outer radius at element nodes including marine growth
+         r2        = mem%RMG(i+1)
+         r1b       = mem%RMGB(i  )    ! outer radius at element nodes including marine growth scaled by sqrt(Cb)
+         r2b       = mem%RMGB(i+1)
+         dRdl_mg   = mem%dRdl_mg(i)   ! Taper of element including marine growth
+         dRdl_mg_b = mem%dRdl_mg_b(i) ! Taper of element including marine growth with radius scaling by sqrt(Cb)
+         a_s1      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i  ))
+         alpha_s1  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i  ))
+         omega_s1  = u%Mesh%RotationVel   (:, mem%NodeIndx(i  ))
+         a_s2      = u%Mesh%TranslationAcc(:, mem%NodeIndx(i+1))
+         alpha_s2  = u%Mesh%RotationAcc   (:, mem%NodeIndx(i+1))
+         omega_s2  = u%Mesh%RotationVel   (:, mem%NodeIndx(i+1))
 
-                  ! Submergence ratio
-                  SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
-                  ! The position of the intersection between the free surface and the element
-                  FSInt    = SubRatio * (pos2-pos1) + pos1
-                  ! Distances along element centerline from point 1 to the waterplane
-                  h0       = SubRatio * dl
-
-                  ! radius of element at point where its centerline crosses the waterplane
-                  rh    = r1 + h0*dRdl_mg    
-
-                  ! Estimate the free-surface normal at the free-surface intersection, n_hat
-                  IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute free surface normal
-                     CALL GetTotalWaveElev( Time, (/FSInt(1)+rh,FSInt(2)/), ZetaP, ErrStat2, ErrMsg2 )
-                     CALL GetTotalWaveElev( Time, (/FSInt(1)-rh,FSInt(2)/), ZetaM, ErrStat2, ErrMsg2 )
-                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                     dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)+rh/), ZetaP, ErrStat2, ErrMsg2 )
-                     CALL GetTotalWaveElev( Time, (/FSInt(1),FSInt(2)-rh/), ZetaM, ErrStat2, ErrMsg2 )
-                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-                     dZetady = (ZetaP-ZetaM)/(2.0_ReKi*rh)
-                     n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-                     n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
-                  ELSE ! Without wave stretching, use the normal of the SWL
-                     n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
-                  END IF
-
-                  ! Get other relevant unit vectors, t_hat, r_hat, and s_hat
-                  t_hat    = Cross_Product(k_hat,n_hat)
-                  sinGamma = SQRT(Dot_Product(t_hat,t_hat))
-                  cosGamma = Dot_Product(k_hat,n_hat)
-                  tanGamma = sinGamma/cosGamma
-                  IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-                     ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-                     IF ( k_hat(3) < 0.999999_ReKi ) THEN
-                        t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
-                        t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
-                     ELSE ! k_hat is close to vertical (0,0,1)
-                        t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
-                     END IF
-                  ELSE
-                     t_hat = t_hat / sinGamma
-                  END IF
-                  s_hat = Cross_Product(t_hat,n_hat)
-                  r_hat = Cross_Product(t_hat,k_hat)
-
-                  ! Compute the waterplane shape, the submerged volume, and it's geometric center
-                  IF (abs(dRdl_mg) < 0.0001) THEN  ! non-tapered member
-
-                     IF (cosGamma < 0.0001) THEN
-                        CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-                     END IF
-
-                     a0   = r1/cosGamma                                       ! Semi major axis of waterplane
-                     b0   = r1                                                ! Semi minor axis of waterplane
-                     a0b0 = a0*b0
-                     s0   = 0.0_ReKi                                          ! Distance from the center of the waterplane to the element centerline
-                     Vs   =       Pi*r1**2*h0                                 ! volume of total submerged portion
-                     Vrc  = -0.25*Pi*r1**4*tanGamma                           ! Submerged Volume * r_c
-                     Vhc  = 0.125*Pi*r1**2* (4.0*h0**2 + r1**2 * tanGamma**2) ! Submerged Volume * h_c
-
-                  ELSE  ! tapered member
-
-                     C_1  = 1.0_ReKi - dRdl_mg**2 * tanGamma**2
-                     IF (C_1 < 0.0001) THEN ! The free surface is nearly tangent to the element wall
-                        CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-                     END IF
-
-                     a0   = rh/(C_1*cosGamma)                                 ! Semi major axis of waterplane
-                     b0   = rh/sqrt(C_1)                                      ! Semi minor axis of waterplane
-                     a0b0 = a0*b0
-                     C_2  = a0b0*rh*cosGamma - r1**3
-                     s0   = -rh*dRdl_mg*tanGamma/C_1/cosGamma                  ! Distance from the center of the waterplane to the element centerline
-                     Vs   =  Pi*C_2/(3.0*dRdl_mg)                              ! volume of total submerged portion
-                     Vrc  = -0.25*Pi *  a0b0*rh**2*sinGamma/C_1                                                   ! Submerged Volume * r_c
-                     Vhc  =  0.25*Pi * (a0b0*rh**2*cosGamma/C_1 - r1**4 - 4.0_ReKi/3.0_ReKi*r1*C_2 ) /dRdl_mg**2   ! Submerged Volume * h_c
-
-                  END IF
-
-                  ! z-coordinate of the center of the waterplane in the global earth-fixed system
-                  Z0 = z1+h0*k_hat(3)+s0*s_hat(3)  
-
-                  ! Hydrostatic force on element
-                  FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*a0b0*Z0*n_hat + Pi*r1**2*z1*k_hat
-                  FbVec = p%WtrDens * g * FbVec
-
-                  ! Hydrostatic moment on element about the lower node
-                  MbVec = Cross_Product( Vrc*r_hat+Vhc*k_hat, (/0.0_ReKi,0.0_ReKi,1.0_ReKi/) ) &
-                          + 0.25*Pi*a0b0*  ( ( s_hat(3)*a0*a0 + 4.0*(s0-h0*sinGamma)*Z0 )*t_hat - t_hat(3)*b0*b0*s_hat ) &
-                          - 0.25*Pi*r1**4* (   r_hat(3)                                  *t_hat - t_hat(3)   *   r_hat )
-                  MbVec = p%WtrDens * g * MbVec
-
-                  IF ( i == 1 ) THEN ! This is the 1st element of the member
-                     ! Assign the element load to the lower (1st) node of the member
-                     F_B1(1:3) = FbVec
-                     F_B1(4:6) = MbVec
-                     m%memberLoads(im)%F_B(:,i) = m%memberLoads(im)%F_B(:,i) + F_B1
-                     y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_B1(1:3)
-                     y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_B1(4:6)
-                  ELSE ! This is not the 1st element of the member
-                     ! Distribute element load to nodes
-                     pwr = 3
-                     alpha = (1.0-mem%alpha(i))*(z1-Zeta1)**pwr / ( -mem%alpha(i)*(z2-Zeta2)**pwr + (1.0-mem%alpha(i))*(z1-Zeta1)**pwr )
-
-                     ! Hydrostatic force
-                     F_B1(1:3) =    alpha  * FbVec
-                     F_B2(1:3) = (1-alpha) * FbVec
-
-                     ! Hydrostatic moment correction followed by redistribution
-                     MbVec = MbVec - Cross_Product( -k_hat*dl, F_B2(1:3))
-                     F_B1(4:6) =    alpha  * MbVec
-                     F_B2(4:6) = (1-alpha) * MbVec
-
-                     ! Add nodal loads to mesh
-                     m%memberLoads(im)%F_B(:, i)   = m%memberLoads(im)%F_B(:, i  ) + F_B1  ! alpha
-                     m%memberLoads(im)%F_B(:, i-1) = m%memberLoads(im)%F_B(:, i-1) + F_B2  ! 1-alpha
-                     y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B1(1:3)
-                     y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B1(4:6)
-                     y%Mesh%Force (:,mem%NodeIndx(i-1)) = y%Mesh%Force (:,mem%NodeIndx(i-1)) + F_B2(1:3)
-                     y%Mesh%Moment(:,mem%NodeIndx(i-1)) = y%Mesh%Moment(:,mem%NodeIndx(i-1)) + F_B2(4:6)
-                  END IF
-
-               ELSE ! fully submerged element
-
-                  ! Compute the waterplane shape, the submerged volume, and it's geometric center
-                  ! No need to consider tapered and non-tapered elements separately
-                  Vs   =  Pi*dl   *(r1**2 +     r1*r2 +     r2**2 ) /  3.0_ReKi   ! volume of total submerged portion
-                  Vhc  =  Pi*dl**2*(r1**2 + 2.0*r1*r2 + 3.0*r2**2 ) / 12.0_ReKi   ! Submerged Volume * h_c
-
-                  ! Hydrostatic force on element
-                  FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*( r2*r2*z2 - r1*r1*z1) *k_hat
-                  FbVec = p%WtrDens * g * FbVec
-
-                  ! Hydrostatic moment on element about the lower node
-                  MbVec = (Vhc+0.25*Pi*(r2**4-r1**4)) * Cross_Product(k_hat,(/0.0_ReKi,0.0_ReKi,1.0_ReKi/))
-                  MbVec = p%WtrDens * g * MbVec
-
-                  ! Distribute element load to nodes
-                  pwr = 3
-                  alpha = mem%alpha(i)*(z2-Zeta2)**pwr/(mem%alpha(i)*(z2-Zeta2)**pwr+(1.0_ReKi-mem%alpha(i))*(z1-Zeta1)**pwr)
-
-                  ! Hydrostatic force
-                  F_B1(1:3) =    alpha  * FbVec
-                  F_B2(1:3) = (1-alpha) * FbVec
-
-                  ! Hydrostatic moment correction followed by redistribution
-                  MbVec = MbVec - Cross_Product( k_hat*dl, F_B1(1:3))
-                  F_B1(4:6) =    alpha  * MbVec
-                  F_B2(4:6) = (1-alpha) * MbVec
-
-                  ! Add nodal loads to mesh
-                  m%memberLoads(im)%F_B(:,i+1) = m%memberLoads(im)%F_B(:,i+1) + F_B1  ! alpha
-                  m%memberLoads(im)%F_B(:,i  ) = m%memberLoads(im)%F_B(:,i  ) + F_B2  ! 1-alpha
-                  y%Mesh%Force (:,mem%NodeIndx(i+1)) = y%Mesh%Force (:,mem%NodeIndx(i+1)) + F_B1(1:3)
-                  y%Mesh%Moment(:,mem%NodeIndx(i+1)) = y%Mesh%Moment(:,mem%NodeIndx(i+1)) + F_B1(4:6)
-                  y%Mesh%Force (:,mem%NodeIndx(i  )) = y%Mesh%Force (:,mem%NodeIndx(i  )) + F_B2(1:3)
-                  y%Mesh%Moment(:,mem%NodeIndx(i  )) = y%Mesh%Moment(:,mem%NodeIndx(i  )) + F_B2(4:6)
-
-               END IF  ! submergence cases
-
-            END IF ! element at least partially submerged
-
-         END IF ! NOT Modeled with Potential flow theory
-      
          ! ------------------ flooded ballast inertia: sides: Section 6.1.1 : Always compute regardless of PropPot setting ---------------------
-
          ! lower node
          Ioffset   = mem%h_cfb_l(i)*mem%h_cfb_l(i)*mem%m_fb_l(i)
          Imat(1,1) = mem%I_rfb_l(i) - Ioffset
@@ -3193,11 +3108,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          Imat(3,3) = mem%I_lfb_l(i) - Ioffset
          iArm = mem%h_cfb_l(i) * k_hat
          iTerm     = ( -a_s1  - cross_product(omega_s1, cross_product(omega_s1,iArm ))  -  cross_product(alpha_s1,iArm) ) * mem%m_fb_l(i)
-         !m%F_If(1:3, mem%NodeIndx(i  )) = m%F_If(1:3, mem%NodeIndx(i  )) + iTerm
-         !m%F_If(4:6, mem%NodeIndx(i  )) = m%F_If(4:6, mem%NodeIndx(i  )) &
-         !                                 - cross_product(a_s1 * mem%m_fb_l(i), mem%h_cfb_l(i) * k_hat) &
-         !                                 + matmul(Imat, alpha_s1) &
-         !                                 - cross_product(omega_s1,matmul(Imat,omega_s1)) 
          F_If(1:3) =  iTerm
          F_If(4:6) =  - cross_product(a_s1 * mem%m_fb_l(i), mem%h_cfb_l(i) * k_hat) + matmul(Imat, alpha_s1) &
                       - cross_product(omega_s1,matmul(Imat,omega_s1)) 
@@ -3205,18 +3115,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + F_If(1:3)
          y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + F_If(4:6)
          
-        ! upper node
+         ! upper node
          Ioffset   = mem%h_cfb_u(i)*mem%h_cfb_u(i)*mem%m_fb_u(i)
          Imat(1,1) = mem%I_rfb_u(i) - Ioffset
          Imat(2,2) = mem%I_rfb_u(i) - Ioffset
          Imat(3,3) = mem%I_lfb_u(i) - Ioffset
          iArm = mem%h_cfb_u(i) * k_hat
          iTerm     = ( -a_s2  - cross_product(omega_s2, cross_product(omega_s2,iArm ))  -  cross_product(alpha_s2,iArm) ) * mem%m_fb_u(i)
-         !m%F_If(1:3, mem%NodeIndx(i+1)) = m%F_If(1:3, mem%NodeIndx(i+1)) + iTerm
-         !m%F_If(4:6, mem%NodeIndx(i+1)) = m%F_If(4:6, mem%NodeIndx(i+1)) &
-         !                                 - cross_product(a_s2 * mem%m_fb_u(i), mem%h_cfb_u(i) * k_hat) &
-         !                                 + matmul(Imat, alpha_s2) &
-         !                                 - cross_product(omega_s2,matmul(Imat,omega_s2)) 
          F_If(1:3) = iTerm
          F_If(4:6) = - cross_product(a_s2 * mem%m_fb_u(i), mem%h_cfb_u(i) * k_hat) + matmul(Imat, alpha_s2) &
                      - cross_product(omega_s2,matmul(Imat,omega_s2)) 
@@ -3244,12 +3149,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                         ( lstar*mem%Rin(i) + 0.5*(lstar*mem%dRdl_in(i) + mem%Rin(i) )*dl + mem%dRdl_in(i)*dl**2/3.0 )*cosphi )
 
             ! forces and moment in tilted coordinates about node i
-            !Fl = mem%Cfl_fb(i)*cosPhi     
             Fr = mem%Cfr_fb(i)*sinPhi     
             Moment  = mem%CM0_fb(i)*sinPhi - Fr*mem%alpha_fb_star(i)*dl
            
             ! calculate full vector and distribute to nodes
-            !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), m%F_BF(:, mem%NodeIndx(i)), m%F_BF(:, mem%NodeIndx(i+1)))
             call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, (1-mem%alpha_fb_star(i)), F_B1, F_B2)
             m%memberLoads(im)%F_BF(:, i)   = m%memberLoads(im)%F_BF(:, i) + F_B2  ! 1-alpha
             m%memberLoads(im)%F_BF(:, i+1) = m%memberLoads(im)%F_BF(:, i+1) + F_B1 ! alpha
@@ -3267,7 +3170,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             Moment  = mem%CM0_fb(i)*sinPhi + Fr*(1 - mem%alpha_fb_star(i))*dl
         
             ! calculate full vector and distribute to nodes
-            !call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), m%F_BF(:, mem%NodeIndx(i)), m%F_BF(:, mem%NodeIndx(i-1)))
             call DistributeElementLoads(Fl, Fr, Moment, sinPhi, cosPhi, sinBeta, cosBeta, mem%alpha_fb_star(i), F_B1, F_B2)
             m%memberLoads(im)%F_BF(:, i) = m%memberLoads(im)%F_BF(:, i) + F_B1     ! alpha
             m%memberLoads(im)%F_BF(:, i-1) = m%memberLoads(im)%F_BF(:, i-1) + F_B2 ! 1- alpha
@@ -3285,18 +3187,12 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      ! Get the z-positions of the two end nodes of the member to determine whether the member is surface piercing 
-      z1 = u%Mesh%Position(3, mem%NodeIndx(1))   - p%MSL2SWL
-      z2 = u%Mesh%Position(3, mem%NodeIndx(N+1)) - p%MSL2SWL
-      ! Include displacement if wave stretching enabled and WaveDisp /= 0
-      IF ( p%WaveStMod > 0 .AND. p%WaveDisp /= 0 ) THEN
-        z1 = z1 + u%Mesh%TranslationDisp(3, mem%NodeIndx(1))
-        z2 = z2 + u%Mesh%TranslationDisp(3, mem%NodeIndx(N+1))
-      END IF
-
-      IF ( p%WaveStMod > 0 .AND. z1 <= m%WaveElev(mem%NodeIndx(1)) .AND. z2 > m%WaveElev(mem%NodeIndx(N+1)) ) THEN 
-      
-      !----------------------------Surface Piercing Member with Wave Stretching-----------------------------!
+      IF ( p%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
+      !----------------------------Apply load smoothing----------------------------!
+      ! only when:
+      ! 1. wave stretching is enabled
+      ! 2. member centerline crosses the free surface exactly once
+      ! 3. the last node is out of water, which implies the first node is in water
                 
         FSElem = -1 ! Initialize the No. of the partially wetted element as -1
       
@@ -3373,6 +3269,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL undisplaced; zero added-mass force
                     f_hydro = 0.0_ReKi
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
                  ELSE
                     ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
                     z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL ! Undisplaced z-position of the next node
@@ -3397,7 +3294,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
               
-           
               !--------------------- hydrodynamic inertia loads: sides: Section 7.1.4 --------------------------!
               IF (mem%PropMCF) THEN
                  f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)       * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
@@ -3639,8 +3535,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) = y%Mesh%Moment(:,mem%NodeIndx(FSElem-1)) + DM_hydro * deltal
         END IF
 
-      ELSE !----------------------------Non-surface Piercing Member or No Wave Stretching----------------------------!
-      
+      ELSE IF ( MemSubStat .NE. 3_IntKi) THEN ! Skip members with centerline completely out of water
+        !----------------------------No load smoothing----------------------------!
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
            ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
            ! Using the initial z-position to be consistent with the evaluation of wave kinematics
@@ -3650,44 +3546,67 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            ELSE
               ! Use initial z-position
               z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
-           END IF
-                                
+           END IF         
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
-           ! Default value for fully submerged interior node
-           deltal = mem%dl
-           h_c    = 0.0_ReKi
-           
-           ! Look to the "left" toward node 1
-           IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
-              deltalLeft = 0.0_ReKi
-           ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
-              ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
-              !       This is the correct behavior.
-              deltalLeft = -mem%h_floor
-           ELSE ! Regular internal node
-              deltalLeft = 0.5_ReKi * mem%dl
-           END IF
-
-           ! Look to the "right" toward node N+1
-           IF ( i == N+1 ) THEN ! Last node
-              deltalRight = 0.0_ReKi
-           ELSE
-              deltalRight = 0.5_ReKi * mem%dl
-              ! Need to check if element i crosses the SWL, but only if WaveStMod == 0
-              ! With wave stretching, surface-piercing members are already handled by the IF branch
-              IF (p%WaveStMod==0) THEN ! No wave stretching
-                 ! Initial z position will always be used
-                 z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                 IF (z1 <= 0.0_ReKi .AND. z2 > 0.0_ReKi) THEN ! Element i crosses the SWL
-                    h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
-                    deltalRight = h
+           ! Cannot make any assumption about WaveStMod and member orientation 
+           IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 0_IntKi ) THEN ! Node is out of water
+              deltal = 0.0_ReKi
+              h_c    = 0.0_ReKi
+           ELSE ! Node in water
+              ! Look to the "left" toward node 1
+              IF ( i == 1 ) THEN ! First node. Note: Having i == 1 also implies mem%i_floor = 0.
+                 deltalLeft = 0.0_ReKi
+              ELSE IF ( i == mem%i_floor+1 ) THEN ! First node above seabed.
+                 ! Note: This part is superceded by i==1 above when mem%i_floor = 0.
+                 !       This is the correct behavior.
+                 deltalLeft = -mem%h_floor
+              ELSE ! Regular internal node
+                 IF ( m%NodeInWater(mem%NodeIndx(i-1)) .EQ. 1_IntKi ) THEN ! Node to the left is submerged
+                    deltalLeft = 0.5_ReKi * mem%dl
+                 ELSE ! Element i-1 crosses the free surface
+                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i-1)) - p%MSL2SWL
+                    ELSE ! Use initial z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) - p%MSL2SWL 
+                    END IF
+                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                       zeta1 = m%WaveElev(mem%NodeIndx(i  ))
+                       zeta2 = m%WaveElev(mem%NodeIndx(i-1))
+                    ELSE
+                       zeta1 = 0.0_ReKi
+                       zeta2 = 0.0_ReKi
+                    END IF
+                    SubRatio = (zeta1-z1)/((zeta1-z1)-(zeta2-z2))
+                    deltalLeft = SubRatio * mem%dl ! Portion of element i-1 in water
                  END IF
               END IF
+              ! Look to the "right" toward node N+1
+              IF ( i == N+1 ) THEN ! Last node
+                 deltalRight = 0.0_ReKi
+              ELSE ! Regular internal node
+                 IF ( m%NodeInWater(mem%NodeIndx(i+1)) .EQ. 1_IntKi ) THEN ! Node to the right is submerged
+                    deltalRight = 0.5_ReKi * mem%dl
+                 ELSE ! Element i crosses the free surface
+                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                    ELSE ! Use initial z-position
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL 
+                    END IF
+                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                       zeta1 = m%WaveElev(mem%NodeIndx(i  ))
+                       zeta2 = m%WaveElev(mem%NodeIndx(i+1))
+                    ELSE
+                       zeta1 = 0.0_ReKi
+                       zeta2 = 0.0_ReKi
+                    END IF
+                    SubRatio = (zeta1-z1)/((zeta1-z1)-(zeta2-z2))
+                    deltalRight = SubRatio * mem%dl ! Portion of element i in water
+                 END IF
+              END IF
+              ! Combine left and right contributions
+              deltal =              deltalRight + deltalLeft
+              h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
            END IF
-
-           ! Combine left and right contributions
-           deltal =              deltalRight + deltalLeft
-           h_c    = 0.5_ReKi * ( deltalRight - deltalLeft )
 
            ! Compute the slope of the member radius
            IF (i == 1) THEN
@@ -3712,13 +3631,42 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
            IF ( .NOT. mem%PropPot ) THEN
               !-------------------- hydrodynamic added mass loads: sides: Section 7.1.3 ------------------------!
               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
-              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )  * m%nodeInWater(mem%NodeIndx(i))
-              CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
+              IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Always compute added-mass force on nodes below SWL when undisplaced
+                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
+                 IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL when undisplaced; zero added-mass force
+                    f_hydro = 0.0_ReKi
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+                 ELSE ! Node at or below SWL when undisplaced
+                    IF ( i == 1 ) THEN
+                       deltalLeft = 0.0_ReKi
+                    ELSE IF ( i == mem%i_floor+1 ) THEN
+                       deltalLeft = -mem%h_floor
+                    ELSE
+                       deltalLeft = 0.5_ReKi * mem%dl
+                    END IF
+                    IF ( i == N+1 ) THEN
+                       deltalRight = 0.0_ReKi
+                    ELSE
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                       IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
+                          deltalRight = -z1 / mem%cosPhi_ref
+                       ELSE
+                          deltalRight = 0.5_ReKi * mem%dl
+                       END IF
+                    END IF
+                    deltal_AM =              deltalRight + deltalLeft
+                    h_c_AM    = 0.5_ReKi * ( deltalRight - deltalLeft )
+                    CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal_AM, h_c_AM, m%memberLoads(im)%F_A(:, i) )
+                 END IF
+              ELSE ! Compute added-mass force on the instantaneous wetted section of the member
+                 f_hydro = f_hydro * m%nodeInWater(mem%NodeIndx(i)) ! Zero the force if node above free surface
+                 CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
+              END IF ! AMMod 0 or 1
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_A(4:6, i)
-           
-              !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
               
+              !-------------------- hydrodynamic inertia loads: sides: Section 7.1.4 ---------------------------!
               IF ( mem%PropMCF ) THEN
                  f_hydro=                     p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)        * matmul( mem%Ak,  m%FAMCF(:,mem%NodeIndx(i)) ) + &
                               2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
@@ -3728,8 +3676,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                               2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p * matmul( mem%kkt, m%FA(:,mem%NodeIndx(i)) ) + &
                               2.0*m%FDynP(mem%NodeIndx(i))*mem%AxCp(i)*pi*mem%RMG(i)*dRdl_pp*mem%k 
               END IF
-                           
-                           
               CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_I(:, i) )
               y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(1:3, i)
               y%Mesh%Moment(:,mem%NodeIndx(i)) = y%Mesh%Moment(:,mem%NodeIndx(i)) + m%memberLoads(im)%F_I(4:6, i)
@@ -3754,6 +3700,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       z1 = pos1(3)
       
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
+        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if ( N == 1 ) then       ! Only one element in member
          sinPhi2  = sinPhi1
          cosPhi2  = cosPhi1
@@ -3767,6 +3714,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
+           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
       
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
@@ -3816,121 +3764,81 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ! --- no inertia loads from water ballast modeled on ends
 
       !---------------------------------- external buoyancy loads: starts ----------------------------------!
-      if ( .not. mem%PropPot ) then
+      if ( (.not. mem%PropPot) .AND. (mem%MHstLMod /= 0) ) then
 
          ! Get positions of member end nodes
          pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1  )) + u%Mesh%Position(:, mem%NodeIndx(1  )) 
          pos1(3) = pos1(3) - p%MSL2SWL
-         z1      = pos1(3)
-         r1      = mem%RMG(1  )
+         r1      = mem%RMGB(1  )
          pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
          pos2(3) = pos2(3) - p%MSL2SWL
-         z2      = pos2(3)
-         r2      = mem%RMG(N+1)
-
-         ! Get free surface elevation vertically above or below the end nodes
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to the instantaneous free surface
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)/), Zeta1, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)/), Zeta2, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-         ELSE ! Without wave stretching, compute buoyancy up to the SWL
-            Zeta1 = 0.0_ReKi
-            Zeta2 = 0.0_ReKi
-         END IF
-
-         !----------------------- Check if the end plates are partially wetted: Start -----------------------!
-         !-------- End plate of node 1 --------
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
-            ! Estimate the free-surface normal vertically above or below node 1, n_hat
-            CALL GetTotalWaveElev( Time, (/pos1(1)+r1,pos1(2)/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos1(1)-r1,pos1(2)/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos1(1),pos1(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
-         ELSE ! Without wave stretching, use normal of SWL
-            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
-         END IF
-         
-         ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat1,n_hat)
-         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
-         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat1(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat1(2),k_hat1(1),0.0_ReKi/)   
-               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
-            ELSE ! k_hat is close to vertical (0,0,1)
-               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
-            END IF
-         ELSE
-            t_hat = t_hat / sinGamma
-         END IF
-         r_hat = Cross_Product(t_hat,k_hat1)
-         IF ( ABS((Zeta1-z1)*n_hat(3)) < r1*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-         END IF
-
-         !-------- End plate of node N+1 --------
-         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute the normal of the free surface
-            ! Estimate the free-surface normal vertically above or below node N+1, n_hat
-            CALL GetTotalWaveElev( Time, (/pos2(1)+r2,pos2(2)/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1)-r2,pos2(2)/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)+r2/), ZetaP, ErrStat2, ErrMsg2 )
-            CALL GetTotalWaveElev( Time, (/pos2(1),pos2(2)-r2/), ZetaM, ErrStat2, ErrMsg2 )
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Morison_CalcOutput' )
-            dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r2)
-            n_hat = (/-dZetadx,-dZetady,1.0_ReKi/)
-            n_hat = n_hat / SQRT(Dot_Product(n_hat,n_hat))
-         ELSE ! Without wave stretching, use normal of SWL
-            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
-         END IF
-         
-         ! Get t_hat and r_hat
-         t_hat    = Cross_Product(k_hat2,n_hat)
-         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
-         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
-            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
-            IF ( k_hat2(3) < 0.999999_ReKi ) THEN
-               t_hat = (/-k_hat2(2),k_hat2(1),0.0_ReKi/)   
-               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
-            ELSE ! k_hat is close to vertical (0,0,1)
-               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
-            END IF
-         ELSE
-            t_hat = t_hat / sinGamma
-         END IF
-         r_hat = Cross_Product(t_hat,k_hat2)
-         IF ( ABS((Zeta2-z2)*n_hat(3)) < r2*Dot_Product(r_hat,n_hat) ) THEN ! End plate is only partially wetted
-            CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, 'Morison_CalcOutput' )
-         END IF
-         !------------------------ Check if the end plates are partially wetted: End ------------------------!
-      
+         r2      = mem%RMGB(N+1)
          if (mem%i_floor == 0) then  ! both ends above or at seabed
-            if ( z2 < Zeta2 ) then
-               ! Compute loads on the end plate of node N+1          
-               Fl      =  p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
-               Moment  =  p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
-               call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
-            end if
-            if ( z1 < Zeta1 ) then
-               ! Compute loads on the end plate of node 1
-               Fl      = -p%WtrDens * g * pi *mem%RMG(1)**2*z1
-               Moment  = -p%WtrDens * g * pi *0.25*mem%RMG(1)**4*sinPhi
-               call AddEndLoad(Fl, Moment, sinPhi1, cosPhi1, sinBeta1, cosBeta1, m%F_B_End(:, mem%NodeIndx(1)))
-            end if
-         elseif ( (mem%doEndBuoyancy) .and. (z2 < Zeta2) ) then ! The member crosses the seabed line so only the upper end could have bouyancy effects, if below free surface
-            ! Only compute the buoyancy contribution from the upper end
-            Fl      = p%WtrDens * g * pi *mem%RMG(N+1)**2*z2
-            Moment  = p%WtrDens * g * pi *0.25*mem%RMG(N+1)**4*sinPhi
-            call AddEndLoad(Fl, Moment, sinPhi2, cosPhi2, sinBeta2, cosBeta2, m%F_B_End(:, mem%NodeIndx(N+1)))
-         else
+            ! Compute loads on the end plate of node 1
+            IF (p%WaveStMod > 0) THEN
+               CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetFreeSurfaceNormal( Time, pos1, r1, n_hat, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               FSPt = (/pos1(1),pos1(2),Zeta1/) ! Reference point on the free surface
+            ELSE
+               FSPt = (/pos1(1),pos1(2),0.0/)
+               n_hat = (/0.0,0.0,1.0/)
+            END IF
+            CALL GetSectionUnitVectors( k_hat1, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos1, FSPt, k_hat1, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
+            m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+               END IF
+            END IF
+            ! Compute loads on the end plate of node N+1
+            IF (p%WaveStMod > 0) THEN
+               CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
+            ELSE
+               FSPt = (/pos2(1),pos2(2),0.0/)
+               n_hat = (/0.0,0.0,1.0/)
+            END IF
+            CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+               END IF
+            END IF
+         elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
+            ! Only compute the loads on the end plate of node N+1
+            IF (p%WaveStMod > 0) THEN
+               CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
+                 CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
+            ELSE
+               FSPt = (/pos2(1),pos2(2),0.0/)
+               n_hat = (/0.0,0.0,1.0/)
+            END IF
+            CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
+            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
+            m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
+            IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
+               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+                   CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+               END IF
+            END IF
+         ! else
             ! entire member is buried below the seabed
          end if
          
@@ -3938,18 +3846,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !----------------------------------- external buoyancy loads: ends -----------------------------------!
 
    end do ! im - looping through members
-      
-   !do j = 1, p%NNodes    
-   !   ! Sum side load components onto output mesh
-   !   DO i=1,6
-   !      IF (i < 4 ) THEN 
-   !         y%Mesh%Force(I,J)    =  m%F_D(I,J) + m%F_A(I,J) + m%F_I(I,J) + m%F_B(I,J) + m%F_BF(I,J) + m%F_If(i,j) + m%F_WMG(i,j) + m%F_IMG(i,j)
-   !      ELSE 
-   !         y%Mesh%Moment(I-3,J) =  m%F_D(I,J) + m%F_A(I,J) + m%F_I(I,J) + m%F_B(I,J) + m%F_BF(I,J) + m%F_If(i,j) + m%F_WMG(i,j) + m%F_IMG(i,j)   
-   !      END IF
-   !   END DO  ! 
-   !end do
- 
+    
    !---------------------------------------------------------------------------------------------------------------!
    !                                     External Hydrodynamic Joint Loads - Start                                 !
    !                                        F_D_End, F_I_End, F_A_End, F_IMG_End                                   !
@@ -4028,19 +3925,547 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
 
    CONTAINS
-   SUBROUTINE GetTotalWaveElev( Time, positionXY, Zeta, ErrStat, ErrMsg )
+   SUBROUTINE GetTotalWaveElev( Time, pos, Zeta, ErrStat, ErrMsg )
       REAL(DbKi),      INTENT( IN    ) :: Time
-      REAL(ReKi),      INTENT( IN    ) :: positionXY(2)
-      REAL(ReKi),      INTENT(   OUT ) :: Zeta
-      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat     ! Error status of the operation
-      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg      ! Error message if errStat /= ErrID_None
+      REAL(ReKi),      INTENT( IN    ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT(   OUT ) :: Zeta    ! Total free-surface elevation with first- and second-order contribution (if present)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetTotalWaveElev'
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
-      Zeta = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+      Zeta = SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (associated(p%WaveElev2)) THEN
-         Zeta = Zeta + SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat, ErrMsg )
+         Zeta = Zeta + SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
+      
    END SUBROUTINE GetTotalWaveElev
+
+   SUBROUTINE GetFreeSurfaceNormal( Time, pos, r, n, ErrStat, ErrMsg)
+      REAL(DbKi),      INTENT( In    ) :: Time
+      REAL(ReKi),      INTENT( In    ) :: pos(*)  ! Position at which free-surface normal is to be calculated. Third entry ignored if present.
+      REAL(ReKi),      INTENT( In    ) :: r       ! Distance for central differencing
+      REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: r1,ZetaP,ZetaM,dZetadx,dZetady
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetFreeSurfaceNormal'
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
+      ErrStat   = ErrID_None
+      ErrMsg    = ""
+
+      r1 = MAX(r,1.0e-6) ! In case r is zero
+
+      CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+      
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
+      
+      n = (/-dZetadx,-dZetady,1.0_ReKi/)
+      n = n / SQRT(Dot_Product(n,n))
+
+   END SUBROUTINE GetFreeSurfaceNormal
+
+   SUBROUTINE GetSectionUnitVectors( k, y, z )
+      REAL(ReKi),      INTENT( In    ) :: k(3) ! Member axial unit vector
+      REAL(ReKi),      INTENT(   OUT ) :: y(3) ! Horizontal unit vector perpendicular to k
+      REAL(ReKi),      INTENT(   OUT ) :: z(3) ! Unit vector perpendicular to k and y with positive vertical component
+      IF ( ABS(k(3)) > 0.999999_ReKi ) THEN ! k is effectively vertical
+         y = (/0.0,1.0,0.0/)
+      ELSE
+         y = (/-k(2),k(1),0.0/)
+         y = y / SQRT(Dot_Product(y,y))      
+      ENDIF
+      z = cross_product(k,y)
+      IF ( z(3) < 0.0 ) THEN ! Flip y and z so z points upward
+         y = -y;
+         z = -z;
+      END IF
+   END SUBROUTINE GetSectionUnitVectors
+
+   SUBROUTINE GetSectionFreeSurfaceIntersects( pos0, FSPt, k_hat, y_hat, z_hat, n_hat, R, theta1, theta2, secStat)
+      REAL(ReKi),      INTENT( In    ) :: pos0(3)
+      REAL(ReKi),      INTENT( In    ) :: FSPt(3)
+      REAL(ReKi),      INTENT( In    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: n_hat(3)
+      REAL(ReKi),      INTENT( In    ) :: R
+      REAL(ReKi),      INTENT(   OUT ) :: theta1
+      REAL(ReKi),      INTENT(   OUT ) :: theta2
+      INTEGER(IntKi),  INTENT(   OUT ) :: secStat
+      REAL(ReKi)                       :: a, b, c, d, d2
+      REAL(ReKi)                       :: alpha, beta
+      REAL(ReKi)                       :: tmp
+      CHARACTER(*),    PARAMETER       :: RoutineName = 'GetSectionFreeSurfaceIntersects'
+
+      a  = R * dot_product(y_hat,n_hat)
+      b  = R * dot_product(z_hat,n_hat)
+      c  = dot_product(FSPt-pos0,n_hat)
+      d2 = a*a+b*b
+      IF ( d2 >= c*c ) THEN ! Has intersection
+         d = SQRT(d2)
+         IF (b>=0.0) THEN
+            alpha =  ACOS(a/d)
+         ELSE
+            alpha = -ACOS(a/d)
+         END IF
+         beta   = ACOS(c/d)
+         theta1 = alpha - beta
+         theta2 = alpha + beta
+         IF ( dot_product( (cos(theta2)-cos(theta1))*z_hat-(sin(theta2)-sin(theta1))*y_hat, n_hat) < 0.0 ) THEN
+            tmp    = theta1
+            theta1 = theta2
+            theta2 = tmp + 2.0*PI
+         END IF
+         secStat = 1;
+      ELSE IF (c > 0.0) THEN ! Section is fully submerged
+         theta1 = -1.5*PI
+         theta2 =  0.5*PI
+         secStat = 2;
+      ELSE ! Section is completely dry
+         theta1 = -0.5*PI
+         theta2 = -0.5*PI
+         secStat = 0;
+      END IF
+
+   END SUBROUTINE GetSectionFreeSurfaceIntersects
+
+   SUBROUTINE GetSectionHstLds( origin, pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl)
+
+      REAL(ReKi),      INTENT( IN    ) :: origin(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: R
+      REAL(ReKi),      INTENT( IN    ) :: dRdl
+      REAL(ReKi),      INTENT( IN    ) :: theta1
+      REAL(ReKi),      INTENT( IN    ) :: theta2
+      REAL(ReKi),      INTENT(   OUT ) :: dFdl(6)
+      REAL(ReKi)                       :: C0, C1, C2
+      REAL(ReKi)                       :: Z0, dTheta, sinTheta1, sinTheta2, cosTheta1, cosTheta2, cosPhi
+      
+      Z0        = pos0(3)
+      dTheta    = theta2 - theta1
+      sinTheta1 = SIN(theta1)
+      sinTheta2 = SIN(theta2)
+      cosTheta1 = COS(theta1)
+      cosTheta2 = COS(theta2)
+      cosPhi    = SQRT(k_hat(1)**2+k_hat(2)**2)
+
+      C0 = Z0*dTheta                +     R*cosPhi*(cosTheta1   -cosTheta2)
+      C1 = Z0*(sinTheta2-sinTheta1) + 0.5*R*cosPhi*(cosTheta2**2-cosTheta1**2)
+      C2 = Z0*(cosTheta1-cosTheta2) + 0.5*R*cosPhi*(dTheta-sinTheta2*cosTheta2+sinTheta1*cosTheta1)
+
+      dFdl(1:3) = -R   *dRdl*C0*k_hat + R*C1*y_hat + R*C2*z_hat
+      dFdl(4:6) = -R**2*dRdl*C2*y_hat + R**2*dRdl*C1*z_hat      + CROSS_PRODUCT((pos0-origin),dFdl(1:3))
+      dFdl = dFdl * p%WtrDens * g
+
+   END SUBROUTINE GetSectionHstLds
+
+   SUBROUTINE getElementHstLds_Mod2( pos1In, pos2In, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
+      
+      REAL(ReKi),      INTENT( IN    ) :: pos1In(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos2In(3)
+      REAL(ReKi),      INTENT( IN    ) :: FSPt(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: n_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: r1
+      REAL(ReKi),      INTENT( IN    ) :: r2
+      REAL(ReKi),      INTENT( IN    ) :: dl
+      REAL(ReKi),      INTENT(   OUT ) :: F_B1(6)
+      REAL(ReKi),      INTENT(   OUT ) :: F_B2(6)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: dRdl, theta1, theta2
+      REAL(ReKi)                       :: dFdl1(6), dFdlMid(6), dFdl2(6), F_B(6)
+      REAL(ReKi)                       :: i, rMid, posMid(3), pos1(3), pos2(3)
+      INTEGER(IntKi)                   :: secStat1, secStatMid, secStat2
+      CHARACTER(*),    PARAMETER       :: routineName = "getElementHstLds_Mod2"
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
+      ErrStat   = ErrID_None
+      ErrMsg    = ""  
+  
+      pos1   = pos1In
+      pos2   = pos2In
+      dRdl   = (r2-r1)/dl
+      rMid   = 0.5*(  r1+  r2)
+      posMid = 0.5*(pos1In+pos2In)
+      
+      ! Avoid sections coincident with the SWL
+      IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
+         IF ( EqualRealNos( pos1In(3), 0.0 ) ) THEN
+            pos1(3) = pos1In(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( pos2In(3), 0.0 ) ) THEN
+            pos2(3) = pos2In(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( posMid(3), 0.0 ) ) THEN
+            posMid(3) = posMid(3) - 1.0E-6 * dl
+         END IF
+      END IF
+
+      ! Section load at node 1
+      CALL GetSectionFreeSurfaceIntersects( pos1,   FSPt, k_hat, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat1)
+      CALL GetSectionHstLds( pos1, pos1,   k_hat, y_hat, z_hat, r1,   dRdl, theta1, theta2, dFdl1)
+
+      ! Section load at midpoint
+      CALL GetSectionFreeSurfaceIntersects( posMid, FSPt, k_hat, y_hat, z_hat, n_hat, rMid, theta1, theta2, secStatMid)
+      CALL GetSectionHstLds( pos1, posMid, k_hat, y_hat, z_hat, rMid, dRdl, theta1, theta2, dFdlMid)
+
+      ! Section load at node 2
+      CALL GetSectionFreeSurfaceIntersects( pos2,   FSPt, k_hat, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat2)
+      CALL GetSectionHstLds( pos1, pos2,   k_hat, y_hat, z_hat, r2,   dRdl, theta1, theta2, dFdl2)
+
+      ! Adaptively refine the load integration over the element
+      CALL RefineElementHstLds(pos1,pos1,posMid,pos2,FSPt,r1,rMid,r2,dl,dRdl,secStat1,secStatMid,secStat2,k_hat,y_hat,z_hat,n_hat,dFdl1,dFdlMid,dFdl2,1,F_B,ErrStat2,ErrMsg2)
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! Distribute the hydrostatic load to the two end nodes
+      F_B1(1:3) = 0.5 * F_B(1:3)
+      F_B2(1:3) = 0.5 * F_B(1:3)
+      F_B(4:6)  = F_B(4:6) - CROSS_PRODUCT(k_hat*dl,F_B2(1:3))
+      F_B1(4:6) = 0.5 * F_B(4:6)
+      F_B2(4:6) = 0.5 * F_B(4:6)
+
+   END SUBROUTINE getElementHstLds_Mod2
+
+   RECURSIVE SUBROUTINE RefineElementHstLds( origin, pos1, posMid, pos2, FSPt, r1, rMid, r2, dl, dRdl,secStat1,secStatMid,secStat2, k_hat, y_hat, z_hat, n_hat, dFdl1, dFdlMid, dFdl2, recurLvl, F_B_5pt, ErrStat, ErrMsg)
+
+      REAL(ReKi),      INTENT( IN    ) :: origin(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos1(3)
+      REAL(ReKi),      INTENT( IN    ) :: posMid(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos2(3)
+      REAL(ReKi),      INTENT( IN    ) :: FSPt(3)
+      REAL(ReKi),      INTENT( IN    ) :: r1
+      REAL(ReKi),      INTENT( IN    ) :: rMid
+      REAL(ReKi),      INTENT( IN    ) :: r2
+      REAL(ReKi),      INTENT( IN    ) :: dl
+      REAL(ReKi),      INTENT( IN    ) :: dRdl
+      INTEGER(IntKi),  INTENT( IN    ) :: secStat1
+      INTEGER(IntKi),  INTENT( IN    ) :: secStatMid
+      INTEGER(IntKi),  INTENT( IN    ) :: secStat2
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: n_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: dFdl1(6)
+      REAL(ReKi),      INTENT( IN    ) :: dFdlMid(6)
+      REAL(ReKi),      INTENT( IN    ) :: dFdl2(6)
+      INTEGER(IntKi),  INTENT( IN    ) :: recurLvl
+      REAL(ReKi),      INTENT(   OUT ) :: F_B_5pt(6)
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+
+      REAL(ReKi)                       :: posMidL(3), posMidR(3), rMidL, rMidR, F_B_3pt(6)
+      REAL(ReKi)                       :: dFdlMidL(6), dFdlMidR(6)
+      REAL(ReKi)                       :: error(6), tmp(6)
+      LOGICAL                          :: refine, tolMet
+      INTEGER(IntKi)                   :: i
+      INTEGER(IntKi)                   :: secStatMidL, secStatMidR
+      REAL(ReKi),      PARAMETER       :: RelTol      = 1.0E-6
+      REAL(ReKi),      PARAMETER       :: AbsTol      = 1.0E-8
+      INTEGER(IntKi),  PARAMETER       :: maxRecurLvl = 50
+      CHARACTER(*),    PARAMETER       :: RoutineName = "RefineElementHstLds"
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      posMidL = 0.5*(pos1+posMid)
+      posMidR = 0.5*(posMid+pos2)
+      rMidL   = 0.5*(r1+rMid)
+      rMidR   = 0.5*(rMid+r2)
+
+      ! Avoid sections coincident with the SWL
+      IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
+         IF ( EqualRealNos( posMidL(3), 0.0 ) ) THEN
+            posMidL(3) = posMidL(3) - 1.0E-6 * dl
+         END IF
+         IF ( EqualRealNos( posMidR(3), 0.0 ) ) THEN
+            posMidR(3) = posMidR(3) - 1.0E-6 * dl
+         END IF
+      END IF
+
+      ! Total hydrostatic load on the element (Simpsons Rule)
+      F_B_3pt = (dFdl1 + 4.0*dFdlMid + dFdl2) * dl/6.0
+
+      ! Mid point of left section
+      CALL GetSectionFreeSurfaceIntersects( posMidL, FSPt, k_hat, y_hat, z_hat, n_hat, rMidL, theta1, theta2, secStatMidL)
+      CALL GetSectionHstLds( origin, posMidL, k_hat, y_hat, z_hat, rMidL, dRdl, theta1, theta2, dFdlMidL)
+
+      ! Mid point of right section
+      CALL GetSectionFreeSurfaceIntersects( posMidR, FSPt, k_hat, y_hat, z_hat, n_hat, rMidR, theta1, theta2, secStatMidR)
+      CALL GetSectionHstLds( origin, posMidR, k_hat, y_hat, z_hat, rMidR, dRdl, theta1, theta2, dFdlMidR)
+      
+      F_B_5pt = (dFdl1 + 4.0*dFdlMidL + 2.0*dFdlMid + 4.0*dFdlMidR + dFdl2) * dl/12.0
+
+      error = ABS(F_B_3pt - F_B_5pt)
+      tolMet = .TRUE.
+      DO i = 1,6
+         IF ( error(i) > MAX(RelTol*ABS(F_B_5pt(i)),AbsTol) ) THEN
+            tolMet = .FALSE.
+         END IF
+      END DO
+      refine = .NOT. tolMet
+      IF (ABS(secStat1-secStat2)>1) THEN ! (Sub)element bounds the waterplane
+         refine = .TRUE. ! Keep refining irrespective of tolMet to avoid premature termination
+      END IF
+      IF ( recurLvl > maxRecurLvl ) THEN
+         refine = .FALSE.
+         IF (.NOT. tolMet) THEN
+            CALL SetErrStat(ErrID_Warn, 'Tolerance for element hydrostatic load not met after the maximum allowed level of recursion is reached. Consider reducing MDivSize.', ErrStat, ErrMsg, RoutineName )
+         ! ELSE
+            ! Free surface is likely normal to the element.
+         END IF
+      END IF
+      
+      IF (refine) THEN ! Recursively refine the load integration if tolerance not met
+         CALL RefineElementHstLds(origin,pos1,posMidL,posMid,FSPt,r1,rMidL,rMid,0.5*dl,dRdl,secStat1,secStatMidL,secStatMid,k_hat,y_hat,z_hat,n_hat,dFdl1,dFdlMidL,dFdlMid, recurLvl+1, tmp, ErrStat, ErrMsg)
+         CALL RefineElementHstLds(origin,posMid,posMidR,pos2,FSPt,rMid,rMidR,r2,0.5*dl,dRdl,secStatMid,secStatMidR,secStat2,k_hat,y_hat,z_hat,n_hat,dFdlMid,dFdlMidR,dFdl2, recurLvl+1, F_B_5pt, ErrStat, ErrMsg)
+         F_B_5pt = F_B_5pt + tmp
+      END IF
+
+   END SUBROUTINE RefineElementHstLds
+
+   SUBROUTINE GetEndPlateHstLds(pos0, k_hat, y_hat, z_hat, R, theta1, theta2, F)
+
+      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: R
+      REAL(ReKi),      INTENT( IN    ) :: theta1
+      REAL(ReKi),      INTENT( IN    ) :: theta2
+      REAL(ReKi),      INTENT(   OUT ) :: F(6)
+      REAL(ReKi)                       :: C0, C1, C2, a, b, tmp1, tmp2, tmp3
+      REAL(ReKi)                       :: Z0, cosPhi, dTheta
+      REAL(ReKi)                       :: y1, y2
+      REAL(ReKi)                       :: z1, z2, z1_2, z2_2, z1_3, z2_3, z1_4, z2_4
+      REAL(ReKi)                       :: dy, dy_3, dz, dz_2, dz_3, dz_4, sz
+      REAL(ReKi)                       :: R_2, R_4
+      REAL(ReKi)                       :: Fk, My, Mz
+
+      Z0     = pos0(3)
+      cosPhi = SQRT(k_hat(1)**2+k_hat(2)**2)
+      dTheta = theta2-theta1
+      y1     = R*COS(theta1)
+      z1     = R*SIN(theta1)
+      y2     = R*COS(theta2)
+      z2     = R*SIN(theta2)
+      z1_2   = z1*z1
+      z1_3   = z1*z1_2
+      z1_4   = z1*z1_3
+      z2_2   = z2*z2
+      z2_3   = z2*z2_2
+      z2_4   = z2*z2_3
+      R_2    = R*R
+      R_4    = R_2*R_2
+      dy     = y2-y1
+      sz     = z1+z2
+      dy_3   = y2*y2*y2-y1*y1*y1
+      dz_2   = z2_2-z1_2
+      dz_3   = z2_3-z1_3
+      dz_4   = z2_4-z1_4
+      tmp1   = y1*z2-y2*z1
+      tmp2   = z1_2+z1*z2+z2_2
+
+      ! End plate force in the k_hat direction
+      Fk     = -0.5*Z0*(R_2*dTheta-tmp1) + cosPhi/6.0*( 2.0*dy_3 - z1*z2*dy - z1_2*(y2+2.0*y1) + z2_2*(y1+2.0*y2) )
+      F(1:3) = p%WtrDens * g * Fk * k_hat
+
+      ! End plate moment in the y_hat and z_hat direction
+      My     = Z0/6.0*( 2.0*dy_3 + 2.0*dy*tmp2 + 3.0*tmp1*sz ) &    ! y_hat component
+               + cosPhi/24.0*( -3.0*R_4*dTheta + 3.0*y1*z1*(2.0*z1_2-R_2) - 3.0*y2*z2*(2.0*z2_2-R_2) &
+                                                            + 6.0*dy*sz*(z1_2+z2_2) + 8.0*tmp1*tmp2  )
+      IF (EqualRealNos(z1, z2)) THEN ! z_hat component (Nonzero only when z1 /= z2)
+         Mz = 0.0
+      ELSE
+         dz = z2-z1
+         a  = dy/dz
+         b  = tmp1/dz
+         tmp1 = a*a+1.0
+         tmp2 = a*b
+         tmp3 = b*b-R_2
+         Mz =     -Z0/ 6.0*(    tmp1*dz_3 + 3.0*tmp2*dz_2 + 3.0*tmp3*dz  ) &
+              -cosPhi/24.0*(3.0*tmp1*dz_4 + 8.0*tmp2*dz_3 + 6.0*tmp3*dz_2)
+      END IF
+      F(4:6) = p%WtrDens * g * (My*y_hat + Mz*z_hat)
+
+   END SUBROUTINE GetEndPlateHstLds
+
+   SUBROUTINE getElementHstLds_Mod1( Time, pos1, pos2, Zeta1, Zeta2, k_hat, r1, r2, dl, alphaIn, Is1stElement, F_B0, F_B1, F_B2, ErrStat, ErrMsg )
+      
+      REAL(DbKi),      INTENT( IN    ) :: Time
+      REAL(ReKi),      INTENT( IN    ) :: pos1(3)
+      REAL(ReKi),      INTENT( IN    ) :: pos2(3)
+      REAL(ReKi),      INTENT( IN    ) :: Zeta1
+      REAL(ReKi),      INTENT( IN    ) :: Zeta2
+      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(ReKi),      INTENT( IN    ) :: r1
+      REAL(ReKi),      INTENT( IN    ) :: r2
+      REAL(ReKi),      INTENT( IN    ) :: dl
+      REAL(ReKi),      INTENT( IN    ) :: alphaIn
+      LOGICAL,         INTENT( IN    ) :: Is1stElement
+      REAL(ReKi),      INTENT(   OUT ) :: F_B0(6) ! Lumped load at the first  node of the last    element
+      REAL(ReKi),      INTENT(   OUT ) :: F_B1(6) ! Lumped load at the first  node of the current element
+      REAL(ReKi),      INTENT(   OUT ) :: F_B2(6) ! Lumped load at the second node of the current element
+      INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
+      CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
+      REAL(ReKi)                       :: alpha, dRdl, SubRatio
+      REAL(ReKi)                       :: Vs, Vrc, Vhc
+      REAL(ReKi)                       :: h0, rh, a0, b0, a0b0, s0, C_1, C_2, Z0
+      REAL(ReKi)                       :: sinGamma, cosGamma, tanGamma
+      REAL(ReKi)                       :: FbVec(3), MbVec(3), FSInt(3), n_hat(3), t_hat(3), s_hat(3), r_hat(3)
+      INTEGER(IntKi)                   :: errStat2
+      CHARACTER(ErrMsgLen)             :: errMsg2
+      INTEGER(IntKi),  PARAMETER       :: pwr = 3 ! Exponent for buoyancy node distribution smoothing
+      CHARACTER(*),    PARAMETER       :: RoutineName = "getElementHstLds_Mod1"
+      
+      F_B0 = 0.0_ReKi
+      F_B1 = 0.0_ReKi
+      F_B2 = 0.0_ReKi
+
+      dRdl = (r2 - r1)/dl
+
+      IF ( (z1 < Zeta1) .AND. (z2 < Zeta2) ) THEN  ! If element is fully submerged
+         ! Compute the waterplane shape, the submerged volume, and it's geometric center
+         ! No need to consider tapered and non-tapered elements separately
+         Vs   =  Pi*dl   *(r1**2 +     r1*r2 +     r2**2 ) /  3.0_ReKi   ! volume of total submerged portion
+         Vhc  =  Pi*dl**2*(r1**2 + 2.0*r1*r2 + 3.0*r2**2 ) / 12.0_ReKi   ! Submerged Volume * h_c
+
+         ! Hydrostatic force on element
+         FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*( r2*r2*z2 - r1*r1*z1) *k_hat
+         FbVec = p%WtrDens * g * FbVec
+
+         ! Hydrostatic moment on element about the lower node
+         MbVec = (Vhc+0.25*Pi*(r2**4-r1**4)) * Cross_Product(k_hat,(/0.0_ReKi,0.0_ReKi,1.0_ReKi/))
+         MbVec = p%WtrDens * g * MbVec
+
+         ! Distribute element load to nodes
+         alpha = alphaIn*(z2-Zeta2)**pwr/(alphaIn*(z2-Zeta2)**pwr+(1.0_ReKi-alphaIn)*(z1-Zeta1)**pwr)
+
+         ! Hydrostatic force
+         F_B1(1:3) = (1-alpha) * FbVec
+         F_B2(1:3) =    alpha  * FbVec
+         
+         ! Hydrostatic moment correction followed by redistribution
+         MbVec = MbVec - Cross_Product( k_hat*dl, F_B2(1:3))
+         F_B1(4:6) = (1-alpha) * MbVec
+         F_B2(4:6) =    alpha  * MbVec
+         
+      ELSE IF ( (z1 < Zeta1) .AND. (z2 >= Zeta2) ) THEN ! Element is partially submerged
+         ! Submergence ratio
+         SubRatio = ( Zeta1-pos1(3) ) / ( (Zeta1-pos1(3)) - (Zeta2-pos2(3)) )
+         ! The position of the intersection between the free surface and the element
+         FSInt    = SubRatio * (pos2-pos1) + pos1
+         ! Distances along element centerline from point 1 to the waterplane
+         h0       = SubRatio * dl
+         ! Scaled radius of element at point where its centerline crosses the waterplane
+         rh       = r1 + h0*dRdl
+         ! Estimate the free-surface normal at the free-surface intersection, n_hat
+         IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute free surface normal
+            CALL GetFreeSurfaceNormal( Time, FSInt, rh, n_hat, ErrStat2, ErrMsg2 )
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ELSE ! Without wave stretching, use the normal of the SWL
+            n_hat = (/0.0_ReKi,0.0_ReKi,1.0_ReKi/)
+         END IF
+         ! Get other relevant unit vectors, t_hat, r_hat, and s_hat
+         t_hat    = Cross_Product(k_hat,n_hat)
+         sinGamma = SQRT(Dot_Product(t_hat,t_hat))
+         cosGamma = Dot_Product(k_hat,n_hat)
+         tanGamma = sinGamma/cosGamma
+         IF (sinGamma < 0.0001) THEN  ! Free surface normal is aligned with the element
+            ! Arbitrary choice for t_hat as long as it is perpendicular to k_hat
+            IF ( k_hat(3) < 0.999999_ReKi ) THEN
+               t_hat = (/-k_hat(2),k_hat(1),0.0_ReKi/)   
+               t_hat = t_hat / SQRT(Dot_Product(t_hat,t_hat))
+            ELSE ! k_hat is close to vertical (0,0,1)
+               t_hat = (/1.0_ReKi,0.0_ReKi,0.0_ReKi/);
+            END IF
+         ELSE
+            t_hat = t_hat / sinGamma
+         END IF
+         s_hat = Cross_Product(t_hat,n_hat)
+         r_hat = Cross_Product(t_hat,k_hat)
+
+         ! Compute the waterplane shape, the submerged volume, and it's geometric center
+         IF (abs(dRdl) < 0.0001) THEN  ! non-tapered member
+
+            IF (cosGamma < 0.0001) THEN
+               CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+            END IF
+
+            a0   = r1/cosGamma                                       ! Semi major axis of waterplane
+            b0   = r1                                                ! Semi minor axis of waterplane
+            a0b0 = a0*b0
+            s0   = 0.0_ReKi                                          ! Distance from the center of the waterplane to the element centerline
+            Vs   =       Pi*r1**2*h0                                 ! volume of total submerged portion
+            Vrc  = -0.25*Pi*r1**4*tanGamma                           ! Submerged Volume * r_c
+            Vhc  = 0.125*Pi*r1**2* (4.0*h0**2 + r1**2 * tanGamma**2) ! Submerged Volume * h_c
+
+         ELSE  ! tapered member
+            C_1  = 1.0_ReKi - dRdl**2 * tanGamma**2
+            IF (C_1 < 0.0001) THEN ! The free surface is nearly tangent to the element wall
+               CALL SetErrStat(ErrID_Fatal, 'Element cannot be parallel to the free surface.  This has happened for Member ID '//trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
+            END IF
+
+            a0   = rh/(C_1*cosGamma)                                 ! Semi major axis of waterplane
+            b0   = rh/sqrt(C_1)                                      ! Semi minor axis of waterplane
+            a0b0 = a0*b0
+            C_2  = a0b0*rh*cosGamma - r1**3
+            s0   = -rh*dRdl*tanGamma/C_1/cosGamma                    ! Distance from the center of the waterplane to the element centerline
+            Vs   =  Pi*C_2/(3.0*dRdl)                                ! volume of total submerged portion
+            Vrc  = -0.25*Pi *  a0b0*rh**2*sinGamma/C_1                                                 ! Submerged Volume * r_c
+            Vhc  =  0.25*Pi * (a0b0*rh**2*cosGamma/C_1 - r1**4 - 4.0_ReKi/3.0_ReKi*r1*C_2 ) /dRdl**2   ! Submerged Volume * h_c
+
+         END IF
+
+         ! z-coordinate of the center of the waterplane in the global earth-fixed system
+         Z0 = z1+h0*k_hat(3)+s0*s_hat(3)  
+
+         ! Hydrostatic force on element
+         FbVec = (/0.0_ReKi,0.0_ReKi,Vs/) - Pi*a0b0*Z0*n_hat + Pi*r1**2*z1*k_hat
+         FbVec = p%WtrDens * g * FbVec
+
+         ! Hydrostatic moment on element about the lower node
+         MbVec = Cross_Product( Vrc*r_hat+Vhc*k_hat, (/0.0_ReKi,0.0_ReKi,1.0_ReKi/) ) &
+                 + 0.25*Pi*a0b0* ( ( s_hat(3)*a0*a0 + 4.0*(s0-h0*sinGamma)*Z0 )*t_hat - t_hat(3)*b0*b0*s_hat ) &
+                 - 0.25*Pi*r1**4*(   r_hat(3)                                  *t_hat - t_hat(3)   *   r_hat )
+         MbVec = p%WtrDens * g * MbVec
+
+         IF ( Is1stElement ) THEN ! This is the 1st element of the member
+            ! Assign the element load to the lower (1st) node of the member
+            F_B1(1:3) = FbVec
+            F_B1(4:6) = MbVec
+         ELSE ! This is not the 1st element of the member
+            ! Distribute element load to nodes
+            alpha = (1.0-alphaIn)*(z1-Zeta1)**pwr / ( -alphaIn*(z2-Zeta2)**pwr + (1.0-alphaIn)*(z1-Zeta1)**pwr )
+            ! Hydrostatic force
+            F_B0(1:3) = (1-alpha) * FbVec
+            F_B1(1:3) =    alpha  * FbVec
+            ! Hydrostatic moment correction followed by redistribution
+            MbVec = MbVec - Cross_Product( -k_hat*dl, F_B0(1:3))
+            F_B0(4:6) = (1-alpha) * MbVec
+            F_B1(4:6) =    alpha  * MbVec
+         END IF
+      END IF
+   END SUBROUTINE getElementHstLds_Mod1
 
 END SUBROUTINE Morison_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4050,8 +4475,6 @@ subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )
    real(ReKi), intent(in   ) :: dl
    real(ReKi), intent(in   ) :: h_c
    real(ReKi), intent(inout) :: lumpedLoad(6)
-   !lumpedLoad(1:3) = lumpedLoad(1:3) + f_hydro*dl
-   !lumpedLoad(4:6) = lumpedLoad(4:6) + cross_product(k_hat*h_c, f_hydro)*dl
    lumpedLoad(1:3) = f_hydro*dl
    lumpedLoad(4:6) = cross_product(k_hat*h_c, f_hydro)*dl
 end subroutine LumpDistrHydroLoads
@@ -4070,50 +4493,21 @@ SUBROUTINE DistributeElementLoads(Fl, Fr, M, sinPhi, cosPhi, SinBeta, cosBeta, a
    
    REAL(ReKi),                     INTENT    ( OUT   )  :: F1(6)   ! (N, Nm) force/moment vector for node i
    REAL(ReKi),                     INTENT    ( OUT   )  :: F2(6)   ! (N, Nm) force/moment vector for the other node (whether i+1, or i-1)
-         
-
-   !F1(1) = F1(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(2) = F1(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(3) = F1(3) +          (Fl*cosPhi - Fr*sinPhi)*alpha
-   !F1(4) = F1(4) +  sinBeta * M                    *alpha
-   !F1(5) = F1(5) +  cosBeta * M                    *alpha
-   !!F1(6) = F1(6) + 0.0
-   !   
-   !F2(1) = F2(1) +  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(2) = F2(2) -  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(3) = F2(3) +          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   !F2(4) = F2(4) +  sinBeta * M                    *(1-alpha)
-   !F2(5) = F2(5) +  cosBeta * M                    *(1-alpha)
-   !!F2(6) = F2(6) + 0.0
    
    F1(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
    F1(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*alpha
-   F1(3) =         (Fl*cosPhi - Fr*sinPhi)*alpha
-   F1(4) =  -sinBeta * M                    *alpha
+   F1(3) =          (Fl*cosPhi - Fr*sinPhi)*alpha
+   F1(4) = -sinBeta * M                    *alpha
    F1(5) =  cosBeta * M                    *alpha
    F1(6) =  0.0
       
    F2(1) =  cosBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
    F2(2) =  sinBeta*(Fl*sinPhi + Fr*cosPhi)*(1-alpha)
    F2(3) =          (Fl*cosPhi - Fr*sinPhi)*(1-alpha)
-   F2(4) =  -sinBeta * M                    *(1-alpha)
+   F2(4) = -sinBeta * M                    *(1-alpha)
    F2(5) =  cosBeta * M                    *(1-alpha)
-   F2(6) = 0.0
+   F2(6) =  0.0
    
-   !F1(1) =  cosBeta*(-Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(2) =  sinBeta*(-Fl*sinPhi + Fr*cosPhi)*alpha
-   !F1(3) =         (Fl*cosPhi + Fr*sinPhi)*alpha
-   !F1(4) =  -sinBeta * M                    *alpha
-   !F1(5) =  cosBeta * M                    *alpha
-   !F1(6) =  0.0
-   !   
-   !F2(1) =  cosBeta*(-Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(2) =  sinBeta*(-Fl*sinPhi + Fr*cosPhi)*(1-alpha)
-   !F2(3) =          (Fl*cosPhi + Fr*sinPhi)*(1-alpha)
-   !F2(4) =  -sinBeta * M                    *(1-alpha)
-   !F2(5) =  cosBeta * M                    *(1-alpha)
-   !F2(6) = 0.0
-
 END SUBROUTINE DistributeElementLoads
 !----------------------------------------------------------------------------------------------------------------------------------
 ! Takes loads on end node i and converts to 6DOF loads, adding to the nodes existing loads
