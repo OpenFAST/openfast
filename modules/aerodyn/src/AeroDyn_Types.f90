@@ -189,7 +189,7 @@ IMPLICIT NONE
 ! =========  AD_InputFile  =======
   TYPE, PUBLIC :: AD_InputFile
     LOGICAL  :: Echo      !< Echo input file to echo file [-]
-    REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or  [default"}"]
+    REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: AFAeroMod      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: TwrPotent      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
@@ -227,7 +227,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: FVWFileName      !< FVW input filename [quoted string]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: AFNames      !< Airfoil file names (NumAF lines) [quoted strings]
     LOGICAL  :: UseBlCm      !< Include aerodynamic pitching moment in calculations? [flag]
-    LOGICAL  :: SumPrint      !< Generate a summary file listing input options and interpolated properties to  [<rootname>.AD.sum"?"]
+    LOGICAL  :: SumPrint      !< Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"? [flag]
     INTEGER(IntKi)  :: NBlOuts      !< Number of blade node outputs [0 - 9] [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: BlOutNd      !< Blade nodes whose values will be output [-]
     INTEGER(IntKi)  :: NTwOuts      !< Number of tower node outputs [0 - 9] [-]
@@ -359,7 +359,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AD_MiscVarType  =======
   TYPE, PUBLIC :: AD_MiscVarType
-    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< - [MiscVars for each rotor]
+    TYPE(RotMiscVarType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< MiscVars for each rotor [-]
     TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
     TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
     TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
