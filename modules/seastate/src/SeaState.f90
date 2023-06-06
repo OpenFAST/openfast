@@ -298,11 +298,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             InputFileData%Waves2%WaveTime => p%WaveTime
             InputFileData%Waves2%WaveElevC0 => Waves_InitOut%WaveElevC0
             InputFileData%Waves2%WaveDirArr => Waves_InitOut%WaveDirArr
-            
-            CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, ErrStat2, ErrMsg2 )
-            ALLOCATE ( p%WaveField%WaveElev2 (0:InputFileData%Waves2%NStepWave,InputFileData%Waves2%NGrid(1),InputFileData%Waves2%NGrid(2)  ) , STAT=ErrStat2 )
-            IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveField%WaveElev2.', ErrStat,ErrMsg,RoutineName)
-            p%WaveField%WaveElev2 = Waves2_InitOut%WaveElev2
+
+            CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
             p%WaveElev2 => p%WaveField%WaveElev2 ! do this before calling cleanup() so that pointers get deallocated properly            
 
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
