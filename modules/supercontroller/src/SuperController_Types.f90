@@ -736,11 +736,13 @@ ENDIF
 
 IF (ASSOCIATED(ParamData%ParamGlobal)) THEN
   DEALLOCATE(ParamData%ParamGlobal)
+  ParamData%ParamGlobal => NULL()
   ParamData%C_obj%ParamGlobal = C_NULL_PTR
   ParamData%C_obj%ParamGlobal_Len = 0
 ENDIF
 IF (ASSOCIATED(ParamData%ParamTurbine)) THEN
   DEALLOCATE(ParamData%ParamTurbine)
+  ParamData%ParamTurbine => NULL()
   ParamData%C_obj%ParamTurbine = C_NULL_PTR
   ParamData%C_obj%ParamTurbine_Len = 0
 ENDIF
@@ -1229,11 +1231,13 @@ ENDIF
 
 IF (ASSOCIATED(DiscStateData%Global)) THEN
   DEALLOCATE(DiscStateData%Global)
+  DiscStateData%Global => NULL()
   DiscStateData%C_obj%Global = C_NULL_PTR
   DiscStateData%C_obj%Global_Len = 0
 ENDIF
 IF (ASSOCIATED(DiscStateData%Turbine)) THEN
   DEALLOCATE(DiscStateData%Turbine)
+  DiscStateData%Turbine => NULL()
   DiscStateData%C_obj%Turbine = C_NULL_PTR
   DiscStateData%C_obj%Turbine_Len = 0
 ENDIF
@@ -2230,11 +2234,13 @@ ENDIF
 
 IF (ASSOCIATED(InputData%toSCglob)) THEN
   DEALLOCATE(InputData%toSCglob)
+  InputData%toSCglob => NULL()
   InputData%C_obj%toSCglob = C_NULL_PTR
   InputData%C_obj%toSCglob_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%toSC)) THEN
   DEALLOCATE(InputData%toSC)
+  InputData%toSC => NULL()
   InputData%C_obj%toSC = C_NULL_PTR
   InputData%C_obj%toSC_Len = 0
 ENDIF
@@ -2555,11 +2561,13 @@ ENDIF
 
 IF (ASSOCIATED(OutputData%fromSCglob)) THEN
   DEALLOCATE(OutputData%fromSCglob)
+  OutputData%fromSCglob => NULL()
   OutputData%C_obj%fromSCglob = C_NULL_PTR
   OutputData%C_obj%fromSCglob_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%fromSC)) THEN
   DEALLOCATE(OutputData%fromSC)
+  OutputData%fromSC => NULL()
   OutputData%C_obj%fromSC = C_NULL_PTR
   OutputData%C_obj%fromSC_Len = 0
 ENDIF

@@ -2478,6 +2478,7 @@ IF (ASSOCIATED(ParamData%FlowField)) THEN
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   ENDIF
   DEALLOCATE(ParamData%FlowField)
+  ParamData%FlowField => NULL()
 ENDIF
 IF (ALLOCATED(ParamData%PositionAvg)) THEN
   DEALLOCATE(ParamData%PositionAvg)
