@@ -3792,7 +3792,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             CALL GetEndPlateHstLds(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
                    CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the first node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
                END IF
             END IF
@@ -3813,7 +3813,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
                    CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
                END IF
             END IF
@@ -3835,7 +3835,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
             IF (mem%MHstLMod == 1) THEN ! Check for partially wetted end plates
-               IF ( (theta2-theta1)/=0.0 .AND. (theta2-theta1)/=2.0*PI) THEN
+               IF ( .NOT.( EqualRealNos((theta2-theta1),0.0_DbKi) .OR. EqualRealNos((theta2-theta1),2.0_DbKi*PI_D) ) ) THEN
                    CALL SetErrStat(ErrID_Warn, 'End plate is partially wetted with MHstLMod = 1. The buoyancy load and distribution potentially have large error. This has happened to the last node of Member ID ' //trim(num2lstr(mem%MemberID)), errStat, errMsg, RoutineName )
                END IF
             END IF
@@ -4029,16 +4029,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          IF ( dot_product( (cos(theta2)-cos(theta1))*z_hat-(sin(theta2)-sin(theta1))*y_hat, n_hat) < 0.0 ) THEN
             tmp    = theta1
             theta1 = theta2
-            theta2 = tmp + 2.0*PI
+            theta2 = tmp + 2.0*PI_D
          END IF
          secStat = 1;
       ELSE IF (c > 0.0) THEN ! Section is fully submerged
-         theta1 = -1.5*PI
-         theta2 =  0.5*PI
+         theta1 = -1.5*PI_D
+         theta2 =  0.5*PI_D
          secStat = 2;
       ELSE ! Section is completely dry
-         theta1 = -0.5*PI
-         theta2 = -0.5*PI
+         theta1 = -0.5*PI_D
+         theta2 = -0.5*PI_D
          secStat = 0;
       END IF
 
