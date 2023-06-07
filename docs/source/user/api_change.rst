@@ -9,6 +9,23 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
+OpenFAST v3.5.0 to OpenFAST dev
+----------------------------------
+
+The HydroDyn module was split into HydroDyn and SeaState.  This results in a
+completely new input file for SeaState, and complete revision of the HydroDyn
+input file.  See examples in the regression tests for the new formats.
+
+============================================= ==== ==================== ========================================================================================================================================================================================================
+Modified in OpenFAST `dev`
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Module                                        Line  Flag Name           Example Value
+============================================= ==== ==================== ========================================================================================================================================================================================================
+HydroDyn                                       all                      Complete restructuring of input file
+SeaState                                       all                      New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
+============================================= ==== ==================== ========================================================================================================================================================================================================
+
+
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
 ----------------------------------
 
