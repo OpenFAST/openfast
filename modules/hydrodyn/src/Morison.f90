@@ -2642,7 +2642,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
    INTEGER(IntKi)           :: MemSubStat, NumFSX
-   REAL(ReKi)               :: theta1, theta2, dFdl(6), y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
+   REAL(DbKi)               :: theta1, theta2
+   REAL(ReKi)               :: y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
    INTEGER(IntKi)           :: secStat
 
    LOGICAL                  :: Is1stElement
@@ -3786,7 +3787,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat1, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects( pos1, FSPt, k_hat1, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat)
+            CALL GetSectionFreeSurfaceIntersects( REAL(pos1,DbKi), REAL(FSPt,DbKi), k_hat1, y_hat, z_hat, n_hat, REAL(r1,DbKi), theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             CALL GetEndPlateHstLds(pos1, k_hat1, y_hat, z_hat, r1, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(  1)) = m%F_B_End(:, mem%NodeIndx(  1)) + F_B_End
@@ -3807,7 +3808,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+            CALL GetSectionFreeSurfaceIntersects( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
@@ -3829,7 +3830,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
-            CALL GetSectionFreeSurfaceIntersects( pos2, FSPt, k_hat2, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat)
+            CALL GetSectionFreeSurfaceIntersects( REAL(pos2,DbKi), REAL(FSPt,DbKi), k_hat2, y_hat, z_hat, n_hat, REAL(r2,DbKi), theta1, theta2, secStat)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             CALL GetEndPlateHstLds(pos2, k_hat2, y_hat, z_hat, r2, theta1, theta2, F_B_End)
             m%F_B_End(:, mem%NodeIndx(N+1)) = m%F_B_End(:, mem%NodeIndx(N+1)) - F_B_End
@@ -3996,19 +3997,19 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    END SUBROUTINE GetSectionUnitVectors
 
    SUBROUTINE GetSectionFreeSurfaceIntersects( pos0, FSPt, k_hat, y_hat, z_hat, n_hat, R, theta1, theta2, secStat)
-      REAL(ReKi),      INTENT( In    ) :: pos0(3)
-      REAL(ReKi),      INTENT( In    ) :: FSPt(3)
+      REAL(DbKi),      INTENT( In    ) :: pos0(3)
+      REAL(DbKi),      INTENT( In    ) :: FSPt(3)
       REAL(ReKi),      INTENT( In    ) :: k_hat(3)
       REAL(ReKi),      INTENT( In    ) :: y_hat(3)
       REAL(ReKi),      INTENT( In    ) :: z_hat(3)
       REAL(ReKi),      INTENT( In    ) :: n_hat(3)
-      REAL(ReKi),      INTENT( In    ) :: R
-      REAL(ReKi),      INTENT(   OUT ) :: theta1
-      REAL(ReKi),      INTENT(   OUT ) :: theta2
+      REAL(DbKi),      INTENT( In    ) :: R
+      REAL(DbKi),      INTENT(   OUT ) :: theta1
+      REAL(DbKi),      INTENT(   OUT ) :: theta2
       INTEGER(IntKi),  INTENT(   OUT ) :: secStat
-      REAL(ReKi)                       :: a, b, c, d, d2
-      REAL(ReKi)                       :: alpha, beta
-      REAL(ReKi)                       :: tmp
+      REAL(DbKi)                       :: a, b, c, d, d2
+      REAL(DbKi)                       :: alpha, beta
+      REAL(DbKi)                       :: tmp
       CHARACTER(*),    PARAMETER       :: RoutineName = 'GetSectionFreeSurfaceIntersects'
 
       a  = R * dot_product(y_hat,n_hat)
@@ -4045,18 +4046,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    SUBROUTINE GetSectionHstLds( origin, pos0, k_hat, y_hat, z_hat, R, dRdl, theta1, theta2, dFdl)
 
-      REAL(ReKi),      INTENT( IN    ) :: origin(3)
-      REAL(ReKi),      INTENT( IN    ) :: pos0(3)
-      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: R
-      REAL(ReKi),      INTENT( IN    ) :: dRdl
-      REAL(ReKi),      INTENT( IN    ) :: theta1
-      REAL(ReKi),      INTENT( IN    ) :: theta2
-      REAL(ReKi),      INTENT(   OUT ) :: dFdl(6)
-      REAL(ReKi)                       :: C0, C1, C2
-      REAL(ReKi)                       :: Z0, dTheta, sinTheta1, sinTheta2, cosTheta1, cosTheta2, cosPhi
+      REAL(DbKi),      INTENT( IN    ) :: origin(3)
+      REAL(DbKi),      INTENT( IN    ) :: pos0(3)
+      REAL(DbKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: R
+      REAL(DbKi),      INTENT( IN    ) :: dRdl
+      REAL(DbKi),      INTENT( IN    ) :: theta1
+      REAL(DbKi),      INTENT( IN    ) :: theta2
+      REAL(DbKi),      INTENT(   OUT ) :: dFdl(6)
+      REAL(DbKi)                       :: C0, C1, C2
+      REAL(DbKi)                       :: Z0, dTheta, sinTheta1, sinTheta2, cosTheta1, cosTheta2, cosPhi
       
       Z0        = pos0(3)
       dTheta    = theta2 - theta1
@@ -4076,25 +4077,25 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    END SUBROUTINE GetSectionHstLds
 
-   SUBROUTINE getElementHstLds_Mod2( pos1In, pos2In, FSPt, k_hat, y_hat, z_hat, n_hat, r1, r2, dl, F_B1, F_B2, ErrStat, ErrMsg )
+   SUBROUTINE getElementHstLds_Mod2( pos1In, pos2In, FSPtIn, k_hatIn, y_hatIn, z_hatIn, n_hatIn, r1In, r2In, dlIn, F_B1, F_B2, ErrStat, ErrMsg )
       
       REAL(ReKi),      INTENT( IN    ) :: pos1In(3)
       REAL(ReKi),      INTENT( IN    ) :: pos2In(3)
-      REAL(ReKi),      INTENT( IN    ) :: FSPt(3)
-      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: n_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: r1
-      REAL(ReKi),      INTENT( IN    ) :: r2
-      REAL(ReKi),      INTENT( IN    ) :: dl
+      REAL(ReKi),      INTENT( IN    ) :: FSPtIn(3)
+      REAL(ReKi),      INTENT( IN    ) :: k_hatIn(3)
+      REAL(ReKi),      INTENT( IN    ) :: y_hatIn(3)
+      REAL(ReKi),      INTENT( IN    ) :: z_hatIn(3)
+      REAL(ReKi),      INTENT( IN    ) :: n_hatIn(3)
+      REAL(ReKi),      INTENT( IN    ) :: r1In
+      REAL(ReKi),      INTENT( IN    ) :: r2In
+      REAL(ReKi),      INTENT( IN    ) :: dlIn
       REAL(ReKi),      INTENT(   OUT ) :: F_B1(6)
       REAL(ReKi),      INTENT(   OUT ) :: F_B2(6)
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
-      REAL(ReKi)                       :: dRdl, theta1, theta2
-      REAL(ReKi)                       :: dFdl1(6), dFdlMid(6), dFdl2(6), F_B(6)
-      REAL(ReKi)                       :: i, rMid, posMid(3), pos1(3), pos2(3)
+      REAL(DbKi)                       :: theta1, theta2
+      REAL(DbKi)                       :: dFdl1(6), dFdlMid(6), dFdl2(6), F_B(6)
+      REAL(DbKi)                       :: i, dl, r1, r2, rMid, dRdl, posMid(3), pos1(3), pos2(3), FSPt(3), k_hat(3), y_hat(3), z_hat(3), n_hat(3)
       INTEGER(IntKi)                   :: secStat1, secStatMid, secStat2
       CHARACTER(*),    PARAMETER       :: routineName = "getElementHstLds_Mod2"
       INTEGER(IntKi)                   :: errStat2
@@ -4102,35 +4103,43 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""  
   
-      pos1   = pos1In
-      pos2   = pos2In
+      pos1   = REAL(pos1In,DbKi)
+      pos2   = REAL(pos2In,DbKi)
+      r1     = REAL(r1In,DbKi)
+      r2     = REAL(r2In,DbKi)
+      dl     = REAL(dlIn,DbKi)
       dRdl   = (r2-r1)/dl
       rMid   = 0.5*(  r1+  r2)
       posMid = 0.5*(pos1In+pos2In)
+      FSPt   = REAL(FSPtIn,DbKi)
+      k_hat  = REAL(k_hatIn,DbKi)
+      y_hat  = REAL(y_hatIn,DbKi)
+      z_hat  = REAL(z_hatIn,DbKi)
+      n_hat  = REAL(n_hatIn,DbKi)
       
       ! Avoid sections coincident with the SWL
       IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
-         IF ( EqualRealNos( pos1In(3), 0.0 ) ) THEN
-            pos1(3) = pos1In(3) - 1.0E-6 * dl
+         IF ( EqualRealNos( pos1(3), 0.0_DbKi ) ) THEN
+            pos1(3) = pos1(3) - 1.0E-6 * dl
          END IF
-         IF ( EqualRealNos( pos2In(3), 0.0 ) ) THEN
-            pos2(3) = pos2In(3) - 1.0E-6 * dl
+         IF ( EqualRealNos( pos2(3), 0.0_DbKi ) ) THEN
+            pos2(3) = pos2(3) - 1.0E-6 * dl
          END IF
-         IF ( EqualRealNos( posMid(3), 0.0 ) ) THEN
+         IF ( EqualRealNos( posMid(3), 0.0_DbKi ) ) THEN
             posMid(3) = posMid(3) - 1.0E-6 * dl
          END IF
       END IF
 
       ! Section load at node 1
-      CALL GetSectionFreeSurfaceIntersects( pos1,   FSPt, k_hat, y_hat, z_hat, n_hat, r1, theta1, theta2, secStat1)
+      CALL GetSectionFreeSurfaceIntersects( pos1,   FSPt, REAL(k_hat,ReKi), REAL(y_hat,ReKi), REAL(z_hat,ReKi), REAL(n_hat,ReKi), r1, theta1, theta2, secStat1)
       CALL GetSectionHstLds( pos1, pos1,   k_hat, y_hat, z_hat, r1,   dRdl, theta1, theta2, dFdl1)
 
       ! Section load at midpoint
-      CALL GetSectionFreeSurfaceIntersects( posMid, FSPt, k_hat, y_hat, z_hat, n_hat, rMid, theta1, theta2, secStatMid)
+      CALL GetSectionFreeSurfaceIntersects( posMid, FSPt, REAL(k_hat,ReKi), REAL(y_hat,ReKi), REAL(z_hat,ReKi), REAL(n_hat,ReKi), rMid, theta1, theta2, secStatMid)
       CALL GetSectionHstLds( pos1, posMid, k_hat, y_hat, z_hat, rMid, dRdl, theta1, theta2, dFdlMid)
 
       ! Section load at node 2
-      CALL GetSectionFreeSurfaceIntersects( pos2,   FSPt, k_hat, y_hat, z_hat, n_hat, r2, theta1, theta2, secStat2)
+      CALL GetSectionFreeSurfaceIntersects( pos2,   FSPt, REAL(k_hat,ReKi), REAL(y_hat,ReKi), REAL(z_hat,ReKi), REAL(n_hat,ReKi), r2, theta1, theta2, secStat2)
       CALL GetSectionHstLds( pos1, pos2,   k_hat, y_hat, z_hat, r2,   dRdl, theta1, theta2, dFdl2)
 
       ! Adaptively refine the load integration over the element
@@ -4148,39 +4157,41 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
    RECURSIVE SUBROUTINE RefineElementHstLds( origin, pos1, posMid, pos2, FSPt, r1, rMid, r2, dl, dRdl,secStat1,secStatMid,secStat2, k_hat, y_hat, z_hat, n_hat, dFdl1, dFdlMid, dFdl2, recurLvl, F_B_5pt, ErrStat, ErrMsg)
 
-      REAL(ReKi),      INTENT( IN    ) :: origin(3)
-      REAL(ReKi),      INTENT( IN    ) :: pos1(3)
-      REAL(ReKi),      INTENT( IN    ) :: posMid(3)
-      REAL(ReKi),      INTENT( IN    ) :: pos2(3)
-      REAL(ReKi),      INTENT( IN    ) :: FSPt(3)
-      REAL(ReKi),      INTENT( IN    ) :: r1
-      REAL(ReKi),      INTENT( IN    ) :: rMid
-      REAL(ReKi),      INTENT( IN    ) :: r2
-      REAL(ReKi),      INTENT( IN    ) :: dl
-      REAL(ReKi),      INTENT( IN    ) :: dRdl
+      REAL(DbKi),      INTENT( IN    ) :: origin(3)
+      REAL(DbKi),      INTENT( IN    ) :: pos1(3)
+      REAL(DbKi),      INTENT( IN    ) :: posMid(3)
+      REAL(DbKi),      INTENT( IN    ) :: pos2(3)
+      REAL(DbKi),      INTENT( IN    ) :: FSPt(3)
+      REAL(DbKi),      INTENT( IN    ) :: r1
+      REAL(DbKi),      INTENT( IN    ) :: rMid
+      REAL(DbKi),      INTENT( IN    ) :: r2
+      REAL(DbKi),      INTENT( IN    ) :: dl
+      REAL(DbKi),      INTENT( IN    ) :: dRdl
       INTEGER(IntKi),  INTENT( IN    ) :: secStat1
       INTEGER(IntKi),  INTENT( IN    ) :: secStatMid
       INTEGER(IntKi),  INTENT( IN    ) :: secStat2
-      REAL(ReKi),      INTENT( IN    ) :: k_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: n_hat(3)
-      REAL(ReKi),      INTENT( IN    ) :: dFdl1(6)
-      REAL(ReKi),      INTENT( IN    ) :: dFdlMid(6)
-      REAL(ReKi),      INTENT( IN    ) :: dFdl2(6)
+      REAL(DbKi),      INTENT( IN    ) :: k_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: y_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: z_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: n_hat(3)
+      REAL(DbKi),      INTENT( IN    ) :: dFdl1(6)
+      REAL(DbKi),      INTENT( IN    ) :: dFdlMid(6)
+      REAL(DbKi),      INTENT( IN    ) :: dFdl2(6)
       INTEGER(IntKi),  INTENT( IN    ) :: recurLvl
-      REAL(ReKi),      INTENT(   OUT ) :: F_B_5pt(6)
+      REAL(DbKi),      INTENT(   OUT ) :: F_B_5pt(6)
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
-      REAL(ReKi)                       :: posMidL(3), posMidR(3), rMidL, rMidR, F_B_3pt(6)
-      REAL(ReKi)                       :: dFdlMidL(6), dFdlMidR(6)
-      REAL(ReKi)                       :: error(6), tmp(6)
+      REAL(DbKi)                       :: theta1,theta2
+      REAL(DbKi)                       :: posMidL(3), posMidR(3)
+      REAL(DbKi)                       :: rMidL, rMidR
+      REAL(DbKi)                       :: dFdlMidL(6), dFdlMidR(6), F_B_3pt(6)
+      REAL(DbKi)                       :: error(6), tmp(6)
       LOGICAL                          :: refine, tolMet
       INTEGER(IntKi)                   :: i
       INTEGER(IntKi)                   :: secStatMidL, secStatMidR
-      REAL(ReKi),      PARAMETER       :: RelTol      = 1.0E-6
-      REAL(ReKi),      PARAMETER       :: AbsTol      = 1.0E-8
+      REAL(DbKi),      PARAMETER       :: RelTol      = 1.0E-6
+      REAL(DbKi),      PARAMETER       :: AbsTol      = 1.0E-8
       INTEGER(IntKi),  PARAMETER       :: maxRecurLvl = 50
       CHARACTER(*),    PARAMETER       :: RoutineName = "RefineElementHstLds"
       
@@ -4194,10 +4205,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       ! Avoid sections coincident with the SWL
       IF ( ABS(k_hat(3)) > 0.999999_ReKi ) THEN ! Vertical member
-         IF ( EqualRealNos( posMidL(3), 0.0 ) ) THEN
+         IF ( EqualRealNos( posMidL(3), 0.0_DbKi ) ) THEN
             posMidL(3) = posMidL(3) - 1.0E-6 * dl
          END IF
-         IF ( EqualRealNos( posMidR(3), 0.0 ) ) THEN
+         IF ( EqualRealNos( posMidR(3), 0.0_DbKi ) ) THEN
             posMidR(3) = posMidR(3) - 1.0E-6 * dl
          END IF
       END IF
@@ -4206,11 +4217,11 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       F_B_3pt = (dFdl1 + 4.0*dFdlMid + dFdl2) * dl/6.0
 
       ! Mid point of left section
-      CALL GetSectionFreeSurfaceIntersects( posMidL, FSPt, k_hat, y_hat, z_hat, n_hat, rMidL, theta1, theta2, secStatMidL)
+      CALL GetSectionFreeSurfaceIntersects( posMidL, FSPt, REAL(k_hat,ReKi), REAL(y_hat,ReKi), REAL(z_hat,ReKi), REAL(n_hat,ReKi), rMidL, theta1, theta2, secStatMidL)
       CALL GetSectionHstLds( origin, posMidL, k_hat, y_hat, z_hat, rMidL, dRdl, theta1, theta2, dFdlMidL)
 
       ! Mid point of right section
-      CALL GetSectionFreeSurfaceIntersects( posMidR, FSPt, k_hat, y_hat, z_hat, n_hat, rMidR, theta1, theta2, secStatMidR)
+      CALL GetSectionFreeSurfaceIntersects( posMidR, FSPt, REAL(k_hat,ReKi), REAL(y_hat,ReKi), REAL(z_hat,ReKi), REAL(n_hat,ReKi), rMidR, theta1, theta2, secStatMidR)
       CALL GetSectionHstLds( origin, posMidR, k_hat, y_hat, z_hat, rMidR, dRdl, theta1, theta2, dFdlMidR)
       
       F_B_5pt = (dFdl1 + 4.0*dFdlMidL + 2.0*dFdlMid + 4.0*dFdlMidR + dFdl2) * dl/12.0
@@ -4250,16 +4261,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT( IN    ) :: y_hat(3)
       REAL(ReKi),      INTENT( IN    ) :: z_hat(3)
       REAL(ReKi),      INTENT( IN    ) :: R
-      REAL(ReKi),      INTENT( IN    ) :: theta1
-      REAL(ReKi),      INTENT( IN    ) :: theta2
+      REAL(DbKi),      INTENT( IN    ) :: theta1
+      REAL(DbKi),      INTENT( IN    ) :: theta2
       REAL(ReKi),      INTENT(   OUT ) :: F(6)
-      REAL(ReKi)                       :: C0, C1, C2, a, b, tmp1, tmp2, tmp3
-      REAL(ReKi)                       :: Z0, cosPhi, dTheta
-      REAL(ReKi)                       :: y1, y2
-      REAL(ReKi)                       :: z1, z2, z1_2, z2_2, z1_3, z2_3, z1_4, z2_4
-      REAL(ReKi)                       :: dy, dy_3, dz, dz_2, dz_3, dz_4, sz
-      REAL(ReKi)                       :: R_2, R_4
-      REAL(ReKi)                       :: Fk, My, Mz
+      REAL(DbKi)                       :: C0, C1, C2, a, b, tmp1, tmp2, tmp3
+      REAL(DbKi)                       :: Z0, cosPhi, dTheta
+      REAL(DbKi)                       :: y1, y2
+      REAL(DbKi)                       :: z1, z2, z1_2, z2_2, z1_3, z2_3, z1_4, z2_4
+      REAL(DbKi)                       :: dy, dy_3, dz, dz_2, dz_3, dz_4, sz
+      REAL(DbKi)                       :: R_2, R_4
+      REAL(DbKi)                       :: Fk, My, Mz
 
       Z0     = pos0(3)
       cosPhi = SQRT(k_hat(1)**2+k_hat(2)**2)
