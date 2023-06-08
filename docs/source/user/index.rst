@@ -53,6 +53,7 @@ Documentation covers usage of models, underlying theory, and in some cases modul
    ExtPtfm <extptfm//index.rst>
    ElastoDyn <elastodyn/index.rst>
    HydroDyn <hydrodyn/index.rst>
+   SeaState <seastate/index.rst>
    InflowWind <inflowwind/index.rst>
    MoorDyn <moordyn/index.rst>
    ServoDyn <servodyn/index.rst>

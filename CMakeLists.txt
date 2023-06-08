@@ -179,6 +179,7 @@ set(OPENFAST_MODULES
   elastodyn
   beamdyn
   subdyn
+  seastate
   hydrodyn
   orcaflex-interface
   extptfm

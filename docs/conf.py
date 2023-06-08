@@ -176,7 +176,7 @@ html_logo = '_static/openfastlogo.jpg'
 # documentation.
 #
 html_theme_options = {
-    "analytics_id": "UA-68999653-10"
+    "analytics_id": "G-54J9QGXMGP"
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

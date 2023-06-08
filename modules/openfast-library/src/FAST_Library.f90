@@ -134,6 +134,7 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
       ! -- MATLAB Integration --
       ! Make sure fast farm integration is false
       ExternInitData%FarmIntegration = .false.
+      ExternInitData%WaveFieldMod = 0
    
       IF ( NINT(InitInpAry(2)) == 1 ) THEN
          ExternInitData%LidRadialVel = .true.

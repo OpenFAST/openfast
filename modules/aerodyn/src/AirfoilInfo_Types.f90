@@ -68,7 +68,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: k2      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: k3      !< airfoil parameter in the x_cp_hat curve best-fit [ignored if UAMod<>1] [-]
     REAL(ReKi)  :: k1_hat      !< Constant in the expression of Cc due to leading edge vortex effects.  [ignored if UAMod<>1] [-]
-    REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
+    REAL(ReKi)  :: x_cp_bar      !< Constant in the expression of \hat(x)_cp^v [ignored if UAMod<>1, default = 0.2] [-]
     REAL(ReKi)  :: UACutout      !< Angle of attack above which unsteady aerodynamics are disabled [input in degrees; stored as radians]
     REAL(ReKi)  :: UACutout_delta      !< Number of angles-of-attack below UACutout where unsteady aerodynamics begin to be disabled [input in degrees; stored as radians]
     REAL(ReKi)  :: UACutout_blend      !< Angle of attack above which unsteady aerodynamics begins to be disabled [stored as radians]

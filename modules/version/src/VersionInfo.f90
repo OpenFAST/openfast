@@ -57,7 +57,7 @@ FUNCTION GetVersion(ThisProgVer, Cmpl4SFun, Cmpl4LV)
 
    CHARACTER(200)                  :: git_commit
 
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled on '//__DATE__//' at '//__TIME__
 
    if (present(Cmpl4SFun)) then
       IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
@@ -303,7 +303,7 @@ END FUNCTION GetVersion
       SUBROUTINE GET_COMMAND_LINE_ARG(ArgIndex, ArgGiven)
 
          INTEGER, INTENT(IN) :: ArgIndex           !< Index location of the argument to get.
-         CHARACTER(1024), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
+         CHARACTER(*), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
          INTEGER :: Error                          !< Indicates if there was an error getting an argument.
 
          CALL GET_COMMAND_ARGUMENT( ArgIndex, ArgGiven, STATUS=Error )

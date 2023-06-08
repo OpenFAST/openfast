@@ -2225,6 +2225,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
+   !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
    rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev

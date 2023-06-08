@@ -90,8 +90,10 @@ def runBeamdynDriverCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
 def runHydrodynDriverCase(inputFile, executable, verbose=False):
-    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+
+def runMoordynDriverCase(inputFile, executable, verbose=False):
+    print("MoorDyn run: {}".format(inputFile))
     return _runGenericCase(inputFile, executable, verbose)
 
 def runSubdynDriverCase(inputFile, executable, verbose=False):
@@ -109,3 +111,8 @@ def runMoordynDriverCase(inputFile, executable, verbose=False):
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
 
+
+def runSeaStateDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
