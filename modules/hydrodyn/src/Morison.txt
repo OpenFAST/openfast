@@ -14,6 +14,7 @@
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
 usefrom   SeaState_Interp.txt
+usefrom   SeaSt_WaveField.txt
 #
 #
 typedef   Morison/Morison              Morison_JointType             INTEGER          JointID                  -          -        -         "User-specified integer ID for the given joint"    -
@@ -95,8 +96,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            Morison_MemberType            INTEGER        NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
 typedef   ^                            ^                             INTEGER        MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER        NElements                -          -        -         "number of elements in this member"    -
-typedef   ^                            ^                             ReKi           RefLength                  -          -        -         "the reference total length for this member"    m
-typedef   ^                            ^                             ReKi           cosPhi_ref                 -          -        -         "the reference cosine of the inclination angle of the member" -
+typedef   ^                            ^                             ReKi           RefLength                -          -        -         "the reference total length for this member"    m
+typedef   ^                            ^                             ReKi           cosPhi_ref               -          -        -         "the reference cosine of the inclination angle of the member" -
 typedef   ^                            ^                             ReKi           dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
 typedef   ^                            ^                             ReKi           k                        {3}        -        -         "unit vector of the member's orientation (may be changed to per-element once additional flexibility is accounted for in HydroDyn)"    m
 typedef   ^                            ^                             ReKi           kkt                      {3}{3}     -        -         "matrix of matmul(k_hat, transpose(k_hat)" -
@@ -212,10 +213,10 @@ typedef   ^                            Morison_MOutput               INTEGER    
 typedef   ^                            Morison_MOutput               INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
 typedef   ^                            Morison_MOutput               ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
 typedef   ^                            Morison_MOutput               INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
-typedef   ^                            Morison_MOutput               INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
-typedef   ^                            Morison_MOutput               INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
-typedef   ^                            Morison_MOutput               INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
-typedef   ^                            Morison_MOutput               INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx1                {:}        -        -         "Index of node in Mesh for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx2                {:}        -        -         "Index of node in Mesh for the end of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx1              {:}        -        -         "Index of Member nodes for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx2              {:}        -        -         "Index of Member nodes for the end of the member element"    -
 typedef   ^                            Morison_MOutput               ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
 typedef   ^                            Morison_JOutput               INTEGER          JointID                  -          -        -         "Joint ID for the requested output"    -
 typedef   ^                            ^                             INTEGER          JointIDIndx              -          -        -         "Joint index in the master list"    -
@@ -272,20 +273,9 @@ typedef   ^                            ^                             CHARACTER(C
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation (points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation (points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
-typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -316,94 +306,69 @@ typedef   ^                            OtherStateType                IntKi      
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-#typedef   ^                            MiscVarType                   ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
-#typedef   ^                            ^                             ReKi                     F_I                           {:}{:}         -         -         "Member-based (side-effects) Nodal inertial loads at time t"   -
-#typedef   ^                            ^                             ReKi                     F_A                           {:}{:}         -         -         "Member-based (side-effects) Nodal added mass loads at time t"   -
-#typedef   ^                            ^                             ReKi                     F_B                           {:}{:}         -         -         "Member-based (side-effects) Nodal buoyancy loads"   -
-#typedef   ^                            ^                             ReKi                     F_BF                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast weight/buoyancy loads"   -
-#typedef   ^                            ^                             ReKi                     F_If                          {:}{:}         -         -         "Member-based (side-effects) Nodal flooded ballast inertia loads"   -
-#typedef   ^                            ^                             ReKi                     F_WMG                          {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth weight loads"   -
-#typedef   ^                            ^                             ReKi                     F_IMG                         {:}{:}         -         -         "Member-based (side-effects) Nodal marine growth inertia loads"   -
-#typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            MiscVarType                   ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FAMCF                         {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             SiKi                     WaveElev                      {:}            -         -         "Total wave elevation"   m
-typedef   ^                            ^                             SiKi                     WaveElev1                      {:}            -         -         "First order wave elevation"        m
-typedef   ^                            ^                             SiKi                     WaveElev2                      {:}            -         -         "Second order wave elevation"        m
+typedef   ^                            ^                             SiKi                     WaveElev1                     {:}            -         -         "First order wave elevation"        m
+typedef   ^                            ^                             SiKi                     WaveElev2                     {:}            -         -         "Second order wave elevation"        m
 typedef   ^                            ^                             ReKi                     vrel                          {:}{:}         -         -         "velocity of structural node relative to the water" m/s^2
-typedef   ^                            ^                             INTEGER                  nodeInWater                    {:}           -         -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
-typedef   ^                            ^                             Morison_MemberLoads      memberLoads                    {:}           -         -          "Array (NMembers long) of member-based side-effects load contributions" -
-typedef   ^                            ^                             ReKi                     F_B_End                       {:}{:}		   -         -         ""        -
+typedef   ^                            ^                             INTEGER                  nodeInWater                   {:}            -         -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             Morison_MemberLoads      memberLoads                   {:}            -         -          "Array (NMembers long) of member-based side-effects load contributions" -
+typedef   ^                            ^                             ReKi                     F_B_End                       {:}{:}	   -         -         ""        -
 typedef   ^                            ^                             ReKi                     F_D_End                       {:}{:}         -         -         "Lumped viscous drag loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_I_End                       {:}{:}         -         -         "Lumped intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
-typedef   ^                            ^                             ReKi                     F_A_End                      {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
-typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     V_rel_n                        {:}      -         -         "Normal relative flow velocity at joints"        m/s
-typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                 {:}      -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
-typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
-typedef   ^                            ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             ReKi                     F_A_End                       {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         ""        -
+typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
+typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
+typedef   ^                            ^                             INTEGER                  LastIndWave                   -              -         -         "Last time index used in the wave kinematics arrays"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 DbKi                     DT                              -          -         -         "Time step for continuous state integration & discrete state update"  (sec)
-typedef   ^                            ^                             ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
-typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
-typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
-typedef   ^                            ^                             INTEGER                  WaveDisp                -          -        -                  "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
-typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
-typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
-typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
-typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
-typedef   ^                            ^                             ReKi                     I_MG_End                      {:}{:}{:}  -         -         "Inertial matrix associated with marine growth mass at joint"        -
-typedef   ^                            ^                             ReKi                     An_End                            {:}{:}     -         -         "directional area vector of each joint"        m^2
-typedef   ^                            ^                             ReKi                     DragConst_End                     {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     VRelNFiltConst                       {:}        -         -         ""        -
-typedef   ^                            ^                             IntKi                    DragMod_End                          {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     DragLoFSc_End                        {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     F_WMG_End                      {:}{:}         -         -         "Joint marine growth weight loads, constant for all t"   N
-typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
-typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg
-typedef   ^                            ^                             ReKi                     AM_End                         {:}{:}{:}         -         -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation (points to SeaState module data)"        m
-typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation (points to SeaState module data)"        m
-typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveVel0                      {:}{:}{:}{:} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAcc0                      {:}{:}{:}{:} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {:}{:}{:}{:} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveDynP0                     {:}{:}{:} -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed (points to SeaState module data)"  s
-typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         "(points to SeaState module data)"        -
-typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -
-typedef   ^                            ^                             Morison_MOutput          MOutLst                         {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NJOutputs                       -          -         -         ""        -
-typedef   ^                            ^                             Morison_JOutput          JOutLst                         {:}        -         -         ""        -
-typedef   ^                            ^                             OutParmType              OutParam                        {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOuts                         -          -         -         ""        -
-typedef   ^                            ^                      SeaSt_Interp_ParameterType   SeaSt_Interp_p                    -          -         -       "parameter information from the SeaState Interpolation module"   -
-typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
+typedef   ^                            ParameterType                 DbKi                     DT                            -          -        -         "Time step for continuous state integration & discrete state update"  (sec)
+typedef   ^                            ^                             ReKi                     Gravity                       -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
+typedef   ^                            ^                             ReKi                     WtrDens                       -          -        -         "Water density"    kg/m^3
+typedef   ^                            ^                             ReKi                     WtrDpth                       -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     MSL2SWL                       -          -        -         "Mean Sea Level to Still Water Level offset"    m
+typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  AMMod                         -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
+typedef   ^                            ^                             INTEGER                  NMembers                      -          -        -         "number of members"        -
+typedef   ^                            ^                             Morison_MemberType       Members                       {:}        -        -         "Array of Morison members used during simulation"    -
+typedef   ^                            ^                             INTEGER                  NNodes                        -          -        -         ""        -
+typedef   ^                            ^                             INTEGER                  NJoints                       -          -        -         "Number of user-specified joints"    -
+typedef   ^                            ^                             ReKi                     I_MG_End                      {:}{:}{:}  -        -         "Inertial matrix associated with marine growth mass at joint"        -
+typedef   ^                            ^                             ReKi                     An_End                        {:}{:}     -        -         "directional area vector of each joint"        m^2
+typedef   ^                            ^                             ReKi                     DragConst_End                 {:}        -        -         ""        -
+typedef   ^                            ^                             ReKi                     VRelNFiltConst                {:}        -        -         ""        -
+typedef   ^                            ^                             IntKi                    DragMod_End                   {:}        -        -         ""        -
+typedef   ^                            ^                             ReKi                     DragLoFSc_End                 {:}        -        -         ""        -
+typedef   ^                            ^                             ReKi                     F_WMG_End                     {:}{:}     -        -         "Joint marine growth weight loads, constant for all t"   N
+typedef   ^                            ^                             ReKi                     DP_Const_End                  {:}{:}     -        -         "Constant part of Joint dynamic pressure term"   N
+typedef   ^                            ^                             ReKi                     Mass_MG_End                   {:}        -        -         "Joint marine growth mass"   kg
+typedef   ^                            ^                             ReKi                     AM_End                        {:}{:}{:}  -        -         "3x3 Joint added mass matrix, constant for all t"   N
+typedef   ^                            ^                             INTEGER                  NStepWave                     -          -        -         ""        -
+typedef   ^                            ^                             INTEGER                  NMOutputs                     -          -        -         ""        -
+typedef   ^                            ^                             Morison_MOutput          MOutLst                       {:}        -        -         ""        -
+typedef   ^                            ^                             INTEGER                  NJOutputs                     -          -        -         ""        -
+typedef   ^                            ^                             Morison_JOutput          JOutLst                       {:}        -        -         ""        -
+typedef   ^                            ^                             OutParmType              OutParam                      {:}        -        -         ""        -
+typedef   ^                            ^                             INTEGER                  NumOuts                       -          -        -         ""        -
+typedef   ^                            ^                             INTEGER                  WaveStMod                     -          -        -         ""    -  
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
 #
 #
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     MeshType                 Mesh                     -         -         -         "Kinematics of each node input mesh" -
+typedef   ^                            InputType                     MeshType                 Mesh                          -          -        -         "Kinematics of each node input mesh" -
 #
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                   MeshType                 Mesh                     -         -         -         "Loads on each node output mesh" -
-typedef   ^                            ^                            ReKi                     WriteOutput                     {:}       -         -         ""  -
+typedef   ^                            OutputType                   MeshType                 Mesh                           -          -        -         "Loads on each node output mesh" -
+typedef   ^                            ^                            ReKi                     WriteOutput                    {:}        -        -         ""  -

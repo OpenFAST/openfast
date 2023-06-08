@@ -155,23 +155,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\modules\openfast-registry\src\data.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\gen_c_types.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\gen_module_files.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\misc.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\my_strtok.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\registry.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\reg_parse.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\sym.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\symtab_gen.c" />
-    <ClCompile Include="..\..\modules\openfast-registry\src\type.c" />
+    <ClCompile Include="..\..\modules\openfast-registry\src\main.cpp" />
+    <ClCompile Include="..\..\modules\openfast-registry\src\registry_gen_c.cpp" />
+    <ClCompile Include="..\..\modules\openfast-registry\src\registry_gen_fortran.cpp" />
+    <ClCompile Include="..\..\modules\openfast-registry\src\registry_parse.cpp" />
+    <ClCompile Include="..\..\modules\openfast-registry\src\registry.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\modules\openfast-registry\src\data.h" />
-    <ClInclude Include="..\..\modules\openfast-registry\src\FAST_preamble.h" />
-    <ClInclude Include="..\..\modules\openfast-registry\src\protos.h" />
-    <ClInclude Include="..\..\modules\openfast-registry\src\registry.h" />
-    <ClInclude Include="..\..\modules\openfast-registry\src\sym.h" />
+    <ClInclude Include="..\..\modules\openfast-registry\src\registry.hpp" />
+    <ClInclude Include="..\..\modules\openfast-registry\src\templates.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
