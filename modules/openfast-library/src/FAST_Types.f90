@@ -48606,7 +48606,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsTower
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%NodeClusterType
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_PackExternInitType
 
@@ -48723,7 +48723,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumActForcePtsTower = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    OutData%NodeClusterType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_UnPackExternInitType
 
