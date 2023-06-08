@@ -16,7 +16,6 @@ include   Registry_NWTC_Library.txt
 usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
-#usefrom   Waves.txt
 usefrom   SeaState_Interp.txt
 
 typedef   WAMIT/WAMIT                  InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
@@ -40,8 +39,6 @@ typedef   ^                            ^                             DbKi       
 typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
-#typedef   ^                            ^                             SS_Rad_InitInputType     SS_Rdtn                         -          -        -         ""    -
-#typedef   ^                            ^                             SS_Exc_InitInputType     SS_Excn                         -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     Rhoxg                           -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -

@@ -824,26 +824,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
          Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
-         
-         ! CALL MOVE_ALLOC( Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )
-         ! CALL MOVE_ALLOC( Init%OutData_SeaSt%WaveElevC, Init%InData_HD%WaveElevC )
-
-         ! Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
-         ! Init%InData_HD%WaveElevC0     => Init%OutData_SeaSt%WaveElevC0
-         ! Init%InData_HD%WaveDirArr     => Init%OutData_SeaSt%WaveDirArr
-         ! Init%InData_HD%WaveElev1      => Init%OutData_SeaSt%WaveElev1
-         ! Init%InData_HD%WaveElev2      => Init%OutData_SeaSt%WaveElev2
-         ! Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
-         ! Init%InData_HD%WaveAcc        => Init%OutData_SeaSt%WaveAcc   
-         ! Init%InData_HD%WaveVel        => Init%OutData_SeaSt%WaveVel 
-         ! Init%InData_HD%PWaveDynP0     => Init%OutData_SeaSt%PWaveDynP0  
-         ! Init%InData_HD%PWaveAcc0      => Init%OutData_SeaSt%PWaveAcc0   
-         ! Init%InData_HD%PWaveVel0      => Init%OutData_SeaSt%PWaveVel0         
-         ! Init%InData_HD%WaveAccMCF     => Init%OutData_SeaSt%WaveAccMCF
-         ! Init%InData_HD%PWaveAccMCF0   => Init%OutData_SeaSt%PWaveAccMCF0
-         
-         ! call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         !    call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
                   

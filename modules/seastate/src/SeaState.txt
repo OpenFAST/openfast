@@ -151,9 +151,6 @@ typedef   ^                  ^                      ReKi                     del
 typedef   ^                  ^                      ReKi                     X_HalfWidth       -       -      -  "Half-width of the domain in the X direction" m
 typedef   ^                  ^                      ReKi                     Y_HalfWidth       -       -      -  "Half-width of the domain in the Y direction" m
 typedef   ^                  ^                      ReKi                     Z_Depth           -       -      -  "Depth of the domain the Z direction" m
-#typedef   ^                  ^                      ReKi                     gridDX            -       -      -  "distance between kinematics grid points along the xi direction"  m
-#typedef   ^                  ^                      ReKi                     gridDY            -       -      -  "distance between kinematics grid points along the yi direction"  m
-#typedef   ^                  ^                      ReKi                     gridDTheta        -       -      -  "delta angle used for cosine-spaced zi direction kinematic grid points"  rad
 typedef   ^                  ^                      INTEGER                  NStepWave         -       -      -  "Number of user-requested data points in the wave kinematics arrays"        -
 typedef   ^                  ^                      INTEGER                  NWaveElev         -       -      -  "Number of wave elevation outputs"        -
 typedef   ^                  ^                      SiKi                     WaveElevxi        {:}     -      -  "xi-coordinates for points where the incident wave elevations can be output"  (meters)
