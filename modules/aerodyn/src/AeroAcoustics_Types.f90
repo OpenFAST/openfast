@@ -73,7 +73,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AA_InputFile  =======
   TYPE, PUBLIC :: AA_InputFile
-    REAL(DbKi)  :: DT_AA      !< Time interval for aerodynamic calculations {or  [default"}"]
+    REAL(DbKi)  :: DT_AA      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: IBLUNT      !< FLAG TO COMPUTE BLUNTNESS NOISE [-]
     INTEGER(IntKi)  :: ILAM      !< FLAG TO COMPUTE LBL NOISE {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: ITIP      !< FLAG TO COMPUTE TIP NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]

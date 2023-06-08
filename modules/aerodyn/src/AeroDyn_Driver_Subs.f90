@@ -22,7 +22,6 @@ module AeroDyn_Driver_Subs
    use AeroDyn_Inflow_Types
    use AeroDyn_Inflow, only: ADI_Init, ADI_ReInit, ADI_End, ADI_CalcOutput, ADI_UpdateStates 
    use AeroDyn_Inflow, only: concatOutputHeaders
-   use AeroDyn_Inflow, only: ADI_ADIW_Solve ! TODO remove me
    use AeroDyn_Inflow, only: Init_MeshMap_For_ADI, Set_Inputs_For_ADI
    use AeroDyn_IO,     only: AD_WrVTK_Surfaces, AD_WrVTK_LinesPoints
    
@@ -238,7 +237,6 @@ subroutine Dvr_InitCase(iCase, dvr, ADI, FED, errStat, errMsg )
    DO j = 1-numInp, 0
       call Shift_ADI_Inputs(j,dvr, ADI, errStat2, errMsg2); if(Failed()) return
       call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-      call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat2, errMsg2); if(Failed()) return ! TODO TODO TODO remove me
    END DO              
    ! --- AeroDyn + Inflow at T=0
    call ADI_CalcOutput(ADI%inputTimes(1), ADI%u(1), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); if(Failed()) return
@@ -291,8 +289,7 @@ subroutine Dvr_TimeStep(nt, dvr, ADI, FED, errStat, errMsg)
    ! u(1) is at nt, u(2) is at nt-1.  Set inputs for nt timestep
    call Shift_ADI_Inputs(nt,dvr, ADI, errStat2, errMsg2); if(Failed()) return
    call Set_Inputs_For_ADI(ADI%u(1), FED, errStat2, errMsg2); if(Failed()) return
-   call ADI_ADIW_Solve(ADI%inputTimes(1), ADI%p, ADI%u(1)%AD, ADI%OtherState(1)%AD, ADI%m%IW%u, ADI%m%IW, .true., errStat, errMsg)
-
+   
    time = ADI%inputTimes(2)
 
    ! Calculate outputs at nt - 1 (current time)
@@ -702,9 +699,12 @@ subroutine Set_Mesh_Motion(nt, dvr, ADI, FED, errStat, errMsg)
       ! Getting current time values by interpolation
       ! timestate = HWindSpeed, PLExp, RotSpeed, Pitch, yaw
       call interpTimeValue(dvr%timeSeries, time, dvr%iTimeSeries, timeState)
-      ! Set wind at this time
+      ! Set wind at this time 
       ADI%m%IW%HWindSpeed = timeState(1)
       ADI%m%IW%PLexp      = timeState(2)
+      ! Set values in flow field (not recommended)
+      ADI%m%IW%p%FlowField%Uniform%VelH = timeState(1)
+      ADI%m%IW%p%FlowField%Uniform%ShrV = timeState(2)
       !! Set motion at this time
       dvr%WT(1)%hub%rotSpeed = timeState(3)     ! rad/s
       do j=1,size(dvr%WT(1)%bld)

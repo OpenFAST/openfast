@@ -1,4 +1,5 @@
 #include <fstream>
+#include <fstream>
 
 #include "registry.hpp"
 #include "templates.hpp"
@@ -502,6 +503,8 @@ void gen_destroy(std::ostream &w, const Module &mod, const DataType::Derived &dd
         if (field.is_allocatable)
         {
             w << "  DEALLOCATE(" << ddt_field << ")\n";
+            if (field.is_pointer)
+                w << "  " << ddt_field << " => NULL()\n";
 
             if (gen_c_code && field.is_pointer)
             {
@@ -1810,7 +1813,7 @@ void gen_copy_f2c(std::ostream &w, const Module &mod, const DataType::Derived &d
         }
         else if (!field.is_allocatable)
         {
-            
+
             switch (field.data_type->tag)
             {
             case DataType::Tag::Real:

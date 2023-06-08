@@ -276,11 +276,13 @@ ENDIF
 
 IF (ASSOCIATED(InitInputData%StructBldRNodes)) THEN
   DEALLOCATE(InitInputData%StructBldRNodes)
+  InitInputData%StructBldRNodes => NULL()
   InitInputData%C_obj%StructBldRNodes = C_NULL_PTR
   InitInputData%C_obj%StructBldRNodes_Len = 0
 ENDIF
 IF (ASSOCIATED(InitInputData%StructTwrHNodes)) THEN
   DEALLOCATE(InitInputData%StructTwrHNodes)
+  InitInputData%StructTwrHNodes => NULL()
   InitInputData%C_obj%StructTwrHNodes = C_NULL_PTR
   InitInputData%C_obj%StructTwrHNodes_Len = 0
 ENDIF
@@ -1771,11 +1773,13 @@ ENDIF
 
 IF (ASSOCIATED(ParamData%forceBldRnodes)) THEN
   DEALLOCATE(ParamData%forceBldRnodes)
+  ParamData%forceBldRnodes => NULL()
   ParamData%C_obj%forceBldRnodes = C_NULL_PTR
   ParamData%C_obj%forceBldRnodes_Len = 0
 ENDIF
 IF (ASSOCIATED(ParamData%forceTwrHnodes)) THEN
   DEALLOCATE(ParamData%forceTwrHnodes)
+  ParamData%forceTwrHnodes => NULL()
   ParamData%C_obj%forceTwrHnodes = C_NULL_PTR
   ParamData%C_obj%forceTwrHnodes_Len = 0
 ENDIF
@@ -2409,86 +2413,103 @@ ENDIF
 
 IF (ASSOCIATED(InputData%pxVel)) THEN
   DEALLOCATE(InputData%pxVel)
+  InputData%pxVel => NULL()
   InputData%C_obj%pxVel = C_NULL_PTR
   InputData%C_obj%pxVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyVel)) THEN
   DEALLOCATE(InputData%pyVel)
+  InputData%pyVel => NULL()
   InputData%C_obj%pyVel = C_NULL_PTR
   InputData%C_obj%pyVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzVel)) THEN
   DEALLOCATE(InputData%pzVel)
+  InputData%pzVel => NULL()
   InputData%C_obj%pzVel = C_NULL_PTR
   InputData%C_obj%pzVel_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pxForce)) THEN
   DEALLOCATE(InputData%pxForce)
+  InputData%pxForce => NULL()
   InputData%C_obj%pxForce = C_NULL_PTR
   InputData%C_obj%pxForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pyForce)) THEN
   DEALLOCATE(InputData%pyForce)
+  InputData%pyForce => NULL()
   InputData%C_obj%pyForce = C_NULL_PTR
   InputData%C_obj%pyForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pzForce)) THEN
   DEALLOCATE(InputData%pzForce)
+  InputData%pzForce => NULL()
   InputData%C_obj%pzForce = C_NULL_PTR
   InputData%C_obj%pzForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%xdotForce)) THEN
   DEALLOCATE(InputData%xdotForce)
+  InputData%xdotForce => NULL()
   InputData%C_obj%xdotForce = C_NULL_PTR
   InputData%C_obj%xdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%ydotForce)) THEN
   DEALLOCATE(InputData%ydotForce)
+  InputData%ydotForce => NULL()
   InputData%C_obj%ydotForce = C_NULL_PTR
   InputData%C_obj%ydotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%zdotForce)) THEN
   DEALLOCATE(InputData%zdotForce)
+  InputData%zdotForce => NULL()
   InputData%C_obj%zdotForce = C_NULL_PTR
   InputData%C_obj%zdotForce_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%pOrientation)) THEN
   DEALLOCATE(InputData%pOrientation)
+  InputData%pOrientation => NULL()
   InputData%C_obj%pOrientation = C_NULL_PTR
   InputData%C_obj%pOrientation_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fx)) THEN
   DEALLOCATE(InputData%fx)
+  InputData%fx => NULL()
   InputData%C_obj%fx = C_NULL_PTR
   InputData%C_obj%fx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fy)) THEN
   DEALLOCATE(InputData%fy)
+  InputData%fy => NULL()
   InputData%C_obj%fy = C_NULL_PTR
   InputData%C_obj%fy_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%fz)) THEN
   DEALLOCATE(InputData%fz)
+  InputData%fz => NULL()
   InputData%C_obj%fz = C_NULL_PTR
   InputData%C_obj%fz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentx)) THEN
   DEALLOCATE(InputData%momentx)
+  InputData%momentx => NULL()
   InputData%C_obj%momentx = C_NULL_PTR
   InputData%C_obj%momentx_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momenty)) THEN
   DEALLOCATE(InputData%momenty)
+  InputData%momenty => NULL()
   InputData%C_obj%momenty = C_NULL_PTR
   InputData%C_obj%momenty_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%momentz)) THEN
   DEALLOCATE(InputData%momentz)
+  InputData%momentz => NULL()
   InputData%C_obj%momentz = C_NULL_PTR
   InputData%C_obj%momentz_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%forceNodesChord)) THEN
   DEALLOCATE(InputData%forceNodesChord)
+  InputData%forceNodesChord => NULL()
   InputData%C_obj%forceNodesChord = C_NULL_PTR
   InputData%C_obj%forceNodesChord_Len = 0
 ENDIF
@@ -3766,16 +3787,19 @@ ENDIF
 
 IF (ASSOCIATED(OutputData%u)) THEN
   DEALLOCATE(OutputData%u)
+  OutputData%u => NULL()
   OutputData%C_obj%u = C_NULL_PTR
   OutputData%C_obj%u_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%v)) THEN
   DEALLOCATE(OutputData%v)
+  OutputData%v => NULL()
   OutputData%C_obj%v = C_NULL_PTR
   OutputData%C_obj%v_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%w)) THEN
   DEALLOCATE(OutputData%w)
+  OutputData%w => NULL()
   OutputData%C_obj%w = C_NULL_PTR
   OutputData%C_obj%w_Len = 0
 ENDIF

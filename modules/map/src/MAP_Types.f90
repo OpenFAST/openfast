@@ -1718,81 +1718,97 @@ ENDIF
 
 IF (ASSOCIATED(OtherStateData%H)) THEN
   DEALLOCATE(OtherStateData%H)
+  OtherStateData%H => NULL()
   OtherStateData%C_obj%H = C_NULL_PTR
   OtherStateData%C_obj%H_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%V)) THEN
   DEALLOCATE(OtherStateData%V)
+  OtherStateData%V => NULL()
   OtherStateData%C_obj%V = C_NULL_PTR
   OtherStateData%C_obj%V_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Ha)) THEN
   DEALLOCATE(OtherStateData%Ha)
+  OtherStateData%Ha => NULL()
   OtherStateData%C_obj%Ha = C_NULL_PTR
   OtherStateData%C_obj%Ha_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Va)) THEN
   DEALLOCATE(OtherStateData%Va)
+  OtherStateData%Va => NULL()
   OtherStateData%C_obj%Va = C_NULL_PTR
   OtherStateData%C_obj%Va_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%x)) THEN
   DEALLOCATE(OtherStateData%x)
+  OtherStateData%x => NULL()
   OtherStateData%C_obj%x = C_NULL_PTR
   OtherStateData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%y)) THEN
   DEALLOCATE(OtherStateData%y)
+  OtherStateData%y => NULL()
   OtherStateData%C_obj%y = C_NULL_PTR
   OtherStateData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%z)) THEN
   DEALLOCATE(OtherStateData%z)
+  OtherStateData%z => NULL()
   OtherStateData%C_obj%z = C_NULL_PTR
   OtherStateData%C_obj%z_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%xa)) THEN
   DEALLOCATE(OtherStateData%xa)
+  OtherStateData%xa => NULL()
   OtherStateData%C_obj%xa = C_NULL_PTR
   OtherStateData%C_obj%xa_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%ya)) THEN
   DEALLOCATE(OtherStateData%ya)
+  OtherStateData%ya => NULL()
   OtherStateData%C_obj%ya = C_NULL_PTR
   OtherStateData%C_obj%ya_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%za)) THEN
   DEALLOCATE(OtherStateData%za)
+  OtherStateData%za => NULL()
   OtherStateData%C_obj%za = C_NULL_PTR
   OtherStateData%C_obj%za_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fx_connect)) THEN
   DEALLOCATE(OtherStateData%Fx_connect)
+  OtherStateData%Fx_connect => NULL()
   OtherStateData%C_obj%Fx_connect = C_NULL_PTR
   OtherStateData%C_obj%Fx_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fy_connect)) THEN
   DEALLOCATE(OtherStateData%Fy_connect)
+  OtherStateData%Fy_connect => NULL()
   OtherStateData%C_obj%Fy_connect = C_NULL_PTR
   OtherStateData%C_obj%Fy_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fz_connect)) THEN
   DEALLOCATE(OtherStateData%Fz_connect)
+  OtherStateData%Fz_connect => NULL()
   OtherStateData%C_obj%Fz_connect = C_NULL_PTR
   OtherStateData%C_obj%Fz_connect_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fx_anchor)) THEN
   DEALLOCATE(OtherStateData%Fx_anchor)
+  OtherStateData%Fx_anchor => NULL()
   OtherStateData%C_obj%Fx_anchor = C_NULL_PTR
   OtherStateData%C_obj%Fx_anchor_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fy_anchor)) THEN
   DEALLOCATE(OtherStateData%Fy_anchor)
+  OtherStateData%Fy_anchor => NULL()
   OtherStateData%C_obj%Fy_anchor = C_NULL_PTR
   OtherStateData%C_obj%Fy_anchor_Len = 0
 ENDIF
 IF (ASSOCIATED(OtherStateData%Fz_anchor)) THEN
   DEALLOCATE(OtherStateData%Fz_anchor)
+  OtherStateData%Fz_anchor => NULL()
   OtherStateData%C_obj%Fz_anchor = C_NULL_PTR
   OtherStateData%C_obj%Fz_anchor_Len = 0
 ENDIF
@@ -3026,26 +3042,31 @@ ENDIF
 
 IF (ASSOCIATED(ConstrStateData%H)) THEN
   DEALLOCATE(ConstrStateData%H)
+  ConstrStateData%H => NULL()
   ConstrStateData%C_obj%H = C_NULL_PTR
   ConstrStateData%C_obj%H_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%V)) THEN
   DEALLOCATE(ConstrStateData%V)
+  ConstrStateData%V => NULL()
   ConstrStateData%C_obj%V = C_NULL_PTR
   ConstrStateData%C_obj%V_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%x)) THEN
   DEALLOCATE(ConstrStateData%x)
+  ConstrStateData%x => NULL()
   ConstrStateData%C_obj%x = C_NULL_PTR
   ConstrStateData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%y)) THEN
   DEALLOCATE(ConstrStateData%y)
+  ConstrStateData%y => NULL()
   ConstrStateData%C_obj%y = C_NULL_PTR
   ConstrStateData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(ConstrStateData%z)) THEN
   DEALLOCATE(ConstrStateData%z)
+  ConstrStateData%z => NULL()
   ConstrStateData%C_obj%z = C_NULL_PTR
   ConstrStateData%C_obj%z_Len = 0
 ENDIF
@@ -3904,16 +3925,19 @@ ENDIF
 
 IF (ASSOCIATED(InputData%x)) THEN
   DEALLOCATE(InputData%x)
+  InputData%x => NULL()
   InputData%C_obj%x = C_NULL_PTR
   InputData%C_obj%x_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%y)) THEN
   DEALLOCATE(InputData%y)
+  InputData%y => NULL()
   InputData%C_obj%y = C_NULL_PTR
   InputData%C_obj%y_Len = 0
 ENDIF
 IF (ASSOCIATED(InputData%z)) THEN
   DEALLOCATE(InputData%z)
+  InputData%z => NULL()
   InputData%C_obj%z = C_NULL_PTR
   InputData%C_obj%z_Len = 0
 ENDIF
@@ -4429,16 +4453,19 @@ ENDIF
 
 IF (ASSOCIATED(OutputData%Fx)) THEN
   DEALLOCATE(OutputData%Fx)
+  OutputData%Fx => NULL()
   OutputData%C_obj%Fx = C_NULL_PTR
   OutputData%C_obj%Fx_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%Fy)) THEN
   DEALLOCATE(OutputData%Fy)
+  OutputData%Fy => NULL()
   OutputData%C_obj%Fy = C_NULL_PTR
   OutputData%C_obj%Fy_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%Fz)) THEN
   DEALLOCATE(OutputData%Fz)
+  OutputData%Fz => NULL()
   OutputData%C_obj%Fz = C_NULL_PTR
   OutputData%C_obj%Fz_Len = 0
 ENDIF
@@ -4447,6 +4474,7 @@ IF (ALLOCATED(OutputData%WriteOutput)) THEN
 ENDIF
 IF (ASSOCIATED(OutputData%wrtOutput)) THEN
   DEALLOCATE(OutputData%wrtOutput)
+  OutputData%wrtOutput => NULL()
   OutputData%C_obj%wrtOutput = C_NULL_PTR
   OutputData%C_obj%wrtOutput_Len = 0
 ENDIF

@@ -747,6 +747,7 @@ ENDIF
 
 IF (ASSOCIATED(InputData%toSC)) THEN
   DEALLOCATE(InputData%toSC)
+  InputData%toSC => NULL()
   InputData%C_obj%toSC = C_NULL_PTR
   InputData%C_obj%toSC_Len = 0
 ENDIF
@@ -1005,11 +1006,13 @@ ENDIF
 
 IF (ASSOCIATED(OutputData%fromSC)) THEN
   DEALLOCATE(OutputData%fromSC)
+  OutputData%fromSC => NULL()
   OutputData%C_obj%fromSC = C_NULL_PTR
   OutputData%C_obj%fromSC_Len = 0
 ENDIF
 IF (ASSOCIATED(OutputData%fromSCglob)) THEN
   DEALLOCATE(OutputData%fromSCglob)
+  OutputData%fromSCglob => NULL()
   OutputData%C_obj%fromSCglob = C_NULL_PTR
   OutputData%C_obj%fromSCglob_Len = 0
 ENDIF

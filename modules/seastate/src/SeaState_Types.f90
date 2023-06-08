@@ -3050,6 +3050,7 @@ IF (ASSOCIATED(ParamData%WaveField)) THEN
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
   ENDIF
   DEALLOCATE(ParamData%WaveField)
+  ParamData%WaveField => NULL()
 ENDIF
  END SUBROUTINE SeaSt_DestroyParam
 
