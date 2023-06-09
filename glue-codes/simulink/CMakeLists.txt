@@ -43,6 +43,7 @@ matlab_add_mex(
     $<TARGET_FILE:icedynlib>
     $<TARGET_FILE:icefloelib>
     $<TARGET_FILE:ifwlib>
+    $<TARGET_FILE:maplib_fortran>
     $<TARGET_FILE:maplib>
     $<TARGET_FILE:moordynlib>
     $<TARGET_FILE:orcaflexlib>

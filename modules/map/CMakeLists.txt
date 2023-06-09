@@ -33,13 +33,18 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(maplib 
-  src/map.f90
-  src/MAP_Types.f90
+add_library(maplib_fortran
   src/MAP_Fortran_Types.f90
-  ${MAP_CLIB_SOURCES}
+  src/MAP_Types.f90
+  src/map.f90
 )
-target_link_libraries(maplib nwtclibs)
+target_link_libraries(maplib_fortran nwtclibs)
+
+add_library(maplib 
+  ${MAP_CLIB_SOURCES}
+  ${MAP_C_HEADERS}
+)
+target_link_libraries(maplib maplib_fortran)
 target_include_directories(maplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/cminpack>
@@ -49,7 +54,7 @@ target_include_directories(maplib PUBLIC
 )
 set_target_properties(maplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h)
 
-install(TARGETS maplib
+install(TARGETS maplib maplib_fortran
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
