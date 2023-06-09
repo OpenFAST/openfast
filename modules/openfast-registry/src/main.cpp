@@ -1,5 +1,4 @@
 #include <fstream>
-#include <filesystem>
 
 #include "registry.hpp"
 #include "templates.hpp"
@@ -113,6 +112,7 @@ int main(int argc, char *argv[])
             bool is_template = arg.substr(1).compare("template") == 0;
 
             output_template(module_name, module_nickname, output_force_template, is_template);
+            return EXIT_SUCCESS;
         }
         else if ((arg.compare("-h") == 0) || (arg.compare("/h") == 0))
         {
@@ -124,9 +124,16 @@ int main(int argc, char *argv[])
             // Set input file path
             inp_file_path = arg;
 
-            // Add input file directory to list of directories to search
-            std::filesystem::path path(arg);
-            reg.include_dirs.push_back(path.parent_path());
+            // Replace backslashes with forward slashes in path
+            std::string path = std::regex_replace(arg, std::regex("\\\\"), "/");
+
+            // If path contains / remove everything after it
+            auto slash_index = path.find_last_of("/");
+            if (slash_index != std::string::npos)
+                path = path.substr(0, slash_index);
+
+            // Add input file directory to list of include directories
+            reg.include_dirs.push_back(path);
         }
     }
 
@@ -172,7 +179,7 @@ void output_template(std::string &module_name, std::string &module_nickname, boo
     }
 
     // Select file contents
-    auto contents = (is_template ? module_template : registry_template).substr(1);
+    auto contents = (is_template ? module_template : registry_template);
 
     // Populate module name and module nickname
     contents = std::regex_replace(contents, std::regex("ModuleName"), module_name);
@@ -180,4 +187,6 @@ void output_template(std::string &module_name, std::string &module_nickname, boo
 
     // Output contents to file
     outfile << contents;
+
+    std::cerr << "Created " << (is_template ? "template" : "registry") << " file '" << fname << "'" << std::endl;
 }

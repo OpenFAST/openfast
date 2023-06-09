@@ -23,7 +23,7 @@ add_executable(openfast_registry
   src/registry.hpp
   src/templates.hpp
 )
-set_property(TARGET openfast_registry PROPERTY CXX_STANDARD 17)
+target_compile_features(openfast_registry PRIVATE cxx_std_11)
 
 set_target_properties(openfast_registry PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/modules/openfast-registry
