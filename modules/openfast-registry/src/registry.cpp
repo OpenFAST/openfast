@@ -1,3 +1,6 @@
+#include <cstdlib>
+#include <cctype>
+
 #include "registry.hpp"
 
 void Registry::gen_module_files(std::string const &out_dir)

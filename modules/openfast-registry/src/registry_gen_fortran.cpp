@@ -1,5 +1,4 @@
 #include <fstream>
-#include <fstream>
 
 #include "registry.hpp"
 #include "templates.hpp"
@@ -75,7 +74,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     }
 
     // Write preamble
-    w << std::regex_replace(FAST_preamble.substr(1), std::regex("ModuleName"), mod.name);
+    w << std::regex_replace(FAST_preamble, std::regex("ModuleName"), mod.name);
 
     // Output USE statements for non-root modules
     for (auto const &mod : this->use_modules)
