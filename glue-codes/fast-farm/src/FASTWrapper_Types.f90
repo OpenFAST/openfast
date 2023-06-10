@@ -59,6 +59,7 @@ IMPLICIT NONE
     LOGICAL  :: UseSC      !< Use the SuperController? (flag) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Global outputs from SuperController [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-specific outputs from SuperController [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vdist_High => NULL()      !< Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step [(m/s)]
   END TYPE FWrap_InitInputType
 ! =======================
 ! =========  FWrap_InitOutputType  =======
@@ -108,7 +109,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FWrap_InputType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCglob      !< Global (turbine-independent) commands from the super controller [(various units)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-dependent commands from the super controller from the super controller [(various units)]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: Vdist_High      !< UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step [(m/s)]
   END TYPE FWrap_InputType
 ! =======================
 ! =========  FWrap_OutputType  =======
@@ -135,6 +135,10 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_CopyInitInput'
@@ -186,6 +190,7 @@ IF (ALLOCATED(SrcInitInputData%fromSC)) THEN
   END IF
     DstInitInputData%fromSC = SrcInitInputData%fromSC
 ENDIF
+    DstInitInputData%Vdist_High => SrcInitInputData%Vdist_High
  END SUBROUTINE FWrap_CopyInitInput
 
  SUBROUTINE FWrap_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -207,6 +212,7 @@ ENDIF
 IF (ALLOCATED(InitInputData%fromSC)) THEN
   DEALLOCATE(InitInputData%fromSC)
 ENDIF
+NULLIFY(InitInputData%Vdist_High)
  END SUBROUTINE FWrap_DestroyInitInput
 
  SUBROUTINE FWrap_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -398,6 +404,10 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_UnPackInitInput'
@@ -501,6 +511,7 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  NULLIFY(OutData%Vdist_High)
  END SUBROUTINE FWrap_UnPackInitInput
 
  SUBROUTINE FWrap_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2246,10 +2257,6 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_CopyInput'
@@ -2280,26 +2287,6 @@ IF (ALLOCATED(SrcInputData%fromSC)) THEN
   END IF
     DstInputData%fromSC = SrcInputData%fromSC
 ENDIF
-IF (ALLOCATED(SrcInputData%Vdist_High)) THEN
-  i1_l = LBOUND(SrcInputData%Vdist_High,1)
-  i1_u = UBOUND(SrcInputData%Vdist_High,1)
-  i2_l = LBOUND(SrcInputData%Vdist_High,2)
-  i2_u = UBOUND(SrcInputData%Vdist_High,2)
-  i3_l = LBOUND(SrcInputData%Vdist_High,3)
-  i3_u = UBOUND(SrcInputData%Vdist_High,3)
-  i4_l = LBOUND(SrcInputData%Vdist_High,4)
-  i4_u = UBOUND(SrcInputData%Vdist_High,4)
-  i5_l = LBOUND(SrcInputData%Vdist_High,5)
-  i5_u = UBOUND(SrcInputData%Vdist_High,5)
-  IF (.NOT. ALLOCATED(DstInputData%Vdist_High)) THEN 
-    ALLOCATE(DstInputData%Vdist_High(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%Vdist_High = SrcInputData%Vdist_High
-ENDIF
  END SUBROUTINE FWrap_CopyInput
 
  SUBROUTINE FWrap_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -2320,9 +2307,6 @@ IF (ALLOCATED(InputData%fromSCglob)) THEN
 ENDIF
 IF (ALLOCATED(InputData%fromSC)) THEN
   DEALLOCATE(InputData%fromSC)
-ENDIF
-IF (ALLOCATED(InputData%Vdist_High)) THEN
-  DEALLOCATE(InputData%Vdist_High)
 ENDIF
  END SUBROUTINE FWrap_DestroyInput
 
@@ -2370,11 +2354,6 @@ ENDIF
   IF ( ALLOCATED(InData%fromSC) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%fromSC)  ! fromSC
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! Vdist_High allocated yes/no
-  IF ( ALLOCATED(InData%Vdist_High) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*5  ! Vdist_High upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vdist_High)  ! Vdist_High
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2433,41 +2412,6 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%Vdist_High) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,3)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,4)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,5)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,5)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i5 = LBOUND(InData%Vdist_High,5), UBOUND(InData%Vdist_High,5)
-        DO i4 = LBOUND(InData%Vdist_High,4), UBOUND(InData%Vdist_High,4)
-          DO i3 = LBOUND(InData%Vdist_High,3), UBOUND(InData%Vdist_High,3)
-            DO i2 = LBOUND(InData%Vdist_High,2), UBOUND(InData%Vdist_High,2)
-              DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
-                ReKiBuf(Re_Xferred) = InData%Vdist_High(i1,i2,i3,i4,i5)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
  END SUBROUTINE FWrap_PackInput
 
  SUBROUTINE FWrap_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2484,10 +2428,6 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FWrap_UnPackInput'
@@ -2535,44 +2475,6 @@ ENDIF
       DO i1 = LBOUND(OutData%fromSC,1), UBOUND(OutData%fromSC,1)
         OutData%fromSC(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vdist_High not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i4_l = IntKiBuf( Int_Xferred    )
-    i4_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i5_l = IntKiBuf( Int_Xferred    )
-    i5_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vdist_High)) DEALLOCATE(OutData%Vdist_High)
-    ALLOCATE(OutData%Vdist_High(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i5 = LBOUND(OutData%Vdist_High,5), UBOUND(OutData%Vdist_High,5)
-        DO i4 = LBOUND(OutData%Vdist_High,4), UBOUND(OutData%Vdist_High,4)
-          DO i3 = LBOUND(OutData%Vdist_High,3), UBOUND(OutData%Vdist_High,3)
-            DO i2 = LBOUND(OutData%Vdist_High,2), UBOUND(OutData%Vdist_High,2)
-              DO i1 = LBOUND(OutData%Vdist_High,1), UBOUND(OutData%Vdist_High,1)
-                OutData%Vdist_High(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
       END DO
   END IF
  END SUBROUTINE FWrap_UnPackInput

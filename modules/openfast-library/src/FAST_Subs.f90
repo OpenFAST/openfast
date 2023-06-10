@@ -603,6 +603,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             Init%InData_IfW%FDext%n      = ExternInitData%windGrid_n
             Init%InData_IfW%FDext%delta  = ExternInitData%windGrid_delta
             Init%InData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
+            Init%InData_IfW%FDext%Vel   => ExternInitData%windGrid_data
          end if
       ELSE
          Init%InData_IfW%Use4Dext                  = .false.
