@@ -168,7 +168,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime      !< Number of time steps between writing checkpoint files [-]
     INTEGER(IntKi)  :: n_DT_Out      !< Number of time steps between writing a line in the time-marching output files [-]
     INTEGER(IntKi)  :: n_VTKTime      !< Number of time steps between writing VTK files [-]
-    INTEGER(IntKi)  :: TurbineType      !< Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating [-]
     LOGICAL  :: WrBinOutFile      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile      !< Write a text (formatted) output file? (.out) [-]
     INTEGER(IntKi)  :: WrBinMod      !< If writing binary, which file format is to be written [1, 2, or 3] [-]
@@ -775,7 +774,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of FAST output files (overrides normal operation) [-]
     INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
     INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
-    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    LOGICAL  :: NodeClusterType      !< Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======
@@ -2208,7 +2207,6 @@ ENDIF
     DstParamData%n_ChkptTime = SrcParamData%n_ChkptTime
     DstParamData%n_DT_Out = SrcParamData%n_DT_Out
     DstParamData%n_VTKTime = SrcParamData%n_VTKTime
-    DstParamData%TurbineType = SrcParamData%TurbineType
     DstParamData%WrBinOutFile = SrcParamData%WrBinOutFile
     DstParamData%WrTxtOutFile = SrcParamData%WrTxtOutFile
     DstParamData%WrBinMod = SrcParamData%WrBinMod
@@ -2370,7 +2368,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! n_ChkptTime
       Int_BufSz  = Int_BufSz  + 1  ! n_DT_Out
       Int_BufSz  = Int_BufSz  + 1  ! n_VTKTime
-      Int_BufSz  = Int_BufSz  + 1  ! TurbineType
       Int_BufSz  = Int_BufSz  + 1  ! WrBinOutFile
       Int_BufSz  = Int_BufSz  + 1  ! WrTxtOutFile
       Int_BufSz  = Int_BufSz  + 1  ! WrBinMod
@@ -2612,8 +2609,6 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%n_DT_Out
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%n_VTKTime
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%TurbineType
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WrBinOutFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -2941,8 +2936,6 @@ ENDIF
     OutData%n_DT_Out = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%n_VTKTime = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%TurbineType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WrBinOutFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%WrBinOutFile)
     Int_Xferred = Int_Xferred + 1

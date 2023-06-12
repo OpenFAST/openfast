@@ -154,7 +154,6 @@ typedef	^	FAST_ParameterType	INTEGER	n_SttsTime	-	-	-	"Number of time steps betw
 typedef	^	FAST_ParameterType	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
 typedef	^	FAST_ParameterType	INTEGER	n_DT_Out	-	-	-	"Number of time steps between writing a line in the time-marching output files"	-
 typedef	^	FAST_ParameterType	INTEGER	n_VTKTime	-	-	-	"Number of time steps between writing VTK files"	-
-typedef	^	FAST_ParameterType	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
 typedef	^	FAST_ParameterType	IntKi	WrBinMod	-	-	-	"If writing binary, which file format is to be written [1, 2, or 3]"	-

@@ -260,13 +260,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    CALL SetModuleSubstepTime(Module_ED, p_FAST, y_FAST, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      ! bjj: added this check per jmj; perhaps it would be better in ElastoDyn, but I'll leave it here for now:
-   IF ( p_FAST%TurbineType == Type_Offshore_Floating ) THEN
-      IF ( ED%p%TowerBsHt < 0.0_ReKi .AND. .NOT. EqualRealNos( ED%p%TowerBsHt, 0.0_ReKi ) ) THEN
-         CALL SetErrStat(ErrID_Fatal,"ElastoDyn TowerBsHt must not be negative for floating offshore systems.",ErrStat,ErrMsg,RoutineName)
-      END IF
-   END IF
-
    allocate( y_FAST%Lin%Modules(MODULE_ED)%Instance(1), stat=ErrStat2)
    if (ErrStat2 /= 0 ) then
       call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(ED).", ErrStat, ErrMsg, RoutineName )
@@ -445,12 +438,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_AD14) = .TRUE.
       CALL SetModuleSubstepTime(Module_AD14, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-         ! bjj: this really shouldn't be in the FAST glue code, but I'm going to put this check here so people don't use an invalid model
-         !    and send me emails to debug numerical issues in their results.
-      IF ( AD14%p%TwrProps%PJM_Version .AND. p_FAST%TurbineType == Type_Offshore_Floating ) THEN
-         CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 tower influence model "NEWTOWER" is invalid for models of floating offshore turbines.',ErrStat,ErrMsg,RoutineName)
-      END IF
 
       AirDens = Init%OutData_AD14%AirDens
 
@@ -1866,30 +1853,6 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
 
    p%nBeams = 0               ! initialize number of BeamDyn instances (will be set later)
 
-      ! determine what kind of turbine we're modeling:
-   IF ( p%MHK == 1 ) THEN
-         p%TurbineType = Type_MHK_Fixed
-   ELSEIF ( p%MHK == 2 ) THEN
-         p%TurbineType = Type_MHK_Floating
-   ELSEIF ( p%CompHydro == Module_HD ) THEN
-      IF ( p%CompSub == Module_SD ) THEN
-         p%TurbineType = Type_Offshore_Fixed
-      ELSE
-         p%TurbineType = Type_Offshore_Floating
-      END IF
-   ELSEIF ( p%CompMooring == Module_Orca ) THEN
-      p%TurbineType = Type_Offshore_Floating
-   ELSEIF ( p%CompSub == Module_ExtPtfm ) THEN
-      p%TurbineType = Type_Offshore_Fixed
-   ELSEIF ( p%MHK == 1 ) THEN
-      p%TurbineType = Type_MHK_Fixed
-   ELSEIF ( p%MHK == 2 ) THEN
-      p%TurbineType = Type_MHK_Floating
-   ELSE      
-      p%TurbineType = Type_LandBased
-   END IF
-
-
    p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
    if (p%TMax < 1.0_DbKi) then ! log10(0) gives floating point divide-by-zero error
@@ -2091,11 +2054,6 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
       if (p%CompMooring /= MODULE_None .and. p%CompMooring == MODULE_FEAM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the FEAMooring mooring module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
 
-   end if
-      
-   
-   if ( (p%TurbineType == Type_Offshore_Fixed .or. p%TurbineType == Type_Offshore_Floating) .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
-    call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
    end if
 
    !...............................................................................................................................
@@ -4091,22 +4049,6 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
 ! output file time step
 ! output file format (text/binary)
 ! coupling method
-
-   SELECT CASE ( p_FAST%TurbineType )
-   CASE ( Type_LandBased )
-      DescStr = 'Modeling a land-based turbine'
-   CASE ( Type_Offshore_Fixed )
-      DescStr = 'Modeling a fixed-bottom offshore turbine'
-   CASE ( Type_Offshore_Floating )
-      DescStr = 'Modeling a floating offshore turbine'
-   CASE ( Type_MHK_Fixed )
-      DescStr = 'Modeling a fixed-bottom MHK turbine'
-   CASE ( Type_MHK_Floating )
-      DescStr = 'Modeling a floating MHK turbine'
-   CASE DEFAULT ! This should never happen
-      DescStr=""
-   END SELECT
-   WRITE(y_FAST%UnSum,'(//A)') TRIM(DescStr)
 
    WRITE (y_FAST%UnSum,'(A)' )   'Description from the FAST input file: '
    WRITE (y_FAST%UnSum,'(2X,A)')  TRIM(p_FAST%FTitle)
