@@ -362,7 +362,8 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
        MeasurementCurrentStep =  INT(t / p%lidar%MeasurementInterval)
        
    IF ( (p%lidar%MeasurementInterval * MeasurementCurrentStep) /= t ) THEN
-       Output%VelocityUVW(:,1) = 0 
+!This isn't returned, so don't set it.
+!       Output%VelocityUVW(:,1) = 0 
    RETURN
    ENDIF
    
