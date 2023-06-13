@@ -493,6 +493,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          tmpWaveElevXY = InitInp%WaveElevXY
+         CALL MOVE_ALLOC(tmpWaveElevXY, InputFileData%Waves%WaveElevXY) ! move this back for waves2 later 
       ENDIF
 
  
