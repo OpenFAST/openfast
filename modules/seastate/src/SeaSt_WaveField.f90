@@ -136,10 +136,11 @@ SUBROUTINE WaveField_GetWaveNormal( WaveField, Time, pos, r, n, ErrStat, ErrMsg 
 END SUBROUTINE WaveField_GetWaveNormal
 
 !-------------------- Subroutine for full wave field kinematics --------------------!
-SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(3)
+   LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev1
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev2
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev
@@ -200,7 +201,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
       
    ELSE ! Wave stretching enabled
       
-      IF ( pos(3) <= WaveElev ) THEN ! Node is submerged
+      IF ( (pos(3) <= WaveElev) .OR. forceNodeInWater ) THEN ! Node is submerged
           
          nodeInWater = 1_IntKi
  
@@ -259,6 +260,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
             ! Map the node z-position linearly from [-EffWtrDpth,m%WaveElev(j)] to [-EffWtrDpth,0] 
             posPrime    = pos
             posPrime(3) = WaveField%EffWtrDpth*(WaveField%EffWtrDpth+pos(3))/(WaveField%EffWtrDpth+WaveElev)-WaveField%EffWtrDpth
+            posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE. 
                   
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL SeaSt_Interp_Setup( Time, posPrime, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 
@@ -290,10 +292,11 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, nodeInWater, WaveElev1, W
 END SUBROUTINE WaveField_GetWaveKin
 
 !-------------------- Subroutine for wave field velocity only --------------------!
-SUBROUTINE WaveField_GetWaveVel( WaveField, Time, pos, nodeInWater, FV, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveVel( WaveField, Time, pos, forceNodeInWater, nodeInWater, FV, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(3)
+   LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
    INTEGER(IntKi),            INTENT(   OUT ) :: nodeInWater
    REAL(SiKi),                INTENT(   OUT ) :: FV(3)
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
@@ -333,7 +336,7 @@ SUBROUTINE WaveField_GetWaveVel( WaveField, Time, pos, nodeInWater, FV, ErrStat,
       
    ELSE ! Wave stretching enabled
       
-      IF ( pos(3) <= WaveElev ) THEN ! Node is submerged
+      IF ( (pos(3) <= WaveElev) .OR. forceNodeInWater ) THEN ! Node is submerged
           
          nodeInWater = 1_IntKi
  
@@ -368,6 +371,7 @@ SUBROUTINE WaveField_GetWaveVel( WaveField, Time, pos, nodeInWater, FV, ErrStat,
             ! Map the node z-position linearly from [-EffWtrDpth,m%WaveElev(j)] to [-EffWtrDpth,0] 
             posPrime    = pos
             posPrime(3) = WaveField%EffWtrDpth*(WaveField%EffWtrDpth+pos(3))/(WaveField%EffWtrDpth+WaveElev)-WaveField%EffWtrDpth
+            posPrime(3) = MIN( posPrime(3), 0.0_ReKi) ! Clamp z-position to zero. Needed when forceNodeInWater=.TRUE. 
                   
             ! Obtain the wave-field variables by interpolation with the mapped position.
             CALL SeaSt_Interp_Setup( Time, posPrime, WaveField%seast_interp_p, seast_interp_m, ErrStat2, ErrMsg2 ) 

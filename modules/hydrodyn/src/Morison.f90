@@ -2596,7 +2596,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       END IF
            
       ! Get the wave elevation and wave kinematics at each node
-      CALL WaveField_GetWaveKin( p%WaveField, Time, pos1, m%nodeInWater(j), m%WaveElev1(j), m%WaveElev2(j), m%WaveElev(j), FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetWaveKin( p%WaveField, Time, pos1, .FALSE., m%nodeInWater(j), m%WaveElev1(j), m%WaveElev2(j), m%WaveElev(j), FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       m%FDynP(j) = REAL(FDynP,ReKi)
       m%FV(:, j) = REAL(FV,   ReKi)
@@ -3048,8 +3048,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
-        ! Get wave dynamics at the free surface intersection
-        CALL WaveField_GetWaveKin( p%WaveField, Time, FSInt, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+        ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
+        CALL WaveField_GetWaveKin( p%WaveField, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         FDynPFSInt = REAL(FDynP,ReKi)
         FVFSInt    = REAL(FV,   ReKi)
@@ -4229,7 +4229,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       END IF
 
       ! Get fluid velocity at the joint
-      CALL WaveField_GetWaveVel( p%WaveField, Time, pos, nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetWaveVel( p%WaveField, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater
