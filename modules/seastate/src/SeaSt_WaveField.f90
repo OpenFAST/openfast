@@ -404,7 +404,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInW
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev(:)
    REAL(ReKi),                INTENT(   OUT ) :: FV(:,:)
    REAL(ReKi),                INTENT(   OUT ) :: FA(:,:)
-   REAL(ReKi),  ALLOCATABLE,  INTENT(   OUT ) :: FAMCF(:,:)
+   REAL(ReKi),                INTENT(   OUT ) :: FAMCF(:,:)
    REAL(ReKi),                INTENT(   OUT ) :: FDynP(:)
    INTEGER(IntKi),            INTENT(   OUT ) :: nodeInWater(:)
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
@@ -427,7 +427,7 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInW
       FDynP(i) = REAL(FDynP_node,ReKi)
       FV(:, i) = REAL(FV_node,   ReKi)
       FA(:, i) = REAL(FA_node,   ReKi)
-      IF (ALLOCATED(FAMCF)) THEN
+      IF (ALLOCATED(WaveField%WaveAccMCF)) THEN
          FAMCF(:,i) = REAL(FAMCF_node,ReKi)
       END IF
    END DO
