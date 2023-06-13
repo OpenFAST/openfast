@@ -2335,7 +2335,9 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    ! Initialize errStat        
    errStat = ErrID_None         
    errMsg  = ""               
-      
+   
+   call AllocAry( m%DispNodePosHdn,   3, NNodes   , 'm%DispNodePosHdn', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
+   call AllocAry( m%DispNodePosHst,   3, NNodes   , 'm%DispNodePosHst', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
    call AllocAry( m%nodeInWater  ,       NNodes   , 'm%nodeInWater'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%vrel         ,    3, NNodes   , 'm%vrel'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
    call AllocAry( m%FV           ,    3, NNodes   , 'm%FV'            , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
@@ -2366,6 +2368,8 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
 
    if (errStat >= AbortErrLev) return
    
+   m%DispNodePosHdn = 0.0_ReKi
+   m%DispNodePosHst = 0.0_ReKi
    m%nodeInWater    = 0
    m%vrel           = 0.0_ReKi
    m%FV             = 0.0_ReKi
@@ -2571,42 +2575,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    errMsg  = ""               
    Imat    = 0.0_ReKi   
    g       = p%Gravity
-   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the free surface
+   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the still water level
    
-   !InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
-
+   !===============================================================================================
+   ! Get displaced positions of the hydrodynamic nodes   
+   CALL GetDisplacedNodePosition( .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( .TRUE. , m%DispNodePosHst ) ! For hydrostatic loads;  always use actual displaced position
+   
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-
+   CALL WaveField_GetWaveKin( p%WaveField, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
+     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
-      IF (p%WaveDisp == 0 ) THEN
-         ! use the initial X,Y location
-         pos1(1) = u%Mesh%Position(1,j)
-         pos1(2) = u%Mesh%Position(2,j)
-      ELSE
-         ! Use current X,Y location
-         pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
-         pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
-      END IF
-      
-      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
-        pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
-      ELSE ! Wave stretching disabled
-        pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
-      END IF
-           
-      ! Get the wave elevation and wave kinematics at each node
-      CALL WaveField_GetWaveKin( p%WaveField, Time, pos1, .FALSE., m%nodeInWater(j), m%WaveElev1(j), m%WaveElev2(j), m%WaveElev(j), FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      m%FDynP(j) = REAL(FDynP,ReKi)
-      m%FV(:, j) = REAL(FV,   ReKi)
-      m%FA(:, j) = REAL(FA,   ReKi)
-      IF (ALLOCATED(m%FAMCF)) THEN
-         m%FAMCF(:,j) = REAL(FAMCF,ReKi)
-      END IF
       m%vrel(:,j)  = ( m%FV(:,j) - u%Mesh%TranslationVel(:,j) ) * m%nodeInWater(j)
-
-   END DO ! j = 1, p%NNodes
+   END DO
 
    ! ==============================================================================================
    ! Calculate instantaneous loads on each member except for the hydrodynamic loads on member ends.
@@ -3049,7 +3032,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
         ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
-        CALL WaveField_GetWaveKin( p%WaveField, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+        CALL WaveField_GetNodeWaveKin( p%WaveField, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         FDynPFSInt = REAL(FDynP,ReKi)
         FVFSInt    = REAL(FV,   ReKi)
@@ -3580,6 +3563,26 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
 
    CONTAINS
+
+   SUBROUTINE GetDisplacedNodePosition( forceDisplaced, pos )
+      LOGICAL,         INTENT( IN    ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
+      REAL(ReKi),      INTENT(   OUT ) :: pos(:,:) ! Displaced node positions
+
+      ! Undisplaced node position
+      pos      = u%Mesh%Position
+      pos(3,:) = pos(3,:) - p%MSL2SWL ! Z position measured from the SWL
+      IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN 
+         ! Use displaced X and Y position
+         pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
+         pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
+         IF ( (p%WaveStMod > 0) .OR. forceDisplaced ) THEN
+            ! Use displaced Z position only when wave stretching is enabled
+            pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
+         END IF
+      END IF
+
+   END SUBROUTINE GetDisplacedNodePosition
+
    SUBROUTINE GetTotalWaveElev( Time, pos, Zeta, ErrStat, ErrMsg )
       REAL(DbKi),      INTENT( IN    ) :: Time
       REAL(ReKi),      INTENT( IN    ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
@@ -3592,7 +3595,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      Zeta = WaveField_GetTotalWaveElev( p%WaveField, Time, pos, ErrStat2, ErrMsg2 )
+      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, Time, pos, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetTotalWaveElev
@@ -3610,7 +3613,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      CALL WaveField_GetWaveNormal( p%WaveField, Time, pos, r, n, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveNormal( p%WaveField, Time, pos, r, n, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END SUBROUTINE GetFreeSurfaceNormal
@@ -4229,7 +4232,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
       END IF
 
       ! Get fluid velocity at the joint
-      CALL WaveField_GetWaveVel( p%WaveField, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveVel( p%WaveField, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FV   = REAL(FVTmp, ReKi)
       vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater

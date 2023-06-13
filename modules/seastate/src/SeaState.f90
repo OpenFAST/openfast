@@ -857,7 +857,7 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
 
       DO i = 1, p%NWaveKin
          positionXYZ = (/p%WaveKinxi(i),p%WaveKinyi(i),p%WaveKinzi(i)/)
-         CALL WaveField_GetWaveKin( p%WaveField, Time, positionXYZ, .FALSE., nodeInWater, zeta1, zeta2, zeta, WaveDynP(i), WaveVel(:,i), WaveAcc(:,i), WaveAccMCF(:,i), ErrStat2, ErrMsg2 )
+         CALL WaveField_GetNodeWaveKin( p%WaveField, Time, positionXYZ, .FALSE., nodeInWater, zeta1, zeta2, zeta, WaveDynP(i), WaveVel(:,i), WaveAcc(:,i), WaveAccMCF(:,i), ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO
      
@@ -865,9 +865,9 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    
       DO i = 1, p%NWaveElev
          positionXY = (/p%WaveElevxi(i),p%WaveElevyi(i)/)
-         WaveElev1(i) = WaveField_GetWaveElev1( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
+         WaveElev1(i) = WaveField_GetNodeWaveElev1( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         WaveElev2(i) = WaveField_GetWaveElev2( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
+         WaveElev2(i) = WaveField_GetNodeWaveElev2( p%WaveField, Time, positionXY, ErrStat2, ErrMsg2 )
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          WaveElev(i)  = WaveElev1(i) + WaveElev2(i)            
       END DO
