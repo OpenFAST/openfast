@@ -2651,12 +2651,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
             ! calculate instantaneous incline angle and heading, and related trig values
-            ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-
-            pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-            pos1(3) = pos1(3) - p%MSL2SWL
-            pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-            pos2(3) = pos2(3) - p%MSL2SWL
+            ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
+            pos1    = m%DispNodePosHst(:, mem%NodeIndx(i  ))
+            pos2    = m%DispNodePosHst(:, mem%NodeIndx(i+1))
 
             call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2785,12 +2782,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
          ! calculate instantaneous incline angle and heading, and related trig values
-         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-         pos2(3) = pos2(3) - p%MSL2SWL
+         ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
+         pos1 = m%DispNodePosHst(:,mem%NodeIndx(i  ))
+         pos2 = m%DispNodePosHst(:,mem%NodeIndx(i+1))
 
          call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2912,16 +2906,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         DO i = mem%i_floor+1,N ! loop through member nodes starting from the first node above seabed, but skip the last node which should not be submerged anyways
            
            ! Get positions of node i and i+1
-           IF (p%WaveDisp /= 0) THEN ! Use current position
-              pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))  
-              pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
-           ELSE ! Use initial position
-              pos1    = u%Mesh%Position(:, mem%NodeIndx(i))  
-              pos2    = u%Mesh%Position(:, mem%NodeIndx(i+1))
-           END if
-           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-           pos1(3) = pos1(3) - p%MSL2SWL
-           pos2(3) = pos2(3) - p%MSL2SWL 
+           pos1 = m%DispNodePosHdn(:,mem%NodeIndx(i  ))
+           pos2 = m%DispNodePosHdn(:,mem%NodeIndx(i+1))
            
            ! Free surface elevation above or below node i and i+1
            Zeta1 = m%WaveElev(mem%NodeIndx(i))
@@ -3176,15 +3162,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ELSE IF ( MemSubStat .NE. 3_IntKi) THEN ! Skip members with centerline completely out of water
         !----------------------------No load smoothing----------------------------!
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
-           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-           ! Using the initial z-position to be consistent with the evaluation of wave kinematics
-           IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN
-              ! Use current z-position
-              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i)) - p%MSL2SWL
-           ELSE
-              ! Use initial z-position
-              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
-           END IF         
+           z1 = m%DispNodePosHdn(3, mem%NodeIndx(i))
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Cannot make any assumption about WaveStMod and member orientation 
            IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 0_IntKi ) THEN ! Node is out of water
@@ -3202,11 +3180,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  IF ( m%NodeInWater(mem%NodeIndx(i-1)) .EQ. 1_IntKi ) THEN ! Node to the left is submerged
                     deltalLeft = 0.5_ReKi * mem%dl
                  ELSE ! Element i-1 crosses the free surface
-                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i-1)) - p%MSL2SWL
-                    ELSE ! Use initial z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) - p%MSL2SWL 
-                    END IF
+                    z2 = m%DispNodePosHdn(3, mem%NodeIndx(i-1))
                     IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i-1))
@@ -3225,11 +3199,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  IF ( m%NodeInWater(mem%NodeIndx(i+1)) .EQ. 1_IntKi ) THEN ! Node to the right is submerged
                     deltalRight = 0.5_ReKi * mem%dl
                  ELSE ! Element i crosses the free surface
-                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                    ELSE ! Use initial z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL 
-                    END IF
+                    z2 = m%DispNodePosHdn(3, mem%NodeIndx(i+1))
                     IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i+1))
@@ -3331,12 +3301,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       ! reassign convenience variables to correspond to member ends
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-      pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
-      pos1(3) = pos1(3) - p%MSL2SWL
-      pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(2)) + u%Mesh%Position(:, mem%NodeIndx(2)) 
-      pos2(3) = pos2(3) - p%MSL2SWL
-      z1 = pos1(3)
-      
+      pos1 = m%DispNodePosHst(:,mem%NodeIndx(1))
+      pos2 = m%DispNodePosHst(:,mem%NodeIndx(2))
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if ( N == 1 ) then       ! Only one element in member
@@ -3347,18 +3313,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          k_hat2   = k_hat1
       else
          !  We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N))   + u%Mesh%Position(:, mem%NodeIndx(N))
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-         pos2(3) = pos2(3) - p%MSL2SWL
+         pos1 = m%DispNodePosHst(:, mem%NodeIndx(N  ))
+         pos2 = m%DispNodePosHst(:, mem%NodeIndx(N+1))
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
-      
-      ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-      pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-      pos2(3) = pos2(3) - p%MSL2SWL
-      z2 = pos2(3)
+      ! z-coordinates of the two ends of the member
+      z1 = m%DispNodePosHst(3,mem%NodeIndx(  1))
+      z2 = m%DispNodePosHst(3,mem%NodeIndx(N+1))
       
       !----------------------------------- filled buoyancy loads: starts -----------------------------------!
       !TODO: Do the equations below still work if z1 > z2 ?
@@ -3403,13 +3365,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       !---------------------------------- external buoyancy loads: starts ----------------------------------!
       if ( (.not. mem%PropPot) .AND. (mem%MHstLMod /= 0) ) then
-
-         ! Get positions of member end nodes
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1  )) + u%Mesh%Position(:, mem%NodeIndx(1  )) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         r1      = mem%RMGB(1  )
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-         pos2(3) = pos2(3) - p%MSL2SWL
+         ! Get positions and scaled radii of member end nodes
+         pos1 = m%DispNodePosHst(:,mem%NodeIndx(  1))
+         pos2 = m%DispNodePosHst(:,mem%NodeIndx(N+1))
+         r1      = mem%RMGB(  1)
          r2      = mem%RMGB(N+1)
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
@@ -3559,8 +3518,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!    
    ! Map calculated results into the y%WriteOutput Array
    CALL MrsnOut_MapOutputs(y, p, u, m)
-        
-
 
    CONTAINS
 
