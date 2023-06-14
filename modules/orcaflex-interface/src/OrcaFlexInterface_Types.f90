@@ -141,121 +141,38 @@ CONTAINS
 
  END SUBROUTINE Orca_DestroyInitInput
 
- SUBROUTINE Orca_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackInitInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%InputFile)  ! InputFile
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
-      Re_BufSz   = Re_BufSz   + 1  ! TMax
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackInitInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackInitInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! InputFile
+   call RegPack(Buf, InData%InputFile)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RootName
+   call RegPack(Buf, InData%RootName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TMax
+   call RegPack(Buf, InData%TMax)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%InputFile)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%InputFile(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%RootName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%RootName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    ReKiBuf(Re_Xferred) = InData%TMax
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_PackInitInput
-
- SUBROUTINE Orca_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInitInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%InputFile)
-      OutData%InputFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%RootName)
-      OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%TMax = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_UnPackInitInput
-
+subroutine Orca_UnPackInitInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackInitInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! InputFile
+   call RegUnpack(Buf, OutData%InputFile)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RootName
+   call RegUnpack(Buf, OutData%RootName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TMax
+   call RegUnpack(Buf, OutData%TMax)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_InitOutputType), INTENT(IN) :: SrcInitOutputData
    TYPE(Orca_InitOutputType), INTENT(INOUT) :: DstInitOutputData
@@ -323,269 +240,72 @@ IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
 ENDIF
  END SUBROUTINE Orca_DestroyInitOutput
 
- SUBROUTINE Orca_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackInitOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine Orca_PackInitOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackInitOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! Ver
+   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WriteOutputHdr
+   call RegPack(Buf, allocated(InData%WriteOutputHdr))
+   if (allocated(InData%WriteOutputHdr)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPack(Buf, InData%WriteOutputHdr)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WriteOutputUnt
+   call RegPack(Buf, allocated(InData%WriteOutputUnt))
+   if (allocated(InData%WriteOutputUnt)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPack(Buf, InData%WriteOutputUnt)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Ver
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Ver
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Ver
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputHdr allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutputHdr) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputHdr upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputHdr)*LEN(InData%WriteOutputHdr)  ! WriteOutputHdr
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutputUnt allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutputUnt) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutputUnt upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%WriteOutputUnt)*LEN(InData%WriteOutputUnt)  ! WriteOutputUnt
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-  IF ( .NOT. ALLOCATED(InData%WriteOutputHdr) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputHdr,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdr,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
-        DO I = 1, LEN(InData%WriteOutputHdr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdr(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%WriteOutputUnt) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutputUnt,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUnt,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
-        DO I = 1, LEN(InData%WriteOutputUnt)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUnt(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
-      END DO
-  END IF
- END SUBROUTINE Orca_PackInitOutput
-
- SUBROUTINE Orca_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInitOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputHdr not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutputHdr)) DEALLOCATE(OutData%WriteOutputHdr)
-    ALLOCATE(OutData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
-        DO I = 1, LEN(OutData%WriteOutputHdr)
-          OutData%WriteOutputHdr(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUnt not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutputUnt)) DEALLOCATE(OutData%WriteOutputUnt)
-    ALLOCATE(OutData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
-        DO I = 1, LEN(OutData%WriteOutputUnt)
-          OutData%WriteOutputUnt(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred + 1
-        END DO ! I
-      END DO
-  END IF
- END SUBROUTINE Orca_UnPackInitOutput
-
+subroutine Orca_UnPackInitOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackInitOutput'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! Ver
+   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   ! WriteOutputHdr
+   if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutputHdr(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutputHdr)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! WriteOutputUnt
+   if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutputUnt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutputUnt)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+end subroutine
  SUBROUTINE Orca_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_InputFile), INTENT(IN) :: SrcInputFileData
    TYPE(Orca_InputFile), INTENT(INOUT) :: DstInputFileData
@@ -622,143 +342,50 @@ ENDIF
 
  END SUBROUTINE Orca_DestroyInputFile
 
- SUBROUTINE Orca_PackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_InputFile),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackInputFile'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_FileName)  ! DLL_FileName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InitProcName)  ! DLL_InitProcName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_CalcProcName)  ! DLL_CalcProcName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_EndProcName)  ! DLL_EndProcName
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%DirRoot)  ! DirRoot
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackInputFile(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_InputFile), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackInputFile'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DLL_FileName
+   call RegPack(Buf, InData%DLL_FileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_InitProcName
+   call RegPack(Buf, InData%DLL_InitProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_CalcProcName
+   call RegPack(Buf, InData%DLL_CalcProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_EndProcName
+   call RegPack(Buf, InData%DLL_EndProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DirRoot
+   call RegPack(Buf, InData%DirRoot)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%DLL_FileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_FileName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%DLL_InitProcName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_InitProcName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%DLL_CalcProcName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_CalcProcName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%DLL_EndProcName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DLL_EndProcName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(InData%DirRoot)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%DirRoot(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE Orca_PackInputFile
-
- SUBROUTINE Orca_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_InputFile), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInputFile'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%DLL_FileName)
-      OutData%DLL_FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%DLL_InitProcName)
-      OutData%DLL_InitProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%DLL_CalcProcName)
-      OutData%DLL_CalcProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%DLL_EndProcName)
-      OutData%DLL_EndProcName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    DO I = 1, LEN(OutData%DirRoot)
-      OutData%DirRoot(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE Orca_UnPackInputFile
-
+subroutine Orca_UnPackInputFile(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_InputFile), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackInputFile'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DLL_FileName
+   call RegUnpack(Buf, OutData%DLL_FileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_InitProcName
+   call RegUnpack(Buf, OutData%DLL_InitProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_CalcProcName
+   call RegUnpack(Buf, OutData%DLL_CalcProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_EndProcName
+   call RegUnpack(Buf, OutData%DLL_EndProcName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DirRoot
+   call RegUnpack(Buf, OutData%DirRoot)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_OtherStateType), INTENT(IN) :: SrcOtherStateData
    TYPE(Orca_OtherStateType), INTENT(INOUT) :: DstOtherStateData
@@ -791,103 +418,26 @@ ENDIF
 
  END SUBROUTINE Orca_DestroyOtherState
 
- SUBROUTINE Orca_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_OtherStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackOtherState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackOtherState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_OtherStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackOtherState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyOtherState
+   call RegPack(Buf, InData%DummyOtherState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyOtherState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_PackOtherState
-
- SUBROUTINE Orca_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_OtherStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackOtherState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyOtherState = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_UnPackOtherState
-
+subroutine Orca_UnPackOtherState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_OtherStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackOtherState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyOtherState
+   call RegUnpack(Buf, OutData%DummyOtherState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_MiscVarType), INTENT(IN) :: SrcMiscData
    TYPE(Orca_MiscVarType), INTENT(INOUT) :: DstMiscData
@@ -940,182 +490,69 @@ IF (ALLOCATED(MiscData%AllOuts)) THEN
 ENDIF
  END SUBROUTINE Orca_DestroyMisc
 
- SUBROUTINE Orca_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_MiscVarType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackMisc'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmAM)  ! PtfmAM
-      Re_BufSz   = Re_BufSz   + SIZE(InData%PtfmFt)  ! PtfmFt
-      Re_BufSz   = Re_BufSz   + SIZE(InData%F_PtfmAM)  ! F_PtfmAM
-  Int_BufSz   = Int_BufSz   + 1     ! AllOuts allocated yes/no
-  IF ( ALLOCATED(InData%AllOuts) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! AllOuts upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%AllOuts)  ! AllOuts
-  END IF
-      Db_BufSz   = Db_BufSz   + 1  ! LastTimeStep
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackMisc(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackMisc'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! PtfmAM
+   call RegPack(Buf, InData%PtfmAM)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PtfmFt
+   call RegPack(Buf, InData%PtfmFt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! F_PtfmAM
+   call RegPack(Buf, InData%F_PtfmAM)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! AllOuts
+   call RegPack(Buf, allocated(InData%AllOuts))
+   if (allocated(InData%AllOuts)) then
+      call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
+      call RegPack(Buf, InData%AllOuts)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LastTimeStep
+   call RegPack(Buf, InData%LastTimeStep)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i2 = LBOUND(InData%PtfmAM,2), UBOUND(InData%PtfmAM,2)
-      DO i1 = LBOUND(InData%PtfmAM,1), UBOUND(InData%PtfmAM,1)
-        ReKiBuf(Re_Xferred) = InData%PtfmAM(i1,i2)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-    DO i1 = LBOUND(InData%PtfmFt,1), UBOUND(InData%PtfmFt,1)
-      ReKiBuf(Re_Xferred) = InData%PtfmFt(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%F_PtfmAM,1), UBOUND(InData%F_PtfmAM,1)
-      ReKiBuf(Re_Xferred) = InData%F_PtfmAM(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-  IF ( .NOT. ALLOCATED(InData%AllOuts) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%AllOuts,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%AllOuts,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%AllOuts,1), UBOUND(InData%AllOuts,1)
-        ReKiBuf(Re_Xferred) = InData%AllOuts(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    DbKiBuf(Db_Xferred) = InData%LastTimeStep
-    Db_Xferred = Db_Xferred + 1
- END SUBROUTINE Orca_PackMisc
-
- SUBROUTINE Orca_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_MiscVarType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackMisc'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%PtfmAM,1)
-    i1_u = UBOUND(OutData%PtfmAM,1)
-    i2_l = LBOUND(OutData%PtfmAM,2)
-    i2_u = UBOUND(OutData%PtfmAM,2)
-    DO i2 = LBOUND(OutData%PtfmAM,2), UBOUND(OutData%PtfmAM,2)
-      DO i1 = LBOUND(OutData%PtfmAM,1), UBOUND(OutData%PtfmAM,1)
-        OutData%PtfmAM(i1,i2) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%PtfmFt,1)
-    i1_u = UBOUND(OutData%PtfmFt,1)
-    DO i1 = LBOUND(OutData%PtfmFt,1), UBOUND(OutData%PtfmFt,1)
-      OutData%PtfmFt(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%F_PtfmAM,1)
-    i1_u = UBOUND(OutData%F_PtfmAM,1)
-    DO i1 = LBOUND(OutData%F_PtfmAM,1), UBOUND(OutData%F_PtfmAM,1)
-      OutData%F_PtfmAM(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AllOuts not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%AllOuts)) DEALLOCATE(OutData%AllOuts)
-    ALLOCATE(OutData%AllOuts(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOuts.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%AllOuts,1), UBOUND(OutData%AllOuts,1)
-        OutData%AllOuts(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-    OutData%LastTimeStep = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
- END SUBROUTINE Orca_UnPackMisc
-
+subroutine Orca_UnPackMisc(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackMisc'
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! PtfmAM
+   call RegUnpack(Buf, OutData%PtfmAM)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PtfmFt
+   call RegUnpack(Buf, OutData%PtfmFt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! F_PtfmAM
+   call RegUnpack(Buf, OutData%F_PtfmAM)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! AllOuts
+   if (allocated(OutData%AllOuts)) deallocate(OutData%AllOuts)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%AllOuts(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%AllOuts.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%AllOuts)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! LastTimeStep
+   call RegUnpack(Buf, OutData%LastTimeStep)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_ParameterType), INTENT(IN) :: SrcParamData
    TYPE(Orca_ParameterType), INTENT(INOUT) :: DstParamData
@@ -1178,329 +615,82 @@ ENDDO
 ENDIF
  END SUBROUTINE Orca_DestroyParam
 
- SUBROUTINE Orca_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_ParameterType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackParam'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Db_BufSz   = Db_BufSz   + 1  ! DT
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! DLL_Orca: size of buffers for each call to pack subtype
-      CALL DLLTypePack( InData%DLL_Orca, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! DLL_Orca 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine Orca_PackParam(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_ParameterType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackParam'
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DT
+   call RegPack(Buf, InData%DT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_Orca
+   call DLLTypePack(Buf, InData%DLL_Orca) 
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SimNamePath
+   call RegPack(Buf, InData%SimNamePath)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SimNamePathLen
+   call RegPack(Buf, InData%SimNamePathLen)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumOuts
+   call RegPack(Buf, InData%NumOuts)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! OutParam
+   call RegPack(Buf, allocated(InData%OutParam))
+   if (allocated(InData%OutParam)) then
+      call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
+      LB(1:1) = lbound(InData%OutParam)
+      UB(1:1) = ubound(InData%OutParam)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
+      end do
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! DLL_Orca
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! DLL_Orca
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! DLL_Orca
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%SimNamePath)  ! SimNamePath
-      Int_BufSz  = Int_BufSz  + 1  ! SimNamePathLen
-      Int_BufSz  = Int_BufSz  + 1  ! NumOuts
-  Int_BufSz   = Int_BufSz   + 1     ! OutParam allocated yes/no
-  IF ( ALLOCATED(InData%OutParam) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! OutParam upper/lower bounds for each dimension
-    DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
-      Int_BufSz   = Int_BufSz + 3  ! OutParam: size of buffers for each call to pack subtype
-      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! OutParam 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN ! OutParam
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! OutParam
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! OutParam
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-    END DO
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DbKiBuf(Db_Xferred) = InData%DT
-    Db_Xferred = Db_Xferred + 1
-      CALL DLLTypePack( InData%DLL_Orca, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! DLL_Orca 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-    DO I = 1, LEN(InData%SimNamePath)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%SimNamePath(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    IntKiBuf(Int_Xferred) = InData%SimNamePathLen
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumOuts
-    Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%OutParam) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%OutParam,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%OutParam,1)
-    Int_Xferred = Int_Xferred + 2
-
-    DO i1 = LBOUND(InData%OutParam,1), UBOUND(InData%OutParam,1)
-      CALL NWTC_Library_PackOutParmType( Re_Buf, Db_Buf, Int_Buf, InData%OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! OutParam 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-    END DO
-  END IF
- END SUBROUTINE Orca_PackParam
-
- SUBROUTINE Orca_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_ParameterType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackParam'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DT = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL DLLTypeUnpack( OutData%DLL_Orca, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! DLL_Orca 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    DO I = 1, LEN(OutData%SimNamePath)
-      OutData%SimNamePath(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%SimNamePathLen = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NumOuts = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! OutParam not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%OutParam)) DEALLOCATE(OutData%OutParam)
-    ALLOCATE(OutData%OutParam(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    DO i1 = LBOUND(OutData%OutParam,1), UBOUND(OutData%OutParam,1)
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_UnpackOutParmType( Re_Buf, Db_Buf, Int_Buf, OutData%OutParam(i1), ErrStat2, ErrMsg2 ) ! OutParam 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    END DO
-  END IF
- END SUBROUTINE Orca_UnPackParam
-
+subroutine Orca_UnPackParam(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_ParameterType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackParam'
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DT
+   call RegUnpack(Buf, OutData%DT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DLL_Orca
+   call DLLTypeUnpack(Buf, OutData%DLL_Orca) ! DLL_Orca 
+   ! SimNamePath
+   call RegUnpack(Buf, OutData%SimNamePath)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SimNamePathLen
+   call RegUnpack(Buf, OutData%SimNamePathLen)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumOuts
+   call RegUnpack(Buf, OutData%NumOuts)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! OutParam
+   if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%OutParam(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%OutParam.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
+      end do
+   end if
+end subroutine
  SUBROUTINE Orca_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_InputType), INTENT(INOUT) :: SrcInputData
    TYPE(Orca_InputType), INTENT(INOUT) :: DstInputData
@@ -1537,184 +727,25 @@ ENDIF
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE Orca_DestroyInput
 
- SUBROUTINE Orca_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_InputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! PtfmMesh: size of buffers for each call to pack subtype
-      CALL MeshPack( InData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine Orca_PackInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_InputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! PtfmMesh
+   call MeshPack(Buf, InData%PtfmMesh) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! PtfmMesh
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! PtfmMesh
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! PtfmMesh
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-      CALL MeshPack( InData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE Orca_PackInput
-
- SUBROUTINE Orca_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_InputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL MeshUnpack( OutData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE Orca_UnPackInput
-
+subroutine Orca_UnPackInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_InputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! PtfmMesh
+   call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
+end subroutine
  SUBROUTINE Orca_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_OutputType), INTENT(INOUT) :: SrcOutputData
    TYPE(Orca_OutputType), INTENT(INOUT) :: DstOutputData
@@ -1767,223 +798,50 @@ IF (ALLOCATED(OutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE Orca_DestroyOutput
 
- SUBROUTINE Orca_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_OutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! PtfmMesh: size of buffers for each call to pack subtype
-      CALL MeshPack( InData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine Orca_PackOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_OutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! PtfmMesh
+   call MeshPack(Buf, InData%PtfmMesh) 
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WriteOutput
+   call RegPack(Buf, allocated(InData%WriteOutput))
+   if (allocated(InData%WriteOutput)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPack(Buf, InData%WriteOutput)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! PtfmMesh
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! PtfmMesh
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! PtfmMesh
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WriteOutput allocated yes/no
-  IF ( ALLOCATED(InData%WriteOutput) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WriteOutput upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WriteOutput)  ! WriteOutput
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-      CALL MeshPack( InData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-  IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WriteOutput,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
-        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE Orca_PackOutput
-
- SUBROUTINE Orca_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_OutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL MeshUnpack( OutData%PtfmMesh, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! PtfmMesh 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WriteOutput)) DEALLOCATE(OutData%WriteOutput)
-    ALLOCATE(OutData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
-        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE Orca_UnPackOutput
-
+subroutine Orca_UnPackOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_OutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackOutput'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! PtfmMesh
+   call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
+   ! WriteOutput
+   if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutput(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutput)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+end subroutine
  SUBROUTINE Orca_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_ContinuousStateType), INTENT(IN) :: SrcContStateData
    TYPE(Orca_ContinuousStateType), INTENT(INOUT) :: DstContStateData
@@ -2016,103 +874,26 @@ ENDIF
 
  END SUBROUTINE Orca_DestroyContState
 
- SUBROUTINE Orca_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_ContinuousStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackContState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! Dummy
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackContState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_ContinuousStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackContState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! Dummy
+   call RegPack(Buf, InData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%Dummy
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_PackContState
-
- SUBROUTINE Orca_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_ContinuousStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackContState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%Dummy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_UnPackContState
-
+subroutine Orca_UnPackContState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_ContinuousStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackContState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! Dummy
+   call RegUnpack(Buf, OutData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
    TYPE(Orca_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
@@ -2145,103 +926,26 @@ ENDIF
 
  END SUBROUTINE Orca_DestroyDiscState
 
- SUBROUTINE Orca_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_DiscreteStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackDiscState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! Dummy
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackDiscState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_DiscreteStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackDiscState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! Dummy
+   call RegPack(Buf, InData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%Dummy
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_PackDiscState
-
- SUBROUTINE Orca_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_DiscreteStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackDiscState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%Dummy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_UnPackDiscState
-
+subroutine Orca_UnPackDiscState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_DiscreteStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackDiscState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! Dummy
+   call RegUnpack(Buf, OutData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Orca_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Orca_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
    TYPE(Orca_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
@@ -2274,103 +978,26 @@ ENDIF
 
  END SUBROUTINE Orca_DestroyConstrState
 
- SUBROUTINE Orca_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Orca_ConstraintStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_PackConstrState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyConstrState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Orca_PackConstrState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Orca_ConstraintStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Orca_PackConstrState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyConstrState
+   call RegPack(Buf, InData%DummyConstrState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyConstrState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_PackConstrState
-
- SUBROUTINE Orca_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Orca_ConstraintStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_UnPackConstrState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyConstrState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Orca_UnPackConstrState
-
+subroutine Orca_UnPackConstrState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Orca_ConstraintStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Orca_UnPackConstrState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyConstrState
+   call RegUnpack(Buf, OutData%DummyConstrState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
  SUBROUTINE Orca_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
 !

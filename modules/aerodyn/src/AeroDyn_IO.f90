@@ -2405,7 +2405,7 @@ end subroutine r8vm_sl
   implicit none  
   !-input/output variables
   integer(IntKi), intent(in)    :: n  
-  real, intent(in)        :: eps
+  real(ReKi), intent(in)        :: eps
   integer(IntKi)                :: ind (n)  
   real(ReKi)                    :: ra (n)
   !-local variables

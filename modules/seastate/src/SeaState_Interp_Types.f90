@@ -100,137 +100,44 @@ CONTAINS
 
  END SUBROUTINE SeaSt_Interp_DestroyInitInput
 
- SUBROUTINE SeaSt_Interp_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackInitInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
-      Re_BufSz   = Re_BufSz   + SIZE(InData%delta)  ! delta
-      Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
-      Re_BufSz   = Re_BufSz   + 1  ! Z_Depth
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine SeaSt_Interp_PackInitInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SeaSt_Interp_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! n
+   call RegPack(Buf, InData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegPack(Buf, InData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegPack(Buf, InData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z_Depth
+   call RegPack(Buf, InData%Z_Depth)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%n,1), UBOUND(InData%n,1)
-      IntKiBuf(Int_Xferred) = InData%n(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%delta,1), UBOUND(InData%delta,1)
-      ReKiBuf(Re_Xferred) = InData%delta(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%pZero,1), UBOUND(InData%pZero,1)
-      ReKiBuf(Re_Xferred) = InData%pZero(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    ReKiBuf(Re_Xferred) = InData%Z_Depth
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaSt_Interp_PackInitInput
-
- SUBROUTINE SeaSt_Interp_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackInitInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%n,1)
-    i1_u = UBOUND(OutData%n,1)
-    DO i1 = LBOUND(OutData%n,1), UBOUND(OutData%n,1)
-      OutData%n(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%delta,1)
-    i1_u = UBOUND(OutData%delta,1)
-    DO i1 = LBOUND(OutData%delta,1), UBOUND(OutData%delta,1)
-      OutData%delta(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%pZero,1)
-    i1_u = UBOUND(OutData%pZero,1)
-    DO i1 = LBOUND(OutData%pZero,1), UBOUND(OutData%pZero,1)
-      OutData%pZero(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%Z_Depth = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaSt_Interp_UnPackInitInput
-
+subroutine SeaSt_Interp_UnPackInitInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SeaSt_Interp_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! n
+   call RegUnpack(Buf, OutData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegUnpack(Buf, OutData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegUnpack(Buf, OutData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z_Depth
+   call RegUnpack(Buf, OutData%Z_Depth)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE SeaSt_Interp_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SeaSt_Interp_InitOutputType), INTENT(IN) :: SrcInitOutputData
    TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: DstInitOutputData
@@ -267,184 +174,25 @@ CONTAINS
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE SeaSt_Interp_DestroyInitOutput
 
- SUBROUTINE SeaSt_Interp_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackInitOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine SeaSt_Interp_PackInitOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SeaSt_Interp_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! Ver
+   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Ver
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Ver
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Ver
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE SeaSt_Interp_PackInitOutput
-
- SUBROUTINE SeaSt_Interp_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackInitOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SeaSt_Interp_UnPackInitOutput
-
+subroutine SeaSt_Interp_UnPackInitOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SeaSt_Interp_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitOutput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! Ver
+   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+end subroutine
  SUBROUTINE SeaSt_Interp_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SeaSt_Interp_MiscVarType), INTENT(IN) :: SrcMiscData
    TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: DstMiscData
@@ -482,148 +230,50 @@ CONTAINS
 
  END SUBROUTINE SeaSt_Interp_DestroyMisc
 
- SUBROUTINE SeaSt_Interp_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_MiscVarType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackMisc'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + SIZE(InData%N3D)  ! N3D
-      Re_BufSz   = Re_BufSz   + SIZE(InData%N4D)  ! N4D
-      Int_BufSz  = Int_BufSz  + SIZE(InData%Indx_Lo)  ! Indx_Lo
-      Int_BufSz  = Int_BufSz  + SIZE(InData%Indx_Hi)  ! Indx_Hi
-      Int_BufSz  = Int_BufSz  + 1  ! FirstWarn_Clamp
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine SeaSt_Interp_PackMisc(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SeaSt_Interp_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackMisc'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! N3D
+   call RegPack(Buf, InData%N3D)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! N4D
+   call RegPack(Buf, InData%N4D)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Indx_Lo
+   call RegPack(Buf, InData%Indx_Lo)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Indx_Hi
+   call RegPack(Buf, InData%Indx_Hi)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FirstWarn_Clamp
+   call RegPack(Buf, InData%FirstWarn_Clamp)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%N3D,1), UBOUND(InData%N3D,1)
-      ReKiBuf(Re_Xferred) = InData%N3D(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%N4D,1), UBOUND(InData%N4D,1)
-      ReKiBuf(Re_Xferred) = InData%N4D(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%Indx_Lo,1), UBOUND(InData%Indx_Lo,1)
-      IntKiBuf(Int_Xferred) = InData%Indx_Lo(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%Indx_Hi,1), UBOUND(InData%Indx_Hi,1)
-      IntKiBuf(Int_Xferred) = InData%Indx_Hi(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%FirstWarn_Clamp, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE SeaSt_Interp_PackMisc
-
- SUBROUTINE SeaSt_Interp_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackMisc'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%N3D,1)
-    i1_u = UBOUND(OutData%N3D,1)
-    DO i1 = LBOUND(OutData%N3D,1), UBOUND(OutData%N3D,1)
-      OutData%N3D(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%N4D,1)
-    i1_u = UBOUND(OutData%N4D,1)
-    DO i1 = LBOUND(OutData%N4D,1), UBOUND(OutData%N4D,1)
-      OutData%N4D(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%Indx_Lo,1)
-    i1_u = UBOUND(OutData%Indx_Lo,1)
-    DO i1 = LBOUND(OutData%Indx_Lo,1), UBOUND(OutData%Indx_Lo,1)
-      OutData%Indx_Lo(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%Indx_Hi,1)
-    i1_u = UBOUND(OutData%Indx_Hi,1)
-    DO i1 = LBOUND(OutData%Indx_Hi,1), UBOUND(OutData%Indx_Hi,1)
-      OutData%Indx_Hi(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    OutData%FirstWarn_Clamp = TRANSFER(IntKiBuf(Int_Xferred), OutData%FirstWarn_Clamp)
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE SeaSt_Interp_UnPackMisc
-
+subroutine SeaSt_Interp_UnPackMisc(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SeaSt_Interp_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackMisc'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! N3D
+   call RegUnpack(Buf, OutData%N3D)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! N4D
+   call RegUnpack(Buf, OutData%N4D)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Indx_Lo
+   call RegUnpack(Buf, OutData%Indx_Lo)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Indx_Hi
+   call RegUnpack(Buf, OutData%Indx_Hi)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FirstWarn_Clamp
+   call RegUnpack(Buf, OutData%FirstWarn_Clamp)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE SeaSt_Interp_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(SeaSt_Interp_ParameterType), INTENT(IN) :: SrcParamData
    TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: DstParamData
@@ -660,136 +310,43 @@ CONTAINS
 
  END SUBROUTINE SeaSt_Interp_DestroyParam
 
- SUBROUTINE SeaSt_Interp_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_ParameterType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_PackParam'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
-      Re_BufSz   = Re_BufSz   + SIZE(InData%delta)  ! delta
-      Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
-      Re_BufSz   = Re_BufSz   + 1  ! Z_Depth
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine SeaSt_Interp_PackParam(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SeaSt_Interp_ParameterType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackParam'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! n
+   call RegPack(Buf, InData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegPack(Buf, InData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegPack(Buf, InData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z_Depth
+   call RegPack(Buf, InData%Z_Depth)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%n,1), UBOUND(InData%n,1)
-      IntKiBuf(Int_Xferred) = InData%n(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%delta,1), UBOUND(InData%delta,1)
-      ReKiBuf(Re_Xferred) = InData%delta(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%pZero,1), UBOUND(InData%pZero,1)
-      ReKiBuf(Re_Xferred) = InData%pZero(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    ReKiBuf(Re_Xferred) = InData%Z_Depth
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaSt_Interp_PackParam
-
- SUBROUTINE SeaSt_Interp_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_UnPackParam'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%n,1)
-    i1_u = UBOUND(OutData%n,1)
-    DO i1 = LBOUND(OutData%n,1), UBOUND(OutData%n,1)
-      OutData%n(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%delta,1)
-    i1_u = UBOUND(OutData%delta,1)
-    DO i1 = LBOUND(OutData%delta,1), UBOUND(OutData%delta,1)
-      OutData%delta(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%pZero,1)
-    i1_u = UBOUND(OutData%pZero,1)
-    DO i1 = LBOUND(OutData%pZero,1), UBOUND(OutData%pZero,1)
-      OutData%pZero(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%Z_Depth = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE SeaSt_Interp_UnPackParam
-
+subroutine SeaSt_Interp_UnPackParam(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SeaSt_Interp_ParameterType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackParam'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! n
+   call RegUnpack(Buf, OutData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegUnpack(Buf, OutData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegUnpack(Buf, OutData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z_Depth
+   call RegUnpack(Buf, OutData%Z_Depth)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 END MODULE SeaState_Interp_Types
 !ENDOFREGISTRYGENERATEDFILE

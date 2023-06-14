@@ -191,217 +191,128 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyWindFileDat
 
- SUBROUTINE InflowWind_IO_PackWindFileDat( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(WindFileDat),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackWindFileDat'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%FileName)  ! FileName
-      Int_BufSz  = Int_BufSz  + 1  ! WindType
-      Re_BufSz   = Re_BufSz   + 1  ! RefHt
-      Int_BufSz  = Int_BufSz  + 1  ! RefHt_Set
-      Db_BufSz   = Db_BufSz   + 1  ! DT
-      Int_BufSz  = Int_BufSz  + 1  ! NumTSteps
-      Int_BufSz  = Int_BufSz  + 1  ! ConstantDT
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TRange)  ! TRange
-      Int_BufSz  = Int_BufSz  + 1  ! TRange_Limited
-      Re_BufSz   = Re_BufSz   + SIZE(InData%YRange)  ! YRange
-      Int_BufSz  = Int_BufSz  + 1  ! YRange_Limited
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ZRange)  ! ZRange
-      Int_BufSz  = Int_BufSz  + 1  ! ZRange_Limited
-      Int_BufSz  = Int_BufSz  + 1  ! BinaryFormat
-      Int_BufSz  = Int_BufSz  + 1  ! IsBinary
-      Re_BufSz   = Re_BufSz   + SIZE(InData%TI)  ! TI
-      Int_BufSz  = Int_BufSz  + 1  ! TI_listed
-      Re_BufSz   = Re_BufSz   + 1  ! MWS
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackWindFileDat(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(WindFileDat), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackWindFileDat'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! FileName
+   call RegPack(Buf, InData%FileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindType
+   call RegPack(Buf, InData%WindType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegPack(Buf, InData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt_Set
+   call RegPack(Buf, InData%RefHt_Set)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DT
+   call RegPack(Buf, InData%DT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumTSteps
+   call RegPack(Buf, InData%NumTSteps)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ConstantDT
+   call RegPack(Buf, InData%ConstantDT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TRange
+   call RegPack(Buf, InData%TRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TRange_Limited
+   call RegPack(Buf, InData%TRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! YRange
+   call RegPack(Buf, InData%YRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! YRange_Limited
+   call RegPack(Buf, InData%YRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ZRange
+   call RegPack(Buf, InData%ZRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ZRange_Limited
+   call RegPack(Buf, InData%ZRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! BinaryFormat
+   call RegPack(Buf, InData%BinaryFormat)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! IsBinary
+   call RegPack(Buf, InData%IsBinary)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TI
+   call RegPack(Buf, InData%TI)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TI_listed
+   call RegPack(Buf, InData%TI_listed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MWS
+   call RegPack(Buf, InData%MWS)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%FileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%FileName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    IntKiBuf(Int_Xferred) = InData%WindType
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefHt
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%RefHt_Set, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%DT
-    Db_Xferred = Db_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumTSteps
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%ConstantDT, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%TRange,1), UBOUND(InData%TRange,1)
-      ReKiBuf(Re_Xferred) = InData%TRange(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%TRange_Limited, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%YRange,1), UBOUND(InData%YRange,1)
-      ReKiBuf(Re_Xferred) = InData%YRange(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%YRange_Limited, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%ZRange,1), UBOUND(InData%ZRange,1)
-      ReKiBuf(Re_Xferred) = InData%ZRange(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%ZRange_Limited, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%BinaryFormat
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%IsBinary, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%TI,1), UBOUND(InData%TI,1)
-      ReKiBuf(Re_Xferred) = InData%TI(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%TI_listed, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%MWS
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackWindFileDat
-
- SUBROUTINE InflowWind_IO_UnPackWindFileDat( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(WindFileDat), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackWindFileDat'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%FileName)
-      OutData%FileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%WindType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%RefHt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefHt_Set = TRANSFER(IntKiBuf(Int_Xferred), OutData%RefHt_Set)
-    Int_Xferred = Int_Xferred + 1
-    OutData%DT = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    OutData%NumTSteps = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%ConstantDT = TRANSFER(IntKiBuf(Int_Xferred), OutData%ConstantDT)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%TRange,1)
-    i1_u = UBOUND(OutData%TRange,1)
-    DO i1 = LBOUND(OutData%TRange,1), UBOUND(OutData%TRange,1)
-      OutData%TRange(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%TRange_Limited = TRANSFER(IntKiBuf(Int_Xferred), OutData%TRange_Limited)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%YRange,1)
-    i1_u = UBOUND(OutData%YRange,1)
-    DO i1 = LBOUND(OutData%YRange,1), UBOUND(OutData%YRange,1)
-      OutData%YRange(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%YRange_Limited = TRANSFER(IntKiBuf(Int_Xferred), OutData%YRange_Limited)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%ZRange,1)
-    i1_u = UBOUND(OutData%ZRange,1)
-    DO i1 = LBOUND(OutData%ZRange,1), UBOUND(OutData%ZRange,1)
-      OutData%ZRange(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%ZRange_Limited = TRANSFER(IntKiBuf(Int_Xferred), OutData%ZRange_Limited)
-    Int_Xferred = Int_Xferred + 1
-    OutData%BinaryFormat = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%IsBinary = TRANSFER(IntKiBuf(Int_Xferred), OutData%IsBinary)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%TI,1)
-    i1_u = UBOUND(OutData%TI,1)
-    DO i1 = LBOUND(OutData%TI,1), UBOUND(OutData%TI,1)
-      OutData%TI(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%TI_listed = TRANSFER(IntKiBuf(Int_Xferred), OutData%TI_listed)
-    Int_Xferred = Int_Xferred + 1
-    OutData%MWS = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackWindFileDat
-
+subroutine InflowWind_IO_UnPackWindFileDat(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(WindFileDat), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackWindFileDat'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! FileName
+   call RegUnpack(Buf, OutData%FileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindType
+   call RegUnpack(Buf, OutData%WindType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegUnpack(Buf, OutData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt_Set
+   call RegUnpack(Buf, OutData%RefHt_Set)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DT
+   call RegUnpack(Buf, OutData%DT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumTSteps
+   call RegUnpack(Buf, OutData%NumTSteps)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ConstantDT
+   call RegUnpack(Buf, OutData%ConstantDT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TRange
+   call RegUnpack(Buf, OutData%TRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TRange_Limited
+   call RegUnpack(Buf, OutData%TRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! YRange
+   call RegUnpack(Buf, OutData%YRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! YRange_Limited
+   call RegUnpack(Buf, OutData%YRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ZRange
+   call RegUnpack(Buf, OutData%ZRange)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ZRange_Limited
+   call RegUnpack(Buf, OutData%ZRange_Limited)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! BinaryFormat
+   call RegUnpack(Buf, OutData%BinaryFormat)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! IsBinary
+   call RegUnpack(Buf, OutData%IsBinary)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TI
+   call RegUnpack(Buf, OutData%TI)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TI_listed
+   call RegUnpack(Buf, OutData%TI_listed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MWS
+   call RegUnpack(Buf, OutData%MWS)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopySteady_InitInputType( SrcSteady_InitInputTypeData, DstSteady_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Steady_InitInputType), INTENT(IN) :: SrcSteady_InitInputTypeData
    TYPE(Steady_InitInputType), INTENT(INOUT) :: DstSteady_InitInputTypeData
@@ -436,113 +347,38 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroySteady_InitInputType
 
- SUBROUTINE InflowWind_IO_PackSteady_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Steady_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackSteady_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! HWindSpeed
-      Re_BufSz   = Re_BufSz   + 1  ! RefHt
-      Re_BufSz   = Re_BufSz   + 1  ! PLExp
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackSteady_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Steady_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackSteady_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! HWindSpeed
+   call RegPack(Buf, InData%HWindSpeed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegPack(Buf, InData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PLExp
+   call RegPack(Buf, InData%PLExp)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%HWindSpeed
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefHt
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PLExp
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackSteady_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackSteady_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Steady_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackSteady_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%HWindSpeed = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefHt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PLExp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackSteady_InitInputType
-
+subroutine InflowWind_IO_UnPackSteady_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Steady_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackSteady_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! HWindSpeed
+   call RegUnpack(Buf, OutData%HWindSpeed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegUnpack(Buf, OutData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PLExp
+   call RegUnpack(Buf, OutData%PLExp)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyUniform_InitInputType( SrcUniform_InitInputTypeData, DstUniform_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Uniform_InitInputType), INTENT(IN) :: SrcUniform_InitInputTypeData
    TYPE(Uniform_InitInputType), INTENT(INOUT) :: DstUniform_InitInputTypeData
@@ -584,213 +420,55 @@ CONTAINS
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType
 
- SUBROUTINE InflowWind_IO_PackUniform_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Uniform_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackUniform_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%WindFileName)  ! WindFileName
-      Re_BufSz   = Re_BufSz   + 1  ! RefHt
-      Re_BufSz   = Re_BufSz   + 1  ! RefLength
-      Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
-      Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! PassedFileData: size of buffers for each call to pack subtype
-      CALL NWTC_Library_PackFileInfoType( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileData 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine InflowWind_IO_PackUniform_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Uniform_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUniform_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! WindFileName
+   call RegPack(Buf, InData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegPack(Buf, InData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefLength
+   call RegPack(Buf, InData%RefLength)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PropagationDir
+   call RegPack(Buf, InData%PropagationDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! UseInputFile
+   call RegPack(Buf, InData%UseInputFile)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PassedFileData
+   call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! PassedFileData
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! PassedFileData
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! PassedFileData
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%WindFileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%WindFileName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    ReKiBuf(Re_Xferred) = InData%RefHt
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefLength
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PropagationDir
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-      CALL NWTC_Library_PackFileInfoType( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileData, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileData 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE InflowWind_IO_PackUniform_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackUniform_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Uniform_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackUniform_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%WindFileName)
-      OutData%WindFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%RefHt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefLength = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PropagationDir = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%UseInputFile = TRANSFER(IntKiBuf(Int_Xferred), OutData%UseInputFile)
-    Int_Xferred = Int_Xferred + 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_UnpackFileInfoType( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileData, ErrStat2, ErrMsg2 ) ! PassedFileData 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE InflowWind_IO_UnPackUniform_InitInputType
-
+subroutine InflowWind_IO_UnPackUniform_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Uniform_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUniform_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! WindFileName
+   call RegUnpack(Buf, OutData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegUnpack(Buf, OutData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefLength
+   call RegUnpack(Buf, OutData%RefLength)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PropagationDir
+   call RegUnpack(Buf, OutData%PropagationDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! UseInputFile
+   call RegUnpack(Buf, OutData%UseInputFile)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PassedFileData
+   call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
+end subroutine
  SUBROUTINE InflowWind_IO_CopyGrid3D_InitInputType( SrcGrid3D_InitInputTypeData, DstGrid3D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Grid3D_InitInputType), INTENT(IN) :: SrcGrid3D_InitInputTypeData
    TYPE(Grid3D_InitInputType), INTENT(INOUT) :: DstGrid3D_InitInputTypeData
@@ -835,171 +513,92 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType
 
- SUBROUTINE InflowWind_IO_PackGrid3D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Grid3D_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackGrid3D_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! ScaleMethod
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SF)  ! SF
-      Re_BufSz   = Re_BufSz   + SIZE(InData%SigmaF)  ! SigmaF
-      Int_BufSz  = Int_BufSz  + 1  ! WindProfileType
-      Re_BufSz   = Re_BufSz   + 1  ! RefHt
-      Re_BufSz   = Re_BufSz   + 1  ! URef
-      Re_BufSz   = Re_BufSz   + 1  ! PLExp
-      Re_BufSz   = Re_BufSz   + 1  ! VLinShr
-      Re_BufSz   = Re_BufSz   + 1  ! HLinShr
-      Re_BufSz   = Re_BufSz   + 1  ! RefLength
-      Re_BufSz   = Re_BufSz   + 1  ! Z0
-      Re_BufSz   = Re_BufSz   + 1  ! XOffset
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackGrid3D_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Grid3D_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid3D_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! ScaleMethod
+   call RegPack(Buf, InData%ScaleMethod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SF
+   call RegPack(Buf, InData%SF)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SigmaF
+   call RegPack(Buf, InData%SigmaF)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindProfileType
+   call RegPack(Buf, InData%WindProfileType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegPack(Buf, InData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! URef
+   call RegPack(Buf, InData%URef)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PLExp
+   call RegPack(Buf, InData%PLExp)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! VLinShr
+   call RegPack(Buf, InData%VLinShr)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HLinShr
+   call RegPack(Buf, InData%HLinShr)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefLength
+   call RegPack(Buf, InData%RefLength)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z0
+   call RegPack(Buf, InData%Z0)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! XOffset
+   call RegPack(Buf, InData%XOffset)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%ScaleMethod
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%SF,1), UBOUND(InData%SF,1)
-      ReKiBuf(Re_Xferred) = InData%SF(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%SigmaF,1), UBOUND(InData%SigmaF,1)
-      ReKiBuf(Re_Xferred) = InData%SigmaF(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = InData%WindProfileType
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefHt
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%URef
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PLExp
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VLinShr
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HLinShr
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%RefLength
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%Z0
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%XOffset
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackGrid3D_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackGrid3D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Grid3D_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackGrid3D_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%ScaleMethod = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%SF,1)
-    i1_u = UBOUND(OutData%SF,1)
-    DO i1 = LBOUND(OutData%SF,1), UBOUND(OutData%SF,1)
-      OutData%SF(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%SigmaF,1)
-    i1_u = UBOUND(OutData%SigmaF,1)
-    DO i1 = LBOUND(OutData%SigmaF,1), UBOUND(OutData%SigmaF,1)
-      OutData%SigmaF(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%WindProfileType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%RefHt = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%URef = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PLExp = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VLinShr = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HLinShr = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%RefLength = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%Z0 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%XOffset = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackGrid3D_InitInputType
-
+subroutine InflowWind_IO_UnPackGrid3D_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Grid3D_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid3D_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! ScaleMethod
+   call RegUnpack(Buf, OutData%ScaleMethod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SF
+   call RegUnpack(Buf, OutData%SF)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SigmaF
+   call RegUnpack(Buf, OutData%SigmaF)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindProfileType
+   call RegUnpack(Buf, OutData%WindProfileType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefHt
+   call RegUnpack(Buf, OutData%RefHt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! URef
+   call RegUnpack(Buf, OutData%URef)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PLExp
+   call RegUnpack(Buf, OutData%PLExp)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! VLinShr
+   call RegUnpack(Buf, OutData%VLinShr)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HLinShr
+   call RegUnpack(Buf, OutData%HLinShr)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RefLength
+   call RegUnpack(Buf, OutData%RefLength)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Z0
+   call RegUnpack(Buf, OutData%Z0)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! XOffset
+   call RegUnpack(Buf, OutData%XOffset)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyTurbSim_InitInputType( SrcTurbSim_InitInputTypeData, DstTurbSim_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(TurbSim_InitInputType), INTENT(IN) :: SrcTurbSim_InitInputTypeData
    TYPE(TurbSim_InitInputType), INTENT(INOUT) :: DstTurbSim_InitInputTypeData
@@ -1032,107 +631,26 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType
 
- SUBROUTINE InflowWind_IO_PackTurbSim_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(TurbSim_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackTurbSim_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%WindFileName)  ! WindFileName
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackTurbSim_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(TurbSim_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackTurbSim_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! WindFileName
+   call RegPack(Buf, InData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%WindFileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%WindFileName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE InflowWind_IO_PackTurbSim_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackTurbSim_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(TurbSim_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackTurbSim_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%WindFileName)
-      OutData%WindFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
- END SUBROUTINE InflowWind_IO_UnPackTurbSim_InitInputType
-
+subroutine InflowWind_IO_UnPackTurbSim_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(TurbSim_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackTurbSim_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! WindFileName
+   call RegUnpack(Buf, OutData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyBladed_InitInputType( SrcBladed_InitInputTypeData, DstBladed_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Bladed_InitInputType), INTENT(IN) :: SrcBladed_InitInputTypeData
    TYPE(Bladed_InitInputType), INTENT(INOUT) :: DstBladed_InitInputTypeData
@@ -1170,132 +688,56 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType
 
- SUBROUTINE InflowWind_IO_PackBladed_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Bladed_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackBladed_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%WindFileName)  ! WindFileName
-      Int_BufSz  = Int_BufSz  + 1  ! WindType
-      Int_BufSz  = Int_BufSz  + 1  ! NativeBladedFmt
-      Int_BufSz  = Int_BufSz  + 1  ! TowerFileExist
-      Int_BufSz  = Int_BufSz  + 1  ! TurbineID
-      Int_BufSz  = Int_BufSz  + 1  ! FixedWindFileRootName
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackBladed_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Bladed_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! WindFileName
+   call RegPack(Buf, InData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindType
+   call RegPack(Buf, InData%WindType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NativeBladedFmt
+   call RegPack(Buf, InData%NativeBladedFmt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TowerFileExist
+   call RegPack(Buf, InData%TowerFileExist)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TurbineID
+   call RegPack(Buf, InData%TurbineID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FixedWindFileRootName
+   call RegPack(Buf, InData%FixedWindFileRootName)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO I = 1, LEN(InData%WindFileName)
-      IntKiBuf(Int_Xferred) = ICHAR(InData%WindFileName(I:I), IntKi)
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    IntKiBuf(Int_Xferred) = InData%WindType
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%NativeBladedFmt, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%TowerFileExist, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%TurbineID
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%FixedWindFileRootName, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackBladed_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackBladed_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Bladed_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackBladed_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    DO I = 1, LEN(OutData%WindFileName)
-      OutData%WindFileName(I:I) = CHAR(IntKiBuf(Int_Xferred))
-      Int_Xferred = Int_Xferred + 1
-    END DO ! I
-    OutData%WindType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%NativeBladedFmt = TRANSFER(IntKiBuf(Int_Xferred), OutData%NativeBladedFmt)
-    Int_Xferred = Int_Xferred + 1
-    OutData%TowerFileExist = TRANSFER(IntKiBuf(Int_Xferred), OutData%TowerFileExist)
-    Int_Xferred = Int_Xferred + 1
-    OutData%TurbineID = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%FixedWindFileRootName = TRANSFER(IntKiBuf(Int_Xferred), OutData%FixedWindFileRootName)
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackBladed_InitInputType
-
+subroutine InflowWind_IO_UnPackBladed_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Bladed_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! WindFileName
+   call RegUnpack(Buf, OutData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WindType
+   call RegUnpack(Buf, OutData%WindType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NativeBladedFmt
+   call RegUnpack(Buf, OutData%NativeBladedFmt)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TowerFileExist
+   call RegUnpack(Buf, OutData%TowerFileExist)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! TurbineID
+   call RegUnpack(Buf, OutData%TurbineID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FixedWindFileRootName
+   call RegUnpack(Buf, OutData%FixedWindFileRootName)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyBladed_InitOutputType( SrcBladed_InitOutputTypeData, DstBladed_InitOutputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Bladed_InitOutputType), INTENT(IN) :: SrcBladed_InitOutputTypeData
    TYPE(Bladed_InitOutputType), INTENT(INOUT) :: DstBladed_InitOutputTypeData
@@ -1329,108 +771,32 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType
 
- SUBROUTINE InflowWind_IO_PackBladed_InitOutputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Bladed_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackBladed_InitOutputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! PropagationDir
-      Re_BufSz   = Re_BufSz   + 1  ! VFlowAngle
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackBladed_InitOutputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Bladed_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitOutputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! PropagationDir
+   call RegPack(Buf, InData%PropagationDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! VFlowAngle
+   call RegPack(Buf, InData%VFlowAngle)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%PropagationDir
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%VFlowAngle
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackBladed_InitOutputType
-
- SUBROUTINE InflowWind_IO_UnPackBladed_InitOutputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Bladed_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackBladed_InitOutputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%PropagationDir = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%VFlowAngle = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackBladed_InitOutputType
-
+subroutine InflowWind_IO_UnPackBladed_InitOutputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Bladed_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitOutputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! PropagationDir
+   call RegUnpack(Buf, OutData%PropagationDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! VFlowAngle
+   call RegUnpack(Buf, OutData%VFlowAngle)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyHAWC_InitInputType( SrcHAWC_InitInputTypeData, DstHAWC_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(HAWC_InitInputType), INTENT(IN) :: SrcHAWC_InitInputTypeData
    TYPE(HAWC_InitInputType), INTENT(INOUT) :: DstHAWC_InitInputTypeData
@@ -1475,230 +841,67 @@ CONTAINS
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType
 
- SUBROUTINE InflowWind_IO_PackHAWC_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(HAWC_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackHAWC_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + SIZE(InData%WindFileName)*LEN(InData%WindFileName)  ! WindFileName
-      Int_BufSz  = Int_BufSz  + 1  ! nx
-      Int_BufSz  = Int_BufSz  + 1  ! ny
-      Int_BufSz  = Int_BufSz  + 1  ! nz
-      Re_BufSz   = Re_BufSz   + 1  ! dx
-      Re_BufSz   = Re_BufSz   + 1  ! dy
-      Re_BufSz   = Re_BufSz   + 1  ! dz
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! G3D: size of buffers for each call to pack subtype
-      CALL InflowWind_IO_PackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, .TRUE. ) ! G3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine InflowWind_IO_PackHAWC_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(HAWC_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackHAWC_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! WindFileName
+   call RegPack(Buf, InData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! nx
+   call RegPack(Buf, InData%nx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ny
+   call RegPack(Buf, InData%ny)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! nz
+   call RegPack(Buf, InData%nz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dx
+   call RegPack(Buf, InData%dx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dy
+   call RegPack(Buf, InData%dy)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dz
+   call RegPack(Buf, InData%dz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! G3D
+   call InflowWind_IO_PackGrid3D_InitInputType(Buf, InData%G3D) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! G3D
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! G3D
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! G3D
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%WindFileName,1), UBOUND(InData%WindFileName,1)
-      DO I = 1, LEN(InData%WindFileName)
-        IntKiBuf(Int_Xferred) = ICHAR(InData%WindFileName(i1)(I:I), IntKi)
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-    IntKiBuf(Int_Xferred) = InData%nx
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%ny
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%nz
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%dx
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%dy
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%dz
-    Re_Xferred = Re_Xferred + 1
-      CALL InflowWind_IO_PackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, OnlySize ) ! G3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
-      ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE InflowWind_IO_PackHAWC_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackHAWC_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(HAWC_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackHAWC_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%WindFileName,1)
-    i1_u = UBOUND(OutData%WindFileName,1)
-    DO i1 = LBOUND(OutData%WindFileName,1), UBOUND(OutData%WindFileName,1)
-      DO I = 1, LEN(OutData%WindFileName)
-        OutData%WindFileName(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred + 1
-      END DO ! I
-    END DO
-    OutData%nx = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%ny = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%nz = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%dx = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%dy = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%dz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
-      END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL InflowWind_IO_UnpackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, OutData%G3D, ErrStat2, ErrMsg2 ) ! G3D 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
-
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE InflowWind_IO_UnPackHAWC_InitInputType
-
+subroutine InflowWind_IO_UnPackHAWC_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(HAWC_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackHAWC_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! WindFileName
+   call RegUnpack(Buf, OutData%WindFileName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! nx
+   call RegUnpack(Buf, OutData%nx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ny
+   call RegUnpack(Buf, OutData%ny)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! nz
+   call RegUnpack(Buf, OutData%nz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dx
+   call RegUnpack(Buf, OutData%dx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dy
+   call RegUnpack(Buf, OutData%dy)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! dz
+   call RegUnpack(Buf, OutData%dz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! G3D
+   call InflowWind_IO_UnpackGrid3D_InitInputType(Buf, OutData%G3D) ! G3D 
+end subroutine
  SUBROUTINE InflowWind_IO_CopyUser_InitInputType( SrcUser_InitInputTypeData, DstUser_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(User_InitInputType), INTENT(IN) :: SrcUser_InitInputTypeData
    TYPE(User_InitInputType), INTENT(INOUT) :: DstUser_InitInputTypeData
@@ -1731,103 +934,26 @@ CONTAINS
 
  END SUBROUTINE InflowWind_IO_DestroyUser_InitInputType
 
- SUBROUTINE InflowWind_IO_PackUser_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(User_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackUser_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! Dummy
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackUser_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(User_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUser_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! Dummy
+   call RegPack(Buf, InData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%Dummy
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackUser_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackUser_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(User_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackUser_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%Dummy = REAL(ReKiBuf(Re_Xferred), SiKi)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackUser_InitInputType
-
+subroutine InflowWind_IO_UnPackUser_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(User_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUser_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! Dummy
+   call RegUnpack(Buf, OutData%Dummy)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE InflowWind_IO_CopyGrid4D_InitInputType( SrcGrid4D_InitInputTypeData, DstGrid4D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Grid4D_InitInputType), INTENT(IN) :: SrcGrid4D_InitInputTypeData
    TYPE(Grid4D_InitInputType), INTENT(INOUT) :: DstGrid4D_InitInputTypeData
@@ -1869,137 +995,79 @@ CONTAINS
 NULLIFY(Grid4D_InitInputTypeData%Vel)
  END SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType
 
- SUBROUTINE InflowWind_IO_PackGrid4D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Grid4D_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackGrid4D_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
-      Re_BufSz   = Re_BufSz   + SIZE(InData%delta)  ! delta
-      Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Grid4D_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid4D_InitInputType'
+   logical         :: PtrInIndex
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! n
+   call RegPack(Buf, InData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegPack(Buf, InData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegPack(Buf, InData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Vel
+   call RegPack(Buf, associated(InData%Vel))
+   if (associated(InData%Vel)) then
+      call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))
+      call RegPackPointer(Buf, c_loc(InData%Vel), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call RegPack(Buf, InData%Vel)
+      end if
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    DO i1 = LBOUND(InData%n,1), UBOUND(InData%n,1)
-      IntKiBuf(Int_Xferred) = InData%n(i1)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%delta,1), UBOUND(InData%delta,1)
-      ReKiBuf(Re_Xferred) = InData%delta(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%pZero,1), UBOUND(InData%pZero,1)
-      ReKiBuf(Re_Xferred) = InData%pZero(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
- END SUBROUTINE InflowWind_IO_PackGrid4D_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackGrid4D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Grid4D_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    i1_l = LBOUND(OutData%n,1)
-    i1_u = UBOUND(OutData%n,1)
-    DO i1 = LBOUND(OutData%n,1), UBOUND(OutData%n,1)
-      OutData%n(i1) = IntKiBuf(Int_Xferred)
-      Int_Xferred = Int_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%delta,1)
-    i1_u = UBOUND(OutData%delta,1)
-    DO i1 = LBOUND(OutData%delta,1), UBOUND(OutData%delta,1)
-      OutData%delta(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%pZero,1)
-    i1_u = UBOUND(OutData%pZero,1)
-    DO i1 = LBOUND(OutData%pZero,1), UBOUND(OutData%pZero,1)
-      OutData%pZero(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-  NULLIFY(OutData%Vel)
- END SUBROUTINE InflowWind_IO_UnPackGrid4D_InitInputType
-
+subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Grid4D_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
+   integer(IntKi)  :: LB(5), UB(5)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
+   if (Buf%ErrStat /= ErrID_None) return
+   ! n
+   call RegUnpack(Buf, OutData%n)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! delta
+   call RegUnpack(Buf, OutData%delta)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! pZero
+   call RegUnpack(Buf, OutData%pZero)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Vel
+   if (associated(OutData%Vel)) deallocate(OutData%Vel)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 5, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vel, UB(1:5)-LB(1:5))
+         OutData%Vel(LB(1):,LB(2):,LB(3):,LB(4):,LB(5):) => OutData%Vel
+      else
+         allocate(OutData%Vel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)),stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vel)
+         call RegUnpack(Buf, OutData%Vel)
+         if (RegCheckErr(Buf, RoutineName)) return
+      end if
+   else
+      OutData%Vel => null()
+   end if
+end subroutine
  SUBROUTINE InflowWind_IO_CopyPoints_InitInputType( SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Points_InitInputType), INTENT(IN) :: SrcPoints_InitInputTypeData
    TYPE(Points_InitInputType), INTENT(INOUT) :: DstPoints_InitInputTypeData
@@ -2032,102 +1100,25 @@ NULLIFY(Grid4D_InitInputTypeData%Vel)
 
  END SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType
 
- SUBROUTINE InflowWind_IO_PackPoints_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Points_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_PackPoints_InitInputType'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NumWindPoints
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine InflowWind_IO_PackPoints_InitInputType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Points_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'InflowWind_IO_PackPoints_InitInputType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! NumWindPoints
+   call RegPack(Buf, InData%NumWindPoints)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%NumWindPoints
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE InflowWind_IO_PackPoints_InitInputType
-
- SUBROUTINE InflowWind_IO_UnPackPoints_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Points_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackPoints_InitInputType'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%NumWindPoints = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE InflowWind_IO_UnPackPoints_InitInputType
-
+subroutine InflowWind_IO_UnPackPoints_InitInputType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Points_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackPoints_InitInputType'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! NumWindPoints
+   call RegUnpack(Buf, OutData%NumWindPoints)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 END MODULE InflowWind_IO_Types
 !ENDOFREGISTRYGENERATEDFILE

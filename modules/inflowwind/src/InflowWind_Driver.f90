@@ -862,7 +862,7 @@ end if
 !FFT calculations occur here.  Output to file.
 
 
-
+   call PackAndSave()
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- We are done, so close everything down -=-=-
@@ -925,8 +925,6 @@ end if
       CALL WrScr(' InflowWind_End call 3 of 3:    ok')
    ENDIF
 
-
-
    CALL DriverCleanup()
 
 CONTAINS
@@ -944,6 +942,25 @@ CONTAINS
 
 
    END SUBROUTINE DriverCleanup
+
+   subroutine PackAndSave()
+      type(PackBuffer) :: BufOut, BufIn
+      integer(IntKi) :: unit
+      TYPE(InflowWind_ParameterType) :: IfW_p  
+
+      call InitPackBuffer(BufOut, ErrStat, ErrMsg)
+      call InflowWind_PackParam(BufOut, InflowWind_p)
+      call GetNewUnit(unit, ErrStat, ErrMsg)
+      call OpenBOutFile(unit, 'pack.bin', ErrStat, ErrMsg)
+      call WritePackBuffer(BufOut, unit, ErrStat, ErrMsg)
+      close(unit)
+
+      call OpenBInpFile(unit, 'pack.bin', ErrStat, ErrMsg)
+      call ReadPackBuffer(BufIn, unit, ErrStat, ErrMsg)
+      call InflowWind_UnPackParam(BufIn, IfW_p)
+      close(unit)
+
+   end subroutine
 
 
 END PROGRAM InflowWind_Driver

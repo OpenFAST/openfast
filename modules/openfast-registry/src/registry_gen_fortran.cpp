@@ -1,4 +1,5 @@
 #include <fstream>
+#include <algorithm>
 
 #include "registry.hpp"
 #include "templates.hpp"
@@ -64,6 +65,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
     auto file_name = mod.name + "_Types.f90";
     auto file_path = out_dir + "/" + file_name;
     std::cerr << "generating " << file_name << std::endl;
+    bool is_NWTC_Library = false;
 
     // Open file, exit if error
     std::ofstream w(file_path);
@@ -83,7 +85,8 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
     // If this is the NWTC Library, we're not going to print "USE NWTC_Library"
     if (tolower(mod.name).compare("nwtc_library") == 0)
-        w << "USE SysSubs\n";
+        w << "USE SysSubs\n"
+          << "USE ModReg\n";
     else
         w << "USE NWTC_Library\n";
 
@@ -523,630 +526,305 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
 {
     auto ddt_data = ddt.name_short + "Data";
     auto routine_name = mod.nickname + "_Pack" + ddt.name_short;
+    std::string indent("\n");
 
-    w << " SUBROUTINE " << routine_name
-      << "( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )\n";
-    w << "  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)\n";
-    w << "  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)\n";
-    w << "  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)\n";
-    w << "  TYPE(" << ddt.type_fortran << "),  INTENT(IN) :: InData\n";
-    w << "  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat\n";
-    w << "  CHARACTER(*),     INTENT(  OUT) :: ErrMsg\n";
-    w << "  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly\n";
-    w << "    ! Local variables\n";
-    w << "  INTEGER(IntKi)                 :: Re_BufSz\n";
-    w << "  INTEGER(IntKi)                 :: Re_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: Db_BufSz\n";
-    w << "  INTEGER(IntKi)                 :: Db_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: Int_BufSz\n";
-    w << "  INTEGER(IntKi)                 :: Int_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5\n";
-    w << "  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers\n";
-    w << "  INTEGER(IntKi)                 :: ErrStat2\n";
-    w << "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n";
-    w << "  CHARACTER(*), PARAMETER        :: RoutineName = '" << routine_name << "'\n";
+    bool has_alloc = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                                 { return f.is_allocatable; });
+    bool has_ptr = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                               { return f.is_pointer; });
+    bool has_ddt_array = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                                     { return f.data_type->tag == DataType::Tag::Derived && f.rank > 0; });
 
-    w << " ! buffers to store subtypes, if any\n";
-    w << "  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)\n";
-    w << "  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)\n";
-    w << "  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)\n\n";
-
-    w << "  OnlySize = .FALSE.\n";
-    w << "  IF ( PRESENT(SizeOnly) ) THEN\n";
-    w << "    OnlySize = SizeOnly\n";
-    w << "  ENDIF\n";
-    w << "    !\n";
-
-    w << "  ErrStat = ErrID_None\n";
-    w << "  ErrMsg  = \"\"\n";
-    w << "  Re_BufSz  = 0\n";
-    w << "  Db_BufSz  = 0\n";
-    w << "  Int_BufSz  = 0\n";
-
-    bool frst = true;
-
-    // Loop through fields in derived data type
-    for (auto &field : ddt.fields)
+    w << indent << "subroutine " << routine_name << "(Buf, Indata)";
+    indent += "   ";
+    w << indent << "type(PackBuffer), intent(inout) :: Buf";
+    w << indent << "type(" << ddt.type_fortran << "), intent(in) :: InData";
+    w << indent << "character(*), parameter         :: RoutineName = '" << routine_name << "'";
+    if (has_ddt_array)
     {
-        // Skip non-target pointer fields
-        if (field.is_pointer && !field.is_target)
-            continue;
-
-        auto assoc_alloc = field.is_pointer ? "ASSOCIATED" : "ALLOCATED";
-        auto field_dims = field.name + dimstr(field.rank);
-
-        // If this field is allocatable
-        if (field.is_allocatable)
-        {
-            w << "  Int_BufSz   = Int_BufSz   + 1     ! " << field.name << " allocated yes/no\n";
-            w << "  IF ( " << assoc_alloc << "(InData%" << field.name << ") ) THEN\n";
-            w << "    Int_BufSz   = Int_BufSz   + 2*" << field.rank << "  ! " << field.name
-              << " upper/lower bounds for each dimension\n";
-        }
-
-        //  call individual routines to pack data from subtypes:
-        if (field.data_type->tag == DataType::Tag::Derived)
-        {
-            auto &field_ddt = field.data_type->derived;
-            if (frst)
-            {
-                w << "   ! Allocate buffers for subtypes, if any (we'll get sizes from these) \n";
-                frst = false;
-            }
-
-            // Loop through dims and generate DO loops
-            for (int d = field.rank; d >= 1; d--)
-                w << "    DO i" << d << " = LBOUND(InData%" << field.name << "," << d
-                  << "), UBOUND(InData%" << field.name << "," << d << ")\n";
-
-            // Increment buffer size to store allocated flag, lower bound, upper bound
-            w << "      Int_BufSz   = Int_BufSz + 3  ! " << field.name
-              << ": size of buffers for each call to pack subtype\n";
-
-            // Call pack function based on type
-            if (field_ddt.name.compare("MeshType") == 0)
-            {
-                w << "      CALL MeshPack( InData%" << field_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! " << field.name
-                  << " \n";
-            }
-            else if (field_ddt.name.compare("DLL_Type") == 0)
-            {
-                w << "      CALL DLLTypePack( InData%" << field_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! " << field.name
-                  << " \n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Derived)
-            {
-                w << "      CALL " << field_ddt.module->nickname << "_Pack" << field_ddt.name_short
-                  << "( Re_Buf, Db_Buf, Int_Buf, InData%" << field_dims
-                  << ", ErrStat2, ErrMsg2, .TRUE. ) ! " << field.name << " \n";
-            }
-
-            w << "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n";
-            w << "        IF (ErrStat >= AbortErrLev) RETURN\n\n";
-
-            w << "      IF(ALLOCATED(Re_Buf)) THEN ! " << field.name << "\n";
-            w << "         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )\n";
-            w << "         DEALLOCATE(Re_Buf)\n";
-            w << "      END IF\n";
-
-            w << "      IF(ALLOCATED(Db_Buf)) THEN ! " << field.name << "\n";
-            w << "         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )\n";
-            w << "         DEALLOCATE(Db_Buf)\n";
-            w << "      END IF\n";
-
-            w << "      IF(ALLOCATED(Int_Buf)) THEN ! " << field.name << "\n";
-            w << "         Int_BufSz = Int_BufSz + SIZE( Int_Buf )\n";
-            w << "         DEALLOCATE(Int_Buf)\n";
-            w << "      END IF\n";
-
-            for (int d = field.rank; d >= 1; d--)
-                w << "    END DO\n";
-        }
-        // intrinsic data types
-        else
-        {
-            // do all dimensions of arrays (no need for loop over i%d)
-
-            std::string size = field.rank > 0 ? "SIZE(InData%" + field.name + ")" : "1";
-
-            if (field.data_type->tag == DataType::Tag::Real)
-            {
-                if (field.data_type->basic.bit_size == 64)
-                    w << "      Db_BufSz   = Db_BufSz   + " << size << "  ! " << field.name << "\n";
-                else
-                    w << "      Re_BufSz   = Re_BufSz   + " << size << "  ! " << field.name << "\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Integer ||
-                     field.data_type->tag == DataType::Tag::Logical)
-            {
-                w << "      Int_BufSz  = Int_BufSz  + " << size << "  ! " << field.name << "\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Character)
-            {
-                w << "      Int_BufSz  = Int_BufSz  + " << size << "*LEN(InData%" << field.name
-                  << ")  ! " << field.name << "\n";
-            }
-        }
-
-        // Close IF ALLOCATED statement
-        if (field.is_allocatable)
-            w << "  END IF\n";
+        w << indent << "integer(IntKi)  :: ";
+        for (int i = 1; i <= ddt.max_rank; i++)
+            w << (i > 1 ? ", " : "") << "i" << i;
+        w << "";
+        w << indent << "integer(IntKi)  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+    }
+    if (has_ptr)
+    {
+        w << indent << "logical         :: PtrInIndex";
     }
 
-    // Allocate buffers
-    w << "  IF ( Re_BufSz  .GT. 0 ) THEN \n";
-    w << "     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )\n";
-    w << "     IF (ErrStat2 /= 0) THEN \n";
-    w << "       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "       RETURN\n";
-    w << "     END IF\n";
-    w << "  END IF\n";
-
-    w << "  IF ( Db_BufSz  .GT. 0 ) THEN \n";
-    w << "     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )\n";
-    w << "     IF (ErrStat2 /= 0) THEN \n";
-    w << "       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "       RETURN\n";
-    w << "     END IF\n";
-    w << "  END IF\n";
-
-    w << "  IF ( Int_BufSz  .GT. 0 ) THEN \n";
-    w << "     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )\n";
-    w << "     IF (ErrStat2 /= 0) THEN \n";
-    w << "       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "       RETURN\n";
-    w << "     END IF\n";
-    w << "  END IF\n";
-    w << "  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)\n\n";
+    w << indent << "if (Buf%ErrStat >= AbortErrLev) return";
 
     if (gen_c_code)
     {
-        w << "  IF (C_ASSOCIATED(InData%C_obj%object)) ";
-        w << "CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)\n\n";
+        w << indent << "if (c_associated(InData%C_obj%object)) then";
+        w << indent << "   call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)";
+        w << indent << "   return";
+        w << indent << "end if";
     }
-
-    w << "  Re_Xferred  = 1\n";
-    w << "  Db_Xferred  = 1\n";
-    w << "  Int_Xferred = 1\n\n";
-
-    std::string mainIndent = "";
 
     // Pack data
     for (auto &field : ddt.fields)
     {
-        // Skip pack non-target pointer fields
-        if (field.is_pointer && !field.is_target)
-            continue;
+        auto assoc_alloc = field.is_pointer ? "associated" : "allocated";
+        auto var = "InData%" + field.name;
 
-        auto assoc_alloc = field.is_pointer ? "ASSOCIATED" : "ALLOCATED";
-        auto field_dims = field.name + dimstr(field.rank);
+        w << indent << "! " << field.name;
 
         if (field.is_allocatable)
         {
-            // store whether the data type is allocated and the bounds of each dimension
-            w << "  IF ( .NOT. " << assoc_alloc << "(InData%" << field.name << ") ) THEN\n";
-            w << "    IntKiBuf( Int_Xferred ) = 0\n"; // not allocated
-            w << "    Int_Xferred = Int_Xferred + 1\n";
-            w << "  ELSE\n";
-            w << "    IntKiBuf( Int_Xferred ) = 1\n"; // allocated
-            w << "    Int_Xferred = Int_Xferred + 1\n";
-            for (int d = 1; d <= field.rank; d++)
+            w << indent << "call RegPack(Buf, " << assoc_alloc << "(" << var << "))";
+            w << indent << "if (" << assoc_alloc << "(" << var << ")) then";
+            indent += "   ";
+            if (field.rank > 0)
             {
-                w << "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%" << field.name << "," << d
-                  << ")\n";
-                w << "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%" << field.name << "," << d
-                  << ")\n";
-                w << "    Int_Xferred = Int_Xferred + 2\n";
+                w << indent << "call RegPackBounds(Buf, " << field.rank << ", lbound(" << var << "), ubound(" << var << "))";
             }
-            w << "\n";
-            mainIndent = "  ";
         }
-        else
+        if (field.is_pointer)
         {
-            mainIndent = "";
+            w << indent << "call RegPackPointer(Buf, c_loc(" << var << "), PtrInIndex)";
+            w << indent << "if (.not. PtrInIndex) then";
+            indent += "   ";
         }
 
         //  call individual routines to pack data from subtypes:
         if (field.data_type->tag == DataType::Tag::Derived)
         {
-            if (frst == 1)
+            auto field_dims = var + dimstr(field.rank);
+
+            if (field.rank > 0)
             {
-                w << "   ! Allocate buffers for subtypes, if any (we'll get sizes from these) \n";
-                frst = false;
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ")";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ")";
             }
 
             for (int d = field.rank; d >= 1; d--)
             {
-                w << "    DO i" << d << " = LBOUND(InData%" << field.name << "," << d
-                  << "), UBOUND(InData%" << field.name << "," << d << ")\n";
+                w << indent << "do i" << d << " = LB(" << d << "), UB(" << d << ")";
+                indent += "   ";
             }
 
             if (field.data_type->derived.name.compare("MeshType") == 0)
             {
-                w << "      CALL MeshPack( InData%" << field_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! " << field.name
-                  << " \n";
+                w << indent << "call MeshPack(Buf, " << field_dims << ") ";
             }
             else if (field.data_type->derived.name.compare("DLL_Type") == 0)
             {
-                w << "      CALL DLLTypePack( InData%" << field_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, OnlySize ) ! " << field.name
-                  << " \n";
+                w << indent << "call DLLTypePack(Buf, " << field_dims << ") ";
             }
             else
             {
-                w << "      CALL " << field.data_type->derived.module->nickname << "_Pack"
-                  << field.data_type->derived.name_short << "( Re_Buf, Db_Buf, Int_Buf, InData%" << field_dims
-                  << ", ErrStat2, ErrMsg2, OnlySize ) ! " << field.name << " \n";
+                w << indent << "call " << field.data_type->derived.module->nickname << "_Pack"
+                  << field.data_type->derived.name_short << "(Buf, " << field_dims << ") ";
             }
-
-            w << "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n";
-            w << "        IF (ErrStat >= AbortErrLev) RETURN\n\n";
-
-            w << "      IF(ALLOCATED(Re_Buf)) THEN\n";
-            w << "        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1\n";
-            w << "        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf\n";
-            w << "        Re_Xferred = Re_Xferred + SIZE(Re_Buf)\n";
-            w << "        DEALLOCATE(Re_Buf)\n";
-            w << "      ELSE\n";
-            w << "        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1\n";
-            w << "      ENDIF\n";
-
-            w << "      IF(ALLOCATED(Db_Buf)) THEN\n";
-            w << "        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1\n";
-            w << "        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf\n";
-            w << "        Db_Xferred = Db_Xferred + SIZE(Db_Buf)\n";
-            w << "        DEALLOCATE(Db_Buf)\n";
-            w << "      ELSE\n";
-            w << "        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1\n";
-            w << "      ENDIF\n";
-
-            w << "      IF(ALLOCATED(Int_Buf)) THEN\n";
-            w << "        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1\n";
-            w << "        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf\n";
-            w << "        Int_Xferred = Int_Xferred + SIZE(Int_Buf)\n";
-            w << "        DEALLOCATE(Int_Buf)\n";
-            w << "      ELSE\n";
-            w << "        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1\n";
-            w << "      ENDIF\n";
 
             for (int d = field.rank; d >= 1; d--)
             {
-                w << "    END DO\n";
+                indent = indent.substr(0, indent.size() - 3);
+                w << indent << "end do";
             }
         }
         else
         {
-            // intrinsic data types
-            // do all dimensions of arrays (no need for loop over i%d)
-            auto indent = "  " + mainIndent;
+            // Intrinsic types are handled by generic Pack method on buffer
+            w << indent << "call RegPack(Buf, " << var << ")";
+        }
 
-            for (int d = field.rank; d >= 1; d--)
-            {
-                w << indent << "  DO i" << d << " = LBOUND(InData%" << field.name << "," << d
-                  << "), UBOUND(InData%" << field.name << "," << d << ")\n";
-                indent += "  ";
-            }
-
-            if (field.data_type->tag == DataType::Tag::Real)
-            {
-                if (field.data_type->basic.bit_size == 64)
-                {
-                    w << indent << "  DbKiBuf(Db_Xferred) = InData%" << field_dims << "\n";
-                    w << indent << "  Db_Xferred = Db_Xferred + 1\n";
-                }
-                else
-                {
-                    w << indent << "  ReKiBuf(Re_Xferred) = InData%" << field_dims << "\n";
-                    w << indent << "  Re_Xferred = Re_Xferred + 1\n";
-                }
-            }
-            else if (field.data_type->tag == DataType::Tag::Integer)
-            {
-                w << indent << "  IntKiBuf(Int_Xferred) = InData%" << field_dims << "\n";
-                w << indent << "  Int_Xferred = Int_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Logical)
-            {
-                w << indent << "  IntKiBuf(Int_Xferred) = TRANSFER(InData%" << field_dims
-                  << ", IntKiBuf(1))\n";
-                w << indent << "  Int_Xferred = Int_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Character)
-            {
-                w << indent << "  DO I = 1, LEN(InData%" << field.name << ")\n";
-                w << indent << "    IntKiBuf(Int_Xferred) = ICHAR(InData%" << field_dims
-                  << "(I:I), IntKi)\n";
-                w << indent << "    Int_Xferred = Int_Xferred + 1\n";
-                w << indent << "  END DO ! I\n";
-            }
-
-            for (int d = field.rank; d >= 1; d--)
-            {
-                indent = "  " + mainIndent;
-                for (int i = 1; i < d; i++)
-                    indent += "  ";
-                w << indent << "  END DO\n";
-            }
+        if (field.is_pointer)
+        {
+            indent = indent.substr(0, indent.size() - 3);
+            w << indent << "end if";
         }
 
         if (field.is_allocatable)
-            w << "  END IF\n";
+        {
+            indent = indent.substr(0, indent.size() - 3);
+            w << indent << "end if";
+        }
+
+        // Check for errors after packing each variable
+        w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
     }
 
-    w << " END SUBROUTINE " << routine_name << "\n\n";
+    indent = indent.substr(0, indent.size() - 3);
+    w << indent << "end subroutine";
+    w << indent;
 }
 
 void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt, bool gen_c_code)
 {
     auto routine_name = mod.nickname + "_UnPack" + ddt.name_short;
+    std::string indent("\n");
 
-    w << " SUBROUTINE " << routine_name
-      << "( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )\n";
-    w << "  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)\n";
-    w << "  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)\n";
-    w << "  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)\n";
-    w << "  TYPE(" << ddt.type_fortran << "), INTENT(INOUT) :: OutData\n";
-    w << "  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n";
-    w << "  CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n";
-    w << "    ! Local variables\n";
-    w << "  INTEGER(IntKi)                 :: Buf_size\n";
-    w << "  INTEGER(IntKi)                 :: Re_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: Db_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: Int_Xferred\n";
-    w << "  INTEGER(IntKi)                 :: i\n";
-    for (int d = 1; d <= ddt.max_rank; d++)
+    bool has_alloc = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                                 { return f.is_allocatable; });
+    bool has_ptr = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                               { return f.is_pointer; });
+    bool has_ddt_array = std::any_of(ddt.fields.begin(), ddt.fields.end(), [](Field f)
+                                     { return f.data_type->tag == DataType::Tag::Derived && f.rank > 0; });
+
+    w << indent << "subroutine " << routine_name << "(Buf, OutData)";
+    indent += "   ";
+    w << indent << "type(PackBuffer), intent(inout)    :: Buf";
+    w << indent << "type(" << ddt.type_fortran << "), intent(inout) :: OutData";
+    w << indent << "character(*), parameter            :: RoutineName = '" << routine_name << "'";
+    if (has_ddt_array)
     {
-        w << "  INTEGER(IntKi)                 :: i" << d << ", i" << d << "_l, i" << d
-          << "_u  !  bounds (upper/lower) for an array dimension " << d << "\n";
+        w << indent << "integer(IntKi)  :: ";
+        for (int i = 1; i <= ddt.max_rank; i++)
+            w << (i > 1 ? ", " : "") << "i" << i;
+        w << "";
     }
-    w << "  INTEGER(IntKi)                 :: ErrStat2\n";
-    w << "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n";
-    w << "  CHARACTER(*), PARAMETER        :: RoutineName = '" << routine_name << "'\n";
-
-    w << " ! buffers to store meshes, if any\n";
-    w << "  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)\n";
-    w << "  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)\n";
-    w << "  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)\n";
-    w << "    !\n";
-    w << "  ErrStat = ErrID_None\n";
-    w << "  ErrMsg  = \"\"\n";
-    w << "  Re_Xferred  = 1\n";
-    w << "  Db_Xferred  = 1\n";
-    w << "  Int_Xferred  = 1\n";
+    if (has_ddt_array || has_alloc)
+    {
+        w << indent << "integer(IntKi)  :: LB(" << ddt.max_rank << "), UB(" << ddt.max_rank << ")";
+    }
+    if (has_alloc)
+    {
+        w << indent << "integer(IntKi)  :: stat";
+        w << indent << "logical         :: IsAllocAssoc";
+    }
+    if (has_ptr)
+    {
+        w << indent << "integer(IntKi)  :: PtrIdx";
+        w << indent << "type(c_ptr)     :: Ptr";
+    }
+    w << indent << "if (Buf%ErrStat /= ErrID_None) return";
 
     // BJJ: TODO:  if there are C types, we're going to have to associate with C data structures....
 
     // Loop through fields and generate code to unpack data
     for (auto &field : ddt.fields)
     {
-        std::string mainIndent;
         auto field_dims = field.name + dimstr(field.rank);
         std::string var = "OutData%" + field.name;
         std::string var_dims = "OutData%" + field.name + dimstr(field.rank);
         std::string var_c = "OutData%C_obj%" + field.name;
+        auto assoc_alloc = field.is_pointer ? "associated" : "allocated";
 
-        // Nullify non-target pointer fields and continue
-        if (field.is_pointer && !field.is_target)
+        w << indent << "! " << field.name << "";
+
+        if (field.is_allocatable)
         {
-            w << "  NULLIFY(" << var << ")\n";
-            continue;
+            w << indent << "if (" << assoc_alloc << "(" << var << ")) deallocate(" << var << ")";
+            w << indent << "call RegUnpack(Buf, IsAllocAssoc)";
+            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            w << indent << "if (IsAllocAssoc) then";
+            indent += "   ";
+            if (field.rank > 0)
+            {
+                w << indent << "call RegUnpackBounds(Buf, " << field.rank << ", LB, UB)";
+                w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            }
+        }
+
+        if (field.is_pointer)
+        {
+            w << indent << "call RegUnpackPointer(Buf, Ptr, PtrIdx)";
+            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
+            w << indent << "if (c_associated(Ptr)) then";
+            if (field.rank == 0)
+            {
+                w << indent << "   call c_f_pointer(Ptr, " << var << ")";
+            }
+            else
+            {
+                auto rank = std::to_string(field.rank);
+                w << indent << "   call c_f_pointer(Ptr, " << var << ", UB(1:" << rank << ")-LB(1:" << rank << "))";
+                std::string remap_dims;
+                for (int d = 1; d <= field.rank; d++)
+                    remap_dims += std::string(d > 1 ? "," : "") + "LB(" + std::to_string(d) + "):";
+                w << indent << "   " << var << "(" << remap_dims << ") => " << var;
+            }
+            w << indent << "else";
+            indent += "   ";
         }
 
         if (field.is_allocatable)
         {
-            auto assoc_alloc = field.is_pointer ? "ASSOCIATED" : "ALLOCATED";
-
-            // determine if the array was allocated when packed:
-            w << "  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! " << field.name
-              << " not allocated\n";
-            w << "    Int_Xferred = Int_Xferred + 1\n";
-            w << "  ELSE\n";
-            w << "    Int_Xferred = Int_Xferred + 1\n";
-
             std::string dims;
             for (int d = 1; d <= field.rank; d++)
-            {
-                w << "    i" << d << "_l = IntKiBuf( Int_Xferred    )\n";
-                w << "    i" << d << "_u = IntKiBuf( Int_Xferred + 1)\n";
-                w << "    Int_Xferred = Int_Xferred + 2\n";
-                dims += (d == 1 ? "(i" : "i") + std::to_string(d) + "_l:i" +
-                        std::to_string(d) + "_u" + (d == field.rank ? ")" : ",");
-            }
-
-            w << "    IF (" << assoc_alloc << "(" << var << ")) DEALLOCATE(" << var << ")\n";
-            w << "    ALLOCATE(" << var << dims << ",STAT=ErrStat2)\n";
-            w << "    IF (ErrStat2 /= 0) THEN \n";
-            w << "       CALL SetErrStat(ErrID_Fatal, 'Error allocating " << var
-              << ".', ErrStat, ErrMsg,RoutineName)\n";
-            w << "       RETURN\n";
-            w << "    END IF\n";
-
-            // bjj: this needs to be updated if we've got multiple dimension arrays
-            if (gen_c_code && field.is_pointer)
-            {
-                w << "    " << var_c << "_Len = SIZE(" << var << ")\n";
-                w << "    IF (" << var_c << "_Len > 0) &\n";
-                w << "       " << var_c << " = C_LOC( " << var << "(";
-                for (int d = 1; d <= field.rank; d++)
-                    w << (d > 1 ? "," : "") << " i" << d << "_l";
-                w << " ) )\n";
-            }
-            mainIndent = "  ";
+                dims += std::string(d == 1 ? "(" : "") + "LB(" + std::to_string(d) + ")" +
+                        ":UB(" + std::to_string(d) + ")" + (d < field.rank ? "," : ")");
+            w << indent << "allocate(" << var << dims << ",stat=stat)";
+            w << indent << "if (stat /= 0) then ";
+            w << indent << "   call SetErrStat(ErrID_Fatal, 'Error allocating " << var << ".', Buf%ErrStat, Buf%ErrMsg, RoutineName)";
+            w << indent << "   return";
+            w << indent << "end if";
         }
-        else
+
+        // If this is a pointer, set pointer in buffer pointer index
+        if (field.is_pointer)
         {
-            for (int d = 1; d <= field.rank; d++)
-            {
-                w << "    i" << d << "_l = LBOUND(" << var << "," << d << ")\n";
-                w << "    i" << d << "_u = UBOUND(" << var << "," << d << ")\n";
-            }
-            mainIndent = "";
+            w << indent << "Buf%Pointers(PtrIdx) = c_loc(" << var << ")";
         }
 
-        // Call individual routines to pack data from subtypes:
+        // bjj: this needs to be updated if we've got multiple dimension arrays
+        if (gen_c_code && field.is_pointer)
+        {
+            w << indent << var_c << "_Len = size(" << var << ")";
+            w << indent << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";
+            for (int d = 1; d <= field.rank; d++)
+                w << (d > 1 ? "," : "") << "LB(" << d << ")";
+            w << "))";
+        }
+
+        // Call individual routines to unpack data from subtypes:
         if (field.data_type->tag == DataType::Tag::Derived)
         {
-            for (int d = field.rank; d >= 1; d--)
+            // Get bounds for non-allocated field
+            if (field.rank > 0 && !field.is_allocatable)
             {
-                w << "    DO i" << d << " = LBOUND(" << var << "," << d << "), UBOUND(" << var
-                  << "," << d << ")\n";
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << var << ")";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << var << ")";
             }
 
-            // initialize buffers to send to subtype-unpack routines:
-
-            // reals:
-            w << "      Buf_size=IntKiBuf( Int_Xferred )\n";
-            w << "      Int_Xferred = Int_Xferred + 1\n";
-            w << "      IF(Buf_size > 0) THEN\n";
-            w << "        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)\n";
-            w << "        IF (ErrStat2 /= 0) THEN \n";
-            w << "           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)\n";
-            w << "           RETURN\n";
-            w << "        END IF\n";
-            w << "        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )\n";
-            w << "        Re_Xferred = Re_Xferred + Buf_size\n";
-            w << "      END IF\n";
-
-            // doubles:
-            w << "      Buf_size=IntKiBuf( Int_Xferred )\n";
-            w << "      Int_Xferred = Int_Xferred + 1\n";
-            w << "      IF(Buf_size > 0) THEN\n";
-            w << "        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)\n";
-            w << "        IF (ErrStat2 /= 0) THEN \n";
-            w << "           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)\n";
-            w << "           RETURN\n";
-            w << "        END IF\n";
-            w << "        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )\n";
-            w << "        Db_Xferred = Db_Xferred + Buf_size\n";
-            w << "      END IF\n";
-
-            // integers:
-            w << "      Buf_size=IntKiBuf( Int_Xferred )\n";
-            w << "      Int_Xferred = Int_Xferred + 1\n";
-            w << "      IF(Buf_size > 0) THEN\n";
-            w << "        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)\n";
-            w << "        IF (ErrStat2 /= 0) THEN \n";
-            w << "           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)\n";
-            w << "           RETURN\n";
-            w << "        END IF\n";
-            w << "        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )\n";
-            w << "        Int_Xferred = Int_Xferred + Buf_size\n";
-            w << "      END IF\n";
+            for (int d = field.rank; d >= 1; d--)
+            {
+                w << indent << "do i" << d << " = LB(" << d << "), UB(" << d << ")";
+                indent += "   ";
+            }
 
             if (field.data_type->derived.name.compare("MeshType") == 0)
             {
-                w << "      CALL MeshUnpack( " << var_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! " << field.name << " \n";
+                w << indent << "call MeshUnpack(Buf, " << var_dims << ") ! " << field.name << " ";
             }
             else if (field.data_type->derived.name.compare("DLL_Type") == 0)
             {
-                w << "      CALL DLLTypeUnpack( " << var_dims
-                  << ", Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! " << field.name << " \n";
+                w << indent << "call DLLTypeUnpack(Buf, " << var_dims << ") ! " << field.name << " ";
             }
             else
             {
-                w << "      CALL " << field.data_type->derived.module->nickname << "_Unpack"
-                  << field.data_type->derived.name_short << "( Re_Buf, Db_Buf, Int_Buf, " << var_dims
-                  << ", ErrStat2, ErrMsg2 ) ! " << field.name << " \n";
+                w << indent << "call " << field.data_type->derived.module->nickname << "_Unpack"
+                  << field.data_type->derived.name_short << "(Buf, " << var_dims << ") ! " << field.name << " ";
             }
-            w << "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n";
-            w << "        IF (ErrStat >= AbortErrLev) RETURN\n\n";
-            w << "      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )\n";
-            w << "      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )\n";
-            w << "      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)\n";
 
             for (int d = field.rank; d >= 1; d--)
-                w << "    END DO\n";
+            {
+                indent = indent.substr(0, indent.size() - 3);
+                w << indent << "end do";
+            }
         }
         else
         {
-            auto indent = "  " + mainIndent;
-            for (int d = field.rank; d >= 1; d--)
-            {
-                w << indent << "  DO i" << d << " = LBOUND(" << var << "," << d
-                  << "), UBOUND(OutData%" << field.name << "," << d << ")\n";
-                indent += "  ";
-            }
-
-            if (field.data_type->tag == DataType::Tag::Real &&
-                field.data_type->basic.bit_size <= 32)
-            {
-                if (gen_c_code && field.is_pointer)
-                {
-                    w << indent << "  " << var_dims << " = REAL(ReKiBuf(Re_Xferred), C_FLOAT)\n";
-                }
-                else if (field.data_type->basic.bit_size == 32)
-                {
-                    w << indent << "  " << var_dims << " = REAL(ReKiBuf(Re_Xferred), SiKi)\n";
-                }
-                else
-                {
-                    w << indent << "  " << var_dims << " = ReKiBuf(Re_Xferred)\n";
-                }
-                w << indent << "  Re_Xferred = Re_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Real &&
-                     field.data_type->basic.bit_size == 64)
-            {
-                if (gen_c_code && field.is_pointer)
-                {
-                    w << indent << "  " << var_dims << " = REAL(DbKiBuf(Db_Xferred), C_DOUBLE)\n";
-                }
-                else if (field.data_type->basic.type_fortran.compare("REAL(R8Ki)") == 0)
-                {
-                    w << indent << "  " << var_dims << " = REAL(DbKiBuf(Db_Xferred), R8Ki)\n";
-                }
-                else
-                {
-                    w << indent << "  " << var_dims << " = DbKiBuf(Db_Xferred)\n";
-                }
-                w << indent << "  Db_Xferred = Db_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Integer)
-            {
-                w << indent << "  " << var_dims << " = IntKiBuf(Int_Xferred)\n";
-                w << indent << "  Int_Xferred = Int_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Logical)
-            {
-                w << indent << "  " << var_dims << " = TRANSFER(IntKiBuf(Int_Xferred), OutData%"
-                  << field_dims << ")\n";
-                w << indent << "  Int_Xferred = Int_Xferred + 1\n";
-            }
-            else if (field.data_type->tag == DataType::Tag::Character)
-            {
-
-                w << indent << "  DO I = 1, LEN(" << var << ")\n";
-                w << indent << "    " << var_dims << "(I:I) = CHAR(IntKiBuf(Int_Xferred))\n";
-                w << indent << "    Int_Xferred = Int_Xferred + 1\n";
-                w << indent << "  END DO ! I\n";
-            }
-
-            for (int d = field.rank; d >= 1; d--)
-            {
-                indent = "  " + mainIndent;
-                for (int i = 1; i < d; i++)
-                    indent += "  ";
-                w << indent << "  END DO\n";
-            }
+            // Intrinsic types are handled by generic unpack method on buffer
+            w << indent << "call RegUnpack(Buf, " << var << ")";
+            w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
 
             // need to move scalars and strings to the %c_obj% type, too!
             // compare with copy routine
             if (gen_c_code && !field.is_pointer && field.rank == 0)
             {
-                std::string var_c = "OutData%C_obj%" + field.name;
                 switch (field.data_type->tag)
                 {
                 case DataType::Tag::Real:
                 case DataType::Tag::Integer:
                 case DataType::Tag::Logical:
-                    w << "      " << var_c << " = " << var << "\n";
+                    w << indent << var_c << " = " << var << "";
                     break;
                 case DataType::Tag::Character:
-                    w << "      " << var_c << " = TRANSFER(" << var << ", " << var_c << " )\n";
+                    w << indent << var_c << " = transfer(" << var << ", " << var_c << " )";
                     break;
                 case DataType::Tag::Derived:
                     break;
@@ -1154,11 +832,27 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
             }
         }
 
+        if (field.is_pointer)
+        {
+            indent = indent.substr(0, indent.size() - 3);
+            w << indent << "end if";
+        }
+
         if (field.is_allocatable)
-            w << "  END IF\n";
+        {
+            indent = indent.substr(0, indent.size() - 3);
+            if (field.is_pointer)
+            {
+                w << indent << "else";
+                w << indent << "   " << var << " => null()";
+            }
+            w << indent << "end if";
+        }
     }
 
-    w << " END SUBROUTINE " << routine_name << "\n\n";
+    indent = indent.substr(0, indent.size() - 3);
+    w << indent << "end subroutine";
+    w << indent;
 }
 
 void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const int order,

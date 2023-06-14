@@ -35,7 +35,7 @@
 !! See https://nwtc.nrel.gov/FAST-Developers and https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf
 MODULE ModMesh
    use VTK, only: WrVTK_header, WrVTK_footer
-
+   USE ModReg
    USE ModMesh_Types
    IMPLICIT NONE
 !   INTEGER :: DEBUG_UNIT = 74
@@ -1507,230 +1507,76 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! buffers when they are no longer needed. For sibling meshes, MeshPack should be called 
 !! separately for each sibling, because the fields allocated with the siblings are separate 
 !! and unique to each sibling.
-   SUBROUTINE MeshPack ( Mesh, ReKiBuf, DbKiBuf, IntKiBuf , ErrStat, ErrMess, SizeOnly )
-   
-     TYPE(MeshType),              INTENT(IN   ) :: Mesh        ! Mesh being packed
-     REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)  ! Real buffer
-     REAL(DbKi),     ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)  ! Double buffer
-     INTEGER(IntKi), ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:) ! Int buffer
-     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
-     CHARACTER(*),                INTENT(  OUT) :: ErrMess
-     LOGICAL,OPTIONAL,            INTENT(IN   ) :: SizeOnly
-     
-   ! Local
-     INTEGER(IntKi)                             :: Re_BufSz      ! number of reals in the buffer
-     INTEGER(IntKi)                             :: Re_Xferred    ! number of reals transferred
-     INTEGER(IntKi)                             :: Db_BufSz      ! number of doubles in the buffer
-     INTEGER(IntKi)                             :: Db_Xferred    ! number of doubles transferred
-     INTEGER(IntKi)                             :: Int_BufSz     ! number of integers in the buffer
-     INTEGER(IntKi)                             :: Int_Xferred   ! number of integers transferred
-   
-   
-     INTEGER i,j, nelemnodes
-     LOGICAL OnlySize
-     INTEGER(IntKi)                             :: ErrStat2
-     !CHARACTER(1024)                            :: ErrMess2
-     CHARACTER(*),      PARAMETER               :: RoutineName = "MeshPack"   
-
-     
-     ErrStat = ErrID_None
-     ErrMess = ""
-     
-     OnlySize = .FALSE.
-     IF ( PRESENT(SizeOnly) ) OnlySize = SizeOnly
-
-
-     ! bjj: figure out what to do about sibling meshes... (for now, I'm going to ignore them)
-     
-     !.........................................
-     ! get number of integer values
-     !.........................................
-      IF (.NOT. Mesh%Initialized) THEN ! we don't need to store any data; it's a blank mesh
-         Int_BufSz = 1
-      ELSE ! initialized, may or may not be committed           
-         Int_BufSz =  3                & ! number of logicals in MeshType (initialized, committed, RemapFlag)
-                     + FIELDMASK_SIZE  & ! number of logicals in MeshType (fieldmask)
-                     + 5                 ! number of non-pointer integers (ios, nnodes, nextelem, nscalars, refNode)
-         
-         !......
-         ! we'll store the element structure (and call MeshCommit on Unpack if necessary to get the remaining fields like det_jac)
-         !......
-         DO i = 1, NELEMKINDS
-
-            Int_BufSz = Int_BufSz+1 ! Mesh%ElemTable(i)%nelem
-            if (Mesh%ElemTable(i)%nelem > 0) Int_BufSz = Int_BufSz+1 ! number of nodes in this kind of element            
-                  
-            DO j = 1, Mesh%ElemTable(i)%nelem            
-               !Int_BufSz = Int_BufSz+1 ! which kind of element 
-               !Int_BufSz = Int_BufSz+1 ! skip Nneighbors until that's implemented (as well as neighbor list)
-               Int_BufSz = Int_BufSz + SIZE( Mesh%ElemTable(i)%Elements(j)%ElemNodes ) ! nodes in this element                     
-            END DO
-         
-         END DO             
-         
-      END IF
+   subroutine MeshPack (Buf, Mesh)
+      type(PackBuffer), intent(inout)  :: Buf
+      type(MeshType), intent(in)       :: Mesh        ! Mesh being packed
       
-     !.........................................
-     ! get number of real values
-     !.........................................
-     Re_BufSz = 0
-     IF (Mesh%Initialized) THEN
-        Re_BufSz = Re_BufSz + Mesh%Nnodes * 3 ! Position
-        !Re_BufSz = Re_BufSz + Mesh%Nnodes * 9 ! RefOrientation
-        IF ( Mesh%FieldMask(MASKID_FORCE) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_MOMENT) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        !IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 9
-        !IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%nScalars .GT. 0 ) Re_BufSz = Re_BufSz + Mesh%Nnodes * Mesh%nScalars
-     END IF
-     
-     !.........................................
-     ! get number of double values (none now)
-     !.........................................
-     Db_BufSz = 0
-     IF (Mesh%Initialized) THEN
-        Db_BufSz = Db_BufSz + Mesh%Nnodes * 9 ! RefOrientation
-        IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Db_BufSz = Db_BufSz + Mesh%Nnodes * 9
-        IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) Db_BufSz = Db_BufSz + Mesh%Nnodes * 3
-     END IF 
-     
-     !.........................................
-     ! allocate buffer arrays
-     !.........................................          
-     IF ( Re_BufSz  .GT. 0 ) THEN 
-        ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-        IF (ErrStat2 /= 0) THEN 
-          CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMess,RoutineName)
-          RETURN
-        END IF
-     END IF
-     IF ( Db_BufSz  .GT. 0 ) THEN 
-        ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-        IF (ErrStat2 /= 0) THEN 
-          CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMess,RoutineName)
-          RETURN
-        END IF
-     END IF
-     IF ( Int_BufSz  .GT. 0 ) THEN 
-        ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-        IF (ErrStat2 /= 0) THEN 
-          CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMess,RoutineName)
-          RETURN
-        END IF
-     END IF
-     IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+      integer                          :: i,j, nelemnodes
+      character(*), parameter          :: RoutineName = "MeshPack"   
 
+      ! bjj: figure out what to do about sibling meshes... (for now, I'm going to ignore them)
+
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
      
-     !.........................................
-     ! store data in buffer arrays
-     !.........................................     
-     Re_Xferred  = 1
-     Db_Xferred  = 1
-     Int_Xferred = 1        
-     
-     ! ..... fill IntKiBuf .....
-     
-      IF (.NOT. Mesh%Initialized) THEN ! we don't need to store any data; it's a blank mesh
-         IntKiBuf(Int_Xferred) = 0; ;  Int_Xferred = Int_Xferred + 1
-      ELSE ! initialized, may or may not be committed                    
-            ! transfer the logicals
-         IntKiBuf(Int_Xferred) = 1;   Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred) = TRANSFER( Mesh%committed, IntKiBuf(1) );  Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1) = TRANSFER( Mesh%fieldmask, IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1) );  Int_Xferred = Int_Xferred + FIELDMASK_SIZE
-         IntKiBuf(Int_Xferred) = TRANSFER( Mesh%RemapFlag, IntKiBuf(1) );  Int_Xferred = Int_Xferred + 1        
-            ! integers
-         IntKiBuf(Int_Xferred) = Mesh%ios;           Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred) = Mesh%nnodes;        Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred) = Mesh%refnode;       Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred) = Mesh%nextelem;      Int_Xferred = Int_Xferred + 1 
-         IntKiBuf(Int_Xferred) = Mesh%nscalars;      Int_Xferred = Int_Xferred + 1 
+      ! Pack if mesh is initialized
+      call RegPack(Buf, Mesh%Initialized)
+
+      ! If mesh is not initialized, return
+      if (.not. Mesh%Initialized) return
+
+      ! Mesh is initialized, but may or may not be committed
+
+      ! Logicals
+      call RegPack(Buf, Mesh%committed)
+      call RegPack(Buf, Mesh%fieldmask)
+      call RegPack(Buf, Mesh%RemapFlag)
+
+      ! Integers
+      call RegPack(Buf, Mesh%ios)
+      call RegPack(Buf, Mesh%nnodes)
+      call RegPack(Buf, Mesh%refnode)
+      call RegPack(Buf, Mesh%nextelem)
+      call RegPack(Buf, Mesh%nscalars)
+      
+      ! Loop through element kinds
+      do i = 1, NELEMKINDS
          
-            ! element structure
-         DO i = 1, NELEMKINDS
+         ! Number of elements of this kind
+         call RegPack(Buf, Mesh%ElemTable(i)%nelem)
+
+         ! If there are elements of this kind
+         if (Mesh%ElemTable(i)%nelem > 0) then
             
-            IntKiBuf(Int_Xferred) = Mesh%ElemTable(i)%nelem;      Int_Xferred = Int_Xferred + 1 ! number of elements
-            
-            if (Mesh%ElemTable(i)%nelem > 0) then
-               nelemnodes = SIZE( Mesh%ElemTable(i)%Elements(1)%ElemNodes );
-               IntKiBuf(Int_Xferred) = nelemnodes; Int_Xferred = Int_Xferred + 1 ! nodes per element
-                                          
-                  ! nodes in this element
-               DO j = 1, Mesh%ElemTable(i)%nelem            
-                  IntKiBuf(Int_Xferred:Int_Xferred+nelemnodes-1) = Mesh%ElemTable(i)%Elements(j)%ElemNodes; Int_Xferred = Int_Xferred + nelemnodes 
-               END DO
-            end if
-         
-         END DO             
-         
-      END IF         
-     
-     ! ..... fill ReKiBuf and DbKiBuf .....
-     IF (Mesh%Initialized) THEN
-         DO i = 1, Mesh%Nnodes ! Position
-            ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Position(:,i); Re_Xferred = Re_Xferred + 3
-         END DO
-         DO i = 1, Mesh%Nnodes ! RefOrientation
-            DO j = 1,3
-               DbKiBuf(Db_Xferred:Db_Xferred+2) = Mesh%RefOrientation(:,j,i); Db_Xferred = Db_Xferred + 3
-            ENDDO
-         END DO
-                
-         IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN ! Force
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Force(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_MOMENT) ) THEN ! Moment
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Moment(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
-            DO i = 1, Mesh%Nnodes 
-               DO j = 1,3
-                  DbKiBuf(Db_Xferred:Db_Xferred+2) = Mesh%Orientation(:,j,i); Db_Xferred = Db_Xferred + 3
-               ENDDO
-            END DO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! TranslationDisp
-            DO i = 1, Mesh%Nnodes
-               DbKiBuf(Db_Xferred:Db_Xferred+2) = Mesh%TranslationDisp(:,i); Db_Xferred = Db_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) THEN ! RotationVel
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RotationVel(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) THEN ! TranslationVel
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%TranslationVel(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) THEN ! RotationAcc
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RotationAcc(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) THEN ! TranslationAcc
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%TranslationAcc(:,i); Re_Xferred = Re_Xferred + 3
-            ENDDO
-         ENDIF
-         
-         IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
-            DO i = 1, Mesh%Nnodes
-               ReKiBuf(Re_Xferred:Re_Xferred+Mesh%nScalars-1) = Mesh%Scalars(:,i); Re_Xferred = Re_Xferred + Mesh%nScalars
-            ENDDO
-         ENDIF         
-         
-     END IF
-     
-     !bjj: where are we keeping track of which ones are siblings so that we can unpack them (set pointers) properly for restart?
+            ! Store number of nodes per element
+            nelemnodes = size(Mesh%ElemTable(i)%Elements(1)%ElemNodes);
+            call RegPack(Buf, nelemnodes)
+
+            ! Loop through nodes of this element type
+            do j = 1, Mesh%ElemTable(i)%nelem      
+               call RegPack(Buf, Mesh%ElemTable(i)%Elements(j)%ElemNodes)
+            end do
+         end if
+      end do
+
+      call RegPack(Buf, Mesh%Position)
+      call RegPack(Buf, Mesh%RefOrientation)
+
+      if (Mesh%fieldmask(MASKID_FORCE))           call RegPack(Buf, Mesh%Force)
+      if (Mesh%fieldmask(MASKID_MOMENT))          call RegPack(Buf, Mesh%Moment)
+      if (Mesh%fieldmask(MASKID_ORIENTATION))     call RegPack(Buf, Mesh%Orientation)
+      if (Mesh%fieldmask(MASKID_TRANSLATIONDISP)) call RegPack(Buf, Mesh%TranslationDisp)
+      if (Mesh%fieldmask(MASKID_ROTATIONVEL))     call RegPack(Buf, Mesh%RotationVel)
+      if (Mesh%fieldmask(MASKID_TRANSLATIONVEL))  call RegPack(Buf, Mesh%TranslationVel)
+      if (Mesh%fieldmask(MASKID_TRANSLATIONACC))  call RegPack(Buf, Mesh%TranslationAcc)
+      if (Mesh%fieldmask(MASKID_ROTATIONACC))     call RegPack(Buf, Mesh%RotationAcc)
+      if (Mesh%nScalars > 0)                      call RegPack(Buf, Mesh%Scalars)
+
+      !bjj: where are we keeping track of which ones are siblings so that we can unpack them (set pointers) properly for restart?
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, RoutineName)) return
+
    END SUBROUTINE MeshPack
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1739,221 +1585,143 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! recreate a mesh after reading in the buffers on a restart of the program. The sense 
 !! of the name is "unpack the mesh from buffers." The resulting mesh will be returned 
 !! in the exact state as when the data in the buffers was packed using MeshPack. 
-   SUBROUTINE MeshUnpack( Mesh, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMess )
+   SUBROUTINE MeshUnpack(Buf, Mesh)
       
+      type(PackBuffer), intent(inout)   :: Buf
+      type(MeshType), intent(inout)     :: Mesh        ! Mesh being packed
+
       ! bjj: not implemented yet:  
       ! If the mesh has an already recreated sibling mesh from a previous call to MeshUnpack, specify 
       ! the existing sibling as an optional argument so that the sibling relationship is also recreated.
    
-      TYPE(MeshType),              INTENT(INOUT) :: Mesh
-      REAL(ReKi),     ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-      REAL(DbKi),     ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-      INTEGER(IntKi), ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
-      CHARACTER(*),                INTENT(  OUT) :: ErrMess
-
-         ! Local
       LOGICAL committed, RemapFlag, fieldmask(FIELDMASK_SIZE)
       INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem, refnode
       INTEGER i,j
-     
-      INTEGER(IntKi)                             :: Re_Xferred    ! number of reals transferred
-      INTEGER(IntKi)                             :: Db_Xferred    ! number of doubles transferred
-      INTEGER(IntKi)                             :: Int_Xferred   ! number of integers transferred
-      
-      INTEGER(IntKi)                             :: ErrStat2
-      CHARACTER(ErrMsgLen)                       :: ErrMess2
-      CHARACTER(*),      PARAMETER               :: RoutineName = "MeshUnpack"        
-     
-      Re_Xferred  = 1
-      Db_Xferred  = 1
-      Int_Xferred = 1
+      integer(IntKi) :: EN(20) ! Element nodes
 
-      ErrStat = ErrID_None
-      ErrMess = ""
+      CHARACTER(*), PARAMETER :: RoutineName = "MeshUnpack"   
+ 
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+
+      ! Read if mesh was initialized
+      call RegUnpack(Buf, Mesh%initialized)
      
-      IF (IntKiBuf(Int_Xferred) == 0 ) THEN ! this is a blank mesh
-         CALL MeshDestroy( Mesh, ErrStat2, ErrMess2, .TRUE. )
-         CALL SetErrStat(ErrStat2,ErrMess2,ErrStat,ErrMess,RoutineName)
-         RETURN
-      END IF
-      
-      
-         ! initialized, may or may not be committed           
-            
-      Mesh%initialized = .true.; Int_Xferred = Int_Xferred + 1
-      committed        = TRANSFER( IntKiBuf(Int_Xferred), Mesh%committed );  Int_Xferred = Int_Xferred + 1 
-      fieldmask        = TRANSFER( IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1), fieldmask );  Int_Xferred = Int_Xferred + FIELDMASK_SIZE 
-      RemapFlag        = TRANSFER( IntKiBuf(Int_Xferred), Mesh%RemapFlag ); Int_Xferred = Int_Xferred + 1 
-         ! integers
-      ios              = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
-      nnodes           = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
-      refnode          = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
-      nextelem         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
-      nscalars         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
-                  
-                                                            
-      CALL MeshCreate( Mesh, ios, nnodes                                         &
-                        ,ErrStat=ErrStat2, ErrMess=ErrMess2                      &
-                        ,Force          =fieldmask(MASKID_FORCE)                 &
-                        ,Moment         =fieldmask(MASKID_MOMENT)                &
-                        ,Orientation    =fieldmask(MASKID_ORIENTATION)           &
-                        ,TranslationDisp=fieldmask(MASKID_TRANSLATIONDISP)       &
-                        ,TranslationVel =fieldmask(MASKID_TRANSLATIONVEL )       &
-                        ,RotationVel    =fieldmask(MASKID_ROTATIONVEL )          &
-                        ,TranslationAcc =fieldmask(MASKID_TRANSLATIONACC )       &
-                        ,RotationAcc    =fieldmask(MASKID_ROTATIONACC )          &
-                        ,nScalars       = nScalars                               &
+      ! If mesh was not initialized, this is a blank mesh, destroy and return
+      if (.not. Mesh%initialized) THEN 
+         call MeshDestroy( Mesh, Buf%ErrStat, Buf%ErrMsg, .TRUE. )
+         return
+      end if
+
+      ! Logicals
+      call RegUnpack(Buf, committed)
+      call RegUnpack(Buf, fieldmask)
+      call RegUnpack(Buf, RemapFlag)
+
+      ! Integers
+      call RegUnpack(Buf, ios)
+      call RegUnpack(Buf, nnodes)
+      call RegUnpack(Buf, refnode)
+      call RegUnpack(Buf, nextelem)
+      call RegUnpack(Buf, nscalars)
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, RoutineName)) return
+
+      ! Create mesh
+      call MeshCreate(Mesh, ios, nnodes                                        &
+                      ,ErrStat=Buf%ErrStat, ErrMess=Buf%ErrMsg                 &
+                      ,Force           = fieldmask(MASKID_FORCE)               &
+                      ,Moment          = fieldmask(MASKID_MOMENT)              &
+                      ,Orientation     = fieldmask(MASKID_ORIENTATION)         &
+                      ,TranslationDisp = fieldmask(MASKID_TRANSLATIONDISP)     &
+                      ,TranslationVel  = fieldmask(MASKID_TRANSLATIONVEL)      &
+                      ,RotationVel     = fieldmask(MASKID_ROTATIONVEL)         &
+                      ,TranslationAcc  = fieldmask(MASKID_TRANSLATIONACC)      &
+                      ,RotationAcc     = fieldmask(MASKID_ROTATIONACC)         &
+                      ,nScalars        = nScalars                              &
                      )
-         CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess, RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (Buf%ErrStat >= AbortErrLev) return
 
       Mesh%RefNode = refnode
       Mesh%RemapFlag = RemapFlag
       Mesh%nextelem  = nextelem
      
-            ! element structure
-      DO i = 1, NELEMKINDS            
-         nelem = IntKiBuf(Int_Xferred);      Int_Xferred = Int_Xferred + 1    ! number of elements            
-            
-         if (nelem > 0) then
-            nelemnodes = IntKiBuf(Int_Xferred); Int_Xferred = Int_Xferred + 1 ! nodes per element
-                                                                             
-               ! nodes in this element
-            DO j = 1,nelem                                                                     
-               
-               SELECT CASE (nelemnodes)
-               CASE (1)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred  )                                                             &
-                  )
-               CASE (2)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1)                               &
-                  )
-               CASE (3)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  )
-               CASE (4)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3)                                                            &
-                  )
-               CASE (6)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
-                  )
-               CASE (8)
-                  CALL MeshConstructElement( Mesh, i, ErrStat2, ErrMess2                                    &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
-                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7)                               &
-                  )
-               CASE (10)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
-                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
-                  , P10=IntKiBuf(Int_Xferred+ 9)                                                            &
-                  )
-               CASE (15)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
-                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
-                  , P10=IntKiBuf(Int_Xferred+ 9),P11=IntKiBuf(Int_Xferred+10),P12=IntKiBuf(Int_Xferred+11)  &
-                  , P13=IntKiBuf(Int_Xferred+12),P14=IntKiBuf(Int_Xferred+13),P15=IntKiBuf(Int_Xferred+14)  &
-                  )
-               CASE (20)
-                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
-                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
-                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
-                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
-                  , P10=IntKiBuf(Int_Xferred+ 9),P11=IntKiBuf(Int_Xferred+10),P12=IntKiBuf(Int_Xferred+11)  &
-                  , P13=IntKiBuf(Int_Xferred+12),P14=IntKiBuf(Int_Xferred+13),P15=IntKiBuf(Int_Xferred+14)  &
-                  , P16=IntKiBuf(Int_Xferred+15),P17=IntKiBuf(Int_Xferred+16),P18=IntKiBuf(Int_Xferred+17)  &
-                  , P19=IntKiBuf(Int_Xferred+18),P20=IntKiBuf(Int_Xferred+19)                               &
-                  )
-               CASE DEFAULT
-                  CALL SetErrStat(ErrID_Fatal,"No such element. Probably manged buffer.",ErrStat,ErrMess,RoutineName)
-                  RETURN
-               END SELECT  
-               Int_Xferred = Int_Xferred + nelemnodes
-            END DO   ! Elements of this kind
-         end if ! if there are any elements of this kind
-
-      END DO ! kinds of elements
-      
-     ! ..... fill ReKiBuf .....
-      DO i = 1, Mesh%Nnodes ! Position
-         Mesh%Position(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-      END DO
-      DO i = 1, Mesh%Nnodes ! RefOrientation
-         DO j = 1,3
-            Mesh%RefOrientation(:,j,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Db_Xferred = Db_Xferred + 3
-         ENDDO
-      END DO
-                
-      IF ( FieldMask(MASKID_FORCE) ) THEN ! Force
-         DO i = 1, Mesh%Nnodes
-            Mesh%Force(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_MOMENT) ) THEN ! Moment
-         DO i = 1, Mesh%Nnodes
-            Mesh%Moment(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
-         DO i = 1, Mesh%Nnodes 
-            DO j = 1,3
-               Mesh%Orientation(:,j,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Db_Xferred = Db_Xferred + 3
-            ENDDO
-         END DO
-      ENDIF
-      IF ( FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! TranslationDisp
-         DO i = 1, Mesh%Nnodes
-            Mesh%TranslationDisp(:,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Db_Xferred = Db_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_ROTATIONVEL) ) THEN ! RotationVel
-         DO i = 1, Mesh%Nnodes
-            Mesh%RotationVel(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_TRANSLATIONVEL) ) THEN ! TranslationVel
-         DO i = 1, Mesh%Nnodes
-            Mesh%TranslationVel(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_ROTATIONACC) ) THEN ! RotationAcc
-         DO i = 1, Mesh%Nnodes
-            Mesh%RotationAcc(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
-      IF ( FieldMask(MASKID_TRANSLATIONACC) ) THEN ! TranslationAcc
-         DO i = 1, Mesh%Nnodes
-            Mesh%TranslationAcc(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
-         ENDDO
-      ENDIF
+      ! element structure
+      DO i = 1, NELEMKINDS
          
-      IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
-         DO i = 1, Mesh%Nnodes
-            Mesh%Scalars(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+Mesh%nScalars-1); Re_Xferred = Re_Xferred + Mesh%nScalars
-         ENDDO
-      ENDIF         
-                     
-      ! commit the mesh
-      IF (committed) THEN
-         CALL MeshCommit(Mesh, ErrStat2, ErrMess2)
-         CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess, RoutineName)
-      END IF
-      
-      RETURN
+         ! number of elements
+         call RegUnpack(Buf, nelem)
+         if (RegCheckErr(Buf, RoutineName)) return
+         
+         ! If there are elements of this kind
+         if (nelem > 0) then
 
-   END SUBROUTINE MeshUnpack
+            ! Get number of nodes per element
+            call RegUnpack(Buf, nelemnodes)
+            if (RegCheckErr(Buf, RoutineName)) return
+                                                                             
+            ! Nodes in this element
+            do j = 1, nelem
+
+               ! Read nodes for this element
+               call RegUnpack(Buf, EN(1:nelemnodes))
+
+               select case (nelemnodes)
+               case (1)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1))
+               case (2)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2))
+               case (3)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3))
+               case (4)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), P4=EN(4))
+               case (6)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), &
+                                            P4=EN(4), P5=EN(5), P6=EN(6))
+               case (8)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), &
+                                            P4=EN(4), P5=EN(5), P6=EN(6), P7=EN(7), P8=EN(8))
+               case (10)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), &
+                                            P4=EN(4), P5=EN(5), P6=EN(6), P7=EN(7), P8=EN(8), P9=EN(9), P10=EN(10))
+               case (15)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), &
+                                            P4=EN(4), P5=EN(5), P6=EN(6), P7=EN(7), P8=EN(8), P9=EN(9),     &
+                                            P10=EN(10), P11=EN(11), P12=EN(12), P13=EN(13), P14=EN(14),  P15=EN(15))
+               case (20)
+                  call MeshConstructElement(Mesh, i, Buf%ErrStat, Buf%ErrMsg, P1=EN(1), P2=EN(2), P3=EN(3), &
+                                            P4=EN(4), P5=EN(5), P6=EN(6), P7=EN(7), P8=EN(8), P9=EN(9),     &
+                                            P10=EN(10), P11=EN(11), P12=EN(12), P13=EN(13), P14=EN(14),     &
+                                            P15=EN(15), P16=EN(16), P17=EN(17), P18=EN(18), P19=EN(19), P20=EN(20))
+               case default
+                  call SetErrStat(ErrID_Fatal,"No such element. Probably mangled buffer.", Buf%ErrStat, Buf%ErrMsg, RoutineName)
+                  return
+               end select  
+            end do
+         end if
+      end do
+
+      call RegUnpack(Buf, Mesh%Position)
+      call RegUnpack(Buf, Mesh%RefOrientation)
+
+      if (FieldMask(MASKID_FORCE))           call RegUnpack(Buf, Mesh%Force)
+      if (FieldMask(MASKID_MOMENT))          call RegUnpack(Buf, Mesh%Moment)
+      if (FieldMask(MASKID_ORIENTATION))     call RegUnpack(Buf, Mesh%Orientation)
+      if (FieldMask(MASKID_TRANSLATIONDISP)) call RegUnpack(Buf, Mesh%TranslationDisp)
+      if (FieldMask(MASKID_ROTATIONVEL))     call RegUnpack(Buf, Mesh%RotationVel)
+      if (FieldMask(MASKID_TRANSLATIONVEL))  call RegUnpack(Buf, Mesh%TranslationVel)
+      if (FieldMask(MASKID_TRANSLATIONACC))  call RegUnpack(Buf, Mesh%TranslationAcc)
+      if (FieldMask(MASKID_ROTATIONACC))     call RegUnpack(Buf, Mesh%RotationAcc)
+      if (nScalars > 0)                      call RegUnpack(Buf, Mesh%Scalars)
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, RoutineName)) return
+                     
+      ! Commit the mesh
+      if (committed) call MeshCommit(Mesh, Buf%ErrStat, Buf%ErrMsg)
+
+   end subroutine 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Given an existing mesh and a destination mesh, create a completely new copy, a sibling, or 

@@ -162,141 +162,56 @@ CONTAINS
 
  END SUBROUTINE Lidar_DestroyInitInput
 
- SUBROUTINE Lidar_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackInitInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! SensorType
-      Db_BufSz   = Db_BufSz   + 1  ! Tmax
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RotorApexOffsetPos)  ! RotorApexOffsetPos
-      Re_BufSz   = Re_BufSz   + SIZE(InData%HubPosition)  ! HubPosition
-      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
-      Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackInitInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackInitInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! SensorType
+   call RegPack(Buf, InData%SensorType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Tmax
+   call RegPack(Buf, InData%Tmax)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RotorApexOffsetPos
+   call RegPack(Buf, InData%RotorApexOffsetPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubPosition
+   call RegPack(Buf, InData%HubPosition)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumPulseGate
+   call RegPack(Buf, InData%NumPulseGate)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidRadialVel
+   call RegPack(Buf, InData%LidRadialVel)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%SensorType
-    Int_Xferred = Int_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%Tmax
-    Db_Xferred = Db_Xferred + 1
-    DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
-      ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%HubPosition,1), UBOUND(InData%HubPosition,1)
-      ReKiBuf(Re_Xferred) = InData%HubPosition(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    IntKiBuf(Int_Xferred) = InData%NumPulseGate
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE Lidar_PackInitInput
-
- SUBROUTINE Lidar_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInitInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%SensorType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%Tmax = DbKiBuf(Db_Xferred)
-    Db_Xferred = Db_Xferred + 1
-    i1_l = LBOUND(OutData%RotorApexOffsetPos,1)
-    i1_u = UBOUND(OutData%RotorApexOffsetPos,1)
-    DO i1 = LBOUND(OutData%RotorApexOffsetPos,1), UBOUND(OutData%RotorApexOffsetPos,1)
-      OutData%RotorApexOffsetPos(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%HubPosition,1)
-    i1_u = UBOUND(OutData%HubPosition,1)
-    DO i1 = LBOUND(OutData%HubPosition,1), UBOUND(OutData%HubPosition,1)
-      OutData%HubPosition(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE Lidar_UnPackInitInput
-
+subroutine Lidar_UnPackInitInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackInitInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! SensorType
+   call RegUnpack(Buf, OutData%SensorType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! Tmax
+   call RegUnpack(Buf, OutData%Tmax)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RotorApexOffsetPos
+   call RegUnpack(Buf, OutData%RotorApexOffsetPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubPosition
+   call RegUnpack(Buf, OutData%HubPosition)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumPulseGate
+   call RegUnpack(Buf, OutData%NumPulseGate)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidRadialVel
+   call RegUnpack(Buf, OutData%LidRadialVel)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_InitOutputType), INTENT(IN) :: SrcInitOutputData
    TYPE(Lidar_InitOutputType), INTENT(INOUT) :: DstInitOutputData
@@ -329,103 +244,26 @@ CONTAINS
 
  END SUBROUTINE Lidar_DestroyInitOutput
 
- SUBROUTINE Lidar_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackInitOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyInitOut
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackInitOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackInitOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyInitOut
+   call RegPack(Buf, InData%DummyInitOut)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyInitOut
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackInitOutput
-
- SUBROUTINE Lidar_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInitOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyInitOut = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackInitOutput
-
+subroutine Lidar_UnPackInitOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackInitOutput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyInitOut
+   call RegUnpack(Buf, OutData%DummyInitOut)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_ParameterType), INTENT(IN) :: SrcParamData
    TYPE(Lidar_ParameterType), INTENT(INOUT) :: DstParamData
@@ -541,374 +379,231 @@ IF (ALLOCATED(ParamData%MsrPosition)) THEN
 ENDIF
  END SUBROUTINE Lidar_DestroyParam
 
- SUBROUTINE Lidar_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_ParameterType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackParam'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NumPulseGate
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RotorApexOffsetPos)  ! RotorApexOffsetPos
-      Re_BufSz   = Re_BufSz   + 1  ! RayRangeSq
-      Re_BufSz   = Re_BufSz   + 1  ! SpatialRes
-      Int_BufSz  = Int_BufSz  + 1  ! SensorType
-      Re_BufSz   = Re_BufSz   + 1  ! WtFnTrunc
-      Re_BufSz   = Re_BufSz   + 1  ! PulseRangeOne
-      Re_BufSz   = Re_BufSz   + 1  ! DeltaP
-      Re_BufSz   = Re_BufSz   + 1  ! DeltaR
-      Re_BufSz   = Re_BufSz   + 1  ! r_p
-      Int_BufSz  = Int_BufSz  + 1  ! LidRadialVel
-      Re_BufSz   = Re_BufSz   + 1  ! DisplacementLidarX
-      Re_BufSz   = Re_BufSz   + 1  ! DisplacementLidarY
-      Re_BufSz   = Re_BufSz   + 1  ! DisplacementLidarZ
-      Int_BufSz  = Int_BufSz  + 1  ! NumBeam
-  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceX allocated yes/no
-  IF ( ALLOCATED(InData%FocalDistanceX) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceX upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceX)  ! FocalDistanceX
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceY allocated yes/no
-  IF ( ALLOCATED(InData%FocalDistanceY) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceY upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceY)  ! FocalDistanceY
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! FocalDistanceZ allocated yes/no
-  IF ( ALLOCATED(InData%FocalDistanceZ) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! FocalDistanceZ upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%FocalDistanceZ)  ! FocalDistanceZ
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MsrPosition allocated yes/no
-  IF ( ALLOCATED(InData%MsrPosition) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! MsrPosition upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPosition)  ! MsrPosition
-  END IF
-      Re_BufSz   = Re_BufSz   + 1  ! PulseSpacing
-      Re_BufSz   = Re_BufSz   + 1  ! URefLid
-      Int_BufSz  = Int_BufSz  + 1  ! ConsiderHubMotion
-      Re_BufSz   = Re_BufSz   + 1  ! MeasurementInterval
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LidPosition)  ! LidPosition
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackParam(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_ParameterType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackParam'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! NumPulseGate
+   call RegPack(Buf, InData%NumPulseGate)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RotorApexOffsetPos
+   call RegPack(Buf, InData%RotorApexOffsetPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RayRangeSq
+   call RegPack(Buf, InData%RayRangeSq)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SpatialRes
+   call RegPack(Buf, InData%SpatialRes)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SensorType
+   call RegPack(Buf, InData%SensorType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WtFnTrunc
+   call RegPack(Buf, InData%WtFnTrunc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PulseRangeOne
+   call RegPack(Buf, InData%PulseRangeOne)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DeltaP
+   call RegPack(Buf, InData%DeltaP)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DeltaR
+   call RegPack(Buf, InData%DeltaR)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! r_p
+   call RegPack(Buf, InData%r_p)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidRadialVel
+   call RegPack(Buf, InData%LidRadialVel)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarX
+   call RegPack(Buf, InData%DisplacementLidarX)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarY
+   call RegPack(Buf, InData%DisplacementLidarY)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarZ
+   call RegPack(Buf, InData%DisplacementLidarZ)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumBeam
+   call RegPack(Buf, InData%NumBeam)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FocalDistanceX
+   call RegPack(Buf, allocated(InData%FocalDistanceX))
+   if (allocated(InData%FocalDistanceX)) then
+      call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceX), ubound(InData%FocalDistanceX))
+      call RegPack(Buf, InData%FocalDistanceX)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FocalDistanceY
+   call RegPack(Buf, allocated(InData%FocalDistanceY))
+   if (allocated(InData%FocalDistanceY)) then
+      call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceY), ubound(InData%FocalDistanceY))
+      call RegPack(Buf, InData%FocalDistanceY)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FocalDistanceZ
+   call RegPack(Buf, allocated(InData%FocalDistanceZ))
+   if (allocated(InData%FocalDistanceZ)) then
+      call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceZ), ubound(InData%FocalDistanceZ))
+      call RegPack(Buf, InData%FocalDistanceZ)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MsrPosition
+   call RegPack(Buf, allocated(InData%MsrPosition))
+   if (allocated(InData%MsrPosition)) then
+      call RegPackBounds(Buf, 2, lbound(InData%MsrPosition), ubound(InData%MsrPosition))
+      call RegPack(Buf, InData%MsrPosition)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PulseSpacing
+   call RegPack(Buf, InData%PulseSpacing)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! URefLid
+   call RegPack(Buf, InData%URefLid)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ConsiderHubMotion
+   call RegPack(Buf, InData%ConsiderHubMotion)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MeasurementInterval
+   call RegPack(Buf, InData%MeasurementInterval)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidPosition
+   call RegPack(Buf, InData%LidPosition)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%NumPulseGate
-    Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%RotorApexOffsetPos,1), UBOUND(InData%RotorApexOffsetPos,1)
-      ReKiBuf(Re_Xferred) = InData%RotorApexOffsetPos(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    ReKiBuf(Re_Xferred) = InData%RayRangeSq
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%SpatialRes
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%SensorType
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%WtFnTrunc
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PulseRangeOne
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%DeltaP
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%DeltaR
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%r_p
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%LidRadialVel, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%DisplacementLidarX
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%DisplacementLidarY
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%DisplacementLidarZ
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumBeam
-    Int_Xferred = Int_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%FocalDistanceX) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceX,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceX,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%FocalDistanceX,1), UBOUND(InData%FocalDistanceX,1)
-        ReKiBuf(Re_Xferred) = InData%FocalDistanceX(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%FocalDistanceY) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceY,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceY,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%FocalDistanceY,1), UBOUND(InData%FocalDistanceY,1)
-        ReKiBuf(Re_Xferred) = InData%FocalDistanceY(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%FocalDistanceZ) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FocalDistanceZ,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FocalDistanceZ,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%FocalDistanceZ,1), UBOUND(InData%FocalDistanceZ,1)
-        ReKiBuf(Re_Xferred) = InData%FocalDistanceZ(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%MsrPosition) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPosition,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPosition,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPosition,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPosition,2)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i2 = LBOUND(InData%MsrPosition,2), UBOUND(InData%MsrPosition,2)
-        DO i1 = LBOUND(InData%MsrPosition,1), UBOUND(InData%MsrPosition,1)
-          ReKiBuf(Re_Xferred) = InData%MsrPosition(i1,i2)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-    ReKiBuf(Re_Xferred) = InData%PulseSpacing
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%URefLid
-    Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%ConsiderHubMotion
-    Int_Xferred = Int_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%MeasurementInterval
-    Re_Xferred = Re_Xferred + 1
-    DO i1 = LBOUND(InData%LidPosition,1), UBOUND(InData%LidPosition,1)
-      ReKiBuf(Re_Xferred) = InData%LidPosition(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
- END SUBROUTINE Lidar_PackParam
-
- SUBROUTINE Lidar_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_ParameterType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackParam'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%NumPulseGate = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%RotorApexOffsetPos,1)
-    i1_u = UBOUND(OutData%RotorApexOffsetPos,1)
-    DO i1 = LBOUND(OutData%RotorApexOffsetPos,1), UBOUND(OutData%RotorApexOffsetPos,1)
-      OutData%RotorApexOffsetPos(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    OutData%RayRangeSq = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%SpatialRes = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%SensorType = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%WtFnTrunc = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PulseRangeOne = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%DeltaP = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%DeltaR = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%r_p = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%LidRadialVel = TRANSFER(IntKiBuf(Int_Xferred), OutData%LidRadialVel)
-    Int_Xferred = Int_Xferred + 1
-    OutData%DisplacementLidarX = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%DisplacementLidarY = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%DisplacementLidarZ = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%NumBeam = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceX not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%FocalDistanceX)) DEALLOCATE(OutData%FocalDistanceX)
-    ALLOCATE(OutData%FocalDistanceX(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceX.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%FocalDistanceX,1), UBOUND(OutData%FocalDistanceX,1)
-        OutData%FocalDistanceX(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceY not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%FocalDistanceY)) DEALLOCATE(OutData%FocalDistanceY)
-    ALLOCATE(OutData%FocalDistanceY(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceY.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%FocalDistanceY,1), UBOUND(OutData%FocalDistanceY,1)
-        OutData%FocalDistanceY(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FocalDistanceZ not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%FocalDistanceZ)) DEALLOCATE(OutData%FocalDistanceZ)
-    ALLOCATE(OutData%FocalDistanceZ(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceZ.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%FocalDistanceZ,1), UBOUND(OutData%FocalDistanceZ,1)
-        OutData%FocalDistanceZ(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPosition not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MsrPosition)) DEALLOCATE(OutData%MsrPosition)
-    ALLOCATE(OutData%MsrPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPosition.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i2 = LBOUND(OutData%MsrPosition,2), UBOUND(OutData%MsrPosition,2)
-        DO i1 = LBOUND(OutData%MsrPosition,1), UBOUND(OutData%MsrPosition,1)
-          OutData%MsrPosition(i1,i2) = ReKiBuf(Re_Xferred)
-          Re_Xferred = Re_Xferred + 1
-        END DO
-      END DO
-  END IF
-    OutData%PulseSpacing = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%URefLid = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%ConsiderHubMotion = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-    OutData%MeasurementInterval = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    i1_l = LBOUND(OutData%LidPosition,1)
-    i1_u = UBOUND(OutData%LidPosition,1)
-    DO i1 = LBOUND(OutData%LidPosition,1), UBOUND(OutData%LidPosition,1)
-      OutData%LidPosition(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
- END SUBROUTINE Lidar_UnPackParam
-
+subroutine Lidar_UnPackParam(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_ParameterType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackParam'
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! NumPulseGate
+   call RegUnpack(Buf, OutData%NumPulseGate)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RotorApexOffsetPos
+   call RegUnpack(Buf, OutData%RotorApexOffsetPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! RayRangeSq
+   call RegUnpack(Buf, OutData%RayRangeSq)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SpatialRes
+   call RegUnpack(Buf, OutData%SpatialRes)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! SensorType
+   call RegUnpack(Buf, OutData%SensorType)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WtFnTrunc
+   call RegUnpack(Buf, OutData%WtFnTrunc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PulseRangeOne
+   call RegUnpack(Buf, OutData%PulseRangeOne)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DeltaP
+   call RegUnpack(Buf, OutData%DeltaP)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DeltaR
+   call RegUnpack(Buf, OutData%DeltaR)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! r_p
+   call RegUnpack(Buf, OutData%r_p)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidRadialVel
+   call RegUnpack(Buf, OutData%LidRadialVel)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarX
+   call RegUnpack(Buf, OutData%DisplacementLidarX)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarY
+   call RegUnpack(Buf, OutData%DisplacementLidarY)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! DisplacementLidarZ
+   call RegUnpack(Buf, OutData%DisplacementLidarZ)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! NumBeam
+   call RegUnpack(Buf, OutData%NumBeam)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! FocalDistanceX
+   if (allocated(OutData%FocalDistanceX)) deallocate(OutData%FocalDistanceX)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%FocalDistanceX(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceX.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%FocalDistanceX)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! FocalDistanceY
+   if (allocated(OutData%FocalDistanceY)) deallocate(OutData%FocalDistanceY)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%FocalDistanceY(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceY.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%FocalDistanceY)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! FocalDistanceZ
+   if (allocated(OutData%FocalDistanceZ)) deallocate(OutData%FocalDistanceZ)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%FocalDistanceZ(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%FocalDistanceZ.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%FocalDistanceZ)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! MsrPosition
+   if (allocated(OutData%MsrPosition)) deallocate(OutData%MsrPosition)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%MsrPosition(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPosition.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%MsrPosition)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! PulseSpacing
+   call RegUnpack(Buf, OutData%PulseSpacing)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! URefLid
+   call RegUnpack(Buf, OutData%URefLid)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! ConsiderHubMotion
+   call RegUnpack(Buf, OutData%ConsiderHubMotion)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MeasurementInterval
+   call RegUnpack(Buf, OutData%MeasurementInterval)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! LidPosition
+   call RegUnpack(Buf, OutData%LidPosition)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_ContinuousStateType), INTENT(IN) :: SrcContStateData
    TYPE(Lidar_ContinuousStateType), INTENT(INOUT) :: DstContStateData
@@ -941,103 +636,26 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyContState
 
- SUBROUTINE Lidar_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_ContinuousStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackContState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyContState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackContState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_ContinuousStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackContState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyContState
+   call RegPack(Buf, InData%DummyContState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyContState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackContState
-
- SUBROUTINE Lidar_UnPackContState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_ContinuousStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackContState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyContState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackContState
-
+subroutine Lidar_UnPackContState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_ContinuousStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackContState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyContState
+   call RegUnpack(Buf, OutData%DummyContState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
    TYPE(Lidar_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
@@ -1070,103 +688,26 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyDiscState
 
- SUBROUTINE Lidar_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_DiscreteStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackDiscState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyDiscState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackDiscState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_DiscreteStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackDiscState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyDiscState
+   call RegPack(Buf, InData%DummyDiscState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyDiscState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackDiscState
-
- SUBROUTINE Lidar_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_DiscreteStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackDiscState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyDiscState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackDiscState
-
+subroutine Lidar_UnPackDiscState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_DiscreteStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackDiscState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyDiscState
+   call RegUnpack(Buf, OutData%DummyDiscState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
    TYPE(Lidar_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
@@ -1199,103 +740,26 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyConstrState
 
- SUBROUTINE Lidar_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_ConstraintStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackConstrState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyConstrState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackConstrState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_ConstraintStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackConstrState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyConstrState
+   call RegPack(Buf, InData%DummyConstrState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyConstrState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackConstrState
-
- SUBROUTINE Lidar_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_ConstraintStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackConstrState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyConstrState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackConstrState
-
+subroutine Lidar_UnPackConstrState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_ConstraintStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackConstrState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyConstrState
+   call RegUnpack(Buf, OutData%DummyConstrState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_OtherStateType), INTENT(IN) :: SrcOtherStateData
    TYPE(Lidar_OtherStateType), INTENT(INOUT) :: DstOtherStateData
@@ -1328,103 +792,26 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyOtherState
 
- SUBROUTINE Lidar_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_OtherStateType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackOtherState'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackOtherState(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_OtherStateType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackOtherState'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyOtherState
+   call RegPack(Buf, InData%DummyOtherState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyOtherState
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackOtherState
-
- SUBROUTINE Lidar_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_OtherStateType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackOtherState'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyOtherState = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackOtherState
-
+subroutine Lidar_UnPackOtherState(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_OtherStateType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackOtherState'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyOtherState
+   call RegUnpack(Buf, OutData%DummyOtherState)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_MiscVarType), INTENT(IN) :: SrcMiscData
    TYPE(Lidar_MiscVarType), INTENT(INOUT) :: DstMiscData
@@ -1457,103 +844,26 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyMisc
 
- SUBROUTINE Lidar_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_MiscVarType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackMisc'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! DummyMiscVar
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackMisc(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_MiscVarType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackMisc'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! DummyMiscVar
+   call RegPack(Buf, InData%DummyMiscVar)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%DummyMiscVar
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackMisc
-
- SUBROUTINE Lidar_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_MiscVarType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackMisc'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%DummyMiscVar = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackMisc
-
+subroutine Lidar_UnPackMisc(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_MiscVarType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackMisc'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! DummyMiscVar
+   call RegUnpack(Buf, OutData%DummyMiscVar)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_InputType), INTENT(IN) :: SrcInputData
    TYPE(Lidar_InputType), INTENT(INOUT) :: DstInputData
@@ -1590,123 +900,50 @@ ENDIF
 
  END SUBROUTINE Lidar_DestroyInput
 
- SUBROUTINE Lidar_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_InputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! PulseLidEl
-      Re_BufSz   = Re_BufSz   + 1  ! PulseLidAz
-      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementX
-      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementY
-      Re_BufSz   = Re_BufSz   + 1  ! HubDisplacementZ
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_InputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! PulseLidEl
+   call RegPack(Buf, InData%PulseLidEl)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PulseLidAz
+   call RegPack(Buf, InData%PulseLidAz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementX
+   call RegPack(Buf, InData%HubDisplacementX)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementY
+   call RegPack(Buf, InData%HubDisplacementY)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementZ
+   call RegPack(Buf, InData%HubDisplacementZ)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    ReKiBuf(Re_Xferred) = InData%PulseLidEl
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%PulseLidAz
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HubDisplacementX
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HubDisplacementY
-    Re_Xferred = Re_Xferred + 1
-    ReKiBuf(Re_Xferred) = InData%HubDisplacementZ
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_PackInput
-
- SUBROUTINE Lidar_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_InputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%PulseLidEl = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%PulseLidAz = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HubDisplacementX = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HubDisplacementY = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
-    OutData%HubDisplacementZ = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
- END SUBROUTINE Lidar_UnPackInput
-
+subroutine Lidar_UnPackInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_InputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   ! PulseLidEl
+   call RegUnpack(Buf, OutData%PulseLidEl)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! PulseLidAz
+   call RegUnpack(Buf, OutData%PulseLidAz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementX
+   call RegUnpack(Buf, OutData%HubDisplacementX)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementY
+   call RegUnpack(Buf, OutData%HubDisplacementY)
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! HubDisplacementZ
+   call RegUnpack(Buf, OutData%HubDisplacementZ)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
  SUBROUTINE Lidar_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(Lidar_OutputType), INTENT(IN) :: SrcOutputData
    TYPE(Lidar_OutputType), INTENT(INOUT) :: DstOutputData
@@ -1814,289 +1051,133 @@ IF (ALLOCATED(OutputData%MsrPositionsZ)) THEN
 ENDIF
  END SUBROUTINE Lidar_DestroyOutput
 
- SUBROUTINE Lidar_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(Lidar_OutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_PackOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! LidSpeed allocated yes/no
-  IF ( ALLOCATED(InData%LidSpeed) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! LidSpeed upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LidSpeed)  ! LidSpeed
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WtTrunc allocated yes/no
-  IF ( ALLOCATED(InData%WtTrunc) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! WtTrunc upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WtTrunc)  ! WtTrunc
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsX allocated yes/no
-  IF ( ALLOCATED(InData%MsrPositionsX) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsX upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsX)  ! MsrPositionsX
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsY allocated yes/no
-  IF ( ALLOCATED(InData%MsrPositionsY) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsY upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsY)  ! MsrPositionsY
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MsrPositionsZ allocated yes/no
-  IF ( ALLOCATED(InData%MsrPositionsZ) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! MsrPositionsZ upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MsrPositionsZ)  ! MsrPositionsZ
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+subroutine Lidar_PackOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(Lidar_OutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Lidar_PackOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   ! LidSpeed
+   call RegPack(Buf, allocated(InData%LidSpeed))
+   if (allocated(InData%LidSpeed)) then
+      call RegPackBounds(Buf, 1, lbound(InData%LidSpeed), ubound(InData%LidSpeed))
+      call RegPack(Buf, InData%LidSpeed)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! WtTrunc
+   call RegPack(Buf, allocated(InData%WtTrunc))
+   if (allocated(InData%WtTrunc)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WtTrunc), ubound(InData%WtTrunc))
+      call RegPack(Buf, InData%WtTrunc)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MsrPositionsX
+   call RegPack(Buf, allocated(InData%MsrPositionsX))
+   if (allocated(InData%MsrPositionsX)) then
+      call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsX), ubound(InData%MsrPositionsX))
+      call RegPack(Buf, InData%MsrPositionsX)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MsrPositionsY
+   call RegPack(Buf, allocated(InData%MsrPositionsY))
+   if (allocated(InData%MsrPositionsY)) then
+      call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsY), ubound(InData%MsrPositionsY))
+      call RegPack(Buf, InData%MsrPositionsY)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+   ! MsrPositionsZ
+   call RegPack(Buf, allocated(InData%MsrPositionsZ))
+   if (allocated(InData%MsrPositionsZ)) then
+      call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsZ), ubound(InData%MsrPositionsZ))
+      call RegPack(Buf, InData%MsrPositionsZ)
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-  IF ( .NOT. ALLOCATED(InData%LidSpeed) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LidSpeed,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LidSpeed,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%LidSpeed,1), UBOUND(InData%LidSpeed,1)
-        ReKiBuf(Re_Xferred) = InData%LidSpeed(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%WtTrunc) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WtTrunc,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WtTrunc,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%WtTrunc,1), UBOUND(InData%WtTrunc,1)
-        ReKiBuf(Re_Xferred) = InData%WtTrunc(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%MsrPositionsX) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsX,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsX,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%MsrPositionsX,1), UBOUND(InData%MsrPositionsX,1)
-        ReKiBuf(Re_Xferred) = InData%MsrPositionsX(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%MsrPositionsY) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsY,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsY,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%MsrPositionsY,1), UBOUND(InData%MsrPositionsY,1)
-        ReKiBuf(Re_Xferred) = InData%MsrPositionsY(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%MsrPositionsZ) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MsrPositionsZ,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MsrPositionsZ,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%MsrPositionsZ,1), UBOUND(InData%MsrPositionsZ,1)
-        ReKiBuf(Re_Xferred) = InData%MsrPositionsZ(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE Lidar_PackOutput
-
- SUBROUTINE Lidar_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(Lidar_OutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_UnPackOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LidSpeed not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%LidSpeed)) DEALLOCATE(OutData%LidSpeed)
-    ALLOCATE(OutData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%LidSpeed,1), UBOUND(OutData%LidSpeed,1)
-        OutData%LidSpeed(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WtTrunc not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WtTrunc)) DEALLOCATE(OutData%WtTrunc)
-    ALLOCATE(OutData%WtTrunc(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WtTrunc.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%WtTrunc,1), UBOUND(OutData%WtTrunc,1)
-        OutData%WtTrunc(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsX not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MsrPositionsX)) DEALLOCATE(OutData%MsrPositionsX)
-    ALLOCATE(OutData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%MsrPositionsX,1), UBOUND(OutData%MsrPositionsX,1)
-        OutData%MsrPositionsX(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsY not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MsrPositionsY)) DEALLOCATE(OutData%MsrPositionsY)
-    ALLOCATE(OutData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%MsrPositionsY,1), UBOUND(OutData%MsrPositionsY,1)
-        OutData%MsrPositionsY(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MsrPositionsZ not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MsrPositionsZ)) DEALLOCATE(OutData%MsrPositionsZ)
-    ALLOCATE(OutData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i1 = LBOUND(OutData%MsrPositionsZ,1), UBOUND(OutData%MsrPositionsZ,1)
-        OutData%MsrPositionsZ(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE Lidar_UnPackOutput
-
+subroutine Lidar_UnPackOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(Lidar_OutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Lidar_UnPackOutput'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   ! LidSpeed
+   if (allocated(OutData%LidSpeed)) deallocate(OutData%LidSpeed)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%LidSpeed(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%LidSpeed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%LidSpeed)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! WtTrunc
+   if (allocated(OutData%WtTrunc)) deallocate(OutData%WtTrunc)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WtTrunc(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WtTrunc.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WtTrunc)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! MsrPositionsX
+   if (allocated(OutData%MsrPositionsX)) deallocate(OutData%MsrPositionsX)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%MsrPositionsX(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsX.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%MsrPositionsX)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! MsrPositionsY
+   if (allocated(OutData%MsrPositionsY)) deallocate(OutData%MsrPositionsY)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%MsrPositionsY(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsY.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%MsrPositionsY)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   ! MsrPositionsZ
+   if (allocated(OutData%MsrPositionsZ)) deallocate(OutData%MsrPositionsZ)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%MsrPositionsZ(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MsrPositionsZ.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%MsrPositionsZ)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+end subroutine
 
  SUBROUTINE Lidar_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
 !
