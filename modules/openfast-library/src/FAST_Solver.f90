@@ -375,7 +375,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
          END IF
    END IF
 
-   IF ( p_FAST%CompAero == Module_AD .and. p_FAST%MHK > 0 .and. .not. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1)) THEN
+   IF ( p_FAST%CompAero == Module_AD .and. p_FAST%MHK /= MHK_None .and. .not. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1)) THEN
       u_ED%HubPtLoad%Force = 0.0_ReKi
       u_ED%HubPtLoad%Moment = 0.0_ReKi
       IF ( u_AD%rotors(1)%HubMotion%Committed ) THEN
@@ -474,7 +474,7 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
                
 
 
-   IF ( p_FAST%MHK==1 .or. p_FAST%MHK==2 ) THEN
+   IF ( p_FAST%MHK /= MHK_None ) THEN
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_FAST%WtrDpth
    ENDIF
 
@@ -2902,7 +2902,7 @@ CONTAINS
             MeshMapData%u_ED_HubPtLoad%Force  = MeshMapData%u_ED_HubPtLoad%Force  + MeshMapData%u_ED_HubPtLoad_2%Force  
             MeshMapData%u_ED_HubPtLoad%Moment = MeshMapData%u_ED_HubPtLoad%Moment + MeshMapData%u_ED_HubPtLoad_2%Moment                
          end do
-         IF ( p_FAST%CompAero == Module_AD .and. p_FAST%MHK > 0) THEN
+         IF ( p_FAST%CompAero == Module_AD .and. p_FAST%MHK /= MHK_None) THEN
             IF ( u_AD%rotors(1)%HubMotion%Committed ) THEN
                CALL Transfer_Point_to_Point( y_AD%rotors(1)%HubLoad, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2, u_AD%rotors(1)%HubMotion, y_ED2%HubPtMotion )
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

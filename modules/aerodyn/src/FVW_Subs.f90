@@ -1625,7 +1625,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if ( p%MHK == 1 .or. p%MHK == 2 ) then
+   if ( p%MHK /= MHK_None ) then
       GROUND         = 1.e-4_ReKi - p%WtrDpth
       ABOVE_GROUND   = 0.1_ReKi - p%WtrDpth
    else
