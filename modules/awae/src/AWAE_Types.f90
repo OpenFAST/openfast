@@ -42,8 +42,13 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MeanderMod_WndwdJinc = 3      ! Spatial filter model for wake meandering: windowed jinc [-]
 ! =========  AWAE_HighWindGrid  =======
   TYPE, PUBLIC :: AWAE_HighWindGrid
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: data      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
   END TYPE AWAE_HighWindGrid
+! =======================
+! =========  AWAE_HighWindGridPtr  =======
+  TYPE, PUBLIC :: AWAE_HighWindGridPtr
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< Pointer to UVW components of wind data across the high-res regularly-spaced grid [m/s]
+  END TYPE AWAE_HighWindGridPtr
 ! =======================
 ! =========  AWAE_InputFileType  =======
   TYPE, PUBLIC :: AWAE_InputFileType
@@ -118,6 +123,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: X0_low      !< X-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Y0_low      !< Y-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Z0_low      !< Z-component of the origin of the low-resolution spatial domain [m]
+    TYPE(AWAE_HighWindGridPtr) , DIMENSION(:), ALLOCATABLE  :: Vdist_High      !< Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step [m/s]
   END TYPE AWAE_InitOutputType
 ! =======================
 ! =========  AWAE_ContinuousStateType  =======
@@ -259,7 +265,7 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcHighWindGridData%data)) THEN
+IF (ASSOCIATED(SrcHighWindGridData%data)) THEN
   i1_l = LBOUND(SrcHighWindGridData%data,1)
   i1_u = UBOUND(SrcHighWindGridData%data,1)
   i2_l = LBOUND(SrcHighWindGridData%data,2)
@@ -270,7 +276,7 @@ IF (ALLOCATED(SrcHighWindGridData%data)) THEN
   i4_u = UBOUND(SrcHighWindGridData%data,4)
   i5_l = LBOUND(SrcHighWindGridData%data,5)
   i5_u = UBOUND(SrcHighWindGridData%data,5)
-  IF (.NOT. ALLOCATED(DstHighWindGridData%data)) THEN 
+  IF (.NOT. ASSOCIATED(DstHighWindGridData%data)) THEN 
     ALLOCATE(DstHighWindGridData%data(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstHighWindGridData%data.', ErrStat, ErrMsg,RoutineName)
@@ -294,8 +300,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-IF (ALLOCATED(HighWindGridData%data)) THEN
+IF (ASSOCIATED(HighWindGridData%data)) THEN
   DEALLOCATE(HighWindGridData%data)
+  HighWindGridData%data => NULL()
 ENDIF
  END SUBROUTINE AWAE_DestroyHighWindGrid
 
@@ -335,7 +342,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Int_BufSz   = Int_BufSz   + 1     ! data allocated yes/no
-  IF ( ALLOCATED(InData%data) ) THEN
+  IF ( ASSOCIATED(InData%data) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! data upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%data)  ! data
   END IF
@@ -366,7 +373,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%data) ) THEN
+  IF ( .NOT. ASSOCIATED(InData%data) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -453,7 +460,7 @@ ENDIF
     i5_l = IntKiBuf( Int_Xferred    )
     i5_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%data)) DEALLOCATE(OutData%data)
+    IF (ASSOCIATED(OutData%data)) DEALLOCATE(OutData%data)
     ALLOCATE(OutData%data(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%data.', ErrStat, ErrMsg,RoutineName)
@@ -473,6 +480,142 @@ ENDIF
       END DO
   END IF
  END SUBROUTINE AWAE_UnPackHighWindGrid
+
+ SUBROUTINE AWAE_CopyHighWindGridPtr( SrcHighWindGridPtrData, DstHighWindGridPtrData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(AWAE_HighWindGridPtr), INTENT(IN) :: SrcHighWindGridPtrData
+   TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: DstHighWindGridPtrData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_CopyHighWindGridPtr'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstHighWindGridPtrData%data => SrcHighWindGridPtrData%data
+ END SUBROUTINE AWAE_CopyHighWindGridPtr
+
+ SUBROUTINE AWAE_DestroyHighWindGridPtr( HighWindGridPtrData, ErrStat, ErrMsg )
+  TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: HighWindGridPtrData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyHighWindGridPtr'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+NULLIFY(HighWindGridPtrData%data)
+ END SUBROUTINE AWAE_DestroyHighWindGridPtr
+
+ SUBROUTINE AWAE_PackHighWindGridPtr( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(AWAE_HighWindGridPtr),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_PackHighWindGridPtr'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+ END SUBROUTINE AWAE_PackHighWindGridPtr
+
+ SUBROUTINE AWAE_UnPackHighWindGridPtr( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_UnPackHighWindGridPtr'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  NULLIFY(OutData%data)
+ END SUBROUTINE AWAE_UnPackHighWindGridPtr
 
  SUBROUTINE AWAE_CopyInputFileType( SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(AWAE_InputFileType), INTENT(IN) :: SrcInputFileTypeData
@@ -1669,6 +1812,22 @@ ENDIF
     DstInitOutputData%X0_low = SrcInitOutputData%X0_low
     DstInitOutputData%Y0_low = SrcInitOutputData%Y0_low
     DstInitOutputData%Z0_low = SrcInitOutputData%Z0_low
+IF (ALLOCATED(SrcInitOutputData%Vdist_High)) THEN
+  i1_l = LBOUND(SrcInitOutputData%Vdist_High,1)
+  i1_u = UBOUND(SrcInitOutputData%Vdist_High,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%Vdist_High)) THEN 
+    ALLOCATE(DstInitOutputData%Vdist_High(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcInitOutputData%Vdist_High,1), UBOUND(SrcInitOutputData%Vdist_High,1)
+      CALL AWAE_Copyhighwindgridptr( SrcInitOutputData%Vdist_High(i1), DstInitOutputData%Vdist_High(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
  END SUBROUTINE AWAE_CopyInitOutput
 
  SUBROUTINE AWAE_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -1703,6 +1862,13 @@ IF (ALLOCATED(InitOutputData%dY_high)) THEN
 ENDIF
 IF (ALLOCATED(InitOutputData%dZ_high)) THEN
   DEALLOCATE(InitOutputData%dZ_high)
+ENDIF
+IF (ALLOCATED(InitOutputData%Vdist_High)) THEN
+DO i1 = LBOUND(InitOutputData%Vdist_High,1), UBOUND(InitOutputData%Vdist_High,1)
+  CALL AWAE_DestroyHighWindGridPtr( InitOutputData%Vdist_High(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+ENDDO
+  DEALLOCATE(InitOutputData%Vdist_High)
 ENDIF
  END SUBROUTINE AWAE_DestroyInitOutput
 
@@ -1801,6 +1967,29 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! X0_low
       Re_BufSz   = Re_BufSz   + 1  ! Y0_low
       Re_BufSz   = Re_BufSz   + 1  ! Z0_low
+  Int_BufSz   = Int_BufSz   + 1     ! Vdist_High allocated yes/no
+  IF ( ALLOCATED(InData%Vdist_High) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vdist_High upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
+      Int_BufSz   = Int_BufSz + 3  ! Vdist_High: size of buffers for each call to pack subtype
+      CALL AWAE_PackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! Vdist_High
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! Vdist_High
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! Vdist_High
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1970,6 +2159,47 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Z0_low
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%Vdist_High) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
+      CALL AWAE_PackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
  END SUBROUTINE AWAE_PackInitOutput
 
  SUBROUTINE AWAE_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2171,6 +2401,62 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Z0_low = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vdist_High not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vdist_High)) DEALLOCATE(OutData%Vdist_High)
+    ALLOCATE(OutData%Vdist_High(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%Vdist_High,1), UBOUND(OutData%Vdist_High,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL AWAE_UnpackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, OutData%Vdist_High(i1), ErrStat2, ErrMsg2 ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
  END SUBROUTINE AWAE_UnPackInitOutput
 
  SUBROUTINE AWAE_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )

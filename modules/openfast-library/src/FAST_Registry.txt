@@ -752,6 +752,7 @@ typedef	^	FAST_ExternInitType	logical	FarmIntegration	-	.false.	-	"whether this 
 typedef	^	FAST_ExternInitType	IntKi	windGrid_n	4	-	-	"number of grid points in the x, y, z, and t directions for IfW"	-
 typedef	^	FAST_ExternInitType	ReKi	windGrid_delta	4	-	-	"size between 2 consecutive grid points in each grid direction for IfW"	"m,m,m,s"
 typedef	^	FAST_ExternInitType	ReKi	windGrid_pZero	3	-	-	"fixed position of the XYZ grid (i.e., XYZ coordinates of IfW m%V(:,1,1,1,:))"	m
+typedef	^	FAST_ExternInitType	SiKi	*windGrid_data	:::::	-	-	"Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
 typedef	^	FAST_ExternInitType	CHARACTER(1024)	RootName	-	-	-	"Root name of FAST output files (overrides normal operation)"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-

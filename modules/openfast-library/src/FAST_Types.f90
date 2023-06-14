@@ -772,6 +772,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:4)  :: windGrid_n      !< number of grid points in the x, y, z, and t directions for IfW [-]
     REAL(ReKi) , DIMENSION(1:4)  :: windGrid_delta      !< size between 2 consecutive grid points in each grid direction for IfW [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: windGrid_pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of IfW m%V(:,1,1,1,:)) [m]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: windGrid_data => NULL()      !< Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step [m/s]
     CHARACTER(1024)  :: RootName      !< Root name of FAST output files (overrides normal operation) [-]
     INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
     INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
@@ -48375,6 +48376,10 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_CopyExternInitType'
@@ -48418,6 +48423,7 @@ ENDIF
     DstExternInitTypeData%windGrid_n = SrcExternInitTypeData%windGrid_n
     DstExternInitTypeData%windGrid_delta = SrcExternInitTypeData%windGrid_delta
     DstExternInitTypeData%windGrid_pZero = SrcExternInitTypeData%windGrid_pZero
+    DstExternInitTypeData%windGrid_data => SrcExternInitTypeData%windGrid_data
     DstExternInitTypeData%RootName = SrcExternInitTypeData%RootName
     DstExternInitTypeData%NumActForcePtsBlade = SrcExternInitTypeData%NumActForcePtsBlade
     DstExternInitTypeData%NumActForcePtsTower = SrcExternInitTypeData%NumActForcePtsTower
@@ -48443,6 +48449,7 @@ ENDIF
 IF (ALLOCATED(ExternInitTypeData%fromSC)) THEN
   DEALLOCATE(ExternInitTypeData%fromSC)
 ENDIF
+NULLIFY(ExternInitTypeData%windGrid_data)
  END SUBROUTINE FAST_DestroyExternInitType
 
  SUBROUTINE FAST_PackExternInitType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -48624,6 +48631,10 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FAST_UnPackExternInitType'
@@ -48715,6 +48726,7 @@ ENDIF
       OutData%windGrid_pZero(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  NULLIFY(OutData%windGrid_data)
     DO I = 1, LEN(OutData%RootName)
       OutData%RootName(I:I) = CHAR(IntKiBuf(Int_Xferred))
       Int_Xferred = Int_Xferred + 1

@@ -97,7 +97,7 @@ typedef  ^              ^                      LOGICAL             BoxExceedWarn
 typedef  ^              Grid4DFieldType        IntKi               n                   4     -         -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
 typedef  ^              ^                      ReKi                delta               4     -         -     "size between 2 consecutive grid points in each grid direction"            "m,m,m,s"
 typedef  ^              ^                      ReKi                pZero               3     -         -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
-typedef  ^              ^                      SiKi                Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
+typedef  ^              ^                      SiKi               *Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
 typedef  ^              ^                      ReKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
 typedef  ^              ^                      ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
 

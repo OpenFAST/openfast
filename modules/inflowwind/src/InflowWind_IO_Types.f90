@@ -132,6 +132,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< pointer to 4D grid velocity data [m/s]
   END TYPE Grid4D_InitInputType
 ! =======================
 ! =========  Points_InitInputType  =======
@@ -1836,6 +1837,10 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
@@ -1845,6 +1850,7 @@ CONTAINS
     DstGrid4D_InitInputTypeData%n = SrcGrid4D_InitInputTypeData%n
     DstGrid4D_InitInputTypeData%delta = SrcGrid4D_InitInputTypeData%delta
     DstGrid4D_InitInputTypeData%pZero = SrcGrid4D_InitInputTypeData%pZero
+    DstGrid4D_InitInputTypeData%Vel => SrcGrid4D_InitInputTypeData%Vel
  END SUBROUTINE InflowWind_IO_CopyGrid4D_InitInputType
 
  SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType( Grid4D_InitInputTypeData, ErrStat, ErrMsg )
@@ -1860,6 +1866,7 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
+NULLIFY(Grid4D_InitInputTypeData%Vel)
  END SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType
 
  SUBROUTINE InflowWind_IO_PackGrid4D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1955,6 +1962,10 @@ CONTAINS
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
@@ -1986,6 +1997,7 @@ CONTAINS
       OutData%pZero(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  NULLIFY(OutData%Vel)
  END SUBROUTINE InflowWind_IO_UnPackGrid4D_InitInputType
 
  SUBROUTINE InflowWind_IO_CopyPoints_InitInputType( SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )

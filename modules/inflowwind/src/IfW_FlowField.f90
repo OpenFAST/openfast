@@ -251,7 +251,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       !-------------------------------------------------------------------------
 
       ! If field is not allocated, return error
-      if (.not. allocated(FF%Grid4D%Vel)) then
+      if (.not. associated(FF%Grid4D%Vel)) then
          call SetErrStat(ErrID_Fatal, "Grid4D Field not allocated", ErrStat, ErrMsg, RoutineName)
          return
       end if
@@ -1629,6 +1629,8 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
       end if
       Indx_Hi(i) = min(Indx_Lo(i) + 1, G4D%n(i))     ! make sure it's a valid index
    end do
+   Indx_Lo = Indx_Lo-1
+   Indx_Hi = Indx_Hi-1
 
    !----------------------------------------------------------------------------
    ! Clamp isopc to [-1, 1] so we don't extrapolate (effectively nearest neighbor)
